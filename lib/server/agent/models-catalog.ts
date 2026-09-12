@@ -1,11 +1,9 @@
 import "server-only";
 
 import {
-  getPrReviewDefaultModelForUser,
-  getRootDefaultModel,
   getUserByok,
+  getUserDefaultModel,
   resolveAgentApiKey,
-  resolveProviderDefaultModel,
 } from "./model";
 import { getBaselinePricing, getModelPlanLimit, type ModelPlanLimit } from "./model-plan";
 import { listOpenRouterIndex } from "./openrouter-index";
@@ -40,9 +38,9 @@ import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
  * `list_agent_models` of Numo (wizard) — same list, same cache, same default.
  *
  * We only return `{ id, name, multiplier? }` per model (+ the slug provider,
- * the effective default and the plan cap): the picker reformats via
- * `formatModelName`, and Numo only needs the exact id to force a model
- * at launch. Process cache by `provider|baseUrl` (the list is identical
+ * the configured account default and the plan cap): the picker reformats via
+ * `formatModelName`, and Numo can explain the account configuration without
+ * changing it. Process cache by `provider|baseUrl` (the list is identical
  * for all accounts of the same endpoint); on failure we serve the expired cache,
  * otherwise an empty list (free entry remains authorized downstream).
  *
@@ -73,7 +71,7 @@ export interface AgentModelEntry {
 
 export interface AgentModelsCatalog {
   provider: AgentProviderId;
-  /** Default model of the active provider (BYOK border or root default), or null (generic). */
+  /** Account model when it belongs to the active provider, otherwise null. */
   defaultModel: string | null;
   models: AgentModelEntry[];
   /**
@@ -340,7 +338,7 @@ export async function getAgentModelsForUser(
   userId: string,
   surface: Extract<AiSurface, "agent" | "assistant"> = "agent",
 ): Promise<AgentModelsCatalog> {
-  const modelKey: ByokModelKey = surface === "assistant" ? "assistant_model" : "agent_model";
+  const modelKey: ByokModelKey = "assistant_model";
   // Active Provider: BYOK of the account, or OpenRouter platform key.
   let provider: AgentProviderId = DEFAULT_AGENT_PROVIDER;
   let baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!;
@@ -360,22 +358,20 @@ export async function getAgentModelsForUser(
     endpointConfigured = false;
   }
 
-  // Actual fault of the active provider: BYOK provider border, otherwise fault
-  // root (quota minddy / OpenRouter BYOK); null for a generic.
+  // Assistant calls retain provider feature defaults. Code-worker catalogs
+  // expose only the explicit provider-bound account preference: there is no
+  // provider or platform fallback that a new delegation could silently use.
   const byok = surface === "assistant" ? await getUserByok(userId, surface) : null;
   const featureDefault = byok?.featureModels[modelKey]?.trim();
-  const providerDefault = featureDefault || (
-    surface === "assistant"
-      ? await resolveByokFeatureDefaultModel(provider, modelKey)
-      : await resolveProviderDefaultModel(provider)
-  );
+  const providerDefault = surface === "assistant"
+    ? featureDefault || await resolveByokFeatureDefaultModel(provider, modelKey)
+    : null;
+  const accountDefault = surface === "agent" ? await getUserDefaultModel(userId) : null;
   const defaultModel = surface === "assistant"
     ? providerDefault ?? null
-    : providerDefault ?? (
-        provider === "generic" || isLocalAgentProvider(provider)
-          ? null
-          : await getRootDefaultModel()
-      );
+    : accountDefault?.provider === provider
+      ? accountDefault.model
+      : null;
 
   const limit = mode === "platform" ? await getModelPlanLimit(userId) : null;
   const localEndpoint = isLocalAgentProvider(provider)
@@ -420,18 +416,6 @@ export async function getAgentModelsForUser(
 /** Catalog for Numo conversations, using the assistant BYOK surface. */
 export function getAssistantModelsForUser(userId: string): Promise<AgentModelsCatalog> {
   return getAgentModelsForUser(userId, "assistant");
-}
-
-/** Catalog of models the account can actually use for a PR review. */
-export async function getPrReviewModelCatalog(userId: string): Promise<AgentModelsCatalog> {
-  const [catalog, defaultModel] = await Promise.all([
-    getAgentModelsForUser(userId),
-    getPrReviewDefaultModelForUser(userId),
-  ]);
-  return {
-    ...catalog,
-    defaultModel,
-  };
 }
 
 /**

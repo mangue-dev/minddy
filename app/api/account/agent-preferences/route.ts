@@ -4,7 +4,8 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { isSandboxRegion, isSandboxSize, resolveSandboxPreferences } from "@/lib/agent-sandbox-config";
 import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
-import { userHasByokKey } from "@/lib/server/agent/model";
+import { getUserByok } from "@/lib/server/agent/model";
+import { DEFAULT_AGENT_PROVIDER } from "@/lib/agent-providers";
 import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
 import {
   DEFAULT_AGENT_BRANCH_PREFIX,
@@ -12,13 +13,11 @@ import {
 } from "@/lib/server/agent/branch-name";
 
 /**
- * User agent preferences (MIN-46): its default model, default reasoning level
- * (MIN-122), and branch prefix. Self-managed RLS
- * (user_agent_preferences) → we use the client cookie. `default_model` null =
- * follows root default (app_config.agent_model); `default_reasoning_level`
- * null = `off`. An explicit model is a free id (as at launch) — not
- * allowlist; the effective key (BYOK or platform) is resolved at runtime
- * of the run.
+ * User agent preferences (MIN-46): the provider-bound code-worker model,
+ * default reasoning level (MIN-122), and branch prefix. Self-managed RLS
+ * (`user_agent_preferences`) uses the authenticated client. A missing or stale
+ * model blocks new workers until this route records a deliberate selection;
+ * no launch path may replace it with an implicit provider default.
  *
  * The PUT is PARTIAL: only the fields PRESENT in the body are written — the
  * settings live on the same row and are edited by distinct controls, so one
@@ -87,12 +86,16 @@ export async function PUT(request: NextRequest) {
   };
 
   if ("default_model" in body) {
-    const model = body.default_model ?? null;
-    if (model !== null && (typeof model !== "string" || !MODEL_ID_RE.test(model.trim()))) {
+    const model = body.default_model;
+    if (typeof model !== "string" || !MODEL_ID_RE.test(model.trim())) {
       return NextResponse.json({ error: "Invalid model" }, { status: 400 });
     }
-    // We store the form that the regex validated — not the white spaces around it.
-    patch.default_model = model === null ? null : model.trim();
+    const byok = await getUserByok(auth.user.id, "agent");
+    // Store the provider boundary together with the exact model choice. If the
+    // active provider changes later, launches fail closed until this settings
+    // flow records a deliberate compatible choice.
+    patch.default_model = model.trim();
+    patch.default_model_provider = byok?.provider ?? DEFAULT_AGENT_PROVIDER;
     // Ceiling of the plan model: reject a platform value that would be refused
     // at launch. The picker already grays these models; this also prevents a
     // saved preference from blocking all platform runs on the account.
@@ -101,7 +104,7 @@ export async function PUT(request: NextRequest) {
         await ensureModelInPlan({
           userId: auth.user.id,
           model: patch.default_model as string,
-          mode: (await userHasByokKey(auth.user.id)) ? "byok" : "platform",
+          mode: byok ? "byok" : "platform",
         });
       } catch (err) {
         if (isPlanLimitError(err)) return planLimitResponse(err);

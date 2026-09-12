@@ -17,7 +17,6 @@ import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { CYCLE_INTENSITIES } from "@/lib/cycle-prefs";
 import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
 import { AUTOMATION_PRESET_IDS } from "@/lib/automations";
-import { REASONING_LEVELS } from "@/lib/agent-reasoning";
 import {
   CREATE_ROUTINE_DESCRIPTION,
   CREATE_ROUTINE_PARAMETERS,
@@ -1439,7 +1438,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_account_settings",
       description:
-        "Update the current user's OWN account settings. Only pass the fields to change. Applies to the requesting user only — never another account. The display theme is saved on the account, so it applies to every device of the user.",
+        "Update the current user's OWN account settings. Only pass the fields to change. Applies to the requesting user only — never another account. The display theme is saved on the account, so it applies to every device of the user. The code-worker model and reasoning are read-only here and can only be changed by the user in Account settings.",
       parameters: {
         type: "object",
         properties: {
@@ -1559,17 +1558,6 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             enum: [...AUTOMATION_PRESET_IDS, null],
             description:
               "The automation loop applied to EVERY project this account owns (each project still has its own on/off switch — update_project, automations_enabled). null clears it: no loop at all, without touching each project.",
-          },
-          default_model: {
-            type: ["string", "null"],
-            description:
-              "The code agent's default model id for this account. Resolve the exact id with list_agent_models first — a model absent from the active provider, or above the plan's usage ceiling, is refused. null falls back to minddy's own default.",
-          },
-          default_reasoning_level: {
-            type: ["string", "null"],
-            enum: [...REASONING_LEVELS, null],
-            description:
-              "How much the code agent reasons before acting, by default. null falls back to minddy's default.",
           },
           branch_prefix: {
             type: ["string", "null"],
@@ -1971,7 +1959,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_agent_models",
       description:
-        "List the AI models available to the minddy code agent for THIS user, resolved by their active provider — their own BYOK provider (OpenAI, Anthropic, Google, OpenRouter or a generic OpenAI-compatible endpoint), or the minddy platform quota on OpenRouter when they have no key. Returns the active provider, the user's effective default model, and matching model ids. Call it (1) to resolve the EXACT model id before forcing one in launch_code_agent when the user names a model loosely ('use GPT-5', 'run it on Claude Sonnet'), and (2) to answer 'which models can I use for the agent?'. Always pass `query` to narrow — the catalog (OpenRouter especially) can hold hundreds of models.",
+        "List code-worker models available to this user through their active provider. The result is informational: Numo may explain the current account configuration, but only the user can change the worker model in Account settings. Always pass `query` to narrow — a provider catalog can hold hundreds of models.",
       parameters: {
         type: "object",
         properties: {
@@ -1989,7 +1977,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "launch_code_agent",
       description:
-        "Start a general conversation with the minddy cloud code agent in this project's repository. A ticket is optional context, not the identity of the conversation. Use `issue_id` for ticket-specific work; omit it for code exploration, explanations, maintenance or any other project-scoped request. `plan`, `implement` and `verify` require an issue; `custom` accepts any prompt. Every call starts its own conversation and branch. A pull request is not automatic. Pass `model` only when the user explicitly names one.",
+        "Delegate repository work to the code worker using the model and reasoning configured by the user in Account settings. A ticket is optional context, not the identity of the conversation. Use `issue_id` for ticket-specific work; omit it for code exploration, explanations, maintenance or any other project-scoped request. `plan`, `implement` and `verify` require an issue; `custom` accepts any prompt. Every call starts its own conversation and branch. A pull request is not automatic. Model and reasoning overrides are never accepted.",
       parameters: {
         type: "object",
         properties: {
@@ -2008,17 +1996,6 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "string",
             description:
               "The request for the agent, in the user's language. With a written mode (plan/implement/verify) it is appended as extra precision and can be omitted; with 'custom' it IS the job — say what to do.",
-          },
-          model: {
-            type: "string",
-            description:
-              "Optional exact model id to force (only when the user explicitly requests a specific model).",
-          },
-          reasoning_level: {
-            type: "string",
-            enum: [...REASONING_LEVELS],
-            description:
-              "How much the agent reasons before acting, FOR THIS RUN ONLY. Pass it only when the user asks for it on this run ('réfléchis bien', 'vite fait') — otherwise omit it and their account default applies. To change that default, use update_account_settings (default_reasoning_level).",
           },
         },
         // `mode` is REQUIRED: on a small model, an optional field is not

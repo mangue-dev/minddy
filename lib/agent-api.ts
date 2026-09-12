@@ -285,10 +285,7 @@ export async function launchAgentRunApi(
   issueId: string,
   body: {
     prompt?: string;
-    model?: string;
     baseBranch?: string;
-    /** Level of reasoning chosen at launch (MIN-122). Absent = personal default. */
-    reasoningLevel?: ReasoningLevel;
     /** `plan` (supervise), `verify` (check the work done) and `custom`
      * (free instructions from the user) leave the exit where it is: alone
      * `implement` the “in progress” pass on the server side. */
@@ -306,8 +303,6 @@ export async function launchAgentRunApi(
 ): Promise<{ run: AgentRunSummary }> {
   // The prompt is NEVER sent — only its presence and length.
   trackEvent("agent_launched", {
-    model: body.model ?? "default",
-    reasoning_level: body.reasoningLevel ?? "default",
     has_branch: !!body.baseBranch,
     provider: "unknown",
     scope: "issue_context",
@@ -352,9 +347,6 @@ export async function launchNotebookAgentApi(body: {
   prompt: string;
   mentions?: AssistantMention[];
   attachments?: ResourceInput[];
-  model?: string;
-  /** Level of reasoning chosen at launch (MIN-122). Absent = personal default. */
-  reasoningLevel?: ReasoningLevel;
   baseBranch?: string;
   /** The conversation starts on the MACHINE (MIN-359): chosen first
    * message, then frozen. The server revalidates (`localExecRequested`). */
@@ -363,8 +355,6 @@ export async function launchNotebookAgentApi(body: {
   localWorktree?: boolean;
 }): Promise<{ run: AgentRunSummary }> {
   trackEvent("agent_launched", {
-    model: body.model ?? "default",
-    reasoning_level: body.reasoningLevel ?? "default",
     has_branch: !!body.baseBranch,
     provider: "unknown",
     scope: "general",
@@ -913,8 +903,6 @@ export async function submitPullRequestReviewApi(
      * instruction for Numo, not a verdict (“correct comments” mode).
      * Default `true` — the historic gesture. */
     postVerdict?: boolean;
-    model?: string;
-    reasoningLevel?: ReasoningLevel;
     /** Request a launch on the local repository attached to this project. */
     localExec?: boolean;
     /** Isolate this local launch in its worktree. */
@@ -951,13 +939,9 @@ export async function submitPullRequestReviewApi(
  * look in the review panel (`usePrReviewSession`). If a pass turns
  * already on this PR, it's his that comes back - we don't open two.
  *
- * `model`: the id chosen in the picker, `""` to return to the minddy default,
- * `undefined` to not change anything in the choice made.
  */
 export async function requestPullRequestAiReviewApi(
   prId: string,
-  model?: string,
-  reasoningLevel?: ReasoningLevel,
   local: {
     localExec?: boolean;
     localWorktree?: boolean;
@@ -971,8 +955,6 @@ export async function requestPullRequestAiReviewApi(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "ai_review",
-        ...(model === undefined ? {} : { model }),
-        ...(reasoningLevel === undefined ? {} : { reasoningLevel }),
         ...local,
       }),
     }),

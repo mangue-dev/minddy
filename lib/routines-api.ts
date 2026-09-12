@@ -1,7 +1,6 @@
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
 import type { AgentRunSummary } from "./agent-api";
-import type { ReasoningLevel } from "./agent-reasoning";
 import type { AssistantMention } from "./assistant-types";
 import { DEFAULT_MAX_SPEND_PERCENT } from "./routine-budget";
 import type { RoutineFrequency } from "./routine-schedule";
@@ -56,8 +55,6 @@ export interface Routine {
   title: string;
   prompt: string;
   prompt_mentions: AssistantMention[];
-  model: string | null;
-  reasoning_level: ReasoningLevel;
   base_branch: string | null;
   /** Share of the monthly budget that ONE passage can spend (1–100; 100 = without
  * own ceiling, only the account quota limits). */
@@ -83,8 +80,6 @@ export interface RoutineInput {
   /** No title: minddy writes it from the instruction (see `titleFor`). */
   prompt: string;
   promptMentions?: AssistantMention[];
-  model?: string | null;
-  reasoningLevel?: ReasoningLevel;
   baseBranch?: string | null;
   /** Ceiling for a passage, as a % of the monthly budget. Absent = the defect (90%). */
   maxSpendPercent?: number;
@@ -103,12 +98,9 @@ export async function fetchRoutinesApi(): Promise<{ routines: Routine[] }> {
 export async function createRoutineApi(
   input: RoutineInput,
 ): Promise<{ routine: Routine }> {
-  // Aligned with `launchNotebookAgentApi`: what we measure is the SHAPE of the
-  // gesture (cadence, model chosen or not), never the instruction itself.
+  // Measure the shape of the gesture, never the instruction itself.
   trackEvent("routine_created", {
     frequency: input.frequency,
-    model: input.model ?? "default",
-    reasoning_level: input.reasoningLevel ?? "default",
     has_branch: !!input.baseBranch,
     // The chosen spending limit: this is the setting we want to know if it
     // is TOUCHED, and in what sense — a defect that no one moves is not

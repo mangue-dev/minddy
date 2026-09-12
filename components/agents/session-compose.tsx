@@ -20,8 +20,6 @@ import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { ChatInput } from "@/components/assistant/chat-input";
 import { AgentEventFeed } from "@/components/agent/agent-event-feed";
-import { ModelCombobox } from "@/components/agent/model-combobox";
-import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
 import { BranchCombobox } from "@/components/agent/branch-combobox";
 import {
   EnvironmentCombobox,
@@ -32,9 +30,8 @@ import { useLocalRepo } from "@/lib/use-local-repo";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { launchGeneralAgentApi, type AgentRunSummary } from "@/lib/agent-api";
 import { agentRunQueryKey, allAgentSessionsQueryKey } from "@/lib/use-agent-runs";
-import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-models-query";
+import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
-import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
 import { useProjects } from "@/lib/projects-context";
 import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
 import { useAuth } from "@/lib/auth-context";
@@ -44,7 +41,6 @@ import {
   rememberAgentProject,
 } from "@/lib/last-agent-project";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
-import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
 import { isLocalAgentProvider } from "@/lib/agent-providers";
 import type { Project } from "@/lib/types";
 import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
@@ -234,30 +230,11 @@ export function SessionCompose({
   }, [launchable, projectId, gitLinkedLoading]);
   const {
     provider,
-    defaultModel: providerDefaultModel,
     cloudExecutionConfigured,
     executionBackend,
   } = useAgentModelsQuery();
   const aiAvailability = useAiSurfaceAvailability("agent");
   const aiUnavailable = !aiAvailability.loading && !aiAvailability.available;
-  const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
-  const [model, setModel] = useState("");
-  // Launch reasoning level (MIN-122), frozen on the server-side run:
-  // as long as we don't touch it, it's the personal defect that goes away - as in the
-  // a ticket composer.
-  const [reasoningOverride, setReasoningOverride] = useState<ReasoningLevel | null>(null);
-  // The actual MODEL of this launch — the one for which we display the performance levels
-  // reasoning. `model` empty = we start with the personal default, otherwise that of the
-  // provider: that's the one that will run, so it's his that you have to read.
-  const effectiveModel = model || defaultModel || providerDefaultModel;
-  const reasoningLevels = useReasoningLevelsFor(effectiveModel);
-  // Focusing on what this model accepts: a personal default to `xhigh` on a
-  // model which does not want it must be displayed on its nearest neighbor, not
-  // let the chip name a bearing missing from the list.
-  const reasoningLevel = nearestReasoningLevel(
-    reasoningOverride ?? defaultReasoningLevel,
-    reasoningLevels,
-  );
   const [baseBranch, setBaseBranch] = useState("");
   const [launching, setLaunching] = useState(false);
   // Optimistic bubble of the 1st message during POST (same reasons as launch
@@ -269,7 +246,6 @@ export function SessionCompose({
   // was actually waiting for the local harness.
   const [launchLocalExec, setLaunchLocalExec] = useState(false);
   const localEndpoint = isLocalAgentProvider(provider);
-  const modelRequired = (provider === "generic" || localEndpoint) && !defaultModel && !model;
   const selectedProject = launchable.find((p) => p.id === projectId) ?? null;
   const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId || null);
 
@@ -303,10 +279,6 @@ export function SessionCompose({
       toast.error(t("composeProjectRequired"));
       return;
     }
-    if (modelRequired) {
-      toast.error(t("modelRequired"));
-      return;
-    }
     const localExec = environment !== "cloud" && localRepo.ready;
     if (!localExec && !cloudExecutionConfigured) {
       toast.error(t("errorExecutionBackendUnavailable"));
@@ -336,8 +308,6 @@ export function SessionCompose({
       const { run } = await launchGeneralAgentApi({
         projectId,
         prompt,
-        model: model || undefined,
-        reasoningLevel,
         baseBranch: baseBranch || undefined,
         mentions,
         attachments,
@@ -563,28 +533,6 @@ export function SessionCompose({
               </div>
             }
             contextPlacement="above"
-            leadingControls={
-              <>
-                <ModelCombobox
-                  variant="compact"
-                  value={model}
-                  onChange={setModel}
-                  defaultLabel={t("modelDefault")}
-                  defaultModelId={defaultModel ?? providerDefaultModel}
-                  placeholder={t("modelSearchPlaceholder")}
-                  emptyLabel={t("modelSearchEmpty")}
-                  loadingLabel={t("modelSearchLoading")}
-                  freeTextLabel={(q) => t("modelUseCustom", { model: q })}
-                  disabled={launching}
-                />
-                <ReasoningCombobox
-                  value={reasoningLevel}
-                  onChange={setReasoningOverride}
-                  disabled={launching}
-                  levels={reasoningLevels}
-                />
-              </>
-            }
           />
         </div>
       </div>

@@ -4,10 +4,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { softDeleteItem } from "@/lib/server/trash";
 import { getProjectLink } from "@/lib/server/git/repo-links";
-import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
 import { checkAgentQuota } from "@/lib/server/agent/quota";
-import { isPlanLimitError } from "@/lib/server/plan-limit-error";
-import { isReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
 import type { AssistantMention } from "@/lib/assistant-types";
 import {
   DEFAULT_MAX_SPEND_PERCENT,
@@ -50,8 +47,6 @@ export interface Routine {
   title: string;
   prompt: string;
   prompt_mentions: AssistantMention[];
-  model: string | null;
-  reasoning_level: ReasoningLevel;
   base_branch: string | null;
   /**
  * Share of the plan's monthly usage budget that ONE passage has the right to spend
@@ -78,6 +73,7 @@ export type RoutineErrorCode =
   | "quota"
   | "noRepo"
   | "alreadyRunning"
+  | "noModelForProvider"
   | "modelAbovePlan"
   | "managedServiceUnavailable"
   | "executionBackendUnavailable"
@@ -91,7 +87,7 @@ export type RoutineErrorKey =
   | "noRepo"
   | "invalidSchedule"
   | "unknownTimezone"
-  | "modelAbovePlan"
+  | "workerConfigurationManagedInSettings"
   | "noFieldsToUpdate"
   | "databaseError";
 
@@ -110,7 +106,6 @@ export type RoutineResult<T> =
 /** Writing terminals — beyond that we truncate, like everywhere else (MIN-118). */
 const MAX_TITLE_LENGTH = 120;
 const MAX_PROMPT_LENGTH = 20_000;
-const MAX_MODEL_LENGTH = 200;
 const MAX_BRANCH_LENGTH = 255;
 
 /**
@@ -136,7 +131,10 @@ export async function routineRunBudgetUsd(routine: {
 }): Promise<number | null> {
   const percent = clampSpendPercent(routine.max_spend_percent);
   if (percent >= NO_SPEND_CAP_PERCENT) return null;
-  const quota = await checkAgentQuota(routine.owner_id, "automations");
+  // Routine code workers use the same account provider as every other worker.
+  // Their helper calls may still use the automations surface, but that surface
+  // must not decide whether this run is platform-funded or BYOK.
+  const quota = await checkAgentQuota(routine.owner_id, "agent");
   if (quota.unlimited || quota.cap == null) return null;
   return (quota.cap * percent) / 100;
 }
@@ -153,8 +151,6 @@ export interface CreateRoutineInput {
  */
   prompt: string;
   promptMentions?: AssistantMention[] | null;
-  model?: string | null;
-  reasoningLevel?: string | null;
   baseBranch?: string | null;
   /** Plafond d'un passage, en % du budget mensuel (1–100). Absent → 15. */
   maxSpendPercent?: number | null;
@@ -232,38 +228,6 @@ function scheduleRefusal(err: unknown): Extract<RoutineResult<never>, { ok: fals
     : { ok: false, status: 400, errorKey: "invalidSchedule", scheduleCode: err.code };
 }
 
-/**
- * The template cap of the plan, applied to the chosen template for the
- * routine. BYOK users choose their own models without this ceiling.
- */
-async function refuseModelAbovePlan(
-  userId: string,
-  model: string | null,
-): Promise<Extract<RoutineResult<never>, { ok: false }> | null> {
-  if (!model) return null;
-  const quota = await checkAgentQuota(userId, "automations");
-  try {
-    await ensureModelInPlan({ userId, model, mode: quota.mode });
-    return null;
-  } catch (err) {
-    if (isPlanLimitError(err) && err.code === "model_above_plan") {
-      const p = err.params ?? {};
-      return {
-        ok: false,
-        status: 403,
-        errorKey: "modelAbovePlan",
-        modelLimit: {
-          model: String(p.model ?? model),
-          multiplier: Number(p.multiplier ?? 0),
-          limit: Number(p.limit ?? 0),
-          planId: String(p.plan ?? ""),
-        },
-      };
-    }
-    throw err;
-  }
-}
-
 /** Creates a routine. Project owner only. */
 export async function createRoutine(
   input: CreateRoutineInput,
@@ -273,6 +237,17 @@ export async function createRoutine(
   // Guard BEFORE everything else: no need to validate a cadence that we are going to
   // refuse, and the refusal must be the same regardless of the door.
   if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
+  const supplied = input as CreateRoutineInput & {
+    model?: unknown;
+    reasoningLevel?: unknown;
+  };
+  if ("model" in supplied || "reasoningLevel" in supplied) {
+    return {
+      ok: false,
+      status: 400,
+      errorKey: "workerConfigurationManagedInSettings",
+    };
+  }
 
   const prompt = input.prompt?.trim() ?? "";
   if (!prompt) return { ok: false, status: 400, errorKey: "promptRequired" };
@@ -292,10 +267,6 @@ export async function createRoutine(
     throw err;
   }
 
-  const model = input.model?.trim() ? input.model.trim().slice(0, MAX_MODEL_LENGTH) : null;
-  const refusal = await refuseModelAbovePlan(input.actorId, model);
-  if (refusal) return refusal;
-
   // The title LAST: after all the refusals, to avoid paying a call from
   // naming a routine that we are about to refuse.
   const title = await titleFor(prompt, input.actorId, input.projectId);
@@ -311,10 +282,6 @@ export async function createRoutine(
       title,
       prompt: prompt.slice(0, MAX_PROMPT_LENGTH),
       prompt_mentions: input.promptMentions?.length ? input.promptMentions : [],
-      model,
-      reasoning_level: isReasoningLevel(input.reasoningLevel)
-        ? input.reasoningLevel
-        : "medium",
       base_branch: input.baseBranch?.trim()
         ? input.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
         : null,
@@ -351,8 +318,6 @@ export interface UpdateRoutineInput {
   /** Rewrite the instruction REDOES the title: cf. `titleFor`. */
   prompt?: string;
   promptMentions?: AssistantMention[] | null;
-  model?: string | null;
-  reasoningLevel?: string | null;
   baseBranch?: string | null;
   /** Nouveau plafond d'un passage, en % du budget mensuel (1–100). */
   maxSpendPercent?: number | null;
@@ -389,6 +354,17 @@ export async function updateRoutine(
   const access = await getProjectAccess(input.actorId, routine.project_id);
   if (!access) return { ok: false, status: 404, errorKey: "routineNotFound" };
   if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
+  const supplied = input as UpdateRoutineInput & {
+    model?: unknown;
+    reasoningLevel?: unknown;
+  };
+  if ("model" in supplied || "reasoningLevel" in supplied) {
+    return {
+      ok: false,
+      status: 400,
+      errorKey: "workerConfigurationManagedInSettings",
+    };
+  }
 
   const updates: Record<string, unknown> = {};
   if (typeof input.prompt === "string") {
@@ -407,15 +383,6 @@ export async function updateRoutine(
     updates.prompt_mentions = input.promptMentions?.length
       ? input.promptMentions
       : [];
-  }
-  if ("model" in input) {
-    const model = input.model?.trim() ? input.model.trim().slice(0, MAX_MODEL_LENGTH) : null;
-    const refusal = await refuseModelAbovePlan(input.actorId, model);
-    if (refusal) return refusal;
-    updates.model = model;
-  }
-  if (input.reasoningLevel != null) {
-    if (isReasoningLevel(input.reasoningLevel)) updates.reasoning_level = input.reasoningLevel;
   }
   if ("baseBranch" in input) {
     updates.base_branch = input.baseBranch?.trim()

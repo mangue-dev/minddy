@@ -17,10 +17,6 @@ import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { displayName } from "@/lib/display-name";
 import { isForgePrEvent, forgePrActor } from "@/lib/pr-events";
 import { getRepoProvider } from "@/lib/repo-providers";
-import { REASONING_LEVELS } from "@/lib/agent-reasoning";
-
-/** `z.enum` wants a non-empty tuple: the complete vocabulary, in its order. */
-const REASONING_LEVELS_TUPLE = REASONING_LEVELS as [string, ...string[]];
 import {
   MAX_PLAN_LENGTH,
   PLAN_TASK_STATES,
@@ -359,8 +355,6 @@ function mcpRoutine(routine: Routine) {
     id: routine.id,
     title: routine.title,
     prompt: routine.prompt,
-    model: routine.model,
-    reasoning_level: routine.reasoning_level,
     base_branch: routine.base_branch,
     /** What ONE passage can spend, as a % of the owner's monthly budget. */
     max_spend_percent: routine.max_spend_percent,
@@ -423,9 +417,11 @@ function routineFailure(r: {
       return fail(
         "forbidden",
         r.modelLimit
-          ? `The model ${r.modelLimit.model} costs ${r.modelLimit.multiplier}x minddy's default model, above the ${r.modelLimit.limit}x ceiling of the ${r.modelLimit.planId} plan. Omit model to use the account default.`
-          : "That model is above the plan's model ceiling. Omit model to use the account default.",
+          ? `The account worker model ${r.modelLimit.model} costs ${r.modelLimit.multiplier}x the baseline, above the ${r.modelLimit.limit}x ceiling of the ${r.modelLimit.planId} plan. The user must choose an eligible model in Account settings.`
+          : "The account worker model is above the plan ceiling. The user must change it in Account settings.",
       );
+    case "workerConfigurationManagedInSettings":
+      return fail("invalid_params", "Worker model and reasoning are controlled in Account settings.");
     case "noFieldsToUpdate":
       return fail("invalid_params", "Pass at least one field to change.");
     default:
@@ -4698,9 +4694,8 @@ export function registerMinddyTools(
         "answered — it decides and documents its choice), and it MAY open a pull " +
         "request without being asked when it finds something worth fixing, and " +
         "simply concludes when it does not. So write `prompt` as a complete brief: " +
-        "what to look at, what counts as a finding, what to do with one. The model " +
-        "is chosen per routine and frozen on it — the strongest one for a security " +
-        "review, the cheapest for a monthly inventory — and its spend is billed " +
+        "what to look at, what counts as a finding, what to do with one. Code workers " +
+        "use the owner's model and reasoning from Account settings, and their spend is billed " +
         "under 'Routines', separately from agent runs. ONE run stops at 15% of the " +
         "owner's monthly usage budget by default, so a routine cannot silently " +
         "take the whole month (`max_spend_percent`). Requires a linked repository.",
@@ -4759,19 +4754,6 @@ export function registerMinddyTools(
               "never skipping a month. At least one is required for 'monthly'; " +
               "REFUSED on other cadences.",
           ),
-        model: z
-          .string()
-          .optional()
-          .describe(
-            "Exact model id to freeze on this routine. Omit for the owner's default. " +
-              "A model above the plan's ceiling is refused here, at creation.",
-          ),
-        reasoning_level: z
-          .enum(REASONING_LEVELS_TUPLE)
-          .optional()
-          .describe(
-            "Reasoning effort of the runs. Omit for the owner's default.",
-          ),
         base_branch: z
           .string()
           .optional()
@@ -4803,8 +4785,6 @@ export function registerMinddyTools(
         projectId: scope.access.project.id,
         actorId: scope.userId,
         prompt: args.prompt,
-        model: args.model ?? null,
-        reasoningLevel: args.reasoning_level ?? null,
         baseBranch: args.base_branch ?? null,
         maxSpendPercent: args.max_spend_percent ?? null,
         frequency: args.frequency,
@@ -4825,7 +4805,7 @@ export function registerMinddyTools(
       title: "Update routine",
       description:
         "Change an existing routine: pause it or bring it back (`enabled`), move " +
-        "its cadence, swap its model, or rewrite its instruction. OWNER ONLY. " +
+        "its cadence or rewrite its instruction. OWNER ONLY. " +
         "Touching the cadence — or re-enabling a paused routine — RECOMPUTES the " +
         "next occurrence, so a change takes effect at the next one, never at the " +
         "one already scheduled. Pausing keeps the routine in the list, where the " +
@@ -4862,8 +4842,6 @@ export function registerMinddyTools(
           .describe(
             "IANA timezone of the hour. Pass the user's, never a guess.",
           ),
-        model: z.string().optional(),
-        reasoning_level: z.enum(REASONING_LEVELS_TUPLE).optional(),
         base_branch: z.string().optional(),
         max_spend_percent: z
           .number()
@@ -4888,10 +4866,6 @@ export function registerMinddyTools(
         actorId: scope.userId,
         ...(args.prompt !== undefined ? { prompt: args.prompt } : {}),
         ...(args.enabled !== undefined ? { enabled: args.enabled } : {}),
-        ...(args.model !== undefined ? { model: args.model } : {}),
-        ...(args.reasoning_level !== undefined
-          ? { reasoningLevel: args.reasoning_level }
-          : {}),
         ...(args.base_branch !== undefined
           ? { baseBranch: args.base_branch }
           : {}),

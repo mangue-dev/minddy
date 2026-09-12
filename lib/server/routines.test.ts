@@ -59,6 +59,7 @@ const world = {
     cap: 5 as number | undefined,
     remaining: 5 as number | undefined,
   },
+  quotaSurfaces: [] as string[],
 };
 
 function makeRoutine(over: Partial<RoutineRow> = {}): RoutineRow {
@@ -189,7 +190,10 @@ vi.mock("@/lib/server/git/repo-links", () => ({
 }));
 
 vi.mock("@/lib/server/agent/quota", () => ({
-  checkAgentQuota: async () => world.quota,
+  checkAgentQuota: async (_userId: string, surface: string) => {
+    world.quotaSurfaces.push(surface);
+    return world.quota;
+  },
 }));
 
 // The little model that NAMES the routine: we don't really call it, but
@@ -241,6 +245,7 @@ beforeEach(() => {
     cap: 5,
     remaining: 5,
   };
+  world.quotaSurfaces = [];
   titleCalls.length = 0;
 });
 
@@ -313,15 +318,15 @@ describe("createRoutine", () => {
     expect(result).toMatchObject({ ok: false, errorKey: "unknownTimezone" });
   });
 
-  it("refuse un modèle au-dessus du plafond du plan, À L'ENREGISTREMENT", async () => {
-    // The refusal must come in front of someone, not at 1 p.m. in a cron.
-    world.modelAbovePlan = true;
+  it("rejects a caller-supplied worker model", async () => {
     const result = await createRoutine(
       validInput({ model: "anthropic/claude-opus-5" }) as never,
     );
-    expect(result).toMatchObject({ ok: false, status: 403, errorKey: "modelAbovePlan" });
-    if (result.ok) return;
-    expect(result.modelLimit?.limit).toBe(15);
+    expect(result).toMatchObject({
+      ok: false,
+      status: 400,
+      errorKey: "workerConfigurationManagedInSettings",
+    });
   });
 
   it("n'arme pas d'échéance sur une routine créée désactivée", async () => {
@@ -580,6 +585,7 @@ describe("plafond de dépense", () => {
     world.quota.remaining = 1;
     const budget = await routineRunBudgetUsd(makeRoutine({ max_spend_percent: 50 }));
     expect(budget).toBeCloseTo(2.5, 6);
+    expect(world.quotaSurfaces).toEqual(["agent"]);
   });
 
   it("ne pose AUCUN plafond à 100 % ni en BYOK", async () => {

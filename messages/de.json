@@ -2286,11 +2286,12 @@
     "agentTab": "KI",
     "dataTab": "Daten",
     "agentModelTitle": "Standard-Agentenmodell",
-    "agentModelDesc": "Sie können bei jedem Start ein anderes Modell auswählen.",
-    "agentModelRoot": "Anbieterstandard",
+    "agentModelDesc": "Jeder neue Code-Agent verwendet dieses Kontomodell. Nur diese Einstellung kann es ändern.",
+    "agentModelRequired": "Wählen Sie ein Modell für den aktiven Anbieter aus, bevor Sie einen weiteren Code-Agent starten.",
+    "agentModelRoot": "Modell auswählen",
     "agentModelSavedToast": "Präferenz gespeichert.",
     "agentReasoningTitle": "Standardbegründungsebene",
-    "agentReasoningDesc": "Wie lange das Modell denkt, bevor es handelt. Sie können bei jedem Start eine andere Ebene auswählen.",
+    "agentReasoningDesc": "Wie lange jeder neue Code-Agent denkt, bevor er handelt. Laufende Agenten behalten ihre festgelegte Stufe.",
     "agentBranchPrefixTitle": "Branch-Präfix",
     "agentBranchPrefixDesc": "Wird auf jeden neuen Branch angewendet, den Numo erstellt.",
     "gitAgentBranchesTitle": "Numo-Branches",
@@ -2577,7 +2578,8 @@
     "errorQuotaExceeded": "Sie haben das monatliche Nutzungsbudget Ihres Plans erreicht.",
     "errorManagedServiceUnavailable": "Verwaltete KI ist auf dieser Instanz deaktiviert. Konfigurieren Sie BYOK oder einen lokalen Endpunkt.",
     "errorExecutionBackendUnavailable": "Es ist kein Agent-Ausführungs-Backend konfiguriert. Bitten Sie den Instanzadministrator, Server-Sandboxen zu aktivieren oder die lokale Ausführung zu verwenden.",
-    "errorNoModelForProvider": "Wählen Sie ein Modell für diesen Anbieter.",
+    "errorNoModelForProvider": "Wählen Sie in den Kontoeinstellungen ein Code-Agent-Modell für diesen Anbieter.",
+    "errorWorkerConfigurationManagedInSettings": "Modell und Denkstufe des Code-Agenten können nur in den Kontoeinstellungen geändert werden.",
     "errorLocalEndpointRequiresLocalRun": "Dieser Modellendpunkt ist lokal. Führen Sie den Agenten auf Ihrem Mac aus; minddy sendet diesen Lauf nicht an die Cloud.",
     "errorLocalIssueConfirmationRequired": "Überprüfen Sie den Probleminhalt und bestätigen Sie ihn, bevor Sie ihn auf Ihrem Mac ausführen.",
     "errorSupersededRun": "Eine neuere Sitzung hat dieses Problem übernommen. Starten Sie einen neuen Agenten, um fortzufahren.",
@@ -3987,12 +3989,8 @@
         "desc": "Wird verwendet, wenn das Numo-Modell leer bleibt."
       },
       "agent_model": {
-        "label": "Numo-Agentenmodell",
-        "desc": "Gilt standardmäßig für alle. Jeder Benutzer kann seine eigene festlegen und beim Starten einer Sitzung eine andere auswählen."
-      },
-      "automation_agent_model": {
-        "label": "Ketten- und Routinenmodell",
-        "desc": "Numo-Modell, das für von einer Automatisierung gestartete Ausführungen verwendet wird."
+        "label": "Preisreferenz für Code-Agenten",
+        "desc": "Referenzmodell zur Berechnung der Tarifmultiplikatoren. Es ersetzt nicht das in jedem Konto ausgewählte Modell."
       },
       "agent_subagent_favorites": {
         "label": "Lieblingsmodelle des Subagenten",
@@ -4001,15 +3999,6 @@
       "recommended_models": {
         "label": "Empfohlene Modelle",
         "desc": "Die kurze Liste, die der Modellauswahl überall in der App öffnet, bevor jemand etwas eingibt. Es verbirgt sich nichts: Die Suche erreicht immer noch den gesamten Katalog, und eine letzte Zeile öffnet mehr. Die Bestellung wird anhand des Preises berechnet, das günstigste zuerst, sodass Sie nur WELCHE Modelle auswählen, die Sie empfehlen möchten. Ein Modell über der Obergrenze des Pro-Plans (×40) kann von niemandem gestartet werden."
-      },
-      "byok_default_model_openai": {
-        "label": "OpenAI Standard"
-      },
-      "byok_default_model_anthropic": {
-        "label": "Anthropic Standard"
-      },
-      "byok_default_model_google": {
-        "label": "Google (Gemini) Standard"
       },
       "smart_assign_model": {
         "label": "Intelligente Zuweisung",
@@ -4062,10 +4051,6 @@
       "feedback_embedding_model": {
         "label": "Feedback-Einbettungen",
         "desc": "Vektorisiert Feedback, um Ähnlichkeit zu messen."
-      },
-      "pr_review_model": {
-        "label": "Numos PR-Bewertung",
-        "desc": "Liest einen Pull Bei Bedarf können Sie den Unterschied der Anfrage auswerten und dann eine Zusammenfassung und bis zu fünf Zeilen Kommentare veröffentlichen. Unterscheiden Sie sich vom Agentenmodell: Die Überprüfung des Codes mit dem Modell, das ihn gerade geschrieben hat, ergibt nur zweimal die gleiche Meinung."
       },
       "import_map_enabled": {
         "label": "CSV-Importzuordnung",
@@ -5756,6 +5741,7 @@
     "projectEnabled": "Automatisierungen an {name}",
     "effortsTitle": "Abgedeckte Aufwände",
     "effortsHint": "Deaktivieren Sie die Schleife für Aufwände, die Sie lieber manuell verwalten möchten. Ein Problem ohne Aufwand folgt wie überall in minddy der Zeile M.",
+    "workerModelHint": "Neue Automatisierungs-Agenten verwenden das Modell und die Denkstufe aus den Kontoeinstellungen.",
     "effortEnabled": "Automatisierungen an {effort} Probleme",
     "modelsTitle": "Modell pro Aufwand",
     "modelsHint": "Ein kleines Modell auf Ihrem XS, ein starkes auf Ihrem XL. „Leer“ bedeutet Ihr Standardmodell, dasselbe, das bei einem manuellen Start verwendet wird. Die Voreinstellung stimmt die Argumentationsebene weiterhin Schritt für Schritt ab.",
@@ -5811,14 +5797,15 @@
     "stepProjectDesc": "Die Routine öffnet eine isolierte Agenten-Sandbox und klont das Repository dieses Projekts für jede Ausführung.",
     "stepJobTitle": "Was soll sie tun?",
     "stepJobDesc": "Diese Anweisung erhält der Agent bei jedem Lauf. Da niemand für Rückfragen anwesend ist, beschreiben Sie genau, was geprüft und wie mit den Ergebnissen verfahren werden soll.",
-    "stepModelTitle": "Auf welchem Modell?",
-    "stepModelDesc": "Bei der Routine eingefroren: das stärkste Modell für eine Sicherheitsüberprüfung, das günstigste für eine monatliche Inventur.",
+    "stepModelTitle": "Agent-Einstellungen",
+    "stepModelDesc": "Wählen Sie den Branch und das Ausgabenlimit für unbeaufsichtigte Läufe.",
     "stepScheduleTitle": "Wie oft?",
     "stepScheduleDesc": "Die Uhrzeit wird in der unten ausgewählten Zeitzone angezeigt; prüfen Sie den ersten Lauf vor der Bestätigung.",
     "createRoutine": "Routine erstellen",
     "createdTitle": "Routine erstellt",
     "createdDesc": "Sie wird eigenständig in einer isolierten Server-Sandbox ausgeführt. Seine Ausführungen sind hier auf der Registerkarte „Routinen“ verfügbar.",
     "executionEnvironment": "Läuft in einer isolierten Sandbox auf dem Server, ohne Desktop-App.",
+    "workerModelHint": "Jeder Lauf verwendet das Modell und die Denkstufe aus den Kontoeinstellungen.",
     "promptLabel": "Anleitung",
     "promptPlaceholder": "Überprüfen Sie den Code auf Sicherheitslücken und öffnen Sie eine Pull-Anfrage für das, was Sie beheben können.",
     "promptShowMore": "Mehr anzeigen",
@@ -5881,6 +5868,7 @@
     "lastError_noRepo": "Letzter Lauf übersprungen: Dieses Projekt hat kein verknüpftes Repository.",
     "lastError_alreadyRunning": "Letzter Lauf übersprungen: Der vorherige hat noch funktioniert.",
     "lastError_modelAbovePlan": "Letzter Lauf übersprungen: Das Modell liegt über der Obergrenze Ihres Plans.",
+    "lastError_noModelForProvider": "Letzter Lauf übersprungen: Wählen Sie in den Kontoeinstellungen ein Code-Agent-Modell für den aktiven Anbieter.",
     "lastError_managedServiceUnavailable": "Letzte Ausführung übersprungen: BYOK oder einen lokalen Endpunkt auf dieser Instanz konfigurieren.",
     "lastError_executionBackendUnavailable": "Letzte Ausführung übersprungen: Auf dieser Instanz ist kein Ausführungs-Backend konfiguriert.",
     "lastError_launchFailed": "Die letzte Ausführung konnte nicht gestartet werden.",

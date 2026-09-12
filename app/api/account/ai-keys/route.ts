@@ -32,8 +32,9 @@ import type { AgentProviderId } from "@/lib/agent-providers";
  * other providers. The plaintext key is NEVER returned — only provider,
  * key_prefix, and base_url. Writes use the service client (RLS is read-owner);
  * the key is encrypted at rest
- * (AES-256-GCM). Changing/removing the provider resets the default model
- * because it belonged to the previous provider's namespace.
+ * (AES-256-GCM). Changing or removing the provider leaves the account worker
+ * preference untouched; the provider-bound resolver fails closed until the
+ * user deliberately chooses a compatible model in Account settings.
  */
 
 const SANITIZED =
@@ -56,14 +57,6 @@ function isHttpEndpointUrl(raw: string): boolean {
   } catch {
     return false;
   }
-}
-
-/** Clears the personal model default (obsolete when the provider changes). */
-async function clearDefaultModel(service: ReturnType<typeof getServiceClient>, userId: string) {
-  await service
-    .from("user_agent_preferences")
-    .update({ default_model: null, updated_at: new Date().toISOString() })
-    .eq("user_id", userId);
 }
 
 export async function GET(request: NextRequest) {
@@ -223,10 +216,9 @@ export async function DELETE(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const service = getServiceClient();
-  // Single-active: we remove the BYOK (whatever the provider) and we put it back
-  // model default to zero (it could target a model outside the platform provider).
+  // Single-active: remove the BYOK regardless of provider. The worker-model
+  // preference remains unchanged so only the dedicated Account setting writes it.
   await service.from("user_ai_keys").delete().eq("user_id", auth.user.id);
-  await clearDefaultModel(service, auth.user.id);
   return NextResponse.json({ ok: true });
 }
 

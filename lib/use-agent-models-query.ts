@@ -24,17 +24,14 @@ import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
  * - `platform` → `/api/admin/models-catalog`, the OpenRouter platform key
  * filtered by the requested runtime capability for the config admin (MIN-90).
  * The admin's BYOK has nothing to do there: `app_config` runs on the platform;
- * - `review` → `/api/agent/review-models`, the active provider catalog used by
- * the PR review run. Native BYOK accounts receive native model IDs.
  */
 
-export type AgentModelsScope = "user" | "assistant" | "platform" | "review";
+export type AgentModelsScope = "user" | "assistant" | "platform";
 
 const SCOPE_ENDPOINTS: Record<AgentModelsScope, string> = {
   user: "/api/agent/models",
   assistant: "/api/assistant/models",
   platform: "/api/admin/models-catalog",
-  review: "/api/agent/review-models",
 };
 
 export interface AgentModel {
@@ -54,7 +51,7 @@ export const agentModelsQueryKey = ["agent-models"] as const;
 
 interface AgentModelsResult {
   provider: AgentProviderId;
-  /** Default model of the active provider (BYOK border or root default), or null. */
+  /** Account model when it belongs to the active provider, otherwise null. */
   defaultModel: string | null;
   models: AgentModel[];
   /**

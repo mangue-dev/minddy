@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   AUTOMATION_EFFORTS_META_KEY,
-  AUTOMATION_MODELS_META_KEY,
   AUTOMATION_PRESET_IDS,
   AUTOMATION_PRESET_META_KEY,
   AUTOMATION_SOURCES,
   automationEffortKey,
-  automationModelFor,
   automationSourceOf,
   isAutomationEffortEnabled,
   DEFAULT_STEP_COST_USD,
@@ -499,30 +497,13 @@ describe("personnalisation par taille de ticket", () => {
     expect(isAutomationEffortEnabled({ [AUTOMATION_EFFORTS_META_KEY]: { m: false } }, null)).toBe(
       false,
     );
-    expect(automationModelFor({ [AUTOMATION_MODELS_META_KEY]: { m: "x/y" } }, null)).toBe("x/y");
-  });
-
-  it("le modèle par taille : absent = le défaut du compte", () => {
-    const meta = { [AUTOMATION_MODELS_META_KEY]: { xs: "cheap/model", xl: "  " } };
-    expect(automationModelFor(meta, "xs")).toBe("cheap/model");
-    expect(automationModelFor(meta, "xl")).toBeNull();
-    expect(automationModelFor(meta, "l")).toBeNull();
-    expect(automationModelFor(null, "m")).toBeNull();
   });
 
   it("des métadonnées corrompues ne cassent rien", () => {
     // The CARD itself is illegible → we come back to the faults.
     for (const junk of [42, "oui", null, []]) {
       expect(isAutomationEffortEnabled({ [AUTOMATION_EFFORTS_META_KEY]: junk }, "xs")).toBe(true);
-      expect(automationModelFor({ [AUTOMATION_MODELS_META_KEY]: junk }, "xs")).toBeNull();
     }
-    // A VALUE of the right type but absurd in a readable map: only what
-    // is not a non-empty string is discarded (a model id is text
-    // free — the catalog decides on usage, not here).
-    const meta = { [AUTOMATION_MODELS_META_KEY]: { xs: 42, s: "", m: "vendor/model" } };
-    expect(automationModelFor(meta, "xs")).toBeNull();
-    expect(automationModelFor(meta, "s")).toBeNull();
-    expect(automationModelFor(meta, "m")).toBe("vendor/model");
   });
 });
 

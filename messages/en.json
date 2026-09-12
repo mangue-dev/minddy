@@ -2286,11 +2286,12 @@
     "agentTab": "AI",
     "dataTab": "Data",
     "agentModelTitle": "Default agent model",
-    "agentModelDesc": "You can pick a different model at each launch.",
-    "agentModelRoot": "Provider default",
+    "agentModelDesc": "Every new code worker uses this account model. Only this setting can change it.",
+    "agentModelRequired": "Choose a model for the active provider before starting another code worker.",
+    "agentModelRoot": "Choose a model",
     "agentModelSavedToast": "Preference saved.",
     "agentReasoningTitle": "Default reasoning level",
-    "agentReasoningDesc": "How long the model thinks before it acts. You can pick a different level at each launch.",
+    "agentReasoningDesc": "How long every new code worker thinks before it acts. Running workers keep their frozen level.",
     "agentBranchPrefixTitle": "Branch prefix",
     "agentBranchPrefixDesc": "Applied to every new branch Numo creates.",
     "gitAgentBranchesTitle": "Numo branches",
@@ -2577,7 +2578,8 @@
     "errorQuotaExceeded": "You've reached your plan's monthly usage budget.",
     "errorManagedServiceUnavailable": "Managed AI is disabled on this instance. Configure BYOK or a local endpoint.",
     "errorExecutionBackendUnavailable": "No agent execution backend is configured. Ask the instance administrator to enable server sandboxes or use local execution.",
-    "errorNoModelForProvider": "Pick a model for this provider.",
+    "errorNoModelForProvider": "Choose a code-worker model for this provider in Account settings.",
+    "errorWorkerConfigurationManagedInSettings": "Code-worker model and reasoning can only be changed in Account settings.",
     "errorLocalEndpointRequiresLocalRun": "This model endpoint is local. Run the agent on your Mac; minddy will not send this run to the cloud.",
     "errorLocalIssueConfirmationRequired": "Review the issue content and confirm before running it on your Mac.",
     "errorSupersededRun": "A newer session has taken over this issue. Launch a new agent to carry on.",
@@ -3987,12 +3989,8 @@
         "desc": "Used when the Numo model is left empty."
       },
       "agent_model": {
-        "label": "Numo agent model",
-        "desc": "Applies to everyone by default. Each user can set their own, and pick another when starting a session."
-      },
-      "automation_agent_model": {
-        "label": "Chains and routines model",
-        "desc": "Numo model used by runs launched from an automation."
+        "label": "Code-worker pricing baseline",
+        "desc": "Reference model used to calculate plan multipliers. It does not replace the model selected in each account."
       },
       "agent_subagent_favorites": {
         "label": "Sub-agent favorite models",
@@ -4001,15 +3999,6 @@
       "recommended_models": {
         "label": "Recommended models",
         "desc": "The short list the model picker opens on, everywhere in the app, before anyone types. It hides nothing: searching still reaches the whole catalogue, and a last line opens up more. Order is computed from price, cheapest first, so you only pick WHICH models to recommend. A model above the Pro plan cap (×40) is launchable by nobody."
-      },
-      "byok_default_model_openai": {
-        "label": "OpenAI default"
-      },
-      "byok_default_model_anthropic": {
-        "label": "Anthropic default"
-      },
-      "byok_default_model_google": {
-        "label": "Google (Gemini) default"
       },
       "smart_assign_model": {
         "label": "Smart assignment",
@@ -4062,10 +4051,6 @@
       "feedback_embedding_model": {
         "label": "Feedback embeddings",
         "desc": "Vectorizes feedback to measure similarity."
-      },
-      "pr_review_model": {
-        "label": "Numo's PR review",
-        "desc": "Reads a pull request's diff on demand, then posts a summary and up to five line comments. Keep it different from the agent model: reviewing code with the model that just wrote it only yields the same opinion twice."
       },
       "import_map_enabled": {
         "label": "CSV import mapping",
@@ -5756,6 +5741,7 @@
     "projectEnabled": "Automations on {name}",
     "effortsTitle": "Efforts covered",
     "effortsHint": "Turn the loop off on the efforts you'd rather keep by hand. An issue with no effort follows the M row, like everywhere else in minddy.",
+    "workerModelHint": "New automation workers use the model and reasoning configured in Account settings.",
     "effortEnabled": "Automations on {effort} issues",
     "modelsTitle": "Model per effort",
     "modelsHint": "A small model on your XS, a strong one on your XL. Empty means your default model, the same one a manual launch uses. The preset still tunes the reasoning level step by step.",
@@ -5811,14 +5797,15 @@
     "stepProjectDesc": "The routine opens an isolated agent sandbox and clones this project's repository for every run.",
     "stepJobTitle": "What should it do?",
     "stepJobDesc": "This is the instruction the agent receives, every time. Nobody will be there to clarify it; say what to look at and what to do with what it finds.",
-    "stepModelTitle": "On which model?",
-    "stepModelDesc": "Frozen on the routine: the strongest model for a security review, the cheapest for a monthly inventory.",
+    "stepModelTitle": "Worker settings",
+    "stepModelDesc": "Choose the branch and spending cap for unattended runs.",
     "stepScheduleTitle": "How often?",
     "stepScheduleDesc": "The hour is read in the timezone below; check the first run before validating.",
     "createRoutine": "Create the routine",
     "createdTitle": "Routine created",
     "createdDesc": "It will run on its own in an isolated server sandbox. Its runs are available here, in the Routines tab.",
     "executionEnvironment": "Runs in an isolated sandbox on the server, without a desktop app.",
+    "workerModelHint": "Each run uses the model and reasoning currently configured in Account settings.",
     "promptLabel": "Instruction",
     "promptPlaceholder": "Review the code for security flaws, and open a pull request for what you can fix.",
     "promptShowMore": "Show more",
@@ -5881,6 +5868,7 @@
     "lastError_noRepo": "Last run skipped: this project has no linked repository.",
     "lastError_alreadyRunning": "Last run skipped: the previous one was still working.",
     "lastError_modelAbovePlan": "Last run skipped: its model is above your plan's ceiling.",
+    "lastError_noModelForProvider": "Last run skipped: choose a code-worker model for the active provider in Account settings.",
     "lastError_managedServiceUnavailable": "Last run skipped: configure BYOK or a local endpoint on this instance.",
     "lastError_executionBackendUnavailable": "Last run skipped: no execution backend is configured on this instance.",
     "lastError_launchFailed": "The last run could not be started.",

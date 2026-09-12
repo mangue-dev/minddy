@@ -18,7 +18,11 @@ import {
   updateAiKeyPreferencesApi,
   type AiKey,
 } from "@/lib/agent-keys-api";
-import { useAgentModelsQuery, useReasoningLevelsFor } from "@/lib/use-agent-models-query";
+import {
+  agentModelsQueryKey,
+  useAgentModelsQuery,
+  useReasoningLevelsFor,
+} from "@/lib/use-agent-models-query";
 import {
   agentPreferencesQueryKey,
   useAgentPreferencesQuery,
@@ -55,9 +59,13 @@ export function AccountAiKeysSection() {
   const reasoningLevels = useReasoningLevelsFor(defaultModel || providerDefaultModel);
 
   const onModelChange = async (value: string) => {
+    if (!value) return;
     try {
-      await saveAgentPreferencesApi({ default_model: value || null });
-      await queryClient.invalidateQueries({ queryKey: agentPreferencesQueryKey });
+      await saveAgentPreferencesApi({ default_model: value });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: agentPreferencesQueryKey }),
+        queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
+      ]);
       toast.success(t("agentModelSavedToast"));
     } catch (err) {
       toast.error((err as Error).message);
@@ -210,9 +218,7 @@ function ByokSurfacePreferences({
                   loadingLabel={tc("loading")}
                   defaultModel={defaultModel}
                   defaultReasoningLevel={defaultReasoningLevel}
-                  providerDefaultModel={
-                    key.resolved_feature_models?.agent_model ?? providerDefaultModel
-                  }
+                  providerDefaultModel={providerDefaultModel}
                   reasoningLevels={reasoningLevels}
                   onModelChange={onModelChange}
                   onReasoningChange={onReasoningChange}
@@ -277,11 +283,12 @@ function AgentPreferenceRows({
     <>
       <SettingsRow
         label={t("agentModelTitle")}
-        hint={t("agentModelDesc")}
+        hint={t(providerDefaultModel ? "agentModelDesc" : "agentModelRequired")}
         control={
           <ModelCombobox
             value={defaultModel ?? ""}
             onChange={(value) => void onModelChange(value)}
+            allowDefault={false}
             defaultLabel={t("agentModelRoot")}
             defaultModelId={providerDefaultModel}
             placeholder={tAgent("modelSearchPlaceholder")}

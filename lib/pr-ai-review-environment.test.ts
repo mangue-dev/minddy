@@ -13,15 +13,12 @@ const dialog = source.slice(
 );
 
 describe("Numo pull-request review environment", () => {
-  it("uses the request-changes compact selector order", () => {
+  it("only exposes the execution environment when launching a review", () => {
     const environment = dialog.indexOf("<EnvironmentCombobox");
-    const model = dialog.indexOf("<ModelCombobox");
-    const reasoning = dialog.indexOf("<ReasoningCombobox");
 
     expect(environment).toBeGreaterThan(-1);
-    expect(model).toBeGreaterThan(environment);
-    expect(reasoning).toBeGreaterThan(model);
-    expect(dialog).toContain('variant="compact"');
+    expect(dialog).not.toContain("<ModelCombobox");
+    expect(dialog).not.toContain("<ReasoningCombobox");
   });
 
   it("offers local review only through the native bridge and isolates it", () => {
@@ -33,7 +30,7 @@ describe("Numo pull-request review environment", () => {
 
   it("keeps review and correction actions available for local-only execution", () => {
     expect(source).toContain(
-      "reviewExecutionConfigured || localRepo.available",
+      "cloudExecutionConfigured || localRepo.available",
     );
     expect(source.match(/reviewUpToDate \|\| !reviewExecutionAvailable/g)).toHaveLength(3);
 

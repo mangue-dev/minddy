@@ -6,6 +6,7 @@ import {
   parseAiSurfaces,
   parseByokFeatureModels,
   surfaceForModelKey,
+  workerModelSurfaceForAgentRun,
 } from "@/lib/ai-surfaces";
 
 describe("AI surfaces", () => {
@@ -27,11 +28,18 @@ describe("AI surfaces", () => {
   });
 
   it("relie chaque modèle à sa surface et à sa clé admin", () => {
-    expect(surfaceForModelKey("automation_agent_model")).toBe("automations");
     expect(surfaceForModelKey("smart_fill_model")).toBe("automations");
     expect(surfaceForModelKey("feedback_embedding_model")).toBe("feedback");
     expect(byokFeatureDefaultModelKey("anthropic", "assistant_model")).toBe(
       "byok_default_anthropic_assistant_model",
     );
+  });
+
+  it("preserves legacy automation providers while routing new workers through account settings", () => {
+    const automation = { chain_id: "chain-1", routine_id: null };
+    expect(workerModelSurfaceForAgentRun(automation)).toBe("automations");
+    expect(
+      workerModelSurfaceForAgentRun({ ...automation, worker_model_source: "account" }),
+    ).toBe("agent");
   });
 });

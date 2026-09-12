@@ -163,7 +163,6 @@ import {
   type LaunchMessageIssue,
 } from "@/lib/server/agent/launch-message";
 import { getAgentModelsForUser } from "@/lib/server/agent/models-catalog";
-import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { forgeFor } from "@/lib/server/agent/forge";
 import {
@@ -306,13 +305,13 @@ function launchErrorMessage(r: Extract<LaunchResult, { ok: false }>): string {
     case "executionBackendUnavailable":
       return "No execution backend is configured on this instance. Use local execution or explicitly enable Vercel Sandbox.";
     case "noModelForProvider":
-      return "The active provider has no default model, so a model must be chosen. Call list_agent_models to find an available model id for this provider, then relaunch with that model (or the user can set a default in Account settings).";
+      return "No code-worker model is configured for the active provider. Ask the user to choose one in Account settings; Numo cannot substitute or change it.";
+    case "workerConfigurationManagedInSettings":
+      return "Code-worker model and reasoning can only be changed by the user in Account settings.";
     case "modelAbovePlan":
-      // Numo relays this refusal as it is: it was he who was able to force the model, and
-      // it must be able to suggest another one without the user guessing.
       return r.modelLimit
-        ? `The model ${r.modelLimit.model} costs ×${r.modelLimit.multiplier} the usage of minddy's default model, above the ×${r.modelLimit.limit} ceiling of the ${r.modelLimit.planId} plan. Call list_agent_models to pick a model within the ceiling, or the user can upgrade their plan.`
-        : "That model is above the usage ceiling of the user's plan. Call list_agent_models to pick a cheaper one.";
+        ? `The account code-worker model ${r.modelLimit.model} costs ×${r.modelLimit.multiplier} the usage of minddy's baseline model, above the ×${r.modelLimit.limit} ceiling of the ${r.modelLimit.planId} plan. Ask the user to choose an eligible model in Account settings or upgrade their plan.`
+        : "The account code-worker model is above the usage ceiling of the user's plan. Ask the user to change it in Account settings or upgrade their plan.";
     default:
       return "Could not launch the code agent.";
   }
@@ -349,8 +348,10 @@ function routineErrorMessage(r: {
       return "The cadence does not hold together: 'weekly' needs at least one weekday in `weekdays` (0=Sunday…6=Saturday) and no days_of_month; 'monthly' needs at least one day in `days_of_month` (1–31) and no weekdays; hour is 0–23 and minute 0–59.";
     case "modelAbovePlan":
       return r.modelLimit
-        ? `The model ${r.modelLimit.model} costs ×${r.modelLimit.multiplier} the usage of minddy's default model, above the ×${r.modelLimit.limit} ceiling of the ${r.modelLimit.planId} plan. Call list_agent_models to pick one within the ceiling.`
-        : "That model is above the usage ceiling of the user's plan. Call list_agent_models to pick a cheaper one.";
+        ? `The account code-worker model ${r.modelLimit.model} costs ×${r.modelLimit.multiplier} the baseline usage, above the ×${r.modelLimit.limit} ceiling of the ${r.modelLimit.planId} plan. Ask the user to choose an eligible model in Account settings.`
+        : "The account code-worker model is above the plan ceiling. Ask the user to change it in Account settings.";
+    case "workerConfigurationManagedInSettings":
+      return "Routine workers use the model and reasoning configured by the user in Account settings.";
     case "noFieldsToUpdate":
       return "Nothing to change — pass at least one field.";
     default:
@@ -1544,6 +1545,11 @@ export async function executeTool(
       }
 
       case "launch_code_agent": {
+        if ("model" in args || "reasoning_level" in args) {
+          return toolError(
+            "Code-worker model and reasoning are controlled in Account settings and cannot be overridden by Numo.",
+          );
+        }
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
         if (issueId) {
           const scoped = await assertIssueInProject(
@@ -1553,10 +1559,6 @@ export async function executeTool(
           );
           if (!scoped.ok) return toolError(scoped.error);
         }
-        const model =
-          typeof args.model === "string" && args.model.trim()
-            ? args.model.trim()
-            : undefined;
         const prompt =
           typeof args.prompt === "string" && args.prompt.trim()
             ? args.prompt.trim()
@@ -1599,12 +1601,6 @@ export async function executeTool(
           userId: ctx.userId,
           triggeredBy: ctx.triggerSource ?? "chat",
           prompt: message,
-          model,
-          forced: !!model,
-          // Omitted = account default applies (resolveReasoningLevel).
-          ...(isReasoningLevel(args.reasoning_level)
-            ? { reasoningLevel: args.reasoning_level }
-            : {}),
           // Framing does not start the ticket; implement and check, yes.
           ...(mode ? { intent: intentForLaunchMode(mode) } : {}),
         });
@@ -1625,15 +1621,15 @@ export async function executeTool(
 
       // ── Routines (MIN-185) ──────────────────────────────────────────
       case "create_routine": {
+        if ("model" in args || "reasoning_level" in args) {
+          return toolError(
+            "Routine code workers use the owner's Account settings and cannot override model or reasoning.",
+          );
+        }
         const result = await createRoutine({
           projectId,
           actorId: ctx.userId,
           prompt: typeof args.prompt === "string" ? args.prompt : "",
-          model: typeof args.model === "string" ? args.model : null,
-          reasoningLevel:
-            typeof args.reasoning_level === "string"
-              ? args.reasoning_level
-              : null,
           baseBranch:
             typeof args.base_branch === "string" ? args.base_branch : null,
           maxSpendPercent:
@@ -1676,18 +1672,17 @@ export async function executeTool(
           typeof args.routine_id === "string" ? args.routine_id : "";
         if (!routineId)
           return toolError("routine_id is required (see list_routines).");
+        if ("model" in args || "reasoning_level" in args) {
+          return toolError(
+            "Routine code workers use the owner's Account settings and cannot override model or reasoning.",
+          );
+        }
         const result = await updateRoutine({
           routineId,
           actorId: ctx.userId,
           ...(typeof args.prompt === "string" ? { prompt: args.prompt } : {}),
           ...(typeof args.enabled === "boolean"
             ? { enabled: args.enabled }
-            : {}),
-          ...("model" in args
-            ? { model: typeof args.model === "string" ? args.model : null }
-            : {}),
-          ...(typeof args.reasoning_level === "string"
-            ? { reasoningLevel: args.reasoning_level }
             : {}),
           ...(typeof args.base_branch === "string"
             ? { baseBranch: args.base_branch }

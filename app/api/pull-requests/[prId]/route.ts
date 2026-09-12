@@ -20,8 +20,8 @@ import {
  * | { action: 'reopen' } → closed → reopened (MIN-164)
  * | { action: 'ready_for_review' } → draft → ready
  * | { action: 'convert_to_draft' } → open → draft
- *       | { action: 'review', verdict, message, relaunch?, model?, reasoningLevel?, localExec?, localWorktree? }
- *       | { action: 'ai_review', model?, reasoningLevel?, localExec?, localWorktree? } → Numo relit (MIN-141)
+ *       | { action: 'review', verdict, message, relaunch?, localExec?, localWorktree? }
+ *       | { action: 'ai_review', localExec?, localWorktree? } → Numo relit (MIN-141)
  *       | { action: 'link_issue', issueId }                  → attaches a ticket (MIN-163)
  *
  * `ai_review` returns a 202 with the agent SESSION anchored to this PR (MIN-168):
@@ -87,13 +87,20 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return prLinkIssueResponse(auth.scope, auth.supabase, body, auth.userId);
   }
   if (action === "ai_review") {
+    if ("model" in body || "reasoningLevel" in body) {
+      return NextResponse.json(
+        {
+          error: "workerConfigurationManagedInSettings",
+          code: "workerConfigurationManagedInSettings",
+        },
+        { status: 400 },
+      );
+    }
     // Language is no longer a parameter: an agent session writes in that of
     // its launcher, resolved in the first chunk as for all the others.
     return prAiReviewResponse(
       auth.scope,
       auth.userId,
-      body.model,
-      body.reasoningLevel,
       body.localExec === true,
       body.localWorktree === true,
       body.localIssueContextConfirmed === true,

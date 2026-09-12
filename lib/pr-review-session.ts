@@ -38,10 +38,4 @@ export interface PrReviewSession {
   /** SHA reread by the last TERMINATED session — compared to the current head:
  * as long as they are equal, restarting would repay a run for the same code. */
   reviewedHeadSha: string | null;
-  model: {
-    /** Effective default for the active provider, or null when one must be selected. */
-    instance: string | null;
-    /** Dernier choix du compte, ou null s'il n'en a jamais fait. */
-    preferred: string | null;
-  };
 }

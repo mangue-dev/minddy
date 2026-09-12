@@ -4,7 +4,7 @@ import { authorizePrRequest, prReviewRunResponse } from "@/lib/server/agent/pr-a
 
 /**
  * Numo's review of this pull request, as a SESSION.
- *  GET → { review, events, reviewedHeadSha, defaultModel }
+ *  GET → { run, reviewedHeadSha }
  *
  * Read when the panel opens (replay the wire), then re-poll while a pass
  * turns — live realtime (`pr-review:{id}`) is comfort, this GET is
@@ -22,5 +22,5 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const { prId } = await params;
   const auth = await authorizePrRequest(request, prId);
   if (!auth.ok) return auth.response;
-  return prReviewRunResponse(auth.scope, auth.userId);
+  return prReviewRunResponse(auth.scope);
 }

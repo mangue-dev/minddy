@@ -14,7 +14,6 @@
  * place a model id is written in code**: every caller reads its own from here
  * via `aiModelFallback` instead of redeclaring the constant on its side.
  */
-import { getProviderDefaultModel } from "@/lib/agent-providers";
 import { AGENT_PROVIDERS } from "@/lib/agent-providers";
 import { BYOK_MODEL_KEYS, byokFeatureDefaultModelKey } from "@/lib/ai-surfaces";
 import { DEFAULT_SUBAGENT_FAVORITES } from "@/lib/subagent-favorites";
@@ -99,13 +98,6 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   },
   { key: "fallback_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   { key: "smart_assign_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
-  {
-    key: "automation_agent_model",
-    kind: "model",
-    fallback: "deepseek/deepseek-v4-flash",
-    group: "automations",
-    noSuffix: true,
-  },
   // Smart-fill (lib/server/smart-fill.ts, MIN-260): ONE call per ticket created at
   // the hand, on its sole title + its description, and which gives priority, effort,
   // categories and objective. He holds the person in front of his screen (the line
@@ -136,7 +128,9 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // the results of the OpenRouter plugin. The flag cuts her everywhere at once.
   { key: "web_search_enabled", kind: "flag", fallback: "true", group: "assistant" },
   { key: "web_search_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
-  // Cloud Code Agent (MIN-46) — root default, overloaded by user then by run.
+  // Cloud Code Agent (MIN-46) — pricing baseline and suggested initial value.
+  // Each account stores its explicit provider-bound worker choice separately;
+  // launches never use this platform setting as an autonomous fallback.
   // No suffix (MIN-263): the model of a run is written on its line
   // `agent_runs` and returns for dozens of rounds, sometimes from the
   // microVM — the fallback “replay without the `:`” would mean rewriting the
@@ -145,18 +139,6 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
     key: "agent_model",
     kind: "model",
     fallback: "deepseek/deepseek-v4-flash",
-    group: "agent",
-    noSuffix: true,
-  },
-  // Review of a PR by Numo (MIN-141). DELIBERATELY more expensive than `agent_model`:
-  // rereading code with the model that just wrote it only produces a second
-  // identical review — the value of a review comes from another perspective. A call by
-  // click, never automatic: this is what makes the price sustainable.
-  // No suffix either: same loop, same persistent run as `agent_model`.
-  {
-    key: "pr_review_model",
-    kind: "model",
-    fallback: "anthropic/claude-sonnet-5",
     group: "agent",
     noSuffix: true,
   },
@@ -178,11 +160,6 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
     fallback: JSON.stringify(DEFAULT_RECOMMENDED_MODELS),
     group: "agent",
   },
-  // Border faults of BYOK providers: what happens to an account that has installed
-  // key without ever choosing a model. NATIVE IDs of the provider (not `vendor/model`).
-  { key: "byok_default_model_openai", kind: "modelId", fallback: byokFallback("openai"), group: "byok" },
-  { key: "byok_default_model_anthropic", kind: "modelId", fallback: byokFallback("anthropic"), group: "byok" },
-  { key: "byok_default_model_google", kind: "modelId", fallback: byokFallback("google"), group: "byok" },
   // Voice (dictation → ticket)
   { key: "dictate_model", kind: "model", fallback: "google/gemini-3.1-flash-lite", group: "voice" },
   {
@@ -335,16 +312,4 @@ export function aiModelFallback(key: string): string {
   const field = getAiConfigField(key);
   if (!field) throw new Error(`Unknown AI config key: ${key}`);
   return field.fallback;
-}
-
-/** `app_config` key for the border fault of a BYOK provider. */
-export function byokDefaultModelKey(providerId: string): string {
-  return `byok_default_model_${providerId}`;
-}
-
-/** Border fault written in the providers register (`lib/agent-providers.ts`). */
-function byokFallback(providerId: string): string {
-  const model = getProviderDefaultModel(providerId);
-  if (!model) throw new Error(`Provider ${providerId} has no default model`);
-  return model;
 }

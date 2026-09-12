@@ -35,7 +35,6 @@ export function usePrReviewSession(prId: string, enabled = true) {
     /** The agent is currently working on this PR. */
     active: run?.working === true,
     reviewedHeadSha: data?.reviewedHeadSha ?? null,
-    model: data?.model ?? null,
     loading: enabled && isPending,
     refetch,
   };

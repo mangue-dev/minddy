@@ -34,7 +34,7 @@ export const ROUTINE_ERROR_STATUS: Record<RoutineErrorKey, number> = {
   noRepo: 409,
   invalidSchedule: 400,
   unknownTimezone: 400,
-  modelAbovePlan: 403,
+  workerConfigurationManagedInSettings: 400,
   noFieldsToUpdate: 400,
   databaseError: 500,
 };
@@ -98,14 +98,21 @@ export async function POST(request: NextRequest) {
   if (!projectId) {
     return NextResponse.json({ error: "projectId required" }, { status: 400 });
   }
+  if ("model" in body || "reasoningLevel" in body) {
+    return NextResponse.json(
+      {
+        error: "workerConfigurationManagedInSettings",
+        code: "workerConfigurationManagedInSettings",
+      },
+      { status: 400 },
+    );
+  }
 
   const result = await createRoutine({
     projectId,
     actorId: auth.user.id,
     prompt: str(body.prompt, MAX_PROMPT_LENGTH),
     promptMentions: parseRoutinePromptMentions(body.promptMentions),
-    model: str(body.model, MAX_SHORT_FIELD) || null,
-    reasoningLevel: str(body.reasoningLevel, 32) || null,
     baseBranch: str(body.baseBranch, MAX_SHORT_FIELD) || null,
     // Absent = factory defect (90%). Terminal 1–100 is his
     // also: only one rule for the four doors.

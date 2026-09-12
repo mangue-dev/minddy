@@ -118,20 +118,6 @@ describe("resolveAiRuntime", () => {
     ).resolves.toMatchObject({ mode: "byok", model: "whisper-admin" });
   });
 
-  it("makes an OpenRouter automation inherit the platform automation model", async () => {
-    config.set("automation_agent_model", "platform/automation");
-    getUserByok.mockResolvedValue({
-      provider: "openrouter",
-      apiKey: "user-key",
-      baseUrl: "https://openrouter.ai/api/v1",
-      featureModels: {},
-    });
-    await expect(
-      resolveAiRuntime({ userId: "u1", modelKey: "automation_agent_model" }),
-    ).resolves.toMatchObject({ mode: "byok", model: "platform/automation" });
-    expect(getUserByok).toHaveBeenCalledWith("u1", "automations");
-  });
-
   it("rejects a corrupted local-provider assignment on a server surface", async () => {
     getUserByok.mockResolvedValue({
       provider: "local_openai",

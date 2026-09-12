@@ -67,6 +67,7 @@ const input: CreateRunInput = {
   modelForced: false,
   reasoningLevel: "medium",
   keyMode: "platform",
+  workerModelProvider: "openrouter",
   triggeredBy: "button",
   managedBudget: {
     periodStart: "2026-08-01T00:00:00.000Z",

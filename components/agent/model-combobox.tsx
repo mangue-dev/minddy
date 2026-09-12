@@ -83,6 +83,7 @@ export function ModelCombobox({
   freeTextLabel,
   disabled,
   disabledTooltip,
+  allowDefault = true,
   variant = "field",
   scope = "user",
   capability = "text",
@@ -104,6 +105,8 @@ export function ModelCombobox({
    * is fixed for the session, e.g. “to change it, launch a new agent”.
    */
   disabledTooltip?: string;
+  /** Whether the picker offers an empty value that follows another default. */
+  allowDefault?: boolean;
   /**
    * `field` (default): full width trigger like form field.
    * `compact`: small pill (logo + name) for the bar of a chat composer.
@@ -219,9 +222,8 @@ export function ModelCombobox({
   );
 
   // Rendering of the “default” option: wording + resolved model (logo + name) separately.
-  // Its multiplier is displayed like that of the others, but it is NEVER
-  // grayed out: it's a fault of Minddy, and Minddy does not refuse hers
-  // (`pr_review_model` is deliberately worth an expensive model).
+  // Its multiplier is displayed like that of the others, but it is never
+  // grayed out because the inherited value has already been validated.
   const defaultEntry = defaultModelId ? models.find((m) => m.id === defaultModelId) : undefined;
   const defaultRow = (
     <span className="flex min-w-0 flex-1 items-center gap-2">
@@ -340,10 +342,12 @@ export function ModelCombobox({
  A horizontal padding alone left the last option 4px from the bottom
  and 8px from the sides, and no ray can be right below there. */}
           <CommandList className="p-1">
-            <CommandItem value="__default__" onSelect={() => select("")}>
-              {defaultRow}
-              <Check className={cn("size-4 shrink-0", value ? "opacity-0" : "opacity-100")} />
-            </CommandItem>
+            {allowDefault ? (
+              <CommandItem value="__default__" onSelect={() => select("")}>
+                {defaultRow}
+                <Check className={cn("size-4 shrink-0", value ? "opacity-0" : "opacity-100")} />
+              </CommandItem>
+            ) : null}
             {/* Grouped under its title when it is the recommended selection: the
  list is short, and the title is what says WHY. `p-0`: the
  padding of the group would shift its options from that of the default,

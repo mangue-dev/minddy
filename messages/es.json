@@ -2286,11 +2286,12 @@
     "agentTab": "IA",
     "dataTab": "Datos",
     "agentModelTitle": "Modelo de agente predeterminado",
-    "agentModelDesc": "Puedes elegir un modelo diferente en cada lanzamiento.",
-    "agentModelRoot": "Por defecto del proveedor",
+    "agentModelDesc": "Cada nuevo agente de código usa este modelo de cuenta. Solo este ajuste puede cambiarlo.",
+    "agentModelRequired": "Elige un modelo para el proveedor activo antes de iniciar otro agente de código.",
+    "agentModelRoot": "Elegir un modelo",
     "agentModelSavedToast": "Preferencia guardada.",
     "agentReasoningTitle": "Nivel de razonamiento por defecto",
-    "agentReasoningDesc": "Cuánto tiempo razona el modelo antes de actuar. Puedes elegir un nivel distinto en cada inicio.",
+    "agentReasoningDesc": "Cuánto razona cada nuevo agente de código antes de actuar. Los agentes en curso conservan su nivel fijado.",
     "agentBranchPrefixTitle": "Prefijo de las ramas",
     "agentBranchPrefixDesc": "Se aplica a cada rama nueva que crea Numo.",
     "gitAgentBranchesTitle": "Ramas de Numo",
@@ -2577,7 +2578,8 @@
     "errorQuotaExceeded": "Has llegado al presupuesto mensual de tu plan.",
     "errorManagedServiceUnavailable": "La IA gestionada está desactivada en esta instancia. Configura BYOK o un endpoint local.",
     "errorExecutionBackendUnavailable": "No se ha configurado ningún backend de ejecución para el agente. Pide a quien administre la instancia que active los entornos aislados del servidor o utiliza la ejecución local.",
-    "errorNoModelForProvider": "Elige un modelo para este proveedor.",
+    "errorNoModelForProvider": "Elige un modelo de agente de código para este proveedor en los ajustes de la cuenta.",
+    "errorWorkerConfigurationManagedInSettings": "El modelo y el razonamiento del agente de código solo se pueden cambiar en los ajustes de la cuenta.",
     "errorLocalEndpointRequiresLocalRun": "Este endpoint de modelo es local. Ejecuta el agente en tu Mac; minddy no enviará esta ejecución a la nube.",
     "errorLocalIssueConfirmationRequired": "Revisa el contenido de la incidencia y confírmalo antes de ejecutarla en tu Mac.",
     "errorSupersededRun": "Una sesión más reciente ha tomado el control de esta incidencia. Inicia un agente nuevo para continuar.",
@@ -3987,12 +3989,8 @@
         "desc": "Utilizado cuando el modelo Numo está vacío."
       },
       "agent_model": {
-        "label": "Modelo de agente Numo",
-        "desc": "Se aplica a todos por defecto. Cada usuario puede configurar su propio, y elegir otro al iniciar una sesión."
-      },
-      "automation_agent_model": {
-        "label": "Modelo de cadenas y rutinas",
-        "desc": "Modelo de Numo utilizado en las ejecuciones iniciadas desde una automatización."
+        "label": "Referencia de precio del agente de código",
+        "desc": "Modelo de referencia usado para calcular los multiplicadores de los planes. No sustituye el modelo elegido en cada cuenta."
       },
       "agent_subagent_favorites": {
         "label": "Modelos favoritos de sub-agentes",
@@ -4001,15 +3999,6 @@
       "recommended_models": {
         "label": "Modelos recomendados",
         "desc": "La lista corta en la que se abre el selector de modelos, en todas partes de la aplicación, antes de que alguien tipifique. No oculta nada: la búsqueda todavía llega a todo el catálogo, y una última línea se abre más. El pedido se calcula a partir del precio, más barato primero, por lo que sólo elige QUIENes modelos recomendar. Un modelo por encima del cap Pro plan (×40) es lanzable por nadie."
-      },
-      "byok_default_model_openai": {
-        "label": "Por defecto, OpenAI"
-      },
-      "byok_default_model_anthropic": {
-        "label": "Por defecto, Anthropic"
-      },
-      "byok_default_model_google": {
-        "label": "Por defecto de Google (Gemini)"
       },
       "smart_assign_model": {
         "label": "Asignación inteligente",
@@ -4062,10 +4051,6 @@
       "feedback_embedding_model": {
         "label": "Embeddings de sugerencias",
         "desc": "Vectoriza la sugerencia para medir la similitud."
-      },
-      "pr_review_model": {
-        "label": "Revisión de pull requests de Numo",
-        "desc": "Lee el diff de una pull request a la demanda, luego publica un resumen y hasta cinco líneas de comentarios. Manténgalo diferente del modelo de agente: revisar código con el modelo que acaba de escribir sólo da la misma opinión dos veces."
       },
       "import_map_enabled": {
         "label": "Cartografía de importación de CSV",
@@ -5756,6 +5741,7 @@
     "projectEnabled": "Automatización en {name}",
     "effortsTitle": "Esfuerzos incluidos",
     "effortsHint": "Desactiva el ciclo para los esfuerzos que prefieras gestionar a mano. Las incidencias sin esfuerzo siguen la fila M, como en el resto de minddy.",
+    "workerModelHint": "Los nuevos agentes de automatización usan el modelo y el razonamiento configurados en los ajustes de la cuenta.",
     "effortEnabled": "Automatizaciones en incidencias {effort}",
     "modelsTitle": "Modelo por esfuerzo",
     "modelsHint": "Puedes usar un modelo pequeño para las XS y uno más potente para las XL. Si lo dejas vacío, se usará tu modelo predeterminado, el mismo que en un inicio manual. El preajuste seguirá adaptando el nivel de razonamiento en cada paso.",
@@ -5811,14 +5797,15 @@
     "stepProjectDesc": "En cada ejecución, la rutina abre un entorno aislado para el agente y clona el repositorio de este proyecto.",
     "stepJobTitle": "¿Qué debería hacer?",
     "stepJobDesc": "Esta es la instrucción que recibirá el agente en cada ejecución. No habrá nadie para aclararla: indica qué debe revisar y qué debe hacer con lo que encuentre.",
-    "stepModelTitle": "¿En qué modelo?",
-    "stepModelDesc": "El modelo queda fijado en la rutina: puedes elegir el más potente para una revisión de seguridad o el más económico para un inventario mensual.",
+    "stepModelTitle": "Ajustes del agente",
+    "stepModelDesc": "Elige la rama y el límite de gasto para las ejecuciones desatendidas.",
     "stepScheduleTitle": "¿Con qué frecuencia?",
     "stepScheduleDesc": "La hora se interpreta según la zona horaria indicada abajo; comprueba la primera ejecución antes de confirmar.",
     "createRoutine": "Crea la rutina",
     "createdTitle": "Rutina creada",
     "createdDesc": "Se ejecutará por sí sola en un entorno aislado del servidor. Sus ejecuciones estarán disponibles aquí, en la pestaña Rutinas.",
     "executionEnvironment": "Se ejecuta en un entorno aislado del servidor, sin la aplicación de escritorio.",
+    "workerModelHint": "Cada ejecución usa el modelo y el razonamiento configurados en los ajustes de la cuenta.",
     "promptLabel": "Instrucción",
     "promptPlaceholder": "Revisa el código en busca de vulnerabilidades y abre una pull request con lo que puedas corregir.",
     "promptShowMore": "Mostrar más",
@@ -5881,6 +5868,7 @@
     "lastError_noRepo": "Última ejecución omitida: este proyecto no tiene repositorio vinculado.",
     "lastError_alreadyRunning": "Última ejecución omitida: la anterior seguía en curso.",
     "lastError_modelAbovePlan": "Última ejecución omitida: su modelo supera el límite de tu plan.",
+    "lastError_noModelForProvider": "Última ejecución omitida: elige un modelo de agente de código para el proveedor activo en los ajustes de la cuenta.",
     "lastError_managedServiceUnavailable": "Última ejecución saltada: configura BYOK o un endpoint local en esta instancia.",
     "lastError_executionBackendUnavailable": "Última ejecución omitida: no se ha configurado ningún backend de ejecución en esta instancia.",
     "lastError_launchFailed": "No se ha podido iniciar la última ejecución.",

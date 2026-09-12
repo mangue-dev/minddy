@@ -37,8 +37,7 @@ const h = vi.hoisted(() => ({
   /** Current forge response used before inheriting a branch without Numo lineage. */
   livePr: null as Record<string, unknown> | null,
   agentModelCalls: [] as Array<Record<string, unknown>>,
-  reviewModelCalls: [] as Array<Record<string, unknown>>,
-  reviewResolvedModel: "model/review",
+  agentResolvedModel: "model/agent",
   quotaMode: "platform" as "platform" | "byok",
   byok: null as Record<string, unknown> | null,
 }));
@@ -129,13 +128,13 @@ vi.mock("./model", () => ({
   getUserByok: vi.fn(async () => h.byok),
   resolveAgentModel: vi.fn(async (input: Record<string, unknown>) => {
     h.agentModelCalls.push(input);
-    return { model: "model/agent", chosenByUser: false };
+    return {
+      model: h.agentResolvedModel,
+      provider: "openrouter",
+      chosenByUser: true,
+    };
   }),
   resolveReasoningLevel: vi.fn(async () => "medium"),
-  resolvePrReviewModel: vi.fn(async (input: Record<string, unknown>) => {
-    h.reviewModelCalls.push(input);
-    return { model: h.reviewResolvedModel, chosenByUser: false };
-  }),
 }));
 
 vi.mock("./model-plan", () => ({ ensureModelInPlan: vi.fn(async () => {}) }));
@@ -169,8 +168,7 @@ beforeEach(() => {
   h.activeIssue = null;
   h.activePr = null;
   h.agentModelCalls = [];
-  h.reviewModelCalls = [];
-  h.reviewResolvedModel = "model/review";
+  h.agentResolvedModel = "model/agent";
   h.quotaMode = "platform";
   h.byok = null;
   h.pr = {
@@ -193,6 +191,26 @@ beforeEach(() => {
     headLabel: "mangue-dev:minddy/agent/note-92275fe4",
     base: "main",
   };
+});
+
+describe("worker configuration boundary", () => {
+  it("rejects caller-supplied model and reasoning before resolving a run", async () => {
+    const result = await launchAgentRun({
+      projectId: PROJECT_ID,
+      userId: USER_ID,
+      triggeredBy: "chat",
+      prompt: "Work on the issue",
+      model: "caller/override",
+      reasoningLevel: "low",
+    } as never);
+
+    expect(result).toEqual({
+      ok: false,
+      error: "workerConfigurationManagedInSettings",
+    });
+    expect(h.created).toEqual([]);
+    expect(h.agentModelCalls).toEqual([]);
+  });
 });
 
 const relaunch = (over: Record<string, unknown> = {}) =>
@@ -298,7 +316,7 @@ describe("an explicit PR keeps priority", () => {
 });
 
 describe("a pull-request review session", () => {
-  it("uses the dedicated review model and disables local execution", async () => {
+  it("uses the account worker model and disables local execution", async () => {
     const result = await launchAgentRun({
       pullRequestId: PR_ID,
       userId: USER_ID,
@@ -313,20 +331,17 @@ describe("a pull-request review session", () => {
     expect(h.created[0]).toMatchObject({
       pullRequestId: PR_ID,
       intent: "review",
-      model: "model/review",
+      model: "model/agent",
       localExec: false,
       localWorktree: false,
       localIssueContextConfirmed: true,
     });
-    expect(h.reviewModelCalls).toEqual([
-      { perCall: undefined, userId: USER_ID },
-    ]);
-    expect(h.agentModelCalls).toEqual([]);
+    expect(h.agentModelCalls).toEqual([USER_ID]);
   });
 
-  it("uses a provider-compatible default review model for BYOK", async () => {
+  it("uses the account worker model for BYOK", async () => {
     h.quotaMode = "byok";
-    h.reviewResolvedModel = "gpt-5.6-sol";
+    h.agentResolvedModel = "gpt-5.6-sol";
     h.byok = {
       provider: "openai",
       apiKey: "user-key",

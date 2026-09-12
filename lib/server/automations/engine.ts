@@ -11,7 +11,6 @@ import {
 } from "@/lib/server/agent/runs";
 import { updateIssueFields } from "@/lib/server/update-issue";
 import {
-  automationModelFor,
   findImplementRule,
   isAutomationEffortEnabled,
   MAX_CHAIN_STEPS,
@@ -183,11 +182,6 @@ async function handleFailedVerification(params: {
   verdict: AgentRunVerdict;
   issue: IssueRow;
   projectKey: string;
-  /** Model set for the SIZE of this ticket. To be passed as on the normal
- * path: a restart remains a step in the same chain, on the same
- * ticket — restarting it with a model other than the one the user has
- * chosen for this size would have no reason to exist. */
-  model: string | null;
 }): Promise<boolean> {
   const { chain, verdict, issue } = params;
 
@@ -236,7 +230,6 @@ async function handleFailedVerification(params: {
     ]
       .filter(Boolean)
       .join("\n"),
-    model: params.model,
   });
   return true;
 }
@@ -452,7 +445,6 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
         verdict,
         issue,
         projectKey,
-        model: automationModelFor(ownerMeta, issue.effort),
       });
       return;
     }
@@ -546,8 +538,5 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     chain: advanced,
     action: rule.then[0],
     issue: { ...issue, project_key: projectKey },
-    // Model chosen by ticket SIZE (account setting). He prevails over
-    // that of the rule: this is the setting that the user sees and manipulates.
-    model: automationModelFor(ownerMeta, issue.effort),
   });
 }

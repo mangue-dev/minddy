@@ -20,7 +20,6 @@ import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import {
   getUserByok,
   LocalEndpointRequiresLocalRunError,
-  resolveProviderDefaultModel,
 } from "@/lib/server/agent/model";
 import { chatCompletionsUrl } from "@/lib/agent-providers";
 import {
@@ -67,8 +66,6 @@ async function providerDefaultModel(
   const configured = values[featureKey]?.trim();
   if (configured) return configured;
 
-  // Compatibility with historical agent BYOK settings.
-  if (modelKey === "agent_model") return (await resolveProviderDefaultModel(provider)) ?? null;
   const registryFallback = aiModelFallback(featureKey).trim();
   if (registryFallback) return registryFallback;
   // No equivalent native endpoint at Anthropic; without explicit admin choice,

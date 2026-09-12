@@ -30,10 +30,9 @@ export interface BillingPlan {
    * ceiling as it falls. The multiplier is read BEFORE
    * throw, in the picker, next to each model.
    *
-   * ONLY applies to the minddy quota: in BYOK the user pays for their tokens,
-   * the entire catalog is open to him. And never minddy's faults
-   * themselves (`agent_model`, `pr_review_model`): the instance responds to its
-   * her own choices, she does not refuse them.
+   * This applies only to the Minddy quota. BYOK users pay for their own
+   * tokens, so the entire catalog is available. The `agent_model` setting is
+   * only the pricing baseline, not an account worker selection.
    *
    * These values ​​are HOOKED to the current default. Propped on
    * deepseek-v4-flash (~$0.21/Mtok), they give each plane a boundary
