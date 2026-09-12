@@ -20,6 +20,7 @@ import { hasResumableConversation } from "@/lib/assistant-resumable";
 import {
   fetchActiveConversation,
   setActiveConversation,
+  updateConversation,
 } from "@/lib/assistant-api";
 import { useAuth } from "@/lib/auth-context";
 import { setLocaleCookie } from "@/lib/set-locale";
@@ -85,7 +86,7 @@ function purgeLegacyStorage(): void {
 }
 
 export function AssistantChatProvider({ children }: { children: ReactNode }) {
-  const { isOpen, pendingOptions, routeProjectId } = useAssistantPanel();
+  const { isOpen, pendingOptions, routeProjectId, close: closePanel } = useAssistantPanel();
   const { refreshUser } = useAuth();
   const currentLocale = useLocale();
   const router = useRouter();
@@ -242,14 +243,24 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     setRestoring(true);
     void (async () => {
       try {
-        const { conversationId, projectId } = await fetchActiveConversation();
+        const { conversationId, projectId, detailHref } = await fetchActiveConversation();
         serverPointerRef.current = conversationId;
         // The user was able to choose while this GET was flying — selection in
         // history, “new conversation”, immediate sending. His choice
         // wins: we never recover it. `loadConversationRaw`, otherwise the
         // resume would declare itself as a choice.
         if (!cancelled && conversationId && !userPickedRef.current) {
-          await loadConversationRaw(conversationId, projectId);
+          void updateConversation(conversationId, { read: true }).catch(() => {});
+          if (detailHref) {
+            // Work opens in its existing detail surface; keep its durable pointer.
+            serverPointerRef.current = null;
+            setRestoring(false);
+            setRestored(true);
+            closePanel();
+            router.push(detailHref);
+          } else {
+            await loadConversationRaw(conversationId, projectId);
+          }
         }
       } catch {
         // Unreadable pointer (network): we start with an empty screen, the thread remains
@@ -265,7 +276,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isOpen, loadConversationRaw]);
+  }, [isOpen, loadConversationRaw, router, closePanel]);
 
   // Mirror the pointer to the server: open a conversation in writing,
   // starting a new one erases it. `restored` is in the dependencies so that

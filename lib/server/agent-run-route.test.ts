@@ -18,6 +18,11 @@ const revokeRunKey = vi.fn(async () => {});
 const h = vi.hoisted(() => ({
   updated: [] as Array<Record<string, unknown>>,
   deleted: [] as string[],
+  resolveIdentity: vi.fn(),
+}));
+
+vi.mock("@/lib/server/numo/conversations", () => ({
+  resolveNumoConversation: h.resolveIdentity,
 }));
 
 vi.mock("@/lib/server/api-auth", () => ({
@@ -78,6 +83,7 @@ const del = () =>
   );
 
 beforeEach(() => {
+  h.resolveIdentity.mockResolvedValue({ conversationId: "numo-conversation", workId: RUN, detailHref: `/agents?run=${RUN}` });
   h.updated.length = 0;
   h.deleted.length = 0;
   requestInterrupt.mockClear();
@@ -183,6 +189,7 @@ describe("GET — resumability", () => {
 
     const body = await (await get()).json();
     expect(body.run.resumable).toBe(true);
+    expect(body.run.numo_conversation_id).toBe("numo-conversation");
     expect(body.run).not.toHaveProperty("checkpoint");
   });
 

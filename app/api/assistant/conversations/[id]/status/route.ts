@@ -7,15 +7,14 @@ export async function GET(
 ) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  const { user, supabase } = auth;
+  const { supabase } = auth;
 
   const { id: conversationId } = await params;
 
   const { data: conversation } = await supabase
-    .from("conversations")
+    .from("numo_conversation_history")
     .select("status, error_message")
     .eq("id", conversationId)
-    .eq("user_id", user.id)
     .single();
 
   if (!conversation) {

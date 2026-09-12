@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   AlertDialog,
@@ -14,15 +15,14 @@ import {
   Button,
   cn,
 } from "mangue-ui";
-import { History, Loader2, Plus, Trash2 } from "lucide-react";
+import { Archive, History, Loader2, Pin, Plus, Trash2 } from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
-import { fetchConversations, deleteConversation } from "@/lib/assistant-api";
-import type { Conversation } from "@/lib/assistant-types";
+import { fetchConversations, deleteConversation, setActiveConversation, updateConversation } from "@/lib/assistant-api";
+import type { NumoConversation } from "@/lib/assistant-types";
+import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 
-interface ConversationWithProject extends Conversation {
-  project?: { name: string } | null;
-}
+type ConversationWithProject = NumoConversation;
 
 /**
  * Numo history: ALL user conversations, projects
@@ -31,7 +31,7 @@ interface ConversationWithProject extends Conversation {
  * No filter by scope, and this is deliberate (MIN-353): the open conversation
  * carries its own scope and no longer follows the URL, so filtering on the URL would render
  * unreachable the first conversation we are looking for — the one we have just had
- * quitter en changeant de page.
+ * leave by navigating to another page.
  */
 interface ConversationListProps {
   activeConversationId: string | null;
@@ -83,6 +83,8 @@ export function ConversationList({
   hideNewButton = false,
 }: ConversationListProps) {
   const t = useTranslations("Assistant");
+  const router = useRouter();
+  const { close: closePanel } = useAssistantPanel();
   const [conversations, setConversations] = useState<ConversationWithProject[]>(
     []
   );
@@ -174,7 +176,14 @@ export function ConversationList({
                 <Button
                   key={conv.id}
                   type="button"
-                  onClick={() => onSelect(conv.id, conv.project_id)}
+                  onClick={() => {
+                    void updateConversation(conv.id, { read: true }).catch(() => {});
+                    if (conv.detail_href) {
+                      void setActiveConversation(conv.id);
+                      closePanel();
+                      router.push(conv.detail_href);
+                    } else onSelect(conv.id, conv.project_id);
+                  }}
                   variant="ghost"
                   className={cn(
                     "group h-auto w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-sm font-normal text-foreground",
@@ -183,6 +192,8 @@ export function ConversationList({
                       : "bg-transparent hover:bg-accent/50"
                   )}
                 >
+                  {conv.pinned_at && <Pin aria-hidden className="h-3 w-3 shrink-0" />}
+                  {conv.archived_at && <Archive aria-hidden className="h-3 w-3 shrink-0 text-muted-foreground" />}
                   <span className="flex-1 truncate">
                     {conv.project?.name && (
                       <span className="block truncate text-2xs text-muted-foreground/60">
@@ -196,7 +207,7 @@ export function ConversationList({
                   {conv.status === "generating" && (
                     <Loader2 className="h-3 w-3 shrink-0 animate-spin text-primary group-hover:hidden" />
                   )}
-                  <AppTooltip label={t("deleteConversation")}>
+                  {conv.source === "assistant" && <AppTooltip label={t("deleteConversation")}>
                     <span
                       role="button"
                       tabIndex={0}
@@ -215,7 +226,7 @@ export function ConversationList({
                     >
                       <Trash2 className="h-3 w-3" />
                     </span>
-                  </AppTooltip>
+                  </AppTooltip>}
                 </Button>
               ))}
             </div>

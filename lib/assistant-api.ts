@@ -1,14 +1,28 @@
 "use client";
 
 import { createSerialQueue } from "./serial-queue";
-import type { Conversation } from "./assistant-types";
+import type { NumoConversation, NumoConversationDetail, NumoConversationPatch } from "./assistant-types";
 
 /** All user conversations, most recent first, projects
  * combined — Numo history no longer filters by scope (MIN-353). */
-export async function fetchConversations(): Promise<Conversation[]> {
+export async function fetchConversations(): Promise<NumoConversation[]> {
   const res = await fetch("/api/assistant/conversations");
   if (!res.ok) return [];
   return res.json();
+}
+
+/** Read the common timeline, retaining the distinction between chat and work. */
+export async function fetchNumoConversation(id: string): Promise<NumoConversationDetail> {
+  const res = await fetch(`/api/numo/conversations/${encodeURIComponent(id)}`);
+  if (!res.ok) throw new Error("Unable to read conversation");
+  return res.json();
+}
+
+export async function updateConversation(id: string, patch: NumoConversationPatch): Promise<boolean> {
+  const res = await fetch(`/api/numo/conversations/${encodeURIComponent(id)}`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch),
+  });
+  return res.ok;
 }
 
 export async function deleteConversation(
@@ -26,6 +40,7 @@ export async function deleteConversation(
 export interface ActiveConversationRef {
   conversationId: string | null;
   projectId: string | null;
+  detailHref?: string | null;
 }
 
 export async function fetchActiveConversation(): Promise<ActiveConversationRef> {

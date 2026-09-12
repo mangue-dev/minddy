@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { NUMO_UUID } from "@/lib/server/numo/conversations";
 import { publicSkillsMetadata } from "@/lib/server/assistant/skills";
 
 export async function GET(
@@ -8,27 +9,34 @@ export async function GET(
 ) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  const { user, supabase } = auth;
+  const { supabase } = auth;
 
   const { id: conversationId } = await params;
 
-  // Verify ownership via RLS (conversations RLS checks user_id = auth.uid())
+  if (!NUMO_UUID.test(conversationId)) return Response.json({ error: "Invalid conversation ID" }, { status: 400 });
+
+  // The legacy renderer only accepts assistant messages from the common identity.
   const { data: conversation } = await supabase
-    .from("conversations")
-    .select("id")
+    .from("numo_conversation_history")
+    .select("id, source, detail_href")
     .eq("id", conversationId)
-    .eq("user_id", user.id)
     .single();
 
   if (!conversation) {
     return Response.json({ error: "Not found" }, { status: 404 });
   }
 
+  if (conversation.source !== "assistant") {
+    return Response.json({ error: "Open work detail", detailHref: conversation.detail_href }, { status: 409 });
+  }
+
   const { data, error } = await supabase
-    .from("assistant_messages")
+    .from("numo_messages")
     .select("*")
     .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: true });
+    .eq("source", "assistant")
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
