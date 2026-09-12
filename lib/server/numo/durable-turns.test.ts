@@ -143,7 +143,13 @@ vi.mock("@/lib/server/assistant/skills", () => ({
   authorizedSkillsNotes: async (_client: unknown, metadata: unknown[]) => metadata.map(() => ""),
 }));
 vi.mock("@/lib/server/assistant/attachment-parts", () => ({ buildAttachmentParts: async () => [] }));
-vi.mock("@/lib/server/assistant/tools", () => ({ CONVERSATION_ASSISTANT_TOOLS: [{ function: { name: "get_issue" } }] }));
+vi.mock("@/lib/server/assistant/tools", () => ({
+  CONVERSATION_ASSISTANT_TOOLS: [{ function: { name: "get_issue" } }],
+  WORKER_MEDIATION_ASSISTANT_TOOLS: [
+    { function: { name: "ask_user" } },
+    { function: { name: "answer_code_worker" } },
+  ],
+}));
 vi.mock("@/lib/server/web-search", () => ({ withoutWebSearch: (tools: unknown) => tools }));
 vi.mock("@/lib/server/assistant/commands", () => ({ commandNote: () => "" }));
 vi.mock("@/lib/server/assistant/sanitize", () => ({ sanitizeAssistantMessageContent: (value: unknown) => String(value ?? "") }));
@@ -277,6 +283,78 @@ describe("durable Numo execution", () => {
     expect(prompt).toContain('\\"status\\":\\"completed\\"');
     expect(prompt).toContain("Tests pass");
     expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "completed" });
+  });
+
+  it("mediates a durable worker question and preserves its correlation across reloads", async () => {
+    const workerRunId = "51600000-0000-4000-8000-000000000006";
+    h.turn = {
+      ...turn({
+        phase: "worker_result",
+        worker_event: {
+          type: "worker_input",
+          payload: {
+            result: {
+              version: 1,
+              status: "needs_input",
+              summary: "A source decision is required.",
+              changedFiles: [],
+              verificationPerformed: [],
+              artifacts: [],
+              unresolvedDecisions: ["Which API should be used?"],
+              inputRequest: {
+                parentTurnId: "51600000-0000-4000-8000-000000000001",
+                runId: workerRunId,
+                questionId: "question-1",
+                callId: "call-question",
+                questions: [{
+                  header: "Source",
+                  question: "Which API should be used?",
+                  options: [],
+                }],
+              },
+            },
+          },
+        },
+      }),
+      active_run_id: workerRunId,
+    };
+    h.processChat.mockResolvedValue({
+      fullContent: "",
+      finalReasoning: null,
+      allToolCalls: [],
+      generations: [],
+      suspension: { kind: "input" },
+    });
+
+    const result = await executeNumoTurn({
+      turnId: h.turn.id as string,
+      aiRuntime: runtime,
+    });
+
+    expect(result.status).toBe("waiting_input");
+    expect(h.processChat.mock.calls[0][1]).toEqual([
+      { function: { name: "ask_user" } },
+      { function: { name: "answer_code_worker" } },
+    ]);
+    expect(h.processChat.mock.calls[0][3]).toMatchObject({
+      workerInput: {
+        parentTurnId: h.turn.id,
+        runId: workerRunId,
+        questionId: "question-1",
+      },
+    });
+    expect(h.checkpoints.at(-1)).toMatchObject({
+      p_status: "waiting_input",
+      p_active_run_id: workerRunId,
+      p_checkpoint: {
+        phase: "worker_input_wait",
+        input_request: {
+          parentTurnId: h.turn.id,
+          runId: workerRunId,
+          questionId: "question-1",
+        },
+      },
+    });
   });
 
   it("moves interrupted initial work to retryable instead of leaving it running", async () => {

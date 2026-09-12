@@ -133,6 +133,22 @@ describe("/api/issues/[id]/agent — le panneau d'un ticket public", () => {
     expect(JSON.stringify(runs)).not.toContain("note privée");
   });
 
+  it("keeps Numo-owned workers out of the issue's standalone agent history", async () => {
+    h.runRows = [
+      runRow({ id: "standalone", created_by: "user-2" }),
+      runRow({
+        id: "numo-worker",
+        created_by: "user-2",
+        parent_numo_turn_id: "33333333-3333-4333-8333-333333333333",
+      }),
+    ];
+
+    const { runs } = (await (await issueAgent()).json()) as {
+      runs: Array<Record<string, unknown>>;
+    };
+    expect(runs.map((run) => run.id)).toEqual(["standalone"]);
+  });
+
   it("les colonnes de visibilité ne fuitent pas dans la réponse", async () => {
     // They are read to decide, not to be displayed: the panel receives
     // exactly the same shape as before MIN-332.

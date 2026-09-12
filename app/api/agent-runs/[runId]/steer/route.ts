@@ -111,6 +111,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
 
+  if (run.parent_numo_turn_id) {
+    return NextResponse.json(
+      { error: "workerOwnedByNumo", code: "workerOwnedByNumo" },
+      { status: 409 },
+    );
+  }
+
   if (run.local_exec) {
     return NextResponse.json(
       {

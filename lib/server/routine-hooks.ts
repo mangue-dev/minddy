@@ -32,6 +32,7 @@ export async function notifyRoutineOfRunEnd(run: {
   project_id: string;
   status: string;
   pr_number: number | null;
+  awaiting_input?: boolean;
 }): Promise<void> {
   if (!run.routine_id) return;
   const openedPr = run.pr_number != null;
@@ -59,7 +60,11 @@ export async function notifyRoutineOfRunEnd(run: {
         {
           user_id: owner,
           project_id: run.project_id,
-          type: failed ? "agent_failed" : openedPr ? "agent_done" : "routine_done",
+          type: run.awaiting_input
+            ? "agent_question"
+            : failed
+              ? "agent_failed"
+              : openedPr ? "agent_done" : "routine_done",
           issue_id: null,
           // The target is the ROUTINE: this is where its executions are read, and
           // nowhere else. Without this field, the inbox line would not lead

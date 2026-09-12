@@ -2316,3 +2316,31 @@ export const CONVERSATION_ASSISTANT_TOOLS = buildGlobalTools().map((tool) => {
   };
   return targeted;
 });
+
+const ANSWER_CODE_WORKER_TOOL: AssistantToolDef = {
+  type: "function",
+  function: {
+    name: "answer_code_worker",
+    description:
+      "Answer the exact pending question from the code worker and warm-resume its preserved task. Use only the run, parent turn and question identifiers supplied in the mediation context. Do not use this when the parent conversation does not reliably determine the answer; ask the user instead.",
+    parameters: {
+      type: "object",
+      properties: {
+        parent_turn_id: { type: "string" },
+        run_id: { type: "string" },
+        question_id: { type: "string" },
+        answer: {
+          type: "string",
+          description: "A direct, self-contained answer to give the waiting worker.",
+        },
+      },
+      required: ["parent_turn_id", "run_id", "question_id", "answer"],
+    },
+  },
+};
+
+/** Restricted surface used while Numo mediates one worker decision. */
+export const WORKER_MEDIATION_ASSISTANT_TOOLS = [
+  CONVERSATION_ASSISTANT_TOOLS.find((tool) => tool.function.name === "ask_user")!,
+  ANSWER_CODE_WORKER_TOOL,
+];

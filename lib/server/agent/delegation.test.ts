@@ -157,13 +157,61 @@ describe("code delegation contracts", () => {
       run: run({ awaiting_input: true, outcome: "Which API should be authoritative?" }),
       events: [{
         seq: 0,
-        type: "question",
-        payload: { question: "Which API should be authoritative?" },
+        type: "needs_input",
+        payload: {
+          id: "call-question",
+          call_id: "call-question",
+          question_id: "question-1",
+          questions: [{
+            header: "Source",
+            question: "Which API should be authoritative?",
+            options: [],
+          }],
+        },
       }],
     });
     expect(needsInput).toMatchObject({
       status: "needs_input",
       unresolvedDecisions: ["Which API should be authoritative?"],
+      inputRequest: {
+        parentTurnId: brief.correlation.parentTurnId,
+        runId: "run-1",
+        questionId: "question-1",
+        callId: "call-question",
+        questions: [{
+          header: "Source",
+          question: "Which API should be authoritative?",
+          options: [],
+        }],
+      },
+    });
+  });
+
+  it("keeps a legacy suspended worker correlated by its question call id", () => {
+    const result = buildAgentDelegationResult({
+      run: run({ awaiting_input: true }),
+      events: [{
+        seq: 0,
+        type: "question",
+        payload: {
+          id: "legacy-call-question",
+          questions: [{
+            header: "Source",
+            question: "Which API should be authoritative?",
+            options: [],
+          }],
+        },
+      }],
+    });
+
+    expect(result).toMatchObject({
+      status: "needs_input",
+      inputRequest: {
+        parentTurnId: brief.correlation.parentTurnId,
+        runId: "run-1",
+        questionId: "legacy-call-question",
+        callId: "legacy-call-question",
+      },
     });
   });
 });

@@ -45,6 +45,7 @@ type AgentRunStatus = "queued" | "running" | "completed" | "failed" | "canceled"
 interface RunRow {
   id: string;
   conversation_id: string;
+  parent_numo_turn_id: string | null;
   issue_id: string | null;
   pull_request_id: string | null;
   status: AgentRunStatus;
@@ -143,12 +144,13 @@ export async function GET(request: NextRequest) {
   const { data, error } = await auth.supabase
     .from("agent_runs")
     .select(
-      "id, conversation_id, issue_id, pull_request_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, conversation:agent_conversations(title, visibility), issue:issues(id, number, title), project:projects(id, key, name, icon_url, orb_seed, deleted_at), pull_request:pull_requests(id, number, title, url)",
+      "id, conversation_id, parent_numo_turn_id, issue_id, pull_request_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, conversation:agent_conversations(title, visibility), issue:issues(id, number, title), project:projects(id, key, name, icon_url, orb_seed, deleted_at), pull_request:pull_requests(id, number, title, url)",
     )
-    // A passage from ROUTINE (MIN-185) is NOT a conversation: it lives in
-    // his routine, under “Previous Executions”, and nowhere else. Without
-    // this filter, a daily routine would drown this column in a week.
+    // Routine passages and Numo-owned workers are not standalone conversations:
+    // the former live in routine history and the latter are mediated only in
+    // their parent Numo conversation.
     .is("routine_id", null)
+    .is("parent_numo_turn_id", null)
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

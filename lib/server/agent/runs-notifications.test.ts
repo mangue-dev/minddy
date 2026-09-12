@@ -112,6 +112,16 @@ describe("agent run notifications", () => {
     expect(h.notifications).toHaveLength(0);
   });
 
+  it("leaves delegated-worker questions to the parent Numo conversation", async () => {
+    await notifyAgentRun({
+      ...terminalRun,
+      routine_id: null,
+      parent_numo_turn_id: "33333333-3333-4333-8333-333333333333",
+    }, "agent_question");
+
+    expect(h.notifications).toHaveLength(0);
+  });
+
   it("still notifies the owner for an ordinary agent run", async () => {
     await notifyAgentRun({ ...terminalRun, routine_id: null }, "agent_done");
 

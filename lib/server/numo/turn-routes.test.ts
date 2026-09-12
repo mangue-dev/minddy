@@ -11,6 +11,13 @@ const h = vi.hoisted(() => ({
     { id: "event-1", seq: 0, type: "content_delta", payload: { delta: "First" } },
     { id: "event-2", seq: 1, type: "done", payload: { status: "completed" } },
   ],
+  pendingInput: {
+    run_id: "51600000-0000-4000-8000-000000000022",
+    parent_numo_turn_id: "51600000-0000-4000-8000-000000000021",
+    question_id: "question-1",
+    call_id: "call-question",
+    questions: [{ header: "Source", question: "Which API should be used?", options: [] }],
+  },
 }));
 
 function queryFor(table: string) {
@@ -26,9 +33,12 @@ function queryFor(table: string) {
     single: async () => table === "numo_conversation_history"
       ? { data: { id: CONVERSATION_ID, source: "assistant", status: "generating", error_message: null } }
       : { data: null },
-    maybeSingle: async () => table === "numo_conversation_history"
-      ? { data: { id: CONVERSATION_ID, source: "assistant" } }
-      : {
+    maybeSingle: async () => {
+      if (table === "numo_conversation_history") {
+        return { data: { id: CONVERSATION_ID, source: "assistant" } };
+      }
+      if (table === "agent_run_input_requests") return { data: h.pendingInput };
+      return {
           data: {
             id: TURN_ID,
             status: "waiting_work",
@@ -36,7 +46,8 @@ function queryFor(table: string) {
             last_event_seq: 1,
             active_run_id: RUN_ID,
           },
-        },
+        };
+    },
     then: (resolve: (value: unknown) => unknown) => Promise.resolve({
       data: table === "numo_turn_events"
         ? h.activity.filter((event) => event.seq > h.afterSeq)
@@ -84,6 +95,7 @@ describe("durable Numo turn routes", () => {
       status: "waiting_work",
       turn_id: TURN_ID,
       last_event_seq: 1,
+      pending_input: h.pendingInput,
       activity: [{ id: "event-2", seq: 1, type: "done" }],
     });
   });

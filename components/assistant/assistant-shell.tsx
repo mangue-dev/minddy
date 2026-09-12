@@ -71,6 +71,7 @@ import { MentionLinksProvider } from "@/components/mention-links";
 import { useSlashCommands } from "@/components/assistant/slash-menu";
 import { useProjects } from "@/lib/projects-context";
 import type {
+  AssistantChatRequest,
   AssistantCommandId,
   AssistantMention,
   AssistantMessage,
@@ -312,6 +313,7 @@ export const AssistantShell = forwardRef<
       mentions: AssistantMention[] = [],
       command?: AssistantCommandId,
       skills: AssistantSkillSelection[] = [],
+      workerInput?: AssistantChatRequest["workerInput"],
     ) => {
       if (!aiAvailability.loading && !aiAvailability.available) return;
       sendMessage(effectiveContextRef.current?.projectId ?? null, message, {
@@ -320,6 +322,7 @@ export const AssistantShell = forwardRef<
         mentions,
         command,
         skills,
+        workerInput,
       });
     },
     [aiAvailability.available, aiAvailability.loading, sendMessage]
@@ -336,9 +339,9 @@ export const AssistantShell = forwardRef<
   // a normal user message — the tool result “awaiting_user_response” is
   // already in the history, the loop resumes with the response.
   const handleAnswer = useCallback(
-    (text: string) => {
+    (text: string, workerInput?: AssistantChatRequest["workerInput"]) => {
       if (!text.trim()) return;
-      handleSend(text);
+      handleSend(text, [], [], undefined, [], workerInput);
     },
     [handleSend]
   );
@@ -370,6 +373,7 @@ export const AssistantShell = forwardRef<
   const activeAskUser = useMemo((): {
     messageId: string;
     questions: AskUserQuestion[];
+    workerInput?: AssistantChatRequest["workerInput"];
   } | null => {
     if (isBusy) return null;
     for (let i = state.messages.length - 1; i >= 0; i--) {
@@ -385,14 +389,33 @@ export const AssistantShell = forwardRef<
         // Invalid LLM args → no card.
       }
       const questions = parseAskUserQuestions(args);
-      return questions.length > 0 ? { messageId: m.id, questions } : null;
+      const rawWorkerInput = args._worker_input as Record<string, unknown> | undefined;
+      const workerInput = rawWorkerInput
+        && typeof rawWorkerInput.parent_turn_id === "string"
+        && typeof rawWorkerInput.run_id === "string"
+        && typeof rawWorkerInput.question_id === "string"
+        ? {
+            parentTurnId: rawWorkerInput.parent_turn_id,
+            runId: rawWorkerInput.run_id,
+            questionId: rawWorkerInput.question_id,
+          }
+        : undefined;
+      if (workerInput && state.pendingWorkerInput === null) return null;
+      if (workerInput && state.pendingWorkerInput && (
+        state.pendingWorkerInput.parentTurnId !== workerInput.parentTurnId
+        || state.pendingWorkerInput.runId !== workerInput.runId
+        || state.pendingWorkerInput.questionId !== workerInput.questionId
+      )) return null;
+      return questions.length > 0
+        ? { messageId: m.id, questions, ...(workerInput ? { workerInput } : {}) }
+        : null;
     }
     return null;
-  }, [state.messages, isBusy]);
+  }, [state.messages, state.pendingWorkerInput, isBusy]);
 
   // Skip questions: Numo receives an explicit user message and resumes.
-  const handleSkipQuestions = useCallback(() => {
-    handleSend(tToolCall("skippedQuestions"));
+  const handleSkipQuestions = useCallback((workerInput?: AssistantChatRequest["workerInput"]) => {
+    handleSend(tToolCall("skippedQuestions"), [], [], undefined, [], workerInput);
   }, [handleSend, tToolCall]);
 
   // Active seed proposal (MIN-173): use the same rule as an open question.
@@ -952,8 +975,8 @@ export const AssistantShell = forwardRef<
                 <AskUserCard
                   key={activeAskUser.messageId}
                   questions={activeAskUser.questions}
-                  onAnswer={handleAnswer}
-                  onSkip={handleSkipQuestions}
+                  onAnswer={(answer) => handleAnswer(answer, activeAskUser.workerInput)}
+                  onSkip={() => handleSkipQuestions(activeAskUser.workerInput)}
                 />
               )}
               <div className={cn(activeAskUser && "hidden")}>
@@ -962,7 +985,8 @@ export const AssistantShell = forwardRef<
                   ref={chatInputRef}
                   onSend={handleSend}
                   onAbort={abort}
-                  isStreaming={isStreaming}
+                  isStreaming={isBusy}
+                  sendWhileStreaming={isGeneratingServer}
                   beam={isBusy}
                   noBorder={!hasMessages}
                   disabled={aiAvailability.loading}
