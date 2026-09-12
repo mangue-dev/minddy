@@ -2,7 +2,6 @@ export type RoutineToolSource = {
   id: string;
   title: string;
   prompt: string;
-  model: string | null;
   max_spend_percent: number;
   frequency: string;
   hour: number;
@@ -34,7 +33,6 @@ export function routineForAssistantTool(
     id: routine.id,
     title: routine.title,
     ...(options.includePrompt === false ? {} : { prompt: routine.prompt }),
-    model: routine.model,
     /** What one run can spend, as a percentage of the owner's monthly budget. */
     max_spend_percent: routine.max_spend_percent,
     frequency: routine.frequency,

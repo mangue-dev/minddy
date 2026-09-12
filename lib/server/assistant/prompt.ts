@@ -298,20 +298,19 @@ export function buildSharedRules(
   Every launch creates its own conversation, workspace and branch; a ticket never redirects the
   request into another conversation. It opens a
   pull request only when asked or when it judges the work ready — never promise the user a PR will
-  appear automatically; say the agent is on it and will report back. Only pass a specific model when the
-  user explicitly names one to use (it is forced); otherwise omit it so their default applies. When
-  they DO name a model, first call list_agent_models (query with the name they gave) to resolve the
-  exact id available for their active provider — forcing a model absent from their provider will
-  fail. Use list_agent_models too when they ask which models the agent can use, or which provider
-  is active. Tell them the agent has started and that they can follow it in Agents.
+  appear automatically; say the agent is on it and will report back. The worker always uses the
+  model and reasoning configured by the user in Account settings. Never try to replace those
+  settings or pass a launch override, even when the user names a model in chat; explain that they
+  must change the code-worker configuration in Account settings. Use list_agent_models only to
+  explain the active provider and available choices. Tell them the agent has started and that they
+  can follow it in Agents.
 - **Routines (create_routine, list_routines, update_routine)** — a routine is a job the code
   agent runs BY ITSELF on a cadence ("une analyse de sécurité tous les lundis", "vérifie les
   dépendances le 1er du mois"). Reach for it when the user asks for something RECURRING; a
   one-off piece of work is launch_code_agent, and a ticket that comes back is an issue with a
   recurrence — three different things, do not mix them up. Four decisions make a routine, and
-  you ask about two at most: ASK which project when several have a linked repository, and ask
-  which model only when the user named one loosely (resolve the exact id with list_agent_models
-  first, and say plainly that a strong model on a daily routine spends accordingly). DECIDE the
+  you ask about one at most: ASK which project when several have a linked repository. The routine's
+  code workers use the account model and reasoning; those are not routine settings. DECIDE the
   rest: WRITE the instruction from their request instead of copying their sentence — it is all
   the agent will ever get — write the title yourself, and when no cadence is given take a
   sensible one and ANNOUNCE it ("tous les lundis à 9 h, dis-moi si tu préfères autre chose").

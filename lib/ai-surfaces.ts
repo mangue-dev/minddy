@@ -17,9 +17,6 @@ export const DEFAULT_BYOK_SURFACES: AiSurface[] = [...AI_SURFACES];
  * Minddy value of the same name without a fragile correspondence table.
  */
 export const BYOK_MODEL_KEYS = [
-  "agent_model",
-  "automation_agent_model",
-  "pr_review_model",
   "assistant_model",
   "conversation_title_model",
   "web_search_model",
@@ -52,7 +49,6 @@ export const AI_SURFACE_DEFINITIONS: readonly AiSurfaceDefinition[] = [
   {
     id: "automations",
     modelKeys: [
-      "automation_agent_model",
       "smart_assign_model",
       "smart_fill_model",
       "import_map_model",
@@ -120,4 +116,17 @@ export function surfaceForAgentRun(run: {
   routine_id?: string | null;
 }): Extract<AiSurface, "agent" | "automations"> {
   return run.chain_id || run.routine_id ? "automations" : "agent";
+}
+
+/**
+ * Provider surface for a frozen code worker. Legacy automation runs retain the
+ * surface they launched with; every run created under the account-only rule
+ * uses the agent surface regardless of its trigger.
+ */
+export function workerModelSurfaceForAgentRun(run: {
+  chain_id?: string | null;
+  routine_id?: string | null;
+  worker_model_source?: string | null;
+}): Extract<AiSurface, "agent" | "automations"> {
+  return run.worker_model_source === "account" ? "agent" : surfaceForAgentRun(run);
 }

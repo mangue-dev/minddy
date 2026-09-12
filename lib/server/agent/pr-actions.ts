@@ -30,16 +30,10 @@ import {
 } from "@/lib/server/agent/launch";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import { mentionsNumo } from "@/lib/server/assistant/comment-agent";
-import {
-  getPrReviewDefaultModelForUser,
-  getUserPrReviewModel,
-  rememberPrReviewModel,
-} from "./model";
 import type { PrReviewRunSummary, PrReviewSession } from "@/lib/pr-review-session";
 import { canReadAgentRun } from "./run-access";
 import { resolveRepoCloneTargetForRepo, type RepoCloneTarget } from "./repo-access";
 import type { RepoProviderId } from "@/lib/repo-providers";
-import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { resolveForgeActor, type ForgeActor } from "@/lib/server/git/forge-actor";
 import { isGithubUserAuthConfigured } from "@/lib/server/git/github-user-auth";
 import { getGithubAppSlug } from "@/lib/server/git/github-app";
@@ -113,7 +107,6 @@ import {
  */
 const MAX_COMMENT_BODY_LENGTH = 65_536;
 const MAX_PATH_LENGTH = 1024;
-const MAX_MODEL_ID_LENGTH = 200;
 
 /** Everything needed to address this PR at its forge with a fresh token. */
 export interface PrScope {
@@ -1695,6 +1688,7 @@ const LAUNCH_ERROR_STATUS: Record<string, number> = {
   quotaExceeded: 402,
   managedServiceUnavailable: 503,
   executionBackendUnavailable: 503,
+  workerConfigurationManagedInSettings: 400,
   modelAbovePlan: 403,
 };
 
@@ -2315,6 +2309,15 @@ export async function prReviewResponse(
 
   let launchedRunId: string | null = null;
   if (relaunch) {
+    if ("model" in body || "reasoningLevel" in body) {
+      return NextResponse.json(
+        {
+          error: "workerConfigurationManagedInSettings",
+          code: "workerConfigurationManagedInSettings",
+        },
+        { status: 400 },
+      );
+    }
     if (scope.pr.state === "merged") {
       return NextResponse.json(
         { error: "Pull request is merged", code: "prMerged" },
@@ -2324,13 +2327,6 @@ export async function prReviewResponse(
     // Launch FIRST: its guards (already active run, quota, deposit) can
     // reject the launch, and posting the review first would leave an orphan review on
     // the PR — duplicated on each user retry.
-    const model =
-      typeof body.model === "string" && body.model.trim()
-        ? body.model.trim().slice(0, MAX_MODEL_ID_LENGTH)
-        : undefined;
-    const reasoningLevel = isReasoningLevel(body.reasoningLevel)
-      ? body.reasoningLevel
-      : undefined;
     // Two anchors describe the same action: the ticket remains the business
     // anchor for events and status, while the explicit PR controls branch
     // lineage. Pass both; the launcher also checks that the ticket links this PR.
@@ -2340,9 +2336,6 @@ export async function prReviewResponse(
       userId,
       triggeredBy: "button",
       prompt: message,
-      model,
-      forced: !!model,
-      reasoningLevel,
       localExec: body.localExec === true,
       localWorktree: body.localWorktree === true,
       localIssueContextConfirmed: body.localIssueContextConfirmed === true,
@@ -2425,8 +2418,6 @@ export async function prReviewResponse(
 export async function prAiReviewResponse(
   scope: PrScope,
   userId: string,
-  requestedModel?: string | null,
-  requestedReasoningLevel?: string | null,
   localExec = false,
   localWorktree = false,
   localIssueContextConfirmed = false,
@@ -2439,37 +2430,16 @@ export async function prAiReviewResponse(
     throw err;
   }
 
-  // Three cases, and they are distinct: a NAMED model (we take it and we
-  // retains), the EMPTY string (“return to minddy’s default” — we erase the
-  // chosen choice, otherwise he would win forever), and the absence of field
-  // (we solve as usual, without touching anything).
-  const chosen = requestedModel?.trim();
-  const reasoningLevel = isReasoningLevel(requestedReasoningLevel)
-    ? requestedReasoningLevel
-    : undefined;
-  if (requestedModel !== undefined && !chosen) await rememberPrReviewModel(userId, null);
-
   const result = await launchAgentRun({
     pullRequestId: scope.pr.id,
     userId,
     triggeredBy: "button",
     intent: "review",
-    // `undefined` (no field) and `""` (“return to default”) all want
-    // two say "solve as usual" on the launch side: it's deletion
-    // above which makes the difference.
-    model: chosen || null,
-    forced: !!chosen,
-    reasoningLevel,
     localExec,
     localWorktree,
     localIssueContextConfirmed,
   });
   if (!result.ok) return await prLaunchErrorResponse(result);
-
-  // The choice is only retained if it has been MADE, and only if the launch has
-  // successful: freezing the default of the instance on the account would freeze it at the value
-  // of the day, and a change to /admin would no longer affect it.
-  if (chosen) await rememberPrReviewModel(userId, result.run.model ?? chosen);
 
   return NextResponse.json(
     { ok: true, review: toReviewRunSummary(result.run) },
@@ -2487,6 +2457,7 @@ const PR_LAUNCH_ERROR_STATUS: Record<string, number> = {
   quotaExceeded: 402,
   managedServiceUnavailable: 503,
   executionBackendUnavailable: 503,
+  workerConfigurationManagedInSettings: 400,
   noModelForProvider: 400,
   modelAbovePlan: 403,
 };
@@ -2557,23 +2528,17 @@ function toReviewRunSummary(run: AgentRun): PrReviewRunSummary {
  * integer for exactly the same code, and the menu entry grays out. This is the
  * server that says it, not the screen that guesses it.
  *
- * `model.instance` is the effective default for the account's active provider;
- * `model.preferred` is the account's last explicit choice.
  */
 export async function prReviewRunResponse(
   scope: PrScope,
-  userId: string,
 ): Promise<NextResponse> {
-  const [run, reviewedHeadSha, instance, preferred] = await Promise.all([
+  const [run, reviewedHeadSha] = await Promise.all([
     latestRunForPullRequest(scope.pr.id),
     lastReviewedShaForPullRequest(scope.pr.id),
-    getPrReviewDefaultModelForUser(userId),
-    getUserPrReviewModel(userId),
   ]);
   const session: PrReviewSession = {
     run: run ? toReviewRunSummary(run) : null,
     reviewedHeadSha,
-    model: { instance, preferred },
   };
   return NextResponse.json(session);
 }

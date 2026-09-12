@@ -89,9 +89,8 @@ export function isByokCatalogProvider(value: string | null | undefined): value i
  * The call-type tail of a BYOK config key (`agent_model`,
  * `transcription_model`…), or `null` for other shapes.
  *
- * Some call-type keys END in another (`automation_agent_model` ends in
- * `agent_model`), so the longest model key wins: matching shortest-first
- * would read the wrong split.
+ * Keys are matched longest-first so future overlapping names cannot produce
+ * an ambiguous provider split.
  */
 export function modelKeyFromByokConfigKey(key: string): ByokModelKey | null {
   const sortedKeys = [...BYOK_MODEL_KEYS].sort((a, b) => b.length - a.length);
@@ -102,18 +101,14 @@ export function modelKeyFromByokConfigKey(key: string): ByokModelKey | null {
  * Which provider a BYOK `app_config` key belongs to, or `null` when the key
  * is not a BYOK default of a catalog-backed provider.
  *
- * Two key shapes exist (lib/ai-model-config.ts):
- * - `byok_default_model_<provider>` — the account-wide border default;
- * - `byok_default_<provider>_<modelKey>` — one per call type
+ * The key shape is `byok_default_<provider>_<modelKey>` — one per call type
  *   (`byokFeatureDefaultModelKey`, lib/ai-surfaces.ts).
  */
 export function byokProviderFromConfigKey(key: string): ByokCatalogProvider | null {
   if (!key.startsWith("byok_default_")) return null;
   const rest = key.slice("byok_default_".length);
-  const provider = rest.startsWith("model_")
-    ? rest.slice("model_".length)
-    : modelKeyFromByokConfigKey(rest)
-      ? rest.slice(0, rest.length - modelKeyFromByokConfigKey(rest)!.length - 1)
-      : null;
+  const provider = modelKeyFromByokConfigKey(rest)
+    ? rest.slice(0, rest.length - modelKeyFromByokConfigKey(rest)!.length - 1)
+    : null;
   return isByokCatalogProvider(provider) ? provider : null;
 }

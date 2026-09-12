@@ -10,7 +10,6 @@ const routine: RoutineToolSource = {
   id: "routine-1",
   title: "Review dependencies",
   prompt: "A very long instruction that must only be loaded on demand.",
-  model: null,
   max_spend_percent: 15,
   frequency: "weekly",
   hour: 9,

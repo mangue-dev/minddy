@@ -8,8 +8,6 @@ import { Play } from "lucide-react";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { BranchCombobox } from "@/components/agent/branch-combobox";
-import { ModelCombobox } from "@/components/agent/model-combobox";
-import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
 import { SettingsRow } from "@/components/settings/settings-ui";
 import {
   WizardDialog,
@@ -23,11 +21,6 @@ import { useProjects } from "@/lib/projects-context";
 import { useAuth } from "@/lib/auth-context";
 import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
 import {
-  useAgentModelsQuery,
-  useReasoningLevelsFor,
-} from "@/lib/use-agent-models-query";
-import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
-import {
   createRoutineApi,
   runRoutineNowApi,
   type Routine,
@@ -39,15 +32,10 @@ import {
   weekdayName,
   type RoutineSchedule,
 } from "@/lib/routine-schedule";
-import {
-  nearestReasoningLevel,
-  type ReasoningLevel,
-} from "@/lib/agent-reasoning";
 import type { AssistantMention } from "@/lib/assistant-types";
 
 /**
- * Set up a ROUTINE (MIN-185), by hand: where, what, with what model, at what
- * rythme.
+ * Set up a ROUTINE (MIN-185), by hand: where, what, and on what schedule.
  *
  * **A wizard, not a form**, and it is the only door to creation
  * manual. A routine is resolved in four independent decisions, three of which
@@ -94,14 +82,11 @@ export function CreateRoutineWizard({
 }) {
   const t = useTranslations("Routines");
   const tAgent = useTranslations("Agent");
-  const tCommon = useTranslations("Common");
   const locale = useLocale();
   const { user } = useAuth();
   const { projects } = useProjects();
   const { projectIds: gitLinked, loading: gitLoading } =
     useGitLinkedProjectsQuery();
-  const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
-  const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
 
   /**
    * ELIGIBLE projects: owned (only the owner can apply for
@@ -119,12 +104,6 @@ export function CreateRoutineWizard({
   );
   const [prompt, setPrompt] = useState("");
   const [promptMentions, setPromptMentions] = useState<AssistantMention[]>([]);
-  const [model, setModel] = useState("");
-  const [reasoning, setReasoning] = useState<ReasoningLevel | null>(null);
-  // The levels of the model that this routine will rotate (see composing it).
-  const reasoningLevels = useReasoningLevelsFor(
-    model || defaultModel || providerDefaultModel,
-  );
   /** "" = the default branch of the repository, which is the common case. */
   const [baseBranch, setBaseBranch] = useState("");
   /** What a passage is allowed to spend, as a % of the monthly budget. */
@@ -177,8 +156,6 @@ export function CreateRoutineWizard({
     setChosenProjectId(initialProjectId ?? "");
     setPrompt("");
     setPromptMentions([]);
-    setModel("");
-    setReasoning(null);
     setSpendCap(DEFAULT_MAX_SPEND_PERCENT);
     setSchedule({
       frequency: "weekly",
@@ -247,8 +224,6 @@ export function CreateRoutineWizard({
         projectId,
         prompt: prompt.trim(),
         promptMentions,
-        model: model || null,
-        reasoningLevel: reasoning ?? defaultReasoningLevel,
         baseBranch: baseBranch || null,
         maxSpendPercent: spendCap,
         frequency: schedule.frequency,
@@ -386,35 +361,9 @@ export function CreateRoutineWizard({
            pastilles and same order as the editor of the detail pane: we do not
            does not relearn the screen when you come back to change a setting. */
         <div className="divide-y divide-border/60">
-          <SettingsRow
-            label={t("modelLabel")}
-            control={
-              <ModelCombobox
-                variant="compact"
-                value={model}
-                onChange={setModel}
-                defaultLabel={t("modelDefault")}
-                defaultModelId={defaultModel || providerDefaultModel}
-                placeholder={t("modelPlaceholder")}
-                emptyLabel={t("modelEmpty")}
-                loadingLabel={tCommon("loading")}
-                freeTextLabel={(query) => t("modelFreeText", { model: query })}
-              />
-            }
-          />
-          <SettingsRow
-            label={t("reasoningLabel")}
-            control={
-              <ReasoningCombobox
-                value={nearestReasoningLevel(
-                  reasoning ?? defaultReasoningLevel,
-                  reasoningLevels,
-                )}
-                onChange={setReasoning}
-                levels={reasoningLevels}
-              />
-            }
-          />
+          <p className="py-3 text-xs leading-relaxed text-muted-foreground">
+            {t("workerModelHint")}
+          </p>
           {/* The DEPARTURE branch is chosen HERE rather than after the fact: a
               routine that starts from the wrong database opens pull requests
               unusable, and it's when you put it on that you know what
@@ -436,8 +385,8 @@ export function CreateRoutineWizard({
               />
             }
           />
-          {/* WHAT SHE CAN SPEND, alongside what decides it (the model, the
-              reasoning): a routine leaves alone, no one looks at its
+          {/* A routine runs unattended, so one execution needs its own cap:
+              no one watches its
               barre d'usage pendant qu'elle travaille. Sans ce plafond, un seul
               The passage could take a whole month. */}
           <SettingsRow
@@ -586,7 +535,7 @@ export function CreateRoutineWizard({
 const ROUTINE_ERROR_KEYS = new Set([
   "ownerOnly",
   "noRepo",
-  "modelAbovePlan",
+  "workerConfigurationManagedInSettings",
   "unknownTimezone",
   "invalidSchedule",
   "titleRequired",

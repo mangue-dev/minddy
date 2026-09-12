@@ -282,15 +282,7 @@ function ByokProviderSection({
 }) {
   const t = useTranslations("Admin");
   const tAgent = useTranslations("Agent");
-  // The border default (`byok_default_model_<provider>`) leads; the per-call
-  // keys follow in registry order.
-  const ordered = useMemo(
-    () =>
-      [...fields].sort(
-        (a, b) => Number(!a.key.startsWith("byok_default_model_")) - Number(!b.key.startsWith("byok_default_model_")),
-      ),
-    [fields],
-  );
+  const ordered = useMemo(() => [...fields], [fields]);
 
   return (
     <SettingsGroup
@@ -298,22 +290,19 @@ function ByokProviderSection({
       title={getAgentProvider(provider)?.label ?? provider}
     >
       {ordered.map((field) => {
-        const isBorderDefault = field.key.startsWith("byok_default_model_");
         // Feature rows speak the label of THEIR call type ("Assistant",
         // "Voice dictation"…); inside a provider-titled section that reads
         // better than the generated "Provider · key" label of the flat list.
         const modelKey = modelKeyFromByokConfigKey(field.key);
-        const label = isBorderDefault
-          ? t("byok.borderDefault")
-          : modelKey
-            ? t(`fields.${modelKey}.label` as AdminKey)
-            : (field.adminLabel ?? t(`fields.${field.key}.label` as AdminKey));
+        const label = modelKey
+          ? t(`fields.${modelKey}.label` as AdminKey)
+          : (field.adminLabel ?? t(`fields.${field.key}.label` as AdminKey));
         return (
           <ByokModelRow
             key={field.key}
             field={field}
             provider={provider}
-            isBorderDefault={isBorderDefault}
+            isBorderDefault={false}
             label={label}
             value={values?.[field.key] ?? null}
             loading={loading}

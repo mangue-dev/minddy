@@ -35,6 +35,7 @@ const LAUNCH_ERROR_STATUS: Record<string, number> = {
   quotaExceeded: 402,
   managedServiceUnavailable: 503,
   executionBackendUnavailable: 503,
+  workerConfigurationManagedInSettings: 400,
   noModelForProvider: 400,
   localEndpointRequiresLocalRun: 409,
   modelAbovePlan: 403,
@@ -73,8 +74,6 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     prompt: routine.prompt,
     promptMentions: routine.prompt_mentions,
     title: routine.title,
-    ...(routine.model ? { model: routine.model, forced: true } : {}),
-    reasoningLevel: routine.reasoning_level,
     baseBranch: routine.base_branch,
     routineId: routine.id,
     // The same ceiling as a passage in the calendar: it is the routine which

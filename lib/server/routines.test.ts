@@ -313,15 +313,15 @@ describe("createRoutine", () => {
     expect(result).toMatchObject({ ok: false, errorKey: "unknownTimezone" });
   });
 
-  it("refuse un modèle au-dessus du plafond du plan, À L'ENREGISTREMENT", async () => {
-    // The refusal must come in front of someone, not at 1 p.m. in a cron.
-    world.modelAbovePlan = true;
+  it("rejects a caller-supplied worker model", async () => {
     const result = await createRoutine(
       validInput({ model: "anthropic/claude-opus-5" }) as never,
     );
-    expect(result).toMatchObject({ ok: false, status: 403, errorKey: "modelAbovePlan" });
-    if (result.ok) return;
-    expect(result.modelLimit?.limit).toBe(15);
+    expect(result).toMatchObject({
+      ok: false,
+      status: 400,
+      errorKey: "workerConfigurationManagedInSettings",
+    });
   });
 
   it("n'arme pas d'échéance sur une routine créée désactivée", async () => {

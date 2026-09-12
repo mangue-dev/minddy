@@ -60,18 +60,12 @@ describe("byokModelsForProvider", () => {
 });
 
 describe("byokProviderFromConfigKey", () => {
-  it("reads the border-default key shape", () => {
-    expect(byokProviderFromConfigKey("byok_default_model_anthropic")).toBe("anthropic");
-  });
-
   it("reads the per-feature key shape", () => {
-    expect(byokProviderFromConfigKey("byok_default_openai_agent_model")).toBe("openai");
     expect(byokProviderFromConfigKey("byok_default_google_transcription_model")).toBe("google");
   });
 
   it("splits on the longest model key, not a suffix of another", () => {
-    // `automation_agent_model` ends in `agent_model`: the longest wins.
-    expect(byokProviderFromConfigKey("byok_default_google_automation_agent_model")).toBe("google");
+    expect(byokProviderFromConfigKey("byok_default_google_automation_agent_model")).toBeNull();
   });
 
   it("returns null for non-BYOK or non-catalog keys", () => {

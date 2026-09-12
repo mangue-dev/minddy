@@ -4,10 +4,8 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValue } from "@/lib/server/app-config";
 import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
 import { AGENT_MODEL_CONFIG_KEY, AGENT_ROOT_MODEL_FALLBACK } from "@/lib/agent-models";
-import { aiModelFallback, byokDefaultModelKey } from "@/lib/ai-model-config";
 import {
   DEFAULT_AGENT_PROVIDER,
-  getProviderDefaultModel,
   isLocalAgentProvider,
   resolveProviderBaseUrl,
   type AgentProviderId,
@@ -24,7 +22,6 @@ import {
 import { getOpenRouterModelInfo } from "./openrouter-index";
 import type { VmModelPricing } from "./vm/protocol";
 import {
-  byokFeatureDefaultModelKey,
   DEFAULT_BYOK_SURFACES,
   type AiSurface,
   type ByokFeatureModels,
@@ -34,16 +31,11 @@ import { isManagedAiEnabled } from "@/lib/managed-services";
 /**
  * Resolved code agent model and endpoint (MIN-46).
  *
- * MODEL — 3-level cascade, precedence run > user > root:
- * 1. run override (chosen at launch, or forced by numo),
- * 2. user's personal default (user_agent_preferences.default_model),
- * 3. BYOK provider border default (openai/anthropic/google) —
- * app_config.byok_default_model_<provider> / provider register,
- * 4. OpenRouter root default (app_config.agent_model / fallback code) —
- * used by the minddy quota AND by OpenRouter BYOK (same endpoint).
- * Only the “generic” provider has no reliable default (unknown namespace):
- * without (1) nor (2), we raise `AgentModelRequiredError` — the user must
- * choose a model (the picker lists those of its provider).
+ * MODEL — the account preference is the sole source for every new code
+ * worker. Launch callers, conversations, routines, automations and PR reviews
+ * cannot override it. The active provider is frozen separately on the run; if
+ * the saved model belongs to another provider, the user must deliberately
+ * choose a compatible model in Account settings.
  *
  * ENDPOINT — only one active BYOK per account: provider + base URL + user key
  * if present (unlimited use, at own expense), otherwise the OpenRouter platform key
@@ -55,33 +47,29 @@ export async function getRootDefaultModel(): Promise<string> {
   return (await getAppConfigValue(AGENT_MODEL_CONFIG_KEY))?.trim() || AGENT_ROOT_MODEL_FALLBACK;
 }
 
-/**
- * Border default of a BYOK provider — adjustable from /admin
- * (`byok_default_model_<provider>`), otherwise that of the providers register.
- *
- * This is the model used by an account which has installed its key without ever choosing one:
- * it changes with each generation of templates, so it can't live only
- * in the code. `undefined` remains possible — OpenRouter (which takes the default
- * root) and the generic (unknown namespace) do not have them.
- */
-export async function resolveProviderDefaultModel(
-  providerId: string | null | undefined,
-): Promise<string | undefined> {
-  const fallback = getProviderDefaultModel(providerId);
-  if (!providerId || !fallback) return fallback;
-  const configured = await getAppConfigValue(byokDefaultModelKey(providerId)).catch(() => null);
-  return configured?.trim() || fallback;
+interface StoredAgentModelPreference {
+  model: string | null;
+  provider: string | null;
 }
 
-/** User's personal default, or null if they have not defined one. */
-export async function getUserDefaultModel(userId: string): Promise<string | null> {
+/** User's personal code-worker model and the provider it was selected for. */
+export async function getUserDefaultModel(
+  userId: string,
+): Promise<StoredAgentModelPreference> {
   const supabase = getServiceClient();
   const { data } = await supabase
     .from("user_agent_preferences")
-    .select("default_model")
+    .select("default_model, default_model_provider")
     .eq("user_id", userId)
     .maybeSingle();
-  return (data as { default_model: string | null } | null)?.default_model ?? null;
+  const row = data as {
+    default_model: string | null;
+    default_model_provider: string | null;
+  } | null;
+  return {
+    model: row?.default_model?.trim() || null,
+    provider: row?.default_model_provider ?? null,
+  };
 }
 
 /** User's reasoning fault, or null if they have not defined one. */
@@ -99,206 +87,51 @@ export async function getUserDefaultReasoningLevel(
 }
 
 /**
- * Fix reasoning level to FREEZE on a run (MIN-122). Cascade
- * run > user > `DEFAULT_REASONING_LEVEL` (`medium`) — no root default: none
- * admin setting here.
+ * Resolve the account reasoning level to freeze on a new run (MIN-122).
+ * Launch callers cannot override it.
  *
  * The four levels are open to ALL, minddy quota included: the subscription is
  * paid, it must be fully usable. What limits the expense is the budget
  * itself (`checkAgentQuota` at launch, and stopping mid-run when it
  * is exhausted), not a restriction on the level.
  */
-export async function resolveReasoningLevel(opts: {
-  perRunLevel?: string | null;
-  userId: string;
-}): Promise<ReasoningLevel> {
-  const perRun = isReasoningLevel(opts.perRunLevel) ? opts.perRunLevel : null;
-  return perRun ?? (await getUserDefaultReasoningLevel(opts.userId)) ?? DEFAULT_REASONING_LEVEL;
+export async function resolveReasoningLevel(userId: string): Promise<ReasoningLevel> {
+  return (await getUserDefaultReasoningLevel(userId)) ?? DEFAULT_REASONING_LEVEL;
 }
 
-/** Raised when a non-OpenRouter BYOK provider has no resolved model. */
+/** Raised when the account has no model valid for its active worker provider. */
 export class AgentModelRequiredError extends Error {
   code = "noModelForProvider" as const;
   constructor(public provider: string) {
-    super(`No default model for provider ${provider}; a model must be selected`);
+    super(`No account code-worker model is configured for provider ${provider}`);
     this.name = "AgentModelRequiredError";
   }
 }
 
-/** Model frozen on a run, and who came from this choice. */
+/** Model frozen on a run. */
 export interface ResolvedAgentModel {
   model: string;
-  /**
- * True when the model comes from SOMEONE — run override (chosen at
- * launch, or forced by Numo) or personal account default. False when it comes
- * from a minddy fault (provider boundary, or root fault).
+  chosenByUser: true;
+}
+
+/**
+ * Resolves the sole model that may be frozen on a new code-worker run.
  *
- * This is the distinction that the plan cap applies (`ensureModelInPlan`):
- * minddy does not deny itself its own faults.
+ * A preference is provider-bound. Changing, disabling or losing a BYOK key
+ * therefore makes the old choice unavailable until the user selects a model
+ * from Account settings. We never replace it with a cheaper platform or
+ * provider default.
  */
-  chosenByUser: boolean;
-}
-
-/**
- * Resolves which model to freeze on a run. `perRunModel` (override/forcing) wins,
- * otherwise the personal default, otherwise the border default of the BYOK provider, otherwise —
- * quota minddy or OpenRouter BYOK — the root default. Raise
- * `AgentModelRequiredError` only for generic BYOK without template.
- */
-export async function resolveAgentModel(opts: {
-  perRunModel?: string | null;
-  userId: string;
-  surface?: Extract<AiSurface, "agent" | "automations">;
-}): Promise<ResolvedAgentModel> {
-  const perRun = opts.perRunModel?.trim();
-  if (perRun) return { model: perRun, chosenByUser: true };
-
-  // A channel/routine is a distinct feature: its BYOK choice must not
-  // be overwritten by the agent's interactive default. Without BYOK on this
-  // surface, it continues naturally on the historic Minddy waterfall.
-  if (opts.surface === "automations") {
-    const automationByok = await getUserByok(opts.userId, "automations");
-    if (automationByok) {
-      const chosen = automationByok.featureModels.automation_agent_model?.trim();
-      if (chosen) return { model: chosen, chosenByUser: true };
-      if (automationByok.provider === "openrouter") {
-        return {
-          model:
-            (await getAppConfigValue("automation_agent_model"))?.trim() ||
-            aiModelFallback("automation_agent_model"),
-          chosenByUser: false,
-        };
-      }
-      const featureKey = byokFeatureDefaultModelKey(
-        automationByok.provider,
-        "automation_agent_model",
-      );
-      const configured = (await getAppConfigValue(featureKey).catch(() => null))?.trim();
-      const fallback = aiModelFallback(featureKey).trim();
-      const providerDefault =
-        configured || fallback || (await resolveProviderDefaultModel(automationByok.provider));
-      if (providerDefault) return { model: providerDefault, chosenByUser: false };
-      throw new AgentModelRequiredError(automationByok.provider);
-    }
-    return {
-      model:
-        (await getAppConfigValue("automation_agent_model"))?.trim() ||
-        aiModelFallback("automation_agent_model"),
-      chosenByUser: false,
-    };
+export async function resolveAgentModel(userId: string): Promise<ResolvedAgentModel> {
+  const [preference, byok] = await Promise.all([
+    getUserDefaultModel(userId),
+    getUserByok(userId, "agent"),
+  ]);
+  const provider = byok?.provider ?? DEFAULT_AGENT_PROVIDER;
+  if (!preference.model || preference.provider !== provider) {
+    throw new AgentModelRequiredError(provider);
   }
-  const userDefault = await getUserDefaultModel(opts.userId);
-  if (userDefault) return { model: userDefault, chosenByUser: true };
-  const byok = await getUserByok(opts.userId, opts.surface ?? "agent");
-  // Provider border fault (openai/anthropic/google), adjustable in /admin.
-  const providerDefault = byok ? await resolveProviderDefaultModel(byok.provider) : undefined;
-  if (providerDefault) return { model: providerDefault, chosenByUser: false };
-  // Generic BYOK: no reliable default → user must choose.
-  if (byok && byok.provider !== "openrouter") {
-    throw new AgentModelRequiredError(byok.provider);
-  }
-  // Quota minddy (platform) or OpenRouter BYOK: root default app_config.
-  return { model: await getRootDefaultModel(), chosenByUser: false };
-}
-
-// ── REREADING model (MIN-141, carried here by MIN-168) ────────────────────
-// A review session is a run like any other, but its model is not
-// does not resolve like a code run: `pr_review_model` is
-// DELIBERATELY distinct from `agent_model` — have code reread by the model which
-// just wrote it gives an identical second opinion, and that's the whole reason
-// to be in the pass.
-
-/** `app_config` key of the review template — the instance default, adjustable in /admin. */
-export const PR_REVIEW_MODEL_CONFIG_KEY = "pr_review_model";
-
-/**
- * The model which will reread, in three steps: what was chosen FOR THIS
- * SESSION, otherwise the last choice of the account, otherwise the default of the instance.
- *
- * The first two stages are explicit user choices and therefore remain subject
- * to the plan ceiling. The instance default is not: launch maps that fallback
- * to the active BYOK provider when needed, so a native endpoint never receives
- * an incompatible OpenRouter model identifier.
- */
-export async function resolvePrReviewModel(opts: {
-  perCall?: string | null;
-  userId: string;
-  /** True when we have just explicitly requested the default of the instance. */
-  ignoreRemembered?: boolean;
-}): Promise<ResolvedAgentModel> {
-  const perCall = opts.perCall?.trim();
-  if (perCall) return { model: perCall, chosenByUser: true };
-  if (!opts.ignoreRemembered) {
-    const remembered = await getUserPrReviewModel(opts.userId);
-    if (remembered) return { model: remembered, chosenByUser: true };
-  }
-  const defaultModel = await getPrReviewDefaultModelForUser(opts.userId);
-  if (!defaultModel) {
-    const byok = await getUserByok(opts.userId, "agent");
-    throw new AgentModelRequiredError(byok?.provider ?? DEFAULT_AGENT_PROVIDER);
-  }
-  return { model: defaultModel, chosenByUser: false };
-}
-
-/** The default of the instance alone (without the choice of account) — what the UI displays
- * as an aside on the “default model” option of the picker. */
-export async function getInstancePrReviewModel(): Promise<string> {
-  return (
-    (await getAppConfigValue(PR_REVIEW_MODEL_CONFIG_KEY))?.trim() ||
-    aiModelFallback(PR_REVIEW_MODEL_CONFIG_KEY)
-  );
-}
-
-/**
- * Effective review default for an account.
- *
- * Platform runs use the instance's OpenRouter model. BYOK runs stay in the
- * active provider's namespace: an account-level feature choice wins, followed
- * by the provider-specific admin default and the provider registry fallback.
- */
-export async function getPrReviewDefaultModelForUser(userId: string): Promise<string | null> {
-  const byok = await getUserByok(userId, "agent");
-  if (!byok) return getInstancePrReviewModel();
-
-  const chosen = byok.featureModels.pr_review_model?.trim();
-  if (chosen) return chosen;
-  if (byok.provider === "openrouter") return getInstancePrReviewModel();
-
-  const featureKey = byokFeatureDefaultModelKey(byok.provider, PR_REVIEW_MODEL_CONFIG_KEY);
-  const configured = (await getAppConfigValue(featureKey).catch(() => null))?.trim();
-  const fallback = aiModelFallback(featureKey).trim();
-  const providerDefault =
-    configured || fallback || (await resolveProviderDefaultModel(byok.provider));
-  return providerDefault || null;
-}
-
-/** Last review template chosen by this account, or null. */
-export async function getUserPrReviewModel(userId: string): Promise<string | null> {
-  const { data } = await getServiceClient()
-    .from("user_agent_preferences")
-    .select("pr_review_model")
-    .eq("user_id", userId)
-    .maybeSingle();
-  return (data as { pr_review_model: string | null } | null)?.pr_review_model ?? null;
-}
-
-/**
- * Retains the chosen model: the next time, “have Numo check” leaves
- * from there. `null` erases the choice — that's what "revert to the default of
- * minddy" in the picker means, and otherwise the selected choice would win forever.
- * Best-effort — an unremembered choice should not prevent review.
- */
-export async function rememberPrReviewModel(
-  userId: string,
-  model: string | null,
-): Promise<void> {
-  try {
-    await getServiceClient()
-      .from("user_agent_preferences")
-      .upsert({ user_id: userId, pr_review_model: model }, { onConflict: "user_id" });
-  } catch (err) {
-    console.error("[agent-model] remember review model failed:", (err as Error).message);
-  }
+  return { model: preference.model, chosenByUser: true };
 }
 
 // ── Endpoint (provider + base URL + key) ─────────────────────────────────────

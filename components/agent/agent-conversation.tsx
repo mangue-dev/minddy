@@ -45,15 +45,7 @@ import {
   useIssueAgentRunsQuery,
 } from "@/lib/use-agent-runs";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
-import {
-  useAgentModelsQuery,
-  useReasoningLevelsFor,
-} from "@/lib/use-agent-models-query";
-import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
-import {
-  nearestReasoningLevel,
-  type ReasoningLevel,
-} from "@/lib/agent-reasoning";
+import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { isLocalAgentProvider } from "@/lib/agent-providers";
 import { ModelBadge } from "@/components/model-badge";
 import { ModelCombobox } from "./model-combobox";
@@ -583,38 +575,17 @@ export function AgentConversation({
     return () => clearInterval(timer);
   }, [active, liveRun?.id]);
 
-  // Model selection (compose phase).
+  // Execution capabilities for the compose phase.
   const {
     provider,
-    defaultModel: providerDefaultModel,
     cloudExecutionConfigured,
     executionBackend,
   } = useAgentModelsQuery();
-  const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
-  const [model, setModel] = useState("");
   // BASE branch (compose phase, new line): "" = the defect of the deposit.
-  // Like the model, the choice is only made at launch – frozen afterwards.
+  // The choice is only made at launch and frozen afterwards.
   const [baseBranch, setBaseBranch] = useState("");
-  // Level of reasoning (MIN-122), also frozen at launch. `null` = not
-  // still touched → we follow the personal fault, which can occur after assembly.
-  const [reasoningOverride, setReasoningOverride] =
-    useState<ReasoningLevel | null>(null);
-  // The bearings of the MODEL which will rotate (override chosen, otherwise personal default,
-  // otherwise default of the provider): what the list selector depends on it, and the
-  // displayed level is lowered to what it accepts.
-  const reasoningLevels = useReasoningLevelsFor(
-    model || defaultModel || providerDefaultModel,
-  );
-  const reasoningLevel = nearestReasoningLevel(
-    reasoningOverride ?? defaultReasoningLevel,
-    reasoningLevels,
-  );
   const [launching, setLaunching] = useState(false);
-  // Generic and local endpoints have no reliable fault: the id of the
-  // model is a decision of their owner, never a cloud fallback.
   const localEndpoint = isLocalAgentProvider(provider);
-  const modelRequired =
-    (provider === "generic" || localEndpoint) && !defaultModel && !model;
 
   // WHERE THE CONVERSATION TURNS (MIN-359), frozen at launch like its three
   // neighbors. The chip only exists in the desktop app AND when a folder is
@@ -651,10 +622,6 @@ export function AgentConversation({
     // without a ticket lives in SessionCompose, before any run): no exit, nothing
     // to launch here.
     if (launching || !issueId) return;
-    if (modelRequired) {
-      toast.error(t("modelRequired"));
-      return;
-    }
     const prompt = message.trim();
     const localExec = environment !== "cloud" && localRepo.ready;
     if (!localExec && !cloudExecutionConfigured) {
@@ -688,11 +655,9 @@ export function AgentConversation({
     try {
       const { run: started } = await launchAgentRunApi(issueId, {
         prompt: prompt || undefined,
-        model: model || undefined,
         // The server ignores it if the lineage already inherits a branch (the picker
         // is then locked — belt and shoulder straps on the racing side).
         baseBranch: baseBranch || undefined,
-        reasoningLevel,
         intent: composeIntent,
         mentions,
         attachments,
@@ -1150,28 +1115,6 @@ export function AgentConversation({
                     </div>
                   }
                   contextPlacement="above"
-                  leadingControls={
-                    <>
-                      <ModelCombobox
-                        variant="compact"
-                        value={model}
-                        onChange={setModel}
-                        defaultLabel={t("modelDefault")}
-                        defaultModelId={defaultModel ?? providerDefaultModel}
-                        placeholder={t("modelSearchPlaceholder")}
-                        emptyLabel={t("modelSearchEmpty")}
-                        loadingLabel={t("modelSearchLoading")}
-                        freeTextLabel={(q) => t("modelUseCustom", { model: q })}
-                        disabled={launching}
-                      />
-                      <ReasoningCombobox
-                        value={reasoningLevel}
-                        onChange={setReasoningOverride}
-                        disabled={launching}
-                        levels={reasoningLevels}
-                      />
-                    </>
-                  }
                 />
               )}
             </div>

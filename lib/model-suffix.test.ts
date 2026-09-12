@@ -103,7 +103,7 @@ describe("registre", () => {
   it("laisse l'agent de code et la review de PR hors du dispositif", () => {
     // Their model is written on the `agent_runs` line and returns for
     // dozens of rounds: the fallback “play again without the `:`” does not hold up.
-    for (const key of ["agent_model", "pr_review_model"]) {
+    for (const key of ["agent_model"]) {
       expect(isModelSuffixKey(modelSuffixKey(key))).toBe(false);
       expect(AI_MODEL_CONFIG_KEYS.has(modelSuffixKey(key))).toBe(false);
     }

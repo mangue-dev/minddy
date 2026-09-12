@@ -1,6 +1,7 @@
 import "server-only";
 
 import { resolveAgentExecutionBackend } from "@/lib/capabilities";
+import { workerModelSurfaceForAgentRun } from "@/lib/ai-surfaces";
 import { getUserSandboxPreferences } from "./sandbox-preferences";
 import { getServiceClient } from "@/lib/supabase-service";
 import { joinedPage } from "@/lib/server/resource-select";
@@ -711,15 +712,15 @@ export async function executeAgentRun(
       ? loadPrRunContext(run.pull_request_id)
       : Promise.resolve(null);
     const prefsPromise = resolveRunPrefs(run);
-    const aiSurface = run.chain_id || run.routine_id ? "automations" : "agent";
+    const workerSurface = workerModelSurfaceForAgentRun(run);
     const quotaAndLedgerPromise = Promise.all([
-      checkAgentQuota(run.created_by ?? "", aiSurface).catch(() => null),
+      checkAgentQuota(run.created_by ?? "", workerSurface).catch(() => null),
       spentFromLedger(run.run_id ?? run.id),
     ]);
     // A BYOK run is fixed to its own payer. If the configuration disappeared, or a
     // local endpoint was requested from the cloud, preparation fails explicitly:
     // it must never fall back to the platform key.
-    const endpointPromise = resolveAgentApiKey(run.created_by, aiSurface, {
+    const endpointPromise = resolveAgentApiKey(run.created_by, workerSurface, {
       allowLocal: localTurn,
       requireByok: run.key_mode === "byok",
     });

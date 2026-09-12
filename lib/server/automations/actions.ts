@@ -60,7 +60,6 @@ async function runNumo(
   action: Extract<AutomationAction, { type: "run_numo" }>,
   issue: IssueForLaunch,
   extraPrompt: string | null,
-  model: string | null,
 ): Promise<ActionOutcome> {
   const locale = await localeOf(chain.owner_id);
   // `custom` mode: the rule instruction IS the message. The other three
@@ -89,10 +88,6 @@ async function runNumo(
     triggeredBy: "automation",
     intent: action.mode === "custom" ? "custom" : intentForLaunchMode(action.mode),
     prompt,
-    // The model by ticket SIZE (account setting) takes precedence over that of
-    // the rule: it is the one that the user sees and manipulates.
-    model: model ?? action.model ?? null,
-    reasoningLevel: action.reasoningLevel ?? null,
     chainId: chain.id,
   });
 
@@ -130,13 +125,11 @@ export async function runAction(params: {
   issue: IssueForLaunch;
   /** Instruction added to the step (the report of a failed verification). */
   extraPrompt?: string | null;
-  /** Model set for the SIZE of this ticket (Account → Automations). */
-  model?: string | null;
 }): Promise<ActionOutcome> {
   const { chain, action, issue } = params;
   switch (action.type) {
     case "run_numo":
-      return runNumo(chain, action, issue, params.extraPrompt ?? null, params.model ?? null);
+      return runNumo(chain, action, issue, params.extraPrompt ?? null);
     case "set_status":
       // Go back through the ordinary writing heart: it is he who writes
       // activity, notifications and feedback sync. It retriggers

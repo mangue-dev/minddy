@@ -46,9 +46,6 @@ import {
   resolveAccountTheme,
   type AccountTheme,
 } from "@/lib/account-theme";
-import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
-import { userHasByokKey } from "@/lib/server/agent/model";
-import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { emailLocalPart } from "@/lib/display-name";
 import {
   DEFAULT_AGENT_BRANCH_PREFIX,
@@ -95,10 +92,6 @@ export interface AgentPrefs {
   default_reasoning_level: ReasoningLevel | null;
   branch_prefix: string;
 }
-
-/** Same safeguard as the PUT of /api/account/agent-preferences: `provider/model`
- (OpenRouter) like native ids without slashes. No allowlist. */
-const MODEL_ID_RE = /^[\w./:@-]{1,200}$/;
 
 function metaString(meta: Record<string, unknown>, key: string): string {
   const v = meta[key];
@@ -217,6 +210,18 @@ export async function updateAccountSettings({
   }
   const meta = (current.user.user_metadata ?? {}) as Record<string, unknown>;
   const next: Record<string, unknown> = { ...meta };
+
+  // Numo may read and explain code-worker settings, but only the authenticated
+  // Account settings route may change them. Keep this check here as a
+  // server-side boundary even when a caller forges fields absent from the tool
+  // schema.
+  if ("default_model" in input || "default_reasoning_level" in input) {
+    return {
+      ok: false,
+      error:
+        "Code-worker model and reasoning can only be changed in Account settings.",
+    };
+  }
 
   if ("display_name" in input) {
     const name = typeof input.display_name === "string" ? input.display_name.trim() : "";
@@ -337,49 +342,9 @@ export async function updateAccountSettings({
     next[CYCLE_UPCOMING_COUNT_META_KEY] = n;
   }
 
-  // Agent preferences (MIN-46 / MIN-122): the only block outside
-  // `user_metadata`. It is validated and written exactly like
-  // /api/account/agent-preferences, including the platform model ceiling, so a
-  // saved preference cannot later block every platform run on the account.
+  // Agent preferences outside user_metadata. Numo may still change the branch
+  // prefix, which is unrelated to the worker's model configuration.
   const agentPatch: Record<string, unknown> = {};
-  if ("default_model" in input) {
-    const model = input.default_model ?? null;
-    if (model !== null && (typeof model !== "string" || !MODEL_ID_RE.test(model.trim()))) {
-      return { ok: false, error: "default_model is not a valid model id." };
-    }
-    agentPatch.default_model = model === null ? null : (model as string).trim();
-    if (agentPatch.default_model) {
-      try {
-        await ensureModelInPlan({
-          userId,
-          model: agentPatch.default_model as string,
-          mode: (await userHasByokKey(userId)) ? "byok" : "platform",
-        });
-      } catch (err) {
-        if (isPlanLimitError(err)) {
-          // The parameters carry the model, its multiplier and the ceiling:
-          // relaying them allows Numo to offer something else, where a
-          // "pattern refused" sec would force the user to guess.
-          const p = err.params ?? {};
-          return {
-            ok: false,
-            error:
-              p.model !== undefined
-                ? `The model ${p.model} costs ×${p.multiplier} the usage of minddy's default model, above the ×${p.limit} ceiling of the ${p.plan} plan. Pick a cheaper model (list_agent_models) or the user can upgrade their plan.`
-                : "That model is above the usage ceiling of this account's plan.",
-          };
-        }
-        throw err;
-      }
-    }
-  }
-  if ("default_reasoning_level" in input) {
-    const level = input.default_reasoning_level ?? null;
-    if (level !== null && !isReasoningLevel(level)) {
-      return { ok: false, error: "default_reasoning_level must be off, low, medium or high." };
-    }
-    agentPatch.default_reasoning_level = level;
-  }
   if ("branch_prefix" in input) {
     const prefix =
       input.branch_prefix === null

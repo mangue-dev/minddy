@@ -272,7 +272,7 @@ export interface AnalyticsEventProps {
 
   // ── Agent de code (MIN-46) ──
   agent_launch_opened: { surface: "issue" | "agents_page" | "palette" };
-  agent_launched: { model: string; has_branch: boolean; provider: string };
+  agent_launched: { has_branch: boolean; provider: string };
   agent_run_opened: { status: string };
   agent_steered: { length_bucket: string };
   agent_stopped: NoProps;
@@ -283,12 +283,10 @@ export interface AnalyticsEventProps {
   agent_preferences_updated: { field: string };
 
   // ── Routines (MIN-185) — un run d'agent qui revient tout seul ──
-  // We measure the FORM of the gesture (cadence, model chosen or not), never
-  // the instruction: it describes someone's deposit.
+  // We measure the form of the gesture, never the instruction: it describes
+  // someone's repository.
   routine_created: {
     frequency: string;
-    model: string;
-    reasoning_level: string;
     has_branch: boolean;
     prompt_length_bucket: string;
   };

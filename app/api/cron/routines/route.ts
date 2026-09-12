@@ -64,6 +64,8 @@ function launchErrorCode(error: string): RoutineErrorCode {
       return "noRepo";
     case "alreadyRunning":
       return "alreadyRunning";
+    case "noModelForProvider":
+      return "noModelForProvider";
     case "modelAbovePlan":
       return "modelAbovePlan";
     default:
@@ -87,8 +89,6 @@ async function runRoutine(routine: Routine): Promise<{ id: string; outcome: stri
     // The title is that of the routine, written ONCE at its creation: no
     // summary to be paid for each visit (see `launch.ts`).
     title: routine.title,
-    ...(routine.model ? { model: routine.model, forced: true } : {}),
-    reasoningLevel: routine.reasoning_level,
     baseBranch: routine.base_branch,
     routineId: routine.id,
     // The ceiling of THIS passage (see `routineRunBudgetUsd`): the loop takes the

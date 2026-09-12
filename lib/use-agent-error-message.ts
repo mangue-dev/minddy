@@ -27,6 +27,7 @@ const AGENT_ERROR_KEYS: Record<string, MessageKey<"Agent">> = {
   managedServiceUnavailable: "errorManagedServiceUnavailable",
   executionBackendUnavailable: "errorExecutionBackendUnavailable",
   noModelForProvider: "errorNoModelForProvider",
+  workerConfigurationManagedInSettings: "errorWorkerConfigurationManagedInSettings",
   localEndpointRequiresLocalRun: "errorLocalEndpointRequiresLocalRun",
   localIssueConfirmationRequired: "errorLocalIssueConfirmationRequired",
   supersededRun: "errorSupersededRun",

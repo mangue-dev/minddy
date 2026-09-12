@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
@@ -30,7 +29,7 @@ import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
  * (read states remain indexed by ticket: two conversations from the same ticket
  * therefore become read together).
  *
- * POST = launch a run without a ticket: { projectId, prompt, model?, baseBranch? }.
+ * POST = launch a run without a ticket: { projectId, prompt, baseBranch? }.
  */
 
 export const runtime = "nodejs";
@@ -242,7 +241,6 @@ export async function GET(request: NextRequest) {
 // framing around that content. Keep enough headroom for the framing so a large
 // notebook is never silently cut before it reaches the agent.
 const MAX_PROMPT_LENGTH = MAX_SCRATCHPAD_LENGTH + 8_192;
-const MAX_MODEL_LENGTH = 200;
 const MAX_BRANCH_LENGTH = 255;
 
 const LAUNCH_ERROR_STATUS: Record<string, number> = {
@@ -253,6 +251,7 @@ const LAUNCH_ERROR_STATUS: Record<string, number> = {
   quotaExceeded: 402,
   managedServiceUnavailable: 503,
   executionBackendUnavailable: 503,
+  workerConfigurationManagedInSettings: 400,
   noModelForProvider: 400,
   localEndpointRequiresLocalRun: 409,
   modelAbovePlan: 403,
@@ -292,8 +291,6 @@ export async function POST(request: NextRequest) {
   let body: {
     projectId?: string;
     prompt?: string;
-    model?: string;
-    reasoningLevel?: string;
     baseBranch?: string;
     mentions?: unknown;
     attachments?: unknown;
@@ -309,6 +306,16 @@ export async function POST(request: NextRequest) {
     body = parsed as typeof body;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if ("model" in body || "reasoningLevel" in body || "forced" in body) {
+    return NextResponse.json(
+      {
+        error: "workerConfigurationManagedInSettings",
+        code: "workerConfigurationManagedInSettings",
+      },
+      { status: 400 },
+    );
   }
 
   const projectId = typeof body.projectId === "string" ? body.projectId.trim() : "";
@@ -335,20 +342,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const model =
-    typeof body.model === "string" && body.model.trim()
-      ? body.model.trim().slice(0, MAX_MODEL_LENGTH)
-      : undefined;
   const baseBranch =
     typeof body.baseBranch === "string" && body.baseBranch.trim()
       ? body.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
       : undefined;
-  // Level of reasoning of the composer (MIN-122). An unknown value is
-  // IGNORED rather than refused: the launch then falls back on the personal fault,
-  // like the route of a ticket.
-  const reasoningLevel = isReasoningLevel(body.reasoningLevel)
-    ? body.reasoningLevel
-    : undefined;
   const resources = parseResourcesInput(body.attachments, `chat/${auth.user.id}/`, 5);
   if (resources === null) {
     return NextResponse.json({ error: "Invalid attachments" }, { status: 400 });
@@ -361,9 +358,6 @@ export async function POST(request: NextRequest) {
     userId: auth.user.id,
     triggeredBy: "button",
     prompt: promptWithFiles,
-    model,
-    forced: !!model,
-    reasoningLevel,
     baseBranch,
     promptMentions: parseAgentMentions(body.mentions),
     localExec: body.localExec === true,

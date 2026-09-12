@@ -1,7 +1,6 @@
 import "server-only";
 
 import { ROUTINE_FREQUENCIES } from "@/lib/routine-schedule";
-import { REASONING_LEVELS } from "@/lib/agent-reasoning";
 
 /**
  * The SCHEMA for the `create_routine` tool, written once (MIN-185).
@@ -40,23 +39,22 @@ export const CREATE_ROUTINE_DESCRIPTION =
   "choice. It MAY open a pull request on its own when it finds something worth " +
   "fixing, and simply concludes when it does not. OWNER ONLY: only the project's " +
   "owner can create a routine, because it is their usage budget that leaves every " +
-  "Monday morning — a member gets a refusal, and there is no way around it. The " +
-  "model is chosen PER ROUTINE and frozen on it: a security review deserves the " +
-  "strongest model, a monthly inventory the cheapest. Its spend is billed under " +
+  "Monday morning — a member gets a refusal, and there is no way around it. Code " +
+  "workers always use the owner's account model and reasoning configuration. Its spend is billed under " +
   "'Routines', separately from agent runs, and ONE run stops at 15% of the " +
   "owner's monthly usage budget by default — it cannot silently take the whole " +
   "month (`max_spend_percent`).";
 
 export const UPDATE_ROUTINE_DESCRIPTION =
   "Change an existing routine: turn it on or off (`enabled`), move its cadence, " +
-  "swap its model or rewrite its instruction (its title follows). OWNER ONLY. " +
+  "or rewrite its instruction (its title follows). OWNER ONLY. " +
   "Touching the cadence or re-enabling it recomputes the next run — so 'move it to 7am' takes effect at the " +
   "NEXT occurrence, not at the one already scheduled. Get the id from list_routines.";
 
 export const LIST_ROUTINES_DESCRIPTION =
   "List the routines of a project without loading every instruction: id, title " +
   "(written by minddy from the instruction), cadence in plain fields, " +
-  "model, the spending cap of one run, whether it is enabled, when it last ran " +
+  "the spending cap of one run, whether it is enabled, when it last ran " +
   "and when it runs next, and the " +
   "code of the last missed run (an exhausted usage budget, an unlinked repository). " +
   "The compact list deliberately omits instructions so a project with many long " +
@@ -143,18 +141,6 @@ export const CREATE_ROUTINE_PARAMETERS = {
         "ask you anything once it has started.",
     },
     ...ROUTINE_SCHEDULE_PROPERTIES,
-    model: {
-      type: "string",
-      description:
-        "Exact model id to run this routine on, FROZEN on it. Pass one only when the " +
-        "user names a model — resolve the exact id with list_agent_models first. Omit " +
-        "to use their default.",
-    },
-    reasoning_level: {
-      type: "string",
-      enum: [...REASONING_LEVELS],
-      description: "Reasoning effort of the runs. Omit for the user's default.",
-    },
     base_branch: {
       type: "string",
       description: "Branch the runs start from. Omit for the repository's default branch.",
@@ -187,8 +173,6 @@ export const UPDATE_ROUTINE_PARAMETERS = {
         "true re-arms it on its next occurrence.",
     },
     ...ROUTINE_SCHEDULE_PROPERTIES,
-    model: { type: "string", description: "New exact model id, or null to use the default." },
-    reasoning_level: { type: "string", enum: [...REASONING_LEVELS] },
     base_branch: { type: "string", description: "New base branch." },
     max_spend_percent: MAX_SPEND_PERCENT_PROPERTY,
   } as Record<string, unknown>,

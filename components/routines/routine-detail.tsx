@@ -35,7 +35,6 @@ import { AgentConversation } from "@/components/agent/agent-conversation";
 import { AppContentHeader } from "@/components/app-content-header";
 import { EmptyScene } from "@/components/empty-scene";
 import { Markdown } from "@/components/markdown";
-import { ModelBadge } from "@/components/model-badge";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import {
@@ -44,8 +43,6 @@ import {
 } from "@/components/pull-requests/pr-state-badge";
 import { agentSessionStatusKey } from "@/components/agents/agent-session-status";
 import { BranchCombobox } from "@/components/agent/branch-combobox";
-import { ModelCombobox } from "@/components/agent/model-combobox";
-import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
 import { RoutinePromptField } from "@/components/routines/routine-prompt-field";
 import { SettingsRow } from "@/components/settings/settings-ui";
 import { RoutineScheduleFields } from "@/components/routines/routine-schedule-fields";
@@ -63,16 +60,8 @@ import {
   routinesQueryKey,
   useRoutineRunsQuery,
 } from "@/lib/use-routines-query";
-import {
-  useAgentModelsQuery,
-  useReasoningLevelsFor,
-} from "@/lib/use-agent-models-query";
-import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
+import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useScrollFade } from "@/lib/use-scroll-fade";
-import {
-  nearestReasoningLevel,
-  type ReasoningLevel,
-} from "@/lib/agent-reasoning";
 import type { AssistantMention } from "@/lib/assistant-types";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -224,8 +213,6 @@ export function RoutineDetail({
     await patch({
       prompt: draft.prompt.trim(),
       promptMentions: draft.promptMentions,
-      model: draft.model || null,
-      reasoningLevel: draft.reasoning,
       baseBranch: draft.baseBranch || null,
       maxSpendPercent: draft.spendCap,
       frequency: draft.schedule.frequency,
@@ -525,10 +512,7 @@ export function RoutineDetail({
               the screen — and “what she does” was precisely what we had come
               check. */}
           <div className="flex shrink-0 flex-col gap-1 px-4 pb-2">
-            <RoutineSummary
-              schedule={routineSchedule(routine)}
-              model={routine.model}
-            />
+            <RoutineSummary schedule={routineSchedule(routine)} />
 
             <p className="text-xs text-muted-foreground">
               {t("executionEnvironment")}
@@ -1015,6 +999,8 @@ function routineErrorLabel(
       return t("lastError_noRepo" as "lastError_quota");
     case "alreadyRunning":
       return t("lastError_alreadyRunning" as "lastError_quota");
+    case "noModelForProvider":
+      return t("lastError_noModelForProvider" as "lastError_quota");
     case "modelAbovePlan":
       return t("lastError_modelAbovePlan" as "lastError_quota");
     case "managedServiceUnavailable":
@@ -1047,10 +1033,8 @@ function routineErrorLabel(
  */
 function RoutineSummary({
   schedule,
-  model,
 }: {
   schedule: RoutineSchedule;
-  model: string | null;
 }) {
   const t = useTranslations("Routines");
   const locale = useLocale();
@@ -1073,12 +1057,6 @@ function RoutineSummary({
       {cadence ? (
         <p className="text-xs text-muted-foreground">{cadence}</p>
       ) : null}
-      <ModelBadge
-        model={model}
-        size={12}
-        fallbackLabel={t("modelDefaultBadge")}
-        tooltip={t("modelTooltip")}
-      />
     </div>
   );
 }
@@ -1087,9 +1065,6 @@ function RoutineSummary({
 interface RoutineDraft {
   prompt: string;
   promptMentions: AssistantMention[];
-  /** "" = the default model of the account (no model fixed on the routine). */
-  model: string;
-  reasoning: ReasoningLevel;
   /** "" = the default branch of the repository. */
   baseBranch: string;
   /** Share of the monthly budget that ONE passage can spend (1–100). */
@@ -1102,8 +1077,6 @@ function draftFrom(routine: Routine): RoutineDraft {
   return {
     prompt: routine.prompt,
     promptMentions: routine.prompt_mentions ?? [],
-    model: routine.model ?? "",
-    reasoning: routine.reasoning_level,
     baseBranch: routine.base_branch ?? "",
     // The routines placed before the ceiling do not already carry any in the cache
     // loaded: the fault, the very one that the base gave them.
@@ -1114,8 +1087,7 @@ function draftFrom(routine: Routine): RoutineDraft {
 
 /**
  * Editing a routine: everything that decides what it does, and what
- * it costs — its education, its model, its level of reasoning, its
- * starting branch and its cadence.
+ * it costs — its instruction, starting branch, spending cap and cadence.
  *
  * No “name” field: the title is written by minddy from
  * the instruction, and rewrites as soon as it changes. No wizard replayed either —
@@ -1140,15 +1112,6 @@ function RoutineEditor({
 }) {
   const t = useTranslations("Routines");
   const tAgent = useTranslations("Agent");
-  const tCommon = useTranslations("Common");
-  // The default of the ACCOUNT, then that of the instance: what the routine will execute
-  // if we don't set any model for it. The combobox displays it as the “default” option.
-  const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
-  const { defaultModel } = useAgentPreferencesQuery();
-  // The levels of the model that this routine rotates (see composing it).
-  const reasoningLevels = useReasoningLevelsFor(
-    draft.model || defaultModel || providerDefaultModel,
-  );
 
   const set = <K extends keyof RoutineDraft>(key: K, value: RoutineDraft[K]) =>
     onChange({ ...draft, [key]: value });
@@ -1181,44 +1144,13 @@ function RoutineEditor({
         />
       </EditorSection>
 
-      {/* WHAT she works with: the model, what she is left to think about, and
-          the code from which it starts. The three were frozen at creation without
-          no surface to change one's mind — it was necessary to remove the routine and
-          redo it.
-
-          In ROWS (labeled on the left, control on the right) and not stacked: three
-          controls in a row without line label did not say which one
-          set what, and the full-width model selector overwrote the
-          two more when it is not more important. The three carry
-          now the same compact pellet. */}
+      {/* Worker model and reasoning come from Account settings. This section
+          only contains routine-specific execution settings. */}
       <EditorSection title={t("sectionAgent")}>
         <div className="divide-y divide-border/60">
-          <SettingsRow
-            label={t("modelLabel")}
-            control={
-              <ModelCombobox
-                variant="compact"
-                value={draft.model}
-                onChange={(value) => set("model", value)}
-                defaultLabel={t("modelDefault")}
-                defaultModelId={defaultModel || providerDefaultModel}
-                placeholder={t("modelPlaceholder")}
-                emptyLabel={t("modelEmpty")}
-                loadingLabel={tCommon("loading")}
-                freeTextLabel={(query) => t("modelFreeText", { model: query })}
-              />
-            }
-          />
-          <SettingsRow
-            label={t("reasoningLabel")}
-            control={
-              <ReasoningCombobox
-                value={nearestReasoningLevel(draft.reasoning, reasoningLevels)}
-                onChange={(value) => set("reasoning", value)}
-                levels={reasoningLevels}
-              />
-            }
-          />
+          <p className="py-3 text-xs leading-relaxed text-muted-foreground">
+            {t("workerModelHint")}
+          </p>
           {/* The START branch: the one that each execution clones and from
               which she opens her pull request. Anchored to the project, like the
               consists of a notebook session — a routine does not have a ticket. */}
@@ -1264,7 +1196,7 @@ function RoutineEditor({
         {/* What all the fields above give, in plain English. Under them, and not
             at the bottom of the screen: it is their result which is read again before
             d'enregistrer. */}
-        <RoutineSummary schedule={draft.schedule} model={draft.model || null} />
+        <RoutineSummary schedule={draft.schedule} />
       </EditorSection>
     </div>
   );

@@ -84,12 +84,12 @@ async function freshCatalog(
     loadOpenRouterIndex: vi.fn(async () => {}),
   }));
   vi.doMock("./model", () => ({
-    getPrReviewDefaultModelForUser: vi.fn(async () => {
-      if (!endpoint) return "anthropic/claude-opus-5";
-      if (endpoint.provider === "anthropic") return "claude-sonnet-5";
-      return null;
-    }),
-    getRootDefaultModel: vi.fn(async () => null),
+    getUserDefaultModel: vi.fn(async () => ({
+      model: endpoint?.provider === "anthropic"
+        ? "claude-sonnet-5"
+        : "deepseek/deepseek-v4-flash",
+      provider: endpoint?.provider ?? "openrouter",
+    })),
     resolveAgentApiKey: vi.fn(async () => {
       if (endpoint) return endpoint;
       return {
@@ -99,7 +99,6 @@ async function freshCatalog(
         mode: "platform",
       };
     }),
-    resolveProviderDefaultModel: vi.fn(async () => null),
     getUserByok: vi.fn(async () => null),
     userHasByokKey: vi.fn(async () => endpoint?.mode === "byok"),
   }));
@@ -299,61 +298,6 @@ describe("recommended models", () => {
     const { getAgentModelsForUser } = await freshCatalog(INDEX, JSON.stringify(["nobody/nothing"]));
     const catalog = await getAgentModelsForUser("user-1");
     expect(catalog.recommended).toEqual([]);
-  });
-
-  it("also accompanies the PR review picker", async () => {
-    // It's a USER surface: same selection, same reason.
-    const { getPrReviewModelCatalog } = await freshCatalog(
-      INDEX,
-      JSON.stringify(["anthropic/claude-opus-5"]),
-    );
-    const catalog = await getPrReviewModelCatalog("user-1");
-    expect(catalog.recommended).toEqual(["anthropic/claude-opus-5"]);
-  });
-
-  it("uses native model IDs for a BYOK PR review", async () => {
-    const { getPrReviewModelCatalog } = await freshCatalog(
-      INDEX,
-      JSON.stringify(["claude-sonnet-5"]),
-      {
-        provider: "anthropic",
-        baseUrl: "https://api.anthropic.com/v1",
-        apiKey: "user-key",
-        mode: "byok",
-      },
-    );
-
-    const catalog = await getPrReviewModelCatalog("user-1");
-
-    expect(catalog).toMatchObject({
-      provider: "anthropic",
-      defaultModel: "claude-sonnet-5",
-      maxMultiplier: null,
-    });
-    expect(catalog.models.map((model) => model.id)).toEqual(["claude-sonnet-5"]);
-  });
-
-  it("exposes local PR review discovery without inventing a default model", async () => {
-    const { getPrReviewModelCatalog } = await freshCatalog(
-      INDEX,
-      null,
-      {
-        provider: "ollama",
-        baseUrl: "http://127.0.0.1:11434/v1",
-        apiKey: "",
-        mode: "byok",
-      },
-    );
-
-    await expect(getPrReviewModelCatalog("user-1")).resolves.toMatchObject({
-      provider: "ollama",
-      defaultModel: null,
-      localEndpoint: {
-        provider: "ollama",
-        baseUrl: "http://127.0.0.1:11434/v1",
-      },
-      models: [],
-    });
   });
 
   it("does not affect the admin catalog", async () => {

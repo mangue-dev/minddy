@@ -30,16 +30,13 @@ import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { AutomationPresetPicker } from "@/components/automations/automation-preset-picker";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
-import { ModelCombobox } from "@/components/agent/model-combobox";
 import {
   AUTOMATION_EFFORTS_META_KEY,
   AUTOMATION_START_DELAY_CHOICES,
   AUTOMATION_START_DELAY_META_KEY,
-  AUTOMATION_MODELS_META_KEY,
   AUTOMATION_PRESET_META_KEY,
   presetRules,
   resolveAutomationEfforts,
-  resolveAutomationModels,
   resolveAutomationPreset,
   resolveAutomationStartDelayMinutes,
   stepCostUsd,
@@ -95,7 +92,6 @@ function sampleIssue(effort: IssueEffort) {
 
 export function AccountAutomationsSection() {
   const t = useTranslations("Automations");
-  const tAgent = useTranslations("Agent");
   const { user, updateUserMetadata } = useAuth();
   const { projects, updateProject, loading: projectsLoading } = useProjects();
   const { includedUsd } = useBillingSummary();
@@ -111,12 +107,8 @@ export function AccountAutomationsSection() {
   const [efforts, setEfforts] = useState(
     resolveAutomationEfforts(user?.user_metadata),
   );
-  const [models, setModels] = useState(
-    resolveAutomationModels(user?.user_metadata),
-  );
   useEffect(() => {
     setEfforts(resolveAutomationEfforts(user?.user_metadata));
-    setModels(resolveAutomationModels(user?.user_metadata));
   }, [user]);
 
   const [delay, setDelay] = useState(() =>
@@ -150,21 +142,6 @@ export function AccountAutomationsSection() {
       await updateUserMetadata({ [AUTOMATION_EFFORTS_META_KEY]: next });
     } catch (e) {
       setEfforts(efforts);
-      toast.error((e as Error).message);
-    }
-  };
-
-  const setEffortModel = async (effort: IssueEffort, model: string) => {
-    // Empty = “my default model”: we remove the key rather than writing
-    // an empty string, so that the fallback remains the default of the account.
-    const next = { ...models };
-    if (model.trim()) next[effort] = model.trim();
-    else delete next[effort];
-    setModels(next);
-    try {
-      await updateUserMetadata({ [AUTOMATION_MODELS_META_KEY]: next });
-    } catch (e) {
-      setModels(models);
       toast.error((e as Error).message);
     }
   };
@@ -347,43 +324,9 @@ export function AccountAutomationsSection() {
               </AccordionContent>
             </AccordionItem>
 
-            <AccordionItem value="models" className="border-b-0">
-              <AccordionTrigger className="py-3 text-sm font-medium">
-                {t("modelsTitle")}
-              </AccordionTrigger>
-              <AccordionContent>
-                <p className="pb-1 text-xs leading-relaxed text-muted-foreground">
-                  {t("modelsHint")}
-                </p>
-                <div className="divide-y divide-border">
-                  {EFFORTS.map((e) => (
-                    <SettingsRow
-                      key={e.value}
-                      className="py-2.5"
-                      label={<span className="tabular-nums">{e.label}</span>}
-                      control={
-                        <ModelCombobox
-                          variant="compact"
-                          value={models[e.value] ?? ""}
-                          onChange={(v) => void setEffortModel(e.value, v)}
-                          defaultLabel={t("modelDefault")}
-                          placeholder={tAgent("modelSearchPlaceholder")}
-                          emptyLabel={tAgent("modelSearchEmpty")}
-                          loadingLabel={tAgent("modelSearchLoading")}
-                          freeTextLabel={(q) =>
-                            tAgent("modelUseCustom", { model: q })
-                          }
-                          // An off size doesn't do anything: choose one
-                          // template would have no effect, and offer it anyway
-                          // would suggest the opposite.
-                          disabled={!efforts[e.value]}
-                        />
-                      }
-                    />
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
+            <p className="pb-3 text-xs leading-relaxed text-muted-foreground">
+              {t("workerModelHint")}
+            </p>
           </Accordion>
         )}
       </SettingsGroup>

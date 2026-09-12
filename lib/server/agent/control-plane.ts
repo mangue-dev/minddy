@@ -61,7 +61,10 @@ import {
 import type { AgentCheckpoint } from "./runs";
 import type { AgentEventType } from "./agent-contract";
 import { parseAgentMentions } from "@/lib/agent-mentions";
-import { surfaceForAgentRun } from "@/lib/ai-surfaces";
+import {
+  surfaceForAgentRun,
+  workerModelSurfaceForAgentRun,
+} from "@/lib/ai-surfaces";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { AI_REVIEW_MAX_INLINE_COMMENTS } from "./tools";
 
@@ -907,7 +910,7 @@ export async function handleControlPlaneRequest(opts: {
       const { resolveAgentApiKey } = await import("./model");
       const endpoint = await resolveAgentApiKey(
         run.created_by ?? "",
-        run.chain_id || run.routine_id ? "automations" : "agent",
+        workerModelSurfaceForAgentRun(run),
         {
           allowLocal: true,
           requireByok: true,

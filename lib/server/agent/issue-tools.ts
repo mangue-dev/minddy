@@ -1055,13 +1055,19 @@ async function createRoutineTool(
       success: false,
     };
   }
+  if ("model" in args || "reasoning_level" in args) {
+    return {
+      result: {
+        error: "Routine workers use the model and reasoning configured in Account settings.",
+        code: "workerConfigurationManagedInSettings",
+      },
+      success: false,
+    };
+  }
   const result = await createRoutine({
     projectId: ctx.projectId,
     actorId: ctx.actorId,
     prompt: typeof args.prompt === "string" ? args.prompt : "",
-    model: typeof args.model === "string" ? args.model : null,
-    reasoningLevel:
-      typeof args.reasoning_level === "string" ? args.reasoning_level : null,
     baseBranch: typeof args.base_branch === "string" ? args.base_branch : null,
     maxSpendPercent:
       typeof args.max_spend_percent === "number"
@@ -1124,8 +1130,10 @@ function routineToolError(r: {
       return "Refused: the cadence does not hold together. 'weekly' takes at least one day in `weekdays` (0=Sunday…6=Saturday) and no days_of_month; 'monthly' takes at least one day in `days_of_month` (1–31) and no weekdays.";
     case "modelAbovePlan":
       return r.modelLimit
-        ? `Refused: ${r.modelLimit.model} is ×${r.modelLimit.multiplier}, above the ×${r.modelLimit.limit} ceiling of the ${r.modelLimit.planId} plan. Omit \`model\` to use the account default.`
-        : "Refused: that model is above the plan's ceiling. Omit `model` to use the account default.";
+        ? `Refused: the account worker model ${r.modelLimit.model} is ×${r.modelLimit.multiplier}, above the ×${r.modelLimit.limit} ceiling of the ${r.modelLimit.planId} plan. The user must choose an eligible model in Account settings.`
+        : "Refused: the account worker model is above the plan ceiling. The user must change it in Account settings.";
+    case "workerConfigurationManagedInSettings":
+      return "Refused: routine worker model and reasoning are controlled by the user in Account settings.";
     default:
       return "Could not create the routine.";
   }

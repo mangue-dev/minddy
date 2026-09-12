@@ -25,7 +25,6 @@
  */
 
 import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
-import { REASONING_LEVELS, type ReasoningLevel } from "@/lib/agent-reasoning";
 import type { AgentLaunchMode } from "@/lib/server/agent/launch-message";
 import type { AgentLaunchIntent } from "@/lib/server/agent/launch";
 import { hasPlanTasks } from "@/lib/plan";
@@ -182,16 +181,13 @@ export interface AutomationConditions {
  * (the same as the app buttons, see `AGENT_LAUNCH_MODES`) plus `custom`,
  * which carries a free setpoint.
  *
- * `model` and `reasoningLevel` are the “one model per step” lever: we pass
- * through OpenRouter, so there is no obligation to plan an XL and reread a diff of
- * three lines with the same model. `null` = launcher default.
+ * Worker model and reasoning are intentionally absent: every code delegation
+ * uses the owner's Account settings.
  */
 export interface AutomationRunAction {
   type: "run_numo";
   mode: AgentLaunchMode | "custom";
   prompt?: string;
-  model?: string | null;
-  reasoningLevel?: ReasoningLevel | null;
 }
 
 export type AutomationAction =
@@ -528,7 +524,6 @@ const EFFORTS: readonly (IssueEffort | "none")[] = ["xs", "s", "m", "l", "xl", "
 const INTENTS: readonly AgentLaunchIntent[] = ["implement", "plan", "verify", "custom"];
 // The complete vocabulary, that of models (see lib/agent-reasoning.ts): a
 // list copied here would be a list that ages separately.
-const REASONING: readonly ReasoningLevel[] = REASONING_LEVELS;
 
 /** Cap of a free instruction stored in a rule (the rest is from the prompt). */
 const MAX_RULE_PROMPT_CHARS = 4000;
@@ -595,10 +590,6 @@ function parseAction(raw: unknown): AutomationAction | null {
       const action: AutomationRunAction = { type: "run_numo", mode };
       if (typeof obj.prompt === "string" && obj.prompt.trim()) {
         action.prompt = obj.prompt.trim().slice(0, MAX_RULE_PROMPT_CHARS);
-      }
-      if (typeof obj.model === "string" && obj.model.trim()) action.model = obj.model.trim();
-      if (typeof obj.reasoningLevel === "string" && (REASONING as readonly string[]).includes(obj.reasoningLevel)) {
-        action.reasoningLevel = obj.reasoningLevel as ReasoningLevel;
       }
       // A `custom` mode without instructions does not require anything from the agent.
       if (action.mode === "custom" && !action.prompt) return null;
@@ -707,13 +698,9 @@ const HUMAN_SOURCES: AutomationSource[] = ["web", "numo"];
  */
 const WORKER_SOURCES: AutomationSource[] = ["web", "numo", "mcp", "agent", "forge"];
 
-// `model` remains MISSING from the presets: an OpenRouter identifier pinned here
-// would age without anyone seeing it, and absent already means “the defect
-// from the launcher”. The cost driver of presets is reasoning.
-const run = (mode: AgentLaunchMode, reasoningLevel: ReasoningLevel): AutomationRunAction => ({
+const run = (mode: AgentLaunchMode): AutomationRunAction => ({
   type: "run_numo",
   mode,
-  reasoningLevel,
 });
 
 /**
@@ -737,7 +724,7 @@ function loopByEffortRules(): AutomationRule[] {
       enabled: true,
       when: { type: "status_changed", to: ["todo"], source: HUMAN_SOURCES },
       if: { effort: SMALL_EFFORTS },
-      then: [run("implement", "low")],
+      then: [run("implement")],
     },
     {
       id: `${p}:medium-plan`,
@@ -745,7 +732,7 @@ function loopByEffortRules(): AutomationRule[] {
       enabled: true,
       when: { type: "status_changed", to: ["todo"], source: HUMAN_SOURCES },
       if: { effort: MEDIUM_EFFORTS },
-      then: [run("plan", "medium")],
+      then: [run("plan")],
     },
     {
       id: `${p}:medium-implement`,
@@ -753,7 +740,7 @@ function loopByEffortRules(): AutomationRule[] {
       enabled: true,
       when: { type: "run_finished", intent: ["plan"], outcome: "ok" },
       if: { effort: MEDIUM_EFFORTS },
-      then: [run("implement", "medium")],
+      then: [run("implement")],
     },
     {
       id: `${p}:medium-verify`,
@@ -761,7 +748,7 @@ function loopByEffortRules(): AutomationRule[] {
       enabled: true,
       when: { type: "run_finished", intent: ["implement"], outcome: "ok" },
       if: { effort: MEDIUM_EFFORTS },
-      then: [run("verify", "low")],
+      then: [run("verify")],
     },
     {
       id: `${p}:big-plan`,
@@ -769,7 +756,7 @@ function loopByEffortRules(): AutomationRule[] {
       enabled: true,
       when: { type: "status_changed", to: ["todo"], source: HUMAN_SOURCES },
       if: { effort: BIG_EFFORTS },
-      then: [run("plan", "high")],
+      then: [run("plan")],
     },
     {
       id: `${p}:big-review-plan`,
@@ -777,7 +764,7 @@ function loopByEffortRules(): AutomationRule[] {
       enabled: true,
       when: { type: "run_finished", intent: ["plan"], outcome: "ok" },
       if: { effort: BIG_EFFORTS },
-      then: [run("plan", "high")],
+      then: [run("plan")],
     },
     {
       id: `${p}:big-await-human`,
@@ -793,7 +780,7 @@ function loopByEffortRules(): AutomationRule[] {
       enabled: true,
       when: { type: "run_finished", intent: ["plan"], outcome: "ok" },
       if: { effort: BIG_EFFORTS },
-      then: [run("implement", "medium")],
+      then: [run("implement")],
     },
     {
       id: `${p}:big-verify`,
@@ -801,7 +788,7 @@ function loopByEffortRules(): AutomationRule[] {
       enabled: true,
       when: { type: "run_finished", intent: ["implement"], outcome: "ok" },
       if: { effort: BIG_EFFORTS },
-      then: [run("verify", "low")],
+      then: [run("verify")],
     },
   ];
 }
@@ -820,7 +807,7 @@ function planAndVerifyRules(): AutomationRule[] {
       enabled: true,
       when: { type: "status_changed", to: ["todo"], source: HUMAN_SOURCES },
       if: {},
-      then: [run("plan", "medium")],
+      then: [run("plan")],
     },
     {
       id: `${p}:verify`,
@@ -828,7 +815,7 @@ function planAndVerifyRules(): AutomationRule[] {
       enabled: true,
       when: { type: "status_changed", to: ["in_review"], source: WORKER_SOURCES },
       if: {},
-      then: [run("verify", "low")],
+      then: [run("verify")],
     },
   ];
 }
@@ -841,7 +828,7 @@ function planOnlyRules(): AutomationRule[] {
       enabled: true,
       when: { type: "status_changed", to: ["todo"], source: HUMAN_SOURCES },
       if: {},
-      then: [run("plan", "medium")],
+      then: [run("plan")],
     },
   ];
 }
@@ -859,7 +846,7 @@ function implementOnlyRules(): AutomationRule[] {
       enabled: true,
       when: { type: "status_changed", to: ["todo"], source: HUMAN_SOURCES },
       if: {},
-      then: [run("implement", "medium")],
+      then: [run("implement")],
     },
   ];
 }
@@ -872,7 +859,7 @@ function verifyOnlyRules(): AutomationRule[] {
       enabled: true,
       when: { type: "status_changed", to: ["in_review"], source: WORKER_SOURCES },
       if: {},
-      then: [run("verify", "low")],
+      then: [run("verify")],
     },
   ];
 }
@@ -987,7 +974,6 @@ export function resolveAutomationPreset(
  * elsewhere (rules of `m` mode, cycle points, cost factor).
  */
 export const AUTOMATION_EFFORTS_META_KEY = "automation_efforts";
-export const AUTOMATION_MODELS_META_KEY = "automation_models";
 
 /** The line of settings that a ticket follows: its own, or that of the Mr. */
 export function automationEffortKey(effort: IssueEffort | null | undefined): IssueEffort {
@@ -1017,27 +1003,6 @@ export function isAutomationEffortEnabled(
   effort: IssueEffort | null | undefined,
 ): boolean {
   return resolveAutomationEfforts(meta)[automationEffortKey(effort)];
-}
-
-/** Model chosen by effort. Absent = account default, such as manual launch. */
-export function resolveAutomationModels(
-  meta: Record<string, unknown> | null | undefined,
-): Partial<Record<IssueEffort, string>> {
-  const raw = meta?.[AUTOMATION_MODELS_META_KEY];
-  const map = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
-  const out: Partial<Record<IssueEffort, string>> = {};
-  for (const effort of ALL_EFFORTS) {
-    const value = map[effort];
-    if (typeof value === "string" && value.trim()) out[effort] = value.trim();
-  }
-  return out;
-}
-
-export function automationModelFor(
-  meta: Record<string, unknown> | null | undefined,
-  effort: IssueEffort | null | undefined,
-): string | null {
-  return resolveAutomationModels(meta)[automationEffortKey(effort)] ?? null;
 }
 
 /**

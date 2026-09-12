@@ -62,6 +62,18 @@ describe("Numo tool contracts", () => {
     expect(listRoutines?.function.description).toMatch(/full instruction/i);
   });
 
+  it("keeps worker model and reasoning out of delegation tools", () => {
+    for (const name of ["launch_code_agent", "create_routine", "update_routine"]) {
+      const properties = tool(name)?.function.parameters.properties;
+      expect(properties, name).not.toHaveProperty("model");
+      expect(properties, name).not.toHaveProperty("reasoning_level");
+    }
+
+    const accountProperties = tool("update_account_settings")?.function.parameters.properties;
+    expect(accountProperties).not.toHaveProperty("default_model");
+    expect(accountProperties).not.toHaveProperty("default_reasoning_level");
+  });
+
   it("keeps feedback comment guidance aligned with the comment service", () => {
     const comment = tool("add_feedback_comment");
 

@@ -63,23 +63,26 @@ export async function PATCH(request: NextRequest, ctx: RouteContext) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
+  if ("model" in body || "reasoningLevel" in body) {
+    return NextResponse.json(
+      {
+        error: "workerConfigurationManagedInSettings",
+        code: "workerConfigurationManagedInSettings",
+      },
+      { status: 400 },
+    );
+  }
 
   const result = await updateRoutine({
     routineId: id,
     actorId: auth.user.id,
-    // Only the PRESENT fields leave: the factory distinguishes “absent” from
-    // "emptied", and a `undefined` passing through would erase a chosen model.
+    // Only the PRESENT fields leave: the factory distinguishes absent values
+    // from fields that were deliberately cleared.
     ...(body.prompt !== undefined
       ? { prompt: str(body.prompt, MAX_PROMPT_LENGTH) }
       : {}),
     ...(body.promptMentions !== undefined
       ? { promptMentions: parseRoutinePromptMentions(body.promptMentions) }
-      : {}),
-    ...(body.model !== undefined
-      ? { model: str(body.model, MAX_SHORT_FIELD) || null }
-      : {}),
-    ...(body.reasoningLevel !== undefined
-      ? { reasoningLevel: str(body.reasoningLevel, 32) }
       : {}),
     ...(body.baseBranch !== undefined
       ? { baseBranch: str(body.baseBranch, MAX_SHORT_FIELD) || null }

@@ -226,15 +226,8 @@ describe("runAutomations — conclure une chaîne", () => {
     expect(report.finishChain).not.toHaveBeenCalled();
   });
 
-  it("la reprise après vérification en échec garde le modèle de la TAILLE", async () => {
-    // A restart is a step in the SAME chain on the SAME ticket: the
-    // restart with another model than the one set for this size would not have
-    // no reason to exist — and the account setting is precisely what
-    // the user sees and manipulates.
-    h.ownerMeta = {
-      automation_preset: "loop-by-effort",
-      automation_models: { m: "vendor/m" },
-    };
+  it("retries a failed verification with the account worker configuration", async () => {
+    h.ownerMeta = { automation_preset: "loop-by-effort" };
     h.verdict = { ok: false, summary: "Les tests ne passent pas.", blockers: ["lib/foo.ts"] };
     h.chain = {
       ...livingChain(),
@@ -257,7 +250,7 @@ describe("runAutomations — conclure une chaîne", () => {
 
     expect(actions.runAction).toHaveBeenCalledTimes(1);
     const call = vi.mocked(actions.runAction).mock.calls[0][0];
-    expect(call.model).toBe("vendor/m");
+    expect(call).not.toHaveProperty("model");
     expect(call.action).toMatchObject({ type: "run_numo", mode: "implement" });
     expect(call.extraPrompt).toContain("Les tests ne passent pas.");
     expect(report.haltChain).not.toHaveBeenCalled();

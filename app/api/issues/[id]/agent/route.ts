@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
-import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { pickIssuePullRequests, type IssuePrRow } from "@/lib/server/agent/activity";
 import {
   launchAgentRun,
@@ -30,7 +29,7 @@ type RunRow = RunAnchors & {
 /**
  * Code Agent Runs from an issue (MIN-46).
  * GET → lists the runs of the issue VISIBLE BY THE CALLER + his pull request.
- * POST → launches a run { prompt?, model? } (“Launch an agent” button).
+ * POST → launches a run { prompt? } (“Launch an agent” button).
  * Access to the issue is verified via the client cookie (RLS); `launchAgentRun`
  * then does the pre-checks (linked deposit, quota/BYOK, run already active).
  */
@@ -126,7 +125,6 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 // Length terminals (MIN-118): the setpoint is persisted as is in
 // agent_runs; model and branch are short identifiers. Beyond that we truncate.
 const MAX_PROMPT_LENGTH = 20_000;
-const MAX_MODEL_LENGTH = 200;
 const MAX_BRANCH_LENGTH = 255;
 
 const LAUNCH_ERROR_STATUS: Record<string, number> = {
@@ -137,6 +135,7 @@ const LAUNCH_ERROR_STATUS: Record<string, number> = {
   quotaExceeded: 402,
   managedServiceUnavailable: 503,
   executionBackendUnavailable: 503,
+  workerConfigurationManagedInSettings: 400,
   noModelForProvider: 400,
   localEndpointRequiresLocalRun: 409,
   modelAbovePlan: 403,
@@ -166,9 +165,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   type LaunchBody = {
     prompt?: string;
-    model?: string;
     baseBranch?: string;
-    reasoningLevel?: string;
     intent?: AgentLaunchIntent;
     mentions?: unknown;
     attachments?: unknown;
@@ -188,10 +185,15 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     // empty body accepted
   }
-  const model =
-    typeof body.model === "string" && body.model.trim()
-      ? body.model.trim().slice(0, MAX_MODEL_LENGTH)
-      : undefined;
+  if ("model" in body || "reasoningLevel" in body || "forced" in body) {
+    return NextResponse.json(
+      {
+        error: "workerConfigurationManagedInSettings",
+        code: "workerConfigurationManagedInSettings",
+      },
+      { status: 400 },
+    );
+  }
   const prompt =
     typeof body.prompt === "string" && body.prompt.trim()
       ? body.prompt.trim().slice(0, MAX_PROMPT_LENGTH)
@@ -200,8 +202,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     typeof body.baseBranch === "string" && body.baseBranch.trim()
       ? body.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
       : undefined;
-  // Unknown level ignored: the launch then falls back to the personal default.
-  const reasoningLevel = isReasoningLevel(body.reasoningLevel) ? body.reasoningLevel : undefined;
   const resources = parseResourcesInput(body.attachments, `chat/${auth.user.id}/`, 5);
   if (resources === null) {
     return NextResponse.json({ error: "Invalid attachments" }, { status: 400 });
@@ -216,10 +216,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     userId: auth.user.id,
     triggeredBy: "button",
     prompt: promptWithFiles,
-    model,
-    forced: !!model,
     baseBranch,
-    reasoningLevel,
     // Framing (“Generate a plan” / “Check the plan”), control
     // (“Check implementation”) and free instruction (“Custom”): the
     // launch does not move the ticket. Everything else is worth “implementing”.

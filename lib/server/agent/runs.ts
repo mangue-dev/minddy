@@ -219,6 +219,8 @@ export interface AgentRun {
    * taken up by another invocation must find the same one. */
   reasoning_level: ReasoningLevel;
   key_mode: "platform" | "byok";
+  /** Resolution contract frozen at launch. NULL/absent identifies legacy runs. */
+  worker_model_source?: "account" | null;
   base_branch: string | null;
   branch_name: string | null;
   pr_number: number | null;
@@ -492,6 +494,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     model_forced: input.modelForced,
     reasoning_level: input.reasoningLevel,
     key_mode: input.keyMode,
+    worker_model_source: "account",
     base_branch: input.baseBranch ?? null,
     branch_name: input.branchName ?? null,
     pr_number: input.prNumber ?? null,

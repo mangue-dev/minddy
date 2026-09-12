@@ -84,20 +84,13 @@ import {
   useFileDrop,
 } from "@/components/resources";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
-import { ModelCombobox } from "@/components/agent/model-combobox";
 import {
   EnvironmentCombobox,
   LOCAL_REPO_ERROR_KEYS,
   type AgentEnvironment,
 } from "@/components/agent/environment-combobox";
-import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
 import { useLocalRepo } from "@/lib/use-local-repo";
-import {
-  useAgentModelsQuery,
-  useReasoningLevelsFor,
-} from "@/lib/use-agent-models-query";
-import { useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
-import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
+import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import {
   usePullRequestQuery,
   usePrCommentsQuery,
@@ -579,14 +572,7 @@ export function PrDetail({
   const tAgent = useTranslations("Agent");
   const isSend = useIsSendShortcut();
   const format = useFormatter();
-  const {
-    defaultModel: providerDefaultModel,
-    cloudExecutionConfigured,
-    executionBackend,
-  } = useAgentModelsQuery();
-  const { cloudExecutionConfigured: reviewExecutionConfigured } =
-    useAgentModelsQuery("review");
-  const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
+  const { cloudExecutionConfigured, executionBackend } = useAgentModelsQuery();
 
   const {
     pr,
@@ -663,10 +649,6 @@ export function PrDetail({
    * of the person: the text is an instruction, not a review.
    */
   const [reviewMode, setReviewMode] = useState<"write" | "findings">("write");
-  // Model of the run to launch — empty = account default (MIN-68: restart Numo
-  // is a cold launch, so it has its own choice of model).
-  const [model, setModel] = useState("");
-  const [reasoningOverride, setReasoningOverride] = useState<ReasoningLevel | null>(null);
   const [environment, setEnvironment] = useState<AgentEnvironment>("cloud");
   const [commentBody, setCommentBody] = useState("");
   const [posting, setPosting] = useState(false);
@@ -679,11 +661,8 @@ export function PrDetail({
   // rechargement.
   const reviewSession = usePrReviewSession(item.prId);
   const [aiReviewDialog, setAiReviewDialog] = useState(false);
-  const [aiReviewModel, setAiReviewModel] = useState("");
   const [aiReviewEnvironment, setAiReviewEnvironment] =
     useState<AgentEnvironment>("cloud");
-  const [aiReviewReasoningOverride, setAiReviewReasoningOverride] =
-    useState<ReasoningLevel | null>(null);
   const [startingAiReview, setStartingAiReview] = useState(false);
   const [tab, setTab] = useState<PullRequestDetailTab>("activity");
   const [unresolvedSidebarOpen, setUnresolvedSidebarOpen] = useState(false);
@@ -705,22 +684,9 @@ export function PrDetail({
     setAiReviewEnvironment(next);
   }, [localRepo.ready]);
 
-  const effectiveModel = model || defaultModel || providerDefaultModel;
-  const reasoningLevels = useReasoningLevelsFor(effectiveModel);
-  const reasoningLevel = nearestReasoningLevel(
-    reasoningOverride ?? defaultReasoningLevel,
-    reasoningLevels,
-  );
-  const aiReviewEffectiveModel = aiReviewModel || reviewSession.model?.instance;
-  const aiReviewReasoningLevels = useReasoningLevelsFor(aiReviewEffectiveModel, "review");
-  const aiReviewReasoningLevel = nearestReasoningLevel(
-    aiReviewReasoningOverride ?? defaultReasoningLevel,
-    aiReviewReasoningLevels,
-  );
   const aiReviewUsesLocal = aiReviewEnvironment === "local" && localRepo.ready;
-  const aiReviewBackendUnavailable = !aiReviewUsesLocal && !reviewExecutionConfigured;
-  const reviewExecutionAvailable =
-    reviewExecutionConfigured || localRepo.available;
+  const aiReviewBackendUnavailable = !aiReviewUsesLocal && !cloudExecutionConfigured;
+  const reviewExecutionAvailable = cloudExecutionConfigured || localRepo.available;
   // What THIS git account can do on this repository (MIN-144). A human gesture leaves
   // of the person's account: without account, or without right, the affordance
   // DISAPPEARS — it’s the banner that explains, once, at the top.
@@ -995,8 +961,6 @@ export function PrDetail({
   const resetReviewDraft = () => {
     setReviewMessage("");
     setReviewMode("write");
-    setModel("");
-    setReasoningOverride(null);
   };
 
   const openReview = (verdict: ReviewVerdict) => {
@@ -1025,8 +989,6 @@ export function PrDetail({
     setReviewMode("findings");
     setReviewMessage(prompt);
     setRelaunch(true);
-    setModel("");
-    setReasoningOverride(null);
   }, []);
 
   /**
@@ -1105,8 +1067,6 @@ export function PrDetail({
         message,
         relaunch: relaunching && reviewVerdict === "request_changes",
         postVerdict,
-        model: model || undefined,
-        reasoningLevel: relaunching ? reasoningLevel : undefined,
         localExec: relaunching && relaunchUsesLocal,
         localWorktree: relaunching && environment === "worktree" && localRepo.ready,
         localIssueContextConfirmed,
@@ -1144,18 +1104,15 @@ export function PrDetail({
    * those that Numo has not opened: re-reading only requires a diff, where
    * "relaunch Numo" needs a branch to inherit from.
    *
-   * The gesture passes through a dialog because it carries three launch choices:
-   * environment, model, and reasoning. They are frozen when the review session
-   * starts, just like a correction run launched from the request-changes dialog.
+   * The gesture passes through a dialog to choose the execution environment.
+   * The account worker model and reasoning are resolved by the server when the
+   * review starts and are then frozen with the session.
    */
   const openAiReviewDialog = () => {
-    if (!reviewExecutionConfigured && !localRepo.available) {
+    if (!cloudExecutionConfigured && !localRepo.available) {
       toast.error(tAgent("errorExecutionBackendUnavailable"));
       return;
     }
-    // The last choice of the account, otherwise “minddy’s default” (empty string).
-    setAiReviewModel(reviewSession.model?.preferred ?? "");
-    setAiReviewReasoningOverride(null);
     setAiReviewDialog(true);
   };
 
@@ -1175,17 +1132,12 @@ export function PrDetail({
     }
     setStartingAiReview(true);
     try {
-      await requestPullRequestAiReviewApi(
-        item.prId,
-        aiReviewModel,
-        aiReviewReasoningLevel,
-        {
+      await requestPullRequestAiReviewApi(item.prId, {
           localExec: aiReviewUsesLocal,
           // PR review always gets an isolated checkout at the provider's PR ref.
           localWorktree: aiReviewUsesLocal,
           localIssueContextConfirmed: localContextConfirmed,
-        },
-      );
+        });
       setAiReviewDialog(false);
       // The pass is seen in the line: bring it back, otherwise it is played under a
       // tab that nobody looks at.
@@ -2295,7 +2247,7 @@ export function PrDetail({
       </Dialog>
 
       {/* “Have it checked by Numo” uses the same compact launch controls and
-          ordering as “Request changes”: environment, model, then reasoning. */}
+          ordering as “Request changes”: the execution environment. */}
       <FormDialog
         open={aiReviewDialog}
         onOpenChange={(next) => {
@@ -2319,7 +2271,7 @@ export function PrDetail({
                 onChange={setAiReviewEnvironment}
                 localAvailable={localRepo.available}
                 worktreeAvailable={false}
-                cloudAvailable={reviewExecutionConfigured}
+                cloudAvailable={cloudExecutionConfigured}
                 executionBackend={executionBackend}
                 folder={localRepo.state?.status === "ready" ? localRepo.state.folder : null}
                 needsAttach={localRepo.state?.status !== "ready"}
@@ -2334,26 +2286,6 @@ export function PrDetail({
                 disabled={startingAiReview || localRepo.busy}
               />
             ) : null}
-            <ModelCombobox
-              // The review catalog follows the provider that will execute the run.
-              scope="review"
-              variant="compact"
-              value={aiReviewModel}
-              onChange={setAiReviewModel}
-              defaultLabel={t("numoReviewModelInstance")}
-              defaultModelId={reviewSession.model?.instance ?? null}
-              placeholder={tAgent("modelSearchPlaceholder")}
-              emptyLabel={tAgent("modelSearchEmpty")}
-              loadingLabel={tAgent("modelSearchLoading")}
-              freeTextLabel={(q) => tAgent("modelUseCustom", { model: q })}
-              disabled={startingAiReview}
-            />
-            <ReasoningCombobox
-              value={aiReviewReasoningLevel}
-              onChange={setAiReviewReasoningOverride}
-              disabled={startingAiReview}
-              levels={aiReviewReasoningLevels}
-            />
             {aiReviewBackendUnavailable ? (
               <p className="w-full text-xs text-amber-600 dark:text-amber-400">
                 {tAgent("errorExecutionBackendUnavailable")}
@@ -2589,10 +2521,9 @@ export function PrDetail({
             )
           ) : null}
 
-          {/* Settings are only visible for the path that actually launches
-              a run now. Sending a review alone only writes about the
-              forge: offer it an environment, a model or reasoning
-              would be a false promise. */}
+          {/* Execution settings are only visible for the path that actually
+              launches a run. The worker model and reasoning remain controlled
+              by Account settings. */}
           {reviewVerdict === "request_changes" && relaunching ? (
             <div className="flex flex-wrap items-center gap-1.5">
               {localRepo.linked ? (
@@ -2615,24 +2546,6 @@ export function PrDetail({
                   disabled={submitting || localRepo.busy}
                 />
               ) : null}
-              <ModelCombobox
-                variant="compact"
-                value={model}
-                onChange={setModel}
-                defaultLabel={tAgent("modelDefault")}
-                defaultModelId={defaultModel ?? providerDefaultModel}
-                placeholder={tAgent("modelSearchPlaceholder")}
-                emptyLabel={tAgent("modelSearchEmpty")}
-                loadingLabel={tAgent("modelSearchLoading")}
-                freeTextLabel={(q) => tAgent("modelUseCustom", { model: q })}
-                disabled={submitting}
-              />
-              <ReasoningCombobox
-                value={reasoningLevel}
-                onChange={setReasoningOverride}
-                disabled={submitting}
-                levels={reasoningLevels}
-              />
               {relaunchBackendUnavailable ? (
                 <p className="w-full text-xs text-amber-600 dark:text-amber-400">
                   {tAgent("errorExecutionBackendUnavailable")}

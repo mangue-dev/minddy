@@ -19,13 +19,9 @@ import { getOpenRouterModelInfo } from "./openrouter-index";
  * 1. **Minddy quota only.** BYOK users pay for their own tokens, so the
  * product does not limit their model choice.
  *
- * 2. **What the user CHOOSES, not what minddy solves.** The cap
- * concerns a model named by someone — run override, default personal,
- * model retained for the review. The instance's defaults (`agent_model`,
- * `pr_review_model`) are never subject to it: `pr_review_model` is worth
- * deliberately an expensive model (reading code again requires another look), and
- * a cap that would deny minddy's own default would leave an account
- * Go without any path to a review.
+ * 2. **What the user chooses, not what Minddy resolves internally.** The cap
+ * applies to the account's explicit worker model. The instance pricing
+ * baseline (`agent_model`) is never itself an account selection.
  *
  * We never refuse on ignorance: unknown prices (model absent from the index,
  * endpoint which publishes nothing) → authorized. The platform usage budget

@@ -10,7 +10,6 @@ import { insertEvents } from "@/lib/server/issue-events";
 import {
   getUserByok,
   resolveAgentModel,
-  resolvePrReviewModel,
   resolveReasoningLevel,
   AgentModelRequiredError,
 } from "./model";
@@ -52,7 +51,7 @@ import type { AssistantMention } from "@/lib/assistant-types";
 /**
  * SINGLE entry point to start a COLD run (MIN-46 + MIN-68). Called by
  * all LAUNCH triggers (sidebar, right click, “request changes”,
- * cat number). Solves and FREEZES the model on the run (cascade run > user > root), done
+ * Numo). Resolves and FREEZES the account's worker configuration on the run, performs
  * the pre-checks (linked deposit, quota/BYOK, no run already active), causes the PR to INHERIT
  * of the outcome if it is still relevant, creates the run `queued`, then kicks the drain
  * in `after()` (immediate response to the user).
@@ -75,6 +74,7 @@ export type LaunchError =
   | "quotaExceeded"
   | "managedServiceUnavailable"
   | "executionBackendUnavailable"
+  | "workerConfigurationManagedInSettings"
   | "noModelForProvider"
   | "localEndpointRequiresLocalRun"
   | "localIssueConfirmationRequired"
@@ -139,17 +139,6 @@ export interface LaunchAgentInput {
   /** Free instructions in addition to the outcome (optional) — or THE note (run notebook). */
   prompt?: string | null;
   promptMentions?: AssistantMention[] | null;
-  /** Explicit model = override/forcing (numo or user). */
-  model?: string | null;
-  /** true if the model is imposed (numo “use such model”). */
-  forced?: boolean;
-  /**
-   * Level of reasoning chosen at launch (MIN-122). Absent → the personal fault
-   * of the user, otherwise `DEFAULT_REASONING_LEVEL` (`medium`). No terminal:
-   * the four levels are open, including minddy quota (cf.
-   * `resolveReasoningLevel`).
-   */
-  reasoningLevel?: string | null;
   /**
    * Base branch chosen at launch (default: the default branch of the
    * deposit). IGNORED if the issue has a living lineage to inherit: the branch of
@@ -319,6 +308,18 @@ async function currentWritablePrWork(
 export async function launchAgentRun(
   input: LaunchAgentInput,
 ): Promise<LaunchResult> {
+  const supplied = input as LaunchAgentInput & {
+    model?: unknown;
+    forced?: unknown;
+    reasoningLevel?: unknown;
+  };
+  if (
+    "model" in supplied ||
+    "forced" in supplied ||
+    "reasoningLevel" in supplied
+  ) {
+    return { ok: false, error: "workerConfigurationManagedInSettings" };
+  }
   const service = getServiceClient();
   const reviewPr = input.pullRequestId
     ? await loadPrRunContext(input.pullRequestId)
@@ -414,9 +415,13 @@ export async function launchAgentRun(
         : input.routineId
           ? activeRunForRoutine(input.routineId)
           : Promise.resolve(null);
-  const aiSurface = input.chainId || input.routineId ? "automations" : "agent";
-  const quotaPromise = checkAgentQuota(input.userId, aiSurface);
-  const byokPromise = getUserByok(input.userId, aiSurface);
+  // Token execution and model selection are both code-worker concerns. The
+  // automations BYOK surface still controls helper calls such as Smart Fill,
+  // but cannot replace the worker provider or its quota mode.
+  const quotaPromise = checkAgentQuota(input.userId, "agent");
+  // Every code worker uses the account's code-agent provider, regardless of
+  // which product surface initiated it.
+  const byokPromise = getUserByok(input.userId, "agent");
 
   // Read BEFORE the link gate: a local run is the only one allowed to launch
   // without a linked repository (see below), so its authenticated destination
@@ -480,28 +485,14 @@ export async function launchAgentRun(
 
   let model: string;
   try {
-    const resolved = reviewPr
-      ? await resolvePrReviewModel({
-          perCall: input.model,
-          userId: input.userId,
-        })
-      : await resolveAgentModel({
-          perRunModel: input.model,
-          userId: input.userId,
-          surface: aiSurface,
-        });
+    const resolved = await resolveAgentModel(input.userId);
     model = resolved.model;
-    // Ceiling of the plan model (minddy quota only): it concerns what the user
-    // CHOSE — not the defaults chosen by minddy itself, whose instance
-    // answers. The picker is already graying these models; this refusal catches the case where the
-    // choice precedes the constraint (personal default recorded, then downgrade).
-    if (resolved.chosenByUser) {
-      await ensureModelInPlan({
-        userId: input.userId,
-        model,
-        mode: quota.mode,
-      });
-    }
+    // The account choice may predate a plan downgrade or ceiling adjustment.
+    await ensureModelInPlan({
+      userId: input.userId,
+      model,
+      mode: quota.mode,
+    });
   } catch (err) {
     if (err instanceof AgentModelRequiredError) {
       return { ok: false, error: "noModelForProvider" };
@@ -524,10 +515,7 @@ export async function launchAgentRun(
 
   // Level of reasoning fixed on the run, like the model: the following chunks
   // rotate in other invocations and must find the same one.
-  const reasoningLevel = await resolveReasoningLevel({
-    perRunLevel: input.reasoningLevel,
-    userId: input.userId,
-  });
+  const reasoningLevel = await resolveReasoningLevel(input.userId);
 
   // A new conversation always has its workspace. The only implicit recovery
   // still admitted here is an EXPLICIT request to continue a pull request:
@@ -564,7 +552,7 @@ export async function launchAgentRun(
       // is written after the HTTP response — it cannot delay the first token.
       title: reviewPr ? prSessionTitle(reviewPr) : input.title?.trim() || null,
       model,
-      modelForced: !!input.forced,
+      modelForced: false,
       reasoningLevel,
       keyMode: quota.mode,
       triggeredBy: input.triggeredBy,
