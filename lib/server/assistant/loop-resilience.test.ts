@@ -309,6 +309,7 @@ describe("Numo chat loop resilience", () => {
     expect(toolReplayPolicy("web_search")).toBe("retry");
     expect(toolReplayPolicy("propose_backlog")).toBe("retry");
     expect(toolReplayPolicy("get_issue")).toBe("retry");
+    expect(toolReplayPolicy("launch_code_agent")).toBe("retry");
     expect(toolReplayPolicy("create_issue")).toBe("reconcile");
   });
 });

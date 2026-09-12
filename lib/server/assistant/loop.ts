@@ -222,6 +222,10 @@ const RETRYABLE_READ_TOOLS = new Set([
   "read_pull_request",
   "propose_backlog",
   "web_search",
+  // The durable parent turn/tool-call pair is a database uniqueness key on
+  // delegated workers. Re-delivery resolves the original run instead of
+  // launching another one, including after a process dies before ledger commit.
+  "launch_code_agent",
 ]);
 
 export function toolReplayPolicy(toolName: string): "retry" | "reconcile" {
@@ -588,7 +592,10 @@ export async function processChat(
         if (ledgerClaim.action === "reuse" && ledgerClaim.execution) {
           execution = ledgerClaim.execution;
         } else {
-          execution = await executeTool(acc.name, args, context);
+          execution = await executeTool(acc.name, args, {
+            ...context,
+            toolCallId: acc.id,
+          });
         }
         const { result, success, modelResult, pause, secrets } = execution;
         // The complete result goes to the browser with any secret included.

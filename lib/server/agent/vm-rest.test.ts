@@ -378,6 +378,22 @@ describe("ce que le fil doit dire", () => {
     });
   });
 
+  it("records the commit produced by the OpenCode turn", async () => {
+    await landVmTurn(
+      run(),
+      report({
+        pushed: {
+          committed: true,
+          remoteUpdated: true,
+          headSha: "abc123",
+          pushed: true,
+        },
+      }),
+    );
+
+    expect(h.events).toContainEqual({ type: "commit", payload: { sha: "abc123" } });
+  });
+
   it("persiste aussi un snapshot local vide, qui signifie que le travail a été annulé", async () => {
     await landVmTurn(
       run(),

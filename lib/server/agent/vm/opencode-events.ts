@@ -553,7 +553,13 @@ export function translateEvent(
           events: [
             {
               type: "tool_result",
-              payload: { id: callId, name, success, preview },
+              payload: {
+                id: callId,
+                name,
+                success,
+                preview,
+                ...(shell ? { exit_code: shell.exit } : {}),
+              },
             },
           ],
           ...(shell ? { shell } : {}),

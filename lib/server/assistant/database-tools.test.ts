@@ -135,6 +135,69 @@ describe("conversation action targets", () => {
     expect(h.access).toHaveBeenCalledWith("actor", "a");
     expect(h.launch).toHaveBeenCalledWith(expect.objectContaining({ projectId: "a", userId: "actor" }));
   });
+  it("owns a structured worker brief from the durable parent turn", async () => {
+    h.access.mockResolvedValue({ project: { id: "a", key: "MIN" } });
+    h.launch.mockResolvedValue({
+      ok: true,
+      run: {
+        id: "run",
+        conversation_id: "worker",
+        status: "queued",
+        model: "test",
+        reasoning_level: "medium",
+      },
+    });
+    const query: Record<string, unknown> = {};
+    const chain = () => query;
+    query.select = chain;
+    query.eq = chain;
+    query.maybeSingle = async () => ({
+      data: {
+        metadata: {
+          attachments: [{
+            storage_path: "actor/chat/file.txt",
+            file_name: "file.txt",
+            mime_type: "text/plain",
+            size_bytes: 12,
+          }],
+        },
+      },
+    });
+    const durable = {
+      ...conversation,
+      conversationId: "parent-conversation",
+      turnId: "parent-turn",
+      toolCallId: "call-1",
+      service: { from: () => query },
+    } as unknown as ToolContext;
+
+    const result = await executeTool("launch_code_agent", {
+      project_id: "a",
+      mode: "custom",
+      objective: "Inspect and update the repository documentation.",
+      source_references: [{ kind: "conversation", label: "User request" }],
+      constraints: ["Keep the public API stable."],
+      authorized_work: ["read_repository", "modify_repository", "run_verification"],
+    }, durable);
+
+    expect(result).toMatchObject({
+      success: true,
+      result: { run_id: "run", parent_turn_id: "parent-turn", contract_version: 1 },
+    });
+    expect(h.launch).toHaveBeenCalledWith(expect.objectContaining({
+      projectId: "a",
+      delegation: expect.objectContaining({
+        parentConversationId: "parent-conversation",
+        parentTurnId: "parent-turn",
+        toolCallId: "call-1",
+        objective: "Inspect and update the repository documentation.",
+        attachments: [expect.objectContaining({ file_name: "file.txt" })],
+        sourceReferences: expect.arrayContaining([
+          expect.objectContaining({ kind: "attachment", label: "file.txt" }),
+        ]),
+      }),
+    }));
+  });
   it("explains how to replace a retired desktop-only worker provider", async () => {
     h.launch.mockResolvedValue({
       ok: false,

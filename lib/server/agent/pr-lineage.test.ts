@@ -40,11 +40,13 @@ const h = vi.hoisted(() => ({
   agentResolvedModel: "model/agent",
   quotaMode: "platform" as "platform" | "byok",
   byok: null as Record<string, unknown> | null,
+  continuedRun: null as Record<string, unknown> | null,
+  deliveredRun: null as Record<string, unknown> | null,
 }));
 
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
-    from: () => {
+    from: (table: string) => {
       const query: Record<string, unknown> = {};
       const chain = () => query;
       query.select = chain;
@@ -52,7 +54,9 @@ vi.mock("@/lib/supabase-service", () => ({
       query.is = chain;
       query.insert = async () => ({ error: null });
       query.maybeSingle = async () => ({
-        data: { id: ISSUE_ID, project_id: PROJECT_ID, title: "A ticket" },
+        data: table === "agent_runs"
+          ? h.deliveredRun
+          : { id: ISSUE_ID, project_id: PROJECT_ID, title: "A ticket" },
         error: null,
       });
       return query;
@@ -80,6 +84,7 @@ vi.mock("./runs", () => ({
   inheritableWorkForPr: vi.fn(async () => h.prLineage),
   insertRunMessage: vi.fn(async () => {}),
   bumpRunActivity: vi.fn(async () => {}),
+  getRun: vi.fn(async () => h.continuedRun),
 }));
 
 vi.mock("./pr-run", () => ({
@@ -107,6 +112,8 @@ vi.mock("@/lib/server/git/repo-links", () => ({
     connection_id: "conn-1",
     provider: "github",
     repo_full_name: REPO,
+    external_repo_id: "repo-1",
+    default_branch: "main",
   })),
 }));
 
@@ -171,6 +178,8 @@ beforeEach(() => {
   h.agentResolvedModel = "model/agent";
   h.quotaMode = "platform";
   h.byok = null;
+  h.continuedRun = null;
+  h.deliveredRun = null;
   h.pr = {
     id: PR_ID,
     provider: "github",
@@ -393,5 +402,88 @@ describe("a pull-request review session", () => {
     });
     expect(h.created).toHaveLength(0);
     expect(h.agentModelCalls).toHaveLength(0);
+  });
+});
+
+describe("Numo-owned delegation lineage", () => {
+  const delegation = {
+    parentConversationId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    parentTurnId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    toolCallId: "call-1",
+    objective: "Implement the requested repository change and verify it.",
+    sourceReferences: [{ kind: "conversation" as const, label: "Parent request" }],
+    constraints: ["Preserve existing behavior outside the request."],
+    authorizedWork: [
+      "read_repository" as const,
+      "modify_repository" as const,
+      "run_verification" as const,
+    ],
+  };
+
+  it("returns the original worker when one tool call is delivered twice", async () => {
+    h.deliveredRun = {
+      id: RUN_ID,
+      created_by: USER_ID,
+      project_id: PROJECT_ID,
+      parent_numo_conversation_id: delegation.parentConversationId,
+      delegation_brief: { objective: delegation.objective },
+      status: "queued",
+    };
+
+    const result = await launchAgentRun({
+      projectId: PROJECT_ID,
+      userId: USER_ID,
+      triggeredBy: "chat",
+      delegation,
+    });
+
+    expect(result).toEqual({ ok: true, run: h.deliveredRun });
+    expect(h.created).toEqual([]);
+    expect(h.agentModelCalls).toEqual([]);
+  });
+
+  it("reuses an explicit previous worker conversation and branch lineage", async () => {
+    h.continuedRun = {
+      id: "previous-run",
+      conversation_id: "code-conversation",
+      created_by: USER_ID,
+      project_id: PROJECT_ID,
+      issue_id: null,
+      repo_link_id: "link-1",
+      repo_provider: "github",
+      repo_external_id: "repo-1",
+      status: "completed",
+      branch_name: "minddy/agent/existing-work",
+      base_branch: "main",
+      pr_number: 71,
+      pr_url: `https://github.com/${REPO}/pull/71`,
+      pr_state: "open",
+    };
+
+    const result = await launchAgentRun({
+      projectId: PROJECT_ID,
+      userId: USER_ID,
+      triggeredBy: "chat",
+      continueRunId: "previous-run",
+      delegation,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(h.created[0]).toMatchObject({
+      conversationId: "code-conversation",
+      continuedFromRunId: "previous-run",
+      branchName: "minddy/agent/existing-work",
+      baseBranch: "main",
+      prNumber: 71,
+      parentNumoTurnId: delegation.parentTurnId,
+      parentNumoToolCallId: delegation.toolCallId,
+      delegationBrief: {
+        version: 1,
+        targetRepository: {
+          projectId: PROJECT_ID,
+          fullName: REPO,
+        },
+      },
+    });
   });
 });

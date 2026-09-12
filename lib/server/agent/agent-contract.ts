@@ -211,6 +211,234 @@ export interface AgentUsageLine {
  */
 export type RecordAgentUsage = (line: AgentUsageLine) => Promise<void>;
 
+/** Current wire/storage version for a Numo-owned code-worker handoff. */
+export const AGENT_DELEGATION_CONTRACT_VERSION = 1 as const;
+
+export const AGENT_DELEGATION_SOURCE_KINDS = [
+  "issue",
+  "plan",
+  "page",
+  "pull_request",
+  "conversation",
+  "attachment",
+  "url",
+  "other",
+] as const;
+export type AgentDelegationSourceKind =
+  (typeof AGENT_DELEGATION_SOURCE_KINDS)[number];
+
+export const AGENT_DELEGATION_AUTHORIZATIONS = [
+  "read_repository",
+  "modify_repository",
+  "run_verification",
+  "commit_changes",
+  "manage_pull_request",
+  "update_issue_plan",
+] as const;
+export type AgentDelegationAuthorization =
+  (typeof AGENT_DELEGATION_AUTHORIZATIONS)[number];
+
+export interface AgentDelegationSourceReference {
+  kind: AgentDelegationSourceKind;
+  label: string;
+  id?: string;
+  url?: string;
+  version?: string;
+}
+
+/** Immutable task brief recorded before a code worker can be queued. */
+export interface AgentDelegationBrief {
+  version: typeof AGENT_DELEGATION_CONTRACT_VERSION;
+  correlation: {
+    parentConversationId: string;
+    parentTurnId: string;
+    toolCallId: string;
+  };
+  targetRepository: {
+    projectId: string;
+    provider: string;
+    externalId: string;
+    fullName: string;
+    defaultBranch: string | null;
+  };
+  objective: string;
+  sourceReferences: AgentDelegationSourceReference[];
+  constraints: string[];
+  authorizedWork: AgentDelegationAuthorization[];
+  expectedOutput: string[];
+}
+
+export type AgentDelegationResultStatus =
+  | "completed"
+  | "partial"
+  | "failed"
+  | "needs_input";
+
+export interface AgentDelegationVerification {
+  command: string;
+  status: "passed" | "failed" | "unknown";
+}
+
+export interface AgentDelegationArtifact {
+  kind: "branch" | "commit" | "pull_request" | "other";
+  ref: string;
+  url?: string;
+}
+
+/** Validated terminal handoff interpreted by Numo in the parent conversation. */
+export interface AgentDelegationResult {
+  version: typeof AGENT_DELEGATION_CONTRACT_VERSION;
+  status: AgentDelegationResultStatus;
+  summary: string;
+  changedFiles: string[];
+  verificationPerformed: AgentDelegationVerification[];
+  artifacts: AgentDelegationArtifact[];
+  unresolvedDecisions: string[];
+}
+
+function contractRecord(value: unknown, label: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be an object`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function contractString(value: unknown, label: string, max: number): string {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`${label} must be a non-empty string`);
+  }
+  return value.trim().slice(0, max);
+}
+
+function contractStrings(value: unknown, label: string, maxItems = 50): string[] {
+  if (!Array.isArray(value)) throw new Error(`${label} must be an array`);
+  return value.slice(0, maxItems).map((item, index) =>
+    contractString(item, `${label}[${index}]`, 1_000)
+  );
+}
+
+/** Parse an untrusted persisted brief and reject unsupported contract versions. */
+export function parseAgentDelegationBrief(raw: unknown): AgentDelegationBrief {
+  const value = contractRecord(raw, "delegation brief");
+  if (value.version !== AGENT_DELEGATION_CONTRACT_VERSION) {
+    throw new Error("Unsupported delegation brief version");
+  }
+  const correlation = contractRecord(value.correlation, "delegation correlation");
+  const repository = contractRecord(value.targetRepository, "target repository");
+  const sourceKinds = new Set<string>(AGENT_DELEGATION_SOURCE_KINDS);
+  const authorizations = new Set<string>(AGENT_DELEGATION_AUTHORIZATIONS);
+  if (!Array.isArray(value.sourceReferences)) {
+    throw new Error("sourceReferences must be an array");
+  }
+  const sourceReferences = value.sourceReferences.slice(0, 50).map((rawSource, index) => {
+    const source = contractRecord(rawSource, `sourceReferences[${index}]`);
+    const kind = contractString(source.kind, `sourceReferences[${index}].kind`, 40);
+    if (!sourceKinds.has(kind)) throw new Error(`Unsupported source reference kind: ${kind}`);
+    return {
+      kind: kind as AgentDelegationSourceKind,
+      label: contractString(source.label, `sourceReferences[${index}].label`, 300),
+      ...(typeof source.id === "string" && source.id.trim()
+        ? { id: source.id.trim().slice(0, 300) }
+        : {}),
+      ...(typeof source.url === "string" && source.url.trim()
+        ? { url: source.url.trim().slice(0, 2_000) }
+        : {}),
+      ...(typeof source.version === "string" && source.version.trim()
+        ? { version: source.version.trim().slice(0, 100) }
+        : {}),
+    };
+  });
+  const authorizedWork = contractStrings(value.authorizedWork, "authorizedWork", 20)
+    .map((authorization) => {
+      if (!authorizations.has(authorization)) {
+        throw new Error(`Unsupported delegated authorization: ${authorization}`);
+      }
+      return authorization as AgentDelegationAuthorization;
+    });
+  if (authorizedWork.length === 0) {
+    throw new Error("authorizedWork must contain at least one authorization");
+  }
+  const expectedOutput = contractStrings(value.expectedOutput, "expectedOutput");
+  if (expectedOutput.length === 0) {
+    throw new Error("expectedOutput must contain at least one requirement");
+  }
+  return {
+    version: AGENT_DELEGATION_CONTRACT_VERSION,
+    correlation: {
+      parentConversationId: contractString(
+        correlation.parentConversationId,
+        "correlation.parentConversationId",
+        100,
+      ),
+      parentTurnId: contractString(correlation.parentTurnId, "correlation.parentTurnId", 100),
+      toolCallId: contractString(correlation.toolCallId, "correlation.toolCallId", 300),
+    },
+    targetRepository: {
+      projectId: contractString(repository.projectId, "targetRepository.projectId", 100),
+      provider: contractString(repository.provider, "targetRepository.provider", 40),
+      externalId: contractString(repository.externalId, "targetRepository.externalId", 300),
+      fullName: contractString(repository.fullName, "targetRepository.fullName", 500),
+      defaultBranch: typeof repository.defaultBranch === "string"
+        ? repository.defaultBranch.trim().slice(0, 300) || null
+        : null,
+    },
+    objective: contractString(value.objective, "objective", 8_000),
+    sourceReferences,
+    constraints: contractStrings(value.constraints, "constraints"),
+    authorizedWork,
+    expectedOutput,
+  };
+}
+
+/** Parse the worker adapter output before it is persisted or shown to Numo. */
+export function parseAgentDelegationResult(raw: unknown): AgentDelegationResult {
+  const value = contractRecord(raw, "delegation result");
+  if (value.version !== AGENT_DELEGATION_CONTRACT_VERSION) {
+    throw new Error("Unsupported delegation result version");
+  }
+  const statuses = new Set<AgentDelegationResultStatus>([
+    "completed", "partial", "failed", "needs_input",
+  ]);
+  const status = contractString(value.status, "status", 40) as AgentDelegationResultStatus;
+  if (!statuses.has(status)) throw new Error(`Unsupported delegation result status: ${status}`);
+  if (!Array.isArray(value.verificationPerformed)) {
+    throw new Error("verificationPerformed must be an array");
+  }
+  if (!Array.isArray(value.artifacts)) throw new Error("artifacts must be an array");
+  const verificationStatuses = new Set(["passed", "failed", "unknown"]);
+  const artifactKinds = new Set(["branch", "commit", "pull_request", "other"]);
+  return {
+    version: AGENT_DELEGATION_CONTRACT_VERSION,
+    status,
+    summary: contractString(value.summary, "summary", 8_000),
+    changedFiles: contractStrings(value.changedFiles, "changedFiles", 500),
+    verificationPerformed: value.verificationPerformed.slice(0, 100).map((rawCheck, index) => {
+      const check = contractRecord(rawCheck, `verificationPerformed[${index}]`);
+      const checkStatus = contractString(check.status, `verificationPerformed[${index}].status`, 20);
+      if (!verificationStatuses.has(checkStatus)) {
+        throw new Error(`Unsupported verification status: ${checkStatus}`);
+      }
+      return {
+        command: contractString(check.command, `verificationPerformed[${index}].command`, 1_000),
+        status: checkStatus as AgentDelegationVerification["status"],
+      };
+    }),
+    artifacts: value.artifacts.slice(0, 100).map((rawArtifact, index) => {
+      const artifact = contractRecord(rawArtifact, `artifacts[${index}]`);
+      const kind = contractString(artifact.kind, `artifacts[${index}].kind`, 30);
+      if (!artifactKinds.has(kind)) throw new Error(`Unsupported artifact kind: ${kind}`);
+      return {
+        kind: kind as AgentDelegationArtifact["kind"],
+        ref: contractString(artifact.ref, `artifacts[${index}].ref`, 500),
+        ...(typeof artifact.url === "string" && artifact.url.trim()
+          ? { url: artifact.url.trim().slice(0, 2_000) }
+          : {}),
+      };
+    }),
+    unresolvedDecisions: contractStrings(value.unresolvedDecisions, "unresolvedDecisions"),
+  };
+}
+
 export type PlanStepStatus = "pending" | "in_progress" | "completed" | "cancelled";
 export interface PlanStep {
   step: string;

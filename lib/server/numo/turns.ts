@@ -41,6 +41,13 @@ import {
   type ToolExecutionLedger,
 } from "@/lib/server/assistant/loop";
 import type { ToolExecution } from "@/lib/server/assistant/execute-tool";
+import { parseAgentDelegationResult } from "@/lib/server/agent/agent-contract";
+import { finalizeAgentDelegationResult } from "@/lib/server/agent/delegation";
+import {
+  deliverAgentDelegationResult,
+  getRun,
+  type AgentRun,
+} from "@/lib/server/agent/runs";
 import { withoutWebSearch } from "@/lib/server/web-search";
 import type { SafeEmitter } from "@/lib/server/assistant/sse";
 
@@ -127,6 +134,69 @@ function compositeRow<T>(data: unknown): T | null {
 
 function checkpointRecord(checkpoint: NumoTurnCheckpoint): Record<string, unknown> {
   return checkpoint as unknown as Record<string, unknown>;
+}
+
+function workerDelegationResult(workerEvent: {
+  type: string;
+  payload: Record<string, unknown>;
+}) {
+  try {
+    return parseAgentDelegationResult(workerEvent.payload.result);
+  } catch (error) {
+    if (Object.hasOwn(workerEvent.payload, "result")) {
+      return parseAgentDelegationResult({
+        version: 1,
+        status: "failed",
+        summary: "The code worker ended without a valid structured result.",
+        changedFiles: [],
+        verificationPerformed: [],
+        artifacts: [],
+        unresolvedDecisions: [(error as Error).message],
+      });
+    }
+
+    const status = workerEvent.payload.status;
+    const awaitingInput = workerEvent.payload.awaiting_input === true;
+    const outcome = typeof workerEvent.payload.outcome === "string"
+      ? workerEvent.payload.outcome.trim()
+      : "";
+    const errorMessage = typeof workerEvent.payload.error_message === "string"
+      ? workerEvent.payload.error_message.trim()
+      : "";
+    const prUrl = typeof workerEvent.payload.pr_url === "string"
+      ? workerEvent.payload.pr_url.trim()
+      : "";
+    const prNumber = typeof workerEvent.payload.pr_number === "number"
+      ? workerEvent.payload.pr_number
+      : null;
+    const failed = status === "failed" || status === "canceled"
+      || workerEvent.type === "worker_failed";
+    return parseAgentDelegationResult({
+      version: 1,
+      status: failed
+        ? "failed"
+        : awaitingInput || workerEvent.type === "worker_input"
+          ? "needs_input"
+          : errorMessage
+            ? "partial"
+            : "completed",
+      summary: outcome || errorMessage || "The code worker ended without a summary.",
+      changedFiles: [],
+      verificationPerformed: [],
+      artifacts: prUrl || prNumber != null
+        ? [{
+            kind: "pull_request",
+            ref: prNumber != null ? `#${prNumber}` : prUrl,
+            ...(prUrl ? { url: prUrl } : {}),
+          }]
+        : [],
+      unresolvedDecisions: awaitingInput && outcome
+        ? [outcome]
+        : failed && errorMessage
+          ? [errorMessage]
+          : [],
+    });
+  }
 }
 
 export async function beginNumoTurn(input: BeginNumoTurnInput): Promise<NumoTurn> {
@@ -377,9 +447,10 @@ async function buildExecutionInput(input: {
     ? turn.checkpoint.worker_event
     : null;
   if (workerEvent) {
+    const durableResult = workerDelegationResult(workerEvent);
     messages.push({
       role: "system",
-      content: `[Durable code-worker event]\n${JSON.stringify(workerEvent)}`,
+      content: `[Validated durable code-worker result: ${workerEvent.type}]\n${JSON.stringify(durableResult)}\nInterpret this result and answer the user's original request in this conversation. Report partial work, failure and unresolved decisions honestly. Do not tell the user to inspect another conversation for the answer.`,
     });
   }
 
@@ -716,6 +787,21 @@ export async function executeNumoTurn(input: {
       outcome: result.fullContent || null,
       costUsd,
     });
+    if (status === "waiting_work" && result.suspension?.kind === "work") {
+      const worker = await getRun(result.suspension.runId);
+      if (worker && ["completed", "failed", "canceled"].includes(worker.status)) {
+        await deliverAgentDelegationResult(worker);
+        const { data: reconciled } = await service.from("numo_assistant_turns")
+          .select("*").eq("id", claimed.id).single();
+        if (reconciled) {
+          const latest = reconciled as NumoTurn;
+          emitter.emit("done", { status: latest.status });
+          await emitter.flush();
+          emitter.close();
+          return { status: latest.status, turn: latest };
+        }
+      }
+    }
     emitter.emit("done", { status });
     await emitter.flush();
     emitter.close();
@@ -862,6 +948,16 @@ export async function retryNumoTurn(conversationId: string, userId: string) {
 
 export async function drainNumoTurns(options?: { limit?: number }) {
   const service = getServiceClient();
+  const { data: terminalWorkers, error: terminalWorkersError } = await service
+    .from("agent_runs")
+    .select("*")
+    .not("parent_numo_turn_id", "is", null)
+    .is("delegation_result", null)
+    .in("status", ["completed", "failed", "canceled"]);
+  if (terminalWorkersError) throw new Error(terminalWorkersError.message);
+  for (const worker of (terminalWorkers ?? []) as AgentRun[]) {
+    await finalizeAgentDelegationResult(service, worker);
+  }
   const { error: recoveryError } = await service.rpc("recover_stale_numo_turns");
   if (recoveryError) throw new Error(recoveryError.message);
   const { data, error } = await service.from("numo_assistant_turns")
