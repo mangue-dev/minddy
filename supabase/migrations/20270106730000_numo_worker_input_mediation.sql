@@ -93,6 +93,42 @@ CREATE TRIGGER agent_run_events_capture_input
 AFTER INSERT ON public.agent_run_events
 FOR EACH ROW EXECUTE FUNCTION public.capture_agent_run_input_request();
 
+-- Workers already suspended when this migration runs emitted a legacy
+-- `question` event whose call id was its only stable identity. Preserve those
+-- decisions so the parent can render and resume the exact worker after deploy.
+INSERT INTO public.agent_run_input_requests (
+  run_id, parent_numo_turn_id, question_id, call_id, questions
+)
+SELECT
+  r.id,
+  r.parent_numo_turn_id,
+  COALESCE(NULLIF(e.payload ->> 'question_id', ''), NULLIF(e.payload ->> 'id', '')),
+  COALESCE(
+    NULLIF(e.payload ->> 'call_id', ''),
+    NULLIF(e.payload ->> 'id', ''),
+    NULLIF(e.payload ->> 'question_id', '')
+  ),
+  e.payload -> 'questions'
+FROM public.agent_runs AS r
+JOIN LATERAL (
+  SELECT event.payload
+  FROM public.agent_run_events AS event
+  WHERE event.run_id = r.id
+    AND event.type IN ('needs_input', 'question')
+    AND COALESCE(
+      NULLIF(event.payload ->> 'question_id', ''),
+      NULLIF(event.payload ->> 'id', '')
+    ) IS NOT NULL
+    AND jsonb_typeof(event.payload -> 'questions') = 'array'
+    AND jsonb_array_length(event.payload -> 'questions') > 0
+  ORDER BY event.seq DESC
+  LIMIT 1
+) AS e ON TRUE
+WHERE r.parent_numo_turn_id IS NOT NULL
+  AND r.status = 'completed'
+  AND r.awaiting_input
+ON CONFLICT (run_id, question_id) DO NOTHING;
+
 CREATE OR REPLACE FUNCTION public.cancel_agent_run_input_request()
 RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
@@ -230,7 +266,11 @@ CREATE OR REPLACE FUNCTION public.steer_numo_worker(
   p_conversation_id uuid,
   p_user_id uuid,
   p_message_id uuid,
-  p_content text
+  p_content text,
+  p_parent_content text DEFAULT NULL,
+  p_mentions jsonb DEFAULT NULL,
+  p_context jsonb DEFAULT NULL,
+  p_metadata jsonb DEFAULT '{}'::jsonb
 ) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 DECLARE
@@ -240,6 +280,11 @@ DECLARE
 BEGIN
   IF p_conversation_id IS NULL OR p_user_id IS NULL OR p_message_id IS NULL
      OR nullif(btrim(p_content), '') IS NULL THEN
+    RAISE EXCEPTION 'numo_worker_steering_invalid' USING ERRCODE = '22023';
+  END IF;
+  IF (p_mentions IS NOT NULL AND jsonb_typeof(p_mentions) <> 'array')
+     OR (p_context IS NOT NULL AND jsonb_typeof(p_context) <> 'object')
+     OR jsonb_typeof(COALESCE(p_metadata, '{}'::jsonb)) <> 'object' THEN
     RAISE EXCEPTION 'numo_worker_steering_invalid' USING ERRCODE = '22023';
   END IF;
   PERFORM pg_catalog.pg_advisory_xact_lock(
@@ -272,16 +317,19 @@ BEGIN
   IF v_run.id IS NULL THEN RETURN jsonb_build_object('action', 'none'); END IF;
 
   SELECT public.insert_latest_agent_run_message(
-    v_run.id, p_message_id, p_user_id, btrim(p_content), null
+    v_run.id, p_message_id, p_user_id, btrim(p_content), p_mentions
   ) INTO v_result;
   IF v_result NOT IN ('inserted', 'already') THEN
     RETURN jsonb_build_object('action', 'refused', 'result', v_result);
   END IF;
   INSERT INTO public.assistant_messages (
-    id, conversation_id, turn_id, role, content, metadata
+    id, conversation_id, turn_id, role, content, context, metadata
   ) VALUES (
-    p_message_id, p_conversation_id, v_turn.id, 'user', btrim(p_content),
-    jsonb_build_object('worker_steering', jsonb_build_object('run_id', v_run.id))
+    p_message_id, p_conversation_id, v_turn.id, 'user',
+    btrim(COALESCE(NULLIF(p_parent_content, ''), p_content)), p_context,
+    COALESCE(p_metadata, '{}'::jsonb) || jsonb_build_object(
+      'worker_steering', jsonb_build_object('run_id', v_run.id)
+    )
   ) ON CONFLICT (id) DO NOTHING;
   UPDATE public.agent_runs
   SET interrupt_requested = true, last_activity_at = now()
@@ -292,9 +340,13 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.steer_numo_worker(uuid, uuid, uuid, text)
+REVOKE ALL ON FUNCTION public.steer_numo_worker(
+  uuid, uuid, uuid, text, text, jsonb, jsonb, jsonb
+)
   FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.steer_numo_worker(uuid, uuid, uuid, text)
+GRANT EXECUTE ON FUNCTION public.steer_numo_worker(
+  uuid, uuid, uuid, text, text, jsonb, jsonb, jsonb
+)
   TO service_role;
 
 -- Stopping a parent also closes its unanswered decisions. This replaces the

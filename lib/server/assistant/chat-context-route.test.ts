@@ -125,7 +125,7 @@ beforeEach(() => {
 
 describe("conversation identity across project contexts", () => {
   it("routes a message to the active worker before starting another Numo turn", async () => {
-    database({ visible: new Set() });
+    database({ visible: new Set(["unavailable"]) });
     h.steerWorker.mockResolvedValue({
       action: "steered",
       turnId: "51600000-0000-4000-8000-000000000001",
@@ -136,7 +136,7 @@ describe("conversation identity across project contexts", () => {
     expect(h.steerWorker).toHaveBeenCalledWith(expect.objectContaining({
       conversationId: "conversation",
       userId: "user",
-      content: "Discuss this project",
+      content: expect.stringContaining("Discuss this project"),
     }));
     expect(h.process).not.toHaveBeenCalled();
     expect(h.loadSkills).not.toHaveBeenCalled();

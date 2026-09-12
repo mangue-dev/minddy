@@ -7,6 +7,10 @@ import { getRun, type AgentRun } from "@/lib/server/agent/runs";
 import { requestedRunReservationUsd } from "@/lib/server/agent/run-key";
 import { kickAgentDrain } from "@/lib/server/agent/launch";
 import { getServiceClient } from "@/lib/supabase-service";
+import type {
+  AssistantMention,
+  AssistantPageContext,
+} from "@/lib/assistant-types";
 
 export interface WorkerInputCorrelation {
   parentTurnId: string;
@@ -103,6 +107,10 @@ export async function steerNumoWorker(input: {
   userId: string;
   messageId: string;
   content: string;
+  parentContent?: string;
+  mentions?: AssistantMention[];
+  context?: AssistantPageContext | null;
+  metadata?: Record<string, unknown>;
 }): Promise<WorkerMessageDisposition> {
   const service = getServiceClient();
   const { data, error } = await service.rpc("steer_numo_worker", {
@@ -110,6 +118,10 @@ export async function steerNumoWorker(input: {
     p_user_id: input.userId,
     p_message_id: input.messageId,
     p_content: input.content.trim(),
+    p_parent_content: input.parentContent?.trim() || null,
+    p_mentions: input.mentions ?? null,
+    p_context: input.context ?? null,
+    p_metadata: input.metadata ?? {},
   });
   if (error) throw new Error(`Worker steering failed: ${error.message}`);
   const result = data as {

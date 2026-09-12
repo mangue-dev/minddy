@@ -175,12 +175,14 @@ function collectUnresolvedDecisions(run: AgentRun, events: RunEvent[]): string[]
 function collectInputRequest(run: AgentRun, events: RunEvent[]) {
   if (!run.awaiting_input || !run.parent_numo_turn_id) return undefined;
   const event = [...events].reverse().find((candidate) =>
-    candidate.type === "needs_input"
+    candidate.type === "needs_input" || candidate.type === "question"
   );
   const payload = event?.payload ?? null;
   if (!payload) return undefined;
   const questions = parseAskUserQuestions({ questions: payload.questions });
-  const questionId = eventString(payload, "question_id");
+  // Before mediation shipped, OpenCode questions used their call id as the
+  // only durable identity. Keep those already-suspended workers resumable.
+  const questionId = eventString(payload, "question_id", "id");
   const callId = eventString(payload, "call_id", "id");
   if (!questionId || !callId || questions.length === 0) return undefined;
   return {

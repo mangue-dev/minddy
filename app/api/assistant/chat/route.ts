@@ -23,6 +23,8 @@ import { fallbackShortTitle, generateShortTitle } from "@/lib/server/short-title
 import { newRunId } from "@/lib/server/ai-usage";
 import { isWebSearchEnabled } from "@/lib/server/web-search";
 import { parseResourcesInput } from "@/lib/server/attachments";
+import { promptWithAttachments } from "@/lib/server/agent/prompt-attachments";
+import { buildPageContextBlock } from "@/lib/server/assistant/prompt";
 import { resolveNumoDefaultStatus } from "@/lib/numo-default-status";
 import {
   ManagedAiUnavailableError,
@@ -320,6 +322,12 @@ export async function POST(request: NextRequest) {
     model?: string | null;
     reasoning_level?: string | null;
   } | null = null;
+  let preparedAttachments: AttachmentInput[] | undefined;
+  let preparedContext: {
+    context: AssistantPageContext | null;
+    mentions: AssistantMention[];
+  } | undefined;
+  let preparedSkills: RepositorySkill[] | undefined;
   if (convId) {
     const { data, error } = await supabase
       .from("conversations")
@@ -336,6 +344,94 @@ export async function POST(request: NextRequest) {
       reasoning_level?: string | null;
     };
 
+    // A parent message can steer an active code worker. Prepare the same
+    // user-selected context that an ordinary Numo turn would retain, then pass
+    // the worker-readable portions through its durable message queue.
+    let workerSteering: {
+      content: string;
+      mentions: AssistantMention[];
+      context: AssistantPageContext | null;
+      metadata: Record<string, unknown>;
+    } | undefined;
+    if (!workerInput) {
+      const steeringResources = parseResourcesInput(
+        body.attachments,
+        `chat/${user.id}/`,
+        5,
+      );
+      if (steeringResources === null) {
+        return Response.json({ error: "Invalid attachments" }, { status: 400 });
+      }
+      const steeringAttachments = steeringResources.filter(
+        (resource): resource is AttachmentInput => resource.kind !== "link",
+      );
+      const steeringContext = await validateMessageContext(supabase, pageContext, mentions);
+      if (!steeringContext) {
+        return Response.json(
+          { error: "Some attached context is unavailable. Remove it or check your project access." },
+          { status: 404 },
+        );
+      }
+      preparedAttachments = steeringAttachments;
+      preparedContext = steeringContext;
+      const steeringSkills: RepositorySkill[] = [];
+      try {
+        for (const sourceProjectId of new Set(skillSelections.map((skill) => skill.projectId))) {
+          const { data: sourceProject } = await supabase.from("projects").select("id")
+            .eq("id", sourceProjectId).is("deleted_at", null).maybeSingle();
+          if (!sourceProject) {
+            return Response.json(
+              { error: "A selected skill's project is unavailable. Remove the skill or check your access." },
+              { status: 404 },
+            );
+          }
+          const paths = skillSelections
+            .filter((skill) => skill.projectId === sourceProjectId)
+            .map((skill) => skill.path);
+          const loaded = await loadProjectRepositorySkills(sourceProjectId, paths);
+          if (!loaded) {
+            return Response.json(
+              { error: "One or more repository skills are no longer available" },
+              { status: 400 },
+            );
+          }
+          steeringSkills.push(...loaded.map((skill) => ({ ...skill, projectId: sourceProjectId })));
+        }
+        if (steeringSkills.reduce(
+          (size, skill) => size + new TextEncoder().encode(skill.content).byteLength,
+          0,
+        ) > MAX_SELECTED_SKILL_BYTES) {
+          return Response.json(
+            { error: "Selected skills are too large. Remove a skill and try again." },
+            { status: 400 },
+          );
+        }
+      } catch (error) {
+        console.error("[repository-skills] selection failed:", (error as Error).message);
+        return Response.json({ error: "Repository skills could not be loaded" }, { status: 502 });
+      }
+      preparedSkills = steeringSkills;
+      let workerContent = await promptWithAttachments(
+        sanitizedUserMessage,
+        steeringAttachments,
+      );
+      if (steeringContext.context) {
+        workerContent += "\n\n[Context captured for this message only; it does not authorize later actions]\n"
+          + buildPageContextBlock(steeringContext.context);
+      }
+      workerSteering = {
+        content: workerContent,
+        mentions: steeringContext.mentions,
+        context: steeringContext.context,
+        metadata: {
+          ...(steeringAttachments.length > 0 ? { attachments: steeringAttachments } : {}),
+          ...(steeringContext.mentions.length > 0 ? { mentions: steeringContext.mentions } : {}),
+          ...(command ? { command } : {}),
+          ...(steeringSkills.length > 0 ? { skills: steeringSkills } : {}),
+        },
+      };
+    }
+
     const mediated = workerInput
       ? await answerNumoWorkerInput({
           conversationId: convId,
@@ -349,7 +445,11 @@ export async function POST(request: NextRequest) {
           conversationId: convId,
           userId: user.id,
           messageId: requestId,
-          content: sanitizedUserMessage,
+          content: workerSteering?.content ?? sanitizedUserMessage,
+          parentContent: sanitizedUserMessage,
+          mentions: workerSteering?.mentions,
+          context: workerSteering?.context,
+          metadata: workerSteering?.metadata,
         });
     if (
       mediated.action === "answered"
@@ -394,10 +494,10 @@ export async function POST(request: NextRequest) {
   // the descriptors ride the request and live on the message's metadata.
   // FILES only — the shell has no link composer, and a chat attachment has no
   // DB row to carry a link's url anyway.
-  const parsedResources = parseResourcesInput(
+  const parsedResources = preparedAttachments ?? parseResourcesInput(
     body.attachments,
     `chat/${user.id}/`,
-    5
+    5,
   );
   if (parsedResources === null) {
     return Response.json({ error: "Invalid attachments" }, { status: 400 });
@@ -434,13 +534,13 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const validated = await validateMessageContext(supabase, pageContext, mentions);
+  const validated = preparedContext ?? await validateMessageContext(supabase, pageContext, mentions);
   if (!validated) return Response.json({ error: "Some attached context is unavailable. Remove it or check your project access." }, { status: 404 });
   pageContext = validated.context;
   mentions = validated.mentions;
 
-  const selectedSkills: RepositorySkill[] = [];
-  try {
+  const selectedSkills: RepositorySkill[] = preparedSkills ?? [];
+  if (!preparedSkills) try {
     for (const sourceProjectId of new Set(skillSelections.map((skill) => skill.projectId))) {
       // The repository loader uses service credentials: authorize its source first.
       const { data: sourceProject } = await supabase.from("projects").select("id")

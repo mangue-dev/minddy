@@ -25,6 +25,15 @@ describe("Numo worker input mediation migration", () => {
     expect(capture).toContain("on conflict (run_id, question_id) do nothing");
   });
 
+  it("backfills parent-owned workers already waiting on a legacy question", () => {
+    expect(sql).toContain("workers already suspended when this migration runs emitted a legacy");
+    expect(sql).toContain("from public.agent_runs as r");
+    expect(sql).toContain("event.type in ('needs_input', 'question')");
+    expect(sql).toContain("and r.status = 'completed'");
+    expect(sql).toContain("and r.awaiting_input");
+    expect(sql).toContain("nullif(e.payload ->> 'id', '')");
+  });
+
   it("resumes only the exact active task and pending question", () => {
     const resume = operation("resume_numo_worker_input", "steer_numo_worker");
     expect(resume).toContain("v_turn.active_run_id is distinct from p_run_id");
@@ -62,7 +71,11 @@ describe("Numo worker input mediation migration", () => {
     expect(steer).toContain("'result', 'worker_input_pending'");
     expect(steer).toContain("id = v_turn.active_run_id and parent_numo_turn_id = v_turn.id");
     expect(steer).toContain("public.insert_latest_agent_run_message");
+    expect(steer).toContain("btrim(p_content), p_mentions");
     expect(steer).toContain("insert into public.assistant_messages");
+    expect(steer).toContain("role, content, context, metadata");
+    expect(steer).toContain("btrim(coalesce(nullif(p_parent_content, ''), p_content))");
+    expect(steer).toContain("coalesce(p_metadata, '{}'::jsonb)");
     expect(steer).toContain("set interrupt_requested = true");
     expect(steer).toContain("where id = v_run.id and status = 'running'");
   });

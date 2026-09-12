@@ -186,4 +186,32 @@ describe("code delegation contracts", () => {
       },
     });
   });
+
+  it("keeps a legacy suspended worker correlated by its question call id", () => {
+    const result = buildAgentDelegationResult({
+      run: run({ awaiting_input: true }),
+      events: [{
+        seq: 0,
+        type: "question",
+        payload: {
+          id: "legacy-call-question",
+          questions: [{
+            header: "Source",
+            question: "Which API should be authoritative?",
+            options: [],
+          }],
+        },
+      }],
+    });
+
+    expect(result).toMatchObject({
+      status: "needs_input",
+      inputRequest: {
+        parentTurnId: brief.correlation.parentTurnId,
+        runId: "run-1",
+        questionId: "legacy-call-question",
+        callId: "legacy-call-question",
+      },
+    });
+  });
 });
