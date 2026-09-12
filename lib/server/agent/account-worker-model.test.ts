@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   preference: {
@@ -48,7 +48,13 @@ vi.mock("@/lib/server/safe-fetch", () => ({
 
 vi.mock("@/lib/managed-services", () => ({ isManagedAiEnabled: () => true }));
 
-import { resolveAgentModel, resolveReasoningLevel } from "./model";
+import {
+  resolveAgentApiKeyForRun,
+  resolveAgentModel,
+  resolveReasoningLevel,
+} from "./model";
+
+const originalPlatformKey = process.env.OPENROUTER_API_KEY;
 
 beforeEach(() => {
   h.preference = {
@@ -57,12 +63,19 @@ beforeEach(() => {
     default_reasoning_level: "high",
   };
   h.byok = null;
+  process.env.OPENROUTER_API_KEY = "platform-key";
+});
+
+afterAll(() => {
+  if (originalPlatformKey === undefined) delete process.env.OPENROUTER_API_KEY;
+  else process.env.OPENROUTER_API_KEY = originalPlatformKey;
 });
 
 describe("account worker model resolution", () => {
   it("uses the explicit account model for platform workers", async () => {
     await expect(resolveAgentModel("user-1")).resolves.toEqual({
       model: "anthropic/claude-sonnet-5",
+      provider: "openrouter",
       chosenByUser: true,
     });
   });
@@ -84,6 +97,7 @@ describe("account worker model resolution", () => {
 
     await expect(resolveAgentModel("user-1")).resolves.toEqual({
       model: "claude-sonnet-5",
+      provider: "anthropic",
       chosenByUser: true,
     });
   });
@@ -119,5 +133,45 @@ describe("account worker model resolution", () => {
 
   it("retains the account reasoning preference", async () => {
     await expect(resolveReasoningLevel("user-1")).resolves.toBe("high");
+  });
+
+  it("keeps a platform run on the platform after BYOK is added", async () => {
+    h.byok = {
+      provider: "openai",
+      key_encrypted: "encrypted-key",
+      base_url: null,
+      validated_at: "2026-09-02T00:00:00.000Z",
+      enabled_surfaces: ["agent"],
+      feature_models: {},
+    };
+
+    await expect(
+      resolveAgentApiKeyForRun("user-1", "agent", {
+        keyMode: "platform",
+        provider: "openrouter",
+      }),
+    ).resolves.toMatchObject({
+      apiKey: "platform-key",
+      mode: "platform",
+      provider: "openrouter",
+    });
+  });
+
+  it("refuses to resume a BYOK run on a replacement provider", async () => {
+    h.byok = {
+      provider: "openai",
+      key_encrypted: "encrypted-key",
+      base_url: null,
+      validated_at: "2026-09-02T00:00:00.000Z",
+      enabled_surfaces: ["agent"],
+      feature_models: {},
+    };
+
+    await expect(
+      resolveAgentApiKeyForRun("user-1", "agent", {
+        keyMode: "byok",
+        provider: "anthropic",
+      }),
+    ).rejects.toMatchObject({ code: "byokCredentialUnavailable" });
   });
 });

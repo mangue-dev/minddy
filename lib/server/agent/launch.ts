@@ -13,7 +13,10 @@ import {
   resolveReasoningLevel,
   AgentModelRequiredError,
 } from "./model";
-import { isLocalAgentProvider } from "@/lib/agent-providers";
+import {
+  isLocalAgentProvider,
+  type AgentProviderId,
+} from "@/lib/agent-providers";
 import { ensureModelInPlan } from "./model-plan";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { checkAgentQuota, type AgentQuota } from "./quota";
@@ -484,9 +487,11 @@ export async function launchAgentRun(
   const titleSource = agentRunTitleSource({ issueTitle, prompt: input.prompt });
 
   let model: string;
+  let workerModelProvider: AgentProviderId;
   try {
     const resolved = await resolveAgentModel(input.userId);
     model = resolved.model;
+    workerModelProvider = resolved.provider;
     // The account choice may predate a plan downgrade or ceiling adjustment.
     await ensureModelInPlan({
       userId: input.userId,
@@ -555,6 +560,7 @@ export async function launchAgentRun(
       modelForced: false,
       reasoningLevel,
       keyMode: quota.mode,
+      workerModelProvider,
       triggeredBy: input.triggeredBy,
       // Persisted since MIN-147: without it, the channel cannot know what
       // the run that just finished DID. `undefined` is “implement”,

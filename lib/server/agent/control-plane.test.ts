@@ -95,7 +95,7 @@ vi.mock("./run-key", async (importOriginal) => ({
 }));
 
 vi.mock("./model", () => ({
-  resolveAgentApiKey: vi.fn(async () =>
+  resolveAgentApiKeyForRun: vi.fn(async () =>
     h.byokAvailable
       ? {
           apiKey: "sk-user-byok",

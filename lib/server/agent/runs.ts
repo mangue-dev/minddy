@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
 import { insertNotifications } from "@/lib/server/notifications";
 import type { RepoProviderId } from "@/lib/repo-providers";
+import type { AgentProviderId } from "@/lib/agent-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import { AGENT_ENGINE, type AgentEngine } from "@/lib/agent-engines";
 // Type ONLY (therefore deleted during compilation): `launch.ts` imports this module, the
@@ -221,6 +222,8 @@ export interface AgentRun {
   key_mode: "platform" | "byok";
   /** Resolution contract frozen at launch. NULL/absent identifies legacy runs. */
   worker_model_source?: "account" | null;
+  /** AI provider frozen with the account worker model. NULL for legacy runs. */
+  worker_model_provider?: AgentProviderId | null;
   base_branch: string | null;
   branch_name: string | null;
   pr_number: number | null;
@@ -377,6 +380,7 @@ export interface CreateRunInput {
   /** Level of reasoning resolved at launch (see `resolveReasoningLevel`). */
   reasoningLevel: ReasoningLevel;
   keyMode: "platform" | "byok";
+  workerModelProvider: AgentProviderId;
   triggeredBy: AgentRunTrigger;
   /** Step of an automation chain (MIN-147): its id and its ceiling. */
   chainId?: string | null;
@@ -495,6 +499,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     reasoning_level: input.reasoningLevel,
     key_mode: input.keyMode,
     worker_model_source: "account",
+    worker_model_provider: input.workerModelProvider,
     base_branch: input.baseBranch ?? null,
     branch_name: input.branchName ?? null,
     pr_number: input.prNumber ?? null,

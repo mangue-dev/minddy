@@ -66,7 +66,7 @@ import {
   pullRequestHeadRef,
 } from "./pr-run";
 import {
-  resolveAgentApiKey,
+  resolveAgentApiKeyForRun,
   getModelContextWindow,
   getModelInputPrice,
   getModelPricing,
@@ -720,9 +720,10 @@ export async function executeAgentRun(
     // A BYOK run is fixed to its own payer. If the configuration disappeared, or a
     // local endpoint was requested from the cloud, preparation fails explicitly:
     // it must never fall back to the platform key.
-    const endpointPromise = resolveAgentApiKey(run.created_by, workerSurface, {
+    const endpointPromise = resolveAgentApiKeyForRun(run.created_by, workerSurface, {
       allowLocal: localTurn,
-      requireByok: run.key_mode === "byok",
+      keyMode: run.key_mode,
+      provider: run.worker_model_provider,
     });
 
     // Clone target (fresh token for this chunk) + the provider's PR/MR client.

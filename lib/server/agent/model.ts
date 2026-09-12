@@ -42,7 +42,7 @@ import { isManagedAiEnabled } from "@/lib/managed-services";
  * OPENROUTER_API_KEY (capped monthly, see quota.ts).
  */
 
-/** Root default (admin): app_config.agent_model or the fallback code. */
+/** Root pricing baseline (admin), never a code-worker selection fallback. */
 export async function getRootDefaultModel(): Promise<string> {
   return (await getAppConfigValue(AGENT_MODEL_CONFIG_KEY))?.trim() || AGENT_ROOT_MODEL_FALLBACK;
 }
@@ -111,6 +111,7 @@ export class AgentModelRequiredError extends Error {
 /** Model frozen on a run. */
 export interface ResolvedAgentModel {
   model: string;
+  provider: AgentProviderId;
   chosenByUser: true;
 }
 
@@ -131,7 +132,7 @@ export async function resolveAgentModel(userId: string): Promise<ResolvedAgentMo
   if (!preference.model || preference.provider !== provider) {
     throw new AgentModelRequiredError(provider);
   }
-  return { model: preference.model, chosenByUser: true };
+  return { model: preference.model, provider, chosenByUser: true };
 }
 
 // ── Endpoint (provider + base URL + key) ─────────────────────────────────────
@@ -400,6 +401,19 @@ export interface ResolvedAgentEndpoint {
   baseUrl: string;
 }
 
+function resolvePlatformAgentEndpoint(): ResolvedAgentEndpoint {
+  if (!isManagedAiEnabled()) throw new ManagedAgentServiceUnavailableError();
+  const platform = process.env.OPENROUTER_API_KEY;
+  if (!platform) throw new ManagedAgentServiceUnavailableError();
+  const baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER);
+  return {
+    apiKey: platform,
+    mode: "platform",
+    provider: DEFAULT_AGENT_PROVIDER,
+    baseUrl: baseUrl!,
+  };
+}
+
 /**
  * Resolves the effective endpoint: BYOK the user if present (provider + base URL +
  * key), otherwise the OpenRouter platform key. Raised if no platform key.
@@ -417,9 +431,39 @@ export async function resolveAgentApiKey(
     return { apiKey: byok.apiKey, mode: "byok", provider: byok.provider, baseUrl: byok.baseUrl };
   }
   if (options.requireByok) throw new ByokCredentialUnavailableError();
-  if (!isManagedAiEnabled()) throw new ManagedAgentServiceUnavailableError();
-  const platform = process.env.OPENROUTER_API_KEY;
-  if (!platform) throw new ManagedAgentServiceUnavailableError();
-  const baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER);
-  return { apiKey: platform, mode: "platform", provider: DEFAULT_AGENT_PROVIDER, baseUrl: baseUrl! };
+  return resolvePlatformAgentEndpoint();
+}
+
+/** Resolve the endpoint frozen on a run without changing provider or payer. */
+export async function resolveAgentApiKeyForRun(
+  userId: string,
+  surface: Extract<AiSurface, "agent" | "automations">,
+  options: {
+    allowLocal?: boolean;
+    keyMode: AgentKeyMode;
+    provider?: AgentProviderId | null;
+  },
+): Promise<ResolvedAgentEndpoint> {
+  if (options.keyMode === "platform") {
+    if (options.provider && options.provider !== DEFAULT_AGENT_PROVIDER) {
+      throw new ByokCredentialUnavailableError();
+    }
+    // A platform run remains platform-funded even if the account adds BYOK
+    // while the worker is queued or between resumable chunks.
+    return resolvePlatformAgentEndpoint();
+  }
+
+  const byok = await getUserByok(userId, surface);
+  if (!byok || (options.provider && byok.provider !== options.provider)) {
+    throw new ByokCredentialUnavailableError();
+  }
+  if (isLocalAgentProvider(byok.provider) && !options.allowLocal) {
+    throw new LocalEndpointRequiresLocalRunError();
+  }
+  return {
+    apiKey: byok.apiKey,
+    mode: "byok",
+    provider: byok.provider,
+    baseUrl: byok.baseUrl,
+  };
 }

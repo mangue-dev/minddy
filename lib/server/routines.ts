@@ -131,7 +131,10 @@ export async function routineRunBudgetUsd(routine: {
 }): Promise<number | null> {
   const percent = clampSpendPercent(routine.max_spend_percent);
   if (percent >= NO_SPEND_CAP_PERCENT) return null;
-  const quota = await checkAgentQuota(routine.owner_id, "automations");
+  // Routine code workers use the same account provider as every other worker.
+  // Their helper calls may still use the automations surface, but that surface
+  // must not decide whether this run is platform-funded or BYOK.
+  const quota = await checkAgentQuota(routine.owner_id, "agent");
   if (quota.unlimited || quota.cap == null) return null;
   return (quota.cap * percent) / 100;
 }

@@ -907,13 +907,14 @@ export async function handleControlPlaneRequest(opts: {
       );
     }
     if (run.key_mode === "byok") {
-      const { resolveAgentApiKey } = await import("./model");
-      const endpoint = await resolveAgentApiKey(
+      const { resolveAgentApiKeyForRun } = await import("./model");
+      const endpoint = await resolveAgentApiKeyForRun(
         run.created_by ?? "",
         workerModelSurfaceForAgentRun(run),
         {
           allowLocal: true,
-          requireByok: true,
+          keyMode: run.key_mode,
+          provider: run.worker_model_provider,
         },
       ).catch(() => null);
       // The key could have been removed after launch. Never substitute then

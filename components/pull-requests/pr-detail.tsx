@@ -91,6 +91,7 @@ import {
 } from "@/components/agent/environment-combobox";
 import { useLocalRepo } from "@/lib/use-local-repo";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
+import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
 import {
   usePullRequestQuery,
   usePrCommentsQuery,
@@ -570,6 +571,7 @@ export function PrDetail({
 }) {
   const t = useTranslations("PullRequests");
   const tAgent = useTranslations("Agent");
+  const agentErrorMessage = useAgentErrorMessage();
   const isSend = useIsSendShortcut();
   const format = useFormatter();
   const { cloudExecutionConfigured, executionBackend } = useAgentModelsQuery();
@@ -1093,7 +1095,7 @@ export function PrDetail({
       onRefetchList(); // brings up a possible new active run → polling the list.
       await Promise.all([refetchComments(), refetchPr()]);
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(agentErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -1144,7 +1146,7 @@ export function PrDetail({
       setTab("activity");
       await reviewSession.refetch();
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(agentErrorMessage(err));
     } finally {
       setStartingAiReview(false);
     }

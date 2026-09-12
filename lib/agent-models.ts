@@ -3,9 +3,9 @@
  * cloud code (MIN-46). NO server-only import: the model picker (UI) and the
  * server-side resolution (`lib/server/agent/model.ts`) both import it.
  *
- * Model resolution cascade of a run:
- * run override > user's personal default (user_agent_preferences) >
- * root default (app_config.agent_model, fallback AGENT_ROOT_MODEL_FALLBACK).
+ * New code workers resolve only the provider-bound account preference in
+ * `user_agent_preferences`. The root model below remains a pricing baseline;
+ * it is never a launch fallback.
  */
 import { aiModelFallback } from "@/lib/ai-model-config";
 
@@ -19,13 +19,13 @@ export interface AgentModelOption {
 }
 
 // ── app_config keys (admin overload without redeploy) ──────────────────────────
-/** Root defect in the agent model. */
+/** Root model used as the plan-pricing baseline, not as a worker fallback. */
 export const AGENT_MODEL_CONFIG_KEY = "agent_model";
 // The old fixed monthly cap (`agent_monthly_cap_usd`, $10) is replaced
 // from MIN-72 by the PLAN usage budget (lib/billing-plans.ts).
 
 /**
- * Root fault if `app_config.agent_model` is absent. The id itself lives in
+ * Pricing baseline if `app_config.agent_model` is absent. The id itself lives in
  * the admin registry (`lib/ai-model-config.ts`), along with all the others — we don't rewrite it here. Mirror the migration seed 20260806090000_agent_runs.sql:
  * keep both in sync.
  */

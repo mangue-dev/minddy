@@ -485,7 +485,7 @@ describe("la préparation locale d'`execute.ts`", () => {
     // time between the sending of the first token.
     const prepareAt = source.indexOf("const targetPromise = run.repo_link_id");
     const endpointAt = source.indexOf(
-      "const endpointPromise = resolveAgentApiKey(",
+      "const endpointPromise = resolveAgentApiKeyForRun(",
     );
     const targetAwaitAt = source.indexOf("const target = await targetPromise;");
     expect(prepareAt).toBeGreaterThan(-1);

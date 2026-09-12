@@ -47,10 +47,38 @@ describe("account worker model boundary", () => {
     );
     expect(migration).toContain("add column if not exists default_model_provider text");
     expect(migration).toContain("add column if not exists worker_model_source text");
+    expect(migration).toContain("add column if not exists worker_model_provider text");
     expect(migration).toContain("drop column if exists pr_review_model");
     expect(migration).toContain("drop column if exists model");
     expect(migration).toContain("drop column if exists reasoning_level");
     expect(migration).toContain("- 'automation_models'");
     expect(migration).not.toMatch(/update\s+public\.agent_runs/i);
+  });
+
+  it("persists the account source through managed budget reservations", () => {
+    const migration = source(
+      "supabase/migrations/20270106700000_account_worker_model_source.sql",
+    );
+    expect(migration).toContain(
+      "p_values->>'worker_model_source' is distinct from 'account'",
+    );
+    expect(migration).toMatch(
+      /reasoning_level, key_mode, worker_model_source, worker_model_provider/,
+    );
+    expect(migration).toMatch(
+      /p_values->>'reasoning_level',[\s\S]*p_values->>'key_mode',[\s\S]*p_values->>'worker_model_source',[\s\S]*p_values->>'worker_model_provider'/,
+    );
+  });
+
+  it("keeps legacy review capabilities and directs PR launch errors to settings", () => {
+    const compatibilityRoute = source("app/api/agent/review-models/route.ts");
+    expect(compatibilityRoute).toContain("cloudExecutionConfigured:");
+    expect(compatibilityRoute).toContain("executionBackend:");
+
+    const pullRequestDetail = source("components/pull-requests/pr-detail.tsx");
+    expect(pullRequestDetail).toContain("const agentErrorMessage = useAgentErrorMessage();");
+    expect(pullRequestDetail.match(/toast\.error\(agentErrorMessage\(err\)\);/g)).toHaveLength(
+      2,
+    );
   });
 });

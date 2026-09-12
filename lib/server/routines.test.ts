@@ -59,6 +59,7 @@ const world = {
     cap: 5 as number | undefined,
     remaining: 5 as number | undefined,
   },
+  quotaSurfaces: [] as string[],
 };
 
 function makeRoutine(over: Partial<RoutineRow> = {}): RoutineRow {
@@ -189,7 +190,10 @@ vi.mock("@/lib/server/git/repo-links", () => ({
 }));
 
 vi.mock("@/lib/server/agent/quota", () => ({
-  checkAgentQuota: async () => world.quota,
+  checkAgentQuota: async (_userId: string, surface: string) => {
+    world.quotaSurfaces.push(surface);
+    return world.quota;
+  },
 }));
 
 // The little model that NAMES the routine: we don't really call it, but
@@ -241,6 +245,7 @@ beforeEach(() => {
     cap: 5,
     remaining: 5,
   };
+  world.quotaSurfaces = [];
   titleCalls.length = 0;
 });
 
@@ -580,6 +585,7 @@ describe("plafond de dépense", () => {
     world.quota.remaining = 1;
     const budget = await routineRunBudgetUsd(makeRoutine({ max_spend_percent: 50 }));
     expect(budget).toBeCloseTo(2.5, 6);
+    expect(world.quotaSurfaces).toEqual(["agent"]);
   });
 
   it("ne pose AUCUN plafond à 100 % ni en BYOK", async () => {

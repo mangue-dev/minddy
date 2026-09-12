@@ -7,11 +7,15 @@ alter table public.user_agent_preferences
   add column if not exists default_model_provider text;
 
 alter table public.agent_runs
-  add column if not exists worker_model_source text;
+  add column if not exists worker_model_source text,
+  add column if not exists worker_model_provider text;
 
 alter table public.agent_runs
   add constraint agent_runs_worker_model_source_check
-  check (worker_model_source is null or worker_model_source = 'account')
+  check (
+    (worker_model_source is null and worker_model_provider is null)
+    or (worker_model_source = 'account' and worker_model_provider is not null)
+  )
   not valid;
 
 alter table public.agent_runs
@@ -19,6 +23,157 @@ alter table public.agent_runs
 
 comment on column public.agent_runs.worker_model_source is
   'NULL marks a legacy frozen run. account marks a run resolved from the provider-bound account preference.';
+comment on column public.agent_runs.worker_model_provider is
+  'AI provider frozen with the account model for a new worker. NULL only for legacy runs.';
+
+-- Managed runs are inserted through this reservation RPC rather than the
+-- ordinary agent_runs insert. Keep its explicit JSON allowlist and column map
+-- in sync so the new source marker is both accepted and persisted atomically.
+create or replace function public.create_agent_run_with_budget(
+  p_user_id uuid,
+  p_usage_since timestamptz,
+  p_budget_cap numeric,
+  p_requested_budget numeric,
+  p_values jsonb
+) returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_spent numeric;
+  v_reserved numeric;
+  v_granted numeric;
+  v_run public.agent_runs%rowtype;
+begin
+  if p_user_id is null
+     or p_usage_since is null
+     or p_budget_cap is null
+     or p_budget_cap < 0
+     or p_requested_budget is null
+     or p_requested_budget <= 0
+     or p_values is null
+     or jsonb_typeof(p_values) <> 'object'
+     or p_values - array[
+       'project_id', 'issue_id', 'pull_request_id', 'pr_head_sha',
+       'repo_link_id', 'connection_id', 'repo_provider', 'repo_external_id',
+       'status', 'triggered_by', 'created_by', 'prompt', 'prompt_mentions',
+       'title', 'model', 'model_forced', 'reasoning_level', 'key_mode',
+       'worker_model_source', 'worker_model_provider', 'base_branch',
+       'branch_name', 'pr_number', 'pr_url', 'pr_state', 'run_id', 'chain_id',
+       'budget_usd', 'routine_id', 'intent', 'deployment_url', 'loop_in_vm',
+       'agent_engine', 'local_exec', 'local_issue_context_confirmed',
+       'local_worktree'
+     ] <> '{}'::jsonb
+     or nullif(p_values->>'created_by', '')::uuid is distinct from p_user_id
+     or p_values->>'key_mode' is distinct from 'platform'
+     or p_values->>'worker_model_source' is distinct from 'account'
+     or nullif(p_values->>'worker_model_provider', '') is null
+     or p_values->>'status' is distinct from 'queued' then
+    raise exception 'agent_run_budget_values_invalid' using errcode = '22023';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(p_user_id::text, 460));
+
+  select coalesce(sum(cost), 0)
+  into v_spent
+  from public.ai_usage
+  where user_id = p_user_id
+    and created_at >= p_usage_since
+    and key_mode = 'platform';
+
+  select coalesce(sum(greatest(run.managed_budget_usd - coalesce(usage.spent, 0), 0)), 0)
+  into v_reserved
+  from public.agent_runs as run
+  left join lateral (
+    select sum(cost) as spent
+    from public.ai_usage
+    where run_id = run.run_id
+      and key_mode = 'platform'
+  ) as usage on true
+  where run.created_by = p_user_id
+    and run.key_mode = 'platform'
+    and run.status in ('queued', 'running')
+    and run.managed_budget_usd is not null;
+
+  v_granted := least(
+    p_requested_budget,
+    greatest(p_budget_cap - v_spent - v_reserved, 0)
+  );
+  if v_granted <= 0 then
+    return jsonb_build_object(
+      'run', null,
+      'granted_budget_usd', 0,
+      'spent_usd', v_spent,
+      'reserved_usd', v_reserved
+    );
+  end if;
+
+  insert into public.agent_runs (
+    project_id, issue_id, pull_request_id, pr_head_sha, repo_link_id,
+    connection_id, repo_provider, repo_external_id, status, triggered_by,
+    created_by, prompt, prompt_mentions, title, model, model_forced,
+    reasoning_level, key_mode, worker_model_source, worker_model_provider,
+    base_branch, branch_name, pr_number, pr_url, pr_state, run_id, chain_id,
+    budget_usd, routine_id, intent, deployment_url, loop_in_vm, agent_engine,
+    local_exec, local_issue_context_confirmed, local_worktree,
+    managed_budget_usd
+  ) values (
+    (p_values->>'project_id')::uuid,
+    nullif(p_values->>'issue_id', '')::uuid,
+    nullif(p_values->>'pull_request_id', '')::uuid,
+    p_values->>'pr_head_sha',
+    nullif(p_values->>'repo_link_id', '')::uuid,
+    nullif(p_values->>'connection_id', '')::uuid,
+    p_values->>'repo_provider',
+    p_values->>'repo_external_id',
+    p_values->>'status',
+    p_values->>'triggered_by',
+    (p_values->>'created_by')::uuid,
+    p_values->>'prompt',
+    p_values->'prompt_mentions',
+    p_values->>'title',
+    p_values->>'model',
+    (p_values->>'model_forced')::boolean,
+    p_values->>'reasoning_level',
+    p_values->>'key_mode',
+    p_values->>'worker_model_source',
+    p_values->>'worker_model_provider',
+    p_values->>'base_branch',
+    p_values->>'branch_name',
+    nullif(p_values->>'pr_number', '')::integer,
+    p_values->>'pr_url',
+    p_values->>'pr_state',
+    (p_values->>'run_id')::uuid,
+    nullif(p_values->>'chain_id', '')::uuid,
+    nullif(p_values->>'budget_usd', '')::numeric,
+    nullif(p_values->>'routine_id', '')::uuid,
+    p_values->>'intent',
+    p_values->>'deployment_url',
+    (p_values->>'loop_in_vm')::boolean,
+    p_values->>'agent_engine',
+    (p_values->>'local_exec')::boolean,
+    (p_values->>'local_issue_context_confirmed')::boolean,
+    (p_values->>'local_worktree')::boolean,
+    v_granted
+  )
+  returning * into v_run;
+
+  return jsonb_build_object(
+    'run', to_jsonb(v_run),
+    'granted_budget_usd', v_granted,
+    'spent_usd', v_spent,
+    'reserved_usd', v_reserved
+  );
+end;
+$function$;
+
+revoke all on function public.create_agent_run_with_budget(
+  uuid, timestamptz, numeric, numeric, jsonb
+) from public, anon, authenticated;
+grant execute on function public.create_agent_run_with_budget(
+  uuid, timestamptz, numeric, numeric, jsonb
+) to service_role;
 
 -- Bind existing explicit choices to the provider that was active when this
 -- invariant was introduced. Missing choices stay missing and must be selected

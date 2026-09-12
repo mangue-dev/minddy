@@ -128,7 +128,11 @@ vi.mock("./model", () => ({
   getUserByok: vi.fn(async () => h.byok),
   resolveAgentModel: vi.fn(async (input: Record<string, unknown>) => {
     h.agentModelCalls.push(input);
-    return { model: h.agentResolvedModel, chosenByUser: true };
+    return {
+      model: h.agentResolvedModel,
+      provider: "openrouter",
+      chosenByUser: true,
+    };
   }),
   resolveReasoningLevel: vi.fn(async () => "medium"),
 }));
