@@ -170,6 +170,9 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
   const [restoring, setRestoring] = useState(false);
   const [restored, setRestored] = useState(false);
   const [restoreRequested, setRestoreRequested] = useState(false);
+  // Read at lookup completion too: an action can arrive while restoration is pending.
+  const pendingActionRef = useRef(false);
+  pendingActionRef.current = Boolean(pendingOptions?.prompt || pendingOptions?.draft);
   useEffect(() => {
     if (isOpen) setRestoreRequested(true);
   }, [isOpen]);
@@ -196,15 +199,16 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
         // wins: we never recover it. `loadConversationRaw`, otherwise the
         // resume would declare itself as a choice.
         if (!cancelled && conversationId && !userPickedRef.current) {
-          void updateConversation(conversationId, { read: true }).catch(() => {});
           if (detailHref) {
-            // Work opens in its existing detail surface; keep its durable pointer.
+            // Keep the durable work pointer until a new message replaces it.
             serverPointerRef.current = null;
-            setRestoring(false);
-            setRestored(true);
-            closePanel();
-            router.push(detailHref);
+            if (!pendingActionRef.current) {
+              void updateConversation(conversationId, { read: true }).catch(() => {});
+              closePanel();
+              router.push(detailHref);
+            }
           } else {
+            void updateConversation(conversationId, { read: true }).catch(() => {});
             await loadConversationRaw(conversationId, projectId);
           }
         }

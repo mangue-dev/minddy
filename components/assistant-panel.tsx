@@ -161,17 +161,9 @@ export function AssistantPanel() {
       >
         <SheetTitle className="sr-only">{t("title")}</SheetTitle>
         <div className="h-full overflow-hidden">
-          {/*
- Keying on the scope starts with a new view when the scope changes:
- draft, history popover and scroll do not drag from one project
- to another. The CONVERSATION lives in AssistantChatProvider —
- this reassembly does not affect it.
-
- Since MIN-353 the scope is that of the CONVERSATION: this reassembly
- therefore only occurs by opening another conversation or by starting a new one. — no longer while browsing, which was precisely the gesture that made the thread disappear.
- */}
+          {/* Context changes must preserve the composer, including drafts filled
+              by an opening whose pending options have just been consumed. */}
           <AssistantShell
-            key={scopeProjectId ?? "__global__"}
             ref={handleShellRef}
             projectId={scopeProjectId}
             mobileSubtitle={activeProject?.name}
