@@ -1743,6 +1743,33 @@ describe("les questions à l'utilisateur", () => {
     expect(report.checkpoint).toBeTruthy();
   });
 
+  it("suspends a delegated worker when one of its subagents asks Numo", async () => {
+    h.extraFrames = [JSON.stringify({
+      type: "question.asked",
+      properties: {
+        id: "que_child",
+        sessionID: CHILD,
+        questions: [{ question: "Which API should I use?", options: [] }],
+        tool: { messageID: "msg_child", callID: "call_child" },
+      },
+    })];
+
+    const report = await run({
+      numoMediation: {
+        parentConversationId: "22222222-2222-4222-8222-222222222222",
+        parentTurnId: "33333333-3333-4333-8333-333333333333",
+      },
+    });
+
+    expect(h.events.some((event) => event.type === "question")).toBe(false);
+    expect(h.events.find((event) => event.type === "needs_input")?.payload).toMatchObject({
+      question_id: "que_child",
+      subagent_id: CHILD,
+    });
+    expect(report).toMatchObject({ status: "completed", askedUser: true });
+    expect(h.questionsRejected).toContain("que_child");
+  });
+
   it("ne tient pas la microVM ouverte le temps qu'un humain revienne", async () => {
     h.extraFrames = [question];
     const report = await run();

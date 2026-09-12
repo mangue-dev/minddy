@@ -2359,7 +2359,11 @@ export async function runOpencodeTurn(
          * answer. The detour from before (rejection → turn cut → disguised response
          * in steering on the next turn) disappears with its three steps.
          */
-        if (out.question && !child) {
+        // A delegated child is still part of the one worker Numo owns. In the
+        // mediated path it must end the worker turn too: otherwise its
+        // `needs_input` event reaches Numo while the worker remains running,
+        // making the durable answer impossible to apply safely.
+        if (out.question && (!child || job.numoMediation)) {
           if (questionsSuspend) {
             pendingQuestion = {
               id: out.question.id,
