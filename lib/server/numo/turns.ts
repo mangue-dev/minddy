@@ -42,9 +42,11 @@ import {
 } from "@/lib/server/assistant/loop";
 import type { ToolExecution } from "@/lib/server/assistant/execute-tool";
 import { parseAgentDelegationResult } from "@/lib/server/agent/agent-contract";
+import { finalizeAgentDelegationResult } from "@/lib/server/agent/delegation";
 import {
   deliverAgentDelegationResult,
   getRun,
+  type AgentRun,
 } from "@/lib/server/agent/runs";
 import { withoutWebSearch } from "@/lib/server/web-search";
 import type { SafeEmitter } from "@/lib/server/assistant/sse";
@@ -946,6 +948,16 @@ export async function retryNumoTurn(conversationId: string, userId: string) {
 
 export async function drainNumoTurns(options?: { limit?: number }) {
   const service = getServiceClient();
+  const { data: terminalWorkers, error: terminalWorkersError } = await service
+    .from("agent_runs")
+    .select("*")
+    .not("parent_numo_turn_id", "is", null)
+    .is("delegation_result", null)
+    .in("status", ["completed", "failed", "canceled"]);
+  if (terminalWorkersError) throw new Error(terminalWorkersError.message);
+  for (const worker of (terminalWorkers ?? []) as AgentRun[]) {
+    await finalizeAgentDelegationResult(service, worker);
+  }
   const { error: recoveryError } = await service.rpc("recover_stale_numo_turns");
   if (recoveryError) throw new Error(recoveryError.message);
   const { data, error } = await service.from("numo_assistant_turns")

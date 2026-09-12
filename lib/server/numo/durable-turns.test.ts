@@ -9,9 +9,11 @@ const h = vi.hoisted(() => ({
   checkpoints: [] as Array<Record<string, unknown>>,
   messages: [] as Array<Record<string, unknown>>,
   queuedTurns: [] as Array<Record<string, unknown>>,
+  terminalWorkers: [] as Array<Record<string, unknown>>,
   interruptions: [] as string[],
   failActivity: false,
   processChat: vi.fn(),
+  finalizeAgentDelegationResult: vi.fn(),
 }));
 
 function queryFor(table: string) {
@@ -38,6 +40,7 @@ function queryFor(table: string) {
       return query;
     },
     is: () => query,
+    not: () => query,
     in: () => query,
     lte: () => query,
     contains: () => query,
@@ -57,7 +60,9 @@ function queryFor(table: string) {
         ? h.messages
         : table === "numo_assistant_turns"
           ? h.queuedTurns
-          : [],
+          : table === "agent_runs"
+            ? h.terminalWorkers
+            : [],
       error: null,
     }).then(resolve),
   };
@@ -145,6 +150,9 @@ vi.mock("@/lib/server/assistant/sanitize", () => ({ sanitizeAssistantMessageCont
 vi.mock("@/lib/server/ai-usage", () => ({ recordAiUsage: vi.fn() }));
 vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: vi.fn() }));
 vi.mock("@/lib/server/ai-runtime", () => ({ resolveAiRuntime: vi.fn() }));
+vi.mock("@/lib/server/agent/delegation", () => ({
+  finalizeAgentDelegationResult: (...args: unknown[]) => h.finalizeAgentDelegationResult(...args),
+}));
 
 const { createDurableNumoEmitter, drainNumoTurns, executeNumoTurn } = await import("./turns");
 
@@ -194,6 +202,7 @@ beforeEach(() => {
   h.checkpoints.length = 0;
   h.messages.length = 0;
   h.queuedTurns.length = 0;
+  h.terminalWorkers.length = 0;
   h.interruptions.length = 0;
   h.failActivity = false;
   h.messages.push({
@@ -208,6 +217,7 @@ beforeEach(() => {
     context: null,
   });
   h.processChat.mockReset();
+  h.finalizeAgentDelegationResult.mockReset();
   h.processChat.mockResolvedValue({
     fullContent: "Done without code.",
     finalReasoning: null,
@@ -283,6 +293,22 @@ describe("durable Numo execution", () => {
 
     await expect(drainNumoTurns({ limit: 1 })).resolves.toEqual({ claimed: 1 });
     expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "retryable" });
+  });
+
+  it("finalizes terminal worker handoffs before recovering stale parent turns", async () => {
+    h.terminalWorkers.push({
+      id: "51600000-0000-4000-8000-000000000006",
+      status: "completed",
+      parent_numo_turn_id: h.turn!.id,
+      delegation_result: null,
+    });
+
+    await drainNumoTurns({ limit: 1 });
+
+    expect(h.finalizeAgentDelegationResult).toHaveBeenCalledWith(
+      service,
+      h.terminalWorkers[0],
+    );
   });
 
   it("preserves the latest tool checkpoint when execution fails", async () => {
