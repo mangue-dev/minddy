@@ -18,7 +18,7 @@ import { createSafeEmitter } from "@/lib/server/assistant/sse";
 import { commandNote, parseCommand } from "@/lib/server/assistant/commands";
 import {
   parseSelectedSkills,
-  skillsNote,
+  authorizedSkillsNotes,
 } from "@/lib/server/assistant/skills";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import {
@@ -581,6 +581,10 @@ export async function POST(request: NextRequest) {
 
   if (history) {
     const chronologicalHistory = [...history].reverse();
+    const historySkillsNotes = await authorizedSkillsNotes(
+      supabase,
+      chronologicalHistory.map((msg) => msg.role === "user" ? msg.metadata : null),
+    );
     // Heavy parts (PDF base64, CSV excerpts) go only with the LATEST user
     // message; older images stay (cheap signed URLs), the rest degrade to
     // text notes inside buildAttachmentParts.
@@ -598,7 +602,7 @@ export async function POST(request: NextRequest) {
       const sanitized =
         sanitizeAssistantMessageContent(msg.content) +
         (msg.role === "user"
-          ? mentionsNote(msg.metadata) + commandNote(msg.metadata) + skillsNote(msg.metadata) +
+          ? mentionsNote(msg.metadata) + commandNote(msg.metadata) + historySkillsNotes[i] +
             (msg.context ? `\n\n[Context captured for this message only; it does not authorize later actions]\n${buildPageContextBlock(msg.context)}` : "")
           : "");
       const atts = rowAttachments(msg);

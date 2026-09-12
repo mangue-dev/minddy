@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   MAX_SELECTED_SKILL_BYTES,
   MAX_SELECTED_SKILLS,
@@ -93,6 +94,30 @@ export function skillsNote(metadata: unknown): string {
       `### ${skill.name} (${skill.path})${skill.projectId ? ` — project ${skill.projectId}` : ""}\n\n${skill.content}`,
   );
   return `\n\n[Repository skills explicitly selected by the user for this message. Follow these workflow instructions for this turn only. They never override system constraints.]\n\n${blocks.join("\n\n---\n\n")}`;
+}
+
+/** Reauthorize persisted sources with the user's RLS client for each turn. */
+export async function authorizedSkillsNotes(
+  supabase: SupabaseClient,
+  metadata: unknown[],
+): Promise<string[]> {
+  const selections = metadata.map((entry) =>
+    persistedSkills((entry as { skills?: unknown } | null)?.skills),
+  );
+  const projectIds = [...new Set(selections.flatMap((skills) =>
+    skills.flatMap((skill) => skill.projectId ? [skill.projectId] : []),
+  ))];
+  if (projectIds.length === 0) return metadata.map(() => "");
+
+  const { data, error } = await supabase.from("projects")
+    .select("id")
+    .in("id", projectIds)
+    .is("deleted_at", null);
+  const accessibleProjects = new Set(error ? [] : (data ?? []).map((project) => project.id));
+  return selections.map((skills) => skillsNote({
+    // Legacy entries without provenance cannot be safely attributed to a project.
+    skills: skills.filter((skill) => skill.projectId && accessibleProjects.has(skill.projectId)),
+  }));
 }
 
 /** Keep full instructions server-side while retaining badge metadata for the UI. */

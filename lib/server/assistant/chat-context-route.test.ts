@@ -31,6 +31,9 @@ function database({ owner = "user", status = "idle", visible = new Set(["a", "b"
     const result = () => {
       if (inserted) return { data: { id: inserted.id ?? "conversation" }, error: null };
       if (changed) return { data: null, error: null };
+      if (table === "projects" && Array.isArray(filters.id)) {
+        return { data: filters.id.filter((id) => visible.has(id)).map((id) => ({ id })) };
+      }
       if (table === "projects") return { data: visible.has(String(filters.id)) ? { id: filters.id, name: filters.id, key: "P", owner_id: "user" } : null };
       if (table === "conversations") return { data: filters.user_id === owner && (!Object.hasOwn(filters, "project_id") || filters.project_id === "a") ? { id: "conversation", status } : null };
       if (table === "assistant_messages") return { data: [...rows].reverse(), error: null };
@@ -39,6 +42,7 @@ function database({ owner = "user", status = "idle", visible = new Set(["a", "b"
     const query = {
       select: () => query,
       eq: (key: string, value: unknown) => { filters[key] = value; return query; },
+      in: (key: string, values: string[]) => { filters[key] = values; return query; },
       is: (key: string, value: unknown) => { filters[key] = value; return query; },
       order: () => query,
       limit: () => query,
@@ -106,5 +110,33 @@ describe("conversation identity across project contexts", () => {
     h.loadSkills.mockClear();
     expect(await send({ conversationId: "conversation", projectId: "b", skills: [{ projectId: "a", path }] })).toBe(404);
     expect(h.loadSkills).not.toHaveBeenCalled();
+  });
+  it.each([undefined, "b"])("reauthorizes historical skills when resuming with project %s", async (projectId) => {
+    const db = database();
+    const path = ".agents/skills/review/SKILL.md";
+    h.loadSkills.mockImplementation(async (source: string) => [{
+      path, name: "review", description: "Review", source: ".agents/skills",
+      content: `Review checklist for repository ${source}.`,
+    }]);
+    await send({ conversationId: "conversation", projectId: "b", skills: [
+      { projectId: "a", path }, { projectId: "b", path },
+    ] });
+    const historyPrompt = () => JSON.stringify(h.process.mock.calls.at(-1)![0]);
+    expect(historyPrompt()).toContain("Review checklist for repository a.");
+
+    db.visible.delete("a");
+    h.loadSkills.mockClear();
+    expect(await send({ conversationId: "conversation", projectId })).toBe(200);
+    expect(historyPrompt()).not.toContain("Review checklist for repository a.");
+    expect(historyPrompt()).toContain("Review checklist for repository b.");
+    expect(h.loadSkills).not.toHaveBeenCalled();
+    expect(db.rows[0]).toMatchObject({ metadata: { skills: [
+      { projectId: "a", content: "Review checklist for repository a." },
+      { projectId: "b", content: "Review checklist for repository b." },
+    ] } });
+
+    db.visible.add("a");
+    expect(await send({ conversationId: "conversation", projectId })).toBe(200);
+    expect(historyPrompt()).toContain("Review checklist for repository a.");
   });
 });
