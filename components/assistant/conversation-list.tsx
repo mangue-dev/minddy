@@ -24,19 +24,10 @@ import { AppTooltip } from "@/components/ui/app-tooltip";
 
 type ConversationWithProject = NumoConversation;
 
-/**
- * Numo history: ALL user conversations, projects
- * combined, each subtitled with its project.
- *
- * No filter by scope, and this is deliberate (MIN-353): the open conversation
- * carries its own scope and no longer follows the URL, so filtering on the URL would render
- * unreachable the first conversation we are looking for — the one we have just had
- * leave by navigating to another page.
- */
+/** All conversations, ordered by recency independently of attached projects. */
 interface ConversationListProps {
   activeConversationId: string | null;
-  /** `projectId` = the scope of the chosen conversation, as it is in
-   * base. It is she who becomes Numo's at the opening (MIN-353). */
+  /** Legacy project metadata accompanies the selected conversation when loading it. */
   onSelect: (conversationId: string, projectId: string | null) => void;
   onNew: () => void;
   refreshKey?: number;
@@ -195,11 +186,6 @@ export function ConversationList({
                   {conv.pinned_at && <Pin aria-hidden className="h-3 w-3 shrink-0" />}
                   {conv.archived_at && <Archive aria-hidden className="h-3 w-3 shrink-0 text-muted-foreground" />}
                   <span className="flex-1 truncate">
-                    {conv.project?.name && (
-                      <span className="block truncate text-2xs text-muted-foreground/60">
-                        {conv.project.name}
-                      </span>
-                    )}
                     <span className="truncate">
                       {conv.title || t("newConversation")}
                     </span>

@@ -2170,7 +2170,7 @@ const LIST_PROJECTS_TOOL: AssistantToolDef = {
   function: {
     name: "list_projects",
     description:
-      "List all projects the user has access to, with their id, name, key, and role (owner or member). In a project conversation, use this only when the user explicitly names another project or asks which projects are available.",
+      "List all projects the user has access to, with their id, name, key, and role (owner or member). Use this to resolve a project named by the user when its ID is not already attached to the message.",
     parameters: { type: "object", properties: {} },
   },
 };
@@ -2278,3 +2278,14 @@ export function buildProjectTools(): AssistantToolDef[] {
 
 export const PROJECT_ASSISTANT_TOOLS = buildProjectTools();
 export const GLOBAL_ASSISTANT_TOOLS = buildGlobalTools();
+
+/** Every conversation uses the same tools; each project action names its target. */
+export const CONVERSATION_ASSISTANT_TOOLS = buildGlobalTools().map((tool) => {
+  if (!GLOBAL_VIEW_TOOLS.has(tool.function.name)) return tool;
+  const targeted = withProjectId(tool, { required: true });
+  targeted.function.parameters.properties.project_id = {
+    type: ["string", "null"],
+    description: "Explicit project ID, or null for the user's personal cross-project views.",
+  };
+  return targeted;
+});

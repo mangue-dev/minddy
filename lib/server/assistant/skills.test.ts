@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   parseSelectedSkillPaths,
+  parseSelectedSkills,
   publicSkillsMetadata,
   skillsNote,
 } from "./skills";
@@ -67,5 +68,23 @@ describe("assistant repository skills", () => {
         },
       ],
     });
+  });
+});
+
+
+describe("repository provenance", () => {
+  const path = ".agents/skills/release/SKILL.md";
+  it("keeps identical paths from different projects distinct", () => {
+    expect(parseSelectedSkills([{ path, projectId: "a" }, { path, projectId: "b" }], undefined, "b"))
+      .toEqual([{ path, projectId: "a" }, { path, projectId: "b" }]);
+  });
+  it("does not rebind a new selection lacking its source project", () => {
+    expect(parseSelectedSkills([{ path }], undefined, "b")).toBeNull();
+    expect(parseSelectedSkills(undefined, [path], "a")).toEqual([{ projectId: "a", path }]);
+  });
+  it("preserves source projects in history and public badges", () => {
+    const metadata = { skills: [{ path, projectId: "a", name: "release", description: "Release", source: ".agents/skills", content: "Use repository A." }] };
+    expect(skillsNote(metadata)).toContain("project a");
+    expect(publicSkillsMetadata(metadata)).toMatchObject({ skills: [{ projectId: "a", path }] });
   });
 });

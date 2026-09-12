@@ -180,7 +180,7 @@ export const AssistantShell = forwardRef<
   // The conversation lives ABOVE the panel (AssistantChatProvider): it
   // survives the closing of the Sheet, which dismantles this shell. Here, we don't do
   // than return it.
-  const { state, sendMessage, loadConversation, reset, abort, restoring } =
+  const { state, sendMessage, loadConversation, reset, abort, restoring, pinned, setPinned } =
     useAssistantChatContext();
   const chatInputRef = useRef<ChatInputHandle>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -209,7 +209,6 @@ export const AssistantShell = forwardRef<
   // the display: they only go out of the sent context — this is
   // `applyContextSelection` which sorts it once when sending.
   const { projects } = useProjects();
-  const [pinned, setPinned] = useState<AssistantPinnedContext[]>([]);
   const [disabledKeys, setDisabledKeys] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -234,7 +233,7 @@ export const AssistantShell = forwardRef<
   const resetContextSelection = useCallback(() => {
     setPinned([]);
     setDisabledKeys(new Set());
-  }, []);
+  }, [setPinned]);
 
   const toggleChip = useCallback((key: string) => {
     setDisabledKeys((prev) => {
@@ -249,7 +248,7 @@ export const AssistantShell = forwardRef<
     setPinned((prev) =>
       prev.filter((item) => `pinned:${item.kind}:${item.id}` !== key),
     );
-  }, []);
+  }, [setPinned]);
 
   const addPinned = useCallback((item: AssistantPinnedContext) => {
     setPinned((prev) =>
@@ -257,11 +256,15 @@ export const AssistantShell = forwardRef<
         ? prev
         : [...prev, item],
     );
-  }, []);
+  }, [setPinned]);
 
   // “@” mentions in the text: the list only loads at the first
   // hits with an “@” (and then remains cached).
-  const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId);
+  const messageReferences = useMemo(() => state.messages.flatMap((message) => [
+    ...(Array.isArray(message.metadata?.mentions) ? message.metadata.mentions as AssistantMention[] : []),
+    ...(message.context?.pinned ?? []).map(({ kind, ...item }) => ({ ...item, type: kind })),
+  ]), [state.messages]);
+  const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId, messageReferences);
 
   // Read by the send handlers without stale closures. The host may set the
   // context the same tick it dispatches a one-shot send, so the imperative
@@ -310,7 +313,7 @@ export const AssistantShell = forwardRef<
       skills: AssistantSkillSelection[] = [],
     ) => {
       if (!aiAvailability.loading && !aiAvailability.available) return;
-      sendMessage(projectId, message, {
+      sendMessage(effectiveContextRef.current?.projectId ?? null, message, {
         pageContext: effectiveContextRef.current,
         attachments,
         mentions,
@@ -318,7 +321,7 @@ export const AssistantShell = forwardRef<
         skills,
       });
     },
-    [aiAvailability.available, aiAvailability.loading, projectId, sendMessage]
+    [aiAvailability.available, aiAvailability.loading, sendMessage]
   );
 
   const slashCommands = useSlashCommands();
@@ -953,7 +956,7 @@ export const AssistantShell = forwardRef<
                   onAddContext={addPinned}
                   commands={slashCommands}
                   skills={projectId ? repositorySkills.skills : undefined}
-                  loadSkill={projectId ? repositorySkills.load : undefined}
+                  loadSkill={repositorySkills.load}
                   contextSlot={(attachments: ChatInputContextAttachments) => (
                     <AssistantContextBar
                       chips={chips}

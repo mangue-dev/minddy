@@ -13,6 +13,8 @@ export const MAX_SKILL_FILE_BYTES = 50_000;
 export const MAX_SELECTED_SKILL_BYTES = 80_000;
 
 export interface RepositorySkillSummary {
+  /** Project whose repository supplied this selection, when used in a conversation. */
+  projectId?: string;
   /** Repository-relative path to the skill entrypoint. */
   path: string;
   name: string;
@@ -177,4 +179,9 @@ export function summarizeRepositorySkill(
 ): RepositorySkillSummary {
   const { content: _content, ...summary } = skill;
   return summary;
+}
+
+/** The same path in two repositories denotes two distinct selections. */
+export function repositorySkillKey(skill: Pick<RepositorySkillSummary, "path" | "projectId">): string {
+  return `${skill.projectId ?? ""}:${skill.path}`;
 }

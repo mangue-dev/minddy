@@ -92,8 +92,12 @@ export function mentionProjectLookup(sources: {
   issues?: MentionRow[];
   objectives?: MentionRow[];
   pages?: MentionRow[];
+  references?: Array<{ type: MentionTargetType; id: string; projectId?: string }>;
 }): (type: MentionTargetType, id: string) => string | undefined {
   const byKey = new Map<string, string>();
+  for (const reference of sources.references ?? []) {
+    if (reference.projectId) byKey.set(`${reference.type}:${reference.id}`, reference.projectId);
+  }
   for (const issue of sources.issues ?? []) {
     byKey.set(`issue:${issue.id}`, issue.project_id);
   }

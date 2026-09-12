@@ -17,13 +17,12 @@ import type {
 import { createSafeEmitter } from "@/lib/server/assistant/sse";
 import { commandNote, parseCommand } from "@/lib/server/assistant/commands";
 import {
-  parseSelectedSkillPaths,
+  parseSelectedSkills,
   skillsNote,
 } from "@/lib/server/assistant/skills";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import {
-  GLOBAL_ASSISTANT_TOOLS,
-  PROJECT_ASSISTANT_TOOLS,
+  CONVERSATION_ASSISTANT_TOOLS,
   type AssistantToolDef,
 } from "@/lib/server/assistant/tools";
 import {
@@ -53,6 +52,8 @@ import {
 } from "@/lib/server/ai-runtime";
 import type { AttachmentInput } from "@/lib/types";
 import { loadProjectRepositorySkills } from "@/lib/server/repository-skills";
+import { validateMessageContext } from "@/lib/server/assistant/message-context";
+import { MAX_SELECTED_SKILL_BYTES } from "@/lib/repository-skills";
 import type { RepositorySkill } from "@/lib/repository-skills";
 
 export const runtime = "nodejs";
@@ -118,6 +119,7 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
         kind: v.kind as AssistantPinnedContext["kind"],
         id: v.id as string,
         label: v.label as string,
+        ...(typeof v.projectId === "string" && v.projectId.length <= 100 ? { projectId: v.projectId } : {}),
         ...(typeof v.detail === "string" && v.detail.length <= 500
           ? { detail: v.detail }
           : {}),
@@ -194,6 +196,7 @@ function parseMentions(raw: unknown): AssistantMention[] {
       type: v.type as AssistantMention["type"],
       id: v.id as string,
       label: v.label as string,
+      ...(typeof v.projectId === "string" && v.projectId.length <= 100 ? { projectId: v.projectId } : {}),
       ...(typeof v.avatarSeed === "string" && v.avatarSeed.length <= 100
         ? { avatarSeed: v.avatarSeed }
         : {}),
@@ -223,7 +226,7 @@ function mentionsNote(metadata: unknown): string {
     }
     return `@${m.label} = objective (id: ${m.id})`;
   });
-  return `\n\n[Mentions in this message: ${parts.join("; ")}]`;
+  return `\n\n[Mentions in this message: ${parts.map((part, index) => `${part}${list[index].projectId ? ` (project id: ${list[index].projectId})` : ""}`).join("; ")}]`;
 }
 
 export async function POST(request: NextRequest) {
@@ -281,10 +284,11 @@ export async function POST(request: NextRequest) {
   }
   const message = typeof body.message === "string" ? body.message : "";
   let pageContext = parsePageContext(body.pageContext);
-  const mentions = parseMentions(body.mentions);
+  if (projectId && !pageContext?.projectId) pageContext = { ...pageContext, projectId };
+  let mentions = parseMentions(body.mentions);
   const command = parseCommand(body.command);
-  const skillPaths = parseSelectedSkillPaths(body.skillPaths);
-  if (skillPaths === null) {
+  const skillSelections = parseSelectedSkills(body.skills, body.skillPaths, projectId);
+  if (skillSelections === null) {
     return Response.json({ error: "Invalid repository skills" }, { status: 400 });
   }
   if (!message.trim()) {
@@ -360,46 +364,29 @@ export async function POST(request: NextRequest) {
     project = data;
   }
 
-  if (skillPaths.length > 0 && !project) {
-    return Response.json(
-      { error: "Repository skills require a project conversation" },
-      { status: 400 },
-    );
-  }
-  let selectedSkills: RepositorySkill[] = [];
-  if (project && skillPaths.length > 0) {
-    try {
-      const loaded = await loadProjectRepositorySkills(project.id, skillPaths);
-      if (!loaded) {
-        return Response.json(
-          { error: "One or more repository skills are no longer available" },
-          { status: 400 },
-        );
-      }
-      selectedSkills = loaded;
-    } catch (error) {
-      console.error("[repository-skills] selection failed:", (error as Error).message);
-      return Response.json(
-        { error: "Repository skills could not be loaded" },
-        { status: 502 },
-      );
-    }
-  }
+  const validated = await validateMessageContext(supabase, pageContext, mentions);
+  if (!validated) return Response.json({ error: "Some attached context is unavailable. Remove it or check your project access." }, { status: 404 });
+  pageContext = validated.context;
+  mentions = validated.mentions;
 
-  // When the page context points at another project (stale client state),
-  // drop it rather than confusing the prompt.
-  if (pageContext?.projectId && projectId && pageContext.projectId !== projectId) {
-    pageContext = null;
-  }
-  // An issue in context must be visible to the user (RLS) — drop it otherwise.
-  if (pageContext?.issueId) {
-    const { data: ctxIssue } = await supabase
-      .from("issues")
-      .select("id")
-      .is("deleted_at", null)
-      .eq("id", pageContext.issueId)
-      .maybeSingle();
-    if (!ctxIssue) pageContext = null;
+  const selectedSkills: RepositorySkill[] = [];
+  try {
+    for (const sourceProjectId of new Set(skillSelections.map((skill) => skill.projectId))) {
+      // The repository loader uses service credentials: authorize its source first.
+      const { data: sourceProject } = await supabase.from("projects").select("id")
+        .eq("id", sourceProjectId).is("deleted_at", null).maybeSingle();
+      if (!sourceProject) return Response.json({ error: "A selected skill's project is unavailable. Remove the skill or check your access." }, { status: 404 });
+      const paths = skillSelections.filter((skill) => skill.projectId === sourceProjectId).map((skill) => skill.path);
+      const loaded = await loadProjectRepositorySkills(sourceProjectId, paths);
+      if (!loaded) return Response.json({ error: "One or more repository skills are no longer available" }, { status: 400 });
+      selectedSkills.push(...loaded.map((skill) => ({ ...skill, projectId: sourceProjectId })));
+    }
+    if (selectedSkills.reduce((size, skill) => size + new TextEncoder().encode(skill.content).byteLength, 0) > MAX_SELECTED_SKILL_BYTES) {
+      return Response.json({ error: "Selected skills are too large. Remove a skill and try again." }, { status: 400 });
+    }
+  } catch (error) {
+    console.error("[repository-skills] selection failed:", (error as Error).message);
+    return Response.json({ error: "Repository skills could not be loaded" }, { status: 502 });
   }
 
   // Create or fetch conversation
@@ -413,7 +400,7 @@ export async function POST(request: NextRequest) {
     const { data: conv, error: convError } = await supabase
       .from("conversations")
       .insert({
-        project_id: projectId ?? null,
+        project_id: null,
         user_id: user.id,
         title,
       })
@@ -454,16 +441,11 @@ export async function POST(request: NextRequest) {
       });
   } else {
     // Check for concurrent generation
-    let convQuery = supabase
+    const convQuery = supabase
       .from("conversations")
       .select("id, status")
       .eq("id", convId)
       .eq("user_id", user.id);
-    if (projectId) {
-      convQuery = convQuery.eq("project_id", projectId);
-    } else {
-      convQuery = convQuery.is("project_id", null);
-    }
     const { data: existingConversation, error: existingConversationError } =
       await convQuery.single();
 
@@ -478,7 +460,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update conversation timestamp after ownership/project validation.
+    // Update conversation timestamp after ownership validation.
     const { error: updateError } = await service
       .from("conversations")
       .update({ updated_at: new Date().toISOString() })
@@ -521,23 +503,20 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: tApi("messageSaveFailed") }, { status: 500 });
   }
 
-  // Build system prompt and select tool set based on mode
+  // Enrich this turn with project context without defining a conversation type.
   let systemPrompt: string;
-  let activeTools: AssistantToolDef[];
+  let activeTools: AssistantToolDef[] = CONVERSATION_ASSISTANT_TOOLS;
 
   if (project) {
-    // ── Project-scoped mode ──────────────────────────────────────────
+    // The attached project supplies a compact context snapshot for this turn.
     const promptProject = await gatherProjectPromptContext({
       supabase,
       service,
       project,
     });
     systemPrompt = buildSystemPrompt(promptProject, locale, numoDefaultStatus);
-    activeTools = PROJECT_ASSISTANT_TOOLS;
   } else {
-    // ── Global mode ──────────────────────────────────────────────────
     systemPrompt = buildGlobalSystemPrompt(locale, numoDefaultStatus);
-    activeTools = GLOBAL_ASSISTANT_TOOLS;
   }
 
   // Web search: guilty of an admin flag. Cut off, the tool is not even
@@ -565,7 +544,7 @@ export async function POST(request: NextRequest) {
   // Load conversation history
   const { data: history } = await supabase
     .from("assistant_messages")
-    .select("role, content, tool_calls, tool_call_id, tool_name, metadata")
+    .select("role, content, tool_calls, tool_call_id, tool_name, metadata, context")
     .eq("conversation_id", convId)
     // Fetch the latest window, then restore chronological order below. Asking
     // for the oldest 30 made long conversations lose the current user turn.
@@ -619,7 +598,8 @@ export async function POST(request: NextRequest) {
       const sanitized =
         sanitizeAssistantMessageContent(msg.content) +
         (msg.role === "user"
-          ? mentionsNote(msg.metadata) + commandNote(msg.metadata) + skillsNote(msg.metadata)
+          ? mentionsNote(msg.metadata) + commandNote(msg.metadata) + skillsNote(msg.metadata) +
+            (msg.context ? `\n\n[Context captured for this message only; it does not authorize later actions]\n${buildPageContextBlock(msg.context)}` : "")
           : "");
       const atts = rowAttachments(msg);
       let content: string | ChatContentPart[] = sanitized;
@@ -672,6 +652,7 @@ export async function POST(request: NextRequest) {
 
         const result = await processChat(chatMessages, activeTools, emitter, {
           projectId: projectId ?? null,
+          requireExplicitProjectTarget: true,
           userId: user.id,
           supabase,
           service,

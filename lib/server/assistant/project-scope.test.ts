@@ -7,7 +7,7 @@ vi.mock("server-only", () => ({}));
 const { buildSystemPrompt } = await import("./prompt");
 
 describe("Numo project scope", () => {
-  it("keeps the conversation project when no alternate target is supplied", () => {
+  it("keeps the context project when no alternate target is supplied", () => {
     expect(resolveAssistantProjectId("current-project", undefined)).toBe(
       "current-project",
     );
@@ -16,7 +16,7 @@ describe("Numo project scope", () => {
     );
   });
 
-  it("lets an explicit alternate project override the conversation project", () => {
+  it("lets an explicit alternate project override the context project", () => {
     expect(
       resolveAssistantProjectId("current-project", " alternate-project "),
     ).toBe("alternate-project");
@@ -37,12 +37,12 @@ describe("Numo project scope", () => {
       "en",
     );
 
-    expect(prompt).toContain("This project is the DEFAULT");
+    expect(prompt).toContain("Conversations have no project identity");
     expect(prompt).toContain(
-      "Only when the user explicitly names another project",
+      "never an implicit mutation target",
     );
     expect(prompt).toContain("call `list_projects`");
-    expect(prompt).toContain("ask which project they mean");
+    expect(prompt).toContain("Ask which project they mean");
     expect(prompt).toContain(
       "tools documented as OWNER ONLY remain owner-only",
     );

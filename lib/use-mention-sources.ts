@@ -173,17 +173,18 @@ export function useMentionLinksFor(
     issues: MentionIssue[];
     objectives: MentionObjective[];
     pages: MentionPage[];
+    references?: Parameters<typeof mentionProjectLookup>[0]["references"];
   },
   onOpenIssue?: (projectId: string, issueId: string) => void,
 ): MentionLinks {
   const router = useRouter();
   const pathname = usePathname();
   const { openIssue, closeIssue } = useIssuePanelActions();
-  const { issues, objectives, pages } = sources;
+  const { issues, objectives, pages, references } = sources;
 
   const projectOf = useMemo(
-    () => mentionProjectLookup({ issues, objectives, pages }),
-    [issues, objectives, pages],
+    () => mentionProjectLookup({ issues, objectives, pages, references }),
+    [issues, objectives, pages, references],
   );
 
   return useMemo<MentionLinks>(() => {

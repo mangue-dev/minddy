@@ -371,6 +371,15 @@ function formatStatusCounts(counts: Record<string, number>): string {
   return entries.map(([status, n]) => `${status}: ${n}`).join(" · ");
 }
 
+const CONVERSATION_TARGET_RULES = `
+## Action targets
+Conversations have no project identity. Projects, issues, objectives, pages, pull requests and repository skills are attached context.
+- Resolve the target from the user's request, mentions, pinned resources and the context attached to that message. Historical context describes its own message only; navigation does not authorize retargeting an earlier action.
+- Pass an explicit \`project_id\` on every project tool call, including code worker launches. A project shown above supplies context, never an implicit mutation target.
+- Use attached resource IDs directly. If a named project's ID is missing, call \`list_projects\` and resolve it to an accessible project. Ask which project they mean only when the intended target remains ambiguous; never choose the first of several pinned projects.
+- Each code worker has exactly one authorized project and repository target. Skills supply instructions for their source repository and message; they never select another worker target or grant access.
+- Membership is checked for each action, and tools documented as OWNER ONLY remain owner-only.`;
+
 export function buildSystemPrompt(
   project: PromptProjectContext,
   locale: string,
@@ -400,9 +409,7 @@ You help users create, find and edit issues, triage, assign work, comment, and c
 - Key: ${project.key} (issues are "${project.key}-N")
 - ID: ${project.id}
 - Issues by status: ${formatStatusCounts(project.statusCounts)}
-- This project is the DEFAULT for every project-scoped tool. Omit \`project_id\` when the request targets it.
-- Another project is NEVER implicit. Only when the user explicitly names another project, call \`list_projects\`, resolve the name to one accessible project, and pass that id as \`project_id\` to every project-scoped tool used for that request. If the name is missing or ambiguous, ask which project they mean before reading or writing there.
-- Cross-project targeting does not change permissions: members may use normal issue operations, while tools documented as OWNER ONLY remain owner-only.
+${CONVERSATION_TARGET_RULES}
 
 ## Recent issues (last 5)
 ${recentLines}
@@ -441,12 +448,7 @@ export function buildGlobalSystemPrompt(
   return `You are Numo, the AI assistant for minddy, a lightweight issue tracker (projects, kanban issues, objectives, saved views).
 You help users create, find and edit issues, triage, assign work, comment, and configure kanban views — through your tools, in natural language.
 
-## Mode
-You are running in **global mode** — not tied to any specific project.
-- Start by using the \`list_projects\` tool to discover the user's projects.
-- All project-scoped tools require a \`project_id\` parameter.
-- If the user's intent implies a specific project but hasn't named one, ask which project they mean.
-- When working across multiple projects, always state which project you're operating on.
+${CONVERSATION_TARGET_RULES}
 
 ${VOCABULARY_BLOCK}
 
@@ -454,11 +456,9 @@ ${PLAN_BLOCK}
 
 ${PAGES_BLOCK}
 
-## Saved views in global mode (the "Tous les tickets" board)
-- Here \`list_views\`/\`create_view\`/\`update_view\` act on the user's PERSONAL
-  CROSS-PROJECT views (they span every project) — NOT a project's. Do NOT pass a
-  project_id to them. When the context says "Current kanban view", that is the global
-  view to edit; read its current filters with \`list_views\` before changing them.
+## Personal cross-project saved views
+- Pass an explicit \`project_id: null\` to read or change personal cross-project views.
+- Pass the target project's ID for project views. Read the view before editing it.
 - The global board has ONE filter a project board doesn't: **filters.project**, an array
   of project ids (from \`list_projects\`) that narrows the view to those projects. Use it
   whenever the user wants their global board restricted to a project or a few — it is the
@@ -915,6 +915,7 @@ export function buildClockBlock(
  */
 export function buildPageContextBlock(ctx: AssistantPageContext): string {
   const lines: string[] = [];
+  if (ctx.projectId) lines.push(`- Attached project (id: ${ctx.projectId}).`);
   if (ctx.inbox) {
     lines.push(
       "- The user is looking at their Inbox.",
@@ -951,7 +952,8 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       ...ctx.issueIds.map((id, i) => {
         const identifier = ctx.issueIdentifiers?.[i];
         const title = ctx.issueTitles?.[i];
-        return `  - ${identifier ?? "(unknown identifier)"}${title ? ` — "${title}"` : ""} (id: ${id})`;
+        const projectId = ctx.issueProjectIds?.[i] ?? ctx.projectId;
+        return `  - ${identifier ?? "(unknown identifier)"}${title ? ` — "${title}"` : ""} (id: ${id})${projectId ? ` in project (id: ${projectId})` : ""}`;
       }),
       `When the user says "ces tickets", "la sélection", "these issues", "tous", or gives an instruction with no explicit target, they mean exactly the issues above — use their ids directly, do not search for them.${ctx.projectId ? ` If a tool needs a project_id, use ${ctx.projectId}.` : ""}`,
     );
@@ -995,21 +997,22 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
     lines.push(
       `- Pinned by the user for this message (chosen explicitly, not derived from the page):`,
       ...ctx.pinned.map((item) => {
+        const provenance = item.projectId ? ` (project id: ${item.projectId})` : "";
         if (item.kind === "issue") {
-          return `  - Issue ${item.label}${item.detail ? ` — "${item.detail}"` : ""} (id: ${item.id})`;
+          return `  - Issue ${item.label}${item.detail ? ` — "${item.detail}"` : ""} (id: ${item.id})${provenance}`;
         }
         if (item.kind === "project") {
-          return `  - Project "${item.label}" (id: ${item.id})`;
+          return `  - Project "${item.label}" (id: ${item.id})${provenance}`;
         }
         if (item.kind === "objective") {
-          return `  - Objective "${item.label}" (id: ${item.id}) — that id is what objective_id fields take`;
+          return `  - Objective "${item.label}" (id: ${item.id})${provenance} — that id is what objective_id fields take`;
         }
         if (item.kind === "page") {
-          return `  - Wiki page "${item.label}" (page id: ${item.id}) — read it with get_page`;
+          return `  - Wiki page "${item.label}" (page id: ${item.id})${provenance} — read it with get_page`;
         }
         return `  - Team member ${item.label}${item.detail ? ` (${item.detail})` : ""} (user id: ${item.id}) — that id is what assignee fields take`;
       }),
-      `When the request has no other explicit target, it is about these — use their ids directly, do not search for them.`,
+      `Use the pinned IDs when they identify the requested target. If several pins could match a singular request, ask which one; do not choose a project from navigation.`,
     );
   }
 

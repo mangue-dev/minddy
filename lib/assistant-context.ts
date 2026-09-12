@@ -44,7 +44,7 @@ export interface AssistantContextChip {
   avatarSeed?: string;
   /** Projects: the imported favicon, when the project has one. */
   iconUrl?: string | null;
-  /** Objectifs : leur couleur — celle que porte leur cible, ici comme ailleurs. */
+  /** Objectives: the color used for their target icon throughout the app. */
   color?: string | null;
   /** Wiki pages: their emoji, when they have one. */
   icon?: string | null;
@@ -66,8 +66,8 @@ type Translate = ReturnType<typeof useTranslations<"Assistant">>;
  * first (largest), then what's open, then view and cycle,
  * then what the user pinned themselves.
  *
- * `scopeProjectId` is the scope of the conversation: on a page without
- * ambient context, it is still the current project, and it deserves its pill.
+ * `scopeProjectId` is the ambient route project for this message. It never
+ * derives from the conversation history.
  */
 export function contextChips(
   ctx: AssistantPageContext | null | undefined,
@@ -242,7 +242,7 @@ const FIELDS_BY_KEY: Record<string, (keyof AssistantPageContext)[]> = {
     "prState",
     "prRunId",
   ],
-  issues: ["issueIds", "issueIdentifiers", "issueTitles"],
+  issues: ["issueIds", "issueProjectIds", "issueIdentifiers", "issueTitles"],
   objective: ["objectiveId", "objectiveName", "objectiveColor"],
   feedback: ["feedbackId", "feedbackTitle"],
   routine: ["routineId", "routineTitle"],

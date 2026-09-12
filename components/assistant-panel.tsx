@@ -37,9 +37,8 @@ export function AssistantPanel() {
   // An explicit context from open() (e.g. a specific issue) wins; otherwise
   // fall back to the ambient context of the page the user is on.
   const effectivePageContext = activePageContext ?? ambientContext;
-  // Scope of the live conversation — resolved and owned by the chat provider,
-  // which keeps it (and the conversation) alive across open/close cycles.
-  const { scopeProjectId, scopeSwitchPending } = useAssistantChatContext();
+  // The provider resolves the next message context and preserves the live response.
+  const { scopeProjectId, isBusy, restoring } = useAssistantChatContext();
   const { projects } = useProjects();
 
   // Display mode: session-local, defaults to compact. (No persisted user
@@ -83,11 +82,7 @@ export function AssistantPanel() {
   // Re-running on `shellReady` flips ensures we don't fire against a null ref.
   useEffect(() => {
     if (!isOpen || !pendingOptions || !shellReady) return;
-    // These options impose a scope that live conversation does not carry:
-    // the provider is in the process of replacing it with a new wire. Send here would leave
-    // in the one that goes away (MIN-353). This effect replays when the switch is made
-    // — `pendingOptions` did not move, and the guard below did not consume anything.
-    if (scopeSwitchPending) return;
+    if (isBusy || restoring) return;
     const handle = shellRef.current;
     if (!handle) return;
     if (dispatchedOptionsRef.current === pendingOptions) return;
@@ -128,7 +123,8 @@ export function AssistantPanel() {
     pendingOptions,
     shellReady,
     scopeProjectId,
-    scopeSwitchPending,
+    isBusy,
+    restoring,
     clearPendingOptions,
   ]);
 

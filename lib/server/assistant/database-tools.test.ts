@@ -5,7 +5,9 @@ const h = vi.hoisted(() => ({
   read: vi.fn(),
   update: vi.fn(),
   create: vi.fn(),
+  launch: vi.fn(),
 }));
+vi.mock("@/lib/server/agent/launch", () => ({ launchAgentRun: h.launch }));
 vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: h.access }));
 vi.mock("@/lib/server/page-tools", () => ({
   readPageForAgent: h.read,
@@ -107,5 +109,43 @@ describe("Numo database tool dispatch", () => {
     expect(h.create).toHaveBeenLastCalledWith(
       expect.objectContaining({ database: false, parentPageId: "database" }),
     );
+  });
+});
+
+
+describe("conversation action targets", () => {
+  const conversation = { ...ctx, requireExplicitProjectTarget: true };
+  it("never substitutes ambient context for an omitted action or worker target", async () => {
+    for (const name of ["update_page_database", "launch_code_agent", "update_view"]) {
+      expect(await executeTool(name, {}, conversation)).toMatchObject({ success: false });
+    }
+    expect(h.access).not.toHaveBeenCalled();
+    expect(h.update).not.toHaveBeenCalled();
+  });
+  it("keeps a named target stable when ambient context changes", async () => {
+    const args = { project_id: "a", page_id: "entry", operation: "value", propertyId: "amount", value: 3 };
+    await executeTool("update_page_database", args, { ...conversation, projectId: "b" });
+    expect(h.access).toHaveBeenCalledWith("actor", "a");
+    expect(h.update).toHaveBeenCalledWith(expect.objectContaining({ projectId: "a" }));
+  });
+  it("launches a worker for the authorized target even when ambient context is elsewhere", async () => {
+    h.launch.mockResolvedValue({ ok: true, run: { id: "run", conversation_id: "worker", status: "queued", model: "test" } });
+    expect(await executeTool("launch_code_agent", { project_id: "a", prompt: "Update the documentation" }, { ...conversation, projectId: "b" }))
+      .toMatchObject({ success: true });
+    expect(h.access).toHaveBeenCalledWith("actor", "a");
+    expect(h.launch).toHaveBeenCalledWith(expect.objectContaining({ projectId: "a", userId: "actor" }));
+  });
+  it("rechecks access before the next message's action", async () => {
+    const args = { project_id: "a", page_id: "entry", operation: "value" };
+    await executeTool("update_page_database", args, conversation);
+    h.access.mockResolvedValue(null);
+    expect(await executeTool("update_page_database", args, conversation)).toMatchObject({ success: false });
+    expect(h.access).toHaveBeenCalledTimes(2);
+    expect(h.update).toHaveBeenCalledTimes(1);
+  });
+  it("keeps owner-only operations gated for an explicitly targeted member project", async () => {
+    h.access.mockResolvedValue({ project: { id: "a" }, isOwner: false });
+    expect(await executeTool("propose_backlog", { project_id: "a" }, conversation))
+      .toMatchObject({ success: false, result: { error: "Only the project owner can seed the backlog of this project." } });
   });
 });

@@ -196,8 +196,10 @@ import { resolveAssistantProjectId } from "./project-scope";
 // every event/notification stays attributed to the human who asked.
 
 export interface ToolContext {
-  /** Project scope of the conversation; null = global mode. */
+  /** Context project for legacy comment entry points. */
   projectId: string | null;
+  /** Conversation tools must name their own target, independent of page navigation. */
+  requireExplicitProjectTarget?: boolean;
   userId: string;
   /** The feedback post a @Numo feedback comment is on — the feedback tools
       default to it when the model omits feedback_post_id. Null otherwise. */
@@ -717,18 +719,26 @@ export async function executeTool(
     // targeted accessible project. Global mode (ctx.projectId null) → the
     // user's personal cross-project view (project_id null).
     if (toolName === "list_views") {
-      const projectId = ctx.projectId
-        ? resolveAssistantProjectId(ctx.projectId, args.project_id)
-        : null;
+      if (ctx.requireExplicitProjectTarget && args.project_id !== null &&
+          (typeof args.project_id !== "string" || !args.project_id.trim())) {
+        return toolError("Specify project_id, or null for a personal cross-project view.");
+      }
+      const projectId = resolveAssistantProjectId(
+        ctx.requireExplicitProjectTarget ? null : ctx.projectId, args.project_id,
+      );
       if (projectId && !(await getProjectAccess(ctx.userId, projectId))) {
         return toolError("Project not found or not accessible.");
       }
       return listViews(ctx, projectId);
     }
     if (toolName === "create_view" || toolName === "update_view") {
-      const projectId = ctx.projectId
-        ? resolveAssistantProjectId(ctx.projectId, args.project_id)
-        : null;
+      if (ctx.requireExplicitProjectTarget && args.project_id !== null &&
+          (typeof args.project_id !== "string" || !args.project_id.trim())) {
+        return toolError("Specify project_id, or null for a personal cross-project view.");
+      }
+      const projectId = resolveAssistantProjectId(
+        ctx.requireExplicitProjectTarget ? null : ctx.projectId, args.project_id,
+      );
       if (projectId && !(await getProjectAccess(ctx.userId, projectId))) {
         return toolError("Project not found or not accessible.");
       }
@@ -843,12 +853,12 @@ export async function executeTool(
 
     // ── Project scope resolution (all remaining tools) ──────────────────
     const projectId = resolveAssistantProjectId(
-      ctx.projectId,
+      ctx.requireExplicitProjectTarget ? null : ctx.projectId,
       args.project_id,
     );
     if (!projectId) {
       return toolError(
-        "No project in scope. Pass project_id (use list_projects to discover projects).",
+        "No explicit project target. Pass project_id (use list_projects to discover projects).",
       );
     }
     const access = await getProjectAccess(ctx.userId, projectId);

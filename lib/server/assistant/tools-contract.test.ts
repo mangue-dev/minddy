@@ -1,3 +1,4 @@
+import { CONVERSATION_ASSISTANT_TOOLS } from "./tools";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -144,4 +145,12 @@ describe("Numo tool contracts", () => {
       expect(scoped?.function.parameters.required, name).toContain("project_id");
     }
   });
+});
+
+
+it("requires an explicit target on every conversation project action and worker", () => {
+  for (const name of PROJECT_SCOPED_TOOLS) {
+    const tool = CONVERSATION_ASSISTANT_TOOLS.find((candidate) => candidate.function.name === name);
+    expect(tool?.function.parameters.required, name).toContain("project_id");
+  }
 });

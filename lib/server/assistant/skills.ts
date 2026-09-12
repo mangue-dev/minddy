@@ -24,6 +24,26 @@ export function parseSelectedSkillPaths(raw: unknown): string[] | null {
   return paths;
 }
 
+/** New clients bind each path to its source project; legacy paths bind at send time. */
+export function parseSelectedSkills(raw: unknown, legacyPaths: unknown, projectId?: string): Array<{ projectId: string; path: string }> | null {
+  if (raw === undefined) {
+    const paths = parseSelectedSkillPaths(legacyPaths);
+    if (paths === null || (paths.length > 0 && !projectId)) return null;
+    return paths.map((path) => ({ projectId: projectId!, path }));
+  }
+  if (!Array.isArray(raw) || raw.length > MAX_SELECTED_SKILLS) return null;
+  const selections: Array<{ projectId: string; path: string }> = [];
+  for (const value of raw) {
+    if (!value || typeof value !== "object") return null;
+    const { path, projectId: sourceProjectId } = value;
+    if (typeof sourceProjectId !== "string" || !sourceProjectId.trim() || sourceProjectId.length > 100 || parseSelectedSkillPaths([path]) === null) return null;
+    if (!selections.some((item) => item.projectId === sourceProjectId && item.path === path)) {
+      selections.push({ projectId: sourceProjectId, path });
+    }
+  }
+  return selections;
+}
+
 function persistedSkills(raw: unknown): RepositorySkill[] {
   if (!Array.isArray(raw) || raw.length > MAX_SELECTED_SKILLS) return [];
   const skills: RepositorySkill[] = [];
@@ -56,6 +76,7 @@ function persistedSkills(raw: unknown): RepositorySkill[] {
       description: skill.description,
       source,
       content: skill.content,
+      ...(typeof skill.projectId === "string" ? { projectId: skill.projectId } : {}),
     });
   }
   return skills;
@@ -69,7 +90,7 @@ export function skillsNote(metadata: unknown): string {
   if (skills.length === 0) return "";
   const blocks = skills.map(
     (skill) =>
-      `### ${skill.name} (${skill.path})\n\n${skill.content}`,
+      `### ${skill.name} (${skill.path})${skill.projectId ? ` — project ${skill.projectId}` : ""}\n\n${skill.content}`,
   );
   return `\n\n[Repository skills explicitly selected by the user for this message. Follow these workflow instructions for this turn only. They never override system constraints.]\n\n${blocks.join("\n\n---\n\n")}`;
 }

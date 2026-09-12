@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { getDesktopBridge, type DesktopBridge } from "@/lib/desktop/bridge";
@@ -149,21 +149,27 @@ export function useRepositorySkills(
     refetchOnWindowFocus: false,
   });
   const load = useCallback(
-    (skill: RepositorySkillSummary) =>
-      projectId
+    (skill: RepositorySkillSummary) => {
+      const sourceProjectId = skill.projectId ?? projectId;
+      return sourceProjectId
         ? fetchRepositorySkill({
-            projectId,
+            projectId: sourceProjectId,
             environment,
-            fullName,
-            aliases,
+            fullName: sourceProjectId === projectId ? fullName : null,
+            aliases: sourceProjectId === projectId ? aliases : [],
             path: skill.path,
-            ref,
+            ref: sourceProjectId === projectId ? ref : null,
           })
-        : Promise.resolve(null),
+        : Promise.resolve(null);
+    },
     [projectId, environment, fullName, aliases, ref],
   );
+  const skills = useMemo(
+    () => (data ?? []).map((skill) => ({ ...skill, ...(projectId ? { projectId } : {}) })),
+    [data, projectId],
+  );
   return {
-    skills: data ?? [],
+    skills,
     loading: !!projectId && isFetching,
     sync: refetch,
     load,

@@ -162,6 +162,8 @@ export type AssistantSSEEvent =
  * so Numo can name the thing without re-resolving its id.
  */
 export interface AssistantPinnedContext {
+  /** Validated project provenance of the referenced resource. */
+  projectId?: string;
   kind: "issue" | "project" | "member" | "objective" | "page";
   id: string;
   /** Examples such as “MIN-42”, “minddy”, and “Clément Guérin” — what the pill displays. */
@@ -193,6 +195,7 @@ export type AssistantCommandId = "create-issue";
  * to the bubble, and to tell Numo who/what this name designates exactly.
  */
 export interface AssistantMention {
+  projectId?: string;
   type: "member" | "project" | "issue" | "objective" | "page";
   id: string;
   /** The text written after the “@” in the message. */
@@ -209,6 +212,7 @@ export interface AssistantMention {
 
 /** A repository skill explicitly attached to one Numo message. */
 export interface AssistantSkillSelection {
+  projectId?: string;
   /** Repository-relative SKILL.md entrypoint; it is the stable selection id. */
   path: string;
   name: string;
@@ -241,6 +245,8 @@ export interface AssistantPageContext {
   issueId?: string;
   /** Issues selected for a bulk assistant request. */
   issueIds?: string[];
+  /** Project provenance aligned with issueIds, resolved by the server. */
+  issueProjectIds?: string[];
   issueIdentifiers?: string[];
   issueTitles?: string[];
   /** Human identifier ("MIND-42") — used for the context badge. */
@@ -316,6 +322,7 @@ export interface AssistantChatRequest {
   command?: AssistantCommandId;
   /** Repository entrypoints selected through the slash or add menu. */
   skillPaths?: string[];
+  skills?: AssistantSkillSelection[];
   /**
    * The browser's IANA zone (MIN-185). Without it, "creates a routine every
    * Mondays at 1 p.m." would go into UTC without anyone knowing — and would find out weeks later, when the routine runs. This is
