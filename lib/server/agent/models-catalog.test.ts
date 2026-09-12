@@ -100,7 +100,11 @@ async function freshCatalog(
       };
     }),
     resolveProviderDefaultModel: vi.fn(async () => null),
+    getUserByok: vi.fn(async () => null),
     userHasByokKey: vi.fn(async () => endpoint?.mode === "byok"),
+  }));
+  vi.doMock("@/lib/server/ai-runtime", () => ({
+    resolveByokFeatureDefaultModel: vi.fn(async () => "assistant/chat-default"),
   }));
   vi.doMock("./model-plan", () => ({
     getModelPlanLimit: vi.fn(async () => null),
@@ -135,6 +139,7 @@ afterEach(() => {
   vi.doUnmock("./model-plan");
   vi.doUnmock("@/lib/server/app-config");
   vi.doUnmock("@/lib/server/safe-fetch");
+  vi.doUnmock("@/lib/server/ai-runtime");
   vi.doUnmock("@/lib/managed-services");
 });
 
@@ -172,6 +177,14 @@ describe("getAgentModelsForUser", () => {
       "anthropic/claude-opus-5",
       "deepseek/deepseek-v4-flash",
     ]);
+  });
+
+  it("reports the assistant feature default instead of the code-agent default", async () => {
+    const { getAssistantModelsForUser } = await freshCatalog();
+
+    await expect(getAssistantModelsForUser("user-1")).resolves.toMatchObject({
+      defaultModel: "assistant/chat-default",
+    });
   });
 
   it("returns a local address to the shell without probing it server-side", async () => {

@@ -21,8 +21,8 @@ export function ConversationSettings() {
   const modelForReasoning = model || defaultModel;
   const reasoningLevels = useReasoningLevelsFor(modelForReasoning, "assistant");
   const defaultReasoning = catalog.defaultReasoning ?? DEFAULT_REASONING_LEVEL;
-  const reasoning = nearestReasoningLevel(
-    state.conversationReasoningLevel ?? defaultReasoning,
+  const reasoning = state.conversationReasoningLevel ?? nearestReasoningLevel(
+    defaultReasoning,
     reasoningLevels,
   );
 

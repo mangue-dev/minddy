@@ -84,6 +84,27 @@ describe("resolveAiRuntime", () => {
     });
   });
 
+  it("uses an explicit conversation model on a generic BYOK endpoint", async () => {
+    getUserByok.mockResolvedValue({
+      provider: "generic",
+      apiKey: "generic-key",
+      baseUrl: "https://models.example.test/v1",
+      featureModels: {},
+    });
+    await expect(
+      resolveAiRuntime({
+        userId: "u1",
+        modelKey: "assistant_model",
+        modelOverride: "custom-chat-model",
+      }),
+    ).resolves.toMatchObject({
+      mode: "byok",
+      provider: "generic",
+      apiKey: "generic-key",
+      model: "custom-chat-model",
+    });
+  });
+
   it("uses the provider × feature default configured by the admin", async () => {
     config.set("byok_default_openai_transcription_model", "whisper-admin");
     getUserByok.mockResolvedValue({

@@ -506,6 +506,10 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     reasoningLevel: ReasoningLevel | null;
   }>({ model: null, reasoningLevel: null });
   const configWritesRef = useRef(createSerialQueue());
+  const confirmedConfigsRef = useRef(new Map<string, {
+    model: string | null;
+    reasoningLevel: ReasoningLevel | null;
+  }>());
   const loadGenerationRef = useRef(0);
   const configRevisionRef = useRef(0);
 
@@ -641,15 +645,14 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       dispatch({ type: "START_STREAMING" });
 
       try {
+        const requestConversationId = liveConvRef.current.id ?? state.conversationId;
         const body: AssistantChatRequest = {
           requestId: createUuid(),
           ...(projectId ? { projectId } : {}),
           message,
-          conversationId: state.conversationId || undefined,
-          ...(configRef.current.model ? { model: configRef.current.model } : {}),
-          ...(configRef.current.reasoningLevel
-            ? { reasoningLevel: configRef.current.reasoningLevel }
-            : {}),
+          conversationId: requestConversationId || undefined,
+          model: configRef.current.model,
+          reasoningLevel: configRef.current.reasoningLevel,
           ...(options?.pageContext ? { pageContext: options.pageContext } : {}),
           ...(files.length ? { attachments: files } : {}),
           ...(options?.mentions?.length ? { mentions: options.mentions } : {}),
@@ -683,6 +686,11 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         const responseConversationId = response.headers.get("X-Numo-Conversation-Id");
         if (responseConversationId) {
           liveConvRef.current = { id: responseConversationId, projectId };
+          if (!requestConversationId) {
+            confirmedConfigsRef.current.set(responseConversationId, {
+              ...configRef.current,
+            });
+          }
           dispatch({
             type: "SET_CONVERSATION_ID",
             conversationId: responseConversationId,
@@ -831,14 +839,19 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       try {
         const detail = await fetchNumoConversation(conversationId);
         if (loadGeneration !== loadGenerationRef.current) return;
-        const messages = detail.messages as AssistantMessage[];
+        const messages = [...detail.messages, ...detail.actions]
+          .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
         const model = detail.conversation.model ?? null;
         const reasoningLevel = isReasoningLevel(detail.conversation.reasoning_level)
           ? detail.conversation.reasoning_level
           : null;
+        const serverConfig = { model, reasoningLevel };
         const configChangedWhileLoading = configRevision !== configRevisionRef.current;
+        if (!configChangedWhileLoading || !confirmedConfigsRef.current.has(conversationId)) {
+          confirmedConfigsRef.current.set(conversationId, serverConfig);
+        }
         if (!configChangedWhileLoading) {
-          configRef.current = { model, reasoningLevel };
+          configRef.current = serverConfig;
           dispatch({
             type: "LOAD_HISTORY",
             messages,
@@ -907,7 +920,18 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         });
       });
       const result = resultRef.current;
-      if (result?.ok) return true;
+      if (result?.ok) {
+        confirmedConfigsRef.current.set(conversationId, next);
+        if (
+          configRevision === configRevisionRef.current &&
+          liveConvRef.current.id === conversationId &&
+          configRef.current.model === next.model &&
+          configRef.current.reasoningLevel === next.reasoningLevel
+        ) {
+          dispatch({ type: "SET_CONVERSATION_CONFIG", ...next });
+        }
+        return true;
+      }
 
       // A later change may already have superseded this failed write. Only
       // roll back when the visible state still represents the failed request.
@@ -917,14 +941,13 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         configRef.current.model === next.model &&
         configRef.current.reasoningLevel === next.reasoningLevel
       ) {
-        configRef.current = previous;
+        const confirmed = confirmedConfigsRef.current.get(conversationId) ?? previous;
+        configRef.current = confirmed;
         dispatch({
           type: "SET_CONVERSATION_CONFIG",
-          ...previous,
+          ...confirmed,
           error: result?.error ?? "Unable to save conversation settings",
         });
-      } else if (result && !result.ok) {
-        dispatch({ type: "SET_CONVERSATION_CONFIG", ...configRef.current, error: result.error });
       }
       return false;
     },
@@ -938,6 +961,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     liveConvRef.current = { id: null, projectId: null };
     configRevisionRef.current += 1;
     configRef.current = { model: null, reasoningLevel: null };
+    confirmedConfigsRef.current.clear();
     trackEvent("assistant_conversation_new", {});
     dispatch({ type: "RESET" });
   }, [stopPolling]);

@@ -31,6 +31,7 @@ import type { AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
 import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
+import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
 
 /**
  * Code agent template catalog (MIN-46), resolved according to the provider
@@ -364,12 +365,17 @@ export async function getAgentModelsForUser(
   const byok = surface === "assistant" ? await getUserByok(userId, surface) : null;
   const featureDefault = byok?.featureModels[modelKey]?.trim();
   const providerDefault = featureDefault || (
-    surface === "assistant" && provider === "openrouter"
-      ? await getRootDefaultModel()
+    surface === "assistant"
+      ? await resolveByokFeatureDefaultModel(provider, modelKey)
       : await resolveProviderDefaultModel(provider)
   );
-  const defaultModel =
-    providerDefault ?? (provider === "generic" || isLocalAgentProvider(provider) ? null : await getRootDefaultModel());
+  const defaultModel = surface === "assistant"
+    ? providerDefault ?? null
+    : providerDefault ?? (
+        provider === "generic" || isLocalAgentProvider(provider)
+          ? null
+          : await getRootDefaultModel()
+      );
 
   const limit = mode === "platform" ? await getModelPlanLimit(userId) : null;
   const localEndpoint = isLocalAgentProvider(provider)

@@ -119,6 +119,7 @@ export async function resolveAiRuntime(params: {
     }
     const chosen = byok.featureModels[params.modelKey]?.trim();
     const model =
+      modelOverride ||
       chosen ||
       (byok.provider === "openrouter"
         ? rootModel
@@ -131,7 +132,7 @@ export async function resolveAiRuntime(params: {
         mode: "byok",
         provider: byok.provider,
         baseUrl: byok.baseUrl,
-        model: modelOverride || model,
+        model,
         requestProfile:
           getAgentProvider(byok.provider)?.requestProfile ?? { outputTokenField: "max_tokens" },
       };
