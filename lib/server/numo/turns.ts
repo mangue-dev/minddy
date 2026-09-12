@@ -134,6 +134,69 @@ function checkpointRecord(checkpoint: NumoTurnCheckpoint): Record<string, unknow
   return checkpoint as unknown as Record<string, unknown>;
 }
 
+function workerDelegationResult(workerEvent: {
+  type: string;
+  payload: Record<string, unknown>;
+}) {
+  try {
+    return parseAgentDelegationResult(workerEvent.payload.result);
+  } catch (error) {
+    if (Object.hasOwn(workerEvent.payload, "result")) {
+      return parseAgentDelegationResult({
+        version: 1,
+        status: "failed",
+        summary: "The code worker ended without a valid structured result.",
+        changedFiles: [],
+        verificationPerformed: [],
+        artifacts: [],
+        unresolvedDecisions: [(error as Error).message],
+      });
+    }
+
+    const status = workerEvent.payload.status;
+    const awaitingInput = workerEvent.payload.awaiting_input === true;
+    const outcome = typeof workerEvent.payload.outcome === "string"
+      ? workerEvent.payload.outcome.trim()
+      : "";
+    const errorMessage = typeof workerEvent.payload.error_message === "string"
+      ? workerEvent.payload.error_message.trim()
+      : "";
+    const prUrl = typeof workerEvent.payload.pr_url === "string"
+      ? workerEvent.payload.pr_url.trim()
+      : "";
+    const prNumber = typeof workerEvent.payload.pr_number === "number"
+      ? workerEvent.payload.pr_number
+      : null;
+    const failed = status === "failed" || status === "canceled"
+      || workerEvent.type === "worker_failed";
+    return parseAgentDelegationResult({
+      version: 1,
+      status: failed
+        ? "failed"
+        : awaitingInput || workerEvent.type === "worker_input"
+          ? "needs_input"
+          : errorMessage
+            ? "partial"
+            : "completed",
+      summary: outcome || errorMessage || "The code worker ended without a summary.",
+      changedFiles: [],
+      verificationPerformed: [],
+      artifacts: prUrl || prNumber != null
+        ? [{
+            kind: "pull_request",
+            ref: prNumber != null ? `#${prNumber}` : prUrl,
+            ...(prUrl ? { url: prUrl } : {}),
+          }]
+        : [],
+      unresolvedDecisions: awaitingInput && outcome
+        ? [outcome]
+        : failed && errorMessage
+          ? [errorMessage]
+          : [],
+    });
+  }
+}
+
 export async function beginNumoTurn(input: BeginNumoTurnInput): Promise<NumoTurn> {
   const { data, error } = await getServiceClient().rpc("begin_numo_turn", {
     p_conversation_id: input.conversationId,
@@ -382,20 +445,7 @@ async function buildExecutionInput(input: {
     ? turn.checkpoint.worker_event
     : null;
   if (workerEvent) {
-    let durableResult: unknown;
-    try {
-      durableResult = parseAgentDelegationResult(workerEvent.payload.result);
-    } catch (error) {
-      durableResult = {
-        version: 1,
-        status: "failed",
-        summary: "The code worker ended without a valid structured result.",
-        changedFiles: [],
-        verificationPerformed: [],
-        artifacts: [],
-        unresolvedDecisions: [(error as Error).message],
-      };
-    }
+    const durableResult = workerDelegationResult(workerEvent);
     messages.push({
       role: "system",
       content: `[Validated durable code-worker result: ${workerEvent.type}]\n${JSON.stringify(durableResult)}\nInterpret this result and answer the user's original request in this conversation. Report partial work, failure and unresolved decisions honestly. Do not tell the user to inspect another conversation for the answer.`,

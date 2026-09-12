@@ -131,7 +131,7 @@ function collectChangedFiles(events: RunEvent[]): string[] {
 
 function collectVerification(events: RunEvent[]): AgentDelegationVerification[] {
   const commands = new Map<string, string>();
-  const results = new Map<string, boolean>();
+  const results = new Map<string, AgentDelegationVerification["status"]>();
   for (const event of events) {
     const payload = event.payload ?? {};
     const id = eventString(payload, "id");
@@ -140,13 +140,17 @@ function collectVerification(events: RunEvent[]): AgentDelegationVerification[] 
     if (event.type === "tool_call" && (name === "run_command" || name === "validate_changes")) {
       commands.set(id, eventString(payload, "command") ?? name);
     }
-    if (event.type === "tool_result" && commands.has(id) && typeof payload.success === "boolean") {
-      results.set(id, payload.success);
+    if (event.type === "tool_result" && commands.has(id)) {
+      if (typeof payload.exit_code === "number" && Number.isFinite(payload.exit_code)) {
+        results.set(id, payload.exit_code === 0 ? "passed" : "failed");
+      } else if (typeof payload.success === "boolean") {
+        results.set(id, payload.success ? "passed" : "failed");
+      }
     }
   }
   return [...commands].map(([id, command]) => ({
     command,
-    status: results.has(id) ? (results.get(id) ? "passed" : "failed") : "unknown",
+    status: results.get(id) ?? "unknown",
   }));
 }
 
@@ -181,7 +185,7 @@ export async function finalizeAgentDelegationResult(
   run: AgentRun,
 ): Promise<AgentDelegationResult | null> {
   if (!run.delegation_brief || !run.parent_numo_turn_id) return null;
-  const [{ data: eventRows }, { data: artifactRows }] = await Promise.all([
+  const [eventsResult, artifactsResult] = await Promise.all([
     service.from("agent_run_events")
       .select("seq, type, payload")
       .eq("run_id", run.id)
@@ -192,10 +196,16 @@ export async function finalizeAgentDelegationResult(
       .eq("run_id", run.id)
       .order("created_at", { ascending: true }),
   ]);
+  if (eventsResult.error) {
+    throw new Error(`Delegation event read failed: ${eventsResult.error.message}`);
+  }
+  if (artifactsResult.error) {
+    throw new Error(`Delegation artifact read failed: ${artifactsResult.error.message}`);
+  }
   const result = buildAgentDelegationResult({
     run,
-    events: (eventRows ?? []) as RunEvent[],
-    artifactRows: (artifactRows ?? []) as Array<{ kind?: unknown; ref?: unknown; url?: unknown }>,
+    events: (eventsResult.data ?? []) as RunEvent[],
+    artifactRows: (artifactsResult.data ?? []) as Array<{ kind?: unknown; ref?: unknown; url?: unknown }>,
   });
   const { error } = await service.from("agent_runs")
     .update({ delegation_result: result })

@@ -1014,6 +1014,9 @@ export async function runOpencodeTurn(
             pushed = await pushWork(
               title || `wip(${job.commitRef}): agent update`,
             );
+            if (pushed.remoteUpdated && pushed.headSha) {
+              await cp.emit("commit", { sha: pushed.headSha }).catch(() => {});
+            }
           } catch (err) {
             // A failed push is a TOOL error: the model reads it and decides. THE
             // the message may echo the push URL, including the token (MIN-239).

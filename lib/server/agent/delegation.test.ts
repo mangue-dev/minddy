@@ -77,7 +77,7 @@ describe("code delegation contracts", () => {
         {
           seq: 1,
           type: "tool_result",
-          payload: { id: "tool-1", name: "run_command", success: true },
+          payload: { id: "tool-1", name: "run_command", success: true, exit_code: 0 },
         },
         {
           seq: 2,
@@ -109,6 +109,28 @@ describe("code delegation contracts", () => {
       },
       { kind: "commit", ref: "abc123" },
     ]));
+  });
+
+  it("uses a shell exit code instead of OpenCode tool completion success", () => {
+    const result = buildAgentDelegationResult({
+      run: run(),
+      events: [
+        {
+          seq: 0,
+          type: "tool_call",
+          payload: { id: "tool-1", name: "run_command", command: "npm test" },
+        },
+        {
+          seq: 1,
+          type: "tool_result",
+          payload: { id: "tool-1", name: "run_command", success: true, exit_code: 1 },
+        },
+      ],
+    });
+
+    expect(result.verificationPerformed).toEqual([
+      { command: "npm test", status: "failed" },
+    ]);
   });
 
   it("returns structured partial, failure and unresolved-decision outcomes", () => {

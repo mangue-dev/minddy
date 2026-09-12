@@ -254,12 +254,18 @@ describe("durable Numo execution", () => {
   it("resumes a worker event in the background with code tools disabled", async () => {
     h.turn = turn({
       phase: "worker_result",
-      worker_event: { type: "worker_completed", payload: { outcome: "Tests pass" } },
+      worker_event: {
+        type: "worker_completed",
+        payload: { status: "completed", outcome: "Tests pass" },
+      },
     });
     await executeNumoTurn({ turnId: h.turn.id as string, aiRuntime: runtime });
 
     expect(h.processChat.mock.calls[0][1]).toEqual([]);
-    expect(JSON.stringify(h.processChat.mock.calls[0][0])).toContain("worker_completed");
+    const prompt = JSON.stringify(h.processChat.mock.calls[0][0]);
+    expect(prompt).toContain("worker_completed");
+    expect(prompt).toContain('\\"status\\":\\"completed\\"');
+    expect(prompt).toContain("Tests pass");
     expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "completed" });
   });
 

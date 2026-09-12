@@ -1987,6 +1987,10 @@ describe("la forge", () => {
     expect(call).toBeTruthy();
     // The push took place BEFORE the call: the function opens on a head that exists.
     expect((call!.body.pushed as { committed: boolean }).committed).toBe(true);
+    expect(h.events).toContainEqual({
+      type: "commit",
+      payload: { sha: "sha-après" },
+    });
     /**
      * THE TRAVEL BRANCH. `agent_runs.branch_name` is only stamped after a push
      * real (MIN-123) — but this push is the first of the run in the normal case:

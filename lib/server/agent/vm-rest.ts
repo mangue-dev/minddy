@@ -186,6 +186,9 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
       ...(report.changed.diff ? { diff: localDiffPayload(report.changed.diff) } : {}),
     });
   }
+  if (report.pushed?.remoteUpdated && report.pushed.headSha) {
+    await emit("commit", { sha: report.pushed.headSha });
+  }
 
   // ── Resting ─────────────────────────── ────────────────────────────
   /**

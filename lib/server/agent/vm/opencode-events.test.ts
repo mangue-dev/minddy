@@ -434,8 +434,12 @@ describe("le code de sortie d'une commande (MIN-262)", () => {
   it("rend la commande et son code de sortie", () => {
     // This is what `run_command` read at home, and what silences the door
     // of delivery when the model launched the tests itself.
-    expect(bashDone({ exit: 0 }).shell).toEqual({ command: "npx vitest run", exit: 0 });
-    expect(bashDone({ exit: 1 }).shell).toEqual({ command: "npx vitest run", exit: 1 });
+    const passed = bashDone({ exit: 0 });
+    const failed = bashDone({ exit: 1 });
+    expect(passed.shell).toEqual({ command: "npx vitest run", exit: 0 });
+    expect(failed.shell).toEqual({ command: "npx vitest run", exit: 1 });
+    expect(passed.events[0].payload).toMatchObject({ exit_code: 0, success: true });
+    expect(failed.events[0].payload).toMatchObject({ exit_code: 1, success: true });
   });
 
   it("ne conclut RIEN quand le code de sortie manque", () => {

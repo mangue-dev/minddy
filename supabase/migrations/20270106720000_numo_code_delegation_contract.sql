@@ -172,6 +172,145 @@ BEGIN
 END;
 $$;
 
+-- Preserve a structured worker handoff when the normal post-commit callback is
+-- interrupted. The regular TypeScript delivery builds the detailed result from
+-- run events; this recovery fallback keeps the terminal facts instead of
+-- converting a successful worker into a synthetic failure.
+CREATE OR REPLACE FUNCTION public.recover_stale_numo_turns()
+RETURNS integer
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_count integer := 0;
+  v_turn public.numo_assistant_turns%ROWTYPE;
+  v_worker record;
+  v_disposition text;
+BEGIN
+  FOR v_worker IN
+    SELECT r.id AS run_id, r.status, r.awaiting_input, r.outcome,
+      r.error_message, r.branch_name, r.pr_number, r.pr_url,
+      COALESCE(
+        r.delegation_result,
+        jsonb_build_object(
+          'version', 1,
+          'status', CASE
+            WHEN r.status = 'completed' AND r.awaiting_input THEN 'needs_input'
+            WHEN r.status = 'completed'
+              AND nullif(btrim(r.error_message), '') IS NOT NULL THEN 'partial'
+            WHEN r.status = 'completed' THEN 'completed'
+            ELSE 'failed'
+          END,
+          'summary', COALESCE(
+            nullif(btrim(r.outcome), ''),
+            nullif(btrim(r.error_message), ''),
+            'The code worker ended without a summary.'
+          ),
+          'changedFiles', '[]'::jsonb,
+          'verificationPerformed', '[]'::jsonb,
+          'artifacts',
+            CASE WHEN nullif(btrim(r.branch_name), '') IS NOT NULL
+              THEN jsonb_build_array(jsonb_build_object(
+                'kind', 'branch', 'ref', btrim(r.branch_name)
+              )) ELSE '[]'::jsonb END
+            || CASE WHEN r.pr_number IS NOT NULL OR nullif(btrim(r.pr_url), '') IS NOT NULL
+              THEN jsonb_build_array(jsonb_strip_nulls(jsonb_build_object(
+                'kind', 'pull_request',
+                'ref', COALESCE('#' || r.pr_number::text, btrim(r.pr_url)),
+                'url', nullif(btrim(r.pr_url), '')
+              ))) ELSE '[]'::jsonb END,
+          'unresolvedDecisions', CASE
+            WHEN r.awaiting_input AND nullif(btrim(r.outcome), '') IS NOT NULL
+              THEN jsonb_build_array(btrim(r.outcome))
+            WHEN r.status IN ('failed', 'canceled')
+              AND nullif(btrim(r.error_message), '') IS NOT NULL
+              THEN jsonb_build_array(btrim(r.error_message))
+            ELSE '[]'::jsonb
+          END
+        )
+      ) AS delegation_result
+    FROM public.numo_assistant_turns t
+    JOIN public.agent_runs r ON r.id = t.active_run_id
+    WHERE t.status = 'waiting_work'
+      AND r.status IN ('completed', 'failed', 'canceled')
+    ORDER BY t.updated_at ASC, t.id ASC
+    FOR UPDATE OF t, r SKIP LOCKED
+  LOOP
+    UPDATE public.agent_runs
+    SET delegation_result = v_worker.delegation_result
+    WHERE id = v_worker.run_id AND delegation_result IS NULL;
+
+    SELECT public.resume_numo_turn_from_worker(
+      v_worker.run_id,
+      gen_random_uuid(),
+      CASE
+        WHEN v_worker.status = 'completed' AND v_worker.awaiting_input
+          THEN 'worker_input'
+        WHEN v_worker.status = 'completed' THEN 'worker_completed'
+        ELSE 'worker_failed'
+      END,
+      jsonb_build_object(
+        'run_id', v_worker.run_id,
+        'status', v_worker.status,
+        'awaiting_input', v_worker.awaiting_input,
+        'outcome', v_worker.outcome,
+        'error_message', v_worker.error_message,
+        'pr_number', v_worker.pr_number,
+        'pr_url', v_worker.pr_url,
+        'result', v_worker.delegation_result
+      )
+    ) INTO v_disposition;
+    IF v_disposition = 'queued' THEN v_count := v_count + 1; END IF;
+  END LOOP;
+
+  FOR v_turn IN
+    SELECT * FROM public.numo_assistant_turns
+    WHERE status IN ('running', 'stopping')
+      AND claimed_at < now() - interval '6 minutes'
+    ORDER BY claimed_at ASC
+    FOR UPDATE SKIP LOCKED
+  LOOP
+    IF v_turn.status = 'stopping' AND v_turn.active_run_id IS NOT NULL THEN
+      UPDATE public.agent_runs
+      SET interrupt_requested = true
+      WHERE id = v_turn.active_run_id AND status IN ('queued', 'running');
+    END IF;
+    UPDATE public.numo_assistant_turns
+    SET status = CASE
+          WHEN v_turn.status = 'stopping' THEN 'stopped'
+          WHEN v_turn.checkpoint ->> 'phase' = 'worker_result' THEN 'queued'
+          ELSE 'retryable'
+        END,
+        claim_token = NULL,
+        claimed_at = NULL,
+        completed_at = CASE WHEN v_turn.status = 'stopping' THEN now() END,
+        error_message = CASE WHEN v_turn.status = 'running'
+            AND (v_turn.checkpoint ->> 'phase') IS DISTINCT FROM 'worker_result'
+          THEN 'The Numo process stopped before the turn reached its next durable boundary. Retry after reconnecting.'
+        END,
+        updated_at = now()
+    WHERE id = v_turn.id;
+    UPDATE public.conversations
+    SET status = CASE
+          WHEN v_turn.status = 'stopping' THEN 'idle'
+          WHEN v_turn.checkpoint ->> 'phase' = 'worker_result' THEN 'generating'
+          ELSE 'error'
+        END,
+        error_message = CASE WHEN v_turn.status = 'running'
+            AND (v_turn.checkpoint ->> 'phase') IS DISTINCT FROM 'worker_result'
+          THEN 'The Numo process stopped before the turn reached its next durable boundary. Retry after reconnecting.'
+        END,
+        updated_at = now()
+    WHERE id = v_turn.conversation_id;
+    v_count := v_count + 1;
+  END LOOP;
+  RETURN v_count;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.recover_stale_numo_turns()
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.recover_stale_numo_turns()
+  TO service_role;
+
 COMMENT ON COLUMN public.agent_runs.delegation_brief IS
   'Versioned immutable brief for a code worker owned by a durable Numo turn.';
 COMMENT ON COLUMN public.agent_runs.delegation_result IS

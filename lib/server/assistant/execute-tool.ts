@@ -1677,7 +1677,8 @@ export async function executeTool(
         }
         let message = durableDelegation ? undefined : objective;
         let issueSource: { number: number; title: string; plan: string | null } | null = null;
-        if (mode) {
+        let launchIssue: LaunchMessageIssue | null = null;
+        if (issueId) {
           const { data: row } = await ctx.supabase
             .from("issues")
             .select("number, title, plan, effort")
@@ -1685,14 +1686,17 @@ export async function executeTool(
             .eq("id", issueId)
             .maybeSingle();
           if (!row) return toolError("Issue not found in this project.");
+          launchIssue = row as LaunchMessageIssue;
           issueSource = {
             number: Number(row.number),
             title: String(row.title ?? ""),
             plan: typeof row.plan === "string" ? row.plan : null,
           };
+        }
+        if (mode) {
           message = await buildAgentLaunchMessage({
             mode,
-            issue: row as LaunchMessageIssue,
+            issue: launchIssue!,
             projectKey: access.project.key,
             locale: ctx.locale,
             extra: durableDelegation ? legacyPrompt : objective,

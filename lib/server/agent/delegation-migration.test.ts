@@ -32,4 +32,14 @@ describe("Numo code delegation migration", () => {
     expect(sql.slice(rpc)).toContain("delegation_brief");
     expect(sql.slice(rpc)).toContain("managed_budget_usd");
   });
+
+  it("recovers a terminal worker with a valid structured fallback", () => {
+    const recovery = sql.indexOf("create or replace function public.recover_stale_numo_turns");
+    const operation = sql.slice(recovery);
+    expect(operation).toContain("coalesce( r.delegation_result");
+    expect(operation).toContain("set delegation_result = v_worker.delegation_result");
+    expect(operation).toContain("'result', v_worker.delegation_result");
+    expect(operation).toContain("'changedfiles', '[]'::jsonb");
+    expect(operation).toContain("'verificationperformed', '[]'::jsonb");
+  });
 });
