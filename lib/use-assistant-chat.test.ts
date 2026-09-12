@@ -123,6 +123,30 @@ afterEach(() => {
 });
 
 describe("Numo conversation settings", () => {
+  it("restores the authoritative pending worker decision on reload", async () => {
+    h.webFetch.mockResolvedValue(Response.json({
+      status: "waiting_input",
+      error_message: null,
+      pending_input: {
+        parent_numo_turn_id: "51700000-0000-4000-8000-000000000002",
+        run_id: "51700000-0000-4000-8000-000000000003",
+        question_id: "question-1",
+        call_id: "call-question",
+        questions: [],
+        created_at: "2026-09-12T10:00:02.000Z",
+      },
+    }));
+    await act(async () => root.render(createElement(Probe)));
+
+    await act(async () => value.loadConversation(conversationId, null));
+
+    expect(value.state.pendingWorkerInput).toEqual({
+      parentTurnId: "51700000-0000-4000-8000-000000000002",
+      runId: "51700000-0000-4000-8000-000000000003",
+      questionId: "question-1",
+    });
+  });
+
   it("restores persisted settings and tool results from the unified detail", async () => {
     await act(async () => root.render(createElement(Probe)));
     await act(async () => value.loadConversation(conversationId, null));
@@ -151,6 +175,25 @@ describe("Numo conversation settings", () => {
     const request = h.webFetch.mock.calls.find(([url]) => url === "/api/assistant/chat")?.[1];
     const body = JSON.parse(String(request?.body));
     expect(body).toMatchObject({ model: null, reasoningLevel: null });
+  });
+
+  it("sends the exact worker-question correlation with a card answer", async () => {
+    h.webFetch.mockResolvedValue(new Response(
+      'event: done\ndata: {"status":"waiting_work"}\n\n',
+      { headers: { "X-Numo-Conversation-Id": conversationId } },
+    ));
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.loadConversation(conversationId, null));
+    const workerInput = {
+      parentTurnId: "51700000-0000-4000-8000-000000000002",
+      runId: "51700000-0000-4000-8000-000000000003",
+      questionId: "question-1",
+    };
+
+    await act(async () => value.sendMessage(null, "Use the public API.", { workerInput }));
+
+    const request = h.webFetch.mock.calls.find(([url]) => url === "/api/assistant/chat")?.[1];
+    expect(JSON.parse(String(request?.body))).toMatchObject({ workerInput });
   });
 
   it("rolls back simultaneous failed writes to the last server-confirmed settings", async () => {

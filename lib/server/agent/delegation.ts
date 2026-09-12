@@ -14,6 +14,7 @@ import {
   type AgentDelegationVerification,
 } from "./agent-contract";
 import type { AgentRun } from "./runs";
+import { parseAskUserQuestions } from "@/lib/ask-user";
 
 const EXPECTED_DELEGATION_OUTPUT = [
   "A concise completion summary, including partial work or failure.",
@@ -157,15 +158,38 @@ function collectVerification(events: RunEvent[]): AgentDelegationVerification[] 
 function collectUnresolvedDecisions(run: AgentRun, events: RunEvent[]): string[] {
   const unresolved = new Set<string>();
   for (const event of events) {
-    if (event.type !== "question") continue;
-    const question = eventString(event.payload ?? {}, "question", "message", "text");
-    if (question) unresolved.add(question);
+    if (event.type !== "question" && event.type !== "needs_input") continue;
+    const payload = event.payload ?? {};
+    const questions = parseAskUserQuestions({ questions: payload.questions });
+    for (const question of questions) unresolved.add(question.question);
+    const fallback = eventString(payload, "question", "message", "text");
+    if (fallback) unresolved.add(fallback);
   }
   if ((run.status === "failed" || run.status === "canceled") && run.error_message?.trim()) {
     unresolved.add(run.error_message.trim());
   }
   if (run.awaiting_input && run.outcome?.trim()) unresolved.add(run.outcome.trim());
   return [...unresolved].slice(0, 50);
+}
+
+function collectInputRequest(run: AgentRun, events: RunEvent[]) {
+  if (!run.awaiting_input || !run.parent_numo_turn_id) return undefined;
+  const event = [...events].reverse().find((candidate) =>
+    candidate.type === "needs_input"
+  );
+  const payload = event?.payload ?? null;
+  if (!payload) return undefined;
+  const questions = parseAskUserQuestions({ questions: payload.questions });
+  const questionId = eventString(payload, "question_id");
+  const callId = eventString(payload, "call_id", "id");
+  if (!questionId || !callId || questions.length === 0) return undefined;
+  return {
+    parentTurnId: run.parent_numo_turn_id,
+    runId: run.id,
+    questionId,
+    callId,
+    questions,
+  };
 }
 
 function addArtifact(
@@ -189,7 +213,7 @@ export async function finalizeAgentDelegationResult(
     service.from("agent_run_events")
       .select("seq, type, payload")
       .eq("run_id", run.id)
-      .in("type", ["files_changed", "tool_call", "tool_result", "commit", "pr_opened", "question", "error"])
+      .in("type", ["files_changed", "tool_call", "tool_result", "commit", "pr_opened", "question", "needs_input", "error"])
       .order("seq", { ascending: true }),
     service.from("agent_artifacts")
       .select("kind, ref, url")
@@ -257,6 +281,7 @@ export function buildAgentDelegationResult(input: {
     });
   }
   const failed = run.status === "failed" || run.status === "canceled";
+  const inputRequest = collectInputRequest(run, events);
   const status = failed
     ? "failed"
     : run.awaiting_input
@@ -276,5 +301,6 @@ export function buildAgentDelegationResult(input: {
     verificationPerformed: collectVerification(events),
     artifacts,
     unresolvedDecisions: collectUnresolvedDecisions(run, events),
+    ...(inputRequest ? { inputRequest } : {}),
   });
 }

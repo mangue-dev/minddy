@@ -211,6 +211,11 @@ export interface VmJob {
   writesToRepo: boolean;
   /** Canonical interaction capability; triggers remain separate context. */
   interactive: boolean;
+  /** Parent conversation that exclusively mediates this worker's questions. */
+  numoMediation?: {
+    parentConversationId: string;
+    parentTurnId: string;
+  };
   /** The run is a chain step → `report_verdict` is served. */
   chain: boolean;
   imageInput: boolean;

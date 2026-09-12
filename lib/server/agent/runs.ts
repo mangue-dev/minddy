@@ -1653,12 +1653,13 @@ export async function notifyAgentRun(
     issue_id: string | null;
     conversation_id: string;
     routine_id?: string | null;
+    parent_numo_turn_id?: string | null;
   },
   type: "agent_done" | "agent_question" | "agent_failed",
 ): Promise<void> {
   // Routine endings have their own target and preference category. Sending the
   // generic conversation notification as well creates a second inbox row and push.
-  if (!run.created_by || run.routine_id) return;
+  if (!run.created_by || run.routine_id || run.parent_numo_turn_id) return;
   try {
     await insertNotifications(
       getServiceClient(),

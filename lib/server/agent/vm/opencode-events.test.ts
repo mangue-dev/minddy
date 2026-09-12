@@ -828,6 +828,8 @@ describe("les garde-fous et les questions", () => {
         type: "question",
         payload: {
           id: "call_7",
+          call_id: "call_7",
+          question_id: "que_1",
           questions: [
             {
               question: "Quelle approche pour le cache ?",

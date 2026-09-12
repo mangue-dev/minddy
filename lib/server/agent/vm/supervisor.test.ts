@@ -1719,6 +1719,30 @@ describe("les questions à l'utilisateur", () => {
     expect(report.reply).toBeUndefined();
   });
 
+  it("reports a delegated question to Numo without exposing a worker question event", async () => {
+    h.extraFrames = [question];
+    const report = await run({
+      numoMediation: {
+        parentConversationId: "22222222-2222-4222-8222-222222222222",
+        parentTurnId: "33333333-3333-4333-8333-333333333333",
+      },
+    });
+
+    expect(h.events.some((event) => event.type === "question")).toBe(false);
+    expect(h.events.find((event) => event.type === "needs_input")).toMatchObject({
+      payload: {
+        id: "call_q",
+        call_id: "call_q",
+        question_id: "que_1",
+        run_id: "11111111-2222-4333-8444-555555555555",
+        parent_turn_id: "33333333-3333-4333-8333-333333333333",
+        questions: [expect.objectContaining({ question: "Quelle approche ?" })],
+      },
+    });
+    expect(report).toMatchObject({ status: "completed", askedUser: true });
+    expect(report.checkpoint).toBeTruthy();
+  });
+
   it("ne tient pas la microVM ouverte le temps qu'un humain revienne", async () => {
     h.extraFrames = [question];
     const report = await run();

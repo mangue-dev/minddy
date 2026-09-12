@@ -29,6 +29,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
 
+  if (run.parent_numo_turn_id) {
+    return NextResponse.json(
+      { error: "workerOwnedByNumo", code: "workerOwnedByNumo" },
+      { status: 409 },
+    );
+  }
+
   // We only interrupt a run that WORKS; at rest there is nothing to interrupt.
   const working = WORKING.includes(run.status);
   if (working) {

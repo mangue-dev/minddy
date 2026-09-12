@@ -2503,8 +2503,17 @@ export async function runOpencodeTurn(
             ? subagents.entry(out.sessionId ?? "")
             : undefined;
           if (entry) payload = markChildPayload(payload, entry);
-          await cp.emit(event.type, {
+          const eventType = job.numoMediation && event.type === "question"
+            ? "needs_input"
+            : event.type;
+          await cp.emit(eventType, {
             ...payload,
+            ...(eventType === "needs_input"
+              ? {
+                  run_id: job.runId,
+                  parent_turn_id: job.numoMediation!.parentTurnId,
+                }
+              : {}),
             ...(reason ? { reason } : {}),
             // A girl that the flow has not attached to anything remains marked: better
             // is worth an event folded under a session id as a gesture attributed to

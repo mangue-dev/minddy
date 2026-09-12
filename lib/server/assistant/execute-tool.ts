@@ -44,6 +44,10 @@ import {
 } from "@/lib/server/add-comment";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
 import { getServiceClient } from "@/lib/supabase-service";
+import {
+  answerNumoWorkerInput,
+  type WorkerInputCorrelation,
+} from "@/lib/server/numo/worker-mediation";
 import { insertAttachments } from "@/lib/server/attachments";
 import { FaviconError } from "@/lib/server/favicon";
 import { resolveLinkResource } from "@/lib/server/link-resource";
@@ -231,6 +235,8 @@ export interface ToolContext {
   /** Durable parent turn and current call correlation for delegated workers. */
   turnId?: string;
   toolCallId?: string;
+  /** Exact pending worker decision available only during a mediation turn. */
+  workerInput?: WorkerInputCorrelation;
 }
 
 /** Status of web search for ONE round (one Numo response, one @Numo). */
@@ -766,6 +772,41 @@ export async function executeTool(
             },
             success: false,
           };
+    }
+    if (toolName === "answer_code_worker") {
+      const expected = ctx.workerInput;
+      const answer = typeof args.answer === "string" ? args.answer.trim() : "";
+      if (
+        !expected
+        || args.parent_turn_id !== expected.parentTurnId
+        || args.run_id !== expected.runId
+        || args.question_id !== expected.questionId
+        || !answer
+      ) {
+        return toolError("The worker answer does not match the pending decision.");
+      }
+      const disposition = await answerNumoWorkerInput({
+        conversationId: ctx.conversationId!,
+        userId: ctx.userId,
+        correlation: expected,
+        answer,
+        persistParentMessage: false,
+      });
+      if (disposition.action !== "answered" && disposition.action !== "already") {
+        const reason = disposition.action === "refused"
+          ? disposition.reason
+          : "pending input was not found";
+        return toolError(`The worker could not be resumed: ${reason}.`);
+      }
+      return {
+        result: {
+          status: disposition.action,
+          run_id: disposition.runId,
+          question_id: expected.questionId,
+        },
+        success: true,
+        pause: true,
+      };
     }
 
     // ── Project discovery and global-only filter options ───────────────
