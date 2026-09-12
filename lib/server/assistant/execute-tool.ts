@@ -157,6 +157,13 @@ import { issueIdentifier } from "@/lib/issue-constants";
 import { isStatus, type IssueStatusValue } from "@/lib/issue-validation";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 import {
+  AGENT_DELEGATION_AUTHORIZATIONS,
+  AGENT_DELEGATION_SOURCE_KINDS,
+  type AgentDelegationAuthorization,
+  type AgentDelegationSourceReference,
+} from "@/lib/server/agent/agent-contract";
+import type { AttachmentInput } from "@/lib/types";
+import {
   buildAgentLaunchMessage,
   intentForLaunchMode,
   isAgentLaunchMode,
@@ -221,6 +228,9 @@ export interface ToolContext {
   webSearch?: WebSearchTurn;
   /** Conversation for the turn (ledger drill-down). Null outside chat. */
   conversationId?: string | null;
+  /** Durable parent turn and current call correlation for delegated workers. */
+  turnId?: string;
+  toolCallId?: string;
 }
 
 /** Status of web search for ONE round (one Numo response, one @Numo). */
@@ -310,6 +320,8 @@ function launchErrorMessage(r: Extract<LaunchResult, { ok: false }>): string {
       return "No code-worker model is configured for the active provider. Ask the user to choose one in Account settings; Numo cannot substitute or change it.";
     case "workerConfigurationManagedInSettings":
       return "Code-worker model and reasoning can only be changed by the user in Account settings.";
+    case "continuationNotFound":
+      return "The requested worker continuation is not available in this repository or does not belong to this account.";
     case "modelAbovePlan":
       return r.modelLimit
         ? `The account code-worker model ${r.modelLimit.model} costs ×${r.modelLimit.multiplier} the usage of minddy's baseline model, above the ×${r.modelLimit.limit} ceiling of the ${r.modelLimit.planId} plan. Ask the user to choose an eligible model in Account settings or upgrade their plan.`
@@ -317,6 +329,74 @@ function launchErrorMessage(r: Extract<LaunchResult, { ok: false }>): string {
     default:
       return "Could not launch the code agent.";
   }
+}
+
+function delegationStrings(raw: unknown, maxItems = 50): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, maxItems).flatMap((value) =>
+    typeof value === "string" && value.trim()
+      ? [value.trim().slice(0, 1_000)]
+      : []
+  );
+}
+
+function delegationSources(raw: unknown): AgentDelegationSourceReference[] {
+  if (!Array.isArray(raw)) return [];
+  const kinds = new Set<string>(AGENT_DELEGATION_SOURCE_KINDS);
+  return raw.slice(0, 50).flatMap((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+    const source = value as Record<string, unknown>;
+    if (typeof source.kind !== "string" || !kinds.has(source.kind)) return [];
+    if (typeof source.label !== "string" || !source.label.trim()) return [];
+    return [{
+      kind: source.kind as AgentDelegationSourceReference["kind"],
+      label: source.label.trim().slice(0, 300),
+      ...(typeof source.id === "string" && source.id.trim()
+        ? { id: source.id.trim().slice(0, 300) }
+        : {}),
+      ...(typeof source.url === "string" && source.url.trim()
+        ? { url: source.url.trim().slice(0, 2_000) }
+        : {}),
+      ...(typeof source.version === "string" && source.version.trim()
+        ? { version: source.version.trim().slice(0, 100) }
+        : {}),
+    }];
+  });
+}
+
+function delegationAuthorizations(raw: unknown): AgentDelegationAuthorization[] {
+  const allowed = new Set<string>(AGENT_DELEGATION_AUTHORIZATIONS);
+  return delegationStrings(raw, 20).filter(
+    (value): value is AgentDelegationAuthorization => allowed.has(value),
+  );
+}
+
+async function parentTurnAttachments(ctx: ToolContext): Promise<AttachmentInput[]> {
+  if (!ctx.turnId) return [];
+  const { data } = await ctx.service.from("assistant_messages")
+    .select("metadata")
+    .eq("turn_id", ctx.turnId)
+    .eq("role", "user")
+    .maybeSingle();
+  const raw = (data?.metadata as { attachments?: unknown } | null)?.attachments;
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, 20).flatMap((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+    const file = value as Record<string, unknown>;
+    if (
+      typeof file.storage_path !== "string" || !file.storage_path
+      || typeof file.file_name !== "string" || !file.file_name
+      || typeof file.mime_type !== "string" || !file.mime_type
+      || typeof file.size_bytes !== "number"
+    ) return [];
+    return [{
+      kind: "file" as const,
+      storage_path: file.storage_path,
+      file_name: file.file_name,
+      mime_type: file.mime_type,
+      size_bytes: file.size_bytes,
+    }];
+  });
 }
 
 /**
@@ -1561,10 +1641,27 @@ export async function executeTool(
           );
           if (!scoped.ok) return toolError(scoped.error);
         }
-        const prompt =
+        const legacyPrompt =
           typeof args.prompt === "string" && args.prompt.trim()
             ? args.prompt.trim()
             : undefined;
+        const objective =
+          typeof args.objective === "string" && args.objective.trim()
+            ? args.objective.trim()
+            : legacyPrompt;
+        const durableDelegation = !!(
+          ctx.conversationId && ctx.turnId && ctx.toolCallId
+        );
+        const sourceReferences = delegationSources(args.source_references);
+        const constraints = delegationStrings(args.constraints);
+        const authorizedWork = delegationAuthorizations(args.authorized_work);
+        const expectedOutput = delegationStrings(args.expected_output);
+        if (durableDelegation && !objective) {
+          return toolError("A complete objective is required for delegated code work.");
+        }
+        if (durableDelegation && authorizedWork.length === 0) {
+          return toolError("authorized_work must explicitly describe what the code worker may do.");
+        }
 
         // Three NATIVE modes (frame / implement / check implementation):
         // the message sent is exactly that of the app buttons, constructed
@@ -1578,7 +1675,8 @@ export async function executeTool(
             "issue_id is required for plan, implement and verify.",
           );
         }
-        let message = prompt;
+        let message = durableDelegation ? undefined : objective;
+        let issueSource: { number: number; title: string; plan: string | null } | null = null;
         if (mode) {
           const { data: row } = await ctx.supabase
             .from("issues")
@@ -1587,22 +1685,80 @@ export async function executeTool(
             .eq("id", issueId)
             .maybeSingle();
           if (!row) return toolError("Issue not found in this project.");
+          issueSource = {
+            number: Number(row.number),
+            title: String(row.title ?? ""),
+            plan: typeof row.plan === "string" ? row.plan : null,
+          };
           message = await buildAgentLaunchMessage({
             mode,
             issue: row as LaunchMessageIssue,
             projectKey: access.project.key,
             locale: ctx.locale,
-            extra: prompt,
+            extra: durableDelegation ? legacyPrompt : objective,
           });
         }
+        if (issueSource) {
+          const identifier = `${access.project.key}-${issueSource.number}`;
+          if (!sourceReferences.some((source) => source.kind === "issue" && source.id === issueId)) {
+            sourceReferences.unshift({
+              kind: "issue",
+              id: issueId,
+              label: `${identifier}: ${issueSource.title}`,
+            });
+          }
+          if (
+            issueSource.plan?.trim()
+            && !sourceReferences.some((source) => source.kind === "plan" && source.id === issueId)
+          ) {
+            sourceReferences.push({
+              kind: "plan",
+              id: issueId,
+              label: `${identifier} implementation plan`,
+            });
+          }
+        }
+        const attachments = durableDelegation
+          ? await parentTurnAttachments(ctx)
+          : [];
+        for (const attachment of attachments) {
+          if (!sourceReferences.some(
+            (source) => source.kind === "attachment" && source.id === attachment.storage_path,
+          )) {
+            sourceReferences.push({
+              kind: "attachment",
+              id: attachment.storage_path,
+              label: attachment.file_name,
+            });
+          }
+        }
 
-        // Without explicit conversation_id, each call opens a conversation and
-        // a clean branch. The possible ticket is only its context.
+        // A fresh delegation opens a code conversation and branch. Explicit
+        // follow-up lineage reuses the selected conversation and branch/PR.
         const result = await launchAgentRun({
           ...(issueId ? { issueId } : { projectId }),
           userId: ctx.userId,
           triggeredBy: ctx.triggerSource ?? "chat",
           prompt: message,
+          continueRunId:
+            typeof args.continuation_run_id === "string"
+              ? args.continuation_run_id
+              : null,
+          ...(durableDelegation
+            ? {
+                delegation: {
+                  parentConversationId: ctx.conversationId!,
+                  parentTurnId: ctx.turnId!,
+                  toolCallId: ctx.toolCallId!,
+                  objective: objective!,
+                  sourceReferences,
+                  constraints,
+                  authorizedWork,
+                  ...(expectedOutput.length ? { expectedOutput } : {}),
+                  attachments,
+                },
+              }
+            : {}),
           // Framing does not start the ticket; implement and check, yes.
           ...(mode ? { intent: intentForLaunchMode(mode) } : {}),
         });
@@ -1616,6 +1772,13 @@ export async function executeTool(
             status: result.run.status,
             model: result.run.model,
             reasoning_level: result.run.reasoning_level,
+            ...(durableDelegation
+              ? {
+                  parent_turn_id: ctx.turnId,
+                  contract_version: 1,
+                  continued_from_run_id: result.run.continued_from_run_id ?? null,
+                }
+              : {}),
           },
           success: true,
         };

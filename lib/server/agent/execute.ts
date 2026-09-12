@@ -9,6 +9,7 @@ import { recordSandboxUsage } from "@/lib/server/usage";
 import { spentFromLedger, type AiUsageBillTo } from "@/lib/server/ai-usage";
 import { resolveRepoCloneTarget, type RepoCloneTarget } from "./repo-access";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
+import { promptWithAttachments } from "./prompt-attachments";
 import { getGithubBotCommitIdentity } from "@/lib/server/git/github-app";
 import {
   getOrCreateAgentSandbox,
@@ -1283,9 +1284,12 @@ export async function executeAgentRun(
         messages.push({
           role: "user",
           content: promptWithMentions(
-            issue
-              ? run.prompt.trim()
-              : buildScratchpadPrompt(run.prompt.trim(), { mcp: false }),
+            await promptWithAttachments(
+              issue
+                ? run.prompt.trim()
+                : buildScratchpadPrompt(run.prompt.trim(), { mcp: false }),
+              run.delegation_attachments ?? [],
+            ),
             run.prompt_mentions,
             run.triggered_by === "routine"
               ? MAX_ROUTINE_PROMPT_MENTIONS

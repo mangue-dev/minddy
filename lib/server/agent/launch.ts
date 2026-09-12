@@ -33,6 +33,7 @@ import {
   activeRunForRoutine,
   activeRunForPrNumber,
   inheritableWorkForPr,
+  getRun,
   insertRunMessage,
   bumpRunActivity,
   ActiveRunExistsError,
@@ -49,6 +50,15 @@ import { handOffToHuman } from "@/lib/server/automations/hooks";
 import { generateShortTitle } from "@/lib/server/short-title";
 import { agentRunTitleSource } from "./run-title";
 import type { AssistantMention } from "@/lib/assistant-types";
+import type { AttachmentInput } from "@/lib/types";
+import {
+  buildAgentDelegationBrief,
+  formatAgentDelegationPrompt,
+} from "./delegation";
+import type {
+  AgentDelegationAuthorization,
+  AgentDelegationSourceReference,
+} from "./agent-contract";
 
 /**
  * SINGLE entry point to start a COLD run (MIN-46 + MIN-68). Called by
@@ -81,7 +91,8 @@ export type LaunchError =
   | "providerEndpointUnavailableFromSandbox"
   | "localExecutionRetired"
   | "modelAbovePlan"
-  | "promptRequired";
+  | "promptRequired"
+  | "continuationNotFound";
 
 /**
  * Enough to write “Claude Opus 5 (×12) exceeds the ceiling of your Go plan (×4)”.
@@ -141,6 +152,20 @@ export interface LaunchAgentInput {
   /** Free instructions in addition to the outcome (optional) — or THE note (run notebook). */
   prompt?: string | null;
   promptMentions?: AssistantMention[] | null;
+  /** A previous worker selected explicitly by Numo for branch/conversation lineage. */
+  continueRunId?: string | null;
+  /** Durable ownership contract for a worker launched from a Numo tool call. */
+  delegation?: {
+    parentConversationId: string;
+    parentTurnId: string;
+    toolCallId: string;
+    objective: string;
+    sourceReferences: AgentDelegationSourceReference[];
+    constraints: string[];
+    authorizedWork: AgentDelegationAuthorization[];
+    expectedOutput?: string[];
+    attachments?: AttachmentInput[];
+  } | null;
   /**
    * Base branch chosen at launch (default: the default branch of the
    * deposit). IGNORED if the issue has a living lineage to inherit: the branch of
@@ -323,6 +348,26 @@ export async function launchAgentRun(
     return { ok: false, error: "localExecutionRetired" };
   }
   const service = getServiceClient();
+  if (input.delegation) {
+    const { data: delivered } = await service
+      .from("agent_runs")
+      .select("*")
+      .eq("parent_numo_turn_id", input.delegation.parentTurnId)
+      .eq("parent_numo_tool_call_id", input.delegation.toolCallId)
+      .maybeSingle();
+    if (delivered) {
+      const run = delivered as AgentRun;
+      if (
+        run.created_by !== input.userId
+        || run.parent_numo_conversation_id !== input.delegation.parentConversationId
+        || (input.projectId && run.project_id !== input.projectId)
+        || run.delegation_brief?.objective !== input.delegation.objective.trim()
+      ) {
+        return { ok: false, error: "continuationNotFound" };
+      }
+      return { ok: true, run };
+    }
+  }
   const reviewPr = input.pullRequestId
     ? await loadPrRunContext(input.pullRequestId)
     : null;
@@ -390,13 +435,33 @@ export async function launchAgentRun(
     if (!prLink) return { ok: false, error: "prNotFound" };
     // Like a run notebook: without instructions, the session would have no mission —
     // and here the instruction IS the request for changes.
-    if (!input.prompt?.trim()) return { ok: false, error: "promptRequired" };
+    if (!input.prompt?.trim() && !input.delegation?.objective.trim()) {
+      return { ok: false, error: "promptRequired" };
+    }
     projectId = prLink.projectId;
   } else {
     // General conversation: without a ticket, the message IS the mission.
     if (!input.projectId) return { ok: false, error: "issueNotFound" };
-    if (!input.prompt?.trim()) return { ok: false, error: "promptRequired" };
+    if (!input.prompt?.trim() && !input.delegation?.objective.trim()) {
+      return { ok: false, error: "promptRequired" };
+    }
     projectId = input.projectId;
+  }
+
+  const continuedRun = input.continueRunId
+    ? await getRun(input.continueRunId)
+    : null;
+  if (input.continueRunId && (
+    !continuedRun
+    || continuedRun.created_by !== input.userId
+    || continuedRun.project_id !== projectId
+    || continuedRun.conversation?.visibility === "project"
+    || (issueId && continuedRun.issue_id !== issueId)
+  )) {
+    return { ok: false, error: "continuationNotFound" };
+  }
+  if (continuedRun && (continuedRun.status === "queued" || continuedRun.status === "running")) {
+    return { ok: false, error: "alreadyRunning", run: continuedRun };
   }
 
   // After the resolution of the project, these readings no longer depend on each other.
@@ -438,6 +503,37 @@ export async function launchAgentRun(
   ) {
     return { ok: false, error: "unsupportedProvider" };
   }
+  if (continuedRun && (
+    continuedRun.repo_link_id !== link.id
+    || continuedRun.repo_provider !== link.provider
+    || continuedRun.repo_external_id !== link.external_repo_id
+  )) {
+    return { ok: false, error: "continuationNotFound" };
+  }
+  const delegationBrief = input.delegation
+    ? buildAgentDelegationBrief({
+        parentConversationId: input.delegation.parentConversationId,
+        parentTurnId: input.delegation.parentTurnId,
+        toolCallId: input.delegation.toolCallId,
+        repository: {
+          projectId,
+          provider: link.provider,
+          externalId: link.external_repo_id,
+          fullName: link.repo_full_name
+            ?? ([link.repo_owner, link.repo_name].filter(Boolean).join("/")
+              || link.external_repo_id),
+          defaultBranch: link.default_branch,
+        },
+        objective: input.delegation.objective,
+        sourceReferences: input.delegation.sourceReferences,
+        constraints: input.delegation.constraints,
+        authorizedWork: input.delegation.authorizedWork,
+        expectedOutput: input.delegation.expectedOutput,
+      })
+    : null;
+  const workerPrompt = delegationBrief
+    ? formatAgentDelegationPrompt(delegationBrief, input.prompt)
+    : input.prompt;
 
   // The ticket is a context, not a lock: multiple conversations can
   // cite it and work in parallel on separate branches.
@@ -477,7 +573,7 @@ export async function launchAgentRun(
     return { ok: false, error: "providerEndpointUnavailableFromSandbox" };
   }
 
-  const titleSource = agentRunTitleSource({ issueTitle, prompt: input.prompt });
+  const titleSource = agentRunTitleSource({ issueTitle, prompt: workerPrompt });
 
   let model: string;
   let workerModelProvider: AgentProviderId;
@@ -527,6 +623,14 @@ export async function launchAgentRun(
         prNumber: continuePr.number,
         provider: continuePr.provider,
       })) ?? (await currentWritablePrWork(continuePr, input.userId)))
+    : continuedRun
+      ? {
+          branchName: continuedRun.branch_name,
+          baseBranch: continuedRun.base_branch,
+          prNumber: continuedRun.pr_number,
+          prUrl: continuedRun.pr_url,
+          prState: continuedRun.pr_state,
+        }
     : null;
   if (continuePr && !inherited) return { ok: false, error: "prNoBranch" };
 
@@ -542,8 +646,15 @@ export async function launchAgentRun(
       repoProvider: link.provider,
       repoExternalId: link.external_repo_id,
       createdBy: input.userId,
-      prompt: input.prompt ?? null,
+      prompt: workerPrompt ?? null,
       promptMentions: input.promptMentions ?? null,
+      conversationId: continuedRun?.conversation_id ?? null,
+      parentNumoConversationId: input.delegation?.parentConversationId ?? null,
+      parentNumoTurnId: input.delegation?.parentTurnId ?? null,
+      parentNumoToolCallId: input.delegation?.toolCallId ?? null,
+      continuedFromRunId: continuedRun?.id ?? null,
+      delegationBrief,
+      delegationAttachments: input.delegation?.attachments ?? [],
       // The title provided wins: it is that of routine. A generated title,
       // is written after the HTTP response — it cannot delay the first token.
       title: reviewPr ? prSessionTitle(reviewPr) : input.title?.trim() || null,
@@ -575,6 +686,15 @@ export async function launchAgentRun(
     // The lock no longer concerns tickets; it remains for automation and
     // to explicit repetitions of the same pull request.
     if (err instanceof ActiveRunExistsError) {
+      if (input.delegation) {
+        const { data: existing } = await service
+          .from("agent_runs")
+          .select("*")
+          .eq("parent_numo_turn_id", input.delegation.parentTurnId)
+          .eq("parent_numo_tool_call_id", input.delegation.toolCallId)
+          .maybeSingle();
+        if (existing) return { ok: true, run: existing as AgentRun };
+      }
       const winner = reviewPr
         ? await activeRunForPullRequest(reviewPr.id)
         : continuePr

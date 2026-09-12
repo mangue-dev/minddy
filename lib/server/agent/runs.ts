@@ -13,7 +13,15 @@ import { AGENT_ENGINE, type AgentEngine } from "@/lib/agent-engines";
 // Type ONLY (therefore deleted during compilation): `launch.ts` imports this module, the
 // dependency should not exist at runtime.
 import type { AgentLaunchIntent } from "./launch";
-import type { AgentChatMessage, AgentEventType } from "./agent-contract";
+import {
+  AGENT_DELEGATION_CONTRACT_VERSION,
+  parseAgentDelegationResult,
+  type AgentChatMessage,
+  type AgentDelegationBrief,
+  type AgentDelegationResult,
+  type AgentEventType,
+} from "./agent-contract";
+import type { AttachmentInput } from "@/lib/types";
 import { broadcastRunEvent } from "./live";
 import { currentDeploymentScope } from "./deployment";
 import { captureServerEvent } from "@/lib/server/posthog";
@@ -65,6 +73,71 @@ function numoWorkerEventId(run: AgentRun): string {
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
   const hex = bytes.toString("hex");
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+/** Deliver one terminal delegated run to its owning durable Numo turn. */
+export async function deliverAgentDelegationResult(
+  run: AgentRun,
+): Promise<"queued" | "duplicate" | "ignored"> {
+  const { finalizeAgentDelegationResult } = await import(
+    "@/lib/server/agent/delegation"
+  );
+  const { executeNumoTurn, resumeNumoTurnFromWorker } = await import(
+    "@/lib/server/numo/turns"
+  );
+  const delegationResult = run.delegation_result
+    ?? await finalizeAgentDelegationResult(getServiceClient(), run)
+    ?? parseAgentDelegationResult({
+      version: AGENT_DELEGATION_CONTRACT_VERSION,
+      status: run.status === "completed"
+        ? run.awaiting_input ? "needs_input" : run.error_message ? "partial" : "completed"
+        : "failed",
+      summary: run.outcome?.trim() || run.error_message?.trim()
+        || "The code worker ended without a summary.",
+      changedFiles: [],
+      verificationPerformed: [],
+      artifacts: [
+        ...(run.branch_name ? [{ kind: "branch", ref: run.branch_name }] : []),
+        ...(run.pr_url ? [{ kind: "pull_request", ref: run.pr_number ? `#${run.pr_number}` : run.pr_url, url: run.pr_url }] : []),
+      ],
+      unresolvedDecisions: run.awaiting_input && run.outcome?.trim()
+        ? [run.outcome.trim()]
+        : run.status !== "completed" && run.error_message?.trim()
+          ? [run.error_message.trim()]
+          : [],
+    });
+  const type = run.status === "completed"
+    ? run.awaiting_input
+      ? "worker_input" as const
+      : "worker_completed" as const
+    : "worker_failed" as const;
+  const disposition = await resumeNumoTurnFromWorker({
+    runId: run.id,
+    eventId: numoWorkerEventId(run),
+    type,
+    payload: {
+      run_id: run.id,
+      status: run.status,
+      awaiting_input: run.awaiting_input,
+      outcome: run.outcome,
+      error_message: run.error_message,
+      pr_number: run.pr_number,
+      pr_url: run.pr_url,
+      result: delegationResult,
+    },
+  });
+  if (disposition === "queued") {
+    const { data: parent } = await getServiceClient()
+      .from("numo_assistant_turns")
+      .select("id")
+      .eq("active_run_id", run.id)
+      .eq("status", "queued")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (parent?.id) await executeNumoTurn({ turnId: parent.id as string });
+  }
+  return disposition;
 }
 
 /**
@@ -210,6 +283,14 @@ export interface AgentRun {
   created_by: string | null;
   prompt: string | null;
   prompt_mentions: AssistantMention[] | null;
+  /** Durable Numo ownership and idempotency correlation for delegated work. */
+  parent_numo_conversation_id?: string | null;
+  parent_numo_turn_id?: string | null;
+  parent_numo_tool_call_id?: string | null;
+  continued_from_run_id?: string | null;
+  delegation_brief?: AgentDelegationBrief | null;
+  delegation_result?: AgentDelegationResult | null;
+  delegation_attachments?: AttachmentInput[] | null;
   /** Short summary of the note, for the CARNET sessions. Null = no summary
    * (issue run, whose title is that of the ticket; or failed generation). */
   title: string | null;
@@ -372,6 +453,14 @@ export interface CreateRunInput {
   createdBy: string;
   prompt?: string | null;
   promptMentions?: AssistantMention[] | null;
+  /** Existing code conversation/branch lineage explicitly selected by Numo. */
+  conversationId?: string | null;
+  parentNumoConversationId?: string | null;
+  parentNumoTurnId?: string | null;
+  parentNumoToolCallId?: string | null;
+  continuedFromRunId?: string | null;
+  delegationBrief?: AgentDelegationBrief | null;
+  delegationAttachments?: AttachmentInput[] | null;
   /** Summary of the note (runs notebook) — cf. `AgentRun.title`. */
   title?: string | null;
   model: string;
@@ -468,6 +557,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
   const engine = AGENT_ENGINE;
   const loopInVm = true;
   const values = {
+    ...(input.conversationId ? { conversation_id: input.conversationId } : {}),
     project_id: input.projectId,
     issue_id: input.issueId,
     pull_request_id: input.pullRequestId ?? null,
@@ -481,6 +571,16 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     created_by: input.createdBy,
     prompt: input.prompt ?? null,
     prompt_mentions: input.promptMentions ?? null,
+    ...(input.delegationBrief
+      ? {
+          parent_numo_conversation_id: input.parentNumoConversationId,
+          parent_numo_turn_id: input.parentNumoTurnId,
+          parent_numo_tool_call_id: input.parentNumoToolCallId,
+          continued_from_run_id: input.continuedFromRunId ?? null,
+          delegation_brief: input.delegationBrief,
+          delegation_attachments: input.delegationAttachments ?? [],
+        }
+      : {}),
     title: input.title ?? null,
     model: input.model,
     model_forced: input.modelForced,
@@ -1530,40 +1630,10 @@ export async function stampRunResult(
     // parent from the same guarded terminal transition that already drives
     // chains and routines. The event ID is stable, so a repeated delivery is
     // harmless; the turn RPC also ignores late events from superseded runs.
-    if (run.triggered_by === "chat") afterOrNow(async () => {
-      const { executeNumoTurn, resumeNumoTurnFromWorker } = await import(
-        "@/lib/server/numo/turns"
-      );
-      const type = run.status === "completed"
-        ? run.awaiting_input
-          ? "worker_input" as const
-          : "worker_completed" as const
-        : "worker_failed" as const;
-      const disposition = await resumeNumoTurnFromWorker({
-        runId: run.id,
-        eventId: numoWorkerEventId(run),
-        type,
-        payload: {
-          run_id: run.id,
-          status: run.status,
-          awaiting_input: run.awaiting_input,
-          outcome: run.outcome,
-          error_message: run.error_message,
-          pr_number: run.pr_number,
-          pr_url: run.pr_url,
-        },
+    if (run.parent_numo_turn_id || run.triggered_by === "chat") afterOrNow(async () => {
+      await deliverAgentDelegationResult(run).catch((error) => {
+        console.error("[agent-runs] delegation delivery failed:", error);
       });
-      if (disposition === "queued") {
-        const { data: parent } = await getServiceClient()
-          .from("numo_assistant_turns")
-          .select("id")
-          .eq("active_run_id", run.id)
-          .eq("status", "queued")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (parent?.id) await executeNumoTurn({ turnId: parent.id as string });
-      }
     });
   }
   return { run, failed: !!error };

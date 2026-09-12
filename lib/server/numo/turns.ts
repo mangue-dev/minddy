@@ -41,6 +41,11 @@ import {
   type ToolExecutionLedger,
 } from "@/lib/server/assistant/loop";
 import type { ToolExecution } from "@/lib/server/assistant/execute-tool";
+import { parseAgentDelegationResult } from "@/lib/server/agent/agent-contract";
+import {
+  deliverAgentDelegationResult,
+  getRun,
+} from "@/lib/server/agent/runs";
 import { withoutWebSearch } from "@/lib/server/web-search";
 import type { SafeEmitter } from "@/lib/server/assistant/sse";
 
@@ -377,9 +382,23 @@ async function buildExecutionInput(input: {
     ? turn.checkpoint.worker_event
     : null;
   if (workerEvent) {
+    let durableResult: unknown;
+    try {
+      durableResult = parseAgentDelegationResult(workerEvent.payload.result);
+    } catch (error) {
+      durableResult = {
+        version: 1,
+        status: "failed",
+        summary: "The code worker ended without a valid structured result.",
+        changedFiles: [],
+        verificationPerformed: [],
+        artifacts: [],
+        unresolvedDecisions: [(error as Error).message],
+      };
+    }
     messages.push({
       role: "system",
-      content: `[Durable code-worker event]\n${JSON.stringify(workerEvent)}`,
+      content: `[Validated durable code-worker result: ${workerEvent.type}]\n${JSON.stringify(durableResult)}\nInterpret this result and answer the user's original request in this conversation. Report partial work, failure and unresolved decisions honestly. Do not tell the user to inspect another conversation for the answer.`,
     });
   }
 
@@ -716,6 +735,21 @@ export async function executeNumoTurn(input: {
       outcome: result.fullContent || null,
       costUsd,
     });
+    if (status === "waiting_work" && result.suspension?.kind === "work") {
+      const worker = await getRun(result.suspension.runId);
+      if (worker && ["completed", "failed", "canceled"].includes(worker.status)) {
+        await deliverAgentDelegationResult(worker);
+        const { data: reconciled } = await service.from("numo_assistant_turns")
+          .select("*").eq("id", claimed.id).single();
+        if (reconciled) {
+          const latest = reconciled as NumoTurn;
+          emitter.emit("done", { status: latest.status });
+          await emitter.flush();
+          emitter.close();
+          return { status: latest.status, turn: latest };
+        }
+      }
+    }
     emitter.emit("done", { status });
     await emitter.flush();
     emitter.close();

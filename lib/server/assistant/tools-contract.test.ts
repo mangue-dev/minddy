@@ -74,6 +74,21 @@ describe("Numo tool contracts", () => {
     expect(accountProperties).not.toHaveProperty("default_reasoning_level");
   });
 
+  it("requires a complete structured brief for code delegation", () => {
+    const launch = tool("launch_code_agent");
+    expect(launch?.function.parameters.required).toEqual([
+      "mode",
+      "objective",
+      "source_references",
+      "constraints",
+      "authorized_work",
+    ]);
+    expect(launch?.function.parameters.properties).toHaveProperty("expected_output");
+    expect(launch?.function.parameters.properties).toHaveProperty("continuation_run_id");
+    expect(launch?.function.description).toMatch(/owned by this Numo turn/i);
+    expect(launch?.function.description).toMatch(/returns here/i);
+  });
+
   it("keeps feedback comment guidance aligned with the comment service", () => {
     const comment = tool("add_feedback_comment");
 

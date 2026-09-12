@@ -1977,7 +1977,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "launch_code_agent",
       description:
-        "Delegate repository work to the code worker using the model and reasoning configured by the user in Account settings. A ticket is optional context, not the identity of the conversation. Use `issue_id` for ticket-specific work; omit it for code exploration, explanations, maintenance or any other project-scoped request. `plan`, `implement` and `verify` require an issue; `custom` accepts any prompt. Every call starts its own conversation and branch. A pull request is not automatic. Model and reasoning overrides are never accepted.",
+        "Delegate a complete repository task to the code worker owned by this Numo turn, using the model and reasoning configured by the user in Account settings. First gather the issue, plan, relevant wiki pages and pull request when they exist; resolve important ambiguity; and decide that repository work is actually needed. A ticket is optional context, not the delegation identity. The worker returns here and Numo gives the final answer in this conversation. Reuse `continuation_run_id` for follow-up on the appropriate worker lineage. A pull request is not automatic. Model and reasoning overrides are never accepted.",
       parameters: {
         type: "object",
         properties: {
@@ -1995,13 +1995,63 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           prompt: {
             type: "string",
             description:
-              "The request for the agent, in the user's language. With a written mode (plan/implement/verify) it is appended as extra precision and can be omitted; with 'custom' it IS the job — say what to do.",
+              "Optional native-mode precision retained for compatibility. Put the complete worker task in objective.",
+          },
+          objective: {
+            type: "string",
+            description:
+              "The complete, unambiguous task the worker must accomplish. Include the desired outcome, not just an issue title or a request to investigate.",
+          },
+          source_references: {
+            type: "array",
+            description:
+              "Sources Numo gathered and relied on for the brief. Cite issues, plans, pages, pull requests, conversation facts, attachments or URLs explicitly.",
+            items: {
+              type: "object",
+              properties: {
+                kind: {
+                  type: "string",
+                  enum: ["issue", "plan", "page", "pull_request", "conversation", "attachment", "url", "other"],
+                },
+                label: { type: "string" },
+                id: { type: "string" },
+                url: { type: "string" },
+                version: { type: "string" },
+              },
+              required: ["kind", "label"],
+            },
+          },
+          constraints: {
+            type: "array",
+            items: { type: "string" },
+            description:
+              "Known product, compatibility, scope, security or delivery constraints the worker must preserve. Pass an empty array only when there are none beyond repository instructions.",
+          },
+          authorized_work: {
+            type: "array",
+            items: {
+              type: "string",
+              enum: ["read_repository", "modify_repository", "run_verification", "commit_changes", "manage_pull_request", "update_issue_plan"],
+            },
+            description:
+              "Explicit work Numo authorizes for this task. Grant only what the user's request requires.",
+          },
+          expected_output: {
+            type: "array",
+            items: { type: "string" },
+            description:
+              "Optional task-specific additions to the standard structured result (summary, changed files, verification, artifacts and unresolved decisions).",
+          },
+          continuation_run_id: {
+            type: "string",
+            description:
+              "Run id from an earlier delegation when this is follow-up work that must reuse its code conversation and branch/PR lineage.",
           },
         },
         // `mode` is REQUIRED: on a small model, an optional field is not
         // simply not filled in — the choice of job would then always be 'custom'
         // by default, and the three native instructions would never be used.
-        required: ["mode"],
+        required: ["mode", "objective", "source_references", "constraints", "authorized_work"],
       },
     },
   },
