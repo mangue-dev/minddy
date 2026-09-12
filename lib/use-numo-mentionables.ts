@@ -21,6 +21,7 @@ import { useProjects } from "@/lib/projects-context";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import type { MentionLinks } from "@/components/mention-links";
 import type { MentionOption } from "@/components/mention-suggest";
+import type { AssistantMention } from "@/lib/assistant-types";
 import type { GlobalBoardResponse, Member } from "@/lib/types";
 
 /**
@@ -61,7 +62,10 @@ export function useNumoMembers(
  * and requests the index of the palette immediately instead of waiting for the dead time
  * which usually arms it — setting up a composer costs nothing.
  */
-export function useNumoMentionables(scopeProjectId: string | null): {
+export function useNumoMentionables(
+  scopeProjectId: string | null,
+  references?: AssistantMention[],
+): {
   mentionables: MentionOption[];
   /** Where the pills of messages ALREADY sent lead: the thread is reread, and a
  ticket cited there opens with a click (components/mention-links). */
@@ -79,7 +83,7 @@ export function useNumoMentionables(scopeProjectId: string | null): {
     wanted,
   );
 
-  const links = useMentionLinksFor({ issues, objectives, pages });
+  const links = useMentionLinksFor({ issues, objectives, pages, references });
 
   const mentionables = useMemo<MentionOption[]>(
     () => [
@@ -103,6 +107,7 @@ export function useNumoMentionables(scopeProjectId: string | null): {
       ...issues.map((i) => ({
         type: "issue" as const,
         id: i.id,
+        projectId: i.project_id,
         label: i.identifier,
         detail: i.title,
         keywords: [i.title],
@@ -110,6 +115,7 @@ export function useNumoMentionables(scopeProjectId: string | null): {
       ...objectives.map((o) => ({
         type: "objective" as const,
         id: o.id,
+        projectId: o.project_id,
         label: o.name,
         color: o.color,
       })),
@@ -120,6 +126,7 @@ export function useNumoMentionables(scopeProjectId: string | null): {
         .map((p) => ({
           type: "page" as const,
           id: p.id,
+          projectId: p.project_id,
           label: p.title,
           icon: p.icon,
         })),

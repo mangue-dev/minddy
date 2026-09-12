@@ -9,6 +9,8 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type Dispatch,
+  type SetStateAction,
 } from "react";
 import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -26,41 +28,17 @@ import { useAuth } from "@/lib/auth-context";
 import { setLocaleCookie } from "@/lib/set-locale";
 import { isAccountTheme } from "@/lib/account-theme";
 
-/**
- * The Numo conversation LIVES ABOVE the panel, not in it.
- *
- * The `AssistantPanel` Sheet unmounts its contents when closed: as long as the
- * cat lived in `AssistantShell`, close the panel for a turn threw
- * the state (the SSE flow continued to dispatch in a dead reducer) and reopen
- * restarted from a restore. By hoisting `useAssistantChat` here, the trick
- * CONTINUES in the background, the shell is just a view, and the FAB can display
- * its border as long as Numo is working.
- *
- * This provider also carries what must survive the disassembly of the view: the
- * SCOPE of the conversation, and the resumption of the open conversation.
- *
- * Both have been read elsewhere than here since MIN-353. The scope is that of the
- * CONVERSATION, not the URL — it's [assistant-scope.ts](assistant-scope.ts)
- * that slices it, and that's what makes a navigation no longer throw the thread in progress. The open conversation is a fact of SERVEUR
- * (`/api/assistant/active-conversation`) and no longer a localStorage key:
- * it survives the reload, the next tab and the desktop app.
- */
+import type { AssistantPinnedContext } from "@/lib/assistant-types";
 
 type AssistantChatApi = ReturnType<typeof useAssistantChat>;
 
 export interface AssistantChatContextValue extends AssistantChatApi {
-  /** Living conversation scope: project id, or `null` = global. */
+  /** Ambient project for the next message, independent of conversation identity. */
   scopeProjectId: string | null;
-  /** Resumption of the open conversation, read on the server side. */
   restoring: boolean;
-  /** Numo produces a round — client flow OR server-side generation. */
   isBusy: boolean;
-  /**
- * An opening has imposed a scope that living conversation cannot carry
- *: a new thread will replace it. Read before sending the message
- * that such an opening carries — sent now, it would go into the departing conversation, and the server would refuse it (scope ≠ conversation).
- */
-  scopeSwitchPending: boolean;
+  pinned: AssistantPinnedContext[];
+  setPinned: Dispatch<SetStateAction<AssistantPinnedContext[]>>;
 }
 
 const AssistantChatContext = createContext<AssistantChatContextValue | null>(
@@ -85,6 +63,7 @@ function purgeLegacyStorage(): void {
   }
 }
 
+/** Keep the conversation and pinned context alive across panel and route changes. */
 export function AssistantChatProvider({ children }: { children: ReactNode }) {
   const { isOpen, pendingOptions, routeProjectId, close: closePanel } = useAssistantPanel();
   const { refreshUser } = useAuth();
@@ -135,10 +114,12 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
  * three cases the recovery believed the field was clear.
  */
   const userPickedRef = useRef(false);
+  const [pinned, setPinned] = useState<AssistantPinnedContext[]>([]);
 
   const loadConversation = useCallback(
     (conversationId: string, projectId: string | null) => {
       userPickedRef.current = true;
+      setPinned([]);
       return loadConversationRaw(conversationId, projectId);
     },
     [loadConversationRaw],
@@ -146,6 +127,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
 
   const reset = useCallback(() => {
     userPickedRef.current = true;
+    setPinned([]);
     resetRaw();
   }, [resetRaw]);
 
@@ -164,9 +146,8 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     state.status === "executing_tool" ||
     state.status === "generating_server";
 
-  // Scope IMPOSED by the opening, if there is one (`undefined` = follow the
-  // road). It doesn't survive `clearPendingOptions()`, so it's only worth
-  // for the gesture that carried it — this is exactly its validity period.
+  // A contextual opening supplies the next message's project until its options
+  // are consumed. Navigation supplies ambient context independently of history.
   const overrideProjectId = useMemo<string | null | undefined>(
     () =>
       pendingOptions && "projectId" in pendingOptions
@@ -175,41 +156,12 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     [pendingOptions],
   );
 
-  // Who decides the scope: the lively conversation, except opening which
-  // imposes another. A navigation no longer moves it — that's the whole fix.
-  const { scopeProjectId: scope, startsNewConversation } = useMemo(
-    () =>
-      resolveAssistantScope({
-        conversationId: state.conversationId,
-        conversationProjectId: state.conversationProjectId,
-        routeProjectId,
-        overrideProjectId,
-        busy: isBusy,
-      }),
-    [
-      state.conversationId,
-      state.conversationProjectId,
-      routeProjectId,
-      overrideProjectId,
-      isBusy,
-    ],
-  );
-
-  // “Ask Numo” about something from ANOTHER project: the current thread does not
-  // cannot accommodate it (the server refuses a message whose scope does not
-  // does not correspond to the conversation), we open a new one in the right one. Never
-  // in the middle of a turn: the seesaw waits until Numo has given up.
-  useEffect(() => {
-    if (startsNewConversation && !isBusy) reset();
-  }, [startsNewConversation, isBusy, reset]);
-
-  // Opening carrying a one-shot action (self-sent prompt, draft):
-  // no resumption, she would chase the action and lose it. Read in a ref
-  // because `clearPendingOptions()` resets the options to null right after.
-  const skipRestoreRef = useRef(false);
-  skipRestoreRef.current = Boolean(
-    pendingOptions?.prompt || pendingOptions?.draft,
-  );
+  const { scopeProjectId: scope } = resolveAssistantScope({
+    conversationId: state.conversationId,
+    conversationProjectId: state.conversationProjectId,
+    routeProjectId,
+    overrideProjectId,
+  });
 
   // The restart is only played ONE time per session, at the first opening of the
   // panel: the open conversation no longer depends on the page you are on
@@ -217,7 +169,13 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
   // who never opens Numo — not even the query.
   const [restoring, setRestoring] = useState(false);
   const [restored, setRestored] = useState(false);
-  const startedRef = useRef(false);
+  const [restoreRequested, setRestoreRequested] = useState(false);
+  // Read at lookup completion too: an action can arrive while restoration is pending.
+  const pendingActionRef = useRef(false);
+  pendingActionRef.current = Boolean(pendingOptions?.prompt || pendingOptions?.draft);
+  useEffect(() => {
+    if (isOpen) setRestoreRequested(true);
+  }, [isOpen]);
   /**
  * What the server carries, as far as we know. `undefined` = we don't know
  * yet. It is HE who avoids the two parasitic writes of the recovery:
@@ -227,17 +185,8 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
   const serverPointerRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
-    if (!isOpen || startedRef.current) return;
-    startedRef.current = true;
+    if (!restoreRequested) return;
     purgeLegacyStorage();
-
-    // One-shot opening: nothing to restart, and the server pointer remains this
-    // that it is until the next send replaces it.
-    if (skipRestoreRef.current) {
-      serverPointerRef.current = null;
-      setRestored(true);
-      return;
-    }
 
     let cancelled = false;
     setRestoring(true);
@@ -250,15 +199,16 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
         // wins: we never recover it. `loadConversationRaw`, otherwise the
         // resume would declare itself as a choice.
         if (!cancelled && conversationId && !userPickedRef.current) {
-          void updateConversation(conversationId, { read: true }).catch(() => {});
           if (detailHref) {
-            // Work opens in its existing detail surface; keep its durable pointer.
+            // Keep the durable work pointer until a new message replaces it.
             serverPointerRef.current = null;
-            setRestoring(false);
-            setRestored(true);
-            closePanel();
-            router.push(detailHref);
+            if (!pendingActionRef.current) {
+              void updateConversation(conversationId, { read: true }).catch(() => {});
+              closePanel();
+              router.push(detailHref);
+            }
           } else {
+            void updateConversation(conversationId, { read: true }).catch(() => {});
             await loadConversationRaw(conversationId, projectId);
           }
         }
@@ -276,7 +226,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isOpen, loadConversationRaw, router, closePanel]);
+  }, [restoreRequested, loadConversationRaw, router, closePanel]);
 
   // Mirror the pointer to the server: open a conversation in writing,
   // starting a new one erases it. `restored` is in the dependencies so that
@@ -332,9 +282,10 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
       reset,
       abort,
       scopeProjectId: scope,
-      restoring,
+      restoring: restoring || !restored,
       isBusy,
-      scopeSwitchPending: startsNewConversation,
+      pinned,
+      setPinned,
     }),
     [
       state,
@@ -343,9 +294,10 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
       reset,
       abort,
       scope,
+      restored,
       restoring,
       isBusy,
-      startsNewConversation,
+      pinned,
     ],
   );
 

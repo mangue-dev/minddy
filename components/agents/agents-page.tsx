@@ -32,7 +32,6 @@ import {
   PROJECT_GROUP_INDENT,
   PROJECT_GROUP_LIMIT,
   SidebarProjectGroup,
-  groupByProject,
   toggledSet,
   type ProjectGroup,
 } from "@/components/sidebar-project-group";
@@ -43,7 +42,6 @@ import {
   useAgentSessionsQuery,
 } from "@/lib/use-agent-runs";
 import { useProjects } from "@/lib/projects-context";
-import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
 import { useAgentReads } from "@/lib/use-agent-reads";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { usePublishCurrentView } from "@/lib/current-view-context";
@@ -575,7 +573,6 @@ export function AgentsPage() {
   const { sessions, loading, refetch } = useAgentSessionsQuery();
   // Projects where the agent can work (linked repository) — only they carry the
   // “+” in their header. Same request as dial, so only one call.
-  const { projectIds: gitLinked } = useGitLinkedProjectsQuery();
   const { reads, markRead } = useAgentReads();
   const isWide = useIsWideViewport();
 
@@ -982,10 +979,7 @@ export function AgentsPage() {
     () => visibleSessions.filter((session) => session.pinned),
     [visibleSessions],
   );
-  const groups = useMemo(
-    () => groupByProject(visibleSessions.filter((session) => !session.pinned), (s) => s.project),
-    [visibleSessions],
-  );
+  const unpinnedSessions = visibleSessions.filter((session) => !session.pinned);
   // A filter in progress UNFOLDS everything and lifts the cup of five: searching is
   // ask to see what fits, not to know where it is stored.
   const filtering = query.trim().length > 0;
@@ -1077,26 +1071,24 @@ export function AgentsPage() {
                 headerIcon={<Pin className="size-4 shrink-0 text-muted-foreground" />}
               />
             ) : null}
-            {groups.map((g) => (
-              <SessionGroupRows
-                key={g.key}
-                group={g}
-                open={filtering || !collapsedGroups.has(g.key)}
-                showAll={filtering || expandedGroups.has(g.key)}
-                collapsible={!filtering}
-                canLaunch={!!g.project && gitLinked.has(g.project.id)}
-                selectedKey={selectedKey}
-                reads={reads}
-                fmtDay={fmtDay}
-                onToggle={() => toggleGroup(g.key)}
-                onShowAll={() => setExpandedGroups((prev) => toggledSet(prev, g.key))}
-                onSelect={selectReal}
-                onNewSession={() => startNewSession(g.project?.id)}
-                onRename={setRenameTarget}
-                onTogglePinned={(session) => void togglePinnedSession(session)}
-                onDelete={setDeleteTarget}
-              />
-            ))}
+            {unpinnedSessions.map((session) => {
+              const key = sessionKey(session);
+              const unread = isAgentSessionUnread(session, reads);
+              return (
+                <SessionRow
+                  key={key}
+                  session={session}
+                  selected={key === selectedKey}
+                  unread={unread}
+                  awaiting={unread && session.awaitingInput}
+                  dateLabel={fmtDay(session.updated_at)}
+                  onSelect={() => selectReal(key)}
+                  onRename={() => setRenameTarget(session)}
+                  onTogglePinned={() => void togglePinnedSession(session)}
+                  onDelete={() => setDeleteTarget(session)}
+                />
+              );
+            })}
           </div>
         )}
       </SecondarySidebar>

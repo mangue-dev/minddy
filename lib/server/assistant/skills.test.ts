@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   parseSelectedSkillPaths,
+  parseSelectedSkills,
   publicSkillsMetadata,
   skillsNote,
+  authorizedSkillsNotes,
 } from "./skills";
 
 describe("assistant repository skills", () => {
@@ -67,5 +69,52 @@ describe("assistant repository skills", () => {
         },
       ],
     });
+  });
+});
+
+describe("historical skill authorization", () => {
+  const skill = {
+    path: ".agents/skills/review/SKILL.md", name: "review", description: "Review",
+    source: ".agents/skills", content: "Review this repository.",
+  };
+
+  it("omits legacy instructions without a source instead of guessing their project", async () => {
+    const from = vi.fn();
+    expect(await authorizedSkillsNotes({ from } as never, [{ skills: [skill] }])).toEqual([""]);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("omits instructions when the authorization query fails", async () => {
+    const query = {
+      select: vi.fn(() => query),
+      in: vi.fn(() => query),
+      is: vi.fn(async () => ({ data: null, error: { message: "Unavailable" } })),
+    };
+    const from = vi.fn(() => query);
+    expect(await authorizedSkillsNotes({ from } as never, [
+      { skills: [{ ...skill, projectId: "a" }] },
+      { skills: [{ ...skill, projectId: "a" }] },
+    ])).toEqual(["", ""]);
+    expect(from).toHaveBeenCalledWith("projects");
+    expect(query.in).toHaveBeenCalledExactlyOnceWith("id", ["a"]);
+    expect(query.is).toHaveBeenCalledWith("deleted_at", null);
+  });
+});
+
+
+describe("repository provenance", () => {
+  const path = ".agents/skills/release/SKILL.md";
+  it("keeps identical paths from different projects distinct", () => {
+    expect(parseSelectedSkills([{ path, projectId: "a" }, { path, projectId: "b" }], undefined, "b"))
+      .toEqual([{ path, projectId: "a" }, { path, projectId: "b" }]);
+  });
+  it("does not rebind a new selection lacking its source project", () => {
+    expect(parseSelectedSkills([{ path }], undefined, "b")).toBeNull();
+    expect(parseSelectedSkills(undefined, [path], "a")).toEqual([{ projectId: "a", path }]);
+  });
+  it("preserves source projects in history and public badges", () => {
+    const metadata = { skills: [{ path, projectId: "a", name: "release", description: "Release", source: ".agents/skills", content: "Use repository A." }] };
+    expect(skillsNote(metadata)).toContain("project a");
+    expect(publicSkillsMetadata(metadata)).toMatchObject({ skills: [{ projectId: "a", path }] });
   });
 });

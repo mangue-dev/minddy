@@ -68,3 +68,13 @@ describe("mentionProjectLookup", () => {
     ).toBe("/projects/p-issue?issue=shared");
   });
 });
+
+
+it("keeps a historical page mention linked after navigating to another project", () => {
+  const projectOf = mentionProjectLookup({
+    pages: [{ id: "page-b", project_id: "b" }],
+    references: [{ type: "page", id: "page-a", projectId: "a" }],
+  });
+  expect(mentionTargetPath("page", "page-a", projectOf("page", "page-a")))
+    .toBe("/projects/a/pages/page-a");
+});

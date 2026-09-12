@@ -89,11 +89,7 @@ export interface AssistantChatState {
   activeToolCalls: ActiveToolCall[];
   toolCallResults: Map<string, ToolCallResult>;
   conversationId: string | null;
-  /**
- * The living conversation project (`null` = global conversation). Frozen
- * upon its creation, it travels with it: it is HE who sets the scope of Numo,
- * plus the current URL (MIN-353, cf. lib/assistant-scope.ts).
- */
+  /** Legacy project metadata retained when loading older conversations. */
   conversationProjectId: string | null;
   error: string | null;
 }
@@ -575,7 +571,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           ...(options?.mentions?.length ? { mentions: options.mentions } : {}),
           ...(options?.command ? { command: options.command } : {}),
           ...(options?.skills?.length
-            ? { skillPaths: options.skills.map((skill) => skill.path) }
+            ? { skills: options.skills }
             : {}),
           // The browser's time zone travels with each message: Numo has it
           // need to set a routine at the time we tell him (MIN-185).
@@ -626,11 +622,11 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
                 const data = JSON.parse(line.slice(6));
                 if (eventType === "tool_call_start") toolCalls += 1;
                 handleSSEEvent(eventType, data, dispatch, {
-                  projectId: projectId ?? null,
+                  projectId: state.conversationProjectId,
                   onConversationId: (id) => {
                     liveConvRef.current = {
                       id,
-                      projectId: projectId ?? null,
+                      projectId: liveConvRef.current.id === id ? liveConvRef.current.projectId : null,
                     };
                   },
                   onToolResult: onToolResultRef.current,
@@ -659,7 +655,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         const convId = liveConvRef.current.id ?? state.conversationId;
         const convProjectId = liveConvRef.current.id
           ? liveConvRef.current.projectId
-          : (projectId ?? null);
+          : state.conversationProjectId;
         if (convId) {
           try {
             const { status } = await fetchConversationStatus(
@@ -697,10 +693,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     [state.conversationId, startPolling, stopPolling, tApi]
   );
 
-  /** `projectId` = the scope of THIS conversation, as it is in base.
- * The caller always knows it (the history list carries it, like the
- * open conversation pointer): it is this which sets the scope to the
- * resume, instead of the project of the current URL (MIN-353). */
+  /** Load a conversation by identity; project metadata never chooses the next target. */
   const loadConversation = useCallback(
     async (conversationId: string, projectId: string | null) => {
       stopPolling();
@@ -769,7 +762,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
 // ── SSE event dispatcher ───────────────────────────────────────────────
 
 interface SSEContext {
-  /** The scope of the current send — the scope of the created conversation. */
+  /** Legacy project metadata of the resumed conversation. */
   projectId: string | null;
   onConversationId?: (conversationId: string) => void;
   onToolResult?: (name: string, success: boolean, result: unknown) => void;

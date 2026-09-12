@@ -22,19 +22,7 @@ import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { trackEvent } from "@/lib/analytics";
 
 export interface OpenAssistantOptions {
-  /**
- * IMPOSED range on Numo. `null` = explicit global mode, `string` = this project.
- *
- * `undefined` = do not impose anything: the open conversation keeps its own, and
- * if there is none, we follow the route (MIN-353, cf. lib/assistant-scope.ts).
- * This is NOT “following the route”: since the conversation carries its
- * scope, navigation no longer moves it. A surface that really wants the
- * road passes `routeProjectId` — that's what the notebook does.
- *
- * An imposed scope that open conversation cannot carry opens a
- * new thread: it's the "Ask Numo" of a painting or a return, a gesture
- * on a specific thing, which has nothing to do with the next conversation.
- */
+  /** Project context attached by this opening; never replaces the conversation. */
   projectId?: string | null;
   /** Auto-send a one-shot message right after opening. */
   prompt?: string;
@@ -125,6 +113,9 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
     useState<OpenAssistantOptions | null>(null);
   const [activePageContext, setActivePageContext] =
     useState<AssistantPageContext | null>(null);
+  useEffect(() => {
+    setActivePageContext(null);
+  }, [pathname]);
   const [ambientContext, setAmbientContextState] =
     useState<AssistantPageContext | null>(null);
   // Which mounted surface owns the current ambient context. Only the owner may
@@ -173,7 +164,7 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
       autosend: !!opts?.prompt,
     });
     setPendingOptions(opts ?? null);
-    setActivePageContext(opts?.pageContext ?? null);
+    setActivePageContext(opts?.pageContext ?? (opts?.projectId ? { projectId: opts.projectId } : null));
     setIsOpen(true);
   }, []);
 

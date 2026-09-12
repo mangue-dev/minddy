@@ -1,8 +1,8 @@
 export function resolveAssistantProjectId(
-  conversationProjectId: string | null,
+  contextProjectId: string | null,
   requestedProjectId: unknown,
 ): string | null {
-  if (typeof requestedProjectId !== "string") return conversationProjectId;
+  if (typeof requestedProjectId !== "string") return contextProjectId;
   const explicitProjectId = requestedProjectId.trim();
-  return explicitProjectId || conversationProjectId;
+  return explicitProjectId || contextProjectId;
 }

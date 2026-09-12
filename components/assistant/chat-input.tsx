@@ -79,6 +79,7 @@ import type {
 import type { ResourceInput } from "@/lib/types";
 import {
   MAX_SELECTED_SKILLS,
+  repositorySkillKey,
   type RepositorySkill,
   type RepositorySkillSummary,
 } from "@/lib/repository-skills";
@@ -134,6 +135,7 @@ function mentionFromNode(node: HTMLElement): MentionOption | null {
     type: type as MentionOption["type"],
     id,
     label,
+    ...(node.dataset.mentionProjectId ? { projectId: node.dataset.mentionProjectId } : {}),
     ...(node.dataset.mentionSeed ? { avatarSeed: node.dataset.mentionSeed } : {}),
     // `data-mention-icon` carries two things depending on the type, and only one
     // times: the favicon of a project (a URL) or the emoji of a page. An attribute
@@ -152,6 +154,7 @@ function createMentionNode(option: MentionOption): HTMLSpanElement {
   pill.contentEditable = "false";
   pill.dataset.mentionType = option.type;
   pill.dataset.mentionId = option.id;
+  if (option.projectId) pill.dataset.mentionProjectId = option.projectId;
   pill.dataset.mentionLabel = option.label;
   if (option.avatarSeed) pill.dataset.mentionSeed = option.avatarSeed;
   const iconAttr = option.iconUrl ?? option.icon;
@@ -167,13 +170,14 @@ function skillFromNode(node: HTMLElement): RepositorySkillSummary | null {
   const description = node.dataset.skillDescription;
   const source = node.dataset.skillSource as RepositorySkillSummary["source"] | undefined;
   if (!path || !name || description === undefined || !source) return null;
-  return { path, name, description, source };
+  return { path, name, description, source, ...(node.dataset.skillProjectId ? { projectId: node.dataset.skillProjectId } : {}) };
 }
 
 function createSkillNode(skill: RepositorySkillSummary): HTMLSpanElement {
   const pill = document.createElement("span");
   pill.contentEditable = "false";
   pill.dataset.skillPath = skill.path;
+  if (skill.projectId) pill.dataset.skillProjectId = skill.projectId;
   pill.dataset.skillName = skill.name;
   pill.dataset.skillDescription = skill.description;
   pill.dataset.skillSource = skill.source;
@@ -664,6 +668,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             kind: option.type,
             id: option.id,
             label: option.label,
+            ...(option.projectId ? { projectId: option.projectId } : {}),
             ...(option.detail ? { detail: option.detail } : {}),
             ...(option.avatarSeed ? { avatarSeed: option.avatarSeed } : {}),
             ...(option.color !== undefined ? { color: option.color } : {}),
@@ -700,8 +705,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     const availableSkills = useMemo(() => {
       if (skillSlots.length >= MAX_SELECTED_SKILLS) return [];
-      const selected = new Set(skillSlots.map((slot) => slot.skill.path));
-      return (skills ?? []).filter((skill) => !selected.has(skill.path));
+      const selected = new Set(skillSlots.map((slot) => repositorySkillKey(slot.skill)));
+      return (skills ?? []).filter((skill) => !selected.has(repositorySkillKey(skill)));
     }, [skillSlots, skills]);
 
     const addMenuSkillOptions = useMemo(
@@ -722,7 +727,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         if (!el) return;
         const alreadySelected = [
           ...el.querySelectorAll<HTMLElement>("[data-skill-path]"),
-        ].some((node) => node.dataset.skillPath === skill.path);
+        ].some((node) => node.dataset.skillPath === skill.path && node.dataset.skillProjectId === skill.projectId);
         if (alreadySelected) {
           setAddMenuOpen(false);
           setAddMenuQuery("");
@@ -783,6 +788,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           type: option.type,
           id: option.id,
           label: option.label,
+          ...(option.projectId ? { projectId: option.projectId } : {}),
           ...(option.avatarSeed ? { avatarSeed: option.avatarSeed } : {}),
           ...(option.color ? { color: option.color } : {}),
           ...(option.icon ? { icon: option.icon } : {}),
@@ -798,8 +804,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       const selected: RepositorySkillSummary[] = [];
       for (const node of el.querySelectorAll<HTMLElement>("[data-skill-path]")) {
         const skill = skillFromNode(node);
-        if (!skill || seen.has(skill.path)) continue;
-        seen.add(skill.path);
+        if (!skill || seen.has(repositorySkillKey(skill))) continue;
+        seen.add(repositorySkillKey(skill));
         selected.push(skill);
       }
       return selected;
@@ -1266,7 +1272,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               onClick={loadSkill ? () => setPreviewSkill(skill) : undefined}
             />,
             el,
-            skill.path,
+            repositorySkillKey(skill),
           ),
         )}
         {loadSkill ? (

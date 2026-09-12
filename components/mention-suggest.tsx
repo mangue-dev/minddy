@@ -19,6 +19,8 @@ import { UserAvatar } from "@/components/user-avatar";
 import { filterMentionItems } from "@/lib/mention-menu";
 
 export interface MentionOption {
+  /** Source project for contextual mentions retained across navigation. */
+  projectId?: string;
   type: "member" | "project" | "issue" | "objective" | "page";
   id: string;
   /** What is written after the “@”. */
