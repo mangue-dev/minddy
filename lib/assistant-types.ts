@@ -15,6 +15,90 @@ export interface Conversation {
   project?: { name: string } | null;
 }
 
+/** Source IDs are namespaced: a worker run is a work reference, never a chat. */
+export type NumoLegacySource = "assistant" | "agent" | "run";
+
+export interface NumoConversation extends Omit<Conversation, "user_id"> {
+  user_id: string | null;
+  source: "assistant" | "agent";
+  legacy_id: string;
+  /** Membership scope; independent of optional project context. */
+  access_project_id: string | null;
+  visibility: "private" | "project";
+  archived_at: string | null;
+  pinned_at: string | null;
+  last_read_at: string | null;
+  detail_href: string | null;
+  latest_work_id: string | null;
+}
+
+export interface NumoMessage extends AssistantMessage {
+  source: "assistant" | "agent";
+  kind: "message" | "action" | "worker_message";
+  turn_id: string | null;
+  run_id: string | null;
+  worker_source: string | null;
+  legacy_queue_message_id: string | null;
+  legacy_event_id: string | null;
+}
+
+export interface NumoWorkReference {
+  id: string;
+  conversation_id: string;
+  work_conversation_id: string;
+  legacy_conversation_id: string;
+  project_id: string;
+  issue_id: string | null;
+  pull_request_id: string | null;
+  status: "queued" | "running" | "completed" | "failed" | "canceled";
+  title: string | null;
+  branch_name: string | null;
+  pr_number: number | null;
+  pr_url: string | null;
+  pr_state: "draft" | "open" | "merged" | "closed" | null;
+  routine_id: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+  archived_at: string | null;
+  visibility: "private" | "project";
+  pinned_at: string | null;
+  last_read_at: string | null;
+  detail_href: string;
+}
+
+export interface NumoConversationDetail {
+  conversation: NumoConversation;
+  /** Worker records retain kind=worker_message and their original provenance. */
+  messages: NumoMessage[];
+  actions: NumoMessage[];
+  work: NumoWorkReference[];
+  contexts: Array<{
+    id: string; conversation_id: string; kind: string; resource_id: string;
+    role: string; snapshot: Record<string, unknown>; created_at: string;
+  }>;
+  artifacts: Array<{
+    id: string; conversation_id: string; run_id: string | null;
+    kind: "branch" | "pull_request"; ref: string; url: string | null;
+    state: string | null; created_at: string; updated_at: string;
+  }>;
+  turns: Array<{
+    id: string; conversation_id: string; run_id: string;
+    status: NumoWorkReference["status"]; model: string | null;
+    reasoning_level: string | null; initiated_by: string | null;
+    cost_usd: number; outcome: string | null; error_message: string | null;
+    started_at: string | null; completed_at: string | null;
+    created_at: string; updated_at: string;
+  }>;
+}
+
+export interface NumoConversationPatch {
+  title?: string | null;
+  pinned?: boolean;
+  archived?: boolean;
+  read?: boolean;
+}
+
 export interface AssistantToolCall {
   id: string;
   type: "function";
@@ -117,7 +201,7 @@ export interface AssistantMention {
   occurrence?: number;
   /** Members: the portrait seed — see AssistantPinnedContext.avatarSeed. */
   avatarSeed?: string;
-  /** Objectifs : leur couleur — voir AssistantPinnedContext.color. */
+  /** Objectives: their color; see AssistantPinnedContext.color. */
   color?: string | null;
   /** Wiki pages: their emoji (MIN-273). */
   icon?: string | null;

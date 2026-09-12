@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { resolveNumoConversation } from "@/lib/server/numo/conversations";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import { getRun, requestInterrupt, type AgentRun } from "@/lib/server/agent/runs";
@@ -75,7 +76,15 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ run: sanitizeRun(run) });
+  try {
+    const identity = await resolveNumoConversation(auth.supabase, "run", run.id);
+    return NextResponse.json({ run: { ...sanitizeRun(run),
+      conversation_id: run.conversation_id,
+      numo_conversation_id: identity?.conversationId ?? null,
+    } });
+  } catch {
+    return NextResponse.json({ error: "Unable to resolve conversation" }, { status: 500 });
+  }
 }
 
 /** A conversation title fits on one line — beyond that, the column truncates it
