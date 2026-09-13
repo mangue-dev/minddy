@@ -284,92 +284,6 @@ export async function postIssueAutomationApi(
   );
 }
 
-export interface NumoIntentStartResponse {
-  conversation: { id: string };
-  turn: { id: string };
-  detail_href: string;
-}
-
-/** Legacy issue launch client. The server now returns a Numo conversation. */
-export async function launchAgentRunApi(
-  issueId: string,
-  body: {
-    prompt?: string;
-    baseBranch?: string;
-    /** `plan` (supervise), `verify` (check the work done) and `custom`
-     * (free instructions from the user) leave the exit where it is: alone
-     * `implement` the “in progress” pass on the server side. */
-    intent?: "implement" | "plan" | "verify" | "custom";
-    mentions?: AssistantMention[];
-    attachments?: ResourceInput[];
-  },
-): Promise<NumoIntentStartResponse> {
-  // The prompt is NEVER sent — only its presence and length.
-  trackEvent("agent_launched", {
-    has_branch: !!body.baseBranch,
-    provider: "unknown",
-    scope: "issue_context",
-    has_prompt: !!body.prompt,
-    prompt_length_bucket: lengthBucket(body.prompt),
-  });
-  return parseJson(
-    await fetch(`/api/issues/${issueId}/agent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    }),
-  );
-}
-
-/**
- * Branches from the repository linked to the issue project (basic branch picker in phase
- * compound). `defaultBranch` at the top of the list.
- */
-export async function fetchIssueRepoBranchesApi(
-  issueId: string,
-): Promise<{ branches: string[]; defaultBranch: string }> {
-  return parseJson(await fetch(`/api/issues/${issueId}/agent/branches`));
-}
-
-// ── Runs WITHOUT TICKET (MIN-84): free subject, anchored to a project ───────────────
-
-/**
- * Legacy ticketless launch client. The project and free-form request now enter
- * a common Numo conversation; any repository work is delegated internally.
- */
-export async function launchNotebookAgentApi(body: {
-  projectId: string;
-  prompt: string;
-  mentions?: AssistantMention[];
-  attachments?: ResourceInput[];
-  baseBranch?: string;
-}): Promise<NumoIntentStartResponse> {
-  trackEvent("agent_launched", {
-    has_branch: !!body.baseBranch,
-    provider: "unknown",
-    scope: "general",
-    has_prompt: !!body.prompt,
-    prompt_length_bucket: lengthBucket(body.prompt),
-  });
-  return parseJson(
-    await fetch(`/api/agent-runs`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    }),
-  );
-}
-
-/** Current domain name; the old export remains available for compatibility. */
-export const launchGeneralAgentApi = launchNotebookAgentApi;
-
-/** Branches of the repository linked to a PROJECT (composed of a run notebook). */
-export async function fetchProjectRepoBranchesApi(
-  projectId: string,
-): Promise<{ branches: string[]; defaultBranch: string }> {
-  return parseJson(await fetch(`/api/projects/${projectId}/agent/branches`));
-}
-
 /** Detail (client-safe) of a run — the conversation of a notebook session. */
 export async function fetchAgentRunApi(
   runId: string,
@@ -928,7 +842,12 @@ export async function submitPullRequestReviewApi(
  */
 export async function requestPullRequestAiReviewApi(
   prId: string,
-): Promise<{ ok: true } & NumoIntentStartResponse> {
+): Promise<{
+  ok: true;
+  conversation: { id: string };
+  turn: { id: string };
+  detail_href: string;
+}> {
   trackEvent("pr_ai_review_requested");
   return parseJson(
     await fetch(prEndpoint(prId), {

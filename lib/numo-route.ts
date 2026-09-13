@@ -1,8 +1,8 @@
 export type AppSearchParams = Record<string, string | string[] | undefined>;
 
-const LEGACY_AGENT_PARAMS = ["run", "issue", "compose"] as const;
+const LEGACY_AGENT_PARAMS = ["run", "issue"] as const;
 
-/** Legacy code-agent launches keep the old detail surface while Numo uses its own route. */
+/** Existing worker histories keep their detail surface while new work uses Numo. */
 export function usesLegacyAgentSurface(params: AppSearchParams): boolean {
   return LEGACY_AGENT_PARAMS.some((key) => params[key] !== undefined);
 }

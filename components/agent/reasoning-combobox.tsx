@@ -22,25 +22,22 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Picker of the REASONING level of an agent session (MIN-122) — the counterpart
- * of the BranchCombobox, simpler: short and CLOSED list, therefore no field
- * de recherche ni de saisie libre.
+ * Reasoning-level picker for an agent session (MIN-122). It is a compact,
+ * closed list with no search field or free-form input.
  *
- * WHAT IT LISTS DEPENDS ON THE MODEL, and cannot not depend on it: the
- * levels are those that the chosen model publishes (`levels`, resolved by
- * `reasoningLevelsFor` at the caller, who alone knows which model is chosen).
- * Un `gpt-5.1-codex-max` en accepte cinq dont `xhigh`, un `gemini-3` quatre dont
- * `minimal` and without “without reasoning”, a Claude does not publish any — we
- * then falls back on the four histories. Proposing the seven everywhere would offer
- * choices without effect; offering three everywhere hid what the models
- * savent faire.
+ * The available levels depend on the selected model. The caller resolves the
+ * model's published capabilities with `reasoningLevelsFor`. For example,
+ * `gpt-5.1-codex-max` accepts five levels including `xhigh`, while `gemini-3`
+ * accepts four including `minimal` and does not support disabling reasoning.
+ * Claude models publish no levels, so they use the four generic defaults.
+ * Offering all seven values would expose ineffective choices, while a fixed
+ * three-level list would hide supported capabilities.
  *
- * Like the model and the branch, the level is chosen at launch then FROZEN for
- * the session: everywhere else, the picker is a locked chip + tooltip.
+ * Like the model and branch, the level is selected at launch and then frozen
+ * for the session. Everywhere else, the picker is a locked chip with a tooltip.
  *
- * All levels are open to everyone, minddy quota included — subscription is
- * paid, it must be usable in its entirety. What limits the expense is the budget
- * of use itself, not a restriction on the level.
+ * Every level is available to every user, including with the Minddy quota.
+ * Usage budgets limit expense; access to individual levels does not.
  */
 
 const LABEL_KEYS: Record<ReasoningLevel, MessageKey<"Agent">> = {

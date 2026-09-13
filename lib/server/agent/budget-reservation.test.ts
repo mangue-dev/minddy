@@ -13,12 +13,10 @@ const launchRoute = readFileSync(
 );
 
 describe("atomic agent budget reservations", () => {
-  it("throttles interactive launches before reading their request body", () => {
-    const throttle = launchRoute.indexOf("rateLimitRefusal(");
-    const bodyRead = launchRoute.indexOf("await request.json()", throttle);
-
-    expect(throttle).toBeGreaterThan(0);
-    expect(bodyRead).toBeGreaterThan(throttle);
+  it("rejects the retired interactive launch route before reading a body", () => {
+    expect(launchRoute).toContain('error: "numoRequired"');
+    expect(launchRoute).not.toContain("await request.json()");
+    expect(launchRoute).not.toContain("create_agent_run_with_budget");
   });
 
   it("serializes account reservations before recomputing spend and inserting", () => {

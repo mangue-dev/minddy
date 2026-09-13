@@ -12,7 +12,6 @@ import { issueIdentifier } from "@/lib/issue-constants";
 import { agentSessionTitle } from "@/lib/agent-session-title";
 import { ChainStatusBar } from "@/components/automations/chain-status-bar";
 import type { AgentSessionListItem } from "@/lib/agent-api";
-import type { AgentComposeIntent } from "@/lib/agent-compose-draft";
 
 /**
  * Agent conversation detail panel (Agents page): a clean header
@@ -32,27 +31,11 @@ export function AgentSessionDetail({
   item,
   onBack,
   onOpenIssue,
-  compose = false,
-  composeInitialText,
-  composeIntent,
 }: {
   item: AgentSessionListItem;
   onBack: () => void;
   /** Opens the linked issue in the side panel, above the page (no navigation). */
   onOpenIssue: (issueId: string, projectId: string) => void;
-  /**
-   * Opens the conversation in the COMPOSE phase (launch draft): compose
-   * pre-written + model picker, without reopening the last run. `item` is then a
-   * synthetic entry (no real run) — see the Agents page.
-   */
-  compose?: boolean;
-  /** Pre-written prompt initiating the composition in composition (relayed to the conversation). */
-  composeInitialText?: string;
-  /**
-   * What the entry point asked for: `plan` (framing) does not start the
-   * ticket at launch, `implement` if. Relayed as is to the conversation.
-   */
-  composeIntent?: AgentComposeIntent;
 }) {
   const t = useTranslations("Agents");
   const router = useRouter();
@@ -101,9 +84,7 @@ export function AgentSessionDetail({
     item.pr_state === "merged" || item.pr_state === "closed" ? item.pr_state : null;
 
   const prActions =
-    // In composition: no PR button (no run launched; legacy PR does not exist
-    // once the first message has been sent). Otherwise, two cases depending on what the PR
-    // still waiting:
+    // Two cases depending on what the PR is still waiting for:
     // • LIVE (open, draft) → the action, “see the pull request”;
     // • FINISHED (merged, closed) → its STATUS, in the badge of the Pull page
     // requests. There is nothing more to do about it, and an action button would lie
@@ -111,7 +92,7 @@ export function AgentSessionDetail({
     //
     // It's the SAME badge as elsewhere (`PrStateBadge`), in GitHub colors:
     // merged purple, closed red. This header painted its own version.
-    compose || item.pr_number == null ? undefined : closedState ? (
+    item.pr_number == null ? undefined : closedState ? (
       <button
         type="button"
         onClick={() => router.push(`/pull-requests?run=${item.runId}`)}
@@ -237,12 +218,7 @@ export function AgentSessionDetail({
         // that the clicked line would be a lie. The `issueId` anchor remains:
         // it is from him that the lineage comes (a past run is not
         // resumable), branches and the launch of a new run.
-        // In COMPOSE (launch draft), `initialCompose` forces it to be composed
-        // blank no matter what — the run doesn't exist yet.
-        initialRunId={compose ? null : item.runId}
-        initialCompose={compose}
-        initialComposeText={compose ? composeInitialText : undefined}
-        composeIntent={compose ? composeIntent : undefined}
+        initialRunId={item.runId}
         active
         headerTitle={headerTitle}
         headerActions={prActions}

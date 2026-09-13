@@ -1,17 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getLocale } from "next-intl/server";
-
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { getProjectAccess } from "@/lib/server/project-access";
-import { parseAgentMentions } from "@/lib/agent-mentions";
-import { parseResourcesInput } from "@/lib/server/attachments";
-import type { AttachmentInput } from "@/lib/types";
-import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
-import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
-import {
-  numoIntentErrorResponse,
-  startNumoIntent,
-} from "@/lib/server/numo/start-intent";
 
 /**
  * GLOBAL list of code agent (Numo) conversations, all projects
@@ -32,17 +20,12 @@ import {
  * (read states remain indexed by ticket: two conversations from the same ticket
  * therefore become read together).
  *
- * POST is a compatibility adapter for old ticketless launch clients. It now
- * creates a common Numo conversation and never a standalone worker session.
+ * POST is a tombstone: new work enters through Numo, while GET keeps historical
+ * standalone worker records accessible.
  */
 
 export const runtime = "nodejs";
-// The launch kick drains the first chunk into after(): same window as the
-// cron route (270 s budget) — same reason as 300 from /api/issues/[id]/agent.
-export const maxDuration = 300;
-
 const WORKING_STATUSES = ["queued", "running"];
-const AGENT_LAUNCH_RATE_LIMIT = { limit: 10 };
 
 type AgentRunStatus = "queued" | "running" | "completed" | "failed" | "canceled";
 
@@ -241,125 +224,10 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ sessions });
 }
 
-// Compatibility request limits for old notebook-style clients.
-// A notebook may contain MAX_SCRATCHPAD_LENGTH characters, and its prompt adds
-// framing around that content. Keep enough headroom for the framing so a large
-// notebook is never silently cut before it reaches the agent.
-const MAX_PROMPT_LENGTH = MAX_SCRATCHPAD_LENGTH + 8_192;
-const MAX_BRANCH_LENGTH = 255;
-
-/**
- * Launch a run WITHOUT A TICKET (MIN-84, called “carnet” — the notebook was the
- * first entry point): anchored to a project (the repository to clone) + a text
- * free as instruction, whatever the subject. Project member required —
- * the run is then personal (RLS: creator alone).
- */
-export async function POST(request: NextRequest) {
-  const auth = await getAuthedUser(request);
-  if (!auth.ok) return auth.response;
-  const limited = rateLimitRefusal(
-    auth.user.id,
-    "agent-runs:launch",
-    AGENT_LAUNCH_RATE_LIMIT,
+/** Retired ticketless launch endpoint kept as a tombstone for stale clients. */
+export async function POST() {
+  return NextResponse.json(
+    { error: "numoRequired", code: "numoRequired" },
+    { status: 410 },
   );
-  if (limited) return limited;
-
-  let body: {
-    projectId?: string;
-    prompt?: string;
-    baseBranch?: string;
-    mentions?: unknown;
-    attachments?: unknown;
-    /** Legacy desktop-local fields are parsed only so stale clients receive
-     * the explicit retirement response instead of silently running elsewhere. */
-    localExec?: unknown;
-    localWorktree?: unknown;
-    localIssueContextConfirmed?: unknown;
-  };
-  try {
-    const parsed: unknown = await request.json();
-    // Non-object body (null, string…): refused here rather than crashing further down.
-    if (!parsed || typeof parsed !== "object") throw new Error("not an object");
-    body = parsed as typeof body;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-
-  if ("model" in body || "reasoningLevel" in body || "forced" in body) {
-    return NextResponse.json(
-      {
-        error: "workerConfigurationManagedInSettings",
-        code: "workerConfigurationManagedInSettings",
-      },
-      { status: 400 },
-    );
-  }
-  if (
-    body.localExec === true ||
-    body.localWorktree === true ||
-    body.localIssueContextConfirmed === true
-  ) {
-    return NextResponse.json(
-      { error: "localExecutionRetired", code: "localExecutionRetired" },
-      { status: 410 },
-    );
-  }
-
-  const projectId = typeof body.projectId === "string" ? body.projectId.trim() : "";
-  const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
-  // A uuid is 36 characters long: beyond the margin, forged body.
-  if (!projectId || projectId.length > 64) {
-    return NextResponse.json({ error: "projectId required" }, { status: 400 });
-  }
-  if (!prompt) {
-    return NextResponse.json(
-      { error: "promptRequired", code: "promptRequired" },
-      { status: 400 },
-    );
-  }
-  if (prompt.length > MAX_PROMPT_LENGTH) {
-    return NextResponse.json(
-      { error: "promptTooLong", code: "promptTooLong", maxLength: MAX_PROMPT_LENGTH },
-      { status: 413 },
-    );
-  }
-
-  const access = await getProjectAccess(auth.user.id, projectId);
-  if (!access?.isMember) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 });
-  }
-
-  const baseBranch =
-    typeof body.baseBranch === "string" && body.baseBranch.trim()
-      ? body.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
-      : undefined;
-  const resources = parseResourcesInput(body.attachments, `chat/${auth.user.id}/`, 5);
-  if (resources === null) {
-    return NextResponse.json({ error: "Invalid attachments" }, { status: 400 });
-  }
-  const attachments = resources.filter((resource): resource is AttachmentInput => resource.kind !== "link");
-  try {
-    const started = await startNumoIntent({
-      supabase: auth.supabase,
-      userId: auth.user.id,
-      userMetadata: auth.user.user_metadata,
-      projectId,
-      prompt: baseBranch
-        ? `${prompt}\n\nRequested base branch: ${baseBranch}`
-        : prompt,
-      locale: await getLocale(),
-      source: "home",
-      action: "custom",
-      context: { projectId },
-      mentions: parseAgentMentions(body.mentions),
-      attachments,
-    });
-    return NextResponse.json({
-      conversation: { id: started.conversationId },
-      turn: { id: started.turnId },
-      detail_href: started.detailHref,
-    }, { status: 202 });
-  } catch (error) {
-    return numoIntentErrorResponse(error);
-  }
 }

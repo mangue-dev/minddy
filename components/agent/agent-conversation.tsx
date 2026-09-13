@@ -11,7 +11,6 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, cn, Spinner, toast } from "mangue-ui";
 import { GitPullRequest } from "lucide-react";
@@ -22,14 +21,12 @@ import { ChatInput } from "@/components/assistant/chat-input";
 import { AskUserCard } from "@/components/assistant/ask-user-card";
 import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
 import { unechoedMessages } from "@/lib/agent-pending";
-import type { AgentComposeIntent } from "@/lib/agent-compose-draft";
 import {
   heartbeatAgentRunApi,
   interruptAgentRunApi,
   isAgentRunActive,
   isAgentRunResumable,
   isAgentRunWorking,
-  launchAgentRunApi,
   steerAgentRunApi,
 } from "@/lib/agent-api";
 import {
@@ -46,7 +43,6 @@ import {
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
 import { ModelBadge } from "@/components/model-badge";
 import { ModelCombobox } from "./model-combobox";
-import { BranchCombobox } from "./branch-combobox";
 import { ReasoningCombobox } from "./reasoning-combobox";
 import { useAgentRunLocalDiff } from "@/lib/use-agent-run-live";
 import {
@@ -75,16 +71,13 @@ import { useRepositorySkills } from "@/lib/use-repository-skills";
  * several, successive, only one of which can WORK at a time; they don't
  * choose more here (the middle selector of the header is gone) but in
  * the LIST on the Agents page, where each has their line and title. The host designates
- * so the one we open, and two modes are distinguished by the ENTRY POINT:
- *
- * • HOT (`live`) — the designated run (`initialRunId` / `noteRunId`), or failing that
+ * so the one we open. The designated run (`initialRunId` / `noteRunId`), or failing that
  * the one who works, otherwise the last of the issue: the thread is its flow
  * of events and composing it speaks DIRECTLY to it (`/steer`), in its
  * context. At rest, the conversation CONTINUES thus, naturally — as
  * a cat. Only the LAST run of the outcome can be repeated; the previous ones
- * consult (the server applies the same rule).
- * • COLD (`compose`) — a legacy issue compose link. Sending now creates a
- * common Numo conversation with issue context rather than a worker run.
+ * consult (the server applies the same rule). New work starts only from the
+ * common Numo composer; this component is the historical work adapter.
  *
  * As long as the component is `active`, a heartbeat refreshes the idle clock
  * of the run so that the sandbox is not cut while reading or writing.
@@ -100,58 +93,35 @@ export function AgentConversation({
   projectId = null,
   noteRunId = null,
   initialRunId = null,
-  initialCompose = false,
   active = true,
   headerTitle,
   headerActions,
-  initialComposeText,
-  composeIntent = "implement",
 }: {
   /** Anchor issue — null for a NOTEBOOK session (pass `noteRunId`). */
   issueId?: string | null;
-  /** Readable identifier (MIN-42) — displayed in the header in phase compose. */
+  /** Readable identifier (MIN-42) — displayed while the run is loading. */
   issueIdentifier?: string;
   /** Project scope for @ mention suggestions and page resolution. */
   projectId?: string | null;
   /**
    * Session WITHOUT TICKET (MIN-84): the run IS the session — conversation of ONE
-   * run, without outcome history or composite phase (the run already exists; the
-   * composed of these sessions lives in SessionCompose, before any run).
+   * run, without outcome history or a launch phase.
    */
   noteRunId?: string | null;
   /**
    * Open THIS run — the one in the line clicked on the Agents page, the one that the
    * Exit sign reopens. Absent → the run that WORKS, otherwise the LAST
-   * run no `failed` of the outcome, and without any run we compose.
+   * run no `failed` of the outcome.
    */
   initialRunId?: string | null;
-  /**
-   * Force the phase to compose at the opening (launch draft) even if the outcome
-   * already has rest runs.
-   */
-  initialCompose?: boolean;
   /** Is the component visible/alive? Gate the question and the heartbeat. */
   active?: boolean;
   /** Left block of the header (default: live model / composite issue). */
   headerTitle?: ReactNode;
   /** Action block to the right of the header. */
   headerActions?: ReactNode;
-  /**
-   * Pre-written prompt that initiates the compose in phase compose (request
-   * implementation adapted to the outcome). One-shot: read when editing the composer, then
-   * freely editable. Without it, the composer starts empty (“New run”, modal).
-   */
-  initialComposeText?: string;
-  /**
-   * What the entry point asked the agent: `plan` (“Generate plan” /
-   * "Check plan") FRAMES the ticket without starting it — the server does not
-   * then does not go “in progress”. Follows the draft, not the text of the composer:
-   * the user remains free to rewrite the instruction.
-   */
-  composeIntent?: AgentComposeIntent;
 }) {
   const t = useTranslations("Agent");
-  const router = useRouter();
   const tToolCall = useTranslations("ToolCall");
   const queryClient = useQueryClient();
   const { mentionables, links, onMentionQuery } =
@@ -195,17 +165,10 @@ export function AgentConversation({
   // Explicitly open run: `initialRunId`, a run chosen from the history,
   // or the one we just launched. `null` → we fall back on the ACTIVE run of the outcome.
   const [selectedId, setSelectedId] = useState<string | null>(initialRunId);
-  // “Launch a new agent” requested explicitly: forces the phase to even compose
-  // if the issue has past runs (otherwise we would reopen the last one).
-  const [composing, setComposing] = useState(initialCompose);
   // Messages sent for which the server echo has not yet arrived (optimistic bubbles).
   const [pendingMessages, setPendingMessages] = useState<
     Array<{ id: string; text: string; mentions: AssistantMention[] }>
   >([]);
-  // Keep the first message visible while the legacy adapter creates the common
-  // Numo conversation and redirects to it.
-  const [launchText, setLaunchText] = useState<string | null>(null);
-  const [launchMentions, setLaunchMentions] = useState<AssistantMention[]>([]);
   // “Create PR” request sent: deactivates the button while the agent
   // starts again (working) or RA appears. Reset by lower effect.
   const [requestingPr, setRequestingPr] = useState(false);
@@ -222,8 +185,7 @@ export function AgentConversation({
   // chooses from the LIST, and the host passes it to us as prop.
   useEffect(() => {
     setSelectedId(initialRunId);
-    setComposing(initialCompose);
-  }, [initialRunId, initialCompose]);
+  }, [initialRunId]);
 
   const { runs: issueRuns, loading: issueLoading } = useIssueAgentRunsQuery(
     active && issueId ? issueId : null,
@@ -242,15 +204,13 @@ export function AgentConversation({
   // nor composer, while an interrupted turn with a surviving checkpoint must
   // reopen normally. The fallback is only used by callers without a designated
   // run; the Agents page always opens the clicked session directly.
-  const liveRun = composing
-    ? null
-    : selectedId
-      ? (knownRuns.find((r) => r.id === selectedId) ?? null)
-      : (activeRun ??
-        knownRuns.find((run) =>
-          isAgentRunResumable(run.status, run.resumable),
-        ) ??
-        null);
+  const liveRun = selectedId
+    ? (knownRuns.find((r) => r.id === selectedId) ?? null)
+    : (activeRun ??
+      knownRuns.find((run) =>
+        isAgentRunResumable(run.status, run.resumable),
+      ) ??
+      null);
   /**
    * What the SERVER does — the truth of the requests (thread polling, diff,
    * decision to discontinue). To be distinguished from `working`, which is what
@@ -472,11 +432,9 @@ export function AgentConversation({
   const openDiff = liveRun ? openDiffAt : undefined;
 
   // Changing runs empties the optimistic bubbles: they belong to the
-  // conversation we leave, not the one we open. `launchText` leaves with:
-  // the launched session now exists and its prompt comes from the server.
+  // conversation we leave, not the one we open.
   useEffect(() => {
     setPendingMessages([]);
-    setLaunchText(null);
     setRequestingPr(false);
     // The requested shutdown applies to the session you are leaving, not the one you are opening.
     setStopping(false);
@@ -533,60 +491,11 @@ export function AgentConversation({
     return () => clearInterval(timer);
   }, [active, liveRun?.id]);
 
-  // BASE branch (compose phase, new line): "" = the defect of the deposit.
-  // The choice is only made at launch and frozen afterwards.
-  const [baseBranch, setBaseBranch] = useState("");
-  const [launching, setLaunching] = useState(false);
   const repositorySkills = useRepositorySkills(
     projectId,
     "cloud",
-    liveRun?.id ?? "compose-server",
+    liveRun?.id ?? "historical-run",
   );
-
-  const launch = async (
-    message: string,
-    attachments: ResourceInput[] = [],
-    mentions: AssistantMention[] = [],
-  ) => {
-    // The compose phase only exists for an ISSUE anchor (that of sessions
-    // without a ticket lives in SessionCompose, before any run): no exit, nothing
-    // to launch here.
-    if (launching || !issueId) return;
-    const prompt = message.trim();
-    setLaunching(true);
-    // Keep the submitted message visible until the common Numo conversation is ready.
-    if (prompt) setLaunchText(prompt);
-    setLaunchMentions(mentions);
-    try {
-      const started = await launchAgentRunApi(issueId, {
-        prompt: prompt || undefined,
-        // The server ignores it if the lineage already inherits a branch (the picker
-        // is then locked — belt and shoulder straps on the racing side).
-        baseBranch: baseBranch || undefined,
-        intent: composeIntent,
-        mentions,
-        attachments,
-      });
-      setComposing(false);
-      router.push(started.detail_href);
-    } catch (err) {
-      // The conversation was not created, so remove the optimistic message.
-      setLaunchText(null);
-      setLaunchMentions([]);
-      toast.error(agentErrorMessage(err));
-    } finally {
-      setLaunching(false);
-    }
-  };
-
-  const submitLaunch = (
-    message: string,
-    attachments: ResourceInput[] = [],
-    mentions: AssistantMention[] = [],
-  ): boolean => {
-    void launch(message, attachments, mentions);
-    return true;
-  };
 
   // Message at rest: continues the conversation (new turn in the same context).
   const steer = async (
@@ -690,11 +599,11 @@ export function AgentConversation({
   // arrived. Applies to a notebook run as well as a run DESIGNATED by the caller
   // (`initialRunId`) — without this case, the conversation that we have just opened from the
   // list flashed in blank dial while the query responded.
-  const phase: "live" | "loading" | "compose" = liveRun
+  const phase: "live" | "loading" | "empty" = liveRun
     ? "live"
-    : loading || noteRunId || (selectedId && !composing)
+    : loading || noteRunId || selectedId
       ? "loading"
-      : "compose";
+      : "empty";
 
   /** Session diff counters and publication action, before the host actions. */
   const sessionActions = liveRun ? (
@@ -780,19 +689,6 @@ export function AgentConversation({
               localExec={liveRun.local_exec === true}
               className="h-full py-4"
             />
-          ) : launchText ? (
-            // Session being created: no session to query yet, but
-            // the SAME thread, which only displays the bubble of the 1st message + “works”.
-            // Reusing the feed (rather than an ad hoc bubble) ensures that when
-            // the session takes over, the bubble does not move a pixel.
-            <AgentEventFeed
-              runId={null}
-              status="queued"
-              pendingUserMessages={[
-                { text: launchText, mentions: launchMentions },
-              ]}
-              className="h-full py-4"
-            />
           ) : phase === "loading" ? (
             <div className="flex h-full items-center justify-center">
               <Spinner className="size-5 text-muted-foreground" />
@@ -809,12 +705,11 @@ export function AgentConversation({
           )}
         </div>
 
-        {/* Compose: steering/interruption (live) or pre-written launch (compose).
-          Terminaled to the same max width as the wire and centered. On the Agents PAGE it
-          sits just above the mobile navigation bar, so in the
-          gradient that it projects: `dock-above-nav` outputs it (see globals.css).
-          In the modal, the class costs nothing — the Sheet is its own
-          contexte d'empilement. */}
+        {/* Historical steering and interruption controls for an existing run.
+          They use the same centered maximum width as the event feed. On the
+          Agents page, `dock-above-nav` keeps them above the mobile navigation
+          gradient (see globals.css). In the modal, the class has no effect
+          because the Sheet creates its own stacking context. */}
         {phase !== "loading" && (
           <div className="dock-above-nav shrink-0">
             <div className="mx-auto w-full max-w-[800px]">
@@ -923,38 +818,7 @@ export function AgentConversation({
                     }
                   />
                 </div>
-              ) : (
-                <ChatInput
-                  key="compose-server"
-                  onSend={(message, attachments, mentions) =>
-                    submitLaunch(message, attachments, mentions)
-                  }
-                  mentionables={mentionables}
-                  onMentionQuery={onMentionQuery}
-                  skills={repositorySkills.skills}
-                  loadSkill={repositorySkills.load}
-                  disabled={launching}
-                  initialValue={initialComposeText}
-                  placeholder={t("composePlaceholder")}
-                  contextSlot={
-                    <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
-                      <BranchCombobox
-                        issueId={issueId}
-                        value={baseBranch}
-                        onChange={setBaseBranch}
-                        defaultLabel={t("branchDefault")}
-                        defaultHint={t("branchDefaultHint")}
-                        placeholder={t("branchSearchPlaceholder")}
-                        emptyLabel={t("branchSearchEmpty")}
-                        loadingLabel={t("branchSearchLoading")}
-                        disabled={launching}
-                        bare
-                      />
-                    </div>
-                  }
-                  contextPlacement="above"
-                />
-              )}
+              ) : null}
             </div>
           </div>
         )}

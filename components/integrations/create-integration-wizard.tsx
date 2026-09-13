@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, Input, Textarea, toast } from "mangue-ui";
 import {
@@ -33,10 +32,7 @@ import {
 } from "@/lib/integrations-api";
 import { integrationKeyEnvLine } from "@/lib/feedback/integration-contract";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
-import {
-  FREE_COMPOSE_PARAM,
-  setAgentComposeDraft,
-} from "@/lib/agent-compose-draft";
+import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import type { IntegrationKind } from "@/lib/types";
 
 /**
@@ -82,7 +78,7 @@ export function CreateIntegrationWizard({
 }) {
   const t = useTranslations("Settings");
   const tCommon = useTranslations("Common");
-  const router = useRouter();
+  const { openIntent } = useAssistantPanel();
 
   const [kind, setKind] = useState<IntegrationKind>("issues");
   const [name, setName] = useState("");
@@ -137,18 +133,17 @@ export function CreateIntegrationWizard({
     }
   };
 
-  /**
-   * Entrust the prompt to Numo: same path as “launch an agent” from the
-   * notebook (conversation draft without ticket + compose from the page
-   * Agents), project already chosen. We go through composing it rather than launching
-   * from here: the user rereads the instructions and chooses their basic branch — a
-   * run on its repository does not start with a click without review.
-   */
+  /** Hand the generated implementation request to the shared Numo conversation. */
   const handOffToNumo = () => {
     if (!prompt) return;
-    setAgentComposeDraft({ kind: "free", prompt, projectId });
     handleOpenChange(false);
-    router.push(`/agents?compose=${FREE_COMPOSE_PARAM}`);
+    openIntent({
+      source: "feedback",
+      action: "implement",
+      projectId,
+      prompt,
+      pageContext: { projectId },
+    });
   };
 
   /** Last configuration step: we create, we plug in, we write. */
