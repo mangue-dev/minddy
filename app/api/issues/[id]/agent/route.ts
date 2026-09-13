@@ -181,6 +181,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       { status: 400 },
     );
   }
+  if (
+    body.localExec === true ||
+    body.localWorktree === true ||
+    body.localIssueContextConfirmed === true
+  ) {
+    return NextResponse.json(
+      { error: "localExecutionRetired", code: "localExecutionRetired" },
+      { status: 410 },
+    );
+  }
   const prompt =
     typeof body.prompt === "string" && body.prompt.trim()
       ? body.prompt.trim().slice(0, MAX_PROMPT_LENGTH)

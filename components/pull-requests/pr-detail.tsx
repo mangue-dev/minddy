@@ -1048,12 +1048,17 @@ export function PrDetail({
     if (!message && reviewVerdict !== "approve") return;
     setSubmitting(true);
     try {
-      const result = await submitPullRequestReviewApi(item.prId, {
-        verdict: reviewVerdict,
-        message,
-        relaunch: false,
-        postVerdict,
-      });
+      // A Numo-only fix has no forge-side effect. Sending it through the
+      // review endpoint would be rejected as `noEffect` before this component
+      // can hand the request to the common conversation below.
+      const result = !postVerdict && relaunching
+        ? { published: "none" as const }
+        : await submitPullRequestReviewApi(item.prId, {
+            verdict: reviewVerdict,
+            message,
+            relaunch: false,
+            postVerdict,
+          });
       if (
         relaunching &&
         reviewVerdict === "request_changes" &&

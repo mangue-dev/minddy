@@ -274,6 +274,7 @@ export async function POST(request: NextRequest) {
      * the explicit retirement response instead of silently running elsewhere. */
     localExec?: unknown;
     localWorktree?: unknown;
+    localIssueContextConfirmed?: unknown;
   };
   try {
     const parsed: unknown = await request.json();
@@ -291,6 +292,16 @@ export async function POST(request: NextRequest) {
         code: "workerConfigurationManagedInSettings",
       },
       { status: 400 },
+    );
+  }
+  if (
+    body.localExec === true ||
+    body.localWorktree === true ||
+    body.localIssueContextConfirmed === true
+  ) {
+    return NextResponse.json(
+      { error: "localExecutionRetired", code: "localExecutionRetired" },
+      { status: 410 },
     );
   }
 

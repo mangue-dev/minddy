@@ -35,6 +35,12 @@ describe("common Numo intent entry", () => {
     expect(contents).not.toContain("requestPullRequestAiReviewApi");
   });
 
+  it("does not submit a no-effect forge review before a Numo-only fix", () => {
+    const contents = source("components/pull-requests/pr-detail.tsx");
+    expect(contents).toContain("!postVerdict && relaunching");
+    expect(contents).toContain('{ published: "none" as const }');
+  });
+
   it.each([
     "app/api/issues/[id]/agent/route.ts",
     "app/api/agent-runs/route.ts",
@@ -54,5 +60,14 @@ describe("common Numo intent entry", () => {
       expect(contents).toContain("mentions: parseAgentMentions(body.mentions)");
       expect(contents).toContain("attachments,");
     }
+  });
+
+  it.each([
+    "app/api/issues/[id]/agent/route.ts",
+    "app/api/agent-runs/route.ts",
+  ])("rejects retired local execution in %s", (file) => {
+    const contents = source(file);
+    expect(contents).toContain('error: "localExecutionRetired"');
+    expect(contents).toContain("status: 410");
   });
 });
