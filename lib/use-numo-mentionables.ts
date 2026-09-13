@@ -13,6 +13,7 @@ import { displayName } from "@/lib/display-name";
 import { globalBoardQueryFn } from "@/lib/global-board-api";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
 import { useMembersQuery } from "@/lib/use-members-query";
+import { contentMentionScanner, type MentionScan } from "@/lib/mention-scan";
 import {
   useMentionLinksFor,
   useMentionSources,
@@ -70,6 +71,8 @@ export function useNumoMentionables(
   /** Where the pills of messages ALREADY sent lead: the thread is reread, and a
  ticket cited there opens with a click (components/mention-links). */
   links: MentionLinks;
+  /** Rehydrates saved plain-text mentions into interactive pills. */
+  scan: MentionScan;
   onMentionQuery: (active: boolean) => void;
 } {
   const [wanted, setWanted] = useState(false);
@@ -78,12 +81,29 @@ export function useNumoMentionables(
   // Tickets and objectives come from the palette index, like the mentions
   // a description: it already carries everything, of all my projects. The pages, they
   // are those of the project in scope — a wiki belongs to its project.
-  const { issues, objectives, pages, armNow } = useMentionSources(
+  const {
+    projects: mentionProjects,
+    issues,
+    objectives,
+    pages,
+    armNow,
+  } = useMentionSources(
     scopeProjectId,
     wanted,
   );
 
   const links = useMentionLinksFor({ issues, objectives, pages, references });
+  const scan = useMemo(
+    () =>
+      contentMentionScanner({
+        members,
+        projects: mentionProjects,
+        issues,
+        objectives,
+        pages,
+      }),
+    [members, mentionProjects, issues, objectives, pages],
+  );
 
   const mentionables = useMemo<MentionOption[]>(
     () => [
@@ -143,7 +163,7 @@ export function useNumoMentionables(
     [armNow],
   );
 
-  return { mentionables, links, onMentionQuery };
+  return { mentionables, links, scan, onMentionQuery };
 }
 
 /**

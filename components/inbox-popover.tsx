@@ -4,11 +4,15 @@ import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Popover, PopoverAnchor, PopoverContent, Skeleton } from "mangue-ui";
+import { Popover, PopoverAnchor, PopoverContent, Spinner } from "mangue-ui";
 import { OPEN_INBOX_EVENT } from "@/lib/inbox-launcher";
 
 const InboxContent = dynamic(() => import("@/components/inbox-content"), {
-  loading: () => <Skeleton className="m-3 h-64" />,
+  loading: () => (
+    <div className="flex h-64 items-center justify-center text-muted-foreground">
+      <Spinner className="size-5" />
+    </div>
+  ),
 });
 
 function visibleTrigger() {

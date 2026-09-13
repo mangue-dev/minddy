@@ -824,7 +824,7 @@ export const AssistantShell = forwardRef<
       )}
 
       {/* Main chat area */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {compactHeader}
 
         {/* Mobile conversations toggle — non-compact only. */}
@@ -958,11 +958,23 @@ export const AssistantShell = forwardRef<
                         !isDelegatedWorkToolCall({ name: call.function.name }),
                       );
                       if (calls.length > 0) {
+                        const toolCalls = calls.map((call) => {
+                          const result = state.toolCallResults.get(call.id);
+                          return {
+                            id: call.id,
+                            name: call.function.name,
+                            arguments: call.function.arguments,
+                            status: result?.status ?? "running",
+                            result: result?.result,
+                            success: result?.success ?? true,
+                          };
+                        });
                         events.push({
                           key: `${msg.id}-actions`,
                           kind: "action",
                           count: calls.length,
-                          active: calls.some((call) => state.toolCallResults.get(call.id)?.status === "running"),
+                          active: toolCalls.some((call) => call.status === "running"),
+                          toolCalls,
                           revealKey: liveSecretRevealKey(calls.map((call) => ({
                             id: call.id,
                             name: call.function.name,
@@ -1019,6 +1031,7 @@ export const AssistantShell = forwardRef<
                           kind: "action",
                           count: calls.length,
                           active: calls.some((call) => call.status === "running"),
+                          toolCalls: calls,
                           revealKey: liveSecretRevealKey(calls),
                           content: <StreamingMessage content="" activeToolCalls={calls} />,
                         });

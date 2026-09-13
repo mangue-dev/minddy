@@ -9,7 +9,7 @@ import { SeedProposalCard } from "./seed-proposal-card";
 import { liveSecretOf, SecretCallout } from "./secret-callout";
 import type { DelegatedWorkCall } from "./delegated-work-card";
 import { isDelegatedWorkToolCall } from "@/lib/delegated-work-state";
-import { useGroupedActions } from "./work-events";
+import { useGroupedActions } from "./grouped-actions-context";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { SeedProposal } from "@/lib/seed/types";
 import {
@@ -67,7 +67,7 @@ import {
   X,
 } from "lucide-react";
 
-interface ToolCallItem {
+export interface ToolCallItem {
   id: string;
   name: string;
   arguments?: string;
@@ -1225,15 +1225,19 @@ export function toolRunningLabel(name: string, t: TranslateFn): string {
   return meta.getLabel({}, undefined, true, "running", t);
 }
 
+export function toolCallLabel(item: ToolCallItem, t: TranslateFn): string {
+  const meta = TOOL_META[item.name];
+  const parsedArgs = safeParseArgs(item.arguments);
+  const resultObj = item.result as Record<string, unknown> | undefined;
+  return meta
+    ? meta.getLabel(parsedArgs, resultObj, item.success ?? true, item.status, t)
+    : getDefaultLabel(item.status, t);
+}
+
 function getToolView(item: ToolCallItem, t: TranslateFn) {
   const meta = TOOL_META[item.name];
   const Icon = meta?.icon ?? DEFAULT_ICON;
-  const parsedArgs = safeParseArgs(item.arguments);
-  const resultObj = item.result as Record<string, unknown> | undefined;
-  const label = meta
-    ? meta.getLabel(parsedArgs, resultObj, item.success ?? true, item.status, t)
-    : getDefaultLabel(item.status, t);
-  return { Icon, label };
+  return { Icon, label: toolCallLabel(item, t) };
 }
 
 // ── Summary of a burst of actions ────────────────────── ──────────────────────
@@ -1329,7 +1333,7 @@ function actionWeight(item: ToolCallItem): number {
 }
 
 /** “Read 4 files, execute 3 commands, 1 failure”. */
-function summarizeActions(items: ToolCallItem[], t: TranslateFn): string {
+export function summarizeToolCalls(items: ToolCallItem[], t: TranslateFn): string {
   const counts = new Map<ActionKind, number>();
   let failed = 0;
   for (const item of items) {
@@ -1500,7 +1504,7 @@ export function ToolCallList({
     // Salve IN PROGRESS: nothing to summarize, an account would be false from one line to the next
     // the other. We keep the live - the last action to date once folded,
     // the current account once unfolded — and the shimmer which says “it’s running”.
-    const summary = anyRunning ? null : summarizeActions(rowItems, t);
+    const summary = anyRunning ? null : summarizeToolCalls(rowItems, t);
     const label =
       summary ??
       (expanded

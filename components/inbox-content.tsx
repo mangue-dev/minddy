@@ -15,7 +15,6 @@ import {
   AlertDialogTitle,
   Button,
   IconButton,
-  Skeleton,
   Spinner,
   cn,
   toast,
@@ -410,10 +409,8 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
             )}
 
             {loading ? (
-              <div className="flex flex-col gap-2">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <Skeleton key={index} className="h-16 rounded-xl" />
-                ))}
+              <div className="flex justify-center py-16 text-muted-foreground">
+                <Spinner className="size-5" />
               </div>
             ) : visible.length === 0 ? (
               showInvitations ? null : (
