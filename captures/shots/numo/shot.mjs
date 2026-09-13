@@ -17,7 +17,6 @@ import {
 } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 import { catalog, toolCallLabel } from "../../lib/messages.mjs";
-import { openDemoWorld } from "../../lib/guards.mjs";
 
 const SLOT = "numoPanel";
 const OUT = "captures/shots/numo/out";
@@ -85,100 +84,6 @@ async function toolLabels(locale) {
 const PUBLISH = process.argv.includes("--publish");
 const VARIANTS = CAPTURE_VARIANTS;
 
-/**
- * Keep local captures usable while a preview database is waiting for the
- * unified-conversation migration. The adapter is read-only and limited to the
- * existing demo conversation; deployed environments with the new views keep
- * using the real API.
- */
-async function installLegacyConversationAdapter(page) {
-  const probe = await page.request.get(`${CAPTURE.baseUrl}/api/assistant/conversations`);
-  if (probe.ok()) return;
-
-  const world = await openDemoWorld();
-  const { data: conversation, error: conversationError } = await world.admin
-    .from("conversations")
-    .select("*")
-    .eq("title", CONVERSATION)
-    .maybeSingle();
-  if (conversationError || !conversation || !world.demoUserIds.has(conversation.user_id)) {
-    throw new Error(
-      `captures: unable to read the demo Numo conversation for the migration adapter — ` +
-        (conversationError?.message || "conversation missing"),
-    );
-  }
-
-  const { data: rows, error: messagesError } = await world.admin
-    .from("assistant_messages")
-    .select("*")
-    .eq("conversation_id", conversation.id)
-    .order("created_at", { ascending: true });
-  if (messagesError) {
-    throw new Error(`captures: unable to read demo Numo messages — ${messagesError.message}`);
-  }
-
-  const normalizedConversation = {
-    ...conversation,
-    source: "assistant",
-    legacy_id: conversation.id,
-    access_project_id: null,
-    visibility: "private",
-    archived_at: null,
-    pinned_at: null,
-    last_read_at: null,
-    detail_href: null,
-    latest_work_id: null,
-  };
-  const normalizedMessages = (rows || []).map((message) => ({
-    ...message,
-    metadata: message.metadata || {},
-    context: message.page_context || null,
-    source: "assistant",
-    kind: message.role === "tool" ? "action" : "message",
-    turn_id: null,
-    run_id: null,
-    worker_source: null,
-    legacy_queue_message_id: null,
-    legacy_event_id: null,
-  }));
-  const detail = {
-    conversation: normalizedConversation,
-    messages: normalizedMessages.filter((message) => message.kind !== "action"),
-    actions: normalizedMessages.filter((message) => message.kind === "action"),
-    work: [],
-    contexts: [],
-    artifacts: [],
-    turns: [],
-    routine_occurrence: null,
-  };
-
-  await page.route("**/api/assistant/conversations", (route) =>
-    route.fulfill({ json: [normalizedConversation] }),
-  );
-  await page.route("**/api/assistant/active-conversation", (route) =>
-    route.request().method() === "GET"
-      ? route.fulfill({ json: { conversationId: null, projectId: null, detailHref: null } })
-      : route.fulfill({ status: 204 }),
-  );
-  await page.route("**/api/assistant/conversations/*/status*", (route) =>
-    route.fulfill({
-      json: {
-        status: "idle",
-        error_message: null,
-        turn_id: null,
-        last_event_seq: -1,
-        pending_input: null,
-        activity: [],
-      },
-    }),
-  );
-  await page.route("**/api/numo/conversations/*", (route) =>
-    route.request().method() === "GET"
-      ? route.fulfill({ json: detail })
-      : route.fulfill({ status: 204 }),
-  );
-}
-
 async function capture({ locale, theme }) {
   const { browser, page } = await openPage({
     theme,
@@ -187,7 +92,6 @@ async function capture({ locale, theme }) {
     frozenNow: LISTING_NOW,
   });
   try {
-    await installLegacyConversationAdapter(page);
     await page.goto(`${CAPTURE.baseUrl}/projects/${AURORA}`, { waitUntil: "domcontentloaded" });
     await settle(page, { expect: "text=AUR-1" });
 

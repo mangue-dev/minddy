@@ -4448,7 +4448,7 @@
     "retentionNotifications": "Notificações",
     "retentionNotificationsDesc": "excluídas 6 meses após a leitura",
     "retentionAgent": "Execução do agente de codificação",
-    "retentionAgentDesc": "a conversa de uma execução (mensagens trocadas com o modelo, chamadas de ferramentas e trechos da saída) é mantida por 30 dias após o fim da execução e depois excluída; em seguida, apenas os metadados (branch, pull request e status) permanecem anexados ao problema. O mesmo prazo de 30 dias se aplica a uma execução realizada no seu próprio computador",
+    "retentionAgentDesc": "a conversa do trabalho de código delegado (mensagens trocadas com o modelo, chamadas de ferramentas e trechos da saída) é mantida por 30 dias após o fim e depois excluída; apenas os metadados, como branch, pull request e status, permanecem anexados ao problema",
     "retentionFeedback": "Participantes do quadro",
     "retentionFeedbackDesc": "mantidos enquanto existir o projeto proprietário do quadro e excluídos com ele. Uma identidade que nunca publicou nada — endereço verificado e nenhuma outra atividade — é excluída após 90 dias. O feedback marcado como indesejado é excluído após 30 dias. Você pode pedir ao editor do quadro para apagar sua identidade a qualquer momento: o endereço e o nome são removidos, mas as contribuições permanecem on-line sob um pseudônimo",
     "retentionAnalytics": "Dados analíticos",

@@ -4448,7 +4448,7 @@
     "retentionNotifications": "Notificaciones",
     "retentionNotificationsDesc": "eliminado 6 meses después de ser leído",
     "retentionAgent": "Agente de codificación ejecuta",
-    "retentionAgentDesc": "el hilo de una ejecución (mensajes intercambiados con el modelo, llamadas de herramientas y extractos de su salida) se mantiene 30 días después de que la ejecución finalice, luego eliminado; después sólo los metadatos (rama, pull request, estado) permanecen conectados a la incidencia. Los mismos 30 días se aplican a una ejecución jugada en su propio ordenador",
+    "retentionAgentDesc": "el hilo del trabajo de código delegado (mensajes intercambiados con el modelo, llamadas de herramientas y extractos de su salida) se conserva durante 30 días después de que termina y luego se elimina; solo los metadatos como la rama, la pull request y el estado permanecen vinculados a la incidencia",
     "retentionFeedback": "Participantes en la Junta",
     "retentionFeedbackDesc": "mantenido mientras el proyecto que posee el tablero exista, y eliminado con él. Una identidad que nunca publicó nada; dirección verificada, entonces nada; se elimina después de 90 días. La sugerencia reservada como basura se elimina después de 30 días. Puede pedir al editor del tablero que borre su identidad en cualquier momento: la dirección y el nombre van, las contribuciones permanecen en línea un pseudónimo",
     "retentionAnalytics": "Datos analíticos",

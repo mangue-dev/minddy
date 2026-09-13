@@ -4448,7 +4448,7 @@
     "retentionNotifications": "Notifiche",
     "retentionNotificationsDesc": "cancellato 6 mesi dopo la lettura",
     "retentionAgent": "Esecuzioni dell'agente di codice",
-    "retentionAgentDesc": "il thread di una esecuzione (messaggi scambiati con il modello, chiamate di strumenti e estratti della loro uscita) viene mantenuto 30 giorni dopo la fine della esecuzione, poi cancellato; in seguito solo i metadati (branch, pull request, status) restano collegati al ticket. Gli stessi 30 giorni si applicano a una esecuzione riprodotta sul proprio computer",
+    "retentionAgentDesc": "il thread del lavoro di codice delegato (messaggi scambiati con il modello, chiamate di strumenti ed estratti del loro output) viene conservato per 30 giorni dopo la conclusione e poi eliminato; solo i metadati come branch, pull request e stato restano collegati al ticket",
     "retentionFeedback": "Partecipanti alla bacheca",
     "retentionFeedbackDesc": "conservati finché esiste il progetto proprietario della bacheca ed eliminati insieme ad esso. Un'identità che non ha mai pubblicato nulla viene eliminata dopo 90 giorni. I feedback contrassegnati come indesiderati vengono eliminati dopo 30 giorni. Puoi chiedere in qualsiasi momento all'editore della bacheca di cancellare la tua identità: indirizzo e nome vengono rimossi, mentre i contributi restano online sotto pseudonimo",
     "retentionAnalytics": "Dati di analisi",

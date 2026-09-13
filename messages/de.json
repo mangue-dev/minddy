@@ -4448,7 +4448,7 @@
     "retentionNotifications": "Benachrichtigungen",
     "retentionNotificationsDesc": "6 Monate nach dem Lesen gelöscht",
     "retentionAgent": "Coding-Agent-Läufe",
-    "retentionAgentDesc": "Die Konversation eines Laufs (mit dem Modell ausgetauschte Nachrichten, Tool-Aufrufe und Auszüge aus deren Ausgaben) wird bis 30 Tage nach Ende des Laufs aufbewahrt und anschließend gelöscht; danach bleiben nur die mit dem Problem verknüpften Metadaten (Branch, Pull-Anfrage, Status) erhalten. Dieselbe Frist von 30 Tagen gilt für einen Lauf auf Ihrem eigenen Computer.",
+    "retentionAgentDesc": "Der Verlauf delegierter Codearbeit (mit dem Modell ausgetauschte Nachrichten, Tool-Aufrufe und Auszüge aus deren Ausgaben) wird 30 Tage nach Abschluss aufbewahrt und anschließend gelöscht; nur Metadaten wie Branch, Pull Request und Status bleiben am Ticket erhalten.",
     "retentionFeedback": "Board-Teilnehmer",
     "retentionFeedbackDesc": "werden so lange aufbewahrt, wie das zugehörige Projekt besteht, und zusammen mit diesem gelöscht. Eine Identität, über die nie ein Beitrag veröffentlicht wurde – Adresse bestätigt, danach keine Aktivität – wird nach 90 Tagen gelöscht. Als unerwünscht eingestuftes Feedback wird nach 30 Tagen gelöscht. Sie können den Herausgeber des Boards jederzeit bitten, Ihre Identität zu entfernen: E-Mail-Adresse und Name werden gelöscht, die Beiträge bleiben unter einem Pseudonym online",
     "retentionAnalytics": "Analysedaten",

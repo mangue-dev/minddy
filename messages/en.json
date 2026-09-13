@@ -4448,7 +4448,7 @@
     "retentionNotifications": "Notifications",
     "retentionNotificationsDesc": "deleted 6 months after being read",
     "retentionAgent": "Coding agent runs",
-    "retentionAgentDesc": "the thread of a run (messages exchanged with the model, tool calls and excerpts of their output) is kept 30 days after the run ends, then deleted; afterwards only the metadata (branch, pull request, status) stays attached to the issue. The same 30 days apply to a run played on your own computer",
+    "retentionAgentDesc": "the thread of delegated code work (messages exchanged with the model, tool calls and excerpts of their output) is kept for 30 days after it ends, then deleted; only metadata such as the branch, pull request and status remains attached to the issue",
     "retentionFeedback": "Board participants",
     "retentionFeedbackDesc": "kept as long as the project that owns the board exists, and deleted with it. An identity that never posted anything; address verified, then nothing; is deleted after 90 days. Feedback set aside as junk is deleted after 30 days. You can ask the board's publisher to erase your identity at any time: the address and name go, the contributions stay online under a pseudonym",
     "retentionAnalytics": "Analytics data",
