@@ -6,22 +6,24 @@ import { publicSkillsMetadata } from "@/lib/server/assistant/skills";
 import { numoWorkDetailPath, type NumoWorkLink } from "@/lib/numo-work-link";
 
 export const NUMO_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const NUMO_CONVERSATIONS_PAGE_SIZE = 50;
+export const MAX_NUMO_CONVERSATIONS_PAGE_SIZE = 500;
 
 /** Always pass the request's RLS client, including for legacy link resolution. */
-export async function listNumoConversations(supabase: SupabaseClient, projectId?: string | null) {
-  const conversations: NumoConversation[] = [];
-  // PostgREST caps responses; page through the stable total order instead of
-  // silently dropping older conversations from a merged history.
-  for (let offset = 0; ; offset += 500) {
-    let query = supabase.from("numo_user_conversation_history").select("*")
-      .order("updated_at", { ascending: false }).order("id", { ascending: true })
-      .range(offset, offset + 499);
-    if (projectId) query = query.eq("project_id", projectId);
-    const { data, error } = await query;
-    if (error) throw new Error(error.message);
-    conversations.push(...(data ?? []) as NumoConversation[]);
-    if (!data || data.length < 500) return conversations;
-  }
+export async function listNumoConversations(
+  supabase: SupabaseClient,
+  projectId?: string | null,
+  limit = NUMO_CONVERSATIONS_PAGE_SIZE,
+) {
+  let query = supabase.from("numo_user_conversation_history").select("*")
+    .order("updated_at", { ascending: false }).order("id", { ascending: true })
+    // Fetch one extra row so the UI can disclose that older history exists.
+    .range(0, limit);
+  if (projectId) query = query.eq("project_id", projectId);
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  const rows = (data ?? []) as NumoConversation[];
+  return { conversations: rows.slice(0, limit), hasMore: rows.length > limit };
 }
 
 export async function getNumoConversation(supabase: SupabaseClient, id: string) {

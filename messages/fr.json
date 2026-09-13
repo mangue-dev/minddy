@@ -481,6 +481,7 @@
     "unreadConversation": "Conversation non lue",
     "conversations": "Conversations",
     "noConversations": "Aucune conversation",
+    "loadMore": "Afficher plus",
     "filterConversations": "Filtrer {count, plural, =0 {les conversations} one {la conversation} other {les # conversations}}…",
     "pinnedConversations": "Épinglées",
     "conversationActions": "Actions de la conversation",

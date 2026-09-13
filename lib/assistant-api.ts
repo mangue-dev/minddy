@@ -3,11 +3,10 @@
 import { createSerialQueue } from "./serial-queue";
 import type { NumoConversation, NumoConversationDetail, NumoConversationPatch } from "./assistant-types";
 
-/** All user conversations, most recent first, projects
- * combined — Numo history no longer filters by scope (MIN-353). */
-export async function fetchConversations(): Promise<NumoConversation[]> {
-  const res = await fetch("/api/assistant/conversations");
-  if (!res.ok) return [];
+/** A bounded, newest-first Numo history page across every accessible project. */
+export async function fetchConversations(limit: number): Promise<{ conversations: NumoConversation[]; hasMore: boolean }> {
+  const res = await fetch(`/api/assistant/conversations?limit=${encodeURIComponent(limit)}`);
+  if (!res.ok) return { conversations: [], hasMore: false };
   return res.json();
 }
 
