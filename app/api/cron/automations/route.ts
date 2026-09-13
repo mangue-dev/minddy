@@ -4,9 +4,13 @@ import { verifyCronSecret } from "@/lib/server/cron-auth";
 import {
   cancelPendingChain,
   duePendingChains,
+  getChain,
+  lastNumoAutomationOperation,
   lastRunOfChain,
+  retryableNumoAutomationOperations,
   staleRunningChains,
 } from "@/lib/server/automations/chain";
+import { recoverNumoAutomationOperation } from "@/lib/server/automations/actions";
 import { activeRunForChain } from "@/lib/server/agent/runs";
 import { haltChain } from "@/lib/server/automations/report";
 import { runAutomations } from "@/lib/server/automations/engine";
@@ -70,6 +74,7 @@ async function handle(request: NextRequest) {
   const due = await duePendingChains(SWEEP_LIMIT);
   let expired = 0;
   let revived = 0;
+  let retried = 0;
 
   // In SERIES: two related chains almost always belong to the same project,
   // and each throws a run. Parallelizing them would only disrupt the quota
@@ -106,6 +111,23 @@ async function handle(request: NextRequest) {
     }
   }
 
+  // Retry only automation-owned Numo turns. Interactive retryable turns remain
+  // under their conversation's explicit retry control.
+  for (const state of await retryableNumoAutomationOperations(SWEEP_LIMIT)) {
+    try {
+      const chain = await getChain(state.operation.chain_id);
+      if (!chain || chain.status !== "running") continue;
+      await recoverNumoAutomationOperation(chain, state);
+      retried++;
+    } catch (err) {
+      console.error(
+        "[automations-cron] Numo retry failed:",
+        state.operation.id,
+        (err as Error).message,
+      );
+    }
+  }
+
   // ── The net of ABANDONED chains ──────────────────────────────────────
   // A `running` string that no run carries anymore: we replay the end of its
   // last run, exactly what the “Continue” button does.
@@ -113,6 +135,14 @@ async function handle(request: NextRequest) {
     new Date(Date.now() - RUNNING_STALE_MS).toISOString(),
   )) {
     try {
+      const operation = await lastNumoAutomationOperation(chain.id);
+      if (
+        operation &&
+        (await recoverNumoAutomationOperation(chain, operation))
+      ) {
+        revived++;
+        continue;
+      }
       if (await activeRunForChain(chain.id)) continue; // it is still working
       const last = await lastRunOfChain(chain.id);
       if (!last) {
@@ -137,7 +167,14 @@ async function handle(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, due: due.length, started, expired, revived });
+  return NextResponse.json({
+    ok: true,
+    due: due.length,
+    started,
+    expired,
+    retried,
+    revived,
+  });
 }
 
 export const GET = handle;

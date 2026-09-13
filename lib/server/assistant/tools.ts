@@ -2326,6 +2326,38 @@ export const CONVERSATION_ASSISTANT_TOOLS = buildGlobalTools().map((tool) => {
   return targeted;
 });
 
+const REPORT_AUTOMATION_OUTCOME_TOOL: AssistantToolDef = {
+  type: "function",
+  function: {
+    name: "report_automation_outcome",
+    description:
+      "Finish the current automated Numo operation with the result the chain should act on. Call exactly once, as the last tool after all Minddy actions and delegated code work are resolved. Use ok only when this step achieved its requested outcome; use failed when work failed or a blocker remains. This records the machine-readable result but does not replace your final conversational summary.",
+    parameters: {
+      type: "object",
+      properties: {
+        outcome: { type: "string", enum: ["ok", "failed"] },
+        summary: {
+          type: "string",
+          description: "A concise explanation of what the operation concluded.",
+        },
+        blockers: {
+          type: "array",
+          items: { type: "string" },
+          description: "Concrete unresolved blockers; empty when outcome is ok.",
+        },
+      },
+      required: ["outcome", "summary", "blockers"],
+    },
+  },
+};
+
+export const AUTOMATION_ASSISTANT_TOOLS = [
+  ...CONVERSATION_ASSISTANT_TOOLS.filter(
+    (tool) => tool.function.name !== "ask_user",
+  ),
+  REPORT_AUTOMATION_OUTCOME_TOOL,
+];
+
 const ANSWER_CODE_WORKER_TOOL: AssistantToolDef = {
   type: "function",
   function: {
@@ -2351,5 +2383,15 @@ const ANSWER_CODE_WORKER_TOOL: AssistantToolDef = {
 /** Restricted surface used while Numo mediates one worker decision. */
 export const WORKER_MEDIATION_ASSISTANT_TOOLS = [
   CONVERSATION_ASSISTANT_TOOLS.find((tool) => tool.function.name === "ask_user")!,
+  ANSWER_CODE_WORKER_TOOL,
+];
+
+/**
+ * An automation has no person waiting at the other end of the conversation.
+ * It may answer a worker from the chain context, or conclude the operation as
+ * blocked, but it must never turn a worker question into a user-input wait.
+ */
+export const AUTOMATION_WORKER_MEDIATION_ASSISTANT_TOOLS = [
+  ...AUTOMATION_ASSISTANT_TOOLS,
   ANSWER_CODE_WORKER_TOOL,
 ];

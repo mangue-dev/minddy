@@ -34,6 +34,8 @@ import { authorizedSkillsNotes } from "@/lib/server/assistant/skills";
 import { commandNote } from "@/lib/server/assistant/commands";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import {
+  AUTOMATION_WORKER_MEDIATION_ASSISTANT_TOOLS,
+  AUTOMATION_ASSISTANT_TOOLS,
   CONVERSATION_ASSISTANT_TOOLS,
   WORKER_MEDIATION_ASSISTANT_TOOLS,
   type AssistantToolDef,
@@ -65,6 +67,7 @@ import {
   projectNumoSurfaceTurn,
   withNumoSurfaceEmitter,
 } from "./surface-projection";
+import { notifyAutomationOfNumoTurn } from "@/lib/server/automations/numo-hooks";
 
 export const NUMO_TURN_STATUSES = [
   "queued",
@@ -92,6 +95,23 @@ export interface NumoTurnIntent {
   operationBudgetUsd?: number | null;
   /** User-facing percentage retained in the same unit as routine settings. */
   operationBudgetPercent?: number | null;
+  /** Durable automation operation whose result is interpreted by this turn. */
+  automation?: NumoAutomationContext | null;
+}
+
+export interface NumoAutomationContext {
+  chainId: string;
+  step: number;
+  ruleId: string;
+  preset: string | null;
+  retries: number;
+  mode: "plan" | "implement" | "verify" | "custom";
+  issue: {
+    id: string;
+    identifier: string;
+    title: string;
+    plan: string | null;
+  };
 }
 
 export type NumoTurnCheckpoint =
@@ -429,6 +449,17 @@ async function buildExecutionInput(input: {
     systemPrompt = buildGlobalSystemPrompt(intent.locale, intent.numoDefaultStatus);
   }
   if (intent.timezone) systemPrompt += buildClockBlock(intent.timezone);
+  if (intent.automation) {
+    const operation = intent.automation;
+    const plan = operation.issue.plan?.trim() || "(no implementation plan at admission)";
+    systemPrompt += `\n## Automated chain operation
+- This is step ${operation.step} of automation chain ${operation.chainId}; rule ${operation.ruleId}, mode ${operation.mode}, retry ${operation.retries}.
+- The attached issue is ${operation.issue.identifier} — ${operation.issue.title} (id: ${operation.issue.id}).
+- The implementation-plan snapshot at admission is:\n\n${plan}\n
+- Complete the requested Numo operation yourself. Use Minddy tools directly when repository work is unnecessary. Delegate through launch_code_agent only when code or repository inspection is required.
+- A delegated worker finishing is not the end of this operation. Interpret its structured result and any remaining work before concluding.
+- Call report_automation_outcome exactly once as your final tool, after all direct actions and delegated work are resolved. Report failed when the requested result was not achieved or blockers remain. Direct user questions are intentionally unavailable in an automated step; delegated-worker input is mediated through the parent conversation, while deliberate human checkpoints remain owned by the chain.`;
+  }
 
   const { data, error } = await service
     .from("assistant_messages")
@@ -540,8 +571,12 @@ async function buildExecutionInput(input: {
   }
 
   let tools: AssistantToolDef[] = input.background
-    ? workerInput ? WORKER_MEDIATION_ASSISTANT_TOOLS : []
-    : CONVERSATION_ASSISTANT_TOOLS;
+    ? workerInput
+      ? intent.automation
+        ? AUTOMATION_WORKER_MEDIATION_ASSISTANT_TOOLS
+        : WORKER_MEDIATION_ASSISTANT_TOOLS
+      : intent.automation ? AUTOMATION_ASSISTANT_TOOLS : []
+    : intent.automation ? AUTOMATION_ASSISTANT_TOOLS : CONVERSATION_ASSISTANT_TOOLS;
   if (!intent.webSearchEnabled) tools = withoutWebSearch(tools);
   return { messages, tools, ...(workerInput ? { workerInput } : {}) };
 }
@@ -809,6 +844,7 @@ async function executeNumoTurnCore(input: {
       operationBudgetUsd: claimed.intent.operationBudgetUsd ?? null,
       operationBudgetPercent: claimed.intent.operationBudgetPercent ?? null,
       routineId: claimed.intent.routineId ?? null,
+      automationChainId: claimed.intent.automation?.chainId ?? null,
       triggerSource: claimed.intent.triggerSource ?? "chat",
       resumeCheckpoint: claimed.checkpoint?.phase === "model" || claimed.checkpoint?.phase === "tools"
         ? claimed.checkpoint
@@ -1124,6 +1160,7 @@ export async function executeNumoTurn(input: {
     });
     if (result.status !== "not_claimed") {
       await projectNumoSurfaceTurn(service, result.turn);
+      notifyAutomationOfNumoTurn(result.turn);
     }
     return result;
   } catch (error) {

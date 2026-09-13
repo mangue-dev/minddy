@@ -234,6 +234,8 @@ const RETRYABLE_READ_TOOLS = new Set([
   // launching another one, including after a process dies before ledger commit.
   "launch_code_agent",
   "answer_code_worker",
+  // A repeated report targets the same operation row and payload.
+  "report_automation_outcome",
 ]);
 
 export function toolReplayPolicy(toolName: string): "retry" | "reconcile" {

@@ -16,10 +16,13 @@ describe("account worker model boundary", () => {
     for (const file of [
       "lib/server/assistant/execute-tool.ts",
       "app/api/cron/routines/route.ts",
-      "lib/server/automations/actions.ts",
     ]) {
       expect(source(file), file).toContain("launchAgentRun({");
     }
+
+    const automation = source("lib/server/automations/actions.ts");
+    expect(automation).toContain("startNumoIntent({");
+    expect(automation).not.toContain("launchAgentRun({");
   });
 
   it("rejects forged worker overrides at public and internal boundaries", () => {

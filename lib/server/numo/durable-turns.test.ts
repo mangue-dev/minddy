@@ -153,6 +153,15 @@ vi.mock("@/lib/server/assistant/skills", () => ({
 vi.mock("@/lib/server/assistant/attachment-parts", () => ({ buildAttachmentParts: async () => [] }));
 vi.mock("@/lib/server/assistant/tools", () => ({
   CONVERSATION_ASSISTANT_TOOLS: [{ function: { name: "get_issue" } }],
+  AUTOMATION_ASSISTANT_TOOLS: [
+    { function: { name: "get_issue" } },
+    { function: { name: "report_automation_outcome" } },
+  ],
+  AUTOMATION_WORKER_MEDIATION_ASSISTANT_TOOLS: [
+    { function: { name: "get_issue" } },
+    { function: { name: "report_automation_outcome" } },
+    { function: { name: "answer_code_worker" } },
+  ],
   WORKER_MEDIATION_ASSISTANT_TOOLS: [
     { function: { name: "ask_user" } },
     { function: { name: "answer_code_worker" } },
@@ -504,6 +513,68 @@ describe("durable Numo execution", () => {
         },
       },
     });
+  });
+
+  it("keeps automated worker questions inside the chain instead of asking a user", async () => {
+    const workerRunId = "51600000-0000-4000-8000-000000000006";
+    h.turn = {
+      ...turn({
+        phase: "worker_result",
+        worker_event: {
+          type: "worker_input",
+          payload: {
+            result: {
+              version: 1,
+              status: "needs_input",
+              summary: "A source decision is required.",
+              changedFiles: [],
+              verificationPerformed: [],
+              artifacts: [],
+              unresolvedDecisions: ["Which API should be used?"],
+              inputRequest: {
+                parentTurnId: "51600000-0000-4000-8000-000000000001",
+                runId: workerRunId,
+                questionId: "question-1",
+                callId: "call-question",
+                questions: [{
+                  header: "Source",
+                  question: "Which API should be used?",
+                  options: [],
+                }],
+              },
+            },
+          },
+        },
+      }),
+      active_run_id: workerRunId,
+      intent: {
+        ...turn({ phase: "model" }).intent,
+        automation: {
+          chainId: "chain-1",
+          step: 1,
+          ruleId: "rule-1",
+          preset: "loop-by-effort",
+          retries: 0,
+          mode: "implement",
+          issue: { id: "issue-1", identifier: "MIN-527", title: "Automate", plan: null },
+        },
+      },
+    };
+    h.processChat.mockResolvedValue({
+      fullContent: "",
+      finalReasoning: null,
+      allToolCalls: [],
+      generations: [],
+      suspension: null,
+    });
+
+    await executeNumoTurn({ turnId: h.turn.id as string, aiRuntime: runtime });
+
+    expect(h.processChat.mock.calls[0][1]).toEqual([
+      { function: { name: "get_issue" } },
+      { function: { name: "report_automation_outcome" } },
+      { function: { name: "answer_code_worker" } },
+    ]);
   });
 
   it("moves interrupted initial work to retryable instead of leaving it running", async () => {

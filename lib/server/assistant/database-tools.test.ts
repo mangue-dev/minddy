@@ -25,7 +25,7 @@ vi.mock("@/lib/server/page-tools", () => ({
   createPageForAgent: h.create,
 }));
 import { executeTool } from "./execute-tool";
-import { PROJECT_ASSISTANT_TOOLS } from "./tools";
+import { AUTOMATION_ASSISTANT_TOOLS, PROJECT_ASSISTANT_TOOLS } from "./tools";
 const ctx = {
   projectId: "project",
   userId: "actor",
@@ -138,6 +138,12 @@ describe("Numo database tool dispatch", () => {
 
 describe("conversation action targets", () => {
   const conversation = { ...ctx, requireExplicitProjectTarget: true };
+  it("keeps chain work available after delegation while reserving user input for mediation", () => {
+    const names = AUTOMATION_ASSISTANT_TOOLS.map((tool) => tool.function.name);
+    expect(names).toContain("launch_code_agent");
+    expect(names).toContain("report_automation_outcome");
+    expect(names).not.toContain("ask_user");
+  });
   it("never substitutes ambient context for an omitted action or worker target", async () => {
     for (const name of ["update_page_database", "launch_code_agent", "update_view"]) {
       expect(await executeTool(name, {}, conversation)).toMatchObject({ success: false });
@@ -174,6 +180,7 @@ describe("conversation action targets", () => {
     const chain = () => query;
     query.select = chain;
     query.eq = chain;
+    query.is = chain;
     query.maybeSingle = async () => ({
       data: {
         metadata: {
@@ -193,6 +200,7 @@ describe("conversation action targets", () => {
       toolCallId: "call-1",
       operationBudgetUsd: 1.5,
       routineId: "routine-1",
+      automationChainId: "chain-1",
       service: { from: () => query },
     } as unknown as ToolContext;
 
@@ -213,6 +221,8 @@ describe("conversation action targets", () => {
       projectId: "a",
       budgetUsd: 1.5,
       routineId: "routine-1",
+      chainId: "chain-1",
+      triggeredBy: "automation",
       delegation: expect.objectContaining({
         parentConversationId: "parent-conversation",
         parentTurnId: "parent-turn",
@@ -224,6 +234,90 @@ describe("conversation action targets", () => {
         ]),
       }),
     }));
+    const launchInput = h.launch.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    expect(launchInput).not.toHaveProperty("model");
+    expect(launchInput).not.toHaveProperty("reasoningLevel");
+  });
+  it("records the automation result only on the bound parent turn", async () => {
+    const writes: Record<string, unknown>[] = [];
+    const query: Record<string, unknown> = {};
+    const chain = () => query;
+    query.update = (value: Record<string, unknown>) => {
+      writes.push(value);
+      return query;
+    };
+    query.eq = chain;
+    query.is = chain;
+    query.select = chain;
+    query.maybeSingle = async () => ({ data: { id: "operation-1" }, error: null });
+    const automation = {
+      ...conversation,
+      conversationId: "parent-conversation",
+      turnId: "parent-turn",
+      automationChainId: "chain-1",
+      service: { from: () => query },
+    } as unknown as ToolContext;
+
+    expect(await executeTool("report_automation_outcome", {
+      outcome: "failed",
+      summary: "The requested change remains blocked.",
+      blockers: ["A product decision is still required."],
+    }, automation)).toMatchObject({
+      success: true,
+      result: { recorded: true, outcome: "failed" },
+    });
+    expect(writes).toEqual([{
+      outcome: "failed",
+      outcome_summary: "The requested change remains blocked.",
+      outcome_blockers: ["A product decision is still required."],
+    }]);
+
+    expect(await executeTool("report_automation_outcome", {
+      outcome: "ok",
+      summary: "Done.",
+      blockers: [],
+    }, conversation)).toMatchObject({ success: false });
+  });
+  it("reuses an identical automation result but rejects a conflicting one", async () => {
+    let selectCount = 0;
+    const query: Record<string, unknown> = {};
+    const chain = () => query;
+    query.update = chain;
+    query.select = () => {
+      selectCount++;
+      return query;
+    };
+    query.eq = chain;
+    query.is = chain;
+    query.maybeSingle = async () => selectCount % 2 === 1
+      ? { data: null, error: null }
+      : {
+          data: {
+            outcome: "failed",
+            outcome_summary: "Still blocked.",
+            outcome_blockers: ["Decision required."],
+          },
+          error: null,
+        };
+    const automation = {
+      ...conversation,
+      conversationId: "parent-conversation",
+      turnId: "parent-turn",
+      automationChainId: "chain-1",
+      service: { from: () => query },
+    } as unknown as ToolContext;
+
+    expect(await executeTool("report_automation_outcome", {
+      outcome: "failed",
+      summary: "Still blocked.",
+      blockers: ["Decision required."],
+    }, automation)).toMatchObject({ success: true, result: { reused: true } });
+
+    expect(await executeTool("report_automation_outcome", {
+      outcome: "failed",
+      summary: "Different result.",
+      blockers: ["Decision required."],
+    }, automation)).toMatchObject({ success: false });
   });
   it.each([
     ["review", { pullRequestId: "pr-1" }],

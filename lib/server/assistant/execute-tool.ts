@@ -243,6 +243,8 @@ export interface ToolContext {
   operationBudgetUsd?: number | null;
   operationBudgetPercent?: number | null;
   routineId?: string | null;
+  /** Automation chain that owns this parent Numo operation, if any. */
+  automationChainId?: string | null;
   /** Exact pending worker decision available only during a mediation turn. */
   workerInput?: WorkerInputCorrelation;
 }
@@ -658,11 +660,16 @@ async function listViews(
   ctx: ToolContext,
   projectId: string | null,
 ): Promise<ToolExecution> {
-  const base = ctx.supabase
+  // Durable automation has no browser session, so its read client is the
+  // service client. Keep the ownership rule in this query as well as in RLS:
+  // global views are personal, while project views are shared or the actor's.
+  const base = ctx.service
     .from("views")
     .select("id, name, kind, user_id, filters, sort, display");
   const { data, error } = await (
-    projectId ? base.eq("project_id", projectId) : base.is("project_id", null)
+    projectId
+      ? base.eq("project_id", projectId).or(`user_id.is.null,user_id.eq.${ctx.userId}`)
+      : base.is("project_id", null).eq("user_id", ctx.userId)
   ).order("position", { ascending: true });
   if (error) return toolError(error.message);
   const views = (data ?? []).map((v) => ({
@@ -677,22 +684,59 @@ async function listViews(
   return { result: { views }, success: true };
 }
 
+/** Service-safe projection of projects the current actor can still access. */
+async function accessibleProjects(ctx: ToolContext): Promise<{
+  projects: Array<{ id: string; name: string; key: string; owner_id: string }>;
+  error: string | null;
+}> {
+  const [{ data: owned, error: ownedError }, { data: memberships, error: membershipError }] =
+    await Promise.all([
+      ctx.service
+        .from("projects")
+        .select("id, name, key, owner_id")
+        .eq("owner_id", ctx.userId)
+        .is("deleted_at", null),
+      ctx.service
+        .from("project_members")
+        .select("project_id")
+        .eq("user_id", ctx.userId),
+    ]);
+  if (ownedError || membershipError) {
+    return { projects: [], error: ownedError?.message ?? membershipError?.message ?? "" };
+  }
+  const ids = new Set<string>([
+    ...((owned ?? []) as Array<{ id: string }>).map((project) => project.id),
+    ...((memberships ?? []) as Array<{ project_id: string }>).map((membership) => membership.project_id),
+  ]);
+  if (ids.size === 0) return { projects: [], error: null };
+  const { data: projects, error } = await ctx.service
+    .from("projects")
+    .select("id, name, key, owner_id")
+    .in("id", [...ids])
+    .is("deleted_at", null)
+    .order("created_at", { ascending: true });
+  return {
+    projects: (projects ?? []) as Array<{ id: string; name: string; key: string; owner_id: string }>,
+    error: error?.message ?? null,
+  };
+}
+
 /** Cross-project category/objective/integration options for global-mode view
     filters — grouped by name so the same label across projects collapses into
     one entry carrying every matching id. */
 async function listGlobalFilterOptions(
   ctx: ToolContext,
 ): Promise<ToolExecution> {
-  const { data: projectRows, error: pErr } = await ctx.supabase
-    .from("projects")
-    .select("id")
-    .is("deleted_at", null);
-  if (pErr) return toolError(pErr.message);
-  const projectIds = (projectRows ?? []).map((p) => (p as { id: string }).id);
+  const visible = await accessibleProjects(ctx);
+  if (visible.error) return toolError(visible.error);
+  const projectIds = visible.projects.map((project) => project.id);
+  if (projectIds.length === 0) {
+    return { result: { categories: [], objectives: [], integrations: [] }, success: true };
+  }
 
   const [catsRes, objsRes] = await Promise.all([
-    ctx.supabase.from("categories").select("id, name"),
-    ctx.supabase.from("objectives").select("id, name").is("deleted_at", null),
+    ctx.service.from("categories").select("id, name").in("project_id", projectIds),
+    ctx.service.from("objectives").select("id, name").in("project_id", projectIds).is("deleted_at", null),
   ]);
   if (catsRes.error) return toolError(catsRes.error.message);
   if (objsRes.error) return toolError(objsRes.error.message);
@@ -822,18 +866,80 @@ export async function executeTool(
         pause: true,
       };
     }
+    if (toolName === "report_automation_outcome") {
+      if (!ctx.automationChainId || !ctx.turnId) {
+        return toolError(
+          "report_automation_outcome is only available inside an automated Numo operation.",
+        );
+      }
+      const outcome = args.outcome === "ok" || args.outcome === "failed"
+        ? args.outcome
+        : null;
+      const summary = typeof args.summary === "string"
+        ? args.summary.trim().slice(0, 2_000)
+        : "";
+      const blockers = delegationStrings(args.blockers, 20);
+      if (!outcome || !summary) {
+        return toolError("outcome and summary are required.");
+      }
+      if (outcome === "ok" && blockers.length > 0) {
+        return toolError("An ok automation outcome cannot carry blockers.");
+      }
+      const { data, error } = await ctx.service
+        .from("numo_automation_operations")
+        .update({
+          outcome,
+          outcome_summary: summary,
+          outcome_blockers: blockers,
+        })
+        .eq("chain_id", ctx.automationChainId)
+        .eq("turn_id", ctx.turnId)
+        .is("outcome", null)
+        .select("id")
+        .maybeSingle();
+      if (error) return toolError(error.message);
+      if (!data) {
+        const { data: existing, error: existingError } = await ctx.service
+          .from("numo_automation_operations")
+          .select("outcome, outcome_summary, outcome_blockers")
+          .eq("chain_id", ctx.automationChainId)
+          .eq("turn_id", ctx.turnId)
+          .maybeSingle();
+        if (existingError) return toolError(existingError.message);
+        const sameBlockers = Array.isArray(existing?.outcome_blockers)
+          && existing.outcome_blockers.length === blockers.length
+          && existing.outcome_blockers.every(
+            (blocker: unknown, index: number) => blocker === blockers[index],
+          );
+        if (
+          existing?.outcome === outcome
+          && existing.outcome_summary === summary
+          && sameBlockers
+        ) {
+          return {
+            result: { recorded: true, reused: true, outcome, summary, blockers },
+            success: true,
+          };
+        }
+        return toolError(
+          existing?.outcome
+            ? "This automation outcome was already recorded."
+            : "The current Numo turn is not bound to this automation chain.",
+        );
+      }
+      return {
+        result: { recorded: true, outcome, summary, blockers },
+        success: true,
+      };
+    }
 
     // ── Project discovery and global-only filter options ───────────────
     if (toolName === "list_projects") {
-      const { data, error } = await ctx.supabase
-        .from("projects")
-        .select("id, name, key, owner_id")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: true });
-      if (error) return toolError(error.message);
+      const visible = await accessibleProjects(ctx);
+      if (visible.error) return toolError(visible.error);
       return {
         result: {
-          projects: (data ?? []).map((project) => ({
+          projects: visible.projects.map((project) => ({
             id: project.id,
             name: project.name,
             key: project.key,
@@ -1769,6 +1875,7 @@ export async function executeTool(
             projectKey: access.project.key,
             locale: ctx.locale,
             extra: durableDelegation ? legacyPrompt : objective,
+            fromChain: !!ctx.automationChainId,
           });
         }
         if (issueSource) {
@@ -1852,7 +1959,7 @@ export async function executeTool(
                 ? { issueId }
                 : { projectId }),
           userId: ctx.userId,
-          triggeredBy: ctx.triggerSource ?? "chat",
+          triggeredBy: ctx.automationChainId ? "automation" : ctx.triggerSource ?? "chat",
           prompt: message,
           continueRunId:
             typeof args.continuation_run_id === "string"
@@ -1875,6 +1982,7 @@ export async function executeTool(
             : {}),
           budgetUsd: ctx.operationBudgetUsd ?? null,
           routineId: ctx.routineId ?? null,
+          chainId: ctx.automationChainId ?? null,
           // Framing does not start the ticket; implement and check, yes.
           ...(mode ? { intent: intentForLaunchMode(mode) } : {}),
         });

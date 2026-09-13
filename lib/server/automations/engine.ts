@@ -10,6 +10,7 @@ import {
   type AgentRunVerdict,
 } from "@/lib/server/agent/runs";
 import { updateIssueFields } from "@/lib/server/update-issue";
+import { requestNumoTurnStop } from "@/lib/server/numo/turns";
 import {
   findImplementRule,
   isAutomationEffortEnabled,
@@ -31,6 +32,7 @@ import {
 import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
 import {
   advanceChain,
+  activeNumoAutomationOperation,
   cancelPendingChain,
   chainForIssue,
   getChain,
@@ -356,6 +358,10 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     HUMAN_STAND_DOWN_SOURCES.includes(params.event.source ?? "web") &&
     CHAIN_STAND_DOWN_STATUSES.includes(params.event.to)
   ) {
+    const operation = await activeNumoAutomationOperation(existing.id);
+    if (operation?.turn) {
+      await requestNumoTurnStop(operation.operation.conversation_id, existing.owner_id);
+    }
     // The current run leaves with it: letting it finish means continuing to
     // spend on a ticket that its owner has just put away.
     const working = await activeRunForChain(existing.id);
@@ -380,7 +386,11 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
   // COMPLETED while its stage is still running. (On the normal path, `stampRun`
   // has already made the run terminal when the hook calls: nothing is active and
   // ce test laisse passer.)
-  if (existing && (await activeRunForChain(existing.id))) return;
+  if (
+    existing &&
+    ((await activeNumoAutomationOperation(existing.id)) ||
+      (await activeRunForChain(existing.id)))
+  ) return;
 
   // ── The EN SURSIS channel ───────────────────────── ──────────────────────────
   // Semantics of `for:` of alerts: the condition must hold CONTINUOUSLY. At

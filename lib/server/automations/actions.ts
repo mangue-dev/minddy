@@ -1,35 +1,40 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { updateIssueFields } from "@/lib/server/update-issue";
-import { launchAgentRun } from "@/lib/server/agent/launch";
-import {
-  buildAgentLaunchMessage,
-  intentForLaunchMode,
-} from "@/lib/server/agent/launch-message";
+import { buildAgentLaunchMessage } from "@/lib/server/agent/launch-message";
 import { getAccountSettings } from "@/lib/server/account-settings";
+import { getServiceClient } from "@/lib/supabase-service";
+import { startNumoIntent } from "@/lib/server/numo/start-intent";
+import { executeNumoTurn, requestNumoTurnStop } from "@/lib/server/numo/turns";
 import { defaultLocale } from "@/i18n/config";
 import type { AutomationAction } from "@/lib/automations";
-import { lastVerdictOfChain, parkChain, type AgentChain } from "./chain";
+import {
+  bindNumoAutomationOperation,
+  ensureNumoAutomationOperation,
+  getChain,
+  lastNumoAutomationOperation,
+  lastVerdictOfChain,
+  parkChain,
+  type AgentChain,
+  type NumoAutomationOperation,
+  type NumoAutomationOperationState,
+} from "./chain";
 import { haltChain, notifyChain, postChainComment } from "./report";
+import { notifyAutomationOfNumoTurn } from "./numo-hooks";
 
 /**
  * Execution of the four actions of a rule (MIN-147).
  *
- * Nothing is reinvented on the agent side: `launchAgentRun` is already the entry point
- * UNIQUE of a cold run, and `buildAgentLaunchMessage` knows how to write the instructions
- * framed without request context — it was precisely written for callers
- * who do not have a composer on hand.
- *
- * A launch failure STOPS the chain with its reason, never silently:
- * `LaunchError` distinguishes eight of them, and it is this code that the comment of
- * report will translate. A channel that dies out without saying anything would be worse than
- * no automation at all.
+ * A run_numo step reserves one durable operation and enters the canonical
+ * conversation service. Numo may finish with Minddy tools alone or delegate
+ * repository work; only the parent turn's interpreted outcome advances the chain.
  */
 
 /** What an action did to the chain, from the engine's perspective. */
 export type ActionOutcome =
-  /** A run has started: the chain awaits its end, the hook will take control again. */
-  | { kind: "launched"; runId: string }
+  /** A Numo operation was submitted; its durable lifecycle now owns the step. */
+  | { kind: "submitted"; turnId: string }
   /** The action has been played and the engine can continue with the event produced. */
   | { kind: "continue" }
   /** The channel is parked (human stopping point) or stopped: nothing more to play. */
@@ -53,6 +58,94 @@ async function localeOf(userId: string): Promise<string> {
     // ignore
   }
   return defaultLocale;
+}
+
+async function metadataOf(userId: string): Promise<Record<string, unknown> | null> {
+  try {
+    const { data } = await getServiceClient().auth.admin.getUserById(userId);
+    return (data?.user?.user_metadata ?? null) as Record<string, unknown> | null;
+  } catch {
+    return null;
+  }
+}
+
+async function executeOperation(
+  chain: AgentChain,
+  operation: NumoAutomationOperation,
+): Promise<string> {
+  const service = getServiceClient();
+  let started;
+  try {
+    started = await startNumoIntent({
+      supabase: service,
+      userId: chain.owner_id,
+      userMetadata: await metadataOf(chain.owner_id),
+      projectId: chain.project_id,
+      prompt: operation.prompt,
+      locale: operation.locale,
+      source: "issue",
+      action: operation.mode,
+      context: {
+        projectId: chain.project_id,
+        issueId: operation.context.issue.id,
+        issueIdentifier: operation.context.issue.identifier,
+        issueTitle: operation.context.issue.title,
+      },
+      conversationId: operation.conversation_id,
+      conversationUserId: chain.owner_id,
+      requestId: operation.request_id,
+      executeInBackground: false,
+      triggerSource: "chat",
+      automation: operation.context,
+    });
+  } catch (error) {
+    // Without an admitted turn there is no canonical retry state to sweep.
+    // Stop visibly instead of leaving an advanced chain that retries forever.
+    await haltChain(chain, "numo_failed");
+    throw error;
+  }
+  await bindNumoAutomationOperation(operation.id, started.turnId);
+  // A stop may win between reserving the operation and binding its turn. Once
+  // bound, stop the exact conversation before its queued turn can execute.
+  // The stop route performs the same action after binding, covering the
+  // opposite ordering.
+  const current = await getChain(chain.id);
+  if (current?.status !== "running") {
+    await requestNumoTurnStop(operation.conversation_id, chain.owner_id);
+    return started.turnId;
+  }
+  await executeNumoTurn({
+    turnId: started.turnId,
+    readClient: service,
+  });
+  return started.turnId;
+}
+
+/** Recover admission, execution, or terminal delivery for one reserved step. */
+export async function recoverNumoAutomationOperation(
+  chain: AgentChain,
+  known?: NumoAutomationOperationState | null,
+): Promise<boolean> {
+  const state = known === undefined
+    ? await lastNumoAutomationOperation(chain.id)
+    : known;
+  if (!state || state.operation.step !== chain.step) return false;
+  if (!state.turn) {
+    await executeOperation(chain, state.operation);
+    return true;
+  }
+  if (state.turn.status === "queued" || state.turn.status === "retryable") {
+    await executeNumoTurn({
+      turnId: state.turn.id,
+      readClient: getServiceClient(),
+      allowRetryable: state.turn.status === "retryable",
+    });
+    return true;
+  }
+  if (["completed", "failed", "stopped"].includes(state.turn.status)) {
+    notifyAutomationOfNumoTurn(state.turn);
+  }
+  return true;
 }
 
 async function runNumo(
@@ -79,23 +172,38 @@ async function runNumo(
           projectKey: issue.project_key,
           locale,
           extra: extraPrompt,
-          fromChain: true,
         });
 
-  const result = await launchAgentRun({
-    issueId: issue.id,
-    userId: chain.owner_id,
-    triggeredBy: "automation",
-    intent: action.mode === "custom" ? "custom" : intentForLaunchMode(action.mode),
-    prompt,
+  const mode = action.mode;
+  const ruleId = chain.played_rule_ids.at(-1);
+  if (!ruleId) throw new Error("Automation chain step has no rule identity");
+  const identifier = `${issue.project_key}-${issue.number}`;
+  const context = {
     chainId: chain.id,
+    step: chain.step,
+    ruleId,
+    preset: chain.preset,
+    retries: chain.retries,
+    mode,
+    issue: {
+      id: issue.id,
+      identifier,
+      title: issue.title,
+      plan: issue.plan,
+    },
+  } as const;
+  const operation = await ensureNumoAutomationOperation({
+    chain,
+    ruleId,
+    mode,
+    title: `${identifier}: ${issue.title}`,
+    requestId: randomUUID(),
+    prompt,
+    locale,
+    context,
   });
-
-  if (!result.ok) {
-    await haltChain(chain, result.error);
-    return { kind: "halted" };
-  }
-  return { kind: "launched", runId: result.run.id };
+  const turnId = await executeOperation(chain, operation);
+  return { kind: "submitted", turnId };
 }
 
 /**

@@ -20,6 +20,7 @@ const h = vi.hoisted(() => ({
   ownerMeta: null as Record<string, unknown> | null,
   chain: null as Record<string, unknown> | null,
   activeRun: null as unknown,
+  activeOperation: null as unknown,
   verdict: null as { ok: boolean; summary: string; blockers: string[] } | null,
 }));
 
@@ -75,9 +76,14 @@ vi.mock("@/lib/server/update-issue", () => ({
   updateIssueFields: vi.fn(async () => ({ ok: true })),
 }));
 
+vi.mock("@/lib/server/numo/turns", () => ({
+  requestNumoTurnStop: vi.fn(async () => null),
+}));
+
 vi.mock("./chain", () => ({
   chainForIssue: vi.fn(async () => h.chain),
   getChain: vi.fn(async () => h.chain),
+  activeNumoAutomationOperation: vi.fn(async () => h.activeOperation),
   advanceChain: vi.fn(async (chain: { step: number; played_rule_ids: string[] }, ruleId: string) => ({
     ...chain,
     step: chain.step + 1,
@@ -114,7 +120,7 @@ vi.mock("./chain", () => ({
   cancelPendingChain: vi.fn(async () => null),
 }));
 
-vi.mock("./actions", () => ({ runAction: vi.fn(async () => ({ kind: "launched" })) }));
+vi.mock("./actions", () => ({ runAction: vi.fn(async () => ({ kind: "submitted" })) }));
 
 vi.mock("./report", () => ({
   haltChain: vi.fn(async () => undefined),
@@ -128,6 +134,7 @@ const actions = await import("./actions");
 const updateIssue = await import("@/lib/server/update-issue");
 const chainMod = await import("./chain");
 const runsMod = await import("@/lib/server/agent/runs");
+const numoTurns = await import("@/lib/server/numo/turns");
 
 /** A living string that has already played its single implementation step. */
 function livingChain() {
@@ -177,6 +184,7 @@ beforeEach(() => {
   h.ownerMeta = { automation_preset: "implement-only" };
   h.chain = livingChain();
   h.activeRun = null;
+  h.activeOperation = null;
   h.verdict = null;
 });
 
@@ -465,6 +473,35 @@ describe("runAutomations — conclure une chaîne", () => {
       expect(runsMod.requestInterrupt).toHaveBeenCalledWith("run-chaine");
       expect(actions.runAction).not.toHaveBeenCalled();
     }
+  });
+
+  it("stops the parent Numo operation when a human takes the issue back", async () => {
+    h.ownerMeta = { automation_preset: "loop-by-effort" };
+    h.chain = { ...livingChain(), preset: "loop-by-effort" };
+    h.activeOperation = {
+      operation: { conversation_id: "conversation-1" },
+      turn: { id: "turn-1", status: "waiting_input" },
+    };
+
+    await runAutomations({
+      issueId: "i1",
+      projectId: "p1",
+      event: {
+        type: "status_changed",
+        from: "in_progress",
+        to: "canceled",
+        source: "web",
+      },
+    });
+
+    expect(numoTurns.requestNumoTurnStop).toHaveBeenCalledWith(
+      "conversation-1",
+      "owner",
+    );
+    expect(report.haltChain).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "chain-1" }),
+      "taken_over",
+    );
   });
 
   it("…mais PAS sur les statuts que la chaîne traverse elle-même", async () => {

@@ -33,6 +33,7 @@ import {
   beginNumoTurn,
   executeNumoTurn,
   NumoBudgetReservationError,
+  type NumoAutomationContext,
 } from "./turns";
 
 export class NumoIntentStartError extends Error {
@@ -67,6 +68,8 @@ export interface StartNumoIntentInput {
   /** Let a surface bind its response destination before execution starts. */
   executeInBackground?: boolean;
   triggerSource?: "chat" | "mention";
+  /** Server-owned chain identity carried into the canonical turn. */
+  automation?: NumoAutomationContext;
 }
 
 export interface StartedNumoIntent {
@@ -189,6 +192,7 @@ export async function startNumoIntent(
         numoDefaultStatus: resolveNumoDefaultStatus(input.userMetadata),
         webSearchEnabled: await isWebSearchEnabled(),
         triggerSource: input.triggerSource ?? "chat",
+        ...(input.automation ? { automation: input.automation } : {}),
       },
       model: configuration.model,
       reasoningLevel: configuration.reasoningLevel,
