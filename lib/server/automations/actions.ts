@@ -6,12 +6,13 @@ import { buildAgentLaunchMessage } from "@/lib/server/agent/launch-message";
 import { getAccountSettings } from "@/lib/server/account-settings";
 import { getServiceClient } from "@/lib/supabase-service";
 import { startNumoIntent } from "@/lib/server/numo/start-intent";
-import { executeNumoTurn } from "@/lib/server/numo/turns";
+import { executeNumoTurn, requestNumoTurnStop } from "@/lib/server/numo/turns";
 import { defaultLocale } from "@/i18n/config";
 import type { AutomationAction } from "@/lib/automations";
 import {
   bindNumoAutomationOperation,
   ensureNumoAutomationOperation,
+  getChain,
   lastNumoAutomationOperation,
   lastVerdictOfChain,
   parkChain,
@@ -104,6 +105,15 @@ async function executeOperation(
     throw error;
   }
   await bindNumoAutomationOperation(operation.id, started.turnId);
+  // A stop may win between reserving the operation and binding its turn. Once
+  // bound, stop the exact conversation before its queued turn can execute.
+  // The stop route performs the same action after binding, covering the
+  // opposite ordering.
+  const current = await getChain(chain.id);
+  if (current?.status !== "running") {
+    await requestNumoTurnStop(operation.conversation_id, chain.owner_id);
+    return started.turnId;
+  }
   await executeNumoTurn({
     turnId: started.turnId,
     readClient: service,

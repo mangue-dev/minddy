@@ -660,11 +660,16 @@ async function listViews(
   ctx: ToolContext,
   projectId: string | null,
 ): Promise<ToolExecution> {
-  const base = ctx.supabase
+  // Durable automation has no browser session, so its read client is the
+  // service client. Keep the ownership rule in this query as well as in RLS:
+  // global views are personal, while project views are shared or the actor's.
+  const base = ctx.service
     .from("views")
     .select("id, name, kind, user_id, filters, sort, display");
   const { data, error } = await (
-    projectId ? base.eq("project_id", projectId) : base.is("project_id", null)
+    projectId
+      ? base.eq("project_id", projectId).or(`user_id.is.null,user_id.eq.${ctx.userId}`)
+      : base.is("project_id", null).eq("user_id", ctx.userId)
   ).order("position", { ascending: true });
   if (error) return toolError(error.message);
   const views = (data ?? []).map((v) => ({
@@ -679,22 +684,59 @@ async function listViews(
   return { result: { views }, success: true };
 }
 
+/** Service-safe projection of projects the current actor can still access. */
+async function accessibleProjects(ctx: ToolContext): Promise<{
+  projects: Array<{ id: string; name: string; key: string; owner_id: string }>;
+  error: string | null;
+}> {
+  const [{ data: owned, error: ownedError }, { data: memberships, error: membershipError }] =
+    await Promise.all([
+      ctx.service
+        .from("projects")
+        .select("id, name, key, owner_id")
+        .eq("owner_id", ctx.userId)
+        .is("deleted_at", null),
+      ctx.service
+        .from("project_members")
+        .select("project_id")
+        .eq("user_id", ctx.userId),
+    ]);
+  if (ownedError || membershipError) {
+    return { projects: [], error: ownedError?.message ?? membershipError?.message ?? "" };
+  }
+  const ids = new Set<string>([
+    ...((owned ?? []) as Array<{ id: string }>).map((project) => project.id),
+    ...((memberships ?? []) as Array<{ project_id: string }>).map((membership) => membership.project_id),
+  ]);
+  if (ids.size === 0) return { projects: [], error: null };
+  const { data: projects, error } = await ctx.service
+    .from("projects")
+    .select("id, name, key, owner_id")
+    .in("id", [...ids])
+    .is("deleted_at", null)
+    .order("created_at", { ascending: true });
+  return {
+    projects: (projects ?? []) as Array<{ id: string; name: string; key: string; owner_id: string }>,
+    error: error?.message ?? null,
+  };
+}
+
 /** Cross-project category/objective/integration options for global-mode view
     filters — grouped by name so the same label across projects collapses into
     one entry carrying every matching id. */
 async function listGlobalFilterOptions(
   ctx: ToolContext,
 ): Promise<ToolExecution> {
-  const { data: projectRows, error: pErr } = await ctx.supabase
-    .from("projects")
-    .select("id")
-    .is("deleted_at", null);
-  if (pErr) return toolError(pErr.message);
-  const projectIds = (projectRows ?? []).map((p) => (p as { id: string }).id);
+  const visible = await accessibleProjects(ctx);
+  if (visible.error) return toolError(visible.error);
+  const projectIds = visible.projects.map((project) => project.id);
+  if (projectIds.length === 0) {
+    return { result: { categories: [], objectives: [], integrations: [] }, success: true };
+  }
 
   const [catsRes, objsRes] = await Promise.all([
-    ctx.supabase.from("categories").select("id, name"),
-    ctx.supabase.from("objectives").select("id, name").is("deleted_at", null),
+    ctx.service.from("categories").select("id, name").in("project_id", projectIds),
+    ctx.service.from("objectives").select("id, name").in("project_id", projectIds).is("deleted_at", null),
   ]);
   if (catsRes.error) return toolError(catsRes.error.message);
   if (objsRes.error) return toolError(objsRes.error.message);
@@ -893,15 +935,11 @@ export async function executeTool(
 
     // ── Project discovery and global-only filter options ───────────────
     if (toolName === "list_projects") {
-      const { data, error } = await ctx.supabase
-        .from("projects")
-        .select("id, name, key, owner_id")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: true });
-      if (error) return toolError(error.message);
+      const visible = await accessibleProjects(ctx);
+      if (visible.error) return toolError(visible.error);
       return {
         result: {
-          projects: (data ?? []).map((project) => ({
+          projects: visible.projects.map((project) => ({
             id: project.id,
             name: project.name,
             key: project.key,

@@ -389,34 +389,32 @@ export async function advanceChain(
  */
 export async function recomputeChainSpend(chainId: string): Promise<number> {
   const service = getServiceClient();
-  const { data: operations, error: operationError } = await service
-    .from("numo_automation_operations")
-    .select("turn_id")
-    .eq("chain_id", chainId);
+  const [{ data: operations, error: operationError }, { data: runs, error: runError }] = await Promise.all([
+    service
+      .from("numo_automation_operations")
+      .select("turn_id")
+      .eq("chain_id", chainId),
+    // Parent Numo operation spend already includes its delegated workers.
+    // Only pre-Numo chain runs belong in this separate compatibility total.
+    service
+      .from("agent_runs")
+      .select("cost_usd")
+      .eq("chain_id", chainId)
+      .is("parent_numo_turn_id", null),
+  ]);
   if (operationError) throw new Error(operationError.message);
+  if (runError) throw new Error(runError.message);
   const turnIds = ((operations ?? []) as Array<{ turn_id: string | null }>)
     .map((row) => row.turn_id)
     .filter((id): id is string => !!id);
-  if ((operations ?? []).length > 0) {
-    const { data: turns, error: turnError } = turnIds.length > 0
+  const { data: turns, error: turnError } = turnIds.length > 0
       ? await service.from("numo_assistant_turns").select("cost_usd").in("id", turnIds)
       : { data: [], error: null };
-    if (turnError) throw new Error(turnError.message);
-    const total = ((turns ?? []) as Array<{ cost_usd: number | string | null }>).reduce(
-      (sum, row) => sum + (Number(row.cost_usd) || 0),
-      0,
-    );
-    const next = Number(total.toFixed(6));
-    await service.from("agent_chains").update({ spent_usd: next }).eq("id", chainId);
-    return next;
-  }
-
-  // Compatibility for chains already launched before Numo operation routing.
-  const { data } = await service
-    .from("agent_runs")
-    .select("cost_usd")
-    .eq("chain_id", chainId);
-  const total = ((data ?? []) as Array<{ cost_usd: number | string | null }>).reduce(
+  if (turnError) throw new Error(turnError.message);
+  const total = [
+    ...((turns ?? []) as Array<{ cost_usd: number | string | null }>),
+    ...((runs ?? []) as Array<{ cost_usd: number | string | null }>),
+  ].reduce(
     (sum, row) => sum + (Number(row.cost_usd) || 0),
     0,
   );

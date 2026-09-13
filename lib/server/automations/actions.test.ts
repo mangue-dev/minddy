@@ -16,6 +16,8 @@ const h = vi.hoisted(() => ({
   ensure: vi.fn(),
   buildPrompt: vi.fn(),
   halt: vi.fn(),
+  stop: vi.fn(),
+  currentChain: null as AgentChain | null,
 }));
 
 const service = {
@@ -28,11 +30,15 @@ const service = {
 
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => service }));
 vi.mock("@/lib/server/numo/start-intent", () => ({ startNumoIntent: h.start }));
-vi.mock("@/lib/server/numo/turns", () => ({ executeNumoTurn: h.execute }));
+vi.mock("@/lib/server/numo/turns", () => ({
+  executeNumoTurn: h.execute,
+  requestNumoTurnStop: h.stop,
+}));
 vi.mock("./numo-hooks", () => ({ notifyAutomationOfNumoTurn: h.notify }));
 vi.mock("./chain", () => ({
   bindNumoAutomationOperation: h.bind,
   ensureNumoAutomationOperation: h.ensure,
+  getChain: vi.fn(async () => h.currentChain),
   lastNumoAutomationOperation: vi.fn(async () => null),
   lastVerdictOfChain: vi.fn(),
   parkChain: vi.fn(),
@@ -142,6 +148,7 @@ const state = (status: NumoTurn["status"] | null): NumoAutomationOperationState 
 
 beforeEach(() => {
   vi.clearAllMocks();
+  h.currentChain = chain;
   h.sequence.length = 0;
   h.start.mockImplementation(async () => {
     h.sequence.push("start");
@@ -230,6 +237,14 @@ describe("Numo automation operation recovery", () => {
     ).rejects.toThrow("usage unavailable");
     expect(h.halt).toHaveBeenCalledWith(chain, "numo_failed");
     expect(h.bind).not.toHaveBeenCalled();
+    expect(h.execute).not.toHaveBeenCalled();
+  });
+
+  it("stops a turn admitted after the chain was explicitly stopped", async () => {
+    h.currentChain = { ...chain, status: "stopped" };
+    await recoverNumoAutomationOperation(chain, state(null));
+
+    expect(h.stop).toHaveBeenCalledWith(operation.conversation_id, chain.owner_id);
     expect(h.execute).not.toHaveBeenCalled();
   });
 
