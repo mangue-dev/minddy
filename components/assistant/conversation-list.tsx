@@ -284,7 +284,7 @@ export function ConversationList({
           )}
           {unread && (
             <span
-              className="size-2 shrink-0 rounded-full bg-primary group-hover:hidden group-focus-within:hidden"
+              className="size-2 shrink-0 rounded-full bg-blue-500"
               aria-label={t("unreadConversation")}
             />
           )}

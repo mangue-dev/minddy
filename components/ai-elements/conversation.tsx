@@ -4,6 +4,7 @@ import { Button, cn } from "mangue-ui";
 import { ArrowDownIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { useScrollFade } from "@/lib/use-scroll-fade";
 import {
   createContext,
   useCallback,
@@ -119,6 +120,21 @@ export const ConversationContent = ({
   ...props
 }: ConversationContentProps) => {
   const { scrollRef, contentRef, measure } = useConversationContext();
+  const {
+    ref: fadeRef,
+    scrollProps: { onScroll: updateFade, style: fadeStyle },
+  } = useScrollFade<HTMLDivElement>();
+  const setScrollRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      scrollRef.current = node;
+      fadeRef(node);
+    },
+    [fadeRef, scrollRef],
+  );
+  const handleScroll = useCallback(() => {
+    measure();
+    updateFade();
+  }, [measure, updateFade]);
 
   // The content grows UNDER the user while Numo writes: without observing its
   // waist, “am I down?” » would only refresh with the next gesture of
@@ -133,10 +149,13 @@ export const ConversationContent = ({
 
   return (
     <div
-      ref={scrollRef}
-      onScroll={measure}
+      ref={setScrollRef}
+      onScroll={handleScroll}
       className="h-full w-full overflow-y-auto"
-      style={{ scrollbarGutter: "stable both-edges" }}
+      style={{
+        scrollbarGutter: "stable both-edges",
+        ...fadeStyle,
+      }}
     >
       <div
         ref={contentRef}
