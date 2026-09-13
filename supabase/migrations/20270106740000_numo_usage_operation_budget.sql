@@ -73,6 +73,21 @@ REVOKE ALL ON FUNCTION public.get_numo_operation_spend(uuid)
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_numo_operation_spend(uuid) TO service_role;
 
+-- A parent can use BYOK while a delegated worker uses the managed worker
+-- surface. Reservations must consume only the latter, while operation caps
+-- still include every charge.
+CREATE OR REPLACE FUNCTION public.get_numo_operation_platform_spend(p_turn_id uuid)
+RETURNS numeric
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = 'public' AS $$
+  SELECT COALESCE(SUM(COALESCE(cost, 0)), 0)
+  FROM public.ai_usage
+  WHERE numo_turn_id = p_turn_id
+    AND key_mode = 'platform';
+$$;
+REVOKE ALL ON FUNCTION public.get_numo_operation_platform_spend(uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_numo_operation_platform_spend(uuid) TO service_role;
+
 -- Ordinary chat turns reserve the remaining account budget before the first
 -- provider call. A routine caller can request only its percentage cap.
 CREATE OR REPLACE FUNCTION public.begin_numo_turn_with_budget(

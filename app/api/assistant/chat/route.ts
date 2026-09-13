@@ -594,6 +594,7 @@ export async function POST(request: NextRequest) {
   // guarantees that it succeeds without delaying the first token of the response.
   let titleDone: Promise<void> | null = null;
   let pendingTitle: { conversationId: string; fallback: string } | null = null;
+  let createdConversationId: string | null = null;
   if (!convId) {
     const title = fallbackShortTitle(sanitizedUserMessage);
     const { data: conv, error: convError } = await supabase
@@ -617,6 +618,7 @@ export async function POST(request: NextRequest) {
       );
     }
     convId = conv.id;
+    createdConversationId = conv.id;
 
     pendingTitle = { conversationId: conv.id as string, fallback: title };
   }
@@ -663,6 +665,18 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof NumoBudgetReservationError) {
+      // The turn was not admitted, so a conversation created for this request
+      // has no messages or durable work to preserve.
+      if (createdConversationId) {
+        const { error: cleanupError } = await service
+          .from("conversations")
+          .delete()
+          .eq("id", createdConversationId)
+          .eq("user_id", user.id);
+        if (cleanupError) {
+          console.error("Failed to remove unadmitted Numo conversation:", cleanupError.message);
+        }
+      }
       return planLimitResponse(new PlanLimitError("usage_budget_exceeded", {
         used: admittedUsage.usedUsd,
         included: admittedUsage.billing.plan.includedUsageUsd,

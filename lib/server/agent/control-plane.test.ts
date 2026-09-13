@@ -44,6 +44,8 @@ const h = vi.hoisted(() => ({
   quota: null as Record<string, unknown> | null,
   /** The sum of the ledger for this run. */
   ledgerSpent: 0 as number | null,
+  /** Platform-funded share of a mixed-payer Numo operation. */
+  platformLedgerSpent: 0 as number | null,
   /** Runs whose abort flag has been cleared. */
   cleared: [] as string[],
   /** Messages RELEASED by the microVM (`POST /messages`). */
@@ -119,6 +121,7 @@ vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
   }),
   spentFromLedger: vi.fn(async () => h.ledgerSpent),
   spentForBudget: vi.fn(async () => h.ledgerSpent),
+  spentPlatformForBudget: vi.fn(async () => h.platformLedgerSpent),
 }));
 
 // The price of the model leaves the process (OpenRouter index): we freeze it, otherwise it
@@ -392,6 +395,7 @@ beforeEach(() => {
   h.cleared.length = 0;
   h.quota = { unlimited: false, remaining: 3, allowed: true, mode: "platform" };
   h.ledgerSpent = 0;
+  h.platformLedgerSpent = 0;
   h.run = {
     id: RUN_ID,
     status: "running",
@@ -562,6 +566,7 @@ describe("le budget restant du tour", () => {
   it("uses only the unspent atomic reservation for a new platform run", async () => {
     h.run = { ...h.run!, managed_budget_usd: 1.5, cost_usd: 0.4 };
     h.ledgerSpent = 0.6;
+    h.platformLedgerSpent = 0.6;
     h.quota = {
       unlimited: false,
       remaining: 9,
@@ -573,6 +578,29 @@ describe("le budget restant du tour", () => {
       await call("GET", "/budget").then((response) => response.body),
     ).toEqual({
       remainingUsd: 0.9,
+    });
+  });
+
+  it("does not charge a parent BYOK generation against its managed worker reservation", async () => {
+    h.run = {
+      ...h.run!,
+      parent_numo_turn_id: "33333333-2222-4333-8444-555555555555",
+      managed_budget_usd: 1,
+      cost_usd: 0.1,
+    };
+    h.ledgerSpent = 0.8;
+    h.platformLedgerSpent = 0.2;
+    h.quota = {
+      unlimited: false,
+      remaining: 9,
+      allowed: true,
+      mode: "platform",
+    };
+
+    expect(
+      await call("GET", "/budget").then((response) => response.body),
+    ).toEqual({
+      remainingUsd: 0.8,
     });
   });
 });
@@ -1519,6 +1547,7 @@ describe("le plan de contrôle vu depuis une machine", () => {
     it("caps a local platform key at the run's unspent reservation", async () => {
       h.run = { ...h.run!, managed_budget_usd: 1.2, cost_usd: 0.2 };
       h.ledgerSpent = 0.4;
+      h.platformLedgerSpent = 0.4;
       h.quota = {
         unlimited: false,
         remaining: 7,

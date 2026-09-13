@@ -80,6 +80,13 @@ describe("Numo operation usage migration", () => {
     expect(create).toContain("v_granted := v_parent.managed_budget_usd");
   });
 
+  it("keeps BYOK parent usage out of a managed worker reservation", () => {
+    expect(sql).toContain(
+      "create or replace function public.get_numo_operation_platform_spend",
+    );
+    expect(sql).toContain("and key_mode = 'platform'");
+  });
+
   it("reacquires the parent operation reservation on a worker continuation", () => {
     const resume = operation(
       "resume_latest_agent_run_with_message",

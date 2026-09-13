@@ -336,20 +336,25 @@ function liveFileStats(raw: unknown): AgentLiveFileStat[] | undefined {
  */
 async function turnBudgetRemainingUsd(run: AgentRun): Promise<number | null> {
   try {
-    const [{ checkAgentQuota }, { spentForBudget }] = await Promise.all([
+    const [{ checkAgentQuota }, { spentForBudget, spentPlatformForBudget }] = await Promise.all([
       import("./quota"),
       import("@/lib/server/ai-usage"),
     ]);
-    const [quota, spent] = await Promise.all([
+    const [quota, spent, platformSpent] = await Promise.all([
       checkAgentQuota(run.created_by ?? ""),
       spentForBudget(run.run_id ?? run.id, run.parent_numo_turn_id),
+      spentPlatformForBudget(run.run_id ?? run.id, run.parent_numo_turn_id),
     ]);
     const runSpent = Math.max(run.cost_usd, spent ?? 0);
+    const platformRunSpent = Math.max(
+      run.key_mode === "platform" ? run.cost_usd : 0,
+      platformSpent ?? 0,
+    );
     const account = quota.unlimited
       ? null
       : run.managed_budget_usd == null
         ? Math.max(0, quota.remaining ?? 0)
-        : Math.max(0, Number(run.managed_budget_usd) - runSpent);
+        : Math.max(0, Number(run.managed_budget_usd) - platformRunSpent);
     const fromRun =
       run.budget_usd == null
         ? null
@@ -940,7 +945,7 @@ export async function handleControlPlaneRequest(opts: {
     const [
       { mintRunKey, revokeRunKey, runKeyCapUsd },
       { checkAgentQuota },
-      { spentForBudget },
+      { spentForBudget, spentPlatformForBudget },
     ] = await Promise.all([
       import("./run-key"),
       import("./quota"),
@@ -950,22 +955,28 @@ export async function handleControlPlaneRequest(opts: {
     // on the same entries: the budget of the run is a governor, the remainder of the
     // has a hard ceiling. Reading it here rather than taking it on a journey is what
     // which means that a long tour does not rely on a six-hour remaining.
-    const [quota, ledgerSpent] = await Promise.all([
+    const [quota, ledgerSpent, platformLedgerSpent] = await Promise.all([
       checkAgentQuota(run.created_by ?? "").catch(() => null),
       spentForBudget(run.run_id ?? run.id, run.parent_numo_turn_id).catch(() => null),
+      spentPlatformForBudget(run.run_id ?? run.id, run.parent_numo_turn_id).catch(() => null),
     ]);
+    const runSpent = Math.max(run.cost_usd, ledgerSpent ?? 0);
+    const platformRunSpent = Math.max(
+      run.key_mode === "platform" ? run.cost_usd : 0,
+      platformLedgerSpent ?? 0,
+    );
     const minted = await mintRunKey({
       runId: run.id,
       capUsd: runKeyCapUsd({
         runBudgetUsd: run.budget_usd,
-        runSpentUsd: Math.max(run.cost_usd, ledgerSpent ?? 0),
+        runSpentUsd: runSpent,
         reservedBudgetUsd:
           run.managed_budget_usd == null
             ? null
             : Math.max(
                 0,
                 Number(run.managed_budget_usd) -
-                  Math.max(run.cost_usd, ledgerSpent ?? 0),
+                  platformRunSpent,
               ),
         accountRemainingUsd:
           quota && !quota.unlimited

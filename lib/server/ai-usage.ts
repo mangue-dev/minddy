@@ -93,6 +93,28 @@ export async function spentFromNumoOperation(turnId: string): Promise<number | n
   }
 }
 
+/** Platform-funded portion of a durable Numo operation. */
+export async function spentFromNumoOperationPlatform(turnId: string): Promise<number | null> {
+  try {
+    const service = getServiceClient();
+    const { data, error } = await service.rpc("get_numo_operation_platform_spend", {
+      p_turn_id: turnId,
+    });
+    if (error) {
+      console.error("[ai-usage] get_numo_operation_platform_spend failed:", error.message);
+      return null;
+    }
+    const spent = Number(data ?? 0);
+    return Number.isFinite(spent) ? spent : null;
+  } catch (err) {
+    console.error(
+      "[ai-usage] get_numo_operation_platform_spend threw:",
+      (err as Error).message,
+    );
+    return null;
+  }
+}
+
 /** Use the shared operation ledger for Numo-owned workers, otherwise the run ledger. */
 export async function spentForBudget(
   runId: string,
@@ -100,6 +122,16 @@ export async function spentForBudget(
 ): Promise<number | null> {
   return numoTurnId
     ? spentFromNumoOperation(numoTurnId)
+    : spentFromLedger(runId);
+}
+
+/** Use only platform-funded operation spend for a managed account reservation. */
+export async function spentPlatformForBudget(
+  runId: string,
+  numoTurnId?: string | null,
+): Promise<number | null> {
+  return numoTurnId
+    ? spentFromNumoOperationPlatform(numoTurnId)
     : spentFromLedger(runId);
 }
 
