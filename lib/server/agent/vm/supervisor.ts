@@ -2359,7 +2359,11 @@ export async function runOpencodeTurn(
          * answer. The detour from before (rejection → turn cut → disguised response
          * in steering on the next turn) disappears with its three steps.
          */
-        if (out.question && !child) {
+        // A delegated child is still part of the one worker Numo owns. In the
+        // mediated path it must end the worker turn too: otherwise its
+        // `needs_input` event reaches Numo while the worker remains running,
+        // making the durable answer impossible to apply safely.
+        if (out.question && (!child || job.numoMediation)) {
           if (questionsSuspend) {
             pendingQuestion = {
               id: out.question.id,
@@ -2503,8 +2507,17 @@ export async function runOpencodeTurn(
             ? subagents.entry(out.sessionId ?? "")
             : undefined;
           if (entry) payload = markChildPayload(payload, entry);
-          await cp.emit(event.type, {
+          const eventType = job.numoMediation && event.type === "question"
+            ? "needs_input"
+            : event.type;
+          await cp.emit(eventType, {
             ...payload,
+            ...(eventType === "needs_input"
+              ? {
+                  run_id: job.runId,
+                  parent_turn_id: job.numoMediation!.parentTurnId,
+                }
+              : {}),
             ...(reason ? { reason } : {}),
             // A girl that the flow has not attached to anything remains marked: better
             // is worth an event folded under a session id as a gesture attributed to

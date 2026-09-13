@@ -1323,6 +1323,7 @@ export async function executeAgentRun(
         // project-PR section, and every sentence that promises a remote.
         hasRepo: target != null,
         interactive: !run.routine_id,
+        mediated: run.parent_numo_turn_id != null && run.parent_numo_conversation_id != null,
         webSearch: webSearchAllowed,
         webSearchMax: MAX_WEB_SEARCHES_PER_TURN,
         chain: !!run.chain_id,
@@ -1550,6 +1551,14 @@ export async function executeAgentRun(
       anchor,
       writesToRepo,
       interactive: true,
+      ...(run.parent_numo_turn_id && run.parent_numo_conversation_id
+        ? {
+            numoMediation: {
+              parentConversationId: run.parent_numo_conversation_id,
+              parentTurnId: run.parent_numo_turn_id,
+            },
+          }
+        : {}),
       chain: !!run.chain_id,
       imageInput,
       webSearch: webSearchAllowed,

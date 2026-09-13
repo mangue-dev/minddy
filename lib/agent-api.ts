@@ -433,6 +433,7 @@ export type AgentEventType =
   | "plan_update"
   | "files_changed"
   | "question"
+  | "needs_input"
   /** Monthly usage budget exhausted during the run: the wire returns the card which says
    * where the budget is and what we can do (make plans, wait, BYOK). */
   | "quota_exhausted";

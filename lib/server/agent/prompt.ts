@@ -338,6 +338,8 @@ ${gitPrLines}`;
 export function askingSection(opts: {
   routine: boolean;
   n: PromptToolNames;
+  /** A delegated worker reports only to Numo, which owns the user dialogue. */
+  mediated?: boolean;
   /**
    * DOES THE QUESTION SUSPEND THE TURN (MIN-364, D7)? On the user's machine, yes — the tool blocks and the response returns IN its result.
    * In microVM it terminates it, because keeping a microVM open for the time
@@ -349,6 +351,15 @@ export function askingSection(opts: {
    */
   currentRepo?: boolean;
 }): string {
+  if (opts.mediated) {
+    return `## Asking for a blocking decision
+- If a product or implementation decision genuinely blocks the delegated task, call \`${opts.n.ask}\` with every blocking question in one call.
+- Numo receives the question, answers it from the parent conversation when reliable, or asks the user there. You never open a separate user dialogue.
+- Calling \`${opts.n.ask}\` ends this worker turn cleanly. Preserve partial work and wait for Numo's answer in the next warm-resumed turn.
+- Resolve ordinary engineering ambiguity yourself and document the assumption; do not ask merely for reassurance.
+
+`;
+  }
   if (!opts.routine && opts.currentRepo) {
     return `## Asking clarifying questions
 - If a genuine product or implementation decision blocks you (ambiguous requirement only the user can resolve), ask — do not guess.

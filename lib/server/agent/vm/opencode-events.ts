@@ -771,7 +771,10 @@ export function translateEvent(
       if (!id || questions.length === 0) return { sessionId, events: [] };
       return {
         sessionId,
-        events: [{ type: "question", payload: { id: callId, questions } }],
+        events: [{
+          type: "question",
+          payload: { id: callId, call_id: callId, question_id: id, questions },
+        }],
         question: { id, callId, questions },
       };
     }

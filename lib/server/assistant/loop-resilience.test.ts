@@ -149,6 +149,57 @@ describe("Numo chat loop resilience", () => {
     expect(registerActiveRun).toHaveBeenCalledWith("worker-run");
   });
 
+  it("suspends on the same worker after Numo answers a mediated question", async () => {
+    fetchOpenRouter.mockResolvedValue({
+      model: "model",
+      response: stream({
+        tool_calls: [{
+          index: 0,
+          id: "call-answer",
+          function: {
+            name: "answer_code_worker",
+            arguments: JSON.stringify({
+              parent_turn_id: "parent-turn",
+              run_id: "worker-run",
+              question_id: "question-1",
+              answer: "Use the public API.",
+            }),
+          },
+        }],
+      }),
+    });
+    executeTool.mockResolvedValue({
+      result: { status: "answered", run_id: "worker-run", question_id: "question-1" },
+      success: true,
+      pause: true,
+    });
+    const registerActiveRun = vi.fn();
+
+    const result = await processChat(
+      [{ role: "user", content: "Continue the delegated work" }],
+      [],
+      { emit: vi.fn() } as never,
+      {
+        model: "model",
+        conversationId: "conversation",
+        projectId: "project",
+        userId: "user",
+        supabase: fakeService(),
+        service: fakeService(),
+        locale: "en",
+        workerInput: {
+          parentTurnId: "parent-turn",
+          runId: "worker-run",
+          questionId: "question-1",
+        },
+        registerActiveRun,
+      },
+    );
+
+    expect(result.suspension).toEqual({ kind: "work", runId: "worker-run" });
+    expect(registerActiveRun).toHaveBeenCalledWith("worker-run");
+  });
+
   it("surfaces an ambiguous mutation instead of executing it again", async () => {
     fetchOpenRouter.mockResolvedValue({
       model: "model",
@@ -265,6 +316,58 @@ describe("Numo chat loop resilience", () => {
     }));
   });
 
+  it("persists worker correlation when Numo asks the user for a decision", async () => {
+    fetchOpenRouter.mockResolvedValue({
+      model: "model",
+      response: stream({
+        tool_calls: [{
+          index: 0,
+          id: "call-question",
+          function: {
+            name: "ask_user",
+            arguments: JSON.stringify({
+              questions: [{ header: "Source", question: "Which API should be used?" }],
+            }),
+          },
+        }],
+      }),
+    });
+    const persistToolRound = vi.fn().mockResolvedValue("assistant-round");
+
+    const result = await processChat(
+      [{ role: "user", content: "Implement the integration" }],
+      [],
+      { emit: vi.fn() } as never,
+      {
+        model: "model",
+        conversationId: "conversation",
+        projectId: "project",
+        userId: "user",
+        supabase: fakeService(),
+        service: fakeService(),
+        locale: "en",
+        turnId: "parent-turn",
+        workerInput: {
+          parentTurnId: "parent-turn",
+          runId: "worker-run",
+          questionId: "question-1",
+        },
+        persistToolRound,
+        persistCheckpoint: vi.fn(),
+      },
+    );
+
+    const pending = persistToolRound.mock.calls[0][0].pendingToolCalls[0];
+    expect(JSON.parse(pending.function.arguments)).toMatchObject({
+      _worker_input: {
+        parent_turn_id: "parent-turn",
+        run_id: "worker-run",
+        question_id: "question-1",
+      },
+    });
+    expect(result.suspension).toEqual({ kind: "input" });
+  });
+
   it("commits a durable tool round before executing its tools", async () => {
     fetchOpenRouter.mockResolvedValue({
       model: "model",
@@ -310,6 +413,7 @@ describe("Numo chat loop resilience", () => {
     expect(toolReplayPolicy("propose_backlog")).toBe("retry");
     expect(toolReplayPolicy("get_issue")).toBe("retry");
     expect(toolReplayPolicy("launch_code_agent")).toBe("retry");
+    expect(toolReplayPolicy("answer_code_worker")).toBe("retry");
     expect(toolReplayPolicy("create_issue")).toBe("reconcile");
   });
 });

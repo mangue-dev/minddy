@@ -69,6 +69,8 @@ export interface OpencodeAnchorInput {
   anchor?: AgentAnchor;
   /** False for a routine passage; this changes context, not capabilities. */
   interactive?: boolean;
+  /** True when the parent Numo conversation owns every user interaction. */
+  mediated?: boolean;
   webSearch?: boolean;
   webSearchMax?: number;
   chain?: boolean;
@@ -127,7 +129,9 @@ function harnessDeltas(input: OpencodeAnchorInput): string {
     // there's nothing to do about that — the opencode tool already blocks itself.
     // Telling him the opposite would make him finish everything before asking, and read his
     // own turn as lost at the moment he asks.
-    input.currentRepo === true
+    input.mediated === true
+      ? `- **\`${n.ask}\` ENDS this worker turn and reports the decision to Numo.** Numo either answers from the parent conversation or asks the user there, then warm-resumes this worker with the answer.`
+      : input.currentRepo === true
       ? `- **\`${n.ask}\` SUSPENDS your turn — it does not end it.** The call blocks, the user answers, and their answer comes back to you as the tool's own result: you keep your context, your plan and your open files. Ask the moment the answer changes what you would write, and put everything blocking the same piece of work in ONE call.`
       : `- **\`${n.ask}\` ENDS your turn.** It is not a blocking prompt: the questions go to the user, the session goes to sleep, and their answers open your next turn. So ask everything blocking the same piece of work in ONE call, and never call it for something you can decide yourself.`,
   );
@@ -231,7 +235,12 @@ ${workflowSteps({
   failedEditAdvice: `If an \`edit\` fails because \`oldString\` wasn't found, re-read the file and copy the exact current text.`,
 })}
 
-${askingSection({ routine, n, currentRepo: input.currentRepo === true })}${chainSection(input.chain === true)}${untrustedContentSection({ notebook })}${rulesTail(replyLanguage, input.currentRepo === true)}`;
+${askingSection({
+  routine,
+  n,
+  mediated: input.mediated === true,
+  currentRepo: input.currentRepo === true,
+})}${chainSection(input.chain === true)}${untrustedContentSection({ notebook })}${rulesTail(replyLanguage, input.currentRepo === true)}`;
 }
 
 /**

@@ -42,11 +42,11 @@ type RouteContext = { params: Promise<{ id: string }> };
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-// `created_by`, `chain_id` and `routine_id` are not there to be displayed:
-// these are the three columns on which the visibility rule (MIN-332) depends, and
-// this reading is done using a service key — without them, we would not be able to sort.
+// `created_by`, `chain_id`, `routine_id`, and `parent_numo_turn_id` are read only
+// to decide visibility. The service-key query needs them before it can return a
+// safe public response.
 const RUN_COLUMNS =
-  "id, conversation_id, status, model, model_forced, reasoning_level, key_mode, triggered_by, prompt, prompt_mentions, pull_request_id, created_by, chain_id, routine_id, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input, local_exec, local_worktree, conversation:agent_conversations(owner_id, visibility)";
+  "id, conversation_id, parent_numo_turn_id, status, model, model_forced, reasoning_level, key_mode, triggered_by, prompt, prompt_mentions, pull_request_id, created_by, chain_id, routine_id, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input, local_exec, local_worktree, conversation:agent_conversations(owner_id, visibility)";
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -76,15 +76,14 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   ]);
   const pullRequest =
     pickIssuePullRequests((prs ?? []) as IssuePrRow[])[id] ?? null;
-  // The ticket is public, its conversations are not (MIN-332): the panel
-  // only shows MY runs, plus those that the project triggered (automation,
-  // routine) or which relate to RA. Sorting is here because reading is
-  // in service key — the `agent_runs_select` policy, which it bypasses, says the
-  // same thing. The three visibility columns appear immediately in the payload.
+  // The issue is public, but its conversations are not (MIN-332): the panel
+  // shows only the caller's runs plus shared project-triggered runs. This
+  // service-key read applies the same rule as `agent_runs_select`, and omits
+  // Numo-owned workers because their parent conversation is their sole surface.
   const visibleRuns = ((data ?? []) as unknown as RunRow[]).filter((run) =>
-    run.conversation
+    run.parent_numo_turn_id == null && (run.conversation
       ? canReadConversationRecord(auth.user.id, run.conversation)
-      : isSharedRun(run) || run.created_by === auth.user.id,
+      : isSharedRun(run) || run.created_by === auth.user.id),
   );
   // Checkpoints can reach several megabytes and must never enter a list payload.
   // Fetch only the ids of failed rows that retained one; other statuses are
@@ -108,6 +107,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       created_by: _c,
       chain_id: _ch,
       routine_id: _r,
+      parent_numo_turn_id: _parent,
       conversation: _v,
       checkpoint: _checkpoint,
       ...rest

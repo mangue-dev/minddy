@@ -46,6 +46,16 @@ export async function GET(
         .order("seq", { ascending: true })
         .limit(200)
     : { data: [] };
+  const { data: pendingInput } = turn
+    ? await supabase
+        .from("agent_run_input_requests")
+        .select("run_id, parent_numo_turn_id, question_id, call_id, questions, created_at")
+        .eq("parent_numo_turn_id", turn.id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
 
   return Response.json({
     status: turn?.status ?? conversation.status,
@@ -53,6 +63,7 @@ export async function GET(
     turn_id: turn?.id ?? null,
     last_event_seq: turn?.last_event_seq ?? -1,
     active_run_id: turn?.active_run_id ?? null,
+    pending_input: pendingInput ?? null,
     activity: activity ?? [],
   });
 }

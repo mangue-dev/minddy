@@ -97,6 +97,17 @@ beforeEach(() => {
 });
 
 describe("POST /api/agent-runs/[runId]/steer", () => {
+  it("keeps a delegated worker owned by its parent Numo conversation", async () => {
+    run!.parent_numo_turn_id = "33333333-3333-4333-8333-333333333333";
+
+    const res = await POST(request(), params);
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: "workerOwnedByNumo" });
+    expect(messages).toHaveLength(0);
+    expect(checkAgentQuota).not.toHaveBeenCalled();
+  });
+
   it("rejects a failed bootstrap that has no checkpoint", async () => {
     run!.status = "failed";
     run!.checkpoint = null;

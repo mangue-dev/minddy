@@ -209,7 +209,7 @@ export async function reapDeadVmRuns(
   const { data } = await service
     .from("agent_runs")
     .select(
-      "id, sandbox_id, sandbox_billing, loop_command_id, local_exec, created_by, project_id, issue_id, conversation_id, provider_key_id, run_id, routine_id, continuations, started_at, last_activity_at, cost_usd",
+      "id, sandbox_id, sandbox_billing, loop_command_id, local_exec, created_by, project_id, issue_id, conversation_id, provider_key_id, run_id, routine_id, parent_numo_turn_id, continuations, started_at, last_activity_at, cost_usd",
     )
     .eq("status", "running")
     .lt("last_activity_at", cutoff)
@@ -227,6 +227,7 @@ export async function reapDeadVmRuns(
     provider_key_id: string | null;
     run_id: string | null;
     routine_id: string | null;
+    parent_numo_turn_id: string | null;
     continuations: number;
     started_at: string | null;
     last_activity_at: string | null;

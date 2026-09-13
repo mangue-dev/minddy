@@ -322,6 +322,12 @@ export interface AssistantChatRequest {
   conversationId?: string;
   projectId?: string;
   message: string;
+  /** Exact pending delegated-worker question answered by this card submission. */
+  workerInput?: {
+    parentTurnId: string;
+    runId: string;
+    questionId: string;
+  };
   /** Model selected for this conversation; omitted/null follows its default. */
   model?: string | null;
   /** Reasoning selected for this conversation; omitted/null follows its default. */

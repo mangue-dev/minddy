@@ -226,6 +226,7 @@ const RETRYABLE_READ_TOOLS = new Set([
   // delegated workers. Re-delivery resolves the original run instead of
   // launching another one, including after a process dies before ledger commit.
   "launch_code_agent",
+  "answer_code_worker",
 ]);
 
 export function toolReplayPolicy(toolName: string): "retry" | "reconcile" {
@@ -430,6 +431,21 @@ export async function processChat(
     if (toolCallAccumulators.size > 0) {
       const assistantToolCalls: AssistantToolCall[] = [];
       for (const [, acc] of toolCallAccumulators) {
+        if (acc.name === "ask_user" && context.workerInput) {
+          try {
+            acc.arguments = JSON.stringify({
+              ...JSON.parse(acc.arguments),
+              _worker_input: {
+                parent_turn_id: context.workerInput.parentTurnId,
+                run_id: context.workerInput.runId,
+                question_id: context.workerInput.questionId,
+              },
+            });
+          } catch {
+            // Invalid arguments remain invalid and the ordinary ask_user parser
+            // will render no question instead of attaching false correlation.
+          }
+        }
         emitter.emit("tool_call_complete", {
           id: acc.id,
           name: acc.name,
@@ -654,7 +670,10 @@ export async function processChat(
           ),
         });
         completedToolCallIds.add(acc.id);
-        if (acc.name === "launch_code_agent" && success) {
+        if (
+          (acc.name === "launch_code_agent" || acc.name === "answer_code_worker")
+          && success
+        ) {
           const runId = (result as { run_id?: unknown } | null)?.run_id;
           if (typeof runId === "string" && runId) {
             suspension = { kind: "work", runId };

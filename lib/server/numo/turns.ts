@@ -28,8 +28,10 @@ import { commandNote } from "@/lib/server/assistant/commands";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import {
   CONVERSATION_ASSISTANT_TOOLS,
+  WORKER_MEDIATION_ASSISTANT_TOOLS,
   type AssistantToolDef,
 } from "@/lib/server/assistant/tools";
+import type { WorkerInputCorrelation } from "@/lib/server/numo/worker-mediation";
 import {
   AmbiguousToolExecutionError,
   getModelInputModalities,
@@ -77,6 +79,11 @@ export type NumoTurnCheckpoint =
   | {
       phase: "worker_result";
       worker_event: { type: string; payload: Record<string, unknown> };
+    }
+  | {
+      phase: "worker_input_wait";
+      worker_event: { type: string; payload: Record<string, unknown> };
+      input_request: WorkerInputCorrelation;
     }
   | { phase: "user_wait" | "done" };
 
@@ -340,7 +347,11 @@ async function buildExecutionInput(input: {
   service: SupabaseClient;
   runtime: ResolvedAiRuntime;
   background: boolean;
-}): Promise<{ messages: ChatMessage[]; tools: AssistantToolDef[] }> {
+}): Promise<{
+  messages: ChatMessage[];
+  tools: AssistantToolDef[];
+  workerInput?: WorkerInputCorrelation;
+}> {
   const { turn, readClient, service, runtime } = input;
   const intent = turn.intent;
   let systemPrompt: string;
@@ -446,17 +457,30 @@ async function buildExecutionInput(input: {
   const workerEvent = turn.checkpoint?.phase === "worker_result"
     ? turn.checkpoint.worker_event
     : null;
+  let workerInput: WorkerInputCorrelation | undefined;
   if (workerEvent) {
     const durableResult = workerDelegationResult(workerEvent);
+    const request = durableResult.inputRequest;
+    if (durableResult.status === "needs_input" && request) {
+      workerInput = {
+        parentTurnId: request.parentTurnId,
+        runId: request.runId,
+        questionId: request.questionId,
+      };
+    }
     messages.push({
       role: "system",
-      content: `[Validated durable code-worker result: ${workerEvent.type}]\n${JSON.stringify(durableResult)}\nInterpret this result and answer the user's original request in this conversation. Report partial work, failure and unresolved decisions honestly. Do not tell the user to inspect another conversation for the answer.`,
+      content: workerInput
+        ? `[Validated durable code-worker input request]\n${JSON.stringify(durableResult)}\nYou alone mediate this worker's interaction with the user. If the parent conversation already determines a reliable answer, call answer_code_worker with the exact supplied identifiers and a self-contained answer. Otherwise call ask_user with the minimum blocking questions; never expose or refer the user to a separate worker conversation. Do not present this as the final result while the worker is waiting.`
+        : `[Validated durable code-worker result: ${workerEvent.type}]\n${JSON.stringify(durableResult)}\nInterpret this result and answer the user's original request in this conversation. Report partial work, failure and unresolved decisions honestly. Do not tell the user to inspect another conversation for the answer.`,
     });
   }
 
-  let tools: AssistantToolDef[] = input.background ? [] : CONVERSATION_ASSISTANT_TOOLS;
+  let tools: AssistantToolDef[] = input.background
+    ? workerInput ? WORKER_MEDIATION_ASSISTANT_TOOLS : []
+    : CONVERSATION_ASSISTANT_TOOLS;
   if (!intent.webSearchEnabled) tools = withoutWebSearch(tools);
-  return { messages, tools };
+  return { messages, tools, ...(workerInput ? { workerInput } : {}) };
 }
 
 function createToolLedger(
@@ -712,6 +736,7 @@ export async function executeNumoTurn(input: {
       },
       toolLedger: createToolLedger(service, claimed.id, claimToken),
       shouldStop: () => stopRequested(service, claimed.id, claimToken),
+      ...(execution.workerInput ? { workerInput: execution.workerInput } : {}),
     });
 
     if (result.generations.length > 0) {
@@ -765,6 +790,14 @@ export async function executeNumoTurn(input: {
 
     const checkpoint = result.suspension?.kind === "work"
       ? { phase: "worker_wait", active_run_id: result.suspension.runId }
+      : result.suspension?.kind === "input" && execution.workerInput
+        ? {
+            phase: "worker_input_wait",
+            worker_event: claimed.checkpoint?.phase === "worker_result"
+              ? claimed.checkpoint.worker_event
+              : { type: "worker_input", payload: {} },
+            input_request: execution.workerInput,
+          }
       : result.suspension?.kind === "input"
         ? { phase: "user_wait" }
         : { phase: "done" };
@@ -783,7 +816,11 @@ export async function executeNumoTurn(input: {
       claimToken,
       status,
       checkpoint,
-      activeRunId: result.suspension?.kind === "work" ? result.suspension.runId : null,
+      activeRunId: result.suspension?.kind === "work"
+        ? result.suspension.runId
+        : result.suspension?.kind === "input" && execution.workerInput
+          ? execution.workerInput.runId
+          : null,
       outcome: result.fullContent || null,
       costUsd,
     });

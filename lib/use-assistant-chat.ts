@@ -104,6 +104,8 @@ export interface AssistantChatState {
   conversationConfigError: string | null;
   error: string | null;
   turnStatus: NumoTurnStatus | null;
+  /** Undefined until checked; null once the server confirms no worker decision is pending. */
+  pendingWorkerInput: AssistantChatRequest["workerInput"] | null | undefined;
 }
 
 const initialState: AssistantChatState = {
@@ -120,6 +122,7 @@ const initialState: AssistantChatState = {
   conversationConfigError: null,
   error: null,
   turnStatus: null,
+  pendingWorkerInput: undefined,
 };
 
 // ── Actions ────────────────────────────────────────────────────────────
@@ -167,6 +170,10 @@ type Action =
     }
   | { type: "DONE" }
   | { type: "GENERATING_SERVER" }
+  | {
+      type: "SET_PENDING_WORKER_INPUT";
+      workerInput: AssistantChatRequest["workerInput"] | null;
+    }
   | { type: "ERROR"; message: string; turnStatus?: NumoTurnStatus }
   | {
       type: "LOAD_HISTORY";
@@ -398,6 +405,9 @@ function reducer(
         error: null,
       };
 
+    case "SET_PENDING_WORKER_INPUT":
+      return { ...state, pendingWorkerInput: action.workerInput };
+
     case "ERROR":
       return {
         ...state,
@@ -452,6 +462,14 @@ async function fetchConversationStatus(
   error_message: string | null;
   turn_id?: string | null;
   last_event_seq?: number;
+  pending_input?: {
+    run_id: string;
+    parent_numo_turn_id: string;
+    question_id: string;
+    call_id: string;
+    questions: unknown[];
+    created_at: string;
+  } | null;
   activity?: NumoTurnActivity[];
 }> {
   const res = await fetch(
@@ -459,6 +477,17 @@ async function fetchConversationStatus(
   );
   if (!res.ok) throw new Error(errorMessage);
   return res.json();
+}
+
+function pendingWorkerInput(
+  value: Awaited<ReturnType<typeof fetchConversationStatus>>["pending_input"],
+): AssistantChatRequest["workerInput"] | null {
+  if (!value) return null;
+  return {
+    parentTurnId: value.parent_numo_turn_id,
+    runId: value.run_id,
+    questionId: value.question_id,
+  };
 }
 
 async function fetchConversationMessages(
@@ -534,6 +563,10 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             after,
           );
           const { status, error_message } = response;
+          dispatch({
+            type: "SET_PENDING_WORKER_INPUT",
+            workerInput: pendingWorkerInput(response.pending_input),
+          });
           for (const event of response.activity ?? []) {
             handleSSEEvent(event.type, event.payload, dispatch, {
               projectId,
@@ -602,6 +635,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         command?: AssistantCommandId;
         /** Repository skills explicitly attached to this message. */
         skills?: AssistantSkillSelection[];
+        workerInput?: AssistantChatRequest["workerInput"];
       },
     ) => {
       if (!message.trim()) return;
@@ -660,6 +694,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           ...(options?.skills?.length
             ? { skills: options.skills }
             : {}),
+          ...(options?.workerInput ? { workerInput: options.workerInput } : {}),
           // The browser's time zone travels with each message: Numo has it
           // need to set a routine at the time we tell him (MIN-185).
           ...(browserTimezone() ? { timezone: browserTimezone() } : {}),
@@ -865,11 +900,16 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         }
 
         // Check if server is still generating for this conversation
-        const { status, error_message } = await fetchConversationStatus(
+        const response = await fetchConversationStatus(
           conversationId,
           tApi("statusFetchFailed")
         );
+        const { status, error_message } = response;
         if (loadGeneration !== loadGenerationRef.current) return;
+        dispatch({
+          type: "SET_PENDING_WORKER_INPUT",
+          workerInput: pendingWorkerInput(response.pending_input),
+        });
         if (status === "generating" || status === "queued" || status === "running" || status === "waiting_work" || status === "stopping") {
           startPolling(conversationId, projectId);
         } else if (status === "error" || status === "failed" || status === "retryable" || status === "reconciling") {

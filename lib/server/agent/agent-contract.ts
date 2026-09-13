@@ -2,6 +2,7 @@ import type { AssistantToolCall } from "@/lib/assistant-types";
 import type { AiFeature, AiUsageBillTo } from "@/lib/server/ai-usage-shape";
 
 import type { AgentFileChangeStatus } from "@/lib/agent-api";
+import type { AskUserQuestion } from "@/lib/ask-user";
 
 /**
  * THE VOCABULARY OF HARNESS, AND NOTHING ELSE (MIN-286).
@@ -106,6 +107,7 @@ export type AgentEventType =
   | "plan_update"
   | "files_changed"
   | "question"
+  | "needs_input"
   /** Monthly usage budget exhausted during the run: the session stops and the thread
  * displays the possible outcomes (upgrade plan, wait, switch to BYOK). */
   | "quota_exhausted";
@@ -294,6 +296,16 @@ export interface AgentDelegationResult {
   verificationPerformed: AgentDelegationVerification[];
   artifacts: AgentDelegationArtifact[];
   unresolvedDecisions: string[];
+  inputRequest?: AgentDelegationInputRequest;
+}
+
+/** Exact worker decision Numo may answer or relay in the parent conversation. */
+export interface AgentDelegationInputRequest {
+  parentTurnId: string;
+  runId: string;
+  questionId: string;
+  callId: string;
+  questions: AskUserQuestion[];
 }
 
 function contractRecord(value: unknown, label: string): Record<string, unknown> {
@@ -315,6 +327,45 @@ function contractStrings(value: unknown, label: string, maxItems = 50): string[]
   return value.slice(0, maxItems).map((item, index) =>
     contractString(item, `${label}[${index}]`, 1_000)
   );
+}
+
+function contractQuestions(value: unknown): AskUserQuestion[] {
+  if (!Array.isArray(value)) throw new Error("inputRequest.questions must be an array");
+  return value.slice(0, 4).map((rawQuestion, questionIndex) => {
+    const question = contractRecord(rawQuestion, `inputRequest.questions[${questionIndex}]`);
+    const rawOptions = question.options === undefined ? [] : question.options;
+    if (!Array.isArray(rawOptions)) {
+      throw new Error(`inputRequest.questions[${questionIndex}].options must be an array`);
+    }
+    return {
+      question: contractString(
+        question.question,
+        `inputRequest.questions[${questionIndex}].question`,
+        1_000,
+      ),
+      header: typeof question.header === "string"
+        ? question.header.trim().slice(0, 100)
+        : "",
+      multiSelect: question.multiSelect === true || question.multi_select === true,
+      options: rawOptions.slice(0, 20).map((rawOption, optionIndex) => {
+        const option = contractRecord(
+          rawOption,
+          `inputRequest.questions[${questionIndex}].options[${optionIndex}]`,
+        );
+        return {
+          label: contractString(
+            option.label,
+            `inputRequest.questions[${questionIndex}].options[${optionIndex}].label`,
+            300,
+          ),
+          description: typeof option.description === "string"
+            ? option.description.trim().slice(0, 1_000)
+            : "",
+          recommended: option.recommended === true,
+        };
+      }),
+    };
+  });
 }
 
 /** Parse an untrusted persisted brief and reject unsupported contract versions. */
@@ -407,6 +458,20 @@ export function parseAgentDelegationResult(raw: unknown): AgentDelegationResult 
   if (!Array.isArray(value.artifacts)) throw new Error("artifacts must be an array");
   const verificationStatuses = new Set(["passed", "failed", "unknown"]);
   const artifactKinds = new Set(["branch", "commit", "pull_request", "other"]);
+  const rawInput = value.inputRequest;
+  let inputRequest: AgentDelegationInputRequest | undefined;
+  if (rawInput !== undefined && rawInput !== null) {
+    const request = contractRecord(rawInput, "inputRequest");
+    const questions = contractQuestions(request.questions);
+    if (questions.length === 0) throw new Error("inputRequest.questions must not be empty");
+    inputRequest = {
+      parentTurnId: contractString(request.parentTurnId, "inputRequest.parentTurnId", 100),
+      runId: contractString(request.runId, "inputRequest.runId", 100),
+      questionId: contractString(request.questionId, "inputRequest.questionId", 300),
+      callId: contractString(request.callId, "inputRequest.callId", 300),
+      questions,
+    };
+  }
   return {
     version: AGENT_DELEGATION_CONTRACT_VERSION,
     status,
@@ -436,6 +501,7 @@ export function parseAgentDelegationResult(raw: unknown): AgentDelegationResult 
       };
     }),
     unresolvedDecisions: contractStrings(value.unresolvedDecisions, "unresolvedDecisions"),
+    ...(inputRequest ? { inputRequest } : {}),
   };
 }
 
