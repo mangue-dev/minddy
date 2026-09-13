@@ -12,7 +12,15 @@ const h = vi.hoisted(() => ({
   terminalWorkers: [] as Array<Record<string, unknown>>,
   interruptions: [] as string[],
   failActivity: false,
+  managedAi: false,
+  operationSpent: 0,
+  userUsage: {
+    usedUsd: 0,
+    period: { start: "2026-09-01T00:00:00.000Z", end: "2026-10-01T00:00:00.000Z" },
+    billing: { plan: { id: "free", includedUsageUsd: 1 } },
+  },
   processChat: vi.fn(),
+  recordAiUsage: vi.fn(),
   finalizeAgentDelegationResult: vi.fn(),
 }));
 
@@ -153,7 +161,16 @@ vi.mock("@/lib/server/assistant/tools", () => ({
 vi.mock("@/lib/server/web-search", () => ({ withoutWebSearch: (tools: unknown) => tools }));
 vi.mock("@/lib/server/assistant/commands", () => ({ commandNote: () => "" }));
 vi.mock("@/lib/server/assistant/sanitize", () => ({ sanitizeAssistantMessageContent: (value: unknown) => String(value ?? "") }));
-vi.mock("@/lib/server/ai-usage", () => ({ recordAiUsage: vi.fn() }));
+vi.mock("@/lib/server/ai-usage", () => ({
+  recordAiUsage: (...args: unknown[]) => h.recordAiUsage(...args),
+  spentFromNumoOperation: vi.fn(async () => h.operationSpent),
+}));
+vi.mock("@/lib/server/usage", () => ({
+  getUserUsage: vi.fn(async () => h.userUsage),
+}));
+vi.mock("@/lib/managed-services", () => ({
+  isManagedAiEnabled: () => h.managedAi,
+}));
 vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: vi.fn() }));
 vi.mock("@/lib/server/ai-runtime", () => ({ resolveAiRuntime: vi.fn() }));
 vi.mock("@/lib/server/agent/delegation", () => ({
@@ -211,6 +228,13 @@ beforeEach(() => {
   h.terminalWorkers.length = 0;
   h.interruptions.length = 0;
   h.failActivity = false;
+  h.managedAi = false;
+  h.operationSpent = 0;
+  h.userUsage = {
+    usedUsd: 0,
+    period: { start: "2026-09-01T00:00:00.000Z", end: "2026-10-01T00:00:00.000Z" },
+    billing: { plan: { id: "free", includedUsageUsd: 1 } },
+  };
   h.messages.push({
     id: "user-message",
     turn_id: h.turn.id,
@@ -223,6 +247,7 @@ beforeEach(() => {
     context: null,
   });
   h.processChat.mockReset();
+  h.recordAiUsage.mockReset();
   h.finalizeAgentDelegationResult.mockReset();
   h.processChat.mockResolvedValue({
     fullContent: "Done without code.",
@@ -264,6 +289,130 @@ describe("durable Numo execution", () => {
     expect(h.messages).toContainEqual(expect.objectContaining({
       role: "assistant",
       content: "Done without code.",
+    }));
+  });
+
+  it("records each parent generation with the durable operation attribution", async () => {
+    h.turn = {
+      ...h.turn,
+      attempts: 1,
+      intent: {
+        ...(h.turn?.intent as Record<string, unknown>),
+        routineId: "routine-1",
+        operationBudgetUsd: 1.5,
+        operationBudgetPercent: 15,
+      },
+    };
+
+    await executeNumoTurn({
+      turnId: h.turn.id as string,
+      readClient: service,
+      aiRuntime: runtime,
+    });
+
+    const context = h.processChat.mock.calls[0][3] as {
+      onGeneration: (
+        generation: Record<string, unknown>,
+        round: number,
+      ) => Promise<void>;
+    };
+    await context.onGeneration({
+      generationId: "generation-1",
+      model: "model",
+      promptTokens: 10,
+      completionTokens: 5,
+      totalTokens: 15,
+      cost: 0.02,
+    }, 2);
+
+    expect(h.recordAiUsage).toHaveBeenCalledWith(expect.objectContaining({
+      runId: h.turn.run_id,
+      feature: "routine_code",
+      billTo: { userId: h.turn.user_id },
+      conversationId: h.turn.conversation_id,
+      numoTurnId: h.turn.id,
+      routineId: "routine-1",
+      generationId: "generation-1",
+    }));
+    expect(context).toMatchObject({
+      operationBudgetUsd: 1.5,
+      operationBudgetPercent: 15,
+      routineId: "routine-1",
+    });
+  });
+
+  it("finishes with unified account exhaustion details before another generation", async () => {
+    h.managedAi = true;
+    h.userUsage = {
+      usedUsd: 1,
+      period: {
+        start: "2026-09-01T00:00:00.000Z",
+        end: "2026-10-01T00:00:00.000Z",
+      },
+      billing: { plan: { id: "free", includedUsageUsd: 1 } },
+    };
+    h.processChat.mockImplementation(async (...args: unknown[]) => {
+      const context = args[3] as { beforeGeneration: () => Promise<void> };
+      await context.beforeGeneration();
+      throw new Error("unreachable");
+    });
+
+    const result = await executeNumoTurn({
+      turnId: h.turn!.id as string,
+      readClient: service,
+      aiRuntime: runtime,
+    });
+
+    expect(result.status).toBe("completed");
+    expect(h.messages).toContainEqual(expect.objectContaining({
+      role: "assistant",
+      content: null,
+      metadata: {
+        usage_exhausted: expect.objectContaining({
+          cause: "account",
+          percent: 100,
+          resetsAt: "2026-10-01T00:00:00.000Z",
+          byok: false,
+        }),
+      },
+    }));
+    expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "completed" });
+  });
+
+  it("reports one routine cap across the parent operation on BYOK", async () => {
+    h.managedAi = true;
+    h.operationSpent = 0.25;
+    h.turn = {
+      ...h.turn,
+      intent: {
+        ...(h.turn?.intent as Record<string, unknown>),
+        routineId: "routine-1",
+        operationBudgetUsd: 0.25,
+        operationBudgetPercent: 25,
+      },
+    };
+    h.processChat.mockImplementation(async (...args: unknown[]) => {
+      const context = args[3] as { beforeGeneration: () => Promise<void> };
+      await context.beforeGeneration();
+      throw new Error("unreachable");
+    });
+
+    const result = await executeNumoTurn({
+      turnId: h.turn.id as string,
+      readClient: service,
+      aiRuntime: { ...runtime, mode: "byok" },
+    });
+
+    expect(result.status).toBe("completed");
+    expect(h.messages).toContainEqual(expect.objectContaining({
+      metadata: {
+        usage_exhausted: expect.objectContaining({
+          cause: "routine_cap",
+          percent: 25,
+          routineId: "routine-1",
+          byok: true,
+        }),
+      },
     }));
   });
 

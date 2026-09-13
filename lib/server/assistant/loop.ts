@@ -192,6 +192,13 @@ export interface ProcessChatContext extends ToolContext {
   registerActiveRun?: (runId: string) => void;
   toolLedger?: ToolExecutionLedger;
   shouldStop?: () => Promise<boolean>;
+  /** Budget gate immediately before every provider generation. */
+  beforeGeneration?: (roundCount: number) => Promise<void>;
+  /** Persist one generation before any tool it requested can launch work. */
+  onGeneration?: (
+    generation: GenerationInfo,
+    roundCount: number,
+  ) => Promise<void>;
 }
 
 const RETRYABLE_READ_TOOLS = new Set([
@@ -333,6 +340,7 @@ export async function processChat(
         });
       }
     } else {
+      await context.beforeGeneration?.(roundCount);
       const call = await fetchAiChat(
         aiRuntime,
         requestModel,
@@ -417,14 +425,16 @@ export async function processChat(
       } finally {
         roundReasoning = reasoningStream.finish();
       }
-      generations.push({
+      const generation = {
         generationId,
         model: modelUsed,
         promptTokens: usageInfo?.prompt_tokens ?? null,
         completionTokens: usageInfo?.completion_tokens ?? null,
         totalTokens: usageInfo?.total_tokens ?? null,
         cost: usageInfo?.cost ?? null,
-      });
+      };
+      generations.push(generation);
+      await context.onGeneration?.(generation, roundCount);
     }
 
     // Process completed tool calls

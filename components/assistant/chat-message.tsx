@@ -40,6 +40,10 @@ import {
 } from "@/components/assistant/adaptive-context-row";
 import { PAGE_CODE_COMPONENTS } from "@/components/assistant/shared-code-renderer";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import {
+  NumoUsageExhaustedCard,
+  parseNumoUsageExhausted,
+} from "@/components/assistant/usage-exhausted-card";
 import { SkillChip } from "@/components/assistant/skill-chip";
 
 interface ChatMessageProps {
@@ -406,6 +410,7 @@ export const ChatMessage = memo(function ChatMessage({
   usePageCodeBlock = false,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
+  const usageExhausted = parseNumoUsageExhausted(message.metadata);
 
   if (message.role === "tool" || message.role === "system") return null;
 
@@ -480,6 +485,10 @@ export const ChatMessage = memo(function ChatMessage({
                 )}
               </>
             )}
+
+            {usageExhausted ? (
+              <NumoUsageExhaustedCard details={usageExhausted} />
+            ) : null}
 
             {message.tool_calls && message.tool_calls.length > 0 && (
               <ToolCallList

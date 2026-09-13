@@ -296,6 +296,8 @@ export async function runWebSearchTool(params: {
   billTo: AiUsageBillTo;
   projectId?: string | null;
   conversationId?: string | null;
+  numoTurnId?: string | null;
+  routineId?: string | null;
   signal?: AbortSignal;
 }): Promise<{ result: unknown; success: boolean }> {
   const settings = await getWebSearchSettings();
@@ -351,6 +353,8 @@ export async function runWebSearchTool(params: {
     billTo: params.billTo,
     projectId: params.projectId ?? null,
     conversationId: params.conversationId ?? null,
+    numoTurnId: params.numoTurnId ?? null,
+    routineId: params.routineId ?? null,
   });
 
   return {

@@ -736,6 +736,9 @@ export async function launchAgentRun(
             userId: input.userId,
             projectId,
             runId: run.run_id ?? run.id,
+            conversationId: input.delegation?.parentConversationId ?? null,
+            numoTurnId: input.delegation?.parentTurnId ?? null,
+            routineId: input.routineId ?? null,
           },
         }).catch(() => null)
       : null;

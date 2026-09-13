@@ -6,7 +6,12 @@ import { getUserSandboxPreferences } from "./sandbox-preferences";
 import { getServiceClient } from "@/lib/supabase-service";
 import { joinedPage } from "@/lib/server/resource-select";
 import { recordSandboxUsage } from "@/lib/server/usage";
-import { spentFromLedger, type AiUsageBillTo } from "@/lib/server/ai-usage";
+import {
+  spentForBudget,
+  spentPlatformForBudget,
+  spentFromLedger,
+  type AiUsageBillTo,
+} from "@/lib/server/ai-usage";
 import { resolveRepoCloneTarget, type RepoCloneTarget } from "./repo-access";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { promptWithAttachments } from "./prompt-attachments";
@@ -615,6 +620,9 @@ export async function executeAgentRun(
       // the compute half of its spending would remain under “Agents”.
       feature: sandboxUsageFeature,
       projectId: run.project_id,
+      conversationId: run.parent_numo_conversation_id ?? run.conversation_id,
+      numoTurnId: run.parent_numo_turn_id,
+      routineId: run.routine_id,
       durationMs: Date.now() - callStart,
       usdPerMinute: run.sandbox_billing?.usdPerMinute,
     }).catch(() => {});
@@ -673,7 +681,8 @@ export async function executeAgentRun(
     const workerSurface = workerModelSurfaceForAgentRun(run);
     const quotaAndLedgerPromise = Promise.all([
       checkAgentQuota(run.created_by ?? "", workerSurface).catch(() => null),
-      spentFromLedger(run.run_id ?? run.id),
+      spentForBudget(run.run_id ?? run.id, run.parent_numo_turn_id),
+      spentPlatformForBudget(run.run_id ?? run.id, run.parent_numo_turn_id),
     ]);
     // A BYOK run is fixed to its own payer. If the configuration disappeared, or a
     // desktop-only endpoint was requested from the server, preparation fails explicitly:
@@ -810,7 +819,12 @@ export async function executeAgentRun(
      * seconds of staleness this introduces in the loop have no effect (the cap has
      * a 1.5× margin, and the ledger is reread for every chunk).
      */
-    const [quotaNow, ledgerSpentUsd] = quotaAndLedger;
+    const [quotaNow, ledgerSpentUsd, platformLedgerSpentUsd] = quotaAndLedger;
+    const operationSpentUsd = Math.max(run.cost_usd, ledgerSpentUsd ?? 0);
+    const platformRunSpentUsd = Math.max(
+      run.key_mode === "platform" ? run.cost_usd : 0,
+      platformLedgerSpentUsd ?? 0,
+    );
 
     // Run endpoint (the user's BYOK endpoint or the OpenRouter platform key).
     // Resolved BEFORE history bootstrap: the system prompt describes only the
@@ -853,7 +867,7 @@ export async function executeAgentRun(
           runId: run.id,
           capUsd: runKeyCapUsd({
             runBudgetUsd: run.budget_usd,
-            runSpentUsd: Math.max(run.cost_usd, ledgerSpentUsd ?? 0),
+            runSpentUsd: operationSpentUsd,
             accountRemainingUsd:
               quotaNow && !quotaNow.unlimited
                 ? Math.max(0, quotaNow.remaining ?? 0)
@@ -864,7 +878,7 @@ export async function executeAgentRun(
                 : Math.max(
                     0,
                     Number(run.managed_budget_usd) -
-                      Math.max(run.cost_usd, ledgerSpentUsd ?? 0),
+                      platformRunSpentUsd,
                   ),
           }),
         });

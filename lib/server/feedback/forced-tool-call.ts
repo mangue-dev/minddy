@@ -44,11 +44,15 @@ export interface ForcedToolCallRecord {
   feature: AiFeature;
   /** Stable ledger run id when this call belongs to a larger reserved action. */
   runId?: string;
+  /** Stable call position when the run contains other generations. */
+  seq?: number;
   /** Who pays — said by the caller, never deducted from the project (MIN-131). */
   billTo: AiUsageBillTo;
   projectId?: string | null;
   /** Numo conversation to which to attach the expense, when there is one. */
   conversationId?: string | null;
+  numoTurnId?: string | null;
+  routineId?: string | null;
 }
 
 export async function forcedToolCall(
@@ -164,6 +168,7 @@ export async function forcedToolCall(
       const u = parseOpenRouterUsage(data.usage);
       await recordAiUsage({
         runId: options.record.runId ?? newRunId(),
+        seq: options.record.seq,
         feature: options.record.feature,
         provider,
         keyMode: runtime?.mode ?? "platform",
@@ -176,6 +181,8 @@ export async function forcedToolCall(
         billTo: options.record.billTo,
         projectId: options.record.projectId ?? null,
         conversationId: options.record.conversationId ?? null,
+        numoTurnId: options.record.numoTurnId ?? null,
+        routineId: options.record.routineId ?? null,
       });
     }
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0]?.function;

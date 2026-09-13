@@ -14,7 +14,13 @@ import type { NumoDefaultStatus } from "@/lib/numo-default-status";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { resolveAiRuntime, type ResolvedAiRuntime } from "@/lib/server/ai-runtime";
-import { recordAiUsage } from "@/lib/server/ai-usage";
+import {
+  recordAiUsage,
+  spentFromNumoOperation,
+} from "@/lib/server/ai-usage";
+import { getUserUsage } from "@/lib/server/usage";
+import { nextBillingPlanId, type BillingPlanId } from "@/lib/billing-plans";
+import { isManagedAiEnabled } from "@/lib/managed-services";
 import { gatherProjectPromptContext } from "@/lib/server/assistant/prompt-context";
 import { buildAttachmentParts } from "@/lib/server/assistant/attachment-parts";
 import {
@@ -71,6 +77,12 @@ export interface NumoTurnIntent {
   timezone: string;
   numoDefaultStatus: NumoDefaultStatus;
   webSearchEnabled: boolean;
+  /** Routine operation identity; the turn id is the occurrence identity. */
+  routineId?: string | null;
+  /** Shared cap across parent generations and every delegated worker. */
+  operationBudgetUsd?: number | null;
+  /** User-facing percentage retained in the same unit as routine settings. */
+  operationBudgetPercent?: number | null;
 }
 
 export type NumoTurnCheckpoint =
@@ -106,6 +118,7 @@ export interface NumoTurn {
   cost_usd: number;
   outcome: string | null;
   error_message: string | null;
+  managed_budget_usd?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -118,9 +131,14 @@ export interface BeginNumoTurnInput {
   intent: NumoTurnIntent;
   model: string;
   reasoningLevel: ReasoningLevel;
-  content: string;
+  content: string | null;
   context: AssistantPageContext | null;
   metadata: Record<string, unknown>;
+  managedBudget?: {
+    periodStart: string;
+    accountCapUsd: number;
+    requestedUsd: number;
+  };
 }
 
 export type ExecuteNumoTurnResult =
@@ -131,6 +149,29 @@ class NumoClaimLostError extends Error {
   constructor() {
     super("Numo turn execution claim was lost");
     this.name = "NumoClaimLostError";
+  }
+}
+
+export class NumoBudgetReservationError extends Error {
+  constructor() {
+    super("No managed AI budget remains for this Numo operation");
+    this.name = "NumoBudgetReservationError";
+  }
+}
+
+interface NumoUsageExhaustedDetails {
+  cause: "account" | "routine_cap";
+  percent: number;
+  resetsAt: string | null;
+  nextPlanId: BillingPlanId | null;
+  byok: boolean;
+  routineId: string | null;
+}
+
+class NumoUsageExhaustedError extends Error {
+  constructor(readonly details: NumoUsageExhaustedDetails) {
+    super("Numo operation usage budget exhausted");
+    this.name = "NumoUsageExhaustedError";
   }
 }
 
@@ -207,7 +248,7 @@ function workerDelegationResult(workerEvent: {
 }
 
 export async function beginNumoTurn(input: BeginNumoTurnInput): Promise<NumoTurn> {
-  const { data, error } = await getServiceClient().rpc("begin_numo_turn", {
+  const params = {
     p_conversation_id: input.conversationId,
     p_user_id: input.userId,
     p_request_id: input.requestId,
@@ -218,9 +259,20 @@ export async function beginNumoTurn(input: BeginNumoTurnInput): Promise<NumoTurn
     p_content: input.content,
     p_context: input.context,
     p_metadata: input.metadata,
-  });
+  };
+  const { data, error } = input.managedBudget
+    ? await getServiceClient().rpc("begin_numo_turn_with_budget", {
+        ...params,
+        p_usage_since: input.managedBudget.periodStart,
+        p_budget_cap: input.managedBudget.accountCapUsd,
+        p_requested_budget: input.managedBudget.requestedUsd,
+      })
+    : await getServiceClient().rpc("begin_numo_turn", params);
   if (error) throw new Error(error.message);
-  const turn = compositeRow<NumoTurn>(data);
+  const turn = input.managedBudget
+    ? ((data as { turn?: NumoTurn | null } | null)?.turn ?? null)
+    : compositeRow<NumoTurn>(data);
+  if (!turn && input.managedBudget) throw new NumoBudgetReservationError();
   if (!turn) throw new Error("Numo turn was not created");
   return turn;
 }
@@ -584,8 +636,9 @@ async function saveFinalMessage(input: {
   service: SupabaseClient;
   turnId: string;
   conversationId: string;
-  content: string;
+  content: string | null;
   reasoning: unknown;
+  metadata?: Record<string, unknown>;
 }): Promise<string | null> {
   const { data: existing } = await input.service.from("assistant_messages")
     .select("id").eq("turn_id", input.turnId).eq("role", "assistant")
@@ -596,10 +649,54 @@ async function saveFinalMessage(input: {
     turn_id: input.turnId,
     role: "assistant",
     content: input.content,
-    ...(input.reasoning ? { metadata: { reasoning: input.reasoning } } : {}),
+    metadata: {
+      ...(input.reasoning ? { reasoning: input.reasoning } : {}),
+      ...input.metadata,
+    },
   }).select("id").single();
   if (error) throw new Error(error.message);
   return (data?.id as string | undefined) ?? null;
+}
+
+async function ensureNumoOperationBudget(
+  turn: NumoTurn,
+  runtime: ResolvedAiRuntime,
+): Promise<void> {
+  if (!isManagedAiEnabled()) return;
+
+  let usage: Awaited<ReturnType<typeof getUserUsage>> | null = null;
+  if (runtime.mode === "platform") {
+    usage = await getUserUsage(turn.user_id);
+    const included = usage.billing.plan.includedUsageUsd;
+    if (usage.usedUsd >= included) {
+      throw new NumoUsageExhaustedError({
+        cause: "account",
+        percent: 100,
+        resetsAt: usage.period.end,
+        nextPlanId: nextBillingPlanId(usage.billing.plan.id),
+        byok: false,
+        routineId: turn.intent.routineId ?? null,
+      });
+    }
+  }
+
+  const operationCap = turn.intent.operationBudgetUsd;
+  if (operationCap == null) return;
+  const spent = await spentFromNumoOperation(turn.id);
+  // Ledger reads fail open, like the existing account and worker budget checks.
+  if (spent == null || spent < operationCap) return;
+  usage ??= await getUserUsage(turn.user_id);
+  const derivedPercent = usage.billing.plan.includedUsageUsd > 0
+    ? Math.round((operationCap / usage.billing.plan.includedUsageUsd) * 100)
+    : 100;
+  throw new NumoUsageExhaustedError({
+    cause: "routine_cap",
+    percent: turn.intent.operationBudgetPercent ?? derivedPercent,
+    resetsAt: usage.period.end,
+    nextPlanId: null,
+    byok: runtime.mode === "byok",
+    routineId: turn.intent.routineId ?? null,
+  });
 }
 
 export async function executeNumoTurn(input: {
@@ -698,6 +795,9 @@ export async function executeNumoTurn(input: {
         ? { runId: claimed.run_id, used: 0 }
         : undefined,
       turnId: claimed.id,
+      operationBudgetUsd: claimed.intent.operationBudgetUsd ?? null,
+      operationBudgetPercent: claimed.intent.operationBudgetPercent ?? null,
+      routineId: claimed.intent.routineId ?? null,
       resumeCheckpoint: claimed.checkpoint?.phase === "model" || claimed.checkpoint?.phase === "tools"
         ? claimed.checkpoint
         : null,
@@ -736,27 +836,29 @@ export async function executeNumoTurn(input: {
       },
       toolLedger: createToolLedger(service, claimed.id, claimToken),
       shouldStop: () => stopRequested(service, claimed.id, claimToken),
+      beforeGeneration: () => ensureNumoOperationBudget(claimed, runtime),
+      onGeneration: async (generation, roundCount) => {
+        await recordAiUsage({
+          runId: claimed.run_id,
+          seq: Math.max(0, claimed.attempts - 1) * 100 + roundCount,
+          feature: claimed.intent.routineId ? "routine_code" : "numo_chat",
+          provider: runtime.provider,
+          keyMode: runtime.mode,
+          model: generation.model,
+          generationId: generation.generationId,
+          promptTokens: generation.promptTokens,
+          completionTokens: generation.completionTokens,
+          totalTokens: generation.totalTokens,
+          cost: generation.cost,
+          billTo: { userId: claimed.user_id },
+          projectId: claimed.intent.projectId,
+          conversationId: claimed.conversation_id,
+          numoTurnId: claimed.id,
+          routineId: claimed.intent.routineId ?? null,
+        });
+      },
       ...(execution.workerInput ? { workerInput: execution.workerInput } : {}),
     });
-
-    if (result.generations.length > 0) {
-      await recordAiUsage(result.generations.map((generation, sequence) => ({
-        runId: claimed.run_id,
-        seq: Math.max(0, claimed.attempts - 1) * 100 + sequence,
-        feature: "numo_chat" as const,
-        provider: runtime.provider,
-        keyMode: runtime.mode,
-        model: generation.model,
-        generationId: generation.generationId,
-        promptTokens: generation.promptTokens,
-        completionTokens: generation.completionTokens,
-        totalTokens: generation.totalTokens,
-        cost: generation.cost,
-        billTo: { userId: claimed.user_id },
-        projectId: claimed.intent.projectId,
-        conversationId: claimed.conversation_id,
-      })));
-    }
 
     if (await stopRequested(service, claimed.id, claimToken)) {
       const activeRunId = result.suspension?.kind === "work"
@@ -806,7 +908,8 @@ export async function executeNumoTurn(input: {
       : result.suspension?.kind === "input"
         ? "waiting_input"
         : "completed";
-    const costUsd = result.generations.reduce(
+    const recordedOperationCost = await spentFromNumoOperation(claimed.id);
+    const fallbackCostUsd = result.generations.reduce(
       (total, generation) => total + Math.max(0, generation.cost ?? 0),
       claimed.cost_usd,
     );
@@ -822,7 +925,7 @@ export async function executeNumoTurn(input: {
           ? execution.workerInput.runId
           : null,
       outcome: result.fullContent || null,
-      costUsd,
+      costUsd: recordedOperationCost ?? fallbackCostUsd,
     });
     if (status === "waiting_work" && result.suspension?.kind === "work") {
       const worker = await getRun(result.suspension.runId);
@@ -844,6 +947,32 @@ export async function executeNumoTurn(input: {
     emitter.close();
     return { status: turn.status, turn };
   } catch (error) {
+    if (error instanceof NumoUsageExhaustedError) {
+      const messageId = await saveFinalMessage({
+        service,
+        turnId: claimed.id,
+        conversationId: claimed.conversation_id,
+        content: null,
+        reasoning: null,
+        metadata: { usage_exhausted: error.details },
+      });
+      const spent = await spentFromNumoOperation(claimed.id);
+      const turn = await checkpointTurn({
+        service,
+        turnId: claimed.id,
+        claimToken,
+        status: "completed",
+        checkpoint: { phase: "done" },
+        activeRunId: claimed.active_run_id,
+        outcome: null,
+        costUsd: spent ?? claimed.cost_usd,
+      });
+      if (messageId) emitter.emit("message_complete", { message_id: messageId });
+      emitter.emit("done", { status: "completed" });
+      await emitter.flush();
+      emitter.close();
+      return { status: turn.status, turn };
+    }
     if (error instanceof AmbiguousToolExecutionError) {
       emitter.emit("error", {
         message: "A tool may have completed before its result was recorded. Review the external state before retrying.",

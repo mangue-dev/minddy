@@ -168,6 +168,8 @@ describe("conversation action targets", () => {
       conversationId: "parent-conversation",
       turnId: "parent-turn",
       toolCallId: "call-1",
+      operationBudgetUsd: 1.5,
+      routineId: "routine-1",
       service: { from: () => query },
     } as unknown as ToolContext;
 
@@ -186,6 +188,8 @@ describe("conversation action targets", () => {
     });
     expect(h.launch).toHaveBeenCalledWith(expect.objectContaining({
       projectId: "a",
+      budgetUsd: 1.5,
+      routineId: "routine-1",
       delegation: expect.objectContaining({
         parentConversationId: "parent-conversation",
         parentTurnId: "parent-turn",

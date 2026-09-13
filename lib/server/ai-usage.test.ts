@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // Customer service is the only contact with the outside world: we replace it
 // by a double which serves the owners and captures the inserted lines.
 const inserted: Record<string, unknown>[] = [];
+const upsertOptions: Record<string, unknown>[] = [];
 let projects: { id: string; owner_id: string | null }[] = [];
 
 vi.mock("@/lib/supabase-service", () => ({
@@ -32,8 +33,12 @@ vi.mock("@/lib/supabase-service", () => ({
         };
       }
       return {
-        insert: async (rows: Record<string, unknown>[]) => {
+        upsert: async (
+          rows: Record<string, unknown>[],
+          options: Record<string, unknown>,
+        ) => {
           inserted.push(...rows);
+          upsertOptions.push(options);
           return { error: null };
         },
       };
@@ -50,6 +55,7 @@ let errorSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   inserted.length = 0;
+  upsertOptions.length = 0;
   projects = [];
   errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -76,6 +82,7 @@ describe("imputation des lignes ai_usage", () => {
     expect(inserted).toHaveLength(1);
     expect(inserted[0].user_id).toBe(MEMBER);
     expect(inserted[0].billed_reason).toBe("trigger");
+    expect(inserted[0].idempotency_key).toEqual(expect.any(String));
     expect(errorSpy).not.toHaveBeenCalled();
   });
 
@@ -160,6 +167,35 @@ describe("imputation des lignes ai_usage", () => {
     expect(inserted.map((r) => [r.user_id, r.billed_reason])).toEqual([
       [MEMBER, "trigger"],
       [OWNER, "project_owner"],
+    ]);
+  });
+
+  it("deduplicates provider retries while retaining operation attribution", async () => {
+    const input = {
+      runId: newRunId(),
+      seq: 3,
+      feature: "numo_chat" as const,
+      provider: "openrouter",
+      generationId: "generation-1",
+      billTo: { userId: MEMBER } as const,
+      conversationId: "33333333-3333-4333-8333-333333333333",
+      numoTurnId: "44444444-4444-4444-8444-444444444444",
+      routineId: "55555555-5555-4555-8555-555555555555",
+      cost: 0.01,
+    };
+
+    await recordAiUsage(input);
+    await recordAiUsage(input);
+
+    expect(inserted[0]).toMatchObject({
+      idempotency_key: "openrouter:generation:generation-1",
+      conversation_id: input.conversationId,
+      numo_turn_id: input.numoTurnId,
+      routine_id: input.routineId,
+    });
+    expect(upsertOptions).toEqual([
+      { onConflict: "idempotency_key", ignoreDuplicates: true },
+      { onConflict: "idempotency_key", ignoreDuplicates: true },
     ]);
   });
 });
