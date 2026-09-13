@@ -19,7 +19,6 @@ import {
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
-import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
 import { routinesQueryKey, useRoutinesQuery } from "@/lib/use-routines-query";
 import { describeSchedule } from "@/lib/routine-schedule";
 import { orderRoutinesWithinWeek } from "@/lib/routine-week-order";
@@ -80,10 +79,8 @@ export function RoutinesPanel({
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { projects } = useProjects();
-  const { projectIds: gitLinked, loading: gitLoading } = useGitLinkedProjectsQuery();
   const { routines, loading } = useRoutinesQuery();
   const {
-    cloudExecutionConfigured,
     routineSchedulingConfigured,
     loading: agentCapabilitiesLoading,
   } = useAgentModelsQuery();
@@ -102,8 +99,8 @@ export function RoutinesPanel({
   );
 
   /**
- * A project eligible for “+”: routine capabilities available, owned AND
- * with a repository to clone.
+ * A project eligible for “+”: scheduling is available and the account owns it.
+ * Repository availability is checked only if Numo delegates code work later.
  *
  * Declared BEFORE the `useMemo` that call it, and not next to its other
  * readers: one `const` arrow stays in its dead zone until its line, and
@@ -112,11 +109,9 @@ export function RoutinesPanel({
  */
   const canCreateIn = (projectId: string | undefined) =>
     !agentCapabilitiesLoading &&
-    cloudExecutionConfigured &&
     routineSchedulingConfigured &&
     !!projectId &&
-    projectById.get(projectId)?.owner_id === user?.id &&
-    gitLinked.has(projectId);
+    projectById.get(projectId)?.owner_id === user?.id;
 
   /**
  * What the column SHOWS. The filter does not touch `routines`, which carries the
@@ -190,7 +185,7 @@ export function RoutinesPanel({
       }));
     return [...ordered, ...extra];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, projectById, projects, query, gitLinked, user?.id, locale]);
+  }, [visible, projectById, projects, query, user?.id, locale]);
 
   const selected = routines.find((r) => r.id === selectedId) ?? null;
   const selectedIsOwner =
@@ -221,25 +216,19 @@ export function RoutinesPanel({
   /**
  * WHY we can't put anything down, when this is the case. Three different walls,
  * and confusing them lets you search: no project at all, projects but
- * no linked repository (a routine clones a repository), or projects with a repository but
- * of which you are not the owner (only the owner commits his budget).
+ * or projects the current account does not own (only the owner commits budget).
  *
  * The composition of conversations already says the second wall; the Routines
  * page said nothing, and its blank screen read like a bug.
  */
-  const noRepoAnywhere = !gitLoading && projects.length > 0 && gitLinked.size === 0;
   const emptyReason =
     agentCapabilitiesLoading
       ? null
-      : !cloudExecutionConfigured
-        ? "emptyNoExecutionBackend"
-        : !routineSchedulingConfigured
+      : !routineSchedulingConfigured
           ? "emptyNoScheduler"
           : projects.length === 0
             ? "emptyNoProject"
-            : noRepoAnywhere
-              ? "emptyNoRepo"
-              : anyEligible
+            : anyEligible
                 ? null
                 : "emptyNotOwner";
   /**
@@ -378,7 +367,7 @@ export function RoutinesPanel({
         actions={
           /* The “+” of the column, exactly in place of that of
  conversations. It ONLY exists if a project can accommodate one
- (owned, linked repository): a button that leads to a 403 is not displayed. */
+ (owned project): a button that leads to a 403 is not displayed. */
           anyEligible ? (
             <Tooltip>
               <TooltipTrigger asChild>

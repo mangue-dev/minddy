@@ -91,12 +91,17 @@ async function collection(supabase: SupabaseClient, table: string, id: string) {
 export async function getNumoConversationDetail(supabase: SupabaseClient, id: string): Promise<NumoConversationDetail | null> {
   const conversation = await getNumoConversation(supabase, id);
   if (!conversation) return null;
-  const [config, messages, work, contexts, artifacts, turns] = await Promise.all([
+  const [config, messages, work, contexts, artifacts, turns, occurrenceResult] = await Promise.all([
     getNumoConversationConfig(supabase, id),
     collection(supabase, "numo_messages", id), collection(supabase, "numo_work", id),
     collection(supabase, "numo_contexts", id), collection(supabase, "numo_artifacts", id),
     collection(supabase, "numo_turns", id),
+    supabase.from("numo_routine_occurrences")
+      .select("id, routine_id, origin, scheduled_for, created_at")
+      .eq("conversation_id", conversation.legacy_id)
+      .maybeSingle(),
   ]);
+  if (occurrenceResult.error) throw new Error(occurrenceResult.error.message);
   const safeMessages: Record<string, unknown>[] = messages.map((m) => ({ ...m, metadata: publicSkillsMetadata(m.metadata) }));
   return {
     conversation: {
@@ -116,6 +121,7 @@ export async function getNumoConversationDetail(supabase: SupabaseClient, id: st
       return { ...row, detail_href: numoWorkDetailPath(candidate as NumoWorkLink) };
     }),
     contexts, artifacts, turns,
+    routine_occurrence: occurrenceResult.data ?? null,
   } as unknown as NumoConversationDetail;
 }
 

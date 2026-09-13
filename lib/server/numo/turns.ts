@@ -68,6 +68,7 @@ import {
   withNumoSurfaceEmitter,
 } from "./surface-projection";
 import { notifyAutomationOfNumoTurn } from "@/lib/server/automations/numo-hooks";
+import { notifyRoutineOfNumoTurn } from "@/lib/server/routine-hooks";
 
 export const NUMO_TURN_STATUSES = [
   "queued",
@@ -91,6 +92,8 @@ export interface NumoTurnIntent {
   triggerSource?: "chat" | "mention";
   /** Routine operation identity; the turn id is the occurrence identity. */
   routineId?: string | null;
+  routineOrigin?: "scheduled" | "manual" | null;
+  routineScheduledFor?: string | null;
   /** Shared cap across parent generations and every delegated worker. */
   operationBudgetUsd?: number | null;
   /** User-facing percentage retained in the same unit as routine settings. */
@@ -459,6 +462,17 @@ async function buildExecutionInput(input: {
 - Complete the requested Numo operation yourself. Use Minddy tools directly when repository work is unnecessary. Delegate through launch_code_agent only when code or repository inspection is required.
 - A delegated worker finishing is not the end of this operation. Interpret its structured result and any remaining work before concluding.
 - Call report_automation_outcome exactly once as your final tool, after all direct actions and delegated work are resolved. Report failed when the requested result was not achieved or blockers remain. Direct user questions are intentionally unavailable in an automated step; delegated-worker input is mediated through the parent conversation, while deliberate human checkpoints remain owned by the chain.`;
+  }
+  if (intent.routineId) {
+    const timing = intent.routineOrigin === "scheduled"
+      ? `scheduled for ${intent.routineScheduledFor ?? "an unspecified time"}`
+      : "started manually";
+    systemPrompt += `\n## Routine occurrence
+- This is one occurrence of routine ${intent.routineId}, ${timing}. The owner is not assumed to be watching the first response.
+- Complete the routine instruction as a Numo conversation. Use Minddy tools directly for triage, cycle, reporting, wiki, project, or other product work that does not require a repository.
+- Delegate with launch_code_agent only when repository inspection or code changes are actually necessary. The worker uses the owner's current Account code model; never ask for or choose a routine-specific worker model.
+- If a real decision or missing fact requires the owner, use ask_user. Leave the occurrence visibly waiting for input instead of guessing or failing silently.
+- A delegated worker result is intermediate. Interpret it and finish the occurrence in this conversation.`;
   }
 
   const { data, error } = await service
@@ -1161,6 +1175,7 @@ export async function executeNumoTurn(input: {
     if (result.status !== "not_claimed") {
       await projectNumoSurfaceTurn(service, result.turn);
       notifyAutomationOfNumoTurn(result.turn);
+      notifyRoutineOfNumoTurn(result.turn);
     }
     return result;
   } catch (error) {
@@ -1205,6 +1220,10 @@ export async function retryNumoTurn(conversationId: string, userId: string) {
 
 export async function drainNumoTurns(options?: { limit?: number }) {
   const service = getServiceClient();
+  const { recoverPendingRoutineOccurrences } = await import(
+    "@/lib/server/routine-occurrences"
+  );
+  await recoverPendingRoutineOccurrences(options?.limit ?? 10);
   const { data: terminalWorkers, error: terminalWorkersError } = await service
     .from("agent_runs")
     .select("*")

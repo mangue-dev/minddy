@@ -7,7 +7,6 @@ import { Play } from "lucide-react";
 
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
-import { BranchCombobox } from "@/components/agent/branch-combobox";
 import { SettingsRow } from "@/components/settings/settings-ui";
 import {
   WizardDialog,
@@ -19,7 +18,6 @@ import { SpendCapCombobox } from "@/components/routines/spend-cap-combobox";
 import { DEFAULT_MAX_SPEND_PERCENT } from "@/lib/routine-budget";
 import { useProjects } from "@/lib/projects-context";
 import { useAuth } from "@/lib/auth-context";
-import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
 import {
   createRoutineApi,
   runRoutineNowApi,
@@ -55,7 +53,7 @@ import type { AssistantMention } from "@/lib/assistant-types";
  * and replaying it to change an hour would take you through four screens.
  */
 
-type StepId = "project" | "job" | "model" | "schedule" | "done";
+type StepId = "project" | "job" | "schedule" | "done";
 
 /** Pre-written instructions for step `job` — the blank page is the real one
     obstacle of this step, and these three describe what a routine does
@@ -81,22 +79,16 @@ export function CreateRoutineWizard({
   onCreated: (routine: Routine) => void;
 }) {
   const t = useTranslations("Routines");
-  const tAgent = useTranslations("Agent");
   const locale = useLocale();
   const { user } = useAuth();
   const { projects } = useProjects();
-  const { projectIds: gitLinked, loading: gitLoading } =
-    useGitLinkedProjectsQuery();
-
   /**
-   * ELIGIBLE projects: owned (only the owner can apply for
-   * routine — it's his budget that leaves) AND with a linked deposit (without which there is no
-   * nothing to clone). Proposing the others would lead to a 403 or a 409.
+   * Eligible projects are owned by the account paying for the routine. A
+   * repository is optional until Numo decides that code delegation is needed.
    */
   const eligible = useMemo(
-    () =>
-      projects.filter((p) => p.owner_id === user?.id && gitLinked.has(p.id)),
-    [projects, gitLinked, user?.id],
+    () => projects.filter((p) => p.owner_id === user?.id),
+    [projects, user?.id],
   );
 
   const [chosenProjectId, setChosenProjectId] = useState(
@@ -104,8 +96,6 @@ export function CreateRoutineWizard({
   );
   const [prompt, setPrompt] = useState("");
   const [promptMentions, setPromptMentions] = useState<AssistantMention[]>([]);
-  /** "" = the default branch of the repository, which is the common case. */
-  const [baseBranch, setBaseBranch] = useState("");
   /** What a passage is allowed to spend, as a % of the monthly budget. */
   const [spendCap, setSpendCap] = useState(DEFAULT_MAX_SPEND_PERCENT);
   // The cadence holds in ONE state, the same as the calculation and the sentence
@@ -224,7 +214,6 @@ export function CreateRoutineWizard({
         projectId,
         prompt: prompt.trim(),
         promptMentions,
-        baseBranch: baseBranch || null,
         maxSpendPercent: spendCap,
         frequency: schedule.frequency,
         hour: schedule.hour,
@@ -260,7 +249,7 @@ export function CreateRoutineWizard({
       hideSubmit: eligible.length > 0,
       submitDisabled: !projectId,
       content:
-        eligible.length === 0 && !gitLoading ? (
+        eligible.length === 0 ? (
           // No eligible project: say it, and refer to what is missing —
           // an empty list would leave one wondering why.
           <p className="rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
@@ -282,7 +271,6 @@ export function CreateRoutineWizard({
                   if (p.id !== projectId) {
                     setPrompt("");
                     setPromptMentions([]);
-                    setBaseBranch("");
                   }
                   setChosenProjectId(p.id);
                   setStepIndex((i) => i + 1);
@@ -320,7 +308,7 @@ export function CreateRoutineWizard({
           <RoutinePromptField
             autoFocus
             projectId={projectId}
-            baseBranch={baseBranch}
+            baseBranch={null}
             value={prompt}
             mentions={promptMentions}
             onChange={(value, mentions) => {
@@ -352,58 +340,6 @@ export function CreateRoutineWizard({
       ),
     },
 
-    model: {
-      id: "model",
-      title: t("stepModelTitle"),
-      subtitle: t("stepModelDesc"),
-      content: (
-        /* The three agent settings in ROWS — same labels, same
-           pastilles and same order as the editor of the detail pane: we do not
-           does not relearn the screen when you come back to change a setting. */
-        <div className="divide-y divide-border/60">
-          <p className="py-3 text-xs leading-relaxed text-muted-foreground">
-            {t("workerModelHint")}
-          </p>
-          {/* The DEPARTURE branch is chosen HERE rather than after the fact: a
-              routine that starts from the wrong database opens pull requests
-              unusable, and it's when you put it on that you know what
-              she has to work. The listing is anchored to the project chosen at
-              the previous step. */}
-          <SettingsRow
-            label={t("baseBranchLabel")}
-            control={
-              <BranchCombobox
-                projectId={projectId}
-                value={baseBranch}
-                onChange={setBaseBranch}
-                defaultLabel={tAgent("branchDefault")}
-                defaultHint={tAgent("branchDefaultHint")}
-                placeholder={tAgent("branchSearchPlaceholder")}
-                emptyLabel={tAgent("branchSearchEmpty")}
-                loadingLabel={tAgent("branchSearchLoading")}
-                disabled={creating}
-              />
-            }
-          />
-          {/* A routine runs unattended, so one execution needs its own cap:
-              no one watches its
-              barre d'usage pendant qu'elle travaille. Sans ce plafond, un seul
-              The passage could take a whole month. */}
-          <SettingsRow
-            label={t("spendCapLabel")}
-            help={t("spendCapHelp")}
-            control={
-              <SpendCapCombobox
-                value={spendCap}
-                onChange={setSpendCap}
-                disabled={creating}
-              />
-            }
-          />
-        </div>
-      ),
-    },
-
     schedule: {
       id: "schedule",
       title: t("stepScheduleTitle"),
@@ -417,6 +353,18 @@ export function CreateRoutineWizard({
               routine (`RoutineScheduleFields`): two separate forms
               would have ended up accepting two different things. */}
           <RoutineScheduleFields value={schedule} onChange={setSchedule} />
+
+          <SettingsRow
+            label={t("spendCapLabel")}
+            help={t("spendCapHelp")}
+            control={
+              <SpendCapCombobox
+                value={spendCap}
+                onChange={setSpendCap}
+                disabled={creating}
+              />
+            }
+          />
 
           {/* The LIVING recap: the phrase and date that the routine goes
               really follow. This is the only way to check a spindle before
@@ -479,7 +427,6 @@ export function CreateRoutineWizard({
 
   const order: StepId[] = [
     ...(skipProject ? [] : (["project"] as const)),
-    "model",
     "job",
     "schedule",
     "done",

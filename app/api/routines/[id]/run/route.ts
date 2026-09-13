@@ -1,60 +1,27 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import {
   getRoutineForUser,
-  routineRunBudgetUsd,
   stampRoutineLaunched,
 } from "@/lib/server/routines";
-import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
+import {
+  numoIntentErrorResponse,
+} from "@/lib/server/numo/start-intent";
+import { executeNumoTurn } from "@/lib/server/numo/turns";
+import { startRoutineOccurrence } from "@/lib/server/routine-occurrences";
 
 /**
- * “Launch now” (MIN-185): an OFF-SCHEDULE passage.
- *
- * Two things he doesn't do, and these are what define him:
- * - **it does not move `next_run_at`.** Trying your routine on a Tuesday should not
- * not blow up the following Monday; the calendar belongs to the cadence,
- *    not the button;
- * - **it does not change the invoice line.** It is the routine that works,
- * even triggered by hand: the expense remains under “Routines”.
- *
- * Owner alone, like any writing on a routine.
+ * Start one off-schedule occurrence through the same durable Numo entry used
+ * by cron. It records manual origin and execution history but deliberately
+ * leaves `next_run_at` unchanged. Only the routine owner may invoke it.
  */
 
 export const runtime = "nodejs";
-// The launch kick drains the first chunk into `after()`.
+// The initial Numo turn may execute tools before yielding to durable work.
 export const maxDuration = 300;
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-const LAUNCH_ERROR_STATUS: Record<string, number> = {
-  issueNotFound: 404,
-  noRepo: 409,
-  unsupportedProvider: 409,
-  alreadyRunning: 409,
-  quotaExceeded: 402,
-  managedServiceUnavailable: 503,
-  executionBackendUnavailable: 503,
-  workerConfigurationManagedInSettings: 400,
-  noModelForProvider: 400,
-  providerEndpointUnavailableFromSandbox: 409,
-  localExecutionRetired: 410,
-  modelAbovePlan: 403,
-  promptRequired: 400,
-};
-
-function launchErrorResponse(result: Extract<LaunchResult, { ok: false }>) {
-  return NextResponse.json(
-    {
-      error: result.error,
-      code: result.error,
-      run: result.run,
-      quota: result.quota,
-      modelLimit: result.modelLimit,
-    },
-    { status: LAUNCH_ERROR_STATUS[result.error] ?? 400 },
-  );
-}
 
 export async function POST(request: NextRequest, ctx: RouteContext) {
   const auth = await getAuthedUser(request);
@@ -68,23 +35,27 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
   }
 
   const routine = found.routine;
-  const result = await launchAgentRun({
-    projectId: routine.project_id,
-    userId: routine.owner_id,
-    triggeredBy: "routine",
-    prompt: routine.prompt,
-    promptMentions: routine.prompt_mentions,
-    title: routine.title,
-    baseBranch: routine.base_branch,
-    routineId: routine.id,
-    // The same ceiling as a passage in the calendar: it is the routine which
-    // works, and trying yours should not cost more than the
-    // run on its own.
-    budgetUsd: await routineRunBudgetUsd(routine),
-  });
-  if (!result.ok) return launchErrorResponse(result);
-  // The passage is gone: the routine remembers that it has turned (and the alert of the
-  // previous passage goes out), without its calendar moving an inch.
+  let started;
+  try {
+    started = await startRoutineOccurrence({
+      routine,
+      origin: "manual",
+      readClient: auth.supabase,
+    });
+  } catch (error) {
+    return numoIntentErrorResponse(error);
+  }
+  // Record activity and clear the previous alert without moving the schedule.
   await stampRoutineLaunched(routine.id);
-  return NextResponse.json({ run: result.run });
+  after(async () => {
+    try {
+      await executeNumoTurn({
+        turnId: started.turn.id,
+        readClient: auth.supabase,
+      });
+    } catch (error) {
+      console.error("[routines] manual Numo occurrence failed:", error);
+    }
+  });
+  return NextResponse.json({ occurrence: started.occurrence }, { status: 202 });
 }

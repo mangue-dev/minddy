@@ -91,6 +91,22 @@ export interface RoutineInput {
   timezone: string;
 }
 
+export interface RoutineRunSummary extends Omit<
+  AgentRunSummary,
+  "reasoning_level" | "key_mode" | "triggered_by"
+> {
+  kind: "numo" | "legacy_agent";
+  reasoning_level: AgentRunSummary["reasoning_level"] | null;
+  key_mode: AgentRunSummary["key_mode"] | null;
+  triggered_by: "routine";
+  numo_status: import("./assistant-types").NumoTurnStatus | null;
+  numo_conversation_id: string | null;
+  conversation_id?: string | null;
+  origin: "scheduled" | "manual" | null;
+  scheduled_for?: string | null;
+  work_run_id?: string | null;
+}
+
 export async function fetchRoutinesApi(): Promise<{ routines: Routine[] }> {
   return parseJson(await fetch("/api/routines"));
 }
@@ -137,14 +153,14 @@ export async function deleteRoutineApi(routineId: string): Promise<{ ok: true }>
 /** “Previous Runs” — the runs of the routine, with the most recent one at the top. */
 export async function fetchRoutineRunsApi(
   routineId: string,
-): Promise<{ runs: AgentRunSummary[] }> {
+): Promise<{ runs: RoutineRunSummary[] }> {
   return parseJson(await fetch(`/api/routines/${routineId}/runs`));
 }
 
 /** “Launch now”: a move outside of the calendar, without moving the deadline. */
 export async function runRoutineNowApi(
   routineId: string,
-): Promise<{ run: AgentRunSummary }> {
+): Promise<{ occurrence: { id: string; conversation_id: string } }> {
   trackEvent("routine_run_now", {});
   return parseJson(
     await fetch(`/api/routines/${routineId}/run`, { method: "POST" }),

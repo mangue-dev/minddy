@@ -16,6 +16,7 @@ import type {
   ConversationStatus,
   NumoTurnActivity,
   NumoTurnStatus,
+  NumoConversationDetail,
 } from "./assistant-types";
 import { fetchNumoConversation, updateConversationWithResult } from "./assistant-api";
 import { createSerialQueue } from "./serial-queue";
@@ -106,6 +107,8 @@ export interface AssistantChatState {
   turnStatus: NumoTurnStatus | null;
   /** Undefined until checked; null once the server confirms no worker decision is pending. */
   pendingWorkerInput: AssistantChatRequest["workerInput"] | null | undefined;
+  /** Provenance for conversations created by a routine occurrence. */
+  routineOccurrence: NonNullable<NumoConversationDetail["routine_occurrence"]> | null;
 }
 
 const initialState: AssistantChatState = {
@@ -123,6 +126,7 @@ const initialState: AssistantChatState = {
   error: null,
   turnStatus: null,
   pendingWorkerInput: undefined,
+  routineOccurrence: null,
 };
 
 // ── Actions ────────────────────────────────────────────────────────────
@@ -182,6 +186,7 @@ type Action =
       projectId: string | null;
       model?: string | null;
       reasoningLevel?: ReasoningLevel | null;
+      routineOccurrence?: NonNullable<NumoConversationDetail["routine_occurrence"]> | null;
     }
   | { type: "RESET" };
 
@@ -433,6 +438,9 @@ function reducer(
         ...(action.model !== undefined ? { conversationModel: action.model } : {}),
         ...(action.reasoningLevel !== undefined
           ? { conversationReasoningLevel: action.reasoningLevel }
+          : {}),
+        ...(action.routineOccurrence !== undefined
+          ? { routineOccurrence: action.routineOccurrence }
           : {}),
         conversationConfigError: null,
         error: null,
@@ -899,6 +907,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             projectId: conversationProjectId,
             model,
             reasoningLevel,
+            routineOccurrence: detail.routine_occurrence ?? null,
           });
         } else {
           dispatch({
@@ -906,6 +915,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             messages,
             conversationId,
             projectId: conversationProjectId,
+            routineOccurrence: detail.routine_occurrence ?? null,
           });
         }
 

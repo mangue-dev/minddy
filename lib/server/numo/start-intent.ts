@@ -70,6 +70,14 @@ export interface StartNumoIntentInput {
   triggerSource?: "chat" | "mention";
   /** Server-owned chain identity carried into the canonical turn. */
   automation?: NumoAutomationContext;
+  /** Server-owned routine occurrence and its shared parent/worker budget. */
+  routine?: {
+    id: string;
+    origin: "scheduled" | "manual";
+    scheduledFor: string | null;
+    budgetUsd: number | null;
+    budgetPercent: number;
+  };
 }
 
 export interface StartedNumoIntent {
@@ -192,6 +200,15 @@ export async function startNumoIntent(
         numoDefaultStatus: resolveNumoDefaultStatus(input.userMetadata),
         webSearchEnabled: await isWebSearchEnabled(),
         triggerSource: input.triggerSource ?? "chat",
+        ...(input.routine
+          ? {
+              routineId: input.routine.id,
+              routineOrigin: input.routine.origin,
+              routineScheduledFor: input.routine.scheduledFor,
+              operationBudgetUsd: input.routine.budgetUsd,
+              operationBudgetPercent: input.routine.budgetPercent,
+            }
+          : {}),
         ...(input.automation ? { automation: input.automation } : {}),
       },
       model: configuration.model,
@@ -212,7 +229,8 @@ export async function startNumoIntent(
             managedBudget: {
               periodStart: admittedUsage.period.start,
               accountCapUsd: admittedUsage.billing.plan.includedUsageUsd,
-              requestedUsd: admittedUsage.billing.plan.includedUsageUsd,
+              requestedUsd:
+                input.routine?.budgetUsd ?? admittedUsage.billing.plan.includedUsageUsd,
             },
           }
         : {}),

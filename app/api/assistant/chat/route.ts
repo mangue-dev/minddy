@@ -51,6 +51,7 @@ import {
   steerNumoWorker,
   type WorkerInputCorrelation,
 } from "@/lib/server/numo/worker-mediation";
+import { routineContinuationForConversation } from "@/lib/server/routine-occurrences";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -548,6 +549,10 @@ export async function POST(request: NextRequest) {
   );
 
   const service = getServiceClient();
+  const routineContinuation = convId
+    ? await routineContinuationForConversation(convId, user.id)
+    : null;
+  const effectiveProjectId = routineContinuation?.routine.project_id ?? projectId;
 
   // Locale from the NEXT_LOCALE cookie (same chain as the rest of the app).
   // Resolved BEFORE the stream starts — next-intl needs the request context.
@@ -675,11 +680,21 @@ export async function POST(request: NextRequest) {
       requestId,
       runId,
       intent: {
-        projectId: projectId ?? null,
+        projectId: effectiveProjectId ?? null,
         locale,
         timezone,
         numoDefaultStatus,
         webSearchEnabled,
+        ...(routineContinuation
+          ? {
+              routineId: routineContinuation.routine.id,
+              routineOrigin: routineContinuation.occurrence.origin,
+              routineScheduledFor: routineContinuation.occurrence.scheduled_for,
+              operationBudgetUsd: routineContinuation.remainingBudgetUsd,
+              operationBudgetPercent:
+                routineContinuation.routine.max_spend_percent,
+            }
+          : {}),
       },
       model: configuration.model,
       reasoningLevel: configuration.reasoningLevel,
@@ -697,7 +712,9 @@ export async function POST(request: NextRequest) {
             managedBudget: {
               periodStart: admittedUsage.period.start,
               accountCapUsd: admittedUsage.billing.plan.includedUsageUsd,
-              requestedUsd: admittedUsage.billing.plan.includedUsageUsd,
+              requestedUsd: routineContinuation?.remainingBudgetUsd == null
+                ? admittedUsage.billing.plan.includedUsageUsd
+                : Math.max(routineContinuation.remainingBudgetUsd, 0.000001),
             },
           }
         : {}),

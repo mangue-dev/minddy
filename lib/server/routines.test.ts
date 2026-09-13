@@ -47,8 +47,6 @@ interface RoutineRow extends Record<string, unknown> {
 
 const world = {
   routines: [] as RoutineRow[],
-  /** Does the project have a linked repository? */
-  hasRepo: true,
   /** Does the requested model exceed the plan ceiling? */
   modelAbovePlan: false,
   /** Owner quota — `cap` is the plan's monthly budget (GB: $5). */
@@ -185,10 +183,6 @@ vi.mock("@/lib/supabase-service", () => {
   return { getServiceClient: () => ({ from }) };
 });
 
-vi.mock("@/lib/server/git/repo-links", () => ({
-  getProjectLink: async () => (world.hasRepo ? { id: "link-1", connection_id: "c1" } : null),
-}));
-
 vi.mock("@/lib/server/agent/quota", () => ({
   checkAgentQuota: async (_userId: string, surface: string) => {
     world.quotaSurfaces.push(surface);
@@ -236,7 +230,6 @@ const { restoreItem } = await import("./trash");
 
 beforeEach(() => {
   world.routines = [];
-  world.hasRepo = true;
   world.modelAbovePlan = false;
   world.quota = {
     allowed: true,
@@ -280,18 +273,14 @@ describe("createRoutine", () => {
     expect(result).toMatchObject({ ok: false, status: 403, errorKey: "ownerOnly" });
   });
 
-  it("refuse un projet sans dépôt lié plutôt que de casser à chaque passage", async () => {
-    world.hasRepo = false;
+  it("allows a project without a repository", async () => {
     const result = await createRoutine(validInput() as never);
-    expect(result).toMatchObject({ ok: false, status: 409, errorKey: "noRepo" });
+    expect(result).toMatchObject({ ok: true });
   });
 
-  it("ne PAYE pas de titre pour une routine qu'on refuse", async () => {
+  it("does not pay for a title when another validation rejects the routine", async () => {
     // Naming is a model call: doing it before refusals would amount to
     // pay for a routine that will never exist.
-    world.hasRepo = false;
-    await createRoutine(validInput() as never);
-    world.hasRepo = true;
     await createRoutine(validInput({ actorId: MEMBER_ID }) as never);
     await createRoutine(validInput({ timezone: "Nowhere/Here" }) as never);
     expect(titleCalls).toHaveLength(0);
