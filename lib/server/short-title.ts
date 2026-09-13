@@ -43,6 +43,8 @@ const MAX_TITLE_CHARS = 60;
 const MAX_TITLE_WORDS = 6;
 /** Beyond this point, the text reveals nothing more about its subject. */
 const MAX_INPUT_CHARS = 2_000;
+/** Dedicated ledger range so a response without an id cannot collide with the main run. */
+const SHORT_TITLE_USAGE_SEQ = 1_600_000_000;
 
 /** Deterministic fallback: the beginning of the text, as before. Never empty. */
 export function fallbackShortTitle(text: string): string {
@@ -119,6 +121,8 @@ export interface ShortTitleUsage {
   conversationId?: string | null;
   /** Stable ledger run id when the title is part of a reserved agent launch. */
   runId?: string;
+  numoTurnId?: string | null;
+  routineId?: string | null;
 }
 
 export interface ShortTitleInput {
@@ -212,9 +216,12 @@ Two or three words each. Nothing was lost that a reader needed.`;
         ? {
             feature: usage.feature,
             runId: usage.runId,
+            seq: SHORT_TITLE_USAGE_SEQ,
             billTo: { userId: usage.userId },
             projectId: usage.projectId ?? null,
             conversationId: usage.conversationId ?? null,
+            numoTurnId: usage.numoTurnId ?? null,
+            routineId: usage.routineId ?? null,
           }
         : undefined,
     }

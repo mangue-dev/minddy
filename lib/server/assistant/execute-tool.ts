@@ -235,6 +235,10 @@ export interface ToolContext {
   /** Durable parent turn and current call correlation for delegated workers. */
   turnId?: string;
   toolCallId?: string;
+  /** Shared ceiling and routine identity of the durable Numo operation. */
+  operationBudgetUsd?: number | null;
+  operationBudgetPercent?: number | null;
+  routineId?: string | null;
   /** Exact pending worker decision available only during a mediation turn. */
   workerInput?: WorkerInputCorrelation;
 }
@@ -748,6 +752,8 @@ async function executeWebSearch(
     billTo: { userId: ctx.userId },
     projectId: ctx.projectId,
     conversationId: ctx.conversationId ?? null,
+    numoTurnId: ctx.turnId ?? null,
+    routineId: ctx.routineId ?? null,
   });
 }
 
@@ -1804,6 +1810,8 @@ export async function executeTool(
                 },
               }
             : {}),
+          budgetUsd: ctx.operationBudgetUsd ?? null,
+          routineId: ctx.routineId ?? null,
           // Framing does not start the ticket; implement and check, yes.
           ...(mode ? { intent: intentForLaunchMode(mode) } : {}),
         });

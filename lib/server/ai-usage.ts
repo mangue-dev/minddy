@@ -68,6 +68,41 @@ export async function spentFromLedger(runId: string): Promise<number | null> {
   }
 }
 
+/**
+ * What one durable Numo operation spent across its parent turns, delegated
+ * workers, summaries, web searches, and sandbox compute.
+ */
+export async function spentFromNumoOperation(turnId: string): Promise<number | null> {
+  try {
+    const service = getServiceClient();
+    const { data, error } = await service.rpc("get_numo_operation_spend", {
+      p_turn_id: turnId,
+    });
+    if (error) {
+      console.error("[ai-usage] get_numo_operation_spend failed:", error.message);
+      return null;
+    }
+    const spent = Number(data ?? 0);
+    return Number.isFinite(spent) ? spent : null;
+  } catch (err) {
+    console.error(
+      "[ai-usage] get_numo_operation_spend threw:",
+      (err as Error).message,
+    );
+    return null;
+  }
+}
+
+/** Use the shared operation ledger for Numo-owned workers, otherwise the run ledger. */
+export async function spentForBudget(
+  runId: string,
+  numoTurnId?: string | null,
+): Promise<number | null> {
+  return numoTurnId
+    ? spentFromNumoOperation(numoTurnId)
+    : spentFromLedger(runId);
+}
+
 export interface AiUsageInput {
   runId: string;
   /** Index of the call in the run (0 for a single call). */
@@ -102,15 +137,26 @@ export interface AiUsageInput {
   estimated?: boolean;
   projectId?: string | null;
   conversationId?: string | null;
+  /** Durable Numo operation shared by parent and delegated worker charges. */
+  numoTurnId?: string | null;
+  /** Routine whose occurrence is the durable Numo operation. */
+  routineId?: string | null;
 }
 
 /** Imputation reason written in base — 1:1 with the migration check. */
 type BilledReason = "trigger" | "project_owner" | "platform" | "unattributed";
 
 function toRow(input: AiUsageInput) {
+  const seq = input.seq ?? 0;
   return {
     run_id: input.runId,
-    seq: input.seq ?? 0,
+    seq,
+    // Provider generation ids deduplicate retried inserts without collapsing
+    // two real calls at the same logical sequence. Compute has no generation
+    // id, so its stable run/feature/sequence identity is the fallback.
+    idempotency_key: input.generationId
+      ? `${input.provider ?? "openrouter"}:generation:${input.generationId}`
+      : `${input.runId}:${input.feature}:${seq}`,
     feature: input.feature,
     ...(input.provider ? { provider: input.provider } : {}),
     ...(input.keyMode ? { key_mode: input.keyMode } : {}),
@@ -134,6 +180,8 @@ function toRow(input: AiUsageInput) {
     billed_reason: "unattributed" as BilledReason,
     project_id: input.projectId ?? null,
     conversation_id: input.conversationId ?? null,
+    numo_turn_id: input.numoTurnId ?? null,
+    routine_id: input.routineId ?? null,
   };
 }
 
@@ -231,7 +279,10 @@ export async function recordAiUsage(
     }
 
     const service = getServiceClient();
-    const { error } = await service.from("ai_usage").insert(rows);
+    const { error } = await service.from("ai_usage").upsert(rows, {
+      onConflict: "idempotency_key",
+      ignoreDuplicates: true,
+    });
     if (error) console.error("[ai-usage] insert failed:", error.message);
   } catch (err) {
     console.error("[ai-usage] insert threw:", (err as Error).message);

@@ -118,6 +118,7 @@ vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
     h.recorded.push(...(Array.isArray(input) ? input : [input]));
   }),
   spentFromLedger: vi.fn(async () => h.ledgerSpent),
+  spentForBudget: vi.fn(async () => h.ledgerSpent),
 }));
 
 // The price of the model leaves the process (OpenRouter index): we freeze it, otherwise it

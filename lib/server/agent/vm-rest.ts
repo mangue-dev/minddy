@@ -1,7 +1,11 @@
 import "server-only";
 
 import { recordSandboxUsage } from "@/lib/server/usage";
-import { spentFromLedger, type AiUsageBillTo } from "@/lib/server/ai-usage";
+import {
+  spentForBudget,
+  spentFromLedger,
+  type AiUsageBillTo,
+} from "@/lib/server/ai-usage";
 
 import { checkAgentQuota } from "./quota";
 import { planProviderStall } from "./retry";
@@ -139,6 +143,9 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
       billTo,
       feature: run.routine_id ? "routine_compute" : "sandbox_compute",
       projectId: run.project_id,
+      conversationId: run.parent_numo_conversation_id ?? run.conversation_id,
+      numoTurnId: run.parent_numo_turn_id,
+      routineId: run.routine_id,
       durationMs: sandboxMs,
       usdPerMinute: run.sandbox_billing?.usdPerMinute,
     }).catch(() => {});
@@ -470,10 +477,16 @@ async function identifierOf(run: AgentRun): Promise<string | null> {
  */
 async function emitBudgetExhausted(run: AgentRun, emit: EmitAgentEvent): Promise<void> {
   const quota = await checkAgentQuota(run.created_by ?? "").catch(() => null);
+  const operationSpent = await spentForBudget(
+    run.run_id ?? run.id,
+    run.parent_numo_turn_id,
+  ).catch(() => null);
   const accountRemainingUsd =
     quota && !quota.unlimited ? Math.max(0, quota.remaining ?? 0) : undefined;
   const runCapRemainingUsd =
-    run.budget_usd == null ? undefined : Math.max(0, Number(run.budget_usd) - run.cost_usd);
+    run.budget_usd == null
+      ? undefined
+      : Math.max(0, Number(run.budget_usd) - (operationSpent ?? run.cost_usd));
   const cappedByRun =
     runCapRemainingUsd !== undefined &&
     (accountRemainingUsd === undefined || runCapRemainingUsd < accountRemainingUsd);

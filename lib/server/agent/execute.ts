@@ -6,7 +6,11 @@ import { getUserSandboxPreferences } from "./sandbox-preferences";
 import { getServiceClient } from "@/lib/supabase-service";
 import { joinedPage } from "@/lib/server/resource-select";
 import { recordSandboxUsage } from "@/lib/server/usage";
-import { spentFromLedger, type AiUsageBillTo } from "@/lib/server/ai-usage";
+import {
+  spentForBudget,
+  spentFromLedger,
+  type AiUsageBillTo,
+} from "@/lib/server/ai-usage";
 import { resolveRepoCloneTarget, type RepoCloneTarget } from "./repo-access";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { promptWithAttachments } from "./prompt-attachments";
@@ -615,6 +619,9 @@ export async function executeAgentRun(
       // the compute half of its spending would remain under “Agents”.
       feature: sandboxUsageFeature,
       projectId: run.project_id,
+      conversationId: run.parent_numo_conversation_id ?? run.conversation_id,
+      numoTurnId: run.parent_numo_turn_id,
+      routineId: run.routine_id,
       durationMs: Date.now() - callStart,
       usdPerMinute: run.sandbox_billing?.usdPerMinute,
     }).catch(() => {});
@@ -673,7 +680,7 @@ export async function executeAgentRun(
     const workerSurface = workerModelSurfaceForAgentRun(run);
     const quotaAndLedgerPromise = Promise.all([
       checkAgentQuota(run.created_by ?? "", workerSurface).catch(() => null),
-      spentFromLedger(run.run_id ?? run.id),
+      spentForBudget(run.run_id ?? run.id, run.parent_numo_turn_id),
     ]);
     // A BYOK run is fixed to its own payer. If the configuration disappeared, or a
     // desktop-only endpoint was requested from the server, preparation fails explicitly:

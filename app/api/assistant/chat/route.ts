@@ -4,9 +4,10 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
-import { ensureUsageBudget } from "@/lib/server/usage";
+import { ensureUsageBudget, type UserUsage } from "@/lib/server/usage";
 import {
   isPlanLimitError,
+  PlanLimitError,
   planLimitResponse,
 } from "@/lib/server/plan-limit-error";
 import type {
@@ -43,6 +44,7 @@ import { NUMO_UUID } from "@/lib/server/numo/conversations";
 import {
   beginNumoTurn,
   executeNumoTurn,
+  NumoBudgetReservationError,
 } from "@/lib/server/numo/turns";
 import {
   answerNumoWorkerInput,
@@ -483,8 +485,9 @@ export async function POST(request: NextRequest) {
 
   // Plan usage budget (MIN-72) — pre-flight before a new Numo LLM call.
   // Worker answers and steering have their own authorization and quota path.
+  let admittedUsage: UserUsage;
   try {
-    await ensureUsageBudget(user.id, "assistant");
+    admittedUsage = await ensureUsageBudget(user.id, "assistant");
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
     throw err;
@@ -590,6 +593,7 @@ export async function POST(request: NextRequest) {
   // already the truncated fallback), then waited before closing the flow — that's what
   // guarantees that it succeeds without delaying the first token of the response.
   let titleDone: Promise<void> | null = null;
+  let pendingTitle: { conversationId: string; fallback: string } | null = null;
   if (!convId) {
     const title = fallbackShortTitle(sanitizedUserMessage);
     const { data: conv, error: convError } = await supabase
@@ -614,30 +618,7 @@ export async function POST(request: NextRequest) {
     }
     convId = conv.id;
 
-    const newConvId = conv.id as string;
-    titleDone = generateShortTitle({
-      text: sanitizedUserMessage,
-      kind: "conversation",
-      locale,
-      usage: {
-        feature: "numo_chat",
-        // It is the author of the message who pays, like the chat trick that follows.
-        userId: user.id,
-        projectId,
-        conversationId: newConvId,
-      },
-    })
-      .then(async (generated) => {
-        if (!generated || generated === title) return;
-        await service
-          .from("conversations")
-          .update({ title: generated })
-          .eq("id", newConvId)
-          .eq("user_id", user.id);
-      })
-      .catch((err) => {
-        console.error("[numo-title] failed:", (err as Error).message);
-      });
+    pendingTitle = { conversationId: conv.id as string, fallback: title };
   }
   const webSearchEnabled = await isWebSearchEnabled();
   const timezone =
@@ -670,8 +651,23 @@ export async function POST(request: NextRequest) {
         ...(command ? { command } : {}),
         ...(selectedSkills.length > 0 ? { skills: selectedSkills } : {}),
       },
+      ...(configuration.runtime.mode === "platform"
+        ? {
+            managedBudget: {
+              periodStart: admittedUsage.period.start,
+              accountCapUsd: admittedUsage.billing.plan.includedUsageUsd,
+              requestedUsd: admittedUsage.billing.plan.includedUsageUsd,
+            },
+          }
+        : {}),
     });
   } catch (error) {
+    if (error instanceof NumoBudgetReservationError) {
+      return planLimitResponse(new PlanLimitError("usage_budget_exceeded", {
+        used: admittedUsage.usedUsd,
+        included: admittedUsage.billing.plan.includedUsageUsd,
+      }));
+    }
     const message = error instanceof Error ? error.message : "";
     if (message.includes("conversation_busy")) {
       return Response.json(
@@ -681,6 +677,34 @@ export async function POST(request: NextRequest) {
     }
     console.error("Failed to begin Numo turn:", message);
     return Response.json({ error: tApi("messageSaveFailed") }, { status: 500 });
+  }
+
+  if (pendingTitle) {
+    const { conversationId: titleConversationId, fallback } = pendingTitle;
+    titleDone = generateShortTitle({
+      text: sanitizedUserMessage,
+      kind: "conversation",
+      locale,
+      usage: {
+        feature: "numo_chat",
+        userId: user.id,
+        projectId,
+        conversationId: titleConversationId,
+        runId,
+        numoTurnId: turn.id,
+      },
+    })
+      .then(async (generated) => {
+        if (!generated || generated === fallback) return;
+        await service
+          .from("conversations")
+          .update({ title: generated })
+          .eq("id", titleConversationId)
+          .eq("user_id", user.id);
+      })
+      .catch((err) => {
+        console.error("[numo-title] failed:", (err as Error).message);
+      });
   }
 
   // The stream is a live projection. The execution service owns the durable

@@ -243,6 +243,9 @@ export async function recordSandboxUsage(params: {
   billTo: AiUsageBillTo;
   feature?: Extract<AiFeature, "sandbox_compute" | "routine_compute">;
   projectId: string | null;
+  conversationId?: string | null;
+  numoTurnId?: string | null;
+  routineId?: string | null;
   durationMs: number;
   /** Trusted rate persisted by the control plane; absent on legacy runs. */
   usdPerMinute?: number | null;
@@ -261,5 +264,8 @@ export async function recordSandboxUsage(params: {
     cost,
     billTo: params.billTo,
     projectId: params.projectId,
+    conversationId: params.conversationId ?? null,
+    numoTurnId: params.numoTurnId ?? null,
+    routineId: params.routineId ?? null,
   });
 }

@@ -336,13 +336,13 @@ function liveFileStats(raw: unknown): AgentLiveFileStat[] | undefined {
  */
 async function turnBudgetRemainingUsd(run: AgentRun): Promise<number | null> {
   try {
-    const [{ checkAgentQuota }, { spentFromLedger }] = await Promise.all([
+    const [{ checkAgentQuota }, { spentForBudget }] = await Promise.all([
       import("./quota"),
       import("@/lib/server/ai-usage"),
     ]);
     const [quota, spent] = await Promise.all([
       checkAgentQuota(run.created_by ?? ""),
-      spentFromLedger(run.run_id ?? run.id),
+      spentForBudget(run.run_id ?? run.id, run.parent_numo_turn_id),
     ]);
     const runSpent = Math.max(run.cost_usd, spent ?? 0);
     const account = quota.unlimited
@@ -676,6 +676,9 @@ export async function handleControlPlaneRequest(opts: {
       cost: claim.cost,
       ...(claim.estimated ? { estimated: true } : {}),
       projectId: run.project_id,
+      conversationId: run.parent_numo_conversation_id ?? run.conversation_id,
+      numoTurnId: run.parent_numo_turn_id,
+      routineId: run.routine_id,
     });
     return ok();
   }
@@ -937,7 +940,7 @@ export async function handleControlPlaneRequest(opts: {
     const [
       { mintRunKey, revokeRunKey, runKeyCapUsd },
       { checkAgentQuota },
-      { spentFromLedger },
+      { spentForBudget },
     ] = await Promise.all([
       import("./run-key"),
       import("./quota"),
@@ -949,7 +952,7 @@ export async function handleControlPlaneRequest(opts: {
     // which means that a long tour does not rely on a six-hour remaining.
     const [quota, ledgerSpent] = await Promise.all([
       checkAgentQuota(run.created_by ?? "").catch(() => null),
-      spentFromLedger(run.run_id ?? run.id).catch(() => null),
+      spentForBudget(run.run_id ?? run.id, run.parent_numo_turn_id).catch(() => null),
     ]);
     const minted = await mintRunKey({
       runId: run.id,
