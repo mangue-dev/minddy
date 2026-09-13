@@ -538,7 +538,6 @@ export function RoutineDetail({
             {/* The instruction, rendered and folded (see `RoutinePrompt`). */}
             <RoutinePrompt
               projectId={routine.project_id}
-              baseBranch={routine.base_branch}
               prompt={routine.prompt}
               promptMentions={routine.prompt_mentions ?? []}
             />
@@ -761,12 +760,10 @@ export function RoutineDetail({
  */
 function RoutinePrompt({
   projectId,
-  baseBranch,
   prompt,
   promptMentions,
 }: {
   projectId: string;
-  baseBranch: string | null;
   prompt: string;
   promptMentions: AssistantMention[];
 }) {
@@ -777,7 +774,7 @@ function RoutinePrompt({
     projectId,
     "cloud",
     "routine-display",
-    baseBranch,
+    null,
   );
   const [expanded, setExpanded] = useState(false);
   /* A fade longer than a scroll edge (2 rem by default):

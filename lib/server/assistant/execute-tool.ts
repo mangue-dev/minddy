@@ -2021,8 +2021,6 @@ export async function executeTool(
           projectId,
           actorId: ctx.userId,
           prompt: typeof args.prompt === "string" ? args.prompt : "",
-          baseBranch:
-            typeof args.base_branch === "string" ? args.base_branch : null,
           maxSpendPercent:
             typeof args.max_spend_percent === "number"
               ? args.max_spend_percent
@@ -2074,9 +2072,6 @@ export async function executeTool(
           ...(typeof args.prompt === "string" ? { prompt: args.prompt } : {}),
           ...(typeof args.enabled === "boolean"
             ? { enabled: args.enabled }
-            : {}),
-          ...(typeof args.base_branch === "string"
-            ? { baseBranch: args.base_branch }
             : {}),
           ...(typeof args.max_spend_percent === "number"
             ? { maxSpendPercent: args.max_spend_percent }

@@ -282,12 +282,11 @@ export interface AnalyticsEventProps {
   agent_model_changed: { model: string };
   agent_preferences_updated: { field: string };
 
-  // ── Routines (MIN-185) — un run d'agent qui revient tout seul ──
-  // We measure the form of the gesture, never the instruction: it describes
-  // someone's repository.
+  // ── Routines (MIN-185) ──
+  // Measure the shape of the gesture, never the instruction itself.
   routine_created: {
     frequency: string;
-    has_branch: boolean;
+    spend_cap_percent: number;
     prompt_length_bucket: string;
   };
   /** “Launch now”: an off-schedule passage, triggered by hand. */

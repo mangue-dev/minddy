@@ -29,6 +29,8 @@ describe("Numo routine occurrence migration", () => {
     expect(sql).toContain("model, reasoning_level");
     expect(sql).toContain("null, null");
     expect(sql).toContain("legacy\n-- routine model/reasoning values were removed");
+    expect(sql).toContain("legacy direct-worker setting retained for history");
+    expect(sql).toContain("numo routine occurrences do not read or update it");
   });
 
   it("keeps occurrence admission service-owned", () => {

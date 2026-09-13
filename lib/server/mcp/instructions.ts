@@ -161,16 +161,16 @@ export const MCP_FULL_USAGE_GUIDE =
       "minddy_list_integrations shows what already exists (never a key, but the " +
       "webhook setup and its last delivery status), minddy_revoke_integration " +
       "kills one for good. " +
-      "A project can also carry ROUTINES: jobs minddy's own coding agent runs BY " +
-      "ITSELF on a cadence — a security review every Monday, a dependency sweep " +
+      "A project can also carry ROUTINES: private Numo conversations started on " +
+      "a cadence — project triage every Monday, a cycle report every Friday " +
       "on the 1st. minddy_create_routine schedules one (owner only), " +
       "minddy_list_routines shows what is already scheduled and when it last ran, " +
       "minddy_update_routine pauses or re-times one, minddy_delete_routine sends " +
       "it to the trash — it stops at once and keeps its history, restorable from " +
       "the app for a few weeks. A routine is neither a recurring issue nor a project " +
-      "automation: nothing triggers it but the clock, it can open a pull request " +
-      "unprompted, and it can never ask a question — so its instruction has to " +
-      "stand on its own. " +
+      "automation: nothing triggers it but the clock. Numo uses Minddy tools and " +
+      "delegates code only when needed, so a repository is optional; the occurrence " +
+      "can pause visibly when owner input is required. " +
       "Start with minddy_list_projects to discover project ids.";
 
 /**

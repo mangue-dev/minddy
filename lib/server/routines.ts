@@ -104,7 +104,6 @@ export type RoutineResult<T> =
 /** Writing terminals — beyond that we truncate, like everywhere else (MIN-118). */
 const MAX_TITLE_LENGTH = 120;
 const MAX_PROMPT_LENGTH = 20_000;
-const MAX_BRANCH_LENGTH = 255;
 
 /**
  * What one occurrence of this routine may spend, in USD. The cap is carried by
@@ -147,7 +146,6 @@ export interface CreateRoutineInput {
  */
   prompt: string;
   promptMentions?: AssistantMention[] | null;
-  baseBranch?: string | null;
   /** Per-occurrence cap as a percentage of monthly usage (1–100). Default: 15. */
   maxSpendPercent?: number | null;
   frequency: string;
@@ -273,9 +271,6 @@ export async function createRoutine(
       title,
       prompt: prompt.slice(0, MAX_PROMPT_LENGTH),
       prompt_mentions: input.promptMentions?.length ? input.promptMentions : [],
-      base_branch: input.baseBranch?.trim()
-        ? input.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
-        : null,
       // Brought back within its limits rather than refused: a poorly written ceiling by a
       // of the four doors should not prevent the routine from being established — the CHECK
       // from the base, he would not forgive.
@@ -309,8 +304,7 @@ export interface UpdateRoutineInput {
   /** Rewrite the instruction REDOES the title: cf. `titleFor`. */
   prompt?: string;
   promptMentions?: AssistantMention[] | null;
-  baseBranch?: string | null;
-  /** Nouveau plafond d'un passage, en % du budget mensuel (1–100). */
+  /** New per-occurrence cap as a percentage of monthly usage (1–100). */
   maxSpendPercent?: number | null;
   frequency?: string;
   hour?: number;
@@ -374,11 +368,6 @@ export async function updateRoutine(
     updates.prompt_mentions = input.promptMentions?.length
       ? input.promptMentions
       : [];
-  }
-  if ("baseBranch" in input) {
-    updates.base_branch = input.baseBranch?.trim()
-      ? input.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
-      : null;
   }
   if (input.maxSpendPercent != null) {
     updates.max_spend_percent = clampSpendPercent(input.maxSpendPercent);

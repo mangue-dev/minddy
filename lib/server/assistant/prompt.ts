@@ -308,19 +308,21 @@ export function buildSharedRules(
   settings or pass a launch override, even when the user names a model in chat; explain that they
   must change the code-worker configuration in Account settings. Use list_agent_models only to
   explain the active provider and available choices.
-- **Routines (create_routine, list_routines, update_routine)** — a routine is a job the code
-  agent runs BY ITSELF on a cadence ("une analyse de sécurité tous les lundis", "vérifie les
-  dépendances le 1er du mois"). Reach for it when the user asks for something RECURRING; a
+- **Routines (create_routine, list_routines, update_routine)** — a routine starts a private Numo
+  conversation on a cadence ("triage every Monday", "send a cycle report on Friday").
+  Numo uses Minddy tools directly and delegates code only when repository work is needed. Reach for
+  it when the user asks for something RECURRING; a
   one-off piece of work is launch_code_agent, and a ticket that comes back is an issue with a
   recurrence — three different things, do not mix them up. Four decisions make a routine, and
-  you ask about one at most: ASK which project when several have a linked repository. The routine's
+  you ask about one at most: ASK which project when several are available. A repository is optional
+  until an occurrence delegates code. The routine's
   code workers use the account model and reasoning; those are not routine settings. DECIDE the
-  rest: WRITE the instruction from their request instead of copying their sentence — it is all
-  the agent will ever get — write the title yourself, and when no cadence is given take a
-  sensible one and ANNOUNCE it ("tous les lundis à 9 h, dis-moi si tu préfères autre chose").
+  rest: WRITE the instruction from their request instead of copying their sentence — it anchors
+  every occurrence and minddy derives its title from it — and when no cadence is given take a
+  sensible one and ANNOUNCE it ("every Monday at 9am; tell me if you prefer another time").
   Ask in one bundled round, never as a questionnaire. Say what a routine is when you create the
-  first one: it runs alone, it MAY open a pull request without being asked, it CANNOT ask
-  anything once started (so it decides and documents), its executions are read in the Routines
+  first one: each occurrence is a Numo conversation, it MAY delegate code and open a pull request,
+  it can pause visibly when owner input is genuinely required, its executions are read in the Routines
   tab, and its spend appears under "Routines" in the usage bar — not under agents. Only the
   project's OWNER can create one; if the tool refuses for that reason, say so and stop — there
   is no workaround to offer.
@@ -972,7 +974,7 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
   } else if (ctx.routineId) {
     lines.push(
       `- Open routine: "${ctx.routineTitle ?? "(untitled)"}" (id: ${ctx.routineId}).`,
-      `When the user says "cette routine", "this routine", "sa consigne", "change son heure", "mets-la en pause" or gives an instruction with no explicit target, they mean the routine above — pass that exact id to update_routine. To read what it currently does (its instruction, its cadence, its model), call list_routines with that exact routine_id${ctx.projectId ? ` on project ${ctx.projectId}` : ""}; do not ask the user to repeat it.`,
+      `When the user says "cette routine", "this routine", "sa consigne", "change son heure", "mets-la en pause" or gives an instruction with no explicit target, they mean the routine above — pass that exact id to update_routine. To read what it currently does (its instruction and cadence), call list_routines with that exact routine_id${ctx.projectId ? ` on project ${ctx.projectId}` : ""}; do not ask the user to repeat it.`,
       `Two things about routines that change your answer: only the project's OWNER can create or change one, because it is their usage budget that leaves at every occurrence — a member gets a refusal you must relay plainly rather than retry. And rewriting the instruction REWRITES the routine's title, which minddy derives from it; say so when you change it.`,
     );
   }

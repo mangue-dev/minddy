@@ -3,6 +3,9 @@
 -- record then preserves the occurrence even when admission or execution fails.
 BEGIN;
 
+COMMENT ON COLUMN public.agent_routines.base_branch IS
+  'Legacy direct-worker setting retained for history. Numo routine occurrences do not read or update it.';
+
 CREATE TABLE public.numo_routine_occurrences (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   routine_id uuid NOT NULL REFERENCES public.agent_routines(id) ON DELETE CASCADE,

@@ -80,8 +80,7 @@ export interface RoutineInput {
   /** No title: minddy writes it from the instruction (see `titleFor`). */
   prompt: string;
   promptMentions?: AssistantMention[];
-  baseBranch?: string | null;
-  /** Ceiling for a passage, as a % of the monthly budget. Absent = the defect (90%). */
+  /** Per-occurrence cap as a percentage of monthly usage. Default: 15. */
   maxSpendPercent?: number;
   frequency: RoutineFrequency;
   hour: number;
@@ -117,7 +116,6 @@ export async function createRoutineApi(
   // Measure the shape of the gesture, never the instruction itself.
   trackEvent("routine_created", {
     frequency: input.frequency,
-    has_branch: !!input.baseBranch,
     // The chosen spending limit: this is the setting we want to know if it
     // is TOUCHED, and in what sense — a defect that no one moves is not
     // the correct default.

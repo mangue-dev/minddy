@@ -67,11 +67,21 @@ describe("Numo tool contracts", () => {
       const properties = tool(name)?.function.parameters.properties;
       expect(properties, name).not.toHaveProperty("model");
       expect(properties, name).not.toHaveProperty("reasoning_level");
+      if (name !== "launch_code_agent") {
+        expect(properties, name).not.toHaveProperty("base_branch");
+      }
     }
 
     const accountProperties = tool("update_account_settings")?.function.parameters.properties;
     expect(accountProperties).not.toHaveProperty("default_model");
     expect(accountProperties).not.toHaveProperty("default_reasoning_level");
+  });
+
+  it("describes routines as repository-optional Numo conversations", () => {
+    const create = tool("create_routine");
+    expect(create?.function.description).toMatch(/Numo conversation/i);
+    expect(create?.function.description).toMatch(/does not need a linked repository/i);
+    expect(create?.function.description).toMatch(/delegates to a code worker only/i);
   });
 
   it("requires a complete structured brief for code delegation", () => {

@@ -24,7 +24,6 @@ export const runtime = "nodejs";
 
 /** Body terminals, such as the notebook launch route (MIN-118). */
 const MAX_PROMPT_LENGTH = 20_000;
-const MAX_SHORT_FIELD = 255;
 
 export const ROUTINE_ERROR_STATUS: Record<RoutineErrorKey, number> = {
   projectNotFound: 404,
@@ -113,9 +112,8 @@ export async function POST(request: NextRequest) {
     actorId: auth.user.id,
     prompt: str(body.prompt, MAX_PROMPT_LENGTH),
     promptMentions: parseRoutinePromptMentions(body.promptMentions),
-    baseBranch: str(body.baseBranch, MAX_SHORT_FIELD) || null,
-    // Absent = factory defect (90%). Terminal 1–100 is his
-    // also: only one rule for the four doors.
+    // An absent cap uses the factory default. The factory also clamps 1–100
+    // so every creation surface follows one rule.
     maxSpendPercent: num(body.maxSpendPercent),
     frequency: str(body.frequency, 32),
     hour: num(body.hour) ?? 9,

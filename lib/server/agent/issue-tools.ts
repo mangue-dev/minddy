@@ -1068,7 +1068,6 @@ async function createRoutineTool(
     projectId: ctx.projectId,
     actorId: ctx.actorId,
     prompt: typeof args.prompt === "string" ? args.prompt : "",
-    baseBranch: typeof args.base_branch === "string" ? args.base_branch : null,
     maxSpendPercent:
       typeof args.max_spend_percent === "number"
         ? args.max_spend_percent

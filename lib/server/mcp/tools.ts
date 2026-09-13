@@ -355,8 +355,7 @@ function mcpRoutine(routine: Routine) {
     id: routine.id,
     title: routine.title,
     prompt: routine.prompt,
-    base_branch: routine.base_branch,
-    /** What ONE passage can spend, as a % of the owner's monthly budget. */
+    /** What one occurrence can spend, as a percentage of monthly usage. */
     max_spend_percent: routine.max_spend_percent,
     frequency: routine.frequency,
     hour: routine.hour,
@@ -4651,12 +4650,11 @@ export function registerMinddyTools(
     {
       title: "List routines",
       description:
-        "List the project's ROUTINES — the jobs minddy's coding agent runs BY " +
-        "ITSELF on a schedule. Each one gives its id, title, the instruction it " +
+        "List the project's ROUTINES — scheduled Numo conversations that use " +
+        "Minddy tools directly and may delegate code when needed. Each one gives its id, title, the instruction it " +
         "runs, its cadence (frequency + hour/minute + weekdays or days_of_month + " +
-        "IANA timezone), its model, whether it is enabled, when it last ran, when " +
-        "it runs next, and the code of the last missed run ('quota' = the monthly " +
-        "usage budget was exhausted, 'noRepo' = the repository was unlinked). Call " +
+        "IANA timezone), spending cap, whether it is enabled, when it last ran, when " +
+        "it runs next, and the code of the last missed occurrence. Call " +
         "it before creating one, to adjust what is already scheduled instead of " +
         "stacking a second routine doing the same job.",
       inputSchema: z.object({ project_id: PROJECT_ID }),
@@ -4677,36 +4675,34 @@ export function registerMinddyTools(
     {
       title: "Create routine",
       description:
-        "Create a ROUTINE: a job that minddy's coding agent runs BY ITSELF " +
-        "on a schedule, in a sandbox on the project's linked repository — a " +
-        "security review every Monday, a dependency sweep on the 1st, a monthly " +
-        "inventory. OWNER ONLY: only the project's owner can create one, because " +
-        "it is their AI usage budget that leaves every Monday morning; a member " +
+        "Create a ROUTINE: an instruction that starts a private Numo conversation " +
+        "on a schedule — project triage every Monday, a cycle report every Friday, " +
+        "or a monthly security review. OWNER ONLY: only the project's owner can " +
+        "create one, because it uses their AI budget; a member " +
         "gets a 'forbidden' refusal and there is no way around it. " +
         "It is NOT a recurring ticket (that is an issue with a `recurrence` — a " +
         "task that comes back on a board) and NOT a project automation (those " +
         "react to an event on an issue): nothing triggers a routine but the clock, " +
-        "and each occurrence is a real agent run with its own sandbox and tools. " +
+        "and each occurrence has its own Numo conversation and history. " +
         "There is NO name to pass: minddy writes the routine's title from its " +
         "instruction, and rewrites it whenever the instruction changes. " +
-        "Two things follow from running unattended, and the instruction must be " +
-        "written for them: the agent CANNOT ask anything (no question will ever be " +
-        "answered — it decides and documents its choice), and it MAY open a pull " +
-        "request without being asked when it finds something worth fixing, and " +
-        "simply concludes when it does not. So write `prompt` as a complete brief: " +
-        "what to look at, what counts as a finding, what to do with one. Code workers " +
-        "use the owner's model and reasoning from Account settings, and their spend is billed " +
-        "under 'Routines', separately from agent runs. ONE run stops at 15% of the " +
+        "Numo uses Minddy tools directly for product work and delegates to a code " +
+        "worker only when repository access is needed. A linked repository is not " +
+        "required to create or run the routine. If a real decision is missing, the " +
+        "occurrence can pause for owner input in its conversation. So write `prompt` " +
+        "as a complete instruction: what to inspect and what outcome to produce. " +
+        "Delegated workers use the owner's current Account code model and reasoning. " +
+        "The complete occurrence, including Numo and workers, stops at 15% of the " +
         "owner's monthly usage budget by default, so a routine cannot silently " +
-        "take the whole month (`max_spend_percent`). Requires a linked repository.",
+        "take the whole month (`max_spend_percent`).",
       inputSchema: z.object({
         project_id: PROJECT_ID,
         prompt: z
           .string()
           .min(1)
           .describe(
-            "The INSTRUCTION the agent receives at every occurrence, in the user's " +
-              "language. It must stand on its own — nobody will be there to clarify it.",
+            "The instruction Numo receives at every occurrence, in the user's " +
+              "language. Numo may use Minddy tools, delegate code, or pause for owner input.",
           ),
         frequency: z
           .enum(["daily", "weekly", "monthly"])
@@ -4754,12 +4750,6 @@ export function registerMinddyTools(
               "never skipping a month. At least one is required for 'monthly'; " +
               "REFUSED on other cadences.",
           ),
-        base_branch: z
-          .string()
-          .optional()
-          .describe(
-            "Branch the runs start from. Omit for the repository's default branch.",
-          ),
         max_spend_percent: z
           .number()
           .int()
@@ -4767,7 +4757,7 @@ export function registerMinddyTools(
           .max(100)
           .optional()
           .describe(
-            "Cap on what ONE run of this routine may spend, as a percentage of the " +
+            "Cap on what ONE occurrence, including Numo and delegated code work, may spend, as a percentage of the " +
               "owner's monthly usage budget. OMIT unless the user asks for a cap: " +
               "the default (15) lets a routine run all month without eating the " +
               "budget, and 100 removes the cap. Raise it for a routine that runs " +
@@ -4785,7 +4775,6 @@ export function registerMinddyTools(
         projectId: scope.access.project.id,
         actorId: scope.userId,
         prompt: args.prompt,
-        baseBranch: args.base_branch ?? null,
         maxSpendPercent: args.max_spend_percent ?? null,
         frequency: args.frequency,
         hour: args.hour,
@@ -4842,7 +4831,6 @@ export function registerMinddyTools(
           .describe(
             "IANA timezone of the hour. Pass the user's, never a guess.",
           ),
-        base_branch: z.string().optional(),
         max_spend_percent: z
           .number()
           .int()
@@ -4850,7 +4838,7 @@ export function registerMinddyTools(
           .max(100)
           .optional()
           .describe(
-            "New cap on what ONE run may spend, as a percentage of the owner's " +
+            "New cap on what ONE occurrence, including Numo and delegated code work, may spend, as a percentage of the owner's " +
               "monthly usage budget (100 = no cap of its own). This is what to " +
               "change when a run stopped on its cap and the user wants it to go " +
               "further — not the plan.",
@@ -4866,9 +4854,6 @@ export function registerMinddyTools(
         actorId: scope.userId,
         ...(args.prompt !== undefined ? { prompt: args.prompt } : {}),
         ...(args.enabled !== undefined ? { enabled: args.enabled } : {}),
-        ...(args.base_branch !== undefined
-          ? { baseBranch: args.base_branch }
-          : {}),
         ...(args.max_spend_percent !== undefined
           ? { maxSpendPercent: args.max_spend_percent }
           : {}),
@@ -4893,7 +4878,7 @@ export function registerMinddyTools(
       description:
         "Move a routine to the TRASH. OWNER ONLY. It stops running at once and " +
         "leaves the list, but nothing is destroyed: its past executions stay with " +
-        "it, and the user can restore it as it was — cadence, instruction, model, " +
+        "it, and the user can restore it as it was — cadence, instruction, " +
         "next occurrence and history — from Trash in the app, for a few weeks. " +
         "After that the nightly sweep deletes it for good, executions included. " +
         "To simply stop it from running while keeping it in the list, pass " +
