@@ -6,7 +6,7 @@ import {
 } from "./surface-projection";
 
 describe("Numo shared-surface response lifecycle", () => {
-  it.each(["queued", "running", "waiting_work"] as const)(
+  it.each(["queued", "running", "waiting_work", "retryable"] as const)(
     "keeps the response private while a %s turn is still working",
     (status) => {
       expect(numoSurfaceProjectionDisposition(status)).toBe("wait");
@@ -20,7 +20,7 @@ describe("Numo shared-surface response lifecycle", () => {
     },
   );
 
-  it.each(["stopping", "stopped", "retryable", "reconciling", "failed"] as const)(
+  it.each(["stopping", "stopped", "reconciling", "failed"] as const)(
     "fails the placeholder for a terminal or interrupted %s turn",
     (status) => {
       expect(numoSurfaceProjectionDisposition(status)).toBe("fail");

@@ -60,6 +60,8 @@ export interface StartNumoIntentInput {
   attachments?: Array<AttachmentInput | PromptAttachment>;
   /** Continue an existing private canonical conversation. */
   conversationId?: string;
+  /** Owner of an existing conversation when another account pays for the turn. */
+  conversationUserId?: string;
   /** Stable source-event identity used for idempotent durable admission. */
   requestId?: string;
   /** Let a surface bind its response destination before execution starts. */
@@ -148,7 +150,7 @@ export async function startNumoIntent(
       .from("conversations")
       .select("id")
       .eq("id", input.conversationId)
-      .eq("user_id", input.userId)
+      .eq("user_id", input.conversationUserId ?? input.userId)
       .maybeSingle();
     if (error || !data) {
       throw new NumoIntentStartError("context_unavailable", 404);

@@ -951,6 +951,9 @@ export async function createPrCommentResponse(
  */
 export async function startNumoPrReview(input: {
   scope: PrScope;
+  /** The forge commenter owning the private canonical conversation. */
+  actorId?: string;
+  /** The project owner whose budget and forge access pay for this review. */
   userId: string;
   supabase: SupabaseClient;
   projectId?: string | null;
@@ -994,7 +997,7 @@ export async function startNumoPrReview(input: {
       service,
       surface: "pull_request_comment",
       sourceThreadId: scope.pr.id,
-      actorId: userId,
+      actorId: input.actorId ?? userId,
       projectId,
       title: `Pull request #${scope.pr.number}: ${scope.pr.title ?? scope.pr.repo_full_name}`,
     });
@@ -1046,6 +1049,7 @@ export async function startNumoPrReview(input: {
     const started = await startNumoIntent({
       supabase,
       userId,
+      conversationUserId: input.actorId ?? userId,
       projectId,
       prompt,
       locale: await getLocale(),

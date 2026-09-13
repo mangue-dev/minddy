@@ -312,6 +312,7 @@ export async function runCommentMention(input: {
     service.from("comments")
       .select("id, author_id, body, via_assistant, created_at")
       .eq("issue_id", issueId)
+      .or(`id.eq.${rootId},parent_id.eq.${rootId}`)
       .order("created_at", { ascending: false })
       .limit(20),
     service.from("attachments")
@@ -406,7 +407,8 @@ export async function runObjectiveCommentMention(input: {
   ) return;
   const [{ data: comments }, { data: attachments }, { data: root }] = await Promise.all([
     service.from("comments").select("id, author_id, body, via_assistant, created_at")
-      .eq("objective_id", objectiveId).order("created_at", { ascending: false }).limit(20),
+      .eq("objective_id", objectiveId).or(`id.eq.${rootId},parent_id.eq.${rootId}`)
+      .order("created_at", { ascending: false }).limit(20),
     service.from("attachments").select(PROMPT_ATTACHMENT_COLUMNS)
       .eq("objective_id", objectiveId).order("created_at", { ascending: true }),
     service.from("comments").select("author_id").eq("id", rootId).maybeSingle(),
@@ -495,7 +497,8 @@ export async function runPageCommentMention(input: {
   ) return;
   const [{ data: comments }, { data: root }] = await Promise.all([
     service.from("page_comments").select("id, author_id, body, via_assistant, created_at")
-      .eq("page_id", pageId).order("created_at", { ascending: false }).limit(20),
+      .eq("page_id", pageId).or(`id.eq.${rootId},parent_id.eq.${rootId}`)
+      .order("created_at", { ascending: false }).limit(20),
     service.from("page_comments").select("author_id, quote").eq("id", rootId).maybeSingle(),
   ]);
   const rows = [...(comments ?? [])].reverse();
@@ -586,7 +589,8 @@ export async function runFeedbackCommentMention(input: {
   const [{ data: comments }, { data: attachments }, { data: root }] = await Promise.all([
     service.from("comments").select(
       "id, author_id, body, via_assistant, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
-    ).eq("feedback_post_id", postId).order("created_at", { ascending: false }).limit(20),
+    ).eq("feedback_post_id", postId).or(`id.eq.${rootId},parent_id.eq.${rootId}`)
+      .order("created_at", { ascending: false }).limit(20),
     service.from("attachments").select(PROMPT_ATTACHMENT_COLUMNS)
       .eq("feedback_post_id", postId).order("created_at", { ascending: true }),
     service.from("comments").select("author_id").eq("id", rootId).maybeSingle(),

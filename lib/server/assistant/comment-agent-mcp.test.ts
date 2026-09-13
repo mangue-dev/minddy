@@ -20,4 +20,9 @@ describe("Numo comment conversation entry", () => {
     expect(source).toContain("pendingSurfaceWorkerInput");
     expect(source).toContain("answerNumoWorkerInput");
   });
+
+  it("keeps the shared prompt limited to the invoked comment thread", () => {
+    const threadFilter = ".or(`id.eq.${rootId},parent_id.eq.${rootId}`)";
+    expect(source.split(threadFilter)).toHaveLength(5);
+  });
 });

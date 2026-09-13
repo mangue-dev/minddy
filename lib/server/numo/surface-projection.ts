@@ -26,7 +26,10 @@ interface SurfaceProjectionRow extends NumoSurfaceEvent {
 export function numoSurfaceProjectionDisposition(
   status: NumoTurn["status"],
 ): "wait" | "reply" | "fail" {
-  if (status === "queued" || status === "running" || status === "waiting_work") {
+  if (
+    status === "queued" || status === "running" || status === "waiting_work"
+    || status === "retryable"
+  ) {
     return "wait";
   }
   if (status === "completed" || status === "waiting_input") return "reply";

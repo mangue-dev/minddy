@@ -88,16 +88,26 @@ export async function isForgeAuthorMember(params: {
   projectIds: string[];
   authorLogin: string | null;
 }): Promise<boolean> {
+  return !!await forgeAuthorMemberId(params);
+}
+
+/** Resolve the exact minddy member connected to the forge comment author. */
+export async function forgeAuthorMemberId(params: {
+  provider: RepoProviderId;
+  projectIds: string[];
+  authorLogin: string | null;
+}): Promise<string | null> {
   const login = params.authorLogin?.trim().toLowerCase();
-  if (!login) return false;
+  if (!login) return null;
   for (const projectId of params.projectIds) {
     const index = await buildForgeAssigneeIndex({
       projectId,
       provider: params.provider,
     });
-    if (index.has(login)) return true;
+    const userId = index.get(login);
+    if (userId) return userId;
   }
-  return false;
+  return null;
 }
 
 /** What the flow guard responds to, and what the caller does with it. */
