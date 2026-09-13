@@ -42,7 +42,7 @@ Storage, and Realtime.
 | Auth email | SMTP configured in Supabase/GoTrue | Recommended for a public service |
 | Application email | Resend, explicitly configured, or no provider; `console` is development-only | No |
 | AI | Per-user provider reachable from the server, or managed AI in the cloud edition | No |
-| Code agent | Built-in self-hosted Docker sandboxes or Vercel Sandbox | Yes in the reference server installation |
+| Numo code work | Built-in self-hosted Docker sandboxes or Vercel Sandbox | Yes in the reference server installation |
 | GitHub, GitLab, application email, Web Push, scheduled routines | Operator-owned accounts and explicit configuration | No |
 
 GitHub integration targets `github.com` and GitLab integration targets
@@ -110,13 +110,14 @@ analytics, Edge Functions, image transformation, the pooler, and other unused
 containers. Database, attachments, and backup storage grow over time; keep
 restorable backups on separate storage.
 
-### Numo agents and routines
+### Numo conversations, code work, and routines
 
-The reference server installation includes both interactive Numo agents and
-scheduled routines. They enter the same launch and execution path. The scheduler
-calls minddy on the private Compose network for due routines, while an interactive
-run starts from the app; the built-in runner then opens one restricted Docker
-sandbox per run on the server in either case:
+The reference server installation includes interactive Numo conversations,
+delegated code work, and scheduled routines. A request from the Numo page, the
+contextual floating button, an in-product action, or a due routine enters the same
+conversation path. Numo uses Minddy tools directly and asks the built-in runner
+to open one restricted Docker sandbox on the server only when repository work is
+needed:
 
 ```dotenv
 AGENT_EXECUTION_BACKEND=self-hosted
@@ -126,8 +127,8 @@ AGENT_CONTROL_ORIGIN=http://minddy:3000
 
 The installer generates `AGENT_RUNNER_SECRET` and `CRON_SECRET`; the operator
 does not configure a separate execution service or keep a desktop app online.
-Starting Numo from either the web or desktop app therefore opens a server
-sandbox just like a routine.
+Starting Numo from either the web or desktop app therefore uses the same server
+execution path. No desktop application needs to stay online for scheduled work.
 The runner has access to the Docker socket so it can create sandboxes. The
 sandbox containers do not receive that socket, the Supabase network, or instance
 secrets. They receive CPU, memory, process, capability, and filesystem limits.

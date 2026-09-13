@@ -4,7 +4,7 @@
 
 <h1 align="center">minddy</h1>
 
-<p align="center"><strong>Issue tracking, product knowledge, and coding agents in one open-source workspace.</strong></p>
+<p align="center"><strong>Issue tracking, product knowledge, and Numo in one open-source workspace.</strong></p>
 
 minddy is an open-source issue tracker for small product teams. It keeps the
 daily work in one place: projects, issues, objectives, saved views, collaborative
@@ -22,15 +22,17 @@ GitLab, Stripe, and OpenRouter.
 
 ## Product tour
 
-### Take work from an issue to a pull request
+### Hand work to Numo
 
-Give a coding agent the issue, plan, repository context, and project knowledge it
-needs. Follow its work in minddy, then review the linked pull request and diff
-without losing the product context that started the change.
+Start one Numo conversation from its page, the contextual floating button, or an
+issue action. Numo can answer with project context, update Minddy directly, or
+delegate repository work to a code worker in a server sandbox. Follow the work in
+the conversation, then review its linked pull request and diff without losing the
+context that started the request.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="public/captures/workflowAgent-en-dark.webp">
-  <img src="public/captures/workflowAgent-en-light.webp" alt="A coding agent implementing a minddy issue and reporting its changes" width="100%">
+  <img src="public/captures/workflowAgent-en-light.webp" alt="A Numo conversation showing delegated code work on a minddy issue" width="100%">
 </picture>
 
 ### Keep durable knowledge beside the backlog
@@ -116,8 +118,8 @@ release branch, and no human writes directly to `production`.
 
 - **Web app:** Next.js App Router, React, Tailwind CSS, and `mangue-ui`.
 - **Data and auth:** Supabase Postgres, Auth, Storage, and Realtime.
-- **Agent integration:** OAuth 2.1 MCP endpoint and an optional Vercel Sandbox
-  code agent.
+- **Numo and agent integration:** Unified Numo conversations, server-sandbox code
+  delegation, scheduled requests, and an OAuth 2.1 MCP endpoint for external agents.
 - **Deployment:** `pnpm deploy` is the interactive maintainer entry point. It
   detects whether to release the public core, deploy the Minddy Cloud web app,
   and publish desktop applications for macOS, Linux, and Windows, with
