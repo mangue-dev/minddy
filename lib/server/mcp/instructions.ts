@@ -84,7 +84,8 @@ export const MCP_FULL_USAGE_GUIDE =
       "definitive — there is no unlink. " +
       "The key owner may have a " +
       "CYCLE: their personal, cross-project week/fortnight ('what am I working on " +
-      "right now'). minddy_get_cycle reads it, minddy_fill_cycle tops it up with the " +
+      "right now'). minddy_get_cycle reads it (pass the owner's IANA timezone), " +
+      "minddy_fill_cycle tops it up with the " +
       "deterministic engine, minddy_add_to_cycle adds individual issues, " +
       "minddy_move_to_cycle moves selected issues between the current and next " +
       "cycles, and minddy_remove_from_cycle removes them; adding assigns the issue " +

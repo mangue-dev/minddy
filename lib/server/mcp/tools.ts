@@ -112,6 +112,7 @@ import {
   fillCycleForUser,
   getCycleOverview,
   getCyclePrefsForUser,
+  todayInTz,
 } from "@/lib/server/cycles";
 import { moveIssuesBetweenCycles } from "@/lib/server/cycle-issues";
 import {
@@ -3503,13 +3504,20 @@ export function registerMinddyTools(
         "the issues in it (with identifiers, across all projects), and the best " +
         "next candidates from their assigned pool (reco-scored, `blocks` relations " +
         "respected). Points are an internal capacity unit: talk to humans in " +
-        "effort sizes or percentages, never raw points. Reading also reconciles " +
+        "effort sizes or percentages, never raw points. The timezone resolves " +
+        "cycle boundaries in the owner's local calendar. Reading also reconciles " +
         "the timeline (cycle creation, rollover, one-shot auto-fill).",
       inputSchema: z.object({
         which: z
           .enum(["current", "next", "previous"])
           .optional()
           .describe("Which cycle to read. Default: current."),
+        timezone: z
+          .string()
+          .refine(isKnownTimezone, "timezone must be a valid IANA name")
+          .describe(
+            "The owner's IANA timezone, such as 'Europe/Paris'. Never guess or substitute UTC.",
+          ),
       }),
       annotations: READ_ONLY,
     },
@@ -3521,6 +3529,7 @@ export function registerMinddyTools(
         userId: scope.userId,
         prefs: scope.prefs,
         which: args.which,
+        today: todayInTz(args.timezone),
       });
       if (!r.ok) return fail("not_found", r.error);
       return ok(r.overview);
