@@ -235,7 +235,7 @@ interface IssueCommentEvent {
   issue?: { number?: number; pull_request?: unknown } | null;
   /** `body` serves the mention `@numo` (MIN-162): this is the only signal we have
       from a call to Numo written from github.com. */
-  comment?: { body?: string | null; user?: GithubActor } | null;
+  comment?: { id?: number; body?: string | null; user?: GithubActor } | null;
   repository?: { full_name?: string };
   sender?: GithubActor;
 }
@@ -521,7 +521,8 @@ async function handleIssueComment(payload: IssueCommentEvent): Promise<void> {
     number == null ||
     !repoFullName ||
     isBot(actor) ||
-    !payload.comment?.body
+    !payload.comment?.body ||
+    payload.comment.id == null
   ) {
     return;
   }
@@ -547,6 +548,7 @@ async function handleIssueComment(payload: IssueCommentEvent): Promise<void> {
     prNumber: number,
     body: payload.comment.body,
     authorLogin: actor?.login ?? null,
+    sourceEventId: String(payload.comment.id ?? ""),
   });
 }
 

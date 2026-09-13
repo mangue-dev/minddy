@@ -1,90 +1,45 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AssistantToolCall } from "@/lib/assistant-types";
-import { getProjectAccess } from "@/lib/server/project-access";
-import { hasUsageBudget } from "@/lib/server/usage";
-import { isWebSearchEnabled, withoutWebSearch } from "@/lib/server/web-search";
-import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
+
+import type {
+  AssistantPageContext,
+  NumoIntentAction,
+  NumoIntentSource,
+} from "@/lib/assistant-types";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
+import { getProjectAccess } from "@/lib/server/project-access";
+import { hasUsageBudget } from "@/lib/server/usage";
+import type { PromptAttachment } from "./attachment-parts";
 import {
-  insertNotifications,
-  projectMemberIds,
-  type NotificationRow,
-} from "@/lib/server/notifications";
-import { getAppConfigValues } from "@/lib/server/app-config";
-import {
-  modelConfigKeys,
-  resolveCascadeFromValues,
-} from "@/lib/server/model-config";
-import {
-  resolveNumoDefaultStatus,
-  type NumoDefaultStatus,
-} from "@/lib/numo-default-status";
-import { executeTool } from "./execute-tool";
-import { redactDeep, SecretRedactor } from "@/lib/server/agent/redact";
-import { ASSISTANT_TOOLS } from "./tools";
-import {
-  buildCommentSystemPrompt,
-  buildObjectiveCommentSystemPrompt,
-  buildPageCommentSystemPrompt,
-  buildFeedbackCommentSystemPrompt,
-  type CommentPromptThreadEntry,
-} from "./prompt";
-import { commentDisplay, type CommentDisplay } from "./comment-live";
-import { gatherProjectPromptContext } from "./prompt-context";
-import {
-  fetchAiChat,
-  resolveAiRuntime,
-  type ResolvedAiRuntime,
-} from "@/lib/server/ai-runtime";
-import {
-  buildAttachmentParts,
   groupPromptAttachments,
   PROMPT_ATTACHMENT_COLUMNS,
 } from "./attachment-parts";
-import { recordAiUsage, newRunId, type AiUsageInput } from "@/lib/server/ai-usage";
+import { commentDisplay, type CommentDisplay } from "./comment-live";
+import { startNumoIntent } from "@/lib/server/numo/start-intent";
+import { executeNumoTurn } from "@/lib/server/numo/turns";
+import { answerNumoWorkerInput } from "@/lib/server/numo/worker-mediation";
 import {
-  getModelInputModalities,
-  type ChatContentPart,
-  type ChatMessage,
-} from "./loop";
-import {
-  getToolResultCharLimit,
-  serializeToolResult,
-} from "./tool-result-serialization";
-import { commentFallbackDone } from "@/lib/server/runtime-locale-copy";
-import { getAssistantReasoningLevel } from "./reasoning";
-import { reasoningMaxTokens } from "@/lib/agent-reasoning";
-import { readPageForAgent } from "@/lib/server/page-tools";
+  bindNumoSurfaceEvent,
+  ensureNumoSurfaceThread,
+  failNumoSurfaceEvent,
+  pendingSurfaceWorkerInput,
+  reserveNumoSurfaceEvent,
+  setNumoSurfaceEventResponse,
+  type NumoSurface,
+  type NumoSurfaceDestination,
+} from "@/lib/server/numo/surface-conversations";
 
-// ── @Numo in comments (fire and forget, Linear-style) ───────────────────
-// A comment mentioning @numo spawns this agent AFTER the HTTP response (via
-// next/server's after()). It posts a threaded reply immediately as a live
-// placeholder (assistant_status='working'), then streams: the text goes out on
-// the reply's own Realtime topic (lib/server/assistant/comment-live.ts —
-// ephemeral, nothing written), while the row keeps only the state that has to
-// survive a missed message (current tool, then the final body). It finishes with
-// only the final message visible. No conversation is stored: the reply comment
-// IS the whole artifact.
-
-const MAX_TOOL_ROUNDS = 6;
-
-/** Detects an @numo / @Numo mention in a comment body (word-boundary, not mid-email). */
 export function mentionsNumo(body: string): boolean {
   return /(^|[\s(>])@numo\b/i.test(body);
 }
 
-/**
- * Build the recipients for a Numo comment without notifying the person whose
- * comment triggered the reply. Other eligible participants still receive the
- * same notification as they would for a regular comment.
- */
 export function numoCommentNotificationTargets(
   requesterId: string,
   memberIds: Set<string>,
-  candidates: Array<string | null | undefined>
+  candidates: Array<string | null | undefined>,
 ): string[] {
   const targets = new Set<string>();
   for (const userId of candidates) {
@@ -95,349 +50,339 @@ export function numoCommentNotificationTargets(
   return [...targets];
 }
 
-/**
- * Linear-style continuation: a reply posted right under a Numo comment
- * re-triggers Numo without needing a new @numo mention. Threads are flat
- * (depth ≤ 1), so "replying to Numo" = the thread's LAST comment before this
- * reply is a Numo one. A still-'working' Numo comment doesn't count — that
- * run is live and a concurrent second run on the same thread would race it.
- */
+async function replyTargetsNumoInTable(input: {
+  service: SupabaseClient;
+  table: "comments" | "page_comments";
+  scopeColumn: "issue_id" | "objective_id" | "feedback_post_id" | "page_id";
+  comment: { id: string; parent_id: string | null } & Record<string, unknown>;
+}): Promise<boolean> {
+  if (!input.comment.parent_id) return false;
+  const { data: last } = await input.service
+    .from(input.table)
+    .select("via_assistant, assistant_status")
+    .eq(input.scopeColumn, input.comment[input.scopeColumn])
+    .or(`id.eq.${input.comment.parent_id},parent_id.eq.${input.comment.parent_id}`)
+    .neq("id", input.comment.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return !!last?.via_assistant && last.assistant_status !== "working";
+}
+
 export async function replyTargetsNumo(
   service: SupabaseClient,
-  comment: { id: string; issue_id: string; parent_id: string | null }
+  comment: { id: string; issue_id: string; parent_id: string | null },
 ): Promise<boolean> {
-  if (!comment.parent_id) return false;
-  const { data: last } = await service
-    .from("comments")
-    .select("via_assistant, assistant_status")
-    .eq("issue_id", comment.issue_id)
-    .or(`id.eq.${comment.parent_id},parent_id.eq.${comment.parent_id}`)
-    .neq("id", comment.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return !!last?.via_assistant && last.assistant_status !== "working";
+  return replyTargetsNumoInTable({
+    service,
+    table: "comments",
+    scopeColumn: "issue_id",
+    comment,
+  });
 }
 
-/** Objective twin of replyTargetsNumo — the thread is scoped by objective_id. */
 export async function replyTargetsNumoObjective(
   service: SupabaseClient,
-  comment: { id: string; objective_id: string; parent_id: string | null }
+  comment: { id: string; objective_id: string; parent_id: string | null },
 ): Promise<boolean> {
-  if (!comment.parent_id) return false;
-  const { data: last } = await service
-    .from("comments")
-    .select("via_assistant, assistant_status")
-    .eq("objective_id", comment.objective_id)
-    .or(`id.eq.${comment.parent_id},parent_id.eq.${comment.parent_id}`)
-    .neq("id", comment.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return !!last?.via_assistant && last.assistant_status !== "working";
+  return replyTargetsNumoInTable({
+    service,
+    table: "comments",
+    scopeColumn: "objective_id",
+    comment,
+  });
 }
 
-/** Feedback twin of replyTargetsNumo — the thread is scoped by feedback_post_id. */
 export async function replyTargetsNumoFeedback(
   service: SupabaseClient,
-  comment: { id: string; feedback_post_id: string; parent_id: string | null }
+  comment: { id: string; feedback_post_id: string; parent_id: string | null },
 ): Promise<boolean> {
-  if (!comment.parent_id) return false;
-  const { data: last } = await service
-    .from("comments")
-    .select("via_assistant, assistant_status")
-    .eq("feedback_post_id", comment.feedback_post_id)
-    .or(`id.eq.${comment.parent_id},parent_id.eq.${comment.parent_id}`)
-    .neq("id", comment.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return !!last?.via_assistant && last.assistant_status !== "working";
+  return replyTargetsNumoInTable({
+    service,
+    table: "comments",
+    scopeColumn: "feedback_post_id",
+    comment,
+  });
 }
 
-/** Page-comment twin of replyTargetsNumo. */
 export async function replyTargetsNumoPage(
   service: SupabaseClient,
-  comment: { id: string; page_id: string; parent_id: string | null }
+  comment: { id: string; page_id: string; parent_id: string | null },
 ): Promise<boolean> {
-  if (!comment.parent_id) return false;
-  const { data: last } = await service
-    .from("page_comments")
-    .select("via_assistant, assistant_status")
-    .eq("page_id", comment.page_id)
-    .or(`id.eq.${comment.parent_id},parent_id.eq.${comment.parent_id}`)
-    .neq("id", comment.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return !!last?.via_assistant && last.assistant_status !== "working";
+  return replyTargetsNumoInTable({
+    service,
+    table: "page_comments",
+    scopeColumn: "page_id",
+    comment,
+  });
 }
 
-// Fire-and-forget: no ask_user — the loop can never pause for the user. Same
-// for proposition_backlog (MIN-173): its proposal opens in the
-// Numo, which a ticket comment does not have on hand.
-const COMMENT_TOOLS = ASSISTANT_TOOLS.filter(
-  (t) => !["ask_user", "propose_backlog"].includes(t.function.name)
-);
+type SharedThreadEntry = {
+  author: string;
+  body: string;
+  attachments?: string[];
+  audience?: string;
+};
 
-// Stored comment content is written once in the requester's locale (unlike UI
-// chrome, which localizes per viewer).
-export async function runCommentMention({
-  supabase,
-  service,
-  issueId,
-  actorId,
-  triggerCommentId,
-  locale,
-  trigger = "mention",
-}: {
-  /** The mentioning user's RLS client (still valid inside after()). */
+function sharedSurfacePrompt(input: {
+  author: string;
+  trigger: "mention" | "reply";
+  target: string;
+  body: string;
+  thread: SharedThreadEntry[];
+}): string {
+  const transcript = input.thread.map((entry) => {
+    const attachments = entry.attachments?.length
+      ? `\nAttachments: ${entry.attachments.join(", ")}`
+      : "";
+    return `${entry.author}${entry.audience ? ` (${entry.audience})` : ""}:\n${entry.body}${attachments}`;
+  }).join("\n\n");
+  return `[Shared comment request]
+${input.author} ${input.trigger === "reply" ? "replied to Numo" : "mentioned Numo"} on ${input.target}.
+
+${input.body}
+
+[Recent shared thread]
+${transcript || "No earlier messages."}
+
+[Response boundary]
+Your final answer is projected back into this shared thread. Answer the request directly and include only information intended for every reader of that surface. The canonical conversation, reasoning, tool results, personal connector data, credentials, and other private context are not shared automatically. Do not reveal them merely because they are available in your private working context. If essential input is missing, ask the minimum blocking question with ask_user; a later reply in this thread resumes the same durable work.`;
+}
+
+async function actorNames(
+  service: SupabaseClient,
+  actorId: string,
+  rows: Array<{ author_id?: unknown }>,
+) {
+  const authorIds = rows.flatMap((row) =>
+    typeof row.author_id === "string" ? [row.author_id] : [],
+  );
+  const users = await fetchAuthUsersById(service, [...authorIds, actorId]);
+  return {
+    users,
+    name(id: string | null, viaAssistant?: boolean) {
+      return viaAssistant
+        ? "Numo"
+        : displayName(toNamed(id ? users.get(id) : null), "User");
+    },
+  };
+}
+
+async function runSharedSurfaceMention(input: {
+  supabase: SupabaseClient;
+  service: SupabaseClient;
+  surface: NumoSurface;
+  sourceThreadId: string;
+  sourceEventId: string;
+  actorId: string;
+  actorMetadata?: Record<string, unknown> | null;
+  projectId: string;
+  title: string;
+  prompt: string;
+  answer: string;
+  locale: string;
+  source: NumoIntentSource;
+  action?: NumoIntentAction;
+  context: AssistantPageContext;
+  attachments?: PromptAttachment[];
+  destination: NumoSurfaceDestination;
+  createResponse: () => Promise<{ id: string; display: CommentDisplay }>;
+}): Promise<void> {
+  let display: CommentDisplay | null = null;
+  let eventId: string | null = null;
+  try {
+    const thread = await ensureNumoSurfaceThread({
+      service: input.service,
+      surface: input.surface,
+      sourceThreadId: input.sourceThreadId,
+      actorId: input.actorId,
+      projectId: input.projectId,
+      title: input.title,
+    });
+    const reserved = await reserveNumoSurfaceEvent({
+      service: input.service,
+      threadId: thread.id,
+      sourceEventId: input.sourceEventId,
+      actorId: input.actorId,
+      destination: input.destination,
+    });
+    if (!reserved.created) return;
+    eventId = reserved.event.id;
+
+    const response = await input.createResponse();
+    display = response.display;
+    await setNumoSurfaceEventResponse({
+      service: input.service,
+      eventId,
+      responseId: response.id,
+    });
+
+    const pendingInput = await pendingSurfaceWorkerInput(
+      input.service,
+      thread.conversation_id,
+    );
+    if (pendingInput) {
+      const disposition = await answerNumoWorkerInput({
+        conversationId: thread.conversation_id,
+        userId: input.actorId,
+        correlation: {
+          parentTurnId: pendingInput.turnId,
+          runId: pendingInput.runId,
+          questionId: pendingInput.questionId,
+        },
+        answer: input.answer,
+        messageId: eventId,
+        persistParentMessage: true,
+      });
+      if (disposition.action === "answered" || disposition.action === "already") {
+        await bindNumoSurfaceEvent({
+          service: input.service,
+          eventId,
+          turnId: pendingInput.turnId,
+        });
+        return;
+      }
+      const reason = disposition.action === "refused"
+        ? disposition.reason
+        : disposition.action;
+      throw new Error(`Unable to resume surface worker input: ${reason}`);
+    }
+
+    const started = await startNumoIntent({
+      supabase: input.supabase,
+      userId: input.actorId,
+      userMetadata: input.actorMetadata,
+      projectId: input.projectId,
+      prompt: input.prompt,
+      locale: input.locale,
+      source: input.source,
+      action: input.action ?? "discuss",
+      context: input.context,
+      attachments: input.attachments,
+      conversationId: thread.conversation_id,
+      requestId: eventId,
+      executeInBackground: false,
+      triggerSource: "mention",
+    });
+    await bindNumoSurfaceEvent({
+      service: input.service,
+      eventId,
+      turnId: started.turnId,
+    });
+    await executeNumoTurn({
+      turnId: started.turnId,
+      readClient: input.supabase,
+    });
+  } catch (error) {
+    console.error(`[numo-surface] ${input.surface} failed:`, error);
+    await display?.fail();
+    if (eventId) await failNumoSurfaceEvent(input.service, eventId);
+  }
+}
+
+export async function runCommentMention(input: {
   supabase: SupabaseClient;
   service: SupabaseClient;
   issueId: string;
   actorId: string;
   triggerCommentId: string;
   locale: string;
-  /** How Numo got pulled in: an explicit @numo, or a reply under its comment. */
   trigger?: "mention" | "reply";
 }): Promise<void> {
-  let replyId: string | null = null;
-  // Hoisted out of the try: the catch writes the failure by the SAME display, therefore in
-  // the same queue of writes — its update necessarily comes after those which
-  // seraient encore en vol.
-  let display: CommentDisplay | null = null;
-  try {
-    // ── Resolve the trigger comment, its thread root, and the issue ─────
-    const { data: triggerRow } = await service
-      .from("comments")
-      .select("id, parent_id, body, author_id")
-      .eq("id", triggerCommentId)
-      .maybeSingle();
-    if (!triggerRow) return;
-    const rootId =
-      (triggerRow.parent_id as string | null) ?? (triggerRow.id as string);
+  const { service, actorId, issueId, triggerCommentId } = input;
+  const { data: triggerRow } = await service
+    .from("comments")
+    .select("id, parent_id, body, author_id")
+    .eq("id", triggerCommentId)
+    .maybeSingle();
+  if (!triggerRow) return;
+  const rootId = (triggerRow.parent_id as string | null) ?? triggerRow.id as string;
+  const { data: issue } = await service
+    .from("issues")
+    .select("id, project_id, number, title, created_by, assignee_id")
+    .eq("id", issueId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  const access = issue
+    ? await getProjectAccess(actorId, issue.project_id as string)
+    : null;
+  if (!issue || !access || !await hasUsageBudget(actorId, "assistant")) return;
 
-    const { data: issue } = await service
-      .from("issues")
-      .select("*, issue_categories(category_id)")
-      .is("deleted_at", null)
-      .eq("id", issueId)
-      .maybeSingle();
-    if (!issue) return;
-
-    const access = await getProjectAccess(actorId, issue.project_id as string);
-    if (!access) return;
-
-    // Plan budget (MIN-72) — fire-and-forget: dry, silent skip.
-    if (!(await hasUsageBudget(actorId, "assistant"))) return;
-
-    // ── Post the live placeholder reply right away ───────────────────────
-    const { data: reply, error: replyError } = await service
-      .from("comments")
-      .insert({
+  const [{ data: comments }, { data: attachments }, { data: root }] = await Promise.all([
+    service.from("comments")
+      .select("id, author_id, body, via_assistant, created_at")
+      .eq("issue_id", issueId)
+      .order("created_at", { ascending: false })
+      .limit(20),
+    service.from("attachments")
+      .select(PROMPT_ATTACHMENT_COLUMNS)
+      .eq("issue_id", issueId)
+      .order("created_at", { ascending: true }),
+    service.from("comments").select("author_id").eq("id", rootId).maybeSingle(),
+  ]);
+  const rows = [...(comments ?? [])].reverse();
+  const names = await actorNames(service, actorId, rows);
+  const grouped = groupPromptAttachments(attachments);
+  const identifier = issueIdentifier(access.project.key, issue.number as number);
+  const thread = rows.map((row) => ({
+    author: names.name(row.author_id as string | null, !!row.via_assistant),
+    body: (row.body as string | null) ?? "",
+    attachments: grouped.get(row.id as string)?.map((attachment) => attachment.file_name),
+  }));
+  const destination: NumoSurfaceDestination = {
+    kind: "comment",
+    table: "comments",
+    locale: input.locale,
+    notification: {
+      type: "comment",
+      candidateUserIds: [root?.author_id, issue.created_by, issue.assignee_id],
+      issueId,
+    },
+  };
+  await runSharedSurfaceMention({
+    ...input,
+    surface: "issue_comment",
+    sourceThreadId: rootId,
+    sourceEventId: triggerCommentId,
+    actorMetadata: names.users.get(actorId)?.user_metadata,
+    projectId: issue.project_id as string,
+    title: `${identifier}: ${issue.title as string}`,
+    prompt: sharedSurfacePrompt({
+      author: names.name(actorId),
+      trigger: input.trigger ?? "mention",
+      target: `${identifier} “${issue.title as string}”`,
+      body: triggerRow.body as string,
+      thread,
+    }),
+    answer: triggerRow.body as string,
+    source: "issue",
+    context: {
+      projectId: issue.project_id as string,
+      issueId,
+      issueIdentifier: identifier,
+      issueTitle: issue.title as string,
+    },
+    attachments: [
+      ...(grouped.get(triggerCommentId) ?? []),
+      ...(grouped.get(null) ?? []),
+    ].slice(0, 5),
+    destination,
+    createResponse: async () => {
+      const { data, error } = await service.from("comments").insert({
         issue_id: issueId,
         author_id: actorId,
         parent_id: rootId,
         body: "",
         via_assistant: true,
         assistant_status: "working",
-      })
-      .select("id")
-      .single();
-    if (replyError || !reply) {
-      console.error("[numo-comment] placeholder failed:", replyError?.message);
-      return;
-    }
-    replyId = reply.id as string;
-
-    // Live display: text on the reply's Realtime topic, state in the row.
-    display = commentDisplay(service, replyId);
-
-    // ── Gather prompt context ────────────────────────────────────────────
-    const [promptProject, { data: threadRows }, { data: attachmentRows }] =
-      await Promise.all([
-        gatherProjectPromptContext({
-          supabase,
-          service,
-          project: access.project as unknown as {
-            id: string;
-            name: string;
-            key: string;
-            owner_id: string;
-          },
-        }),
-        // The LAST 20 comments (that's where the live discussion is), re-sorted
-        // chronologically below for the prompt.
-        service
-          .from("comments")
-          .select("id, author_id, body, via_assistant, created_at")
-          .eq("issue_id", issueId)
-          .neq("id", replyId)
-          .order("created_at", { ascending: false })
-          .limit(20),
-        // Every attachment of the issue in one query — thread lines name them,
-        // the trigger comment's (+ issue-level ones) feed the model directly.
-        service
-          .from("attachments")
-          .select(PROMPT_ATTACHMENT_COLUMNS)
-          .eq("issue_id", issueId)
-          .order("created_at", { ascending: true }),
-      ]);
-
-    const attachmentsByComment = groupPromptAttachments(attachmentRows);
-
-    const recentComments = [...(threadRows ?? [])].reverse();
-    const authorIds = recentComments.map((c) => c.author_id as string);
-    const users = await fetchAuthUsersById(service, [...authorIds, actorId]);
-    const authorName = (id: string | null, viaAssistant?: boolean): string =>
-      viaAssistant ? "Numo" : displayName(toNamed(id ? users.get(id) : null), "User");
-
-    const thread: CommentPromptThreadEntry[] = recentComments.map((c) => ({
-      author: authorName(c.author_id as string | null, !!c.via_assistant),
-      body: (c.body as string) ?? "",
-      attachments: attachmentsByComment
-        .get(c.id as string)
-        ?.map((a) => a.file_name),
-    }));
-
-    const categories = (issue.issue_categories ?? []) as Array<{
-      category_id: string;
-    }>;
-    const systemPrompt = buildCommentSystemPrompt({
-      project: promptProject,
-      issue: {
-        id: issue.id as string,
-        identifier: issueIdentifier(access.project.key, issue.number as number),
-        title: issue.title as string,
-        description: (issue.description as string | null) ?? null,
-        status: issue.status as string,
-        priority: issue.priority as string,
-        effort: (issue.effort as string | null) ?? null,
-        assignee_id: (issue.assignee_id as string | null) ?? null,
-        objective_id: (issue.objective_id as string | null) ?? null,
-        due_date: (issue.due_date as string | null) ?? null,
-        category_ids: categories.map((c) => c.category_id),
-      },
-      thread,
-      locale,
-    });
-
-    // Model resolved here (not in runLoop) so its input modalities can gate
-    // the attachment parts below.
-    const cfg = await getAppConfigValues([
-      ...modelConfigKeys("assistant_model"),
-      ...modelConfigKeys("fallback_model"),
-    ]);
-    const { model } = resolveCascadeFromValues(["assistant_model", "fallback_model"], cfg);
-
-    const triggerText = `${authorName(actorId)} ${
-      trigger === "reply"
-        ? "replied to your comment"
-        : "mentioned you in a comment"
-    } on ${issueIdentifier(
-      access.project.key,
-      issue.number as number
-    )}:\n"""\n${triggerRow.body as string}\n"""`;
-
-    // Files the model gets to actually look at: the trigger comment's, then
-    // the issue-level ones — capped to keep the request bounded.
-    const directAttachments = [
-      ...(attachmentsByComment.get(triggerCommentId) ?? []),
-      ...(attachmentsByComment.get(null) ?? []),
-    ].slice(0, 5);
-
-    let triggerContent: string | ChatContentPart[] = triggerText;
-    let aiRuntime: ResolvedAiRuntime | undefined;
-    if (directAttachments.length > 0) {
-      aiRuntime = await resolveAiRuntime({
-        userId: actorId,
-        modelKey: "assistant_model",
-        surface: "assistant",
-      });
-      const modalities = aiRuntime.provider === "openrouter"
-        ? await getModelInputModalities(aiRuntime.model, aiRuntime.apiKey)
-        : new Set(["text"]);
-      triggerContent = [
-        { type: "text", text: triggerText },
-        ...(await buildAttachmentParts(service, directAttachments, {
-          modalities,
-          includeHeavy: true,
-        })),
-      ];
-    }
-
-    const messages: ChatMessage[] = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: triggerContent },
-    ];
-
-    // ── Agent loop (streamed, in-memory only — nothing persisted per round)
-    const finalContent = await runCommentLoop(messages, {
-      model,
-      aiRuntime,
-      projectId: issue.project_id as string,
-      userId: actorId,
-      supabase,
-      service,
-      locale,
-      // Landing status for issues Numo creates here (Account → Preferences).
-      numoDefaultStatus: resolveNumoDefaultStatus(
-        users.get(actorId)?.user_metadata
-      ),
-      onTool: (name) => display?.tool(name),
-      onText: (partial) => display?.stream(partial),
-    });
-
-    // ── Finalize: only the final message remains ─────────────────────────
-    await display.finish(
-      finalContent || commentFallbackDone(locale)
-    );
-
-    // Notifications, like a regular comment: issue owner/assignee + thread
-    // root author, members only. The requester already initiated and sees the
-    // live reply, so notifying them would announce the result of their own action.
-    const valid = await projectMemberIds(service, issue.project_id as string);
-    const { data: rootComment } = await service
-      .from("comments")
-      .select("author_id")
-      .eq("id", rootId)
-      .maybeSingle();
-    const targets = numoCommentNotificationTargets(actorId, valid, [
-      rootComment?.author_id,
-      issue.created_by,
-      issue.assignee_id,
-    ]);
-    const rows: NotificationRow[] = targets.map((uid) => ({
-      user_id: uid,
-      project_id: issue.project_id as string,
-      type: "comment" as const,
-      issue_id: issueId,
-      comment_id: replyId as string,
-      actor_id: actorId,
-      // The entry itself says Numo wrote it. The inbox already knows this from
-      // `comments.via_assistant`, but the pushed notification reads only this
-      // row. Without the flag, the banner would tell the requester that they
-      // commented on their own ticket.
-      via_assistant: true,
-    }));
-    await insertNotifications(service, rows);
-  } catch (err) {
-    console.error("[numo-comment] failed:", err);
-    // Empty body + status 'error' → the timeline renders a localized
-    // "Numo couldn't complete this" line per viewer.
-    await display?.fail();
-  }
+      }).select("id").single();
+      if (error || !data) throw new Error(error?.message ?? "Unable to create response");
+      return { id: data.id as string, display: commentDisplay(service, data.id as string) };
+    },
+  });
 }
 
-export async function runObjectiveCommentMention({
-  supabase,
-  service,
-  objectiveId,
-  actorId,
-  triggerCommentId,
-  locale,
-  trigger = "mention",
-}: {
+export async function runObjectiveCommentMention(input: {
   supabase: SupabaseClient;
   service: SupabaseClient;
   objectiveId: string;
@@ -446,225 +391,86 @@ export async function runObjectiveCommentMention({
   locale: string;
   trigger?: "mention" | "reply";
 }): Promise<void> {
-  let replyId: string | null = null;
-  // Hoisted out of the try: the catch writes the failure by the SAME display, therefore in
-  // the same queue of writes — its update necessarily comes after those which
-  // seraient encore en vol.
-  let display: CommentDisplay | null = null;
-  try {
-    // ── Resolve the trigger comment, its thread root, and the objective ──
-    const { data: triggerRow } = await service
-      .from("comments")
-      .select("id, parent_id, body, author_id")
-      .eq("id", triggerCommentId)
-      .maybeSingle();
-    if (!triggerRow) return;
-    const rootId =
-      (triggerRow.parent_id as string | null) ?? (triggerRow.id as string);
-
-    const { data: objective } = await service
-      .from("objectives")
-      .select("*")
-      .is("deleted_at", null)
-      .eq("id", objectiveId)
-      .maybeSingle();
-    if (!objective) return;
-
-    const access = await getProjectAccess(actorId, objective.project_id as string);
-    if (!access) return;
-
-    // Plan budget (MIN-72) — fire-and-forget: dry, silent skip.
-    if (!(await hasUsageBudget(actorId, "assistant"))) return;
-
-    // ── Post the live placeholder reply right away ───────────────────────
-    const { data: reply, error: replyError } = await service
-      .from("comments")
-      .insert({
+  const { service, actorId, objectiveId, triggerCommentId } = input;
+  const { data: triggerRow } = await service.from("comments")
+    .select("id, parent_id, body, author_id").eq("id", triggerCommentId).maybeSingle();
+  if (!triggerRow) return;
+  const rootId = (triggerRow.parent_id as string | null) ?? triggerRow.id as string;
+  const { data: objective } = await service.from("objectives")
+    .select("id, project_id, name, lead_user_id").eq("id", objectiveId)
+    .is("deleted_at", null).maybeSingle();
+  if (
+    !objective
+    || !await getProjectAccess(actorId, objective.project_id as string)
+    || !await hasUsageBudget(actorId, "assistant")
+  ) return;
+  const [{ data: comments }, { data: attachments }, { data: root }] = await Promise.all([
+    service.from("comments").select("id, author_id, body, via_assistant, created_at")
+      .eq("objective_id", objectiveId).order("created_at", { ascending: false }).limit(20),
+    service.from("attachments").select(PROMPT_ATTACHMENT_COLUMNS)
+      .eq("objective_id", objectiveId).order("created_at", { ascending: true }),
+    service.from("comments").select("author_id").eq("id", rootId).maybeSingle(),
+  ]);
+  const rows = [...(comments ?? [])].reverse();
+  const names = await actorNames(service, actorId, rows);
+  const grouped = groupPromptAttachments(attachments);
+  const thread = rows.map((row) => ({
+    author: names.name(row.author_id as string | null, !!row.via_assistant),
+    body: (row.body as string | null) ?? "",
+    attachments: grouped.get(row.id as string)?.map((attachment) => attachment.file_name),
+  }));
+  await runSharedSurfaceMention({
+    ...input,
+    surface: "objective_comment",
+    sourceThreadId: rootId,
+    sourceEventId: triggerCommentId,
+    actorMetadata: names.users.get(actorId)?.user_metadata,
+    projectId: objective.project_id as string,
+    title: `Objective: ${objective.name as string}`,
+    prompt: sharedSurfacePrompt({
+      author: names.name(actorId),
+      trigger: input.trigger ?? "mention",
+      target: `the objective “${objective.name as string}”`,
+      body: triggerRow.body as string,
+      thread,
+    }),
+    answer: triggerRow.body as string,
+    source: "objective",
+    context: {
+      projectId: objective.project_id as string,
+      objectiveId,
+      objectiveName: objective.name as string,
+    },
+    attachments: [
+      ...(grouped.get(triggerCommentId) ?? []),
+      ...(grouped.get(null) ?? []),
+    ].slice(0, 5),
+    destination: {
+      kind: "comment",
+      table: "comments",
+      locale: input.locale,
+      notification: {
+        type: "comment",
+        candidateUserIds: [root?.author_id, objective.lead_user_id],
+        objectiveId,
+      },
+    },
+    createResponse: async () => {
+      const { data, error } = await service.from("comments").insert({
         objective_id: objectiveId,
         author_id: actorId,
         parent_id: rootId,
         body: "",
         via_assistant: true,
         assistant_status: "working",
-      })
-      .select("id")
-      .single();
-    if (replyError || !reply) {
-      console.error("[numo-comment] objective placeholder failed:", replyError?.message);
-      return;
-    }
-    replyId = reply.id as string;
-
-    display = commentDisplay(service, replyId);
-
-    // ── Gather prompt context (project, thread, attachments, linked issues) ─
-    const [promptProject, { data: threadRows }, { data: attachmentRows }, { data: linkedIssues }] =
-      await Promise.all([
-        gatherProjectPromptContext({
-          supabase,
-          service,
-          project: access.project as unknown as {
-            id: string;
-            name: string;
-            key: string;
-            owner_id: string;
-          },
-        }),
-        service
-          .from("comments")
-          .select("id, author_id, body, via_assistant, created_at")
-          .eq("objective_id", objectiveId)
-          .neq("id", replyId)
-          .order("created_at", { ascending: false })
-          .limit(20),
-        service
-          .from("attachments")
-          .select(PROMPT_ATTACHMENT_COLUMNS)
-          .eq("objective_id", objectiveId)
-          .order("created_at", { ascending: true }),
-        service
-          .from("issues")
-          .select("number, title, status")
-          .is("deleted_at", null)
-          .eq("objective_id", objectiveId)
-          .order("number", { ascending: true }),
-      ]);
-
-    const attachmentsByComment = groupPromptAttachments(attachmentRows);
-
-    const recentComments = [...(threadRows ?? [])].reverse();
-    const authorIds = recentComments.map((c) => c.author_id as string);
-    const users = await fetchAuthUsersById(service, [...authorIds, actorId]);
-    const authorName = (id: string | null, viaAssistant?: boolean): string =>
-      viaAssistant ? "Numo" : displayName(toNamed(id ? users.get(id) : null), "User");
-
-    const thread: CommentPromptThreadEntry[] = recentComments.map((c) => ({
-      author: authorName(c.author_id as string | null, !!c.via_assistant),
-      body: (c.body as string) ?? "",
-      attachments: attachmentsByComment
-        .get(c.id as string)
-        ?.map((a) => a.file_name),
-    }));
-
-    const systemPrompt = buildObjectiveCommentSystemPrompt({
-      project: promptProject,
-      objective: {
-        id: objective.id as string,
-        name: objective.name as string,
-        description: (objective.description as string | null) ?? null,
-        status: objective.status as string,
-        lead_user_id: (objective.lead_user_id as string | null) ?? null,
-        target_date: (objective.target_date as string | null) ?? null,
-        issues: (linkedIssues ?? []).map((i) => ({
-          identifier: issueIdentifier(access.project.key, i.number as number),
-          title: i.title as string,
-          status: i.status as string,
-        })),
-      },
-      thread,
-      locale,
-    });
-
-    const cfg = await getAppConfigValues([
-      ...modelConfigKeys("assistant_model"),
-      ...modelConfigKeys("fallback_model"),
-    ]);
-    const { model } = resolveCascadeFromValues(["assistant_model", "fallback_model"], cfg);
-
-    const triggerText = `${authorName(actorId)} ${
-      trigger === "reply"
-        ? "replied to your comment"
-        : "mentioned you in a comment"
-    } on the objective "${objective.name as string}":\n"""\n${triggerRow.body as string}\n"""`;
-
-    const directAttachments = [
-      ...(attachmentsByComment.get(triggerCommentId) ?? []),
-      ...(attachmentsByComment.get(null) ?? []),
-    ].slice(0, 5);
-
-    let triggerContent: string | ChatContentPart[] = triggerText;
-    let aiRuntime: ResolvedAiRuntime | undefined;
-    if (directAttachments.length > 0) {
-      aiRuntime = await resolveAiRuntime({
-        userId: actorId,
-        modelKey: "assistant_model",
-        surface: "assistant",
-      });
-      const modalities = aiRuntime.provider === "openrouter"
-        ? await getModelInputModalities(aiRuntime.model, aiRuntime.apiKey)
-        : new Set(["text"]);
-      triggerContent = [
-        { type: "text", text: triggerText },
-        ...(await buildAttachmentParts(service, directAttachments, {
-          modalities,
-          includeHeavy: true,
-        })),
-      ];
-    }
-
-    const messages: ChatMessage[] = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: triggerContent },
-    ];
-
-    const finalContent = await runCommentLoop(messages, {
-      model,
-      aiRuntime,
-      projectId: objective.project_id as string,
-      userId: actorId,
-      supabase,
-      service,
-      locale,
-      numoDefaultStatus: resolveNumoDefaultStatus(
-        users.get(actorId)?.user_metadata
-      ),
-      onTool: (name) => display?.tool(name),
-      onText: (partial) => display?.stream(partial),
-    });
-
-    await display.finish(
-      finalContent || commentFallbackDone(locale)
-    );
-
-    // Notifications: the objective's lead + the thread root author, members
-    // only, excluding the requester who initiated Numo's reply.
-    const valid = await projectMemberIds(service, objective.project_id as string);
-    const { data: rootComment } = await service
-      .from("comments")
-      .select("author_id")
-      .eq("id", rootId)
-      .maybeSingle();
-    const targets = numoCommentNotificationTargets(actorId, valid, [
-      rootComment?.author_id,
-      objective.lead_user_id,
-    ]);
-    const rows: NotificationRow[] = targets.map((uid) => ({
-      user_id: uid,
-      project_id: objective.project_id as string,
-      type: "comment" as const,
-      issue_id: null,
-      objective_id: objectiveId,
-      comment_id: replyId as string,
-      actor_id: actorId,
-      // Cf. the twin ticket: the line names Numo, on both surfaces.
-      via_assistant: true,
-    }));
-    await insertNotifications(service, rows);
-  } catch (err) {
-    console.error("[numo-comment] objective failed:", err);
-    await display?.fail();
-  }
+      }).select("id").single();
+      if (error || !data) throw new Error(error?.message ?? "Unable to create response");
+      return { id: data.id as string, display: commentDisplay(service, data.id as string) };
+    },
+  });
 }
 
-export async function runPageCommentMention({
-  supabase,
-  service,
-  pageId,
-  actorId,
-  triggerCommentId,
-  locale,
-  trigger = "mention",
-}: {
+export async function runPageCommentMention(input: {
   supabase: SupabaseClient;
   service: SupabaseClient;
   pageId: string;
@@ -673,42 +479,71 @@ export async function runPageCommentMention({
   locale: string;
   trigger?: "mention" | "reply";
 }): Promise<void> {
-  let display: CommentDisplay | null = null;
-  try {
-    const { data: triggerRow } = await service
-      .from("page_comments")
-      .select("id, parent_id, body, author_id, block_id")
-      .eq("id", triggerCommentId)
-      .maybeSingle();
-    if (!triggerRow) return;
-    const rootId =
-      (triggerRow.parent_id as string | null) ?? (triggerRow.id as string);
-
-    const { data: page } = await service
-      .from("pages")
-      .select("id, project_id, title, created_by")
-      .is("deleted_at", null)
-      .eq("id", pageId)
-      .maybeSingle();
-    if (!page) return;
-
-    const projectId = page.project_id as string;
-    const access = await getProjectAccess(actorId, projectId);
-    if (!access || !(await hasUsageBudget(actorId, "assistant"))) return;
-
-    const currentPage = await readPageForAgent({
+  const { service, actorId, pageId, triggerCommentId } = input;
+  const { data: triggerRow } = await service.from("page_comments")
+    .select("id, parent_id, body, author_id, block_id")
+    .eq("id", triggerCommentId).maybeSingle();
+  if (!triggerRow) return;
+  const rootId = (triggerRow.parent_id as string | null) ?? triggerRow.id as string;
+  const { data: page } = await service.from("pages")
+    .select("id, project_id, title, created_by").eq("id", pageId)
+    .is("deleted_at", null).maybeSingle();
+  if (
+    !page
+    || !await getProjectAccess(actorId, page.project_id as string)
+    || !await hasUsageBudget(actorId, "assistant")
+  ) return;
+  const [{ data: comments }, { data: root }] = await Promise.all([
+    service.from("page_comments").select("id, author_id, body, via_assistant, created_at")
+      .eq("page_id", pageId).order("created_at", { ascending: false }).limit(20),
+    service.from("page_comments").select("author_id, quote").eq("id", rootId).maybeSingle(),
+  ]);
+  const rows = [...(comments ?? [])].reverse();
+  const names = await actorNames(service, actorId, rows);
+  const thread = rows.map((row) => ({
+    author: names.name(row.author_id as string | null, !!row.via_assistant),
+    body: (row.body as string | null) ?? "",
+  }));
+  const quote = typeof root?.quote === "string" && root.quote.trim()
+    ? `\n\nThe thread is anchored to this quote:\n${root.quote}`
+    : "";
+  await runSharedSurfaceMention({
+    ...input,
+    surface: "page_comment",
+    sourceThreadId: rootId,
+    sourceEventId: triggerCommentId,
+    actorMetadata: names.users.get(actorId)?.user_metadata,
+    projectId: page.project_id as string,
+    title: `Page: ${page.title as string}`,
+    prompt: sharedSurfacePrompt({
+      author: names.name(actorId),
+      trigger: input.trigger ?? "mention",
+      target: `the page “${page.title as string}”${quote}`,
+      body: triggerRow.body as string,
+      thread,
+    }),
+    answer: triggerRow.body as string,
+    source: "page",
+    context: {
+      projectId: page.project_id as string,
       pageId,
-      projectId,
-      actorId,
-      withBacklinks: false,
-    });
-    if (!currentPage.ok) return;
-
-    const { data: reply, error: replyError } = await service
-      .from("page_comments")
-      .insert({
+      pageTitle: page.title as string,
+    },
+    destination: {
+      kind: "comment",
+      table: "page_comments",
+      locale: input.locale,
+      notification: {
+        type: "page_comment",
+        candidateUserIds: [root?.author_id, page.created_by],
+        pageId,
+        blockId: (triggerRow.block_id as string | null) ?? null,
+      },
+    },
+    createResponse: async () => {
+      const { data, error } = await service.from("page_comments").insert({
         page_id: pageId,
-        project_id: projectId,
+        project_id: page.project_id,
         block_id: (triggerRow.block_id as string | null) ?? null,
         quote: null,
         author_id: actorId,
@@ -716,136 +551,17 @@ export async function runPageCommentMention({
         body: "",
         via_assistant: true,
         assistant_status: "working",
-      })
-      .select("id")
-      .single();
-    if (replyError || !reply) {
-      console.error("[numo-comment] page placeholder failed:", replyError?.message);
-      return;
-    }
-    const replyId = reply.id as string;
-    display = commentDisplay(service, replyId, "page_comments");
-
-    const [promptProject, { data: threadRows }, { data: rootComment }] =
-      await Promise.all([
-        gatherProjectPromptContext({
-          supabase,
-          service,
-          project: access.project as unknown as {
-            id: string;
-            name: string;
-            key: string;
-            owner_id: string;
-          },
-        }),
-        service
-          .from("page_comments")
-          .select("id, author_id, body, via_assistant, created_at")
-          .eq("page_id", pageId)
-          .neq("id", replyId)
-          .order("created_at", { ascending: false })
-          .limit(20),
-        service
-          .from("page_comments")
-          .select("author_id, quote")
-          .eq("id", rootId)
-          .maybeSingle(),
-      ]);
-
-    const recentComments = [...(threadRows ?? [])].reverse();
-    const authorIds = recentComments.map((comment) => comment.author_id as string);
-    const users = await fetchAuthUsersById(service, [...authorIds, actorId]);
-    const authorName = (id: string | null, viaAssistant?: boolean): string =>
-      viaAssistant
-        ? "Numo"
-        : displayName(toNamed(id ? users.get(id) : null), "User");
-    const thread: CommentPromptThreadEntry[] = recentComments.map((comment) => ({
-      author: authorName(
-        comment.author_id as string | null,
-        !!comment.via_assistant
-      ),
-      body: (comment.body as string) ?? "",
-    }));
-
-    const systemPrompt = buildPageCommentSystemPrompt({
-      project: promptProject,
-      page: {
-        id: pageId,
-        title: currentPage.data.title,
-        markdown: currentPage.data.markdown,
-        version: currentPage.data.version,
-        quote: (rootComment?.quote as string | null) ?? null,
-      },
-      thread,
-      locale,
-    });
-
-    const cfg = await getAppConfigValues([
-      ...modelConfigKeys("assistant_model"),
-      ...modelConfigKeys("fallback_model"),
-    ]);
-    const { model } = resolveCascadeFromValues(
-      ["assistant_model", "fallback_model"],
-      cfg
-    );
-    const triggerText = `${authorName(actorId)} ${
-      trigger === "reply"
-        ? "replied to your comment"
-        : "mentioned you in a comment"
-    } on the page "${currentPage.data.title || "(untitled)"}":\n"""\n${
-      triggerRow.body as string
-    }\n"""`;
-    const messages: ChatMessage[] = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: triggerText },
-    ];
-
-    const finalContent = await runCommentLoop(messages, {
-      model,
-      projectId,
-      userId: actorId,
-      supabase,
-      service,
-      locale,
-      numoDefaultStatus: resolveNumoDefaultStatus(
-        users.get(actorId)?.user_metadata
-      ),
-      onTool: (name) => display?.tool(name),
-      onText: (partial) => display?.stream(partial),
-    });
-    await display.finish(finalContent || commentFallbackDone(locale));
-
-    const valid = await projectMemberIds(service, projectId);
-    const targets = numoCommentNotificationTargets(actorId, valid, [
-      rootComment?.author_id,
-      page.created_by,
-    ]);
-    const rows: NotificationRow[] = targets.map((userId) => ({
-      user_id: userId,
-      project_id: projectId,
-      type: "page_comment" as const,
-      issue_id: null,
-      page_id: pageId,
-      block_id: (triggerRow.block_id as string | null) ?? null,
-      actor_id: actorId,
-      via_assistant: true,
-    }));
-    await insertNotifications(service, rows);
-  } catch (error) {
-    console.error("[numo-comment] page failed:", error);
-    await display?.fail();
-  }
+      }).select("id").single();
+      if (error || !data) throw new Error(error?.message ?? "Unable to create response");
+      return {
+        id: data.id as string,
+        display: commentDisplay(service, data.id as string, "page_comments"),
+      };
+    },
+  });
 }
 
-export async function runFeedbackCommentMention({
-  supabase,
-  service,
-  postId,
-  actorId,
-  triggerCommentId,
-  locale,
-  trigger = "mention",
-}: {
+export async function runFeedbackCommentMention(input: {
   supabase: SupabaseClient;
   service: SupabaseClient;
   postId: string;
@@ -854,461 +570,95 @@ export async function runFeedbackCommentMention({
   locale: string;
   trigger?: "mention" | "reply";
 }): Promise<void> {
-  let replyId: string | null = null;
-  // Hoisted out of the try: the catch writes the failure by the SAME display, therefore in
-  // the same queue of writes — its update necessarily comes after those which
-  // seraient encore en vol.
-  let display: CommentDisplay | null = null;
-  try {
-    // ── Resolve the trigger comment, its thread root, and the post ───────
-    const { data: triggerRow } = await service
-      .from("comments")
-      .select("id, parent_id, body, author_id")
-      .eq("id", triggerCommentId)
-      .maybeSingle();
-    if (!triggerRow) return;
-    const rootId =
-      (triggerRow.parent_id as string | null) ?? (triggerRow.id as string);
-
-    const { data: post } = await service
-      .from("feedback_posts")
-      .select("id, project_id, title, body, status, vote_count, is_public, issue_id")
-      .is("deleted_at", null)
-      .eq("id", postId)
-      .maybeSingle();
-    if (!post) return;
-
-    const access = await getProjectAccess(actorId, post.project_id as string);
-    if (!access) return;
-
-    // Plan budget (MIN-72) — fire-and-forget: dry, silent skip.
-    if (!(await hasUsageBudget(actorId, "assistant"))) return;
-
-    // ── Post the live placeholder reply right away ───────────────────────
-    const { data: reply, error: replyError } = await service
-      .from("comments")
-      .insert({
+  const { service, actorId, postId, triggerCommentId } = input;
+  const { data: triggerRow } = await service.from("comments")
+    .select("id, parent_id, body, author_id").eq("id", triggerCommentId).maybeSingle();
+  if (!triggerRow) return;
+  const rootId = (triggerRow.parent_id as string | null) ?? triggerRow.id as string;
+  const { data: post } = await service.from("feedback_posts")
+    .select("id, project_id, title").eq("id", postId)
+    .is("deleted_at", null).maybeSingle();
+  if (
+    !post
+    || !await getProjectAccess(actorId, post.project_id as string)
+    || !await hasUsageBudget(actorId, "assistant")
+  ) return;
+  const [{ data: comments }, { data: attachments }, { data: root }] = await Promise.all([
+    service.from("comments").select(
+      "id, author_id, body, via_assistant, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
+    ).eq("feedback_post_id", postId).order("created_at", { ascending: false }).limit(20),
+    service.from("attachments").select(PROMPT_ATTACHMENT_COLUMNS)
+      .eq("feedback_post_id", postId).order("created_at", { ascending: true }),
+    service.from("comments").select("author_id").eq("id", rootId).maybeSingle(),
+  ]);
+  const rows = [...(comments ?? [])].reverse();
+  const names = await actorNames(service, actorId, rows);
+  const grouped = groupPromptAttachments(attachments);
+  const thread = rows.map((row) => {
+    const visitor = row.feedback_users as unknown as {
+      name: string | null;
+      email: string | null;
+      pseudonym: string;
+    } | null;
+    const author = visitor
+      ? visitor.name?.trim() || visitor.email?.trim() || visitor.pseudonym
+      : names.name(row.author_id as string | null, !!row.via_assistant);
+    return {
+      author,
+      audience: visitor
+        ? "public board visitor"
+        : row.visibility === "public" ? "public team reply" : "internal team comment",
+      body: (row.body as string | null) ?? "",
+      attachments: grouped.get(row.id as string)?.map((attachment) => attachment.file_name),
+    };
+  });
+  await runSharedSurfaceMention({
+    ...input,
+    surface: "feedback_comment",
+    sourceThreadId: rootId,
+    sourceEventId: triggerCommentId,
+    actorMetadata: names.users.get(actorId)?.user_metadata,
+    projectId: post.project_id as string,
+    title: `Feedback: ${post.title as string}`,
+    prompt: sharedSurfacePrompt({
+      author: names.name(actorId),
+      trigger: input.trigger ?? "mention",
+      target: `the feedback post “${post.title as string}”`,
+      body: triggerRow.body as string,
+      thread,
+    }),
+    answer: triggerRow.body as string,
+    source: "feedback",
+    context: {
+      projectId: post.project_id as string,
+      feedbackId: postId,
+      feedbackTitle: post.title as string,
+    },
+    attachments: [
+      ...(grouped.get(triggerCommentId) ?? []),
+      ...(grouped.get(null) ?? []),
+    ].slice(0, 5),
+    destination: {
+      kind: "comment",
+      table: "comments",
+      locale: input.locale,
+      notification: {
+        type: "comment",
+        candidateUserIds: [root?.author_id],
+        feedbackPostId: postId,
+      },
+    },
+    createResponse: async () => {
+      const { data, error } = await service.from("comments").insert({
         feedback_post_id: postId,
         author_id: actorId,
         parent_id: rootId,
         body: "",
         via_assistant: true,
         assistant_status: "working",
-      })
-      .select("id")
-      .single();
-    if (replyError || !reply) {
-      console.error("[numo-comment] feedback placeholder failed:", replyError?.message);
-      return;
-    }
-    replyId = reply.id as string;
-
-    display = commentDisplay(service, replyId);
-
-    // ── Gather prompt context (project, thread, attachments, linked issue) ─
-    const [promptProject, { data: threadRows }, { data: attachmentRows }, { data: linkedIssue }] =
-      await Promise.all([
-        gatherProjectPromptContext({
-          supabase,
-          service,
-          project: access.project as unknown as {
-            id: string;
-            name: string;
-            key: string;
-            owner_id: string;
-          },
-        }),
-        service
-          .from("comments")
-          .select(
-            "id, author_id, body, via_assistant, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)"
-          )
-          .eq("feedback_post_id", postId)
-          .neq("id", replyId)
-          .order("created_at", { ascending: false })
-          .limit(20),
-        service
-          .from("attachments")
-          .select(PROMPT_ATTACHMENT_COLUMNS)
-          .eq("feedback_post_id", postId)
-          .order("created_at", { ascending: true }),
-        post.issue_id
-          ? service
-              .from("issues")
-              .select("number, title, status")
-              .is("deleted_at", null)
-              .eq("id", post.issue_id as string)
-              .maybeSingle()
-          : Promise.resolve({ data: null }),
-      ]);
-
-    const attachmentsByComment = groupPromptAttachments(attachmentRows);
-
-    const recentComments = [...(threadRows ?? [])].reverse();
-    const authorIds = recentComments.map((c) => c.author_id as string);
-    const users = await fetchAuthUsersById(service, [...authorIds, actorId]);
-    const authorName = (id: string | null, viaAssistant?: boolean): string =>
-      viaAssistant ? "Numo" : displayName(toNamed(id ? users.get(id) : null), "User");
-
-    // The thread of a return mixes TWO conversations (MIN-196): team notes
-    // and what is written on the public board. Serve them flat, with a visitor
-    // made “User” like any teammate, this is asking the
-    // model of reasoning about comments of which he is unaware of both the origin and the
-    // scope — and to respond “as X said above” about a
-    // unknown who wrote on a public page.
-    //
-    // Each entry therefore indicates where it comes from. Numo ONLY responds in threads
-    // internal (the trigger cuts off on the public, see the route of
-    // comments): the audience is here READING.
-    const thread: CommentPromptThreadEntry[] = recentComments.map((c) => {
-      const visitor = c.feedback_users as unknown as {
-        name: string | null;
-        email: string | null;
-        pseudonym: string;
-      } | null;
-      const who = visitor
-        ? visitor.name?.trim() || visitor.email?.trim() || visitor.pseudonym
-        : authorName(c.author_id as string | null, !!c.via_assistant);
-      return {
-        author: visitor
-          ? `${who} (board visitor — PUBLIC comment)`
-          : c.visibility === "public"
-            ? `${who} (team — PUBLIC reply, read on the board)`
-            : who,
-        body: (c.body as string) ?? "",
-        attachments: attachmentsByComment
-          .get(c.id as string)
-          ?.map((a) => a.file_name),
-      };
-    });
-
-    const linked = linkedIssue
-      ? {
-          identifier: issueIdentifier(
-            access.project.key,
-            (linkedIssue as { number: number }).number
-          ),
-          title: (linkedIssue as { title: string }).title,
-          status: (linkedIssue as { status: string }).status,
-        }
-      : null;
-
-    const systemPrompt = buildFeedbackCommentSystemPrompt({
-      project: promptProject,
-      feedback: {
-        id: post.id as string,
-        title: post.title as string,
-        body: (post.body as string | null) ?? null,
-        status: post.status as string,
-        vote_count: (post.vote_count as number) ?? 0,
-        is_public: !!post.is_public,
-        linked_issue: linked,
-      },
-      thread,
-      locale,
-    });
-
-    const cfg = await getAppConfigValues([
-      ...modelConfigKeys("assistant_model"),
-      ...modelConfigKeys("fallback_model"),
-    ]);
-    const { model } = resolveCascadeFromValues(["assistant_model", "fallback_model"], cfg);
-
-    const triggerText = `${authorName(actorId)} ${
-      trigger === "reply"
-        ? "replied to your comment"
-        : "mentioned you in a comment"
-    } on the feedback post "${post.title as string}":\n"""\n${triggerRow.body as string}\n"""`;
-
-    const directAttachments = [
-      ...(attachmentsByComment.get(triggerCommentId) ?? []),
-      ...(attachmentsByComment.get(null) ?? []),
-    ].slice(0, 5);
-
-    let triggerContent: string | ChatContentPart[] = triggerText;
-    let aiRuntime: ResolvedAiRuntime | undefined;
-    if (directAttachments.length > 0) {
-      aiRuntime = await resolveAiRuntime({
-        userId: actorId,
-        modelKey: "assistant_model",
-        surface: "assistant",
-      });
-      const modalities = aiRuntime.provider === "openrouter"
-        ? await getModelInputModalities(aiRuntime.model, aiRuntime.apiKey)
-        : new Set(["text"]);
-      triggerContent = [
-        { type: "text", text: triggerText },
-        ...(await buildAttachmentParts(service, directAttachments, {
-          modalities,
-          includeHeavy: true,
-        })),
-      ];
-    }
-
-    const messages: ChatMessage[] = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: triggerContent },
-    ];
-
-    const finalContent = await runCommentLoop(messages, {
-      model,
-      aiRuntime,
-      projectId: post.project_id as string,
-      userId: actorId,
-      // The current post — feedback tools default to it when the model omits
-      // feedback_post_id ("promote this feedback", "link it to MIN-12").
-      feedbackPostId: postId,
-      supabase,
-      service,
-      locale,
-      numoDefaultStatus: resolveNumoDefaultStatus(
-        users.get(actorId)?.user_metadata
-      ),
-      onTool: (name) => display?.tool(name),
-      onText: (partial) => display?.stream(partial),
-    });
-
-    await display.finish(
-      finalContent || commentFallbackDone(locale)
-    );
-
-    // Notifications: the thread root author, members only, excluding the
-    // requester who initiated Numo's reply. A feedback post has no owner,
-    // assignee, or lead.
-    const valid = await projectMemberIds(service, post.project_id as string);
-    const { data: rootComment } = await service
-      .from("comments")
-      .select("author_id")
-      .eq("id", rootId)
-      .maybeSingle();
-    const targets = numoCommentNotificationTargets(actorId, valid, [
-      rootComment?.author_id,
-    ]);
-    const rows: NotificationRow[] = targets.map((uid) => ({
-      user_id: uid,
-      project_id: post.project_id as string,
-      type: "comment" as const,
-      issue_id: null,
-      feedback_post_id: postId,
-      comment_id: replyId as string,
-      actor_id: actorId,
-      // Cf. the twin ticket: the line names Numo, on both surfaces.
-      via_assistant: true,
-    }));
-    await insertNotifications(service, rows);
-  } catch (err) {
-    console.error("[numo-comment] feedback failed:", err);
-    await display?.fail();
-  }
-}
-
-// ── Streaming loop (adapted from loop.ts, without SSE/persistence) ───────
-
-export async function runCommentLoop(
-  messages: ChatMessage[],
-  ctx: {
-    model: string;
-    aiRuntime?: ResolvedAiRuntime;
-    projectId: string;
-    userId: string;
-    /** Set only in feedback comment mode — the post the feedback tools default
-        to when the model omits feedback_post_id. */
-    feedbackPostId?: string | null;
-    supabase: SupabaseClient;
-    service: SupabaseClient;
-    locale: string;
-    numoDefaultStatus: NumoDefaultStatus;
-    onTool: (name: string) => void;
-    onText: (partial: string) => void;
-  }
-): Promise<string> {
-  const aiRuntime = ctx.aiRuntime ?? await resolveAiRuntime({
-    userId: ctx.userId,
-    modelKey: "assistant_model",
-    surface: "assistant",
+      }).select("id").single();
+      if (error || !data) throw new Error(error?.message ?? "Unable to create response");
+      return { id: data.id as string, display: commentDisplay(service, data.id as string) };
+    },
   });
-  ctx.model = aiRuntime.model;
-  const reasoningLevel = await getAssistantReasoningLevel();
-
-  let finalContent = "";
-  let continueLoop = true;
-  let roundCount = 0;
-  // Cost tracking: one run = this @number; each round is a call.
-  const runId = newRunId();
-  const usageRows: AiUsageInput[] = [];
-  // The live identifiers that a tool would have returned (MIN-343) — cumulative on
-  // the turn, as in the cat loop.
-  const redactor = new SecretRedactor();
-  // Tour web search: same run as the calls above, capped on the
-  // duration of the @numo (its ledger lines are written over time).
-  // Cut off on the admin side, the tool is not offered at all.
-  const webSearchEnabled = await isWebSearchEnabled();
-  const webSearch = webSearchEnabled ? { runId, used: 0 } : undefined;
-  const tools = webSearchEnabled ? COMMENT_TOOLS : withoutWebSearch(COMMENT_TOOLS);
-
-  while (continueLoop) {
-    continueLoop = false;
-    roundCount++;
-    // Past the round cap, force a text-only conclusion (no tools offered).
-    const lastRound = roundCount >= MAX_TOOL_ROUNDS;
-
-    const { response } = await fetchAiChat(
-      aiRuntime,
-      ctx.model,
-      () => ({
-        model: ctx.model,
-        messages,
-        stream: true,
-        maxOutputTokens: reasoningMaxTokens(4096, reasoningLevel),
-        reasoning: { effort: reasoningLevel },
-        ...(lastRound ? {} : { tools }),
-      }),
-      "Numo (minddy)",
-      "[numo-comment]",
-    );
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
-    }
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error("No response body from LLM");
-
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let fullContent = "";
-    let generationId: string | null = null;
-    let modelUsed: string | null = null;
-    let usageInfo:
-      | { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; cost?: number }
-      | null = null;
-    const toolCallAccumulators: Map<
-      number,
-      { id: string; name: string; arguments: string }
-    > = new Map();
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
-
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const data = line.slice(6).trim();
-        if (data === "[DONE]") continue;
-        let parsed;
-        try {
-          parsed = JSON.parse(data);
-        } catch {
-          continue;
-        }
-        if (parsed.id && !generationId) generationId = parsed.id;
-        if (parsed.model) modelUsed = parsed.model;
-        if (parsed.usage) usageInfo = parsed.usage;
-
-        const delta = parsed.choices?.[0]?.delta;
-        if (!delta) continue;
-
-        if (delta.content) {
-          fullContent += delta.content;
-          // Live "he's writing" display: the round's text as written so far,
-          // never a delta. The cadence is the transport's business (see
-          // comment-live.ts) — the loop just says what it has.
-          ctx.onText(fullContent);
-        }
-        if (delta.tool_calls) {
-          for (const tc of delta.tool_calls) {
-            const idx = tc.index ?? 0;
-            if (!toolCallAccumulators.has(idx)) {
-              toolCallAccumulators.set(idx, {
-                id: tc.id || "",
-                name: tc.function?.name || "",
-                arguments: "",
-              });
-            }
-            const acc = toolCallAccumulators.get(idx)!;
-            if (tc.id) acc.id = tc.id;
-            if (tc.function?.name) acc.name = tc.function.name;
-            if (tc.function?.arguments) acc.arguments += tc.function.arguments;
-          }
-        }
-      }
-    }
-
-    usageRows.push({
-      runId,
-      seq: roundCount - 1,
-      feature: "numo_comment",
-      provider: aiRuntime.provider,
-      keyMode: aiRuntime.mode,
-      model: modelUsed,
-      generationId,
-      promptTokens: usageInfo?.prompt_tokens ?? null,
-      completionTokens: usageInfo?.completion_tokens ?? null,
-      totalTokens: usageInfo?.total_tokens ?? null,
-      cost: usageInfo?.cost ?? null,
-      // The author of the mention pays — it was his budget that opened the round
-      // (`hasUsageBudget(actorId)`), even on someone else's project.
-      billTo: { userId: ctx.userId },
-      projectId: ctx.projectId,
-    });
-
-    if (toolCallAccumulators.size > 0) {
-      const assistantToolCalls: AssistantToolCall[] = [...toolCallAccumulators.values()].map(
-        (acc) => ({
-          id: acc.id,
-          type: "function",
-          function: { name: acc.name, arguments: acc.arguments },
-        })
-      );
-      messages.push({
-        role: "assistant",
-        content: fullContent || null,
-        tool_calls: assistantToolCalls,
-      });
-
-      for (const [, acc] of toolCallAccumulators) {
-        ctx.onTool(acc.name);
-        let args: Record<string, unknown> = {};
-        try {
-          args = JSON.parse(acc.arguments);
-        } catch {
-          // Invalid JSON from LLM
-        }
-        const { result, secrets } = await executeTool(acc.name, args, {
-          projectId: ctx.projectId,
-          userId: ctx.userId,
-          feedbackPostId: ctx.feedbackPostId ?? null,
-          supabase: ctx.supabase,
-          service: ctx.service,
-          locale: ctx.locale,
-          numoDefaultStatus: ctx.numoDefaultStatus,
-          triggerSource: "mention",
-          webSearch,
-        });
-        // Here the tour does not render a screen but a COMMENT: an identifier
-        // alive left in the result, the model would copy it into a text
-        // that the whole project reads (MIN-343). Substituted, therefore — and the secret is
-        // simply lost for this surface, which is the good compromise:
-        // a key is created from the chat or settings, not from a thread.
-        for (const secret of secrets ?? []) redactor.add(secret);
-        messages.push({
-          role: "tool",
-          tool_call_id: acc.id,
-          content: serializeToolResult(
-            redactDeep(result, redactor.redact),
-            Math.max(12_000, getToolResultCharLimit(acc.name, args))
-          ),
-        });
-      }
-      continueLoop = true;
-    } else {
-      finalContent = fullContent;
-    }
-  }
-
-  await recordAiUsage(usageRows);
-
-  return finalContent;
 }

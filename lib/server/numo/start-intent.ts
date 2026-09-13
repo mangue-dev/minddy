@@ -11,6 +11,7 @@ import type {
   NumoIntentSource,
 } from "@/lib/assistant-types";
 import type { AttachmentInput } from "@/lib/types";
+import type { PromptAttachment } from "@/lib/server/assistant/attachment-parts";
 import { resolveNumoDefaultStatus } from "@/lib/numo-default-status";
 import { newRunId } from "@/lib/server/ai-usage";
 import {
@@ -56,7 +57,14 @@ export interface StartNumoIntentInput {
   action: NumoIntentAction;
   context?: AssistantPageContext | null;
   mentions?: AssistantMention[];
-  attachments?: AttachmentInput[];
+  attachments?: Array<AttachmentInput | PromptAttachment>;
+  /** Continue an existing private canonical conversation. */
+  conversationId?: string;
+  /** Stable source-event identity used for idempotent durable admission. */
+  requestId?: string;
+  /** Let a surface bind its response destination before execution starts. */
+  executeInBackground?: boolean;
+  triggerSource?: "chat" | "mention";
 }
 
 export interface StartedNumoIntent {
@@ -133,20 +141,37 @@ export async function startNumoIntent(
     userId: input.userId,
   });
   const service = getServiceClient();
-  const { data: conversation, error: conversationError } = await input.supabase
-    .from("conversations")
-    .insert({
-      project_id: null,
-      user_id: input.userId,
-      title: fallbackShortTitle(prompt),
-    })
-    .select("id")
-    .single();
-  if (conversationError || !conversation) {
-    throw new NumoIntentStartError("conversation_create_failed", 500);
+  let createdConversation = false;
+  let conversation: { id: string } | null = null;
+  if (input.conversationId) {
+    const { data, error } = await input.supabase
+      .from("conversations")
+      .select("id")
+      .eq("id", input.conversationId)
+      .eq("user_id", input.userId)
+      .maybeSingle();
+    if (error || !data) {
+      throw new NumoIntentStartError("context_unavailable", 404);
+    }
+    conversation = data as { id: string };
+  } else {
+    const { data, error } = await input.supabase
+      .from("conversations")
+      .insert({
+        project_id: null,
+        user_id: input.userId,
+        title: fallbackShortTitle(prompt),
+      })
+      .select("id")
+      .single();
+    if (error || !data) {
+      throw new NumoIntentStartError("conversation_create_failed", 500);
+    }
+    conversation = data as { id: string };
+    createdConversation = true;
   }
 
-  const requestId = randomUUID();
+  const requestId = input.requestId ?? randomUUID();
   const runId = newRunId();
   let turn;
   try {
@@ -161,6 +186,7 @@ export async function startNumoIntent(
         timezone: input.timezone ?? "",
         numoDefaultStatus: resolveNumoDefaultStatus(input.userMetadata),
         webSearchEnabled: await isWebSearchEnabled(),
+        triggerSource: input.triggerSource ?? "chat",
       },
       model: configuration.model,
       reasoningLevel: configuration.reasoningLevel,
@@ -186,28 +212,32 @@ export async function startNumoIntent(
         : {}),
     });
   } catch (error) {
-    await service
-      .from("conversations")
-      .delete()
-      .eq("id", conversation.id)
-      .eq("user_id", input.userId);
+    if (createdConversation) {
+      await service
+        .from("conversations")
+        .delete()
+        .eq("id", conversation.id)
+        .eq("user_id", input.userId);
+    }
     throw error;
   }
 
-  after(async () => {
-    try {
-      await executeNumoTurn({
-        turnId: turn.id,
-        readClient: input.supabase,
-        aiRuntime: configuration.runtime,
-      });
-    } catch (error) {
-      console.error(
-        "[numo-intent] background turn failed:",
-        (error as Error).message,
-      );
-    }
-  });
+  if (input.executeInBackground !== false) {
+    after(async () => {
+      try {
+        await executeNumoTurn({
+          turnId: turn.id,
+          readClient: input.supabase,
+          aiRuntime: configuration.runtime,
+        });
+      } catch (error) {
+        console.error(
+          "[numo-intent] background turn failed:",
+          (error as Error).message,
+        );
+      }
+    });
+  }
 
   return {
     conversationId: conversation.id,

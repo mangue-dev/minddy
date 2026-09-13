@@ -325,6 +325,8 @@ export interface AssistantPageContext {
 export type NumoIntentSource =
   | "home"
   | "issue"
+  | "objective"
+  | "feedback"
   | "page"
   | "scratchpad"
   | "pull_request"

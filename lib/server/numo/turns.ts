@@ -23,6 +23,7 @@ import { nextBillingPlanId, type BillingPlanId } from "@/lib/billing-plans";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { gatherProjectPromptContext } from "@/lib/server/assistant/prompt-context";
 import { buildAttachmentParts } from "@/lib/server/assistant/attachment-parts";
+import type { PromptAttachment } from "@/lib/server/assistant/attachment-parts";
 import {
   buildClockBlock,
   buildGlobalSystemPrompt,
@@ -59,6 +60,11 @@ import {
 } from "@/lib/server/agent/runs";
 import { withoutWebSearch } from "@/lib/server/web-search";
 import type { SafeEmitter } from "@/lib/server/assistant/sse";
+import {
+  failNumoSurfaceProjection,
+  projectNumoSurfaceTurn,
+  withNumoSurfaceEmitter,
+} from "./surface-projection";
 
 export const NUMO_TURN_STATUSES = [
   "queued",
@@ -78,6 +84,8 @@ export interface NumoTurnIntent {
   timezone: string;
   numoDefaultStatus: NumoDefaultStatus;
   webSearchEnabled: boolean;
+  /** Preserve comment-origin semantics for delegated work and activity. */
+  triggerSource?: "chat" | "mention";
   /** Routine operation identity; the turn id is the occurrence identity. */
   routineId?: string | null;
   /** Shared cap across parent generations and every delegated worker. */
@@ -452,10 +460,12 @@ async function buildExecutionInput(input: {
       }
     : { role: "system", content: systemPrompt };
   const messages: ChatMessage[] = [systemMessage];
-  const rowAttachments = (message: StoredMessage): AttachmentInput[] => {
+  const rowAttachments = (
+    message: StoredMessage,
+  ): Array<AttachmentInput | PromptAttachment> => {
     if (message.role !== "user") return [];
     const raw = (message.metadata as { attachments?: unknown } | null)?.attachments;
-    return Array.isArray(raw) ? raw as AttachmentInput[] : [];
+    return Array.isArray(raw) ? raw as Array<AttachmentInput | PromptAttachment> : [];
   };
   const lastUserIndex = history.reduce(
     (last, message, index) => message.role === "user" ? index : last,
@@ -700,7 +710,7 @@ async function ensureNumoOperationBudget(
   });
 }
 
-export async function executeNumoTurn(input: {
+async function executeNumoTurnCore(input: {
   turnId: string;
   readClient?: SupabaseClient;
   liveEmitter?: SafeEmitter;
@@ -799,6 +809,7 @@ export async function executeNumoTurn(input: {
       operationBudgetUsd: claimed.intent.operationBudgetUsd ?? null,
       operationBudgetPercent: claimed.intent.operationBudgetPercent ?? null,
       routineId: claimed.intent.routineId ?? null,
+      triggerSource: claimed.intent.triggerSource ?? "chat",
       resumeCheckpoint: claimed.checkpoint?.phase === "model" || claimed.checkpoint?.phase === "tools"
         ? claimed.checkpoint
         : null,
@@ -1090,6 +1101,34 @@ export async function executeNumoTurn(input: {
     await emitter.flush();
     emitter.close();
     return { status: turn.status, turn };
+  }
+}
+
+/** Execute one durable turn and keep any shared comment projection in sync. */
+export async function executeNumoTurn(input: {
+  turnId: string;
+  readClient?: SupabaseClient;
+  liveEmitter?: SafeEmitter;
+  aiRuntime?: ResolvedAiRuntime;
+  allowRetryable?: boolean;
+}): Promise<ExecuteNumoTurnResult> {
+  const service = getServiceClient();
+  try {
+    const result = await executeNumoTurnCore({
+      ...input,
+      liveEmitter: await withNumoSurfaceEmitter(
+        service,
+        input.turnId,
+        input.liveEmitter,
+      ),
+    });
+    if (result.status !== "not_claimed") {
+      await projectNumoSurfaceTurn(service, result.turn);
+    }
+    return result;
+  } catch (error) {
+    await failNumoSurfaceProjection(service, input.turnId);
+    throw error;
   }
 }
 

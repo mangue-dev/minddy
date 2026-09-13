@@ -133,6 +133,7 @@ function mention(login: string | null, body = "@numo peux-tu relire ?") {
     prNumber: 42,
     body,
     authorLogin: login,
+    sourceEventId: "forge-comment-1",
   });
 }
 

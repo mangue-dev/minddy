@@ -159,6 +159,7 @@ export async function handleForgeNumoMention(opts: {
   prNumber: number;
   body: string | null | undefined;
   authorLogin: string | null;
+  sourceEventId: string;
 }): Promise<void> {
   const body = opts.body ?? "";
   if (!mentionsNumo(body)) return;
@@ -236,6 +237,7 @@ export async function handleForgeNumoMention(opts: {
       userId,
       supabase: getServiceClient(),
       projectId: projectIds[0] ?? null,
+      sourceEventId: opts.sourceEventId,
       question: { author: opts.authorLogin, body },
     });
   } catch (err) {
