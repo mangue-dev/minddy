@@ -62,12 +62,14 @@ import {
   filterMentionItems,
   findActiveMentionQuery,
 } from "@/lib/mention-menu";
+import { assistantDraftHtml } from "@/lib/assistant-composer-draft";
 import {
   findActiveComposerMenuQuery,
   type ActiveComposerMenuQuery,
 } from "@/lib/assistant-slash-options";
 import {
   useAttachmentUploads,
+  type AttachmentUploads,
   type PendingResource,
 } from "@/lib/use-attachment-uploads";
 import { useAuth } from "@/lib/auth-context";
@@ -192,7 +194,7 @@ export interface ChatInputContextAttachments {
   onRemovePending: (localId: string) => void;
 }
 
-interface ChatInputProps {
+export interface ChatInputProps {
   /** Close an enclosing panel when the composer opens account settings. */
   onNavigate?: () => void;
   onSend: (
@@ -272,6 +274,11 @@ interface ChatInputProps {
    * One-shot: only read once when the composer mounts.
    */
   initialValue?: string;
+  /** In-memory HTML snapshot used to move one draft between Numo surfaces. */
+  draftHtml?: string;
+  onDraftHtmlChange?: (html: string) => void;
+  /** Shared upload queue paired with the retained Numo draft. */
+  attachmentUploads?: AttachmentUploads;
   /**
    * Extra controls pinned to the LEFT of the bottom bar (the send/dictate
    * cluster stays right). The agent launch composer drops its model picker here.
@@ -325,6 +332,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       skills,
       loadSkill,
       initialValue,
+      draftHtml,
+      onDraftHtmlChange,
+      attachmentUploads,
       leadingControls,
       beam,
       sendWhileStreaming,
@@ -349,7 +359,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const [isFocused, setIsFocused] = useState(false);
     const { user } = useAuth();
     const userId = user?.id;
-    const uploads = useAttachmentUploads(() => `chat/${userId}`, { max: 5 });
+    const localUploads = useAttachmentUploads(() => `chat/${userId}`, { max: 5 });
+    const uploads = attachmentUploads ?? localUploads;
+    const publishedDraftRef = useRef<string | undefined>(undefined);
+    const publishDraft = useCallback(() => {
+      const html = editorRef.current ? assistantDraftHtml(editorRef.current) : "";
+      publishedDraftRef.current = html;
+      onDraftHtmlChange?.(html);
+    }, [onDraftHtmlChange]);
     const uploadedResources = uploads.pending.filter(
       (entry) => entry.status === "done",
     );
@@ -515,8 +532,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         setMentionSlots([]);
         setSkillSlots([]);
         setSlashQuery(null);
+        publishedDraftRef.current = "";
+        onDraftHtmlChange?.("");
       }
-    }, []);
+    }, [onDraftHtmlChange]);
 
     // ── Mentions « @ » ──────────────────────────────────────────────
     // The request is read in the TEXT NODE under the caret: it is the only
@@ -657,8 +676,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         onMentionQuery?.(false);
         setIsEmpty(false);
         syncMentionSlots();
+        publishDraft();
       },
-      [readMention, onMentionQuery, syncMentionSlots],
+      [readMention, onMentionQuery, publishDraft, syncMentionSlots],
     );
 
     const addContextOption = useCallback(
@@ -699,8 +719,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         }
         setAddMenuOpen(false);
         setAddMenuQuery("");
+        publishDraft();
       },
-      [onAddContext, syncMentionSlots],
+      [onAddContext, publishDraft, syncMentionSlots],
     );
 
     const availableSkills = useMemo(() => {
@@ -768,8 +789,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         setAddMenuOpen(false);
         setAddMenuQuery("");
         syncSkillSlots();
+        publishDraft();
       },
-      [syncSkillSlots],
+      [publishDraft, syncSkillSlots],
     );
 
     /** The mentions actually made in the text, duplicated. */
@@ -909,7 +931,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       el.focus();
       setSlashQuery(null);
       setIsEmpty(false);
-    }, []);
+      publishDraft();
+    }, [publishDraft]);
 
     const insertSlashOption = useCallback(
       (option: SlashMenuOption) => {
@@ -976,6 +999,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           setSlashQuery(null);
           setIsEmpty(!editorRef.current.textContent?.trim());
           syncSkillSlots();
+          publishDraft();
           return;
         }
         // Open slash menu: same keyboard contract as the list of mentions.
@@ -1050,6 +1074,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         slashOptions,
         activeSlash,
         insertSlashOption,
+        publishDraft,
         syncSkillSlots,
       ]
     );
@@ -1067,7 +1092,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       refreshSlash();
       syncMentionSlots();
       syncSkillSlots();
-    }, [refreshMention, refreshSlash, syncMentionSlots, syncSkillSlots]);
+      publishDraft();
+    }, [publishDraft, refreshMention, refreshSlash, syncMentionSlots, syncSkillSlots]);
 
     /**
      * Pastes only the text provided by the clipboard. The editors of
@@ -1115,9 +1141,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         refreshSlash();
         syncMentionSlots();
         syncSkillSlots();
+        publishDraft();
         el.focus();
       },
-      [refreshMention, refreshSlash, syncMentionSlots, syncSkillSlots],
+      [publishDraft, refreshMention, refreshSlash, syncMentionSlots, syncSkillSlots],
     );
 
     const handlePaste = useCallback(
@@ -1155,7 +1182,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         sel.removeAllRanges();
         sel.addRange(range);
       }
-    }, []);
+      publishDraft();
+    }, [publishDraft]);
 
     useImperativeHandle(
       ref,
@@ -1174,9 +1202,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             sel.removeAllRanges();
             sel.addRange(range);
           }
+          publishDraft();
         },
       }),
-      []
+      [publishDraft]
     );
 
     useEffect(() => {
@@ -1184,6 +1213,19 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         editorRef.current.focus();
       }
     }, [noBorder]);
+
+    // A surface remount restores the same DOM tokens and upload queue. Avoid
+    // writing when this editor produced the snapshot so the caret stays put.
+    useEffect(() => {
+      const el = editorRef.current;
+      if (draftHtml === undefined || !el || el.innerHTML === draftHtml) return;
+      if (publishedDraftRef.current === draftHtml) return;
+      el.innerHTML = draftHtml;
+      publishedDraftRef.current = draftHtml;
+      setIsEmpty(!el.textContent?.trim());
+      syncMentionSlots();
+      syncSkillSlots();
+    }, [draftHtml, syncMentionSlots, syncSkillSlots]);
 
     // One-shot pre-filling (editing): we write the initial text, caret in
     // fine, ready for editing — the Agent Launch Composer uses this to
@@ -1193,6 +1235,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       if (!initialValue || !el) return;
       el.textContent = initialValue;
       setIsEmpty(false);
+      publishDraft();
       el.focus();
       const sel = window.getSelection();
       if (sel) {

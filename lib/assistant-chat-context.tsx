@@ -36,6 +36,8 @@ export interface AssistantChatContextValue extends AssistantChatApi {
   /** Ambient project for the next message, independent of conversation identity. */
   scopeProjectId: string | null;
   restoring: boolean;
+  /** Start the one-time active-conversation restore for any mounted surface. */
+  requestRestore: () => void;
   isBusy: boolean;
   pinned: AssistantPinnedContext[];
   setPinned: Dispatch<SetStateAction<AssistantPinnedContext[]>>;
@@ -165,19 +167,19 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     overrideProjectId,
   });
 
-  // The restart is only played ONE time per session, at the first opening of the
-  // panel: the open conversation no longer depends on the page you are on
-  // found, so there is no reason to replay it while browsing. And nothing at all
-  // who never opens Numo — not even the query.
+  // Restore only once per app session, when either the page or panel first asks
+  // for Numo. The active conversation is independent of the current route, so
+  // ordinary navigation must not replay the restore.
   const [restoring, setRestoring] = useState(false);
   const [restored, setRestored] = useState(false);
   const [restoreRequested, setRestoreRequested] = useState(false);
+  const requestRestore = useCallback(() => setRestoreRequested(true), []);
   // Read at lookup completion too: an action can arrive while restoration is pending.
   const pendingActionRef = useRef(false);
   pendingActionRef.current = Boolean(pendingOptions?.prompt || pendingOptions?.draft);
   useEffect(() => {
-    if (isOpen) setRestoreRequested(true);
-  }, [isOpen]);
+    if (isOpen) requestRestore();
+  }, [isOpen, requestRestore]);
   /**
  * What the server carries, as far as we know. `undefined` = we don't know
  * yet. It is HE who avoids the two parasitic writes of the recovery:
@@ -287,6 +289,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
       abort,
       scopeProjectId: scope,
       restoring: restoring || !restored,
+      requestRestore,
       isBusy,
       pinned,
       setPinned,
@@ -302,6 +305,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
       scope,
       restored,
       restoring,
+      requestRestore,
       isBusy,
       pinned,
     ],

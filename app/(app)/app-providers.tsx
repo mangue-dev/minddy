@@ -9,6 +9,7 @@ import { ProjectsProvider } from "@/lib/projects-context";
 import { CreateProvider } from "@/lib/create-context";
 import { AssistantPanelProvider } from "@/lib/assistant-panel-context";
 import { AssistantChatProvider } from "@/lib/assistant-chat-context";
+import { AssistantComposerProvider } from "@/lib/assistant-composer-context";
 import { ScratchpadProvider } from "@/lib/scratchpad-context";
 import {
   KeyboardProvider,
@@ -78,10 +79,14 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                 <ProjectDraftResume />
               </Suspense>
               <AssistantPanelProvider>
-                {/* The Numo conversation lives HERE, above the sign: close the
- panel dismantles its shell, not the current round. */}
+                {/* The Numo conversation lives above both projections. Closing
+                    the panel or leaving the page dismantles a shell, not the
+                    current turn. */}
                 <AssistantChatProvider>
-                  <ScratchpadProvider>
+                  {/* Draft text, mentions, skills, and uploads outlive either
+                      projection of the shared composer. */}
+                  <AssistantComposerProvider>
+                    <ScratchpadProvider>
                     <SidebarVisibilityProvider>
                       {/* Above the keyboard: ⌘B reads this context to know
  that a page has a secondary sidebar — the primary y
@@ -130,7 +135,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                         </KeyboardProvider>
                       </SecondarySidebarProvider>
                     </SidebarVisibilityProvider>
-                  </ScratchpadProvider>
+                    </ScratchpadProvider>
+                  </AssistantComposerProvider>
                 </AssistantChatProvider>
               </AssistantPanelProvider>
               </IssuePanelProvider>

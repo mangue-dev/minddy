@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { AgentsPage } from "@/components/agents/agents-page";
+import { NumoPage } from "@/components/assistant/numo-page";
 import { AgentsPlanGate } from "@/components/billing/agents-plan-gate";
 
 export default async function AgentsRoute({
@@ -15,11 +16,16 @@ export default async function AgentsRoute({
     redirect(routine ? `/routines?routine=${encodeURIComponent(routine)}` : "/routines");
   }
 
-  // <Suspense> requis : AgentsPage lit ?issue= via useSearchParams.
+  // Existing work and launch deep links keep their detail surface until they
+  // are folded into the common conversation timeline by MIN-524 and MIN-525.
+  const usesLegacyAgentSurface = ["run", "issue", "compose"].some(
+    (key) => params[key] !== undefined,
+  );
+
   return (
     <AgentsPlanGate>
       <Suspense fallback={null}>
-        <AgentsPage />
+        {usesLegacyAgentSurface ? <AgentsPage /> : <NumoPage />}
       </Suspense>
     </AgentsPlanGate>
   );

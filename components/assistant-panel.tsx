@@ -151,6 +151,7 @@ export function AssistantPanel() {
           if (!target) return;
           if (
             target.closest('[data-slot="popover-content"]') ||
+            target.closest('[data-slot="dropdown-menu-content"]') ||
             target.closest('[role="alertdialog"]')
           ) {
             e.preventDefault();

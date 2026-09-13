@@ -39,6 +39,17 @@ beforeEach(() => {
 afterEach(() => { act(() => root.unmount()); });
 
 describe("persistent conversation context", () => {
+  it("lets the full page request the same lazy restore while the panel is closed", async () => {
+    h.panel.isOpen = false;
+    await render();
+    expect(h.active).not.toHaveBeenCalled();
+
+    await act(async () => value.requestRestore());
+
+    expect(h.active).toHaveBeenCalledOnce();
+    expect(h.load).toHaveBeenCalledWith("conversation", "a");
+  });
+
   it("keeps history and removable pins across navigation, panel unmounts and an active response", async () => {
     await render();
     await act(async () => value.setPinned([{ kind: "project", id: "a", label: "A" }]));

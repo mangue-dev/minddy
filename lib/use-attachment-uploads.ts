@@ -399,6 +399,8 @@ export function useAttachmentUploads(
   };
 }
 
+export type AttachmentUploads = ReturnType<typeof useAttachmentUploads>;
+
 /** `https://www.linear.app/x` → `linear.app`; the raw string if unparsable
     (the server has the last word on validity anyway). */
 function hostnameOf(url: string): string {

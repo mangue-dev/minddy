@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   AlertDialog,
@@ -14,13 +15,34 @@ import {
   AlertDialogTitle,
   Button,
   cn,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  toast,
 } from "mangue-ui";
-import { Archive, History, Loader2, Pin, Plus, Trash2 } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  CalendarClock,
+  Ellipsis,
+  History,
+  Loader2,
+  Pin,
+  PinOff,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
 import { fetchConversations, deleteConversation, setActiveConversation, updateConversation } from "@/lib/assistant-api";
 import type { NumoConversation } from "@/lib/assistant-types";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import {
+  matchesFilter,
+  SidebarFilterField,
+} from "@/components/sidebar-filter-field";
 
 type ConversationWithProject = NumoConversation;
 
@@ -74,6 +96,7 @@ export function ConversationList({
   hideNewButton = false,
 }: ConversationListProps) {
   const t = useTranslations("Assistant");
+  const tc = useTranslations("Common");
   const router = useRouter();
   const { close: closePanel } = useAssistantPanel();
   const [conversations, setConversations] = useState<ConversationWithProject[]>(
@@ -81,6 +104,7 @@ export function ConversationList({
   );
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   // The list leaves EMPTY: without this flag, “no conversation” is displayed on
   // fetch time, even when there are dozens.
   const [loaded, setLoaded] = useState(false);
@@ -98,7 +122,32 @@ export function ConversationList({
     return () => {
       active = false;
     };
-  }, [refreshKey]);
+  }, [activeConversationId, refreshKey]);
+
+  const patchConversation = useCallback(
+    async (id: string, patch: { pinned?: boolean; archived?: boolean }) => {
+      const previous = conversations;
+      setConversations((current) =>
+        current.map((conversation) =>
+          conversation.id === id
+            ? {
+                ...conversation,
+                ...(patch.pinned !== undefined
+                  ? { pinned_at: patch.pinned ? new Date().toISOString() : null }
+                  : {}),
+                ...(patch.archived !== undefined
+                  ? { archived_at: patch.archived ? new Date().toISOString() : null }
+                  : {}),
+              }
+            : conversation,
+        ),
+      );
+      if (await updateConversation(id, patch)) return;
+      setConversations(previous);
+      toast.error(t("historyUpdateFailed"));
+    },
+    [conversations, t],
+  );
 
   const handleConfirmDelete = useCallback(async () => {
     if (!pendingDelete) return;
@@ -124,28 +173,163 @@ export function ConversationList({
       older: [],
     };
     for (const conv of conversations) {
+      if (!matchesFilter(query, [conv.title])) continue;
+      if (conv.pinned_at) continue;
       g[bucketFor(conv.updated_at)].push(conv);
     }
     return g;
-  }, [conversations]);
+  }, [conversations, query]);
+
+  const pinned = useMemo(
+    () =>
+      conversations.filter(
+        (conversation) =>
+          conversation.pinned_at && matchesFilter(query, [conversation.title]),
+      ),
+    [conversations, query],
+  );
+  const visibleCount = useMemo(
+    () =>
+      conversations.filter((conversation) =>
+        matchesFilter(query, [conversation.title]),
+      ).length,
+    [conversations, query],
+  );
+
+  const renderConversation = (conversation: ConversationWithProject) => {
+    const isPinned = Boolean(conversation.pinned_at);
+    const isArchived = Boolean(conversation.archived_at);
+    return (
+      <div
+        key={conversation.id}
+        className={cn(
+          "group flex items-center rounded-lg text-foreground",
+          activeConversationId === conversation.id
+            ? "bg-accent"
+            : "hover:bg-accent/50 focus-within:bg-accent/50",
+        )}
+      >
+        <button
+          type="button"
+          data-sidebar-filter-result
+          className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm outline-none"
+          onClick={() => {
+            void updateConversation(conversation.id, { read: true }).catch(
+              () => {},
+            );
+            if (conversation.detail_href) {
+              void setActiveConversation(conversation.id);
+              closePanel();
+              router.push(conversation.detail_href);
+            } else {
+              onSelect(conversation.id, conversation.project_id);
+            }
+          }}
+        >
+          {isPinned && <Pin aria-hidden className="size-3 shrink-0" />}
+          {isArchived && (
+            <Archive
+              aria-hidden
+              className="size-3 shrink-0 text-muted-foreground"
+            />
+          )}
+          <span className="min-w-0 flex-1 truncate">
+            {conversation.title || t("newConversation")}
+          </span>
+          {conversation.status === "generating" && (
+            <Loader2 className="size-3 shrink-0 animate-spin text-primary group-hover:hidden group-focus-within:hidden" />
+          )}
+        </button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="mr-1 size-7 shrink-0 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+              aria-label={t("conversationActions")}
+            >
+              <Ellipsis className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onSelect={() =>
+                void patchConversation(conversation.id, { pinned: !isPinned })
+              }
+            >
+              {isPinned ? <PinOff /> : <Pin />}
+              {t(isPinned ? "unpinConversation" : "pinConversation")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() =>
+                void patchConversation(conversation.id, {
+                  archived: !isArchived,
+                })
+              }
+            >
+              {isArchived ? <ArchiveRestore /> : <Archive />}
+              {t(isArchived ? "unarchiveConversation" : "archiveConversation")}
+            </DropdownMenuItem>
+            {conversation.source === "assistant" && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  disabled={deletingId === conversation.id}
+                  onSelect={() => setPendingDelete(conversation.id)}
+                >
+                  <Trash2 />
+                  {t("deleteConversation")}
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
+  };
 
   return (
     <>
       <div className="flex flex-col gap-1">
-        {!hideNewButton && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onNew}
-            className="mb-1 w-full justify-start gap-2"
-          >
-            <Plus className="h-icon-sm w-icon-sm" />
-            {t("newConversation")}
-          </Button>
-        )}
+        <div className="flex gap-1">
+          {!hideNewButton && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onNew}
+              className="min-w-0 flex-1 justify-start gap-2"
+            >
+              <Plus className="size-4" />
+              {t("newConversation")}
+            </Button>
+          )}
+          <AppTooltip label={t("routines")}>
+            <Button
+              asChild
+              variant={hideNewButton ? "outline" : "ghost"}
+              size={hideNewButton ? "sm" : "icon-sm"}
+              className={hideNewButton ? "flex-1 justify-start gap-2" : undefined}
+            >
+              <Link href="/routines" onClick={closePanel}>
+                <CalendarClock className="size-4" />
+                {hideNewButton ? t("routines") : null}
+              </Link>
+            </Button>
+          </AppTooltip>
+        </div>
 
-        {/* No conversation: the same scene as everywhere else, at the
- size of the popover — the title goes into ink, like the other empty states, instead of a gray line that we take for a note. */}
+        <div className="mt-1 flex h-9 items-center px-2">
+          <SidebarFilterField
+            value={query}
+            onChange={setQuery}
+            placeholder={t("filterConversations", { count: visibleCount })}
+            clearLabel={tc("clearFilter")}
+          />
+        </div>
+
         {loaded && conversations.length === 0 && (
           <EmptyScene
             size="compact"
@@ -153,6 +337,21 @@ export function ConversationList({
             title={t("noConversations")}
             className="px-0 py-4"
           />
+        )}
+
+        {loaded && conversations.length > 0 && visibleCount === 0 && (
+          <p className="px-3 py-4 text-center text-sm text-muted-foreground">
+            {tc("noFilterMatch")}
+          </p>
+        )}
+
+        {pinned.length > 0 && (
+          <div className="mt-2 flex flex-col gap-0.5">
+            <div className="px-2 pb-1 text-xs font-medium text-muted-foreground">
+              {t("pinnedConversations")}
+            </div>
+            {pinned.map(renderConversation)}
+          </div>
         )}
 
         {BUCKET_ORDER.map((bucket) => {
@@ -163,58 +362,7 @@ export function ConversationList({
               <div className="px-2 pb-1 text-xs font-medium text-muted-foreground">
                 {t(`group.${bucket}` as const)}
               </div>
-              {items.map((conv) => (
-                <Button
-                  key={conv.id}
-                  type="button"
-                  onClick={() => {
-                    void updateConversation(conv.id, { read: true }).catch(() => {});
-                    if (conv.detail_href) {
-                      void setActiveConversation(conv.id);
-                      closePanel();
-                      router.push(conv.detail_href);
-                    } else onSelect(conv.id, conv.project_id);
-                  }}
-                  variant="ghost"
-                  className={cn(
-                    "group h-auto w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-sm font-normal text-foreground",
-                    activeConversationId === conv.id
-                      ? "bg-accent hover:bg-accent"
-                      : "bg-transparent hover:bg-accent/50"
-                  )}
-                >
-                  {conv.pinned_at && <Pin aria-hidden className="h-3 w-3 shrink-0" />}
-                  {conv.archived_at && <Archive aria-hidden className="h-3 w-3 shrink-0 text-muted-foreground" />}
-                  <span className="flex-1 truncate">
-                    <span className="truncate">
-                      {conv.title || t("newConversation")}
-                    </span>
-                  </span>
-                  {conv.status === "generating" && (
-                    <Loader2 className="h-3 w-3 shrink-0 animate-spin text-primary group-hover:hidden" />
-                  )}
-                  {conv.source === "assistant" && <AppTooltip label={t("deleteConversation")}>
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPendingDelete(conv.id);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.stopPropagation();
-                          setPendingDelete(conv.id);
-                        }
-                      }}
-                      aria-disabled={deletingId === conv.id}
-                      className="hidden shrink-0 cursor-pointer rounded p-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive group-hover:flex"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </span>
-                  </AppTooltip>}
-                </Button>
-              ))}
+              {items.map(renderConversation)}
             </div>
           );
         })}
