@@ -27,6 +27,7 @@ import {
   Layers,
   LayoutGrid,
   MessagesSquare,
+  GitPullRequest,
   Settings2,
   Target,
   X,
@@ -67,6 +68,10 @@ const STYLES: Record<
   issues: {
     icon: Layers,
     tint: "bg-violet-500/12 text-violet-600 dark:text-violet-400",
+  },
+  pull_request: {
+    icon: GitPullRequest,
+    tint: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400",
   },
   // The lens does NOT take its shade here: it wears HIS, the one it
   // displayed everywhere else (see below, ObjectiveIconBadge). The entrance remains

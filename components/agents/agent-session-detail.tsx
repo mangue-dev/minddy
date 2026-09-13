@@ -11,7 +11,7 @@ import { PR_STATE_STYLES, PrStateBadge } from "@/components/pull-requests/pr-sta
 import { issueIdentifier } from "@/lib/issue-constants";
 import { agentSessionTitle } from "@/lib/agent-session-title";
 import { ChainStatusBar } from "@/components/automations/chain-status-bar";
-import type { AgentRunSummary, AgentSessionListItem } from "@/lib/agent-api";
+import type { AgentSessionListItem } from "@/lib/agent-api";
 import type { AgentComposeIntent } from "@/lib/agent-compose-draft";
 
 /**
@@ -35,7 +35,6 @@ export function AgentSessionDetail({
   compose = false,
   composeInitialText,
   composeIntent,
-  onLaunched,
 }: {
   item: AgentSessionListItem;
   onBack: () => void;
@@ -54,8 +53,6 @@ export function AgentSessionDetail({
    * ticket at launch, `implement` if. Relayed as is to the conversation.
    */
   composeIntent?: AgentComposeIntent;
-  /** Relayed in the conversation: a new run has just been launched from the compound. */
-  onLaunched?: (run: AgentRunSummary) => void;
 }) {
   const t = useTranslations("Agents");
   const router = useRouter();
@@ -246,7 +243,6 @@ export function AgentSessionDetail({
         initialCompose={compose}
         initialComposeText={compose ? composeInitialText : undefined}
         composeIntent={compose ? composeIntent : undefined}
-        onLaunched={onLaunched}
         active
         headerTitle={headerTitle}
         headerActions={prActions}

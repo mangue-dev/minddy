@@ -57,7 +57,6 @@ import {
   isAgentSessionUnread,
   renameAgentRunApi,
   setAgentConversationPinnedApi,
-  type AgentRunSummary,
   type AgentSessionListItem,
 } from "@/lib/agent-api";
 import { agentSessionTitle } from "@/lib/agent-session-title";
@@ -609,10 +608,6 @@ export function AgentsPage() {
   );
   // Related issue open in side panel (on top of page, no navigation).
   const [panel, setPanel] = useState<{ projectId: string; issueId: string } | null>(null);
-  // Id of the run just launched from the composer: we keep the shutter mounted
-  // (same key → no remount, transition compose → live smooth) until the
-  // list of sessions catches up with this specific run.
-  const [launchedRunId, setLaunchedRunId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   // Targets of the context menu of the list: the conversation that we rename, the one
   // which we are about to delete. `null` = the corresponding dialog is closed.
@@ -703,20 +698,11 @@ export function AgentsPage() {
       }
     : null;
 
-  // Has the list caught up with the run we just launched? Just one question
-  // for both forms: the session of a ticket takes this run for
-  // rep, a ticketless session IS this run.
-  const launchedItem = launchedRunId
-    ? sessions.find((s) => s.runId === launchedRunId) ?? null
-    : null;
-
-  // LAUNCH flaps — no runs yet. They hold until the run
-  // launched appears in the list, where the real session takes over.
   const issueComposeSelected =
-    !!issueDraft && selectedKey === issueDraft.issueId && !launchedItem;
+    !!issueDraft && selectedKey === issueDraft.issueId;
   // The blank conversation: the default view, what “New” reopens, and what
   // that the notebook and the wizards pre-write.
-  const freeComposeActive = selectedKey === FREE_COMPOSE_PARAM && !launchedItem;
+  const freeComposeActive = selectedKey === FREE_COMPOSE_PARAM;
   const composeSelected = issueComposeSelected || freeComposeActive;
 
   // Tracks param changes (client navigation to another entry).
@@ -752,18 +738,6 @@ export function AgentsPage() {
     setNewSessionProjectId(null);
   }, [draft, draftKey]);
 
-  // Transition completed: the run launched appears in the list → we delete the
-  // draft and we select its session — its REAL key (the outcome for a
-  // ticket session, the run otherwise), read on the entry that we have just caught
-  // rather than guessed again here. We also clean `?compose=` from the URL.
-  useEffect(() => {
-    if (!launchedItem) return;
-    setSelectedKey(sessionKey(launchedItem));
-    setLaunchedRunId(null);
-    setAgentComposeDraft(null);
-    if (composeParam || issueParam || runParam) router.replace("/agents");
-  }, [launchedItem?.runId]); // eslint-disable-line react-hooks/exhaustive-deps
-
   /**
    * The conversation designated by a selection key. It's a run (the case
    * current: a line in the list, `?run=`) — but a deep-link can also
@@ -780,11 +754,8 @@ export function AgentsPage() {
         null
       : null;
 
-  // Item displayed on the right. The run just launched passes IN FRONT of the selection:
-  // she has just been caught up by the list and the effect above has not yet
-  // moved `selectedKey` — otherwise, the pane would flash “no selection” on
-  // time of an image, just after sending the first message.
-  const realSelected = launchedItem ?? sessionForKey(selectedKey);
+  // Resolve the selected historical conversation for the detail pane.
+  const realSelected = sessionForKey(selectedKey);
   const activeItem = issueComposeSelected ? draftItem : realSelected;
 
   // The DISPLAYED conversation never has a bubble: it is marked read when it is opened AND
@@ -846,7 +817,7 @@ export function AgentsPage() {
   // touches nothing during a compose (no session to validate) nor as long as the list
   // has not arrived (loading / deep-link preselection).
   useEffect(() => {
-    if (composeSelected || launchedRunId) return;
+    if (composeSelected) return;
     if (sessions.length === 0) return;
     const resolved = sessionForKey(selectedKey);
     if (!resolved) {
@@ -857,13 +828,12 @@ export function AgentsPage() {
     // that he opened, not the ticket — otherwise no line is highlighted, and the
     // part would follow a ticket whose conversations are no longer one.
     if (resolved.conversationId !== selectedKey) setSelectedKey(resolved.conversationId);
-  }, [sessions, selectedKey, composeSelected, launchedRunId]);
+  }, [sessions, selectedKey, composeSelected]);
 
   // Select a REAL session: abandon the current draft (never sent →
   // deleted, such as leaving the page). Purely UI, no run existed.
   const selectReal = (key: string) => {
     if (draft) setAgentComposeDraft(null);
-    setLaunchedRunId(null);
     setSelectedKey(key);
     setMobileDetail(true);
     // The URL stops pointing to the entry you just left. She would lie to
@@ -878,7 +848,6 @@ export function AgentsPage() {
   // project, she leaves with this project already chosen (composing it allows it to change).
   const startNewSession = (projectId?: string) => {
     if (draft) setAgentComposeDraft(null);
-    setLaunchedRunId(null);
     setNewSessionProjectId(projectId ?? null);
     setSelectedKey(FREE_COMPOSE_PARAM);
     setMobileDetail(true);
@@ -1108,7 +1077,6 @@ export function AgentsPage() {
             key={`${composeNonce}:${freeDraft?.prompt ?? ""}`}
             initialText={freeDraft?.prompt}
             initialProjectId={freeDraft?.projectId ?? newSessionProjectId ?? undefined}
-            onLaunched={(run: AgentRunSummary) => setLaunchedRunId(run.id)}
             onBack={() => setMobileDetail(false)}
           />
         ) : activeItem ? (
@@ -1124,7 +1092,6 @@ export function AgentsPage() {
             composeIntent={
               issueComposeSelected ? issueDraft?.intent ?? "implement" : undefined
             }
-            onLaunched={(run: AgentRunSummary) => setLaunchedRunId(run.id)}
             onBack={() => setMobileDetail(false)}
             onOpenIssue={(issueId, projectId) => setPanel({ projectId, issueId })}
           />

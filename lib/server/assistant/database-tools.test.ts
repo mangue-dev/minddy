@@ -6,8 +6,18 @@ const h = vi.hoisted(() => ({
   update: vi.fn(),
   create: vi.fn(),
   launch: vi.fn(),
+  findPr: vi.fn(),
+  resolveRepo: vi.fn(),
 }));
 vi.mock("@/lib/server/agent/launch", () => ({ launchAgentRun: h.launch }));
+vi.mock("@/lib/server/agent/pull-requests", () => ({
+  findPullRequest: h.findPr,
+  findPullRequestForIssue: vi.fn(),
+  rowProvider: (row: { provider: string }) => row.provider,
+}));
+vi.mock("@/lib/server/agent/repo-access", () => ({
+  resolveRepoCloneTarget: h.resolveRepo,
+}));
 vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: h.access }));
 vi.mock("@/lib/server/page-tools", () => ({
   readPageForAgent: h.read,
@@ -38,6 +48,19 @@ beforeEach(() => {
     },
   });
   h.create.mockResolvedValue({ ok: true, data: { page_id: "new" } });
+  h.findPr.mockResolvedValue({
+    id: "pr-1",
+    provider: "github",
+    repo_full_name: "mangue-dev/minddy",
+    number: 42,
+    title: "Unify Numo entry",
+    url: "https://github.com/mangue-dev/minddy/pull/42",
+    issue_id: "issue-1",
+  });
+  h.resolveRepo.mockResolvedValue({
+    provider: "github",
+    repoFullName: "mangue-dev/minddy",
+  });
 });
 describe("Numo database tool dispatch", () => {
   it("exposes a project-scoped database tool and returns schema read results", async () => {
@@ -202,6 +225,50 @@ describe("conversation action targets", () => {
       }),
     }));
   });
+  it.each([
+    ["review", { pullRequestId: "pr-1" }],
+    [
+      "fix",
+      { continuePullRequestId: "pr-1", issueId: "issue-1" },
+    ],
+  ] as const)(
+    "preserves the selected pull request when delegating %s work",
+    async (mode, expectedAnchor) => {
+      h.access.mockResolvedValue({ project: { id: "a", key: "MIN" } });
+      h.launch.mockResolvedValue({
+        ok: true,
+        run: {
+          id: "run",
+          conversation_id: "worker",
+          status: "queued",
+          model: "test",
+          reasoning_level: "medium",
+        },
+      });
+
+      const result = await executeTool(
+        "launch_code_agent",
+        {
+          project_id: "a",
+          pull_request_id: "pr-1",
+          mode,
+          objective: `${mode} the selected pull request.`,
+          source_references: [],
+          constraints: [],
+          authorized_work:
+            mode === "review"
+              ? ["read_repository", "run_verification"]
+              : ["read_repository", "modify_repository", "run_verification"],
+        },
+        conversation,
+      );
+
+      expect(result).toMatchObject({ success: true, result: { mode } });
+      expect(h.launch).toHaveBeenCalledWith(
+        expect.objectContaining(expectedAnchor),
+      );
+    },
+  );
   it("explains how to replace a retired desktop-only worker provider", async () => {
     h.launch.mockResolvedValue({
       ok: false,

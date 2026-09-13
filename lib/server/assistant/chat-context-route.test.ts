@@ -203,6 +203,16 @@ describe("conversation identity across project contexts", () => {
     expect(await send({ projectId: "a" })).toBe(200);
     expect(db.conversations).toEqual([expect.objectContaining({ project_id: null, user_id: "user" })]);
   });
+  it("persists voluntary entry provenance on the user message", async () => {
+    const db = database();
+    expect(await send({
+      projectId: "a",
+      intent: { source: "issue", action: "implement" },
+    })).toBe(200);
+    expect(db.rows[0]).toMatchObject({
+      metadata: { intent: { source: "issue", action: "implement" } },
+    });
+  });
   it("keeps polling possible when execution and its status lookup both fail", async () => {
     database();
     h.claimError = true;

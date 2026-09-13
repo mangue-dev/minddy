@@ -53,4 +53,62 @@ describe("per-message context authorization", () => {
     expect(await validateMessageContext(supabase, { projectId: "b", issueId: "issue-a" }, [])).toBeNull();
     expect(await validateMessageContext(supabase, null, [{ type: "page", id: "missing", label: "Guide" }])).toBeNull();
   });
+  it("derives canonical pull request context without requiring an issue", async () => {
+    const supabase = {
+      from: (table: string) => {
+        const filters: Record<string, string> = {};
+        const query = {
+          select: () => query,
+          eq: (key: string, value: string) => {
+            filters[key] = value;
+            return query;
+          },
+          is: () => query,
+          maybeSingle: async () => ({
+            data:
+              table === "pull_requests" && filters.id === "pr-1"
+                ? {
+                    id: "pr-1",
+                    provider: "github",
+                    repo_full_name: "mangue-dev/minddy",
+                    number: 42,
+                    state: "open",
+                    head_branch: "work/min-42",
+                    base_branch: "main",
+                    issue_id: null,
+                  }
+                : table === "projects" && filters.id === "project-1"
+                  ? { id: "project-1" }
+                  : null,
+          }),
+          limit: async () => ({
+            data:
+              table === "project_git_links" &&
+              filters.provider === "github" &&
+              filters.repo_full_name === "mangue-dev/minddy"
+                ? [{ project_id: "project-1" }]
+                : [],
+          }),
+        };
+        return query;
+      },
+    } as never;
+
+    const result = await validateMessageContext(
+      supabase,
+      { pullRequestId: "pr-1" },
+      [],
+    );
+    expect(result?.context).toMatchObject({
+      projectId: "project-1",
+      pullRequestId: "pr-1",
+      prNumber: 42,
+      prState: "open",
+      prHeadRef: "work/min-42",
+      prBaseRef: "main",
+    });
+    expect(buildPageContextBlock(result!.context!)).toContain(
+      'read_pull_request { pull_request_id: "pr-1" }',
+    );
+  });
 });

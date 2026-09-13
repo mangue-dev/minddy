@@ -96,6 +96,7 @@ export function AssistantPanel() {
       mentions,
       command,
       attachments,
+      intent,
     } = pendingOptions;
     const targetProjectId =
       projectId === undefined ? scopeProjectId : projectId;
@@ -110,6 +111,7 @@ export function AssistantPanel() {
         mentions,
         command,
         attachments,
+        intent,
       });
     }
 

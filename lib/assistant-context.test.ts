@@ -27,6 +27,12 @@ const everything: AssistantPageContext = {
   issueId: "i1",
   issueIdentifier: "MIN-42",
   issueTitle: "Un ticket",
+  pullRequestId: "pr1",
+  prNumber: 42,
+  prState: "open",
+  prHeadRef: "feature/min-42",
+  prBaseRef: "main",
+  prRunId: "run1",
   objectiveId: "o1",
   objectiveName: "Un objectif",
   feedbackId: "f1",
@@ -75,6 +81,20 @@ describe("applyContextSelection", () => {
   it("keeps the routine while its pill is lit", () => {
     const sent = applyContextSelection(everything, new Set(["feedback"]));
     expect(sent?.routineId).toBe("r1");
+  });
+
+  it("removes every selected pull request field together", () => {
+    const sent = applyContextSelection(
+      everything,
+      new Set(["pull_request"]),
+    );
+    expect(sent?.pullRequestId).toBeUndefined();
+    expect(sent?.prNumber).toBeUndefined();
+    expect(sent?.prState).toBeUndefined();
+    expect(sent?.prHeadRef).toBeUndefined();
+    expect(sent?.prBaseRef).toBeUndefined();
+    expect(sent?.prRunId).toBeUndefined();
+    expect(sent?.issueId).toBe("i1");
   });
 
   /**

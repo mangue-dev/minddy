@@ -8,7 +8,7 @@ function source(relativePath: string): string {
 }
 
 describe("account worker model boundary", () => {
-  it("funnels chat, routine, automation, and PR workers through the shared launcher", () => {
+  it("funnels Numo delegation, routine, and automation workers through the shared launcher", () => {
     const launch = source("lib/server/agent/launch.ts");
     expect(launch).toContain("const resolved = await resolveAgentModel(input.userId);");
     expect(launch).toContain("const reasoningLevel = await resolveReasoningLevel(input.userId);");
@@ -17,7 +17,6 @@ describe("account worker model boundary", () => {
       "lib/server/assistant/execute-tool.ts",
       "app/api/cron/routines/route.ts",
       "lib/server/automations/actions.ts",
-      "lib/server/agent/pr-actions.ts",
     ]) {
       expect(source(file), file).toContain("launchAgentRun({");
     }
@@ -70,15 +69,17 @@ describe("account worker model boundary", () => {
     );
   });
 
-  it("keeps legacy review capabilities and directs PR launch errors to settings", () => {
+  it("keeps legacy review capabilities while PR requests enter Numo", () => {
     const compatibilityRoute = source("app/api/agent/review-models/route.ts");
     expect(compatibilityRoute).toContain("cloudExecutionConfigured:");
     expect(compatibilityRoute).toContain("executionBackend:");
 
     const pullRequestDetail = source("components/pull-requests/pr-detail.tsx");
     expect(pullRequestDetail).toContain("const agentErrorMessage = useAgentErrorMessage();");
-    expect(pullRequestDetail.match(/toast\.error\(agentErrorMessage\(err\)\);/g)).toHaveLength(
-      2,
+    expect(pullRequestDetail).toContain('action: "review"');
+    expect(pullRequestDetail).toContain('action: "fix"');
+    expect(source("lib/server/agent/pr-actions.ts")).not.toContain(
+      "launchAgentRun({",
     );
   });
 });

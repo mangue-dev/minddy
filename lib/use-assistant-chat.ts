@@ -636,6 +636,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         /** Repository skills explicitly attached to this message. */
         skills?: AssistantSkillSelection[];
         workerInput?: AssistantChatRequest["workerInput"];
+        /** Voluntary entry provenance from the common Numo intent contract. */
+        intent?: AssistantChatRequest["intent"];
       },
     ) => {
       if (!message.trim()) return;
@@ -695,6 +697,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             ? { skills: options.skills }
             : {}),
           ...(options?.workerInput ? { workerInput: options.workerInput } : {}),
+          ...(options?.intent ? { intent: options.intent } : {}),
           // The browser's time zone travels with each message: Numo has it
           // need to set a routine at the time we tell him (MIN-185).
           ...(browserTimezone() ? { timezone: browserTimezone() } : {}),

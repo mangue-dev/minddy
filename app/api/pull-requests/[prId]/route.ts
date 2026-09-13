@@ -20,13 +20,12 @@ import {
  * | { action: 'reopen' } → closed → reopened (MIN-164)
  * | { action: 'ready_for_review' } → draft → ready
  * | { action: 'convert_to_draft' } → open → draft
- *       | { action: 'review', verdict, message, relaunch?, legacy local flags? }
- *       | { action: 'ai_review', legacy local flags? } → Numo rereads (MIN-141)
+ *       | { action: 'review', verdict, message, relaunch? }
+ *       | { action: 'ai_review' } → compatibility Numo review intent
  *       | { action: 'link_issue', issueId }                  → attaches a ticket (MIN-163)
  *
- * `ai_review` returns a 202 with the agent SESSION anchored to this PR (MIN-168):
- * the agent clones the branch, reads the code and comments, and the session watches itself
- * in `/agents` — `./ai-review` gives the status for the PR thread.
+ * Both Numo actions return a durable common conversation. Existing worker
+ * review status remains readable from `./ai-review` for historical runs.
  *
  * The old `agent-runs/[runId]/pr/*` roads have become facades of
  * these: the body of each gesture lives in `lib/server/agent/pr-actions`,
@@ -35,9 +34,7 @@ import {
 
 type RouteContext = { params: Promise<{ prId: string }> };
 
-// `review` + relaunch launches a cold run and kicks the drain in after(): it
-// it needs the full drain window (270 s budget), otherwise the first
-// chunk is killed in the middle of a round — same reason as /api/issues/[id]/agent.
+// A Numo turn or delegated worker may continue after the response.
 export const maxDuration = 300;
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
@@ -81,7 +78,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
 
   if (action === "review") {
-    return prReviewResponse(auth.scope, body, auth.userId);
+    return prReviewResponse(auth.scope, body, auth.userId, auth.supabase);
   }
   if (action === "link_issue") {
     return prLinkIssueResponse(auth.scope, auth.supabase, body, auth.userId);
@@ -101,9 +98,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return prAiReviewResponse(
       auth.scope,
       auth.userId,
-      body.localExec === true,
-      body.localWorktree === true,
-      body.localIssueContextConfirmed === true,
+      auth.supabase,
     );
   }
   if (

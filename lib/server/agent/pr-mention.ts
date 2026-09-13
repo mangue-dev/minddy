@@ -4,8 +4,8 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { mentionsNumo } from "@/lib/server/assistant/comment-agent";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { findPullRequestByNumber, type PullRequestRow } from "./pull-requests";
-// Type seulement : l'import de valeur reste paresseux plus bas (`pr-actions`
-// pull the entire module from PR routes, and `next/server` with it).
+// Type-only import: the value import stays lazy below because `pr-actions`
+// pulls in the complete PR route module, including `next/server`.
 import type { PrScope } from "./pr-actions";
 import {
   claimDenialNotice,
@@ -144,7 +144,7 @@ async function replyOnPr(scope: PrScope, body: string): Promise<void> {
   } catch (err) {
     // The refusal itself does not have to cause the webhook to fail: the mention is already
     // rejected, this comment is just politeness explaining it.
-    console.warn("[pr-mention] refus non commenté :", (err as Error).message);
+    console.warn("[pr-mention] could not post denial comment:", (err as Error).message);
   }
 }
 
@@ -175,9 +175,9 @@ export async function handleForgeNumoMention(opts: {
     if (!target) {
       // NO more projects link this repository (link since removed): no one to
       // which to charge the expense, and no right to read. We say it, rather than
-      // deviner un compte.
+      // guess an account.
       console.warn(
-        `[pr-mention] @numo ignoré sur ${opts.repoFullName}#${opts.prNumber} : aucun projet ne lie ce dépôt`,
+        `[pr-mention] ignored @numo on ${opts.repoFullName}#${opts.prNumber}: no project links this repository`,
       );
       return;
     }
@@ -208,8 +208,8 @@ export async function handleForgeNumoMention(opts: {
             authorLogin: opts.authorLogin,
           });
       console.warn(
-        `[pr-mention] @numo refusé sur ${opts.repoFullName}#${opts.prNumber} ` +
-          `(${opts.authorLogin ?? "auteur inconnu"}) : ${member ? "débit" : "non-membre"}`,
+        `[pr-mention] denied @numo on ${opts.repoFullName}#${opts.prNumber} ` +
+          `(${opts.authorLogin ?? "unknown author"}): ${member ? "rate limit" : "not a member"}`,
       );
       if (!notify) return;
       // Resolving the range COSTS a forge token: we only do it for the
@@ -234,9 +234,11 @@ export async function handleForgeNumoMention(opts: {
     await startNumoPrReview({
       scope,
       userId,
+      supabase: getServiceClient(),
+      projectId: projectIds[0] ?? null,
       question: { author: opts.authorLogin, body },
     });
   } catch (err) {
-    console.error("[pr-mention] @numo depuis la forge a échoué :", (err as Error).message);
+    console.error("[pr-mention] forge @numo request failed:", (err as Error).message);
   }
 }

@@ -89,6 +89,27 @@ describe("Numo tool contracts", () => {
     expect(launch?.function.description).toMatch(/returns here/i);
   });
 
+  it("keeps pull request review and fixes anchored to the selected PR", () => {
+    const launch = tool("launch_code_agent");
+    const mode = launch?.function.parameters.properties.mode as {
+      enum?: string[];
+    };
+    expect(mode.enum).toEqual(
+      expect.arrayContaining(["review", "fix"]),
+    );
+    expect(launch?.function.parameters.properties).toHaveProperty(
+      "pull_request_id",
+    );
+
+    const read = tool("read_pull_request");
+    expect(read?.function.parameters.properties).toHaveProperty(
+      "pull_request_id",
+    );
+    expect(read?.function.parameters.required ?? []).not.toContain(
+      "issue_id",
+    );
+  });
+
   it("keeps feedback comment guidance aligned with the comment service", () => {
     const comment = tool("add_feedback_comment");
 

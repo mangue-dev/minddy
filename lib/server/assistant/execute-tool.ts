@@ -181,7 +181,11 @@ import {
   resolveProjectPullRequest,
   type PrLinkRefusal,
 } from "@/lib/server/agent/pr-link";
-import { findPullRequestForIssue } from "@/lib/server/agent/pull-requests";
+import {
+  findPullRequest,
+  findPullRequestForIssue,
+  rowProvider,
+} from "@/lib/server/agent/pull-requests";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 import {
   runWebSearchTool,
@@ -332,6 +336,10 @@ function launchErrorMessage(r: Extract<LaunchResult, { ok: false }>): string {
       return "Code-worker model and reasoning can only be changed by the user in Account settings.";
     case "continuationNotFound":
       return "The requested worker continuation is not available in this repository or does not belong to this account.";
+    case "prNotFound":
+      return "The selected pull request is unavailable or is not linked to a project you can access.";
+    case "prIncomplete":
+      return "The selected pull request is missing the branch information required for this work.";
     case "modelAbovePlan":
       return r.modelLimit
         ? `The account code-worker model ${r.modelLimit.model} costs ×${r.modelLimit.multiplier} the usage of minddy's baseline model, above the ×${r.modelLimit.limit} ceiling of the ${r.modelLimit.planId} plan. Ask the user to choose an eligible model in Account settings or upgrade their plan.`
@@ -1680,6 +1688,8 @@ export async function executeTool(
           );
         }
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+        const pullRequestId =
+          typeof args.pull_request_id === "string" ? args.pull_request_id : "";
         if (issueId) {
           const scoped = await assertIssueInProject(
             ctx.supabase,
@@ -1717,9 +1727,21 @@ export async function executeTool(
         // fourth choice (`custom`, or any unknown mode) falls on the
         // original behavior: the helper prompt IS the request.
         const mode = isAgentLaunchMode(args.mode) ? args.mode : null;
+        const pullRequestMode =
+          args.mode === "review" || args.mode === "fix" ? args.mode : null;
         if (mode && !issueId) {
           return toolError(
             "issue_id is required for plan, implement and verify.",
+          );
+        }
+        if (pullRequestMode && !pullRequestId) {
+          return toolError(
+            "pull_request_id is required for review and fix.",
+          );
+        }
+        if (pullRequestId && !pullRequestMode) {
+          return toolError(
+            "pull_request_id can only be used with review or fix.",
           );
         }
         let message = durableDelegation ? undefined : objective;
@@ -1769,6 +1791,36 @@ export async function executeTool(
             });
           }
         }
+        let selectedPullRequestIssueId: string | null = null;
+        if (pullRequestId) {
+          const selectedPr = await findPullRequest(pullRequestId);
+          const target = await resolveRepoCloneTarget(projectId);
+          if (
+            !selectedPr ||
+            !target ||
+            target.provider !== rowProvider(selectedPr) ||
+            target.repoFullName !== selectedPr.repo_full_name
+          ) {
+            return toolError(
+              "The selected pull request is not available in this project.",
+            );
+          }
+          selectedPullRequestIssueId = selectedPr.issue_id;
+          if (
+            !sourceReferences.some(
+              (source) =>
+                source.kind === "pull_request" &&
+                source.id === pullRequestId,
+            )
+          ) {
+            sourceReferences.unshift({
+              kind: "pull_request",
+              id: pullRequestId,
+              label: `#${selectedPr.number}${selectedPr.title ? `: ${selectedPr.title}` : ""}`,
+              ...(selectedPr.url ? { url: selectedPr.url } : {}),
+            });
+          }
+        }
         const attachments = durableDelegation
           ? await parentTurnAttachments(ctx)
           : [];
@@ -1787,7 +1839,18 @@ export async function executeTool(
         // A fresh delegation opens a code conversation and branch. Explicit
         // follow-up lineage reuses the selected conversation and branch/PR.
         const result = await launchAgentRun({
-          ...(issueId ? { issueId } : { projectId }),
+          ...(pullRequestMode === "review"
+            ? { pullRequestId }
+            : pullRequestMode === "fix"
+              ? {
+                  continuePullRequestId: pullRequestId,
+                  ...(issueId || selectedPullRequestIssueId
+                    ? { issueId: issueId || selectedPullRequestIssueId }
+                    : {}),
+                }
+              : issueId
+                ? { issueId }
+                : { projectId }),
           userId: ctx.userId,
           triggeredBy: ctx.triggerSource ?? "chat",
           prompt: message,
@@ -1819,7 +1882,9 @@ export async function executeTool(
         return {
           result: {
             launched: true,
-            ...(mode ? { mode } : {}),
+            ...(mode || pullRequestMode
+              ? { mode: mode ?? pullRequestMode }
+              : {}),
             run_id: result.run.id,
             conversation_id: result.run.conversation_id,
             status: result.run.status,
@@ -1932,12 +1997,21 @@ export async function executeTool(
 
       case "read_pull_request": {
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const scoped = await assertIssueInProject(
-          ctx.supabase,
-          issueId,
-          projectId,
-        );
-        if (!scoped.ok) return toolError(scoped.error);
+        const pullRequestId =
+          typeof args.pull_request_id === "string" ? args.pull_request_id : "";
+        if ((!issueId && !pullRequestId) || (issueId && pullRequestId)) {
+          return toolError(
+            "Pass exactly one of issue_id or pull_request_id.",
+          );
+        }
+        if (issueId) {
+          const scoped = await assertIssueInProject(
+            ctx.supabase,
+            issueId,
+            projectId,
+          );
+          if (!scoped.ok) return toolError(scoped.error);
+        }
 
         // The PR of the ticket comes from `pull_requests`, source of truth since
         // MIN-143: a human PR, or attached by convention (identifier
@@ -1945,9 +2019,22 @@ export async function executeTool(
         // link_pull_request, has NO run — look for it in `agent_runs`
         // caused the tool to fail on a PR that the user had under
         // eyes. The fallback on the run covers the rows before the table.
-        const linkedPr = await findPullRequestForIssue(issueId);
+        const linkedPr = pullRequestId
+          ? await findPullRequest(pullRequestId)
+          : await findPullRequestForIssue(issueId);
+        const target = await resolveRepoCloneTarget(projectId);
+        if (!target) return toolError("This project has no linked repository.");
+        if (
+          linkedPr &&
+          (target.provider !== rowProvider(linkedPr) ||
+            target.repoFullName !== linkedPr.repo_full_name)
+        ) {
+          return toolError(
+            "The selected pull request is not available in this project.",
+          );
+        }
         let prNumber = linkedPr?.number ?? null;
-        if (prNumber == null) {
+        if (prNumber == null && issueId) {
           // Fallback aligned with findPullRequestForIssue: LIVE PR first,
           // otherwise the most recent. A pre-table ticket may carry
           // several runs at PR (successive repeats) — take the most
@@ -1969,11 +2056,12 @@ export async function executeTool(
           prNumber = (live ?? rows[0])?.pr_number ?? null;
         }
         if (prNumber == null) {
-          return toolError("This issue has no pull request attached yet.");
+          return toolError(
+            pullRequestId
+              ? "The selected pull request is unavailable."
+              : "This issue has no pull request attached yet.",
+          );
         }
-
-        const target = await resolveRepoCloneTarget(projectId);
-        if (!target) return toolError("This project has no linked repository.");
         const forge = forgeFor(target.provider);
 
         const [pr, diff, reviewComments, reviewThreads] = await Promise.all([

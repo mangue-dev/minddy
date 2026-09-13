@@ -69,7 +69,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
 
   if (action === "review") {
-    return prReviewResponse(auth.scope, body, auth.userId);
+    return prReviewResponse(auth.scope, body, auth.userId, auth.supabase);
   }
   return prStateActionResponse(auth.scope, action, body, auth.userId);
 }

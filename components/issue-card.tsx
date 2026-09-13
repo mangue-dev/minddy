@@ -64,13 +64,8 @@ import {
   isPrWorthShowing,
   type IssuePr,
 } from "@/lib/agent-api";
-import {
-  setAgentComposeDraft,
-  type AgentComposeIntent,
-} from "@/lib/agent-compose-draft";
-import { usePlanGates } from "@/lib/use-billing-query";
-import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
-import { getDesktopBridge } from "@/lib/desktop/bridge";
+import type { NumoIntentAction } from "@/lib/assistant-types";
+import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import {
   agentLaunchPromptVariant,
   agentPlanPromptVariant,
@@ -999,23 +994,11 @@ const IssueCardContent = memo(function IssueCardContent({
   const tCommon = useTranslations("Common");
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { openIntent } = useAssistantPanel();
   const agentActive = useAgentActive(issue.id);
-  // An agent run is ACTIVE on the issue → the action OPENS its conversation.
-  // Otherwise (no run, or all completed), it LAUNCHES a new one from scratch (MIN-68).
+  // Historical worker activity remains available as a read-only navigation
+  // target; new voluntary work enters Numo below.
   const agentHasSession = useAgentHasSession(issue.id);
-  const { agentsAllowed } = usePlanGates();
-  // Agent + PR are unavailable without a linked repository (MIN-80): the server
-  // rejects a `noRepo` launch anyway, so remove the option early. Stay permissive
-  // while the query loads → no flash in the common case (project WITH a repository).
-  const { link: repoLink, loading: repoLinkLoading } = useProjectGitLinkQuery(
-    issue.project_id,
-  );
-  // In the desktop app a local run needs NO linked repository: it plays on the
-  // folder attached to this machine. In the browser the link stays the only
-  // door (the server refuses a `noRepo` cloud launch anyway).
-  const desktopAvailable = useMemo(() => !!getDesktopBridge(), []);
-  const agentsEnabled =
-    agentsAllowed && (repoLinkLoading || repoLink != null || desktopAvailable);
   // The ticket's PR → chip on the card (if it still calls for action) and
   // “View pull request” in the menu (whatever its state).
   // `?pr=` rather than `?run=`: the link must also work for a PR that no run
@@ -1029,7 +1012,7 @@ const IssueCardContent = memo(function IssueCardContent({
   // card's memoization.
   const openIssue = useCallback(() => onOpenIssue(issue), [onOpenIssue, issue]);
 
-  // Idem pour le menu de raccourcis (MIN-316) : trois tableaux neufs par rendu.
+  // Apply the same memoization to the shortcut menu (MIN-316).
   const cardMemberList = useMemo(() => [...memberMap.values()], [memberMap]);
   const cardCategoryList = useMemo(
     () => [...categoryMap.values()],
@@ -1083,35 +1066,32 @@ const IssueCardContent = memo(function IssueCardContent({
   );
   // Confirmation before trash (the “Move to trash” entry).
   const [confirmDelete, setConfirmDelete] = useState(false);
-  // “Custom”: the free-form prompt dialog, opened either to copy the prompt or
-  // launch the agent (`null` = closed).
+  // “Custom”: the free-form prompt dialog, opened either to copy the external
+  // prompt or entrust the request to Numo (`null` = closed).
   const [customTarget, setCustomTarget] = useState<CustomPromptTarget | null>(
     null,
   );
-  // Code agent for this ticket (MIN-46) — right-click menu + ⇧A shortcut. Redirects
-  // to the Agents page rather than opening a modal. Two entry points:
-  //  • openAgentSession — rouvre la session existante (sa run la plus active, `?issue=`) ;
-  //  • startNewAgentSession — pose un brouillon de composition optimiste et ouvre son
-  //    composer (`?compose=`), launching a NEW session even if the ticket already has
-  //    one (a new run on the ticket), exactly like the issue-panel button.
+  // Historical worker navigation remains separate from new work. Opening a
+  // prior session is read-only navigation; every new request uses Numo.
   const openAgentSession = () => {
     router.push(`/agents?issue=${issue.id}`);
   };
-  const composeAgentSession = (
+  const entrustToNumo = (
     prompt: string,
-    intent: AgentComposeIntent = "implement",
+    action: NumoIntentAction = "implement",
   ) => {
-    setAgentComposeDraft({
-      kind: "issue",
-      issueId: issue.id,
-      issueNumber: issue.number,
-      issueTitle: issue.title,
+    openIntent({
+      source: "issue",
+      action,
       projectId: issue.project_id,
-      projectKey,
       prompt,
-      intent,
+      pageContext: {
+        projectId: issue.project_id,
+        issueId: issue.id,
+        issueIdentifier: identifier,
+        issueTitle: issue.title,
+      },
     });
-    router.push(`/agents?compose=${issue.id}`);
   };
   const startNewAgentSession = () => {
     // “Implement the ticket” ALWAYS arrives with its pre-written prompt
@@ -1120,39 +1100,31 @@ const IssueCardContent = memo(function IssueCardContent({
     // already had a session, on the assumption that the context was inherited:
     // from the user's perspective, the same menu entry filled the composer only
     // every other time, without explaining the difference.
-    composeAgentSession(
+    entrustToNumo(
       `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`,
     );
   };
   // A plan already exists → the “plan” entries (⋯ menu, copied prompt, agent)
   // switch from “generate” to “verify”.
   const issueHasPlan = hasPlanTasks(issue.plan);
-  // “Generate a plan” / “Verify the plan”: a new session whose prompt is to
-  // FRAME the ticket — write the plan if it has none, review it point by point
-  // if it already has one, then stop before implementing. `intent:
-  // "plan"`: the ticket does not go "in progress", framing is not starting.
+  // Preserve the planning intent explicitly so Numo can answer, use issue
+  // tools, or delegate a repository-only planning task when needed.
   const writePlanWithAgent = () => {
-    composeAgentSession(
+    entrustToNumo(
       `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent(`launchPrompt.${agentPlanPromptVariant(issue)}`)}`,
       "plan",
     );
   };
-  // “Check implementation”: new session that rereads the work ALREADY done
-  // facing the plan and the ticket comments, then fixes the proven bugs.
-  // `intent: "verify"`: the ticket does not move — check the work done
-  // is not the start, and a review ticket must remain there.
+  // Preserve verification as a distinct intent without moving the issue.
   const verifyWithAgent = () => {
-    composeAgentSession(
+    entrustToNumo(
       `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent("launchPrompt.verifyImplementation")}`,
       "verify",
     );
   };
-  // ⇧A: ticket already with a session → we open it; otherwise we start a new one.
-  // Plan without agents (MIN-72): the shortcut is inert, the menu entries absent.
+  // ⇧A always starts a new common Numo request for this issue.
   const launchAgent = () => {
-    if (!agentsEnabled) return;
-    if (agentHasSession) openAgentSession();
-    else startNewAgentSession();
+    startNewAgentSession();
   };
 
   // Picker candidates: the other OPEN issues of the project, excluding those
@@ -1269,7 +1241,7 @@ const IssueCardContent = memo(function IssueCardContent({
     target: CustomPromptTarget,
   ) => {
     if (target === "launch") {
-      composeAgentSession(
+      entrustToNumo(
         `${tAgent("launchPrompt.head", { identifier })}\n\n${instructions}`,
         "custom",
       );
@@ -1298,7 +1270,7 @@ const IssueCardContent = memo(function IssueCardContent({
   // action and ~16 JSX icons per card per render — for a CLOSED menu.
   // `useStableCallback` freezes their identity without freezing what they do.
   const agentActions = useAgentMenuActions({
-    agentsEnabled,
+    agentsEnabled: true,
     hasSession: agentHasSession,
     hasPlan: issueHasPlan,
     onCopyPrompt: useStableCallback(() => void copyPrompt()),
@@ -1380,7 +1352,7 @@ const IssueCardContent = memo(function IssueCardContent({
       // the Agents PAGE; ⇧P and ⇧A remain on the “implement” branch.
       ...agentActions,
       // Open pull request — only offered when a PR exists for the ticket.
-      ...(agentsEnabled && pr && openPr
+      ...(pr && openPr
         ? [
             {
               id: "open-pr",
@@ -1479,7 +1451,6 @@ const IssueCardContent = memo(function IssueCardContent({
   }, [
     menuPosition,
     agentActions,
-    agentsEnabled,
     pr,
     openPr,
     onAddRelation,

@@ -1986,11 +1986,16 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "Optional issue context. Required only for plan, implement and verify.",
           },
+          pull_request_id: {
+            type: "string",
+            description:
+              "Optional Minddy pull request id. Required for review and fix so the selected PR and branch remain the delegation anchor.",
+          },
           mode: {
             type: "string",
-            enum: ["plan", "implement", "verify", "custom"],
+            enum: ["plan", "implement", "verify", "custom", "review", "fix"],
             description:
-              "Which job to send. The first three are written for you, word for word like the app's own buttons: 'plan' scopes the issue WITHOUT coding (writes the implementation plan, or reviews it task by task when one already exists) and leaves the issue's status alone; 'implement' does the work (the instructions adapt to the issue's plan and effort); 'verify' checks the implementation already done against the plan and the issue's comments, then fixes the bugs it can prove. 'custom' for anything else — then `prompt` IS the job, so write it.",
+              "Which job to send. The first three are written for you, word for word like the app's own buttons: 'plan' scopes the issue WITHOUT coding (writes the implementation plan, or reviews it task by task when one already exists) and leaves the issue's status alone; 'implement' does the work (the instructions adapt to the issue's plan and effort); 'verify' checks the implementation already done against the plan and the issue's comments, then fixes the bugs it can prove. 'review' reads the selected pull request without writing to its branch and delivers the existing PR review output. 'fix' continues work on the selected pull request and its current branch. 'custom' is for anything else.",
           },
           prompt: {
             type: "string",
@@ -2098,7 +2103,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "read_pull_request",
       description:
-        "Read the pull request attached to an issue: its title, description, state, branch, CI checks, the per-file diffs (patches, capped), and the review comments anchored to specific lines of code (with their file:line anchor and the diff snippet they were written against). Use it to explain what a PR changes or answer questions about its content or review feedback. To make changes to the PR, use launch_code_agent on the linked issue. Works for ANY pull request of the linked repository attached to the issue — one the code agent opened, one a human opened that matched by convention, or one attached with link_pull_request. When the issue carries several, it reads the live one (draft or open), otherwise the most recently updated.",
+        "Read a selected pull request, or the pull request attached to an issue: its title, description, state, branch, CI checks, per-file diffs (patches, capped), and review comments anchored to code. Use pull_request_id when the conversation carries a PR directly, including a human PR with no issue. Otherwise use issue_id to resolve the issue's live or most recently updated PR. To delegate repository work, use launch_code_agent with that exact pull_request_id and mode review or fix.",
       parameters: {
         type: "object",
         properties: {
@@ -2107,8 +2112,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "id of the issue whose pull request to read (resolve via list_issues/search_issues, or use the issue in context).",
           },
+          pull_request_id: {
+            type: "string",
+            description:
+              "Minddy id of the pull request to read, as supplied by the pull request context.",
+          },
         },
-        required: ["issue_id"],
       },
     },
   },

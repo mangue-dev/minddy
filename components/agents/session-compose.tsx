@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   DropdownMenu,
@@ -21,12 +19,9 @@ import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { ChatInput } from "@/components/assistant/chat-input";
 import { AgentEventFeed } from "@/components/agent/agent-event-feed";
 import { BranchCombobox } from "@/components/agent/branch-combobox";
-import { launchGeneralAgentApi, type AgentRunSummary } from "@/lib/agent-api";
-import { agentRunQueryKey, allAgentSessionsQueryKey } from "@/lib/use-agent-runs";
-import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
+import { launchGeneralAgentApi } from "@/lib/agent-api";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
 import { useProjects } from "@/lib/projects-context";
-import { useGitLinkedProjectsQuery } from "@/lib/use-project-git-link-query";
 import { useAuth } from "@/lib/auth-context";
 import {
   defaultAgentProjectId,
@@ -40,7 +35,6 @@ import { useNumoMentionables } from "@/lib/use-numo-mentionables";
 import { MentionLinksProvider } from "@/components/mention-links";
 import type { AssistantMention } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
-import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
 import { useRepositorySkills } from "@/lib/use-repository-skills";
 
 /**
@@ -110,41 +104,22 @@ function ProjectSelect({
 }
 
 /**
- * Compose LAUNCH of an agent conversation — the front-end phase
- * run, equivalent to that of AgentConversation for a ticket.
- *
- * This is the DEFAULT VIEW of the Agents page: getting there means opening a
- * blank conversation. The subject is FREE — what we write here goes like
- * instruction, and the only mandatory thing is the PROJECT, whose clone agent
- * the deposit. The text can arrive pre-written (a notebook note — MIN-84 —, a
- * integration prompt) or empty (arrival on the page, “New” button), and
- * remains editable in both cases. Model, level of reasoning and branch of
- * base are optional — they are based on personal faults, as from a
- * ticket.
- *
- * A conversation ANCHORED to a ticket does not go through here: it starts
- * FROM THE TICKET (card or panel) — the Agents page does not offer any selector
- * ticket — and opens the AgentConversation composer, who knows what a ticket
- * additional request: inherited branch, status to be advanced.
- *
- * Send POST /api/agent-runs; the rendered run is moved up the page
- * (`onLaunched`), which switches to its real session.
+ * Compatibility composer for old `/agents?compose=` links. The request may be
+ * prefilled by a scratchpad note or integration setup, remains editable, and
+ * requires a project so its context is unambiguous. Sending admits a durable
+ * common Numo turn and navigates to that conversation. The optional branch is
+ * retained as part of the request; Numo decides whether code delegation is
+ * needed.
  */
 export function SessionCompose({
   initialText,
   initialProjectId,
-  onLaunched,
   onBack,
 }: {
   /** Pre-written text in the composer (freely editable), empty by default. */
   initialText?: string;
-  /**
-   * Pre-chosen project when the draft designates one (prompt integration
-   * feedback, launched from a project settings) — the picker remains open.
-   */
+  /** Preselected project from the legacy draft; the picker remains editable. */
   initialProjectId?: string;
-  /** A run has just been launched — the page switches to its session. */
-  onLaunched: (run: AgentRunSummary) => void;
   /**
    * Return to the list under `md`, where list and detail take turns in full screen.
    * Same button as the header of a conversation (`AgentSessionDetail`): without
@@ -155,7 +130,6 @@ export function SessionCompose({
 }) {
   const t = useTranslations("Agent");
   const tAgents = useTranslations("Agents");
-  const tAssistant = useTranslations("Assistant");
   const tNav = useTranslations("Nav");
 
   /**
@@ -168,7 +142,6 @@ export function SessionCompose({
   useSuppressAssistantFab();
 
   const agentErrorMessage = useAgentErrorMessage();
-  const queryClient = useQueryClient();
   const router = useRouter();
   const { projects } = useProjects();
   // The account is named here like everywhere else (sidebar, menu
@@ -180,15 +153,7 @@ export function SessionCompose({
     tNav("accountFallback"),
   );
 
-  /** Projects where the server sandbox has a linked repository to clone. */
-  const { projectIds: gitLinked, loading: gitLinkedLoading } =
-    useGitLinkedProjectsQuery();
-  const launchable = useMemo(
-    () => projects.filter((p) => gitLinked.has(p.id)),
-    [projects, gitLinked],
-  );
-  /** No server-sandbox launch is possible without a linked repository. */
-  const noRepoAnywhere = !gitLinkedLoading && launchable.length === 0;
+  const launchable = projects;
 
   // The project leaves PRE-CHOSEN: the one that the draft designates, otherwise the last
   // where an agent was launched (failing that, the most recently affected project). He
@@ -204,17 +169,14 @@ export function SessionCompose({
   // unlinked since) is no longer in the list, and the selector would then display a
   // empty by pretending that a project is chosen.
   useEffect(() => {
-    if (gitLinkedLoading || launchable.length === 0) return;
+    if (launchable.length === 0) return;
     if (projectId && launchable.some((p) => p.id === projectId)) return;
     setProjectId(defaultAgentProjectId(launchable, lastAgentProjectId()) ?? "");
-  }, [launchable, projectId, gitLinkedLoading]);
-  const { cloudExecutionConfigured } = useAgentModelsQuery();
-  const aiAvailability = useAiSurfaceAvailability("agent");
-  const aiUnavailable = !aiAvailability.loading && !aiAvailability.available;
+  }, [launchable, projectId]);
   const [baseBranch, setBaseBranch] = useState("");
   const [launching, setLaunching] = useState(false);
-  // Optimistic bubble of the 1st message during POST (same reasons as launch
-  // of AgentConversation: server pre-checks take a few seconds).
+  // Keep the first message visible while the legacy adapter creates the common
+  // Numo conversation and redirects to it.
   const [launchText, setLaunchText] = useState<string | null>(null);
   const [launchMentions, setLaunchMentions] = useState<AssistantMention[]>([]);
   const selectedProject = launchable.find((p) => p.id === projectId) ?? null;
@@ -231,7 +193,6 @@ export function SessionCompose({
     attachments: ResourceInput[] = [],
     mentions: AssistantMention[] = [],
   ) => {
-    if (aiUnavailable) return;
     if (launching) return;
     const prompt = message.trim();
     if (!prompt) return;
@@ -239,43 +200,20 @@ export function SessionCompose({
       toast.error(t("composeProjectRequired"));
       return;
     }
-    if (!cloudExecutionConfigured) {
-      toast.error(t("errorExecutionBackendUnavailable"));
-      return;
-    }
-    if (!gitLinkedLoading && !gitLinked.has(projectId)) {
-      toast.error(t("errorNoRepo"));
-      router.push(`/projects/${projectId}/settings?tab=git`);
-      return;
-    }
     setLaunching(true);
     setLaunchText(prompt);
     setLaunchMentions(mentions);
     try {
-      const { run } = await launchGeneralAgentApi({
+      const started = await launchGeneralAgentApi({
         projectId,
         prompt,
         baseBranch: baseBranch || undefined,
         mentions,
         attachments,
       });
-      /**
-       * Primes the session cache BEFORE returning control.
-       *
-       * The conversation pane that takes over in a second questions
-       * this key (`useAgentRunQuery`). Without data, it goes in phase
-       * “loading”: a spinner INSTEAD of the message and the composer, time
-       * of a round trip, right in the middle of the launch. But the session is HERE,
-       * as the server has just returned it — there is nothing to fetch.
-       * The conversation therefore opens directly on his thread.
-       */
-      queryClient.setQueryData(agentRunQueryKey(run.id), { run });
-      onLaunched(run);
       // This project becomes the default of the next composer (device memory).
       rememberAgentProject(projectId);
-      // The list of sessions does not pollute at rest: without invalidation, the page
-      // would only catch up with the new session on the next reload.
-      await queryClient.invalidateQueries({ queryKey: allAgentSessionsQueryKey });
+      router.push(started.detail_href);
     } catch (err) {
       // Refused (no linked deposit, quota, etc.): the run does not exist → we remove the
       // bubble rather than suggesting the launch.
@@ -325,23 +263,7 @@ export function SessionCompose({
         <span className="truncate text-sm font-medium">{tAgents("newButton")}</span>
       </AppContentHeader>
       <div className="min-h-0 flex-1">
-        {aiUnavailable ? (
-          <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
-            <div className="max-w-sm space-y-1">
-              <p className="text-base font-medium">
-                {tAssistant("providerUnavailableTitle")}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {tAssistant("providerUnavailableDescription")}
-              </p>
-            </div>
-            <Button asChild size="sm">
-              <Link href="/settings?tab=agent">
-                {tAssistant("providerUnavailableCta")}
-              </Link>
-            </Button>
-          </div>
-        ) : launchText ? (
+        {launchText ? (
           /* Mention pills LEAD SOMEWHERE, here as in the
  conversation ([agent-conversation.tsx]): without this provider, the
  optimistic bubble displays `@MIN-42` and the click does nothing — so
@@ -362,18 +284,9 @@ export function SessionCompose({
  the sending (the model, the reasoning and the branch, they are). */
           <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
             <p className="text-lg font-medium">{t("composeGreeting", { name })}</p>
-            {noRepoAnywhere ? (
-              /* No project has a deposit: there is no choice to offer, and
- the agent has nothing to clone. We say it here rather than letting
- an empty selector make it appear as a loading. */
-              <p className="max-w-sm text-sm text-muted-foreground">
-                {t("composeNoRepo")}
-              </p>
-            ) : (
-              <p className="max-w-sm text-sm text-muted-foreground">
-                {t("composeGreetingPrompt")}
-              </p>
-            )}
+            <p className="max-w-sm text-sm text-muted-foreground">
+              {t("composeGreetingPrompt")}
+            </p>
           </div>
         )}
       </div>
@@ -394,18 +307,8 @@ export function SessionCompose({
             // freely editable) and the button tooltip says what is missing —
             // choose a project, or connect one to a repository if there is one
             // no where to launch the agent.
-            sendDisabled={
-              aiUnavailable || !projectId || !cloudExecutionConfigured
-            }
-            sendDisabledTooltip={
-              aiUnavailable
-                ? tAssistant("providerUnavailableDescription")
-                : !cloudExecutionConfigured
-                ? t("errorExecutionBackendUnavailable")
-                : noRepoAnywhere
-                  ? t("composeNoRepo")
-                  : t("composeProjectTooltip")
-            }
+            sendDisabled={!projectId}
+            sendDisabledTooltip={t("composeProjectTooltip")}
             initialValue={initialText}
             placeholder={t("composePlaceholderFree")}
             contextSlot={

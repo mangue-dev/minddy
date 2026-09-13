@@ -1,13 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getLocale } from "next-intl/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { pickIssuePullRequests, type IssuePrRow } from "@/lib/server/agent/activity";
-import {
-  launchAgentRun,
-  type AgentLaunchIntent,
-  type LaunchResult,
-} from "@/lib/server/agent/launch";
+import type { AgentLaunchIntent } from "@/lib/server/agent/launch";
 import { parseAgentMentions } from "@/lib/agent-mentions";
 import {
   canReadConversationRecord,
@@ -16,9 +13,16 @@ import {
   type RunAnchors,
 } from "@/lib/server/agent/run-access";
 import { parseResourcesInput } from "@/lib/server/attachments";
-import { promptWithAttachments } from "@/lib/server/agent/prompt-attachments";
 import type { AttachmentInput } from "@/lib/types";
 import { agentRunCanResume } from "@/lib/agent-run-resumability";
+import {
+  buildAgentLaunchMessage,
+  isAgentLaunchMode,
+} from "@/lib/server/agent/launch-message";
+import {
+  numoIntentErrorResponse,
+  startNumoIntent,
+} from "@/lib/server/numo/start-intent";
 
 /** The `RUN_COLUMNS` columns this file needs to slice. */
 type RunRow = RunAnchors & {
@@ -29,9 +33,9 @@ type RunRow = RunAnchors & {
 /**
  * Code Agent Runs from an issue (MIN-46).
  * GET → lists the runs of the issue VISIBLE BY THE CALLER + his pull request.
- * POST → launches a run { prompt? } (“Launch an agent” button).
- * Access to the issue is verified via the client cookie (RLS); `launchAgentRun`
- * then does the pre-checks (linked deposit, quota/BYOK, run already active).
+ * POST → compatibility adapter that creates a common Numo conversation for
+ * the issue intent. Repository work can only start later through Numo's
+ * internal delegation tool.
  */
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -128,42 +132,23 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 const MAX_PROMPT_LENGTH = 20_000;
 const MAX_BRANCH_LENGTH = 255;
 
-const LAUNCH_ERROR_STATUS: Record<string, number> = {
-  issueNotFound: 404,
-  noRepo: 409,
-  unsupportedProvider: 409,
-  alreadyRunning: 409,
-  quotaExceeded: 402,
-  managedServiceUnavailable: 503,
-  executionBackendUnavailable: 503,
-  workerConfigurationManagedInSettings: 400,
-  noModelForProvider: 400,
-  providerEndpointUnavailableFromSandbox: 409,
-  localExecutionRetired: 410,
-  modelAbovePlan: 403,
-};
-
-function launchErrorResponse(result: Extract<LaunchResult, { ok: false }>) {
-  const status = LAUNCH_ERROR_STATUS[result.error] ?? 400;
-  return NextResponse.json(
-    {
-      error: result.error,
-      code: result.error,
-      run: result.run,
-      quota: result.quota,
-      modelLimit: result.modelLimit,
-    },
-    { status },
-  );
-}
-
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  const { data: issue } = await auth.supabase.from("issues").select("id").eq("id", id).maybeSingle();
+  const { data: issue } = await auth.supabase
+    .from("issues")
+    .select("id, project_id, number, title, plan, effort")
+    .eq("id", id)
+    .maybeSingle();
   if (!issue) return NextResponse.json({ error: "Issue not found" }, { status: 404 });
+  const { data: project } = await auth.supabase
+    .from("projects")
+    .select("id, key")
+    .eq("id", issue.project_id)
+    .maybeSingle();
+  if (!project) return NextResponse.json({ error: "Issue not found" }, { status: 404 });
 
   type LaunchBody = {
     prompt?: string;
@@ -209,28 +194,52 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Invalid attachments" }, { status: 400 });
   }
   const attachments = resources.filter((resource): resource is AttachmentInput => resource.kind !== "link");
-  const promptWithFiles = prompt
-    ? await promptWithAttachments(prompt, attachments)
-    : undefined;
-
-  const result = await launchAgentRun({
-    issueId: id,
-    userId: auth.user.id,
-    triggeredBy: "button",
-    prompt: promptWithFiles,
-    baseBranch,
-    // Framing (“Generate a plan” / “Check the plan”), control
-    // (“Check implementation”) and free instruction (“Custom”): the
-    // launch does not move the ticket. Everything else is worth “implementing”.
-    intent:
-      body.intent === "plan" || body.intent === "verify" || body.intent === "custom"
-        ? body.intent
-        : "implement",
-    promptMentions: parseAgentMentions(body.mentions),
-    localExec: body.localExec === true,
-    localWorktree: body.localWorktree === true,
-    localIssueContextConfirmed: body.localIssueContextConfirmed === true,
-  });
-  if (!result.ok) return launchErrorResponse(result);
-  return NextResponse.json({ run: result.run });
+  const requestedIntent =
+    body.intent === "plan" || body.intent === "verify" || body.intent === "custom"
+      ? body.intent
+      : "implement";
+  const message = isAgentLaunchMode(requestedIntent)
+    ? await buildAgentLaunchMessage({
+        mode: requestedIntent,
+        issue,
+        projectKey: project.key,
+        locale: await getLocale(),
+        extra: [prompt, baseBranch ? `Requested base branch: ${baseBranch}` : null]
+          .filter(Boolean)
+          .join("\n\n"),
+      })
+    : prompt;
+  if (!message) {
+    return NextResponse.json(
+      { error: "promptRequired", code: "promptRequired" },
+      { status: 400 },
+    );
+  }
+  try {
+    const started = await startNumoIntent({
+      supabase: auth.supabase,
+      userId: auth.user.id,
+      userMetadata: auth.user.user_metadata,
+      projectId: project.id,
+      prompt: message,
+      locale: await getLocale(),
+      source: "issue",
+      action: requestedIntent,
+      context: {
+        projectId: project.id,
+        issueId: issue.id,
+        issueIdentifier: `${project.key}-${issue.number}`,
+        issueTitle: issue.title,
+      },
+      mentions: parseAgentMentions(body.mentions),
+      attachments,
+    });
+    return NextResponse.json({
+      conversation: { id: started.conversationId },
+      turn: { id: started.turnId },
+      detail_href: started.detailHref,
+    }, { status: 202 });
+  } catch (error) {
+    return numoIntentErrorResponse(error);
+  }
 }

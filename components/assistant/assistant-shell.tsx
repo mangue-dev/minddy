@@ -131,6 +131,7 @@ export interface AssistantShellHandle {
       command?: AssistantCommandId;
       attachments?: ResourceInput[];
       skills?: AssistantSkillSelection[];
+      intent?: AssistantChatRequest["intent"];
     },
   ) => void;
   /** Pre-fill the composer without sending. */
@@ -313,6 +314,7 @@ export const AssistantShell = forwardRef<
                 ? { attachments: opts.attachments }
                 : {}),
               ...(opts?.skills?.length ? { skills: opts.skills } : {}),
+              ...(opts?.intent ? { intent: opts.intent } : {}),
             }),
       fill: (text) => chatInputRef.current?.fill(text),
     }),
@@ -327,6 +329,7 @@ export const AssistantShell = forwardRef<
       command?: AssistantCommandId,
       skills: AssistantSkillSelection[] = [],
       workerInput?: AssistantChatRequest["workerInput"],
+      intent?: AssistantChatRequest["intent"],
     ) => {
       if (!aiAvailability.loading && !aiAvailability.available) return;
       sendMessage(effectiveContextRef.current?.projectId ?? null, message, {
@@ -336,6 +339,7 @@ export const AssistantShell = forwardRef<
         command,
         skills,
         workerInput,
+        intent,
       });
     },
     [aiAvailability.available, aiAvailability.loading, sendMessage]

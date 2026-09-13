@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, cn, Spinner, toast } from "mangue-ui";
 import { GitPullRequest } from "lucide-react";
@@ -30,7 +31,6 @@ import {
   isAgentRunWorking,
   launchAgentRunApi,
   steerAgentRunApi,
-  type AgentRunSummary,
 } from "@/lib/agent-api";
 import {
   agentRunDiffQueryKey,
@@ -44,7 +44,6 @@ import {
   useIssueAgentRunsQuery,
 } from "@/lib/use-agent-runs";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
-import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { ModelBadge } from "@/components/model-badge";
 import { ModelCombobox } from "./model-combobox";
 import { BranchCombobox } from "./branch-combobox";
@@ -84,10 +83,8 @@ import { useRepositorySkills } from "@/lib/use-repository-skills";
  * context. At rest, the conversation CONTINUES thus, naturally — as
  * a cat. Only the LAST run of the outcome can be repeated; the previous ones
  * consult (the server applies the same rule).
- * • COLD (`compose`) — no run on the issue, or launch draft:
- * compose BLANK (the user says what he wants, no pre-written goal) +
- * model picker. Send launches a NEW run, which will inherit the server side of the
- *    branche/PR de l'issue.
+ * • COLD (`compose`) — a legacy issue compose link. Sending now creates a
+ * common Numo conversation with issue context rather than a worker run.
  *
  * As long as the component is `active`, a heartbeat refreshes the idle clock
  * of the run so that the sandbox is not cut while reading or writing.
@@ -107,7 +104,6 @@ export function AgentConversation({
   active = true,
   headerTitle,
   headerActions,
-  onLaunched,
   initialComposeText,
   composeIntent = "implement",
 }: {
@@ -141,12 +137,6 @@ export function AgentConversation({
   /** Action block to the right of the header. */
   headerActions?: ReactNode;
   /**
-   * Called as soon as a NEW run has just been launched from the compose phase (before
-   * even if the list of sessions has not caught up). The Agents page uses it
-   * to retain the id of the run during the transition compose → live.
-   */
-  onLaunched?: (run: AgentRunSummary) => void;
-  /**
    * Pre-written prompt that initiates the compose in phase compose (request
    * implementation adapted to the outcome). One-shot: read when editing the composer, then
    * freely editable. Without it, the composer starts empty (“New run”, modal).
@@ -161,6 +151,7 @@ export function AgentConversation({
   composeIntent?: AgentComposeIntent;
 }) {
   const t = useTranslations("Agent");
+  const router = useRouter();
   const tToolCall = useTranslations("ToolCall");
   const queryClient = useQueryClient();
   const { mentionables, links, onMentionQuery } =
@@ -204,9 +195,6 @@ export function AgentConversation({
   // Explicitly open run: `initialRunId`, a run chosen from the history,
   // or the one we just launched. `null` → we fall back on the ACTIVE run of the outcome.
   const [selectedId, setSelectedId] = useState<string | null>(initialRunId);
-  // Run just launched: the query has not yet returned it, it has been displayed since
-  // POST response → instantaneous live toggle, without phase compose flash.
-  const [launched, setLaunched] = useState<AgentRunSummary | null>(null);
   // “Launch a new agent” requested explicitly: forces the phase to even compose
   // if the issue has past runs (otherwise we would reopen the last one).
   const [composing, setComposing] = useState(initialCompose);
@@ -214,10 +202,8 @@ export function AgentConversation({
   const [pendingMessages, setPendingMessages] = useState<
     Array<{ id: string; text: string; mentions: AssistantMention[] }>
   >([]);
-  // 1st message of a session being created: the launch POST does the
-  // pre-checks (deposit, quota, model) before rendering the session, and during this
-  // time there is nothing to display — the message has left the composer and does not exist
-  // nowhere yet. We hold it here to show it right away.
+  // Keep the first message visible while the legacy adapter creates the common
+  // Numo conversation and redirects to it.
   const [launchText, setLaunchText] = useState<string | null>(null);
   const [launchMentions, setLaunchMentions] = useState<AssistantMention[]>([]);
   // “Create PR” request sent: deactivates the button while the agent
@@ -248,12 +234,7 @@ export function AgentConversation({
   );
   const runs = noteRunId ? (noteRun ? [noteRun] : []) : issueRuns;
   const loading = noteRunId ? noteLoading : issueLoading;
-  // The run just launched is active but not yet in `runs`: without it, we
-  // would suggest “launch a new agent” on an already occupied issue (→ 409).
-  const knownRuns =
-    launched && !runs.some((r) => r.id === launched.id)
-      ? [launched, ...runs]
-      : runs;
+  const knownRuns = runs;
 
   const activeRun = knownRuns.find((r) => isAgentRunActive(r.status)) ?? null;
   // Resolution of the run displayed: the one designated, otherwise the one working,
@@ -552,8 +533,6 @@ export function AgentConversation({
     return () => clearInterval(timer);
   }, [active, liveRun?.id]);
 
-  // Execution capabilities for the compose phase.
-  const { cloudExecutionConfigured } = useAgentModelsQuery();
   // BASE branch (compose phase, new line): "" = the defect of the deposit.
   // The choice is only made at launch and frozen afterwards.
   const [baseBranch, setBaseBranch] = useState("");
@@ -574,19 +553,12 @@ export function AgentConversation({
     // to launch here.
     if (launching || !issueId) return;
     const prompt = message.trim();
-    if (!cloudExecutionConfigured) {
-      toast.error(t("errorExecutionBackendUnavailable"));
-      return;
-    }
     setLaunching(true);
-    // OPTIMISTIC display of the 1st message, as for a follow-up: the POST continues
-    // the pre-checks (issue, deposit, quota, model resolution) before submitting the
-    // session, and during this time the message does not exist anywhere — neither in the
-    // compose (emptied on sending), nor in the thread (no session to display).
+    // Keep the submitted message visible until the common Numo conversation is ready.
     if (prompt) setLaunchText(prompt);
     setLaunchMentions(mentions);
     try {
-      const { run: started } = await launchAgentRunApi(issueId, {
+      const started = await launchAgentRunApi(issueId, {
         prompt: prompt || undefined,
         // The server ignores it if the lineage already inherits a branch (the picker
         // is then locked — belt and shoulder straps on the racing side).
@@ -595,16 +567,10 @@ export function AgentConversation({
         mentions,
         attachments,
       });
-      // The new session becomes the open session → immediate live switch. Her
-      // `prompt` carries the same text: the thread displays the SAME bubble, without interruption.
-      setLaunched(started);
-      setSelectedId(started.id);
       setComposing(false);
-      onLaunched?.(started);
-      await refreshRuns();
+      router.push(started.detail_href);
     } catch (err) {
-      // Refused (quota, no deposit, a session is already running...): the session does not exist
-      // not → we remove the bubble rather than suggesting the launch.
+      // The conversation was not created, so remove the optimistic message.
       setLaunchText(null);
       setLaunchMentions([]);
       toast.error(agentErrorMessage(err));
@@ -968,8 +934,6 @@ export function AgentConversation({
                   skills={repositorySkills.skills}
                   loadSkill={repositorySkills.load}
                   disabled={launching}
-                  sendDisabled={!cloudExecutionConfigured}
-                  sendDisabledTooltip={t("errorExecutionBackendUnavailable")}
                   initialValue={initialComposeText}
                   placeholder={t("composePlaceholder")}
                   contextSlot={

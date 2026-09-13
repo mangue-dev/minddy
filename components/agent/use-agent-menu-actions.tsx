@@ -177,7 +177,7 @@ export function useAgentMenuActions({
         label: t("actionImplement"),
         keywords: implementKeywords,
         icon: <Code2 className="size-4" />,
-        ...(hasSession ? {} : { shortcut: "⇧A" }),
+        shortcut: "⇧A",
         onSelect: onImplementWithAgent,
       },
       verifyAction("agent-verify", onVerifyWithAgent),
@@ -192,7 +192,6 @@ export function useAgentMenuActions({
             label: tAgent("openAgent"),
             keywords: ["agent", "open", "ouvrir", "session", "code", "ai", "numo"],
             icon: <NumoIcon className="size-4" />,
-            shortcut: "⇧A",
             onSelect: onOpenSession,
           },
           {

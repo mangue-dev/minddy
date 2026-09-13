@@ -26,16 +26,13 @@ describe("Numo pull-request review execution", () => {
     expect(source).not.toContain("LocalIssueRunConfirmation");
   });
 
-  it("gates review and correction actions on server execution", () => {
-    expect(source).toContain(
-      "const reviewExecutionAvailable = cloudExecutionConfigured;",
-    );
-    expect(source.match(/reviewUpToDate \|\| !reviewExecutionAvailable/g)).toHaveLength(3);
-
-    const relaunchGate = source.slice(
-      source.indexOf("const canRelaunch ="),
-      source.indexOf("// `item` comes from the list"),
-    );
-    expect(relaunchGate).toContain("reviewExecutionAvailable");
+  it("routes review and correction requests through Numo", () => {
+    expect(source).toContain('source: "pull_request"');
+    expect(source).toContain('action: "review"');
+    expect(source).toContain('action: "fix"');
+    expect(source).toContain("pullRequestId: item.prId");
+    expect(source).not.toContain("requestPullRequestAiReviewApi");
+    expect(source).not.toContain("reviewExecutionAvailable");
+    expect(source).not.toContain("cloudExecutionConfigured");
   });
 });
