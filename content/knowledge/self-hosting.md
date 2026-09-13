@@ -5,7 +5,7 @@ summary: Choose a supported topology, install minddy, configure its services, an
 category: deployment
 audience: both
 tags: [self-hosting, self host, deployment, docker, supabase, installation, local, server, numo]
-lastReviewed: 2026-09-09
+lastReviewed: 2026-09-13
 ---
 
 minddy is open source under the GNU AGPL v3.0 only. The only supported distribution is the public `mangue-dev/minddy` repository and its immutable tagged release assets. Do not use a moving branch, an unofficial deployment repository, or a third-party image. The exact release row in `deploy/self-hosted/compatibility.json` is the source of truth for the supported image digest, Supabase Compose revision, host architectures, and Docker minimums.
@@ -44,7 +44,7 @@ The installer generates `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_K
 
 ## Numo, routines, and server execution
 
-The reference server profiles include interactive Numo runs, scheduled routines, and the built-in Docker sandbox runner. They use:
+The reference server profiles include Numo conversations, scheduled requests, delegated repository work, and the built-in Docker sandbox runner. They use:
 
 ```dotenv
 AGENT_EXECUTION_BACKEND=self-hosted

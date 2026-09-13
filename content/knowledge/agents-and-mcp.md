@@ -1,16 +1,20 @@
 ---
 id: agents-and-mcp
-title: Agents and MCP
-summary: Connect external agents to minddy and give Numo access to personal MCP tools.
+title: Numo and MCP
+summary: Work with Numo in minddy and connect external agents or personal MCP tools.
 category: automation
 audience: both
 tags: [agent, mcp, oauth, codex, claude, cursor]
-lastReviewed: 2026-09-09
+lastReviewed: 2026-09-13
 ---
 
-minddy exposes an OAuth-based MCP server. Compatible coding agents can read issues and their context, update status and properties, write plans and comments, create linked issues and objectives, and work with project pages. The MCP setup page provides the endpoint and setup instructions for supported clients.
+Numo is minddy's built-in conversation for understanding and acting on project work. The **Numo** page is the main place to start or find conversations. The floating Numo button is a compact view of that same experience: it adds the current page as context, and a conversation started there remains available on the Numo page. Contextual actions such as **Hand to Numo** also enter this common conversation instead of opening a separate agent destination.
 
-Numo is the assistant built into minddy. The optional code agent works from an issue: in the cloud it clones a linked GitHub or GitLab repository into an isolated environment, and the desktop app can also run it on a local folder the user attaches, where the changes stay in the working copy. It can plan, implement, run checks, and attach its pull request to the issue. The MCP server and Numo are available on every plan; available AI usage and model choices depend on the account plan or an optional personal API key.
+Choose the conversation model and reasoning level in Numo's composer. When a request needs repository work, Numo delegates it to a code worker and shows its progress, changed files, checks, and pull request inside the conversation. The worker always uses the code model and reasoning level configured in **Account settings → AI**. It clones the project's linked GitHub or GitLab repository into the configured server sandbox; it does not run in a folder on the user's computer.
+
+Routines are scheduled Numo requests. Each occurrence starts a new Numo conversation with the saved instruction and project context. Numo can use Minddy tools directly and delegate repository work only when needed. The conversation records the result and any request for user input.
+
+minddy also exposes an OAuth-based MCP server for external tools. Compatible coding agents can read issues and their context, update status and properties, write plans and comments, create linked issues and objectives, and work with project pages. The MCP setup page provides the endpoint and setup instructions for supported clients. The MCP server and Numo are available on every plan; available AI usage and model choices depend on the account plan or an optional personal API key.
 
 ## Connect Numo to an MCP server
 
@@ -43,20 +47,20 @@ are not supported by this server-side connection flow.
 
 Use the connection's menu to edit, test, disable or remove it. **Minddy MCP** is
 the separate account tab for connecting external assistants such as Claude or
-Codex to Minddy. Connections for Numo belong to your account
-and work across projects in Numo chat and agent sessions, including local agents.
+Codex to Minddy. Connections for Numo belong to your account and work across
+projects in Numo conversations and scheduled requests.
 Only connect servers you trust with the information and actions you ask Numo to
 send. Remote descriptions and results cannot authorize additional actions.
 
 Project routines use the project owner's connections, including saved OAuth
-refresh tokens. An agent session steered by another member cannot use the
+refresh tokens. A conversation continued by another member cannot use the
 original owner's personal connections. A routine whose project ownership has
-changed cannot use the previous owner's connections; start a new routine session
+changed cannot use the previous owner's connections; start a new occurrence
 under the current owner.
 
 Edit, disable, or remove a connection at any time. Disabling or removing stops
 new calls; a request already sent may still finish. Secrets are encrypted with
-`AI_KEY_ENCRYPTION_SECRET` and never returned to the browser or agent sandbox.
+`AI_KEY_ENCRYPTION_SECRET` and never returned to the browser or code-worker sandbox.
 Blank credential fields preserve existing values. Changing the URL clears saved
 credentials and headers. Use **Remove saved token** to clear a bearer token, or
 enter `{}` in custom headers to remove them. Reconnect if OAuth access expires or

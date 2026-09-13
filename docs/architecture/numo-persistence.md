@@ -1,5 +1,14 @@
 # Numo conversation persistence
 
+The product presents one Numo experience: the full page, floating panel,
+contextual actions, and scheduled requests all open or continue conversations.
+People choose a conversation model and reasoning level in the composer. When a
+request needs repository work, Numo delegates it to an isolated server sandbox
+using the account's configured code model and reasoning level, then shows that
+work inside the conversation. The `assistant`, `agent`, `session`, and `run`
+terms below name historical storage and execution records; they are not separate
+user-facing destinations or local execution choices.
+
 MIN-514 adds a compatibility layer over the two historical stores. It does not
 copy messages, rehydrate worker journals, or reinterpret worker summaries as
 new assistant replies. The legacy tables remain the write authority during this

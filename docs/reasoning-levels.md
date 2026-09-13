@@ -1,4 +1,4 @@
-# The reasoning of the code agent, provider by provider
+# Numo code-worker reasoning, provider by provider
 
 > **Date**: 2026-07-29, reviewed on 2026-08-11 · **Ticket**: MIN-122
 >
@@ -71,7 +71,7 @@ the adapter sends `reasoning_effort: "none"`, regardless of the level chosen.
 OpenAI rejects this combination with active effort and recommends Responses
 to maintain both reasoning, tools and multi-turn.
 
-**The default is `medium`** (“Standard” in the UI): a code agent gains at
+**The default is `medium`** (“Standard” in the UI): Numo's code worker gains at
 think a little before acting. `off` was the default on the day of delivery of
 MIN-122, to not change anything in the existing behavior while observing the
 field on the real; this was not the best setting for the user.
