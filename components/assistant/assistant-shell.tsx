@@ -32,6 +32,7 @@ import {
   SheetTitle,
 } from "mangue-ui";
 import { NumoIcon } from "@/components/numo-icon";
+import { SecondarySidebar } from "@/components/secondary-sidebar";
 import {
   Conversation,
   ConversationContent,
@@ -39,10 +40,10 @@ import {
 } from "@/components/ai-elements/conversation";
 import { useAssistantChatContext } from "@/lib/assistant-chat-context";
 import {
-  ChatInput,
   type ChatInputContextAttachments,
   type ChatInputHandle,
 } from "@/components/assistant/chat-input";
+import { AssistantChatInput } from "@/components/assistant/assistant-chat-input";
 import { ConversationSettings } from "@/components/assistant/conversation-settings";
 import {
   ChatMessage,
@@ -179,15 +180,26 @@ export const AssistantShell = forwardRef<
   const tSeed = useTranslations("Seed");
   const aiAvailability = useAiSurfaceAvailability("assistant");
 
-  // The conversation lives ABOVE the panel (AssistantChatProvider): it
-  // survives the closing of the Sheet, which dismantles this shell. Here, we don't do
-  // than return it.
-  const { state, sendMessage, loadConversation, reset, retry, abort, restoring, pinned, setPinned } =
-    useAssistantChatContext();
+  // The controller and composer state live above both projections. Unmounting
+  // this shell therefore moves the conversation without resetting it.
+  const {
+    state,
+    sendMessage,
+    loadConversation,
+    reset,
+    retry,
+    abort,
+    restoring,
+    requestRestore,
+    pinned,
+    setPinned,
+  } = useAssistantChatContext();
   const chatInputRef = useRef<ChatInputHandle>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+
+  useEffect(() => requestRestore(), [requestRestore]);
   // Portal target for the history popover. When the shell lives inside a modal
   // Sheet/Dialog, Radix's `react-remove-scroll` blocks wheel/touch scrolling on
   // anything portaled to <body> (outside its allowed subtree). Resolving the
@@ -723,9 +735,9 @@ export const AssistantShell = forwardRef<
     <div className="flex h-full overflow-hidden">
       {/* Permanent sidebar — only outside compact mode. */}
       {!compact && (
-        <div className="hidden w-64 shrink-0 flex-col border-r border-border md:flex">
+        <SecondarySidebar title={t("title")} hiddenOnMobile>
           {sidebarContent}
-        </div>
+        </SecondarySidebar>
       )}
 
       {/* Mobile sidebar sheet — only outside compact mode (compact uses Popover). */}
@@ -980,7 +992,7 @@ export const AssistantShell = forwardRef<
                 />
               )}
               <div className={cn(activeAskUser && "hidden")}>
-                <ChatInput
+                <AssistantChatInput
                   onNavigate={onClose}
                   ref={chatInputRef}
                   onSend={handleSend}
