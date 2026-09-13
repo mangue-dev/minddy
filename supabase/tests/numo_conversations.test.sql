@@ -127,6 +127,10 @@ INSERT INTO public.numo_routine_occurrences (
   '51400000-0000-4000-8000-000000000028',
   '51400000-0000-4000-8000-000000000062'
 );
+SELECT pg_temp.assert_numo(
+  to_regclass('public.numo_routine_occurrences_conversation_id_idx') IS NOT NULL,
+  'routine conversation lookup has an index'
+);
 INSERT INTO public.agent_messages (id, conversation_id, run_id, role, content, source) VALUES
  ('51400000-0000-4000-8000-000000000041', '51400000-0000-4000-8000-000000000020', '51400000-0000-4000-8000-000000000030', 'assistant', 'Original worker summary', 'assistant_summary'),
  ('51400000-0000-4000-8000-000000000043', '51400000-0000-4000-8000-000000000021', '51400000-0000-4000-8000-000000000032', 'assistant', 'Linked worker summary', 'assistant_summary');
