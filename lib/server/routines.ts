@@ -3,7 +3,6 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { softDeleteItem } from "@/lib/server/trash";
-import { getProjectLink } from "@/lib/server/git/repo-links";
 import { checkAgentQuota } from "@/lib/server/agent/quota";
 import type { AssistantMention } from "@/lib/assistant-types";
 import {
@@ -24,20 +23,18 @@ import {
 /**
  * The FACTORY of routines (MIN-185) — just one, for four doors.
  *
- * The wizard, the cat Numo, the agent Numo and the MCP all know how to set a
- * routine; none of the four validate anything. Everything is here: the
- * property guard, the linked deposit, the consistency of the cadence, the ceiling of
- * plan model, the calculation of the next pass. Same doctrine as the MIN-170 ticket factory
- * — four similar validations end up diverging, and it's the least traveled door that lets through.
+ * The wizard, Numo, and MCP tools all know how to create a routine; none of
+ * those entry points owns validation. Project ownership, schedule consistency,
+ * spending caps, and the next occurrence calculation all live here.
  *
  * **Only the OWNER of the project creates, modifies or deletes a routine.** A
  * routine commits a budget every Monday morning without anyone clicking:
  * it is up to the person who pays to set it. A member SEES it (read RLS is
  * `can_access_project`) and reads its executions, but is denied writing
  * in `403 ownerOnly` — just like project settings
- * (`update-project.ts`) and inviting members (`members.ts`) *
- * **`ensureModelInPlan` is called AT REGISTRATION**, not at launch: an out-of-plan model must be refused in front of someone, not at 1 p.m. in a cron
- * for which no one reads the logs.
+ * (`update-project.ts`) and inviting members (`members.ts`). A repository is
+ * deliberately not required here because many Numo routine tasks do not need
+ * code delegation.
  */
 
 export interface Routine {
@@ -107,19 +104,16 @@ export type RoutineResult<T> =
 /** Writing terminals — beyond that we truncate, like everywhere else (MIN-118). */
 const MAX_TITLE_LENGTH = 120;
 const MAX_PROMPT_LENGTH = 20_000;
-const MAX_BRANCH_LENGTH = 255;
 
 /**
- * What ONE pass of this routine is allowed to spend, in USD — the
- * `budget_usd` placed on its run, which the loop makes enforceable.
+ * What one occurrence of this routine may spend, in USD. The cap is carried by
+ * the parent Numo turn and shared with any workers it delegates.
  *
  * `null` = no own ceiling, and this is true in two cases :
  * - **100%**, the setting which says "only my quota limits me" (the old
  * behavior, kept accessible);
  * - **BYOK**, where the budget of the plan no longer limits anything: the user pays his
- * tokens, and a percentage of a budget which does not concern him would pose
- * a cap that he did not ask for. Same doctrine as the model ceiling
- * (`ensureModelInPlan`), which also only applies to the minddy quota.
+ * tokens, and a percentage of the included plan budget does not apply.
  *
  * The basis is the PLAN budget and not the rest of the month: a ceiling which
  * would melt with consumption would make the routine work less and less less
@@ -152,8 +146,7 @@ export interface CreateRoutineInput {
  */
   prompt: string;
   promptMentions?: AssistantMention[] | null;
-  baseBranch?: string | null;
-  /** Plafond d'un passage, en % du budget mensuel (1–100). Absent → 15. */
+  /** Per-occurrence cap as a percentage of monthly usage (1–100). Default: 15. */
   maxSpendPercent?: number | null;
   frequency: string;
   hour: number;
@@ -253,11 +246,6 @@ export async function createRoutine(
   const prompt = input.prompt?.trim() ?? "";
   if (!prompt) return { ok: false, status: 400, errorKey: "promptRequired" };
 
-  // Without a linked repository, the routine would have nothing to clone: ​​we rather refuse here
-  // than letting a routine break with each pass.
-  const link = await getProjectLink(input.projectId);
-  if (!link) return { ok: false, status: 409, errorKey: "noRepo" };
-
   const schedule = toSchedule(input);
   let next: Date;
   try {
@@ -283,9 +271,6 @@ export async function createRoutine(
       title,
       prompt: prompt.slice(0, MAX_PROMPT_LENGTH),
       prompt_mentions: input.promptMentions?.length ? input.promptMentions : [],
-      base_branch: input.baseBranch?.trim()
-        ? input.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
-        : null,
       // Brought back within its limits rather than refused: a poorly written ceiling by a
       // of the four doors should not prevent the routine from being established — the CHECK
       // from the base, he would not forgive.
@@ -319,8 +304,7 @@ export interface UpdateRoutineInput {
   /** Rewrite the instruction REDOES the title: cf. `titleFor`. */
   prompt?: string;
   promptMentions?: AssistantMention[] | null;
-  baseBranch?: string | null;
-  /** Nouveau plafond d'un passage, en % du budget mensuel (1–100). */
+  /** New per-occurrence cap as a percentage of monthly usage (1–100). */
   maxSpendPercent?: number | null;
   frequency?: string;
   hour?: number;
@@ -384,11 +368,6 @@ export async function updateRoutine(
     updates.prompt_mentions = input.promptMentions?.length
       ? input.promptMentions
       : [];
-  }
-  if ("baseBranch" in input) {
-    updates.base_branch = input.baseBranch?.trim()
-      ? input.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
-      : null;
   }
   if (input.maxSpendPercent != null) {
     updates.max_spend_percent = clampSpendPercent(input.maxSpendPercent);

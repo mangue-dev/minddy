@@ -2,6 +2,80 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { insertNotifications } from "@/lib/server/notifications";
+import { afterOrNow } from "@/lib/server/after-safe";
+import type { NumoTurn } from "@/lib/server/numo/turns";
+
+/**
+ * Observe the parent Numo turn of a routine occurrence. Delegated code is only
+ * one intermediate action: the routine is complete, failed, or waiting only
+ * when the parent conversation reaches that state.
+ */
+export function notifyRoutineOfNumoTurn(turn: NumoTurn): void {
+  if (!turn.intent.routineId) return;
+  if (![
+    "completed",
+    "failed",
+    "stopped",
+    "waiting_input",
+  ].includes(turn.status)) return;
+
+  afterOrNow(async () => {
+    try {
+      const service = getServiceClient();
+      const { data: occurrence } = await service
+        .from("numo_routine_occurrences")
+        .select("id, routine_id, conversation_id")
+        .eq("conversation_id", turn.conversation_id)
+        .maybeSingle();
+      if (!occurrence) return;
+      const { data: routine } = await service
+        .from("agent_routines")
+        .select("id, owner_id, project_id")
+        .eq("id", occurrence.routine_id)
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (!routine?.owner_id) return;
+
+      const failed = turn.status === "failed" || turn.status === "stopped";
+      if (turn.status !== "waiting_input") {
+        await service
+          .from("agent_routines")
+          .update({ last_error: failed ? "launchFailed" : null })
+          .eq("id", routine.id);
+      }
+
+      const { data: delegated } = await service
+        .from("agent_runs")
+        .select("id, conversation_id, pr_number")
+        .eq("parent_numo_turn_id", turn.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      await insertNotifications(
+        service,
+        [{
+          user_id: routine.owner_id,
+          project_id: routine.project_id,
+          type: turn.status === "waiting_input"
+            ? "agent_question"
+            : failed
+              ? "agent_failed"
+              : delegated?.pr_number != null ? "agent_done" : "routine_done",
+          issue_id: null,
+          routine_id: routine.id,
+          agent_conversation_id: delegated?.conversation_id ?? null,
+          numo_conversation_id: occurrence.conversation_id,
+          numo_work_id: delegated?.id ?? null,
+          actor_id: null,
+          via_assistant: true,
+        }],
+        { replaceUnread: true },
+      );
+    } catch (error) {
+      console.error("[routine-hooks] Numo occurrence notification failed:", error);
+    }
+  });
+}
 
 /**
  * The END OF PASS hook of a routine (MIN-185).

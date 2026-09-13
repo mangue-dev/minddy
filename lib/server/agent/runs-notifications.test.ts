@@ -151,6 +151,21 @@ describe("agent run notifications", () => {
     expect(h.notifications).toHaveLength(0);
   });
 
+  it("does not finish a routine when only its delegated worker finishes", async () => {
+    h.returnedRun = {
+      ...terminalRun,
+      parent_numo_conversation_id: "22222222-2222-4222-8222-222222222222",
+      parent_numo_turn_id: "33333333-3333-4333-8333-333333333333",
+    };
+
+    await stampRunResult("run-1", { status: "completed" });
+    await Promise.all(h.background);
+
+    expect(h.routineNotifications).toHaveLength(0);
+    expect(h.routineStamps).toHaveLength(0);
+    expect(h.resumeNumo).toHaveBeenCalledOnce();
+  });
+
   it("still notifies the owner for an ordinary agent run", async () => {
     await notifyAgentRun({ ...terminalRun, routine_id: null }, "agent_done");
 

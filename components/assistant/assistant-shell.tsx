@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import {
+  CalendarClock,
   History,
   Lightbulb,
   ListTodo,
@@ -177,6 +178,7 @@ export const AssistantShell = forwardRef<
   // reading column to use more of the larger surface.
   const convoMaxW = isExpanded ? "max-w-4xl" : "max-w-3xl";
   const t = useTranslations("Assistant");
+  const tRoutines = useTranslations("Routines");
   const tc = useTranslations("Common");
   const tToolCall = useTranslations("ToolCall");
   const tSeed = useTranslations("Seed");
@@ -793,6 +795,28 @@ export const AssistantShell = forwardRef<
  message would unmount it, the focus would go to <body> and the
  FocusScope of the Sheet would place it on the shell (focus halo). */
           <>
+            {state.routineOccurrence ? (
+              <div className="shrink-0 border-b border-border px-4 py-2">
+                <Link
+                  href={`/routines?routine=${encodeURIComponent(state.routineOccurrence.routine_id)}`}
+                  className={cn(
+                    "mx-auto flex w-full items-center gap-2 text-xs text-muted-foreground hover:text-foreground",
+                    convoMaxW,
+                  )}
+                >
+                  <CalendarClock className="size-3.5" aria-hidden />
+                  <span>{tRoutines("routineOccurrence")}</span>
+                  <span aria-hidden>·</span>
+                  <span>
+                    {tRoutines(
+                      state.routineOccurrence.origin === "scheduled"
+                        ? "runOriginScheduled"
+                        : "runOriginManual",
+                    )}
+                  </span>
+                </Link>
+              </div>
+            ) : null}
             {hasMessages ? (
               <Conversation className="min-h-0 flex-1" anchor={scrollAnchor}>
                 <ConversationContent
@@ -991,26 +1015,36 @@ export const AssistantShell = forwardRef<
             ) : (
               /* Empty state — a centered set of useful first actions. */
               <div className="flex flex-1 items-center justify-center px-4">
-                <div className="grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
-                  {STARTERS.map(({ key, icon: Icon, iconClassName }) => {
-                    const title = t(`starter.${key}.title` as const);
-                    const prompt = t(`starter.${key}.prompt` as const);
-                    return (
-                      <Button
-                        key={key}
-                        className="h-auto min-h-32 w-full flex-col items-start justify-between gap-8 rounded-xl px-5 py-5 text-left whitespace-normal"
-                        onClick={() => chatInputRef.current?.fill(prompt)}
-                        type="button"
-                        variant="outline"
-                      >
-                        <Icon
-                          className={cn("size-5 shrink-0", iconClassName)}
-                          aria-hidden
-                        />
-                        <span className="text-sm leading-5">{title}</span>
-                      </Button>
-                    );
-                  })}
+                <div className="flex w-full max-w-2xl flex-col gap-4">
+                  {state.error ? (
+                    <div
+                      className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+                      role="alert"
+                    >
+                      {state.error}
+                    </div>
+                  ) : null}
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {STARTERS.map(({ key, icon: Icon, iconClassName }) => {
+                      const title = t(`starter.${key}.title` as const);
+                      const prompt = t(`starter.${key}.prompt` as const);
+                      return (
+                        <Button
+                          key={key}
+                          className="h-auto min-h-32 w-full flex-col items-start justify-between gap-8 rounded-xl px-5 py-5 text-left whitespace-normal"
+                          onClick={() => chatInputRef.current?.fill(prompt)}
+                          type="button"
+                          variant="outline"
+                        >
+                          <Icon
+                            className={cn("size-5 shrink-0", iconClassName)}
+                            aria-hidden
+                          />
+                          <span className="text-sm leading-5">{title}</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}

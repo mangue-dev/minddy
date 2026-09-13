@@ -22,7 +22,6 @@ export const runtime = "nodejs";
 type RouteContext = { params: Promise<{ id: string }> };
 
 const MAX_PROMPT_LENGTH = 20_000;
-const MAX_SHORT_FIELD = 255;
 
 function str(value: unknown, max: number): string | undefined {
   return typeof value === "string" ? value.trim().slice(0, max) : undefined;
@@ -83,9 +82,6 @@ export async function PATCH(request: NextRequest, ctx: RouteContext) {
       : {}),
     ...(body.promptMentions !== undefined
       ? { promptMentions: parseRoutinePromptMentions(body.promptMentions) }
-      : {}),
-    ...(body.baseBranch !== undefined
-      ? { baseBranch: str(body.baseBranch, MAX_SHORT_FIELD) || null }
       : {}),
     ...(body.maxSpendPercent !== undefined
       ? { maxSpendPercent: num(body.maxSpendPercent) }

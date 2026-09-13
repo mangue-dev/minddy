@@ -42,7 +42,6 @@ import {
   PrStateBadge,
 } from "@/components/pull-requests/pr-state-badge";
 import { agentSessionStatusKey } from "@/components/agents/agent-session-status";
-import { BranchCombobox } from "@/components/agent/branch-combobox";
 import { RoutinePromptField } from "@/components/routines/routine-prompt-field";
 import { SettingsRow } from "@/components/settings/settings-ui";
 import { RoutineScheduleFields } from "@/components/routines/routine-schedule-fields";
@@ -73,7 +72,7 @@ import {
   weekdayName,
   type RoutineSchedule,
 } from "@/lib/routine-schedule";
-import type { AgentRunSummary } from "@/lib/agent-api";
+import type { RoutineRunSummary } from "@/lib/routines-api";
 import { formatRoutineRunDuration } from "@/lib/routine-run-metrics";
 import {
   Tooltip,
@@ -145,7 +144,6 @@ export function RoutineDetail({
   const router = useRouter();
   const queryClient = useQueryClient();
   const {
-    cloudExecutionConfigured,
     routineSchedulingConfigured,
     loading: agentCapabilitiesLoading,
   } = useAgentModelsQuery();
@@ -181,8 +179,17 @@ export function RoutineDetail({
     setOpenRunId(null);
     setDraft(null);
   }, [routine.id]);
-  const openRun: AgentRunSummary | null =
+  const openRun: RoutineRunSummary | null =
     runs.find((r) => r.id === openRunId) ?? null;
+  const openRoutineRun = (run: RoutineRunSummary) => {
+    if (run.numo_conversation_id) {
+      router.push(
+        `/agents?conversation=${encodeURIComponent(run.numo_conversation_id)}`,
+      );
+      return;
+    }
+    setOpenRunId(run.id);
+  };
 
   /**
    * The next passage reads in the LIST of executions, at the head — it is
@@ -213,7 +220,6 @@ export function RoutineDetail({
     await patch({
       prompt: draft.prompt.trim(),
       promptMentions: draft.promptMentions,
-      baseBranch: draft.baseBranch || null,
       maxSpendPercent: draft.spendCap,
       frequency: draft.schedule.frequency,
       hour: draft.schedule.hour,
@@ -230,10 +236,6 @@ export function RoutineDetail({
   };
 
   const runNow = async () => {
-    if (!cloudExecutionConfigured) {
-      toast.error(t("unavailableExecutionBackend"));
-      return;
-    }
     setBusy(true);
     try {
       await runRoutineNowApi(routine.id);
@@ -270,15 +272,9 @@ export function RoutineDetail({
   const toggleEnabled = (enabled: boolean) => {
     if (
       enabled &&
-      (!cloudExecutionConfigured || !routineSchedulingConfigured)
+      !routineSchedulingConfigured
     ) {
-      toast.error(
-        t(
-          !cloudExecutionConfigured
-            ? "unavailableExecutionBackend"
-            : "unavailableScheduler",
-        ),
-      );
+      toast.error(t("unavailableScheduler"));
       return;
     }
     const seq = ++toggleSeq.current;
@@ -452,7 +448,7 @@ export function RoutineDetail({
                   busy ||
                   agentCapabilitiesLoading ||
                   (!routine.enabled &&
-                    (!cloudExecutionConfigured || !routineSchedulingConfigured))
+                    !routineSchedulingConfigured)
                 }
                 onCheckedChange={toggleEnabled}
               />
@@ -469,11 +465,7 @@ export function RoutineDetail({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  disabled={
-                    busy ||
-                    agentCapabilitiesLoading ||
-                    !cloudExecutionConfigured
-                  }
+                  disabled={busy}
                   onSelect={() => void runNow()}
                 >
                   <Play className="size-4" />
@@ -519,15 +511,11 @@ export function RoutineDetail({
             </p>
 
             {!agentCapabilitiesLoading &&
-            (!cloudExecutionConfigured || !routineSchedulingConfigured) ? (
+            !routineSchedulingConfigured ? (
               <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
                 <AlertTriangle className="size-3.5 shrink-0" />
                 <span>
-                  {t(
-                    !cloudExecutionConfigured
-                      ? "unavailableExecutionBackend"
-                      : "unavailableScheduler",
-                  )}
+                  {t("unavailableScheduler")}
                 </span>
               </p>
             ) : null}
@@ -550,7 +538,6 @@ export function RoutineDetail({
             {/* The instruction, rendered and folded (see `RoutinePrompt`). */}
             <RoutinePrompt
               projectId={routine.project_id}
-              baseBranch={routine.base_branch}
               prompt={routine.prompt}
               promptMentions={routine.prompt_mentions ?? []}
             />
@@ -622,7 +609,7 @@ export function RoutineDetail({
                             return (
                               <tr
                                 key={run.id}
-                                onClick={() => setOpenRunId(run.id)}
+                                onClick={() => openRoutineRun(run)}
                                 className="group cursor-pointer transition-colors hover:bg-muted/50 focus-within:bg-muted/50"
                               >
                                 <td className="px-4 py-2.5 text-sm">
@@ -630,12 +617,21 @@ export function RoutineDetail({
                                     type="button"
                                     onClick={(event) => {
                                       event.stopPropagation();
-                                      setOpenRunId(run.id);
+                                      openRoutineRun(run);
                                     }}
                                     aria-label={t("openRun", { date })}
-                                    className="block w-full truncate rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    className="block w-full rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                   >
-                                    {date}
+                                    <span className="block truncate">{date}</span>
+                                    {run.origin ? (
+                                      <span className="block text-[11px] text-muted-foreground">
+                                        {t(
+                                          run.origin === "scheduled"
+                                            ? "runOriginScheduled"
+                                            : "runOriginManual",
+                                        )}
+                                      </span>
+                                    ) : null}
                                   </button>
                                 </td>
                                 <td className="pointer-events-none relative px-3 py-2.5 text-xs tabular-nums text-muted-foreground">
@@ -660,7 +656,7 @@ export function RoutineDetail({
                                         onClick={(event) => {
                                           event.stopPropagation();
                                           router.push(
-                                            `/pull-requests?run=${run.id}`,
+                                            `/pull-requests?run=${run.work_run_id ?? run.id}`,
                                           );
                                         }}
                                         className="relative z-10 shrink-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -672,13 +668,19 @@ export function RoutineDetail({
                                       </button>
                                     ) : (
                                       <span className="pointer-events-none relative min-w-0 truncate text-xs text-muted-foreground">
-                                        {tAgents(
-                                          agentSessionStatusKey({
-                                            status: run.status,
-                                            prNumber: run.pr_number,
-                                            prState: run.pr_state,
-                                          }),
-                                        )}
+                                        {run.awaiting_input
+                                          ? t("runWaitingInput")
+                                          : run.error_message
+                                            ? run.error_message
+                                            : run.outcome
+                                              ? run.outcome
+                                              : tAgents(
+                                                  agentSessionStatusKey({
+                                                    status: run.status,
+                                                    prNumber: run.pr_number,
+                                                    prState: run.pr_state,
+                                                  }),
+                                                )}
                                       </span>
                                     )}
                                     <ChevronRight className="pointer-events-none relative size-4 shrink-0 text-muted-foreground" />
@@ -706,11 +708,7 @@ export function RoutineDetail({
                     {isOwner ? (
                       <Button
                         size="sm"
-                        disabled={
-                          busy ||
-                          agentCapabilitiesLoading ||
-                          !cloudExecutionConfigured
-                        }
+                        disabled={busy}
                         onClick={() => void runNow()}
                       >
                         <Play className="size-4" />
@@ -762,12 +760,10 @@ export function RoutineDetail({
  */
 function RoutinePrompt({
   projectId,
-  baseBranch,
   prompt,
   promptMentions,
 }: {
   projectId: string;
-  baseBranch: string | null;
   prompt: string;
   promptMentions: AssistantMention[];
 }) {
@@ -778,7 +774,7 @@ function RoutinePrompt({
     projectId,
     "cloud",
     "routine-display",
-    baseBranch,
+    null,
   );
   const [expanded, setExpanded] = useState(false);
   /* A fade longer than a scroll edge (2 rem by default):
@@ -923,7 +919,7 @@ function formatRunUsagePercent(
  * a FINISHED PR is a state (the badge, clickable - the PR can still be consulted).
  * No PR: nothing, and the conversation then suggests creating one.
  */
-function PrHeaderAction({ run }: { run: AgentRunSummary }) {
+function PrHeaderAction({ run }: { run: RoutineRunSummary }) {
   const t = useTranslations("Agents");
   const router = useRouter();
   if (run.pr_number == null) return null;
@@ -1067,8 +1063,6 @@ function RoutineSummary({
 interface RoutineDraft {
   prompt: string;
   promptMentions: AssistantMention[];
-  /** "" = the default branch of the repository. */
-  baseBranch: string;
   /** Share of the monthly budget that ONE passage can spend (1–100). */
   spendCap: number;
   schedule: RoutineSchedule;
@@ -1079,7 +1073,6 @@ function draftFrom(routine: Routine): RoutineDraft {
   return {
     prompt: routine.prompt,
     promptMentions: routine.prompt_mentions ?? [],
-    baseBranch: routine.base_branch ?? "",
     // The routines placed before the ceiling do not already carry any in the cache
     // loaded: the fault, the very one that the base gave them.
     spendCap: routine.max_spend_percent ?? DEFAULT_MAX_SPEND_PERCENT,
@@ -1088,8 +1081,8 @@ function draftFrom(routine: Routine): RoutineDraft {
 }
 
 /**
- * Editing a routine: everything that decides what it does, and what
- * it costs — its instruction, starting branch, spending cap and cadence.
+ * Editing a routine: everything that decides what it does and what it costs —
+ * its instruction, spending cap and cadence.
  *
  * No “name” field: the title is written by minddy from
  * the instruction, and rewrites as soon as it changes. No wizard replayed either —
@@ -1113,7 +1106,6 @@ function RoutineEditor({
   busy: boolean;
 }) {
   const t = useTranslations("Routines");
-  const tAgent = useTranslations("Agent");
 
   const set = <K extends keyof RoutineDraft>(key: K, value: RoutineDraft[K]) =>
     onChange({ ...draft, [key]: value });
@@ -1136,7 +1128,7 @@ function RoutineEditor({
         <RoutinePromptField
           autoFocus
           projectId={projectId}
-          baseBranch={draft.baseBranch}
+          baseBranch={null}
           value={draft.prompt}
           mentions={draft.promptMentions}
           onChange={(value, mentions) =>
@@ -1153,25 +1145,6 @@ function RoutineEditor({
           <p className="py-3 text-xs leading-relaxed text-muted-foreground">
             {t("workerModelHint")}
           </p>
-          {/* The START branch: the one that each execution clones and from
-              which she opens her pull request. Anchored to the project, like the
-              consists of a notebook session — a routine does not have a ticket. */}
-          <SettingsRow
-            label={t("baseBranchLabel")}
-            control={
-              <BranchCombobox
-                projectId={projectId}
-                value={draft.baseBranch}
-                onChange={(value) => set("baseBranch", value)}
-                defaultLabel={tAgent("branchDefault")}
-                defaultHint={tAgent("branchDefaultHint")}
-                placeholder={tAgent("branchSearchPlaceholder")}
-                emptyLabel={tAgent("branchSearchEmpty")}
-                loadingLabel={tAgent("branchSearchLoading")}
-                disabled={busy}
-              />
-            }
-          />
           {/* WHAT A PASS CAN EXPEND. This is where we come to lower it
               after seeing what routine really costs — hence its place at
               side of the model, the other setting which decides the note. */}

@@ -8,21 +8,21 @@ function source(relativePath: string): string {
 }
 
 describe("account worker model boundary", () => {
-  it("funnels Numo delegation, routine, and automation workers through the shared launcher", () => {
+  it("funnels every Numo-delegated worker through the shared launcher", () => {
     const launch = source("lib/server/agent/launch.ts");
     expect(launch).toContain("const resolved = await resolveAgentModel(input.userId);");
     expect(launch).toContain("const reasoningLevel = await resolveReasoningLevel(input.userId);");
 
-    for (const file of [
-      "lib/server/assistant/execute-tool.ts",
-      "app/api/cron/routines/route.ts",
-    ]) {
-      expect(source(file), file).toContain("launchAgentRun({");
-    }
+    expect(source("lib/server/assistant/execute-tool.ts"))
+      .toContain("launchAgentRun({");
 
     const automation = source("lib/server/automations/actions.ts");
     expect(automation).toContain("startNumoIntent({");
     expect(automation).not.toContain("launchAgentRun({");
+
+    const routine = source("app/api/cron/routines/route.ts");
+    expect(routine).toContain("startRoutineOccurrence({");
+    expect(routine).not.toContain("launchAgentRun({");
   });
 
   it("rejects forged worker overrides at public and internal boundaries", () => {

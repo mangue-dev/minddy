@@ -116,6 +116,14 @@ export interface NumoConversationDetail {
     started_at: string | null; completed_at: string | null;
     created_at: string; updated_at: string;
   }>;
+  /** Scheduled/manual provenance when this conversation is a routine occurrence. */
+  routine_occurrence?: {
+    id: string;
+    routine_id: string;
+    origin: "scheduled" | "manual";
+    scheduled_for: string | null;
+    created_at: string;
+  } | null;
 }
 
 export interface NumoConversationPatch {
@@ -330,6 +338,7 @@ export type NumoIntentSource =
   | "page"
   | "scratchpad"
   | "pull_request"
+  | "routine"
   | "bulk";
 
 /** The distinction the originating action promised to preserve. */

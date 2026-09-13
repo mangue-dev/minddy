@@ -15,9 +15,9 @@ import { ROUTINE_FREQUENCIES } from "@/lib/routine-schedule";
  * - **this is NOT a recurring ticket** (`recurrence` on a ticket) nor a
  * project automation (`when … then …`). The three look similar from a distance;
  * a client that confuses them creates the wrong thing;
- * - **it runs on its own and cannot ask for anything** — `ask_user` is removed by
- *   its tool set, so the instruction must be self-contained;
- * - **it has permission to open a pull request** without being asked;
+ * - **each occurrence is a Numo conversation** that can use Minddy tools and
+ *   pause visibly for owner input;
+ * - **repository work is optional** and delegated only when needed;
  * - **only the project owner can create one**;
  * - **the time zone cannot be guessed**.
  */
@@ -25,23 +25,23 @@ import { ROUTINE_FREQUENCIES } from "@/lib/routine-schedule";
 const FREQUENCY_VALUES = [...ROUTINE_FREQUENCIES];
 
 export const CREATE_ROUTINE_DESCRIPTION =
-  "Create a ROUTINE: a job that minddy's coding agent runs BY ITSELF on a " +
-  "schedule, in a sandbox on the project's linked repository — a security review " +
-  "every Monday, a dependency sweep on the first of the month, a monthly inventory " +
-  "of something. It is NOT a recurring ticket (that is an issue with a `recurrence`) " +
+  "Create a ROUTINE: an instruction that starts a private Numo conversation on a " +
+  "schedule — project triage every Monday, a cycle report every Friday, or a " +
+  "monthly security review. It is NOT a recurring ticket (that is an issue with a `recurrence`) " +
   "and NOT a project automation (those react to an event): nothing triggers it but " +
-  "the clock, and it produces a real agent run with its own streaming, sandbox and " +
-  "tools. There is NO name to pass: minddy writes the routine's title from its " +
+  "the clock, and every occurrence has its own Numo conversation and history. There " +
+  "is NO name to pass: minddy writes the routine's title from its " +
   "instruction, and rewrites it whenever the instruction changes. `prompt` IS the " +
-  "instruction the agent receives, so WRITE it from the " +
-  "user's request rather than copying their sentence — nobody will be at the screen " +
-  "to clarify it: the routine CANNOT ask questions, it decides and documents its " +
-  "choice. It MAY open a pull request on its own when it finds something worth " +
-  "fixing, and simply concludes when it does not. OWNER ONLY: only the project's " +
+  "instruction Numo receives, so WRITE it from the user's request rather than " +
+  "copying their sentence. Numo uses Minddy tools directly for product work and " +
+  "delegates to a code worker only when repository access is actually needed. A " +
+  "project therefore does not need a linked repository to create or run a routine. " +
+  "If a real decision is missing, the occurrence can pause for owner input in its " +
+  "conversation. OWNER ONLY: only the project's " +
   "owner can create a routine, because it is their usage budget that leaves every " +
-  "Monday morning — a member gets a refusal, and there is no way around it. Code " +
-  "workers always use the owner's account model and reasoning configuration. Its spend is billed under " +
-  "'Routines', separately from agent runs, and ONE run stops at 15% of the " +
+  "occurrence — a member gets a refusal, and there is no way around it. Delegated " +
+  "workers always use the owner's current account code model and reasoning. The " +
+  "complete occurrence, including Numo and delegated workers, stops at 15% of the " +
   "owner's monthly usage budget by default — it cannot silently take the whole " +
   "month (`max_spend_percent`).";
 
@@ -54,9 +54,9 @@ export const UPDATE_ROUTINE_DESCRIPTION =
 export const LIST_ROUTINES_DESCRIPTION =
   "List the routines of a project without loading every instruction: id, title " +
   "(written by minddy from the instruction), cadence in plain fields, " +
-  "the spending cap of one run, whether it is enabled, when it last ran " +
+  "the spending cap of one occurrence, whether it is enabled, when it last ran " +
   "and when it runs next, and the " +
-  "code of the last missed run (an exhausted usage budget, an unlinked repository). " +
+  "code of the last missed occurrence. " +
   "The compact list deliberately omits instructions so a project with many long " +
   "routines still fits in one tool result. Pass `routine_id` after finding the " +
   "routine to read that routine again with its full instruction. " +
@@ -64,15 +64,15 @@ export const LIST_ROUTINES_DESCRIPTION =
   "of stacking a second routine that does the same job.";
 
 /**
- * The SPENDING CEILING for one run — shared by both tools and written for a model
- * that will never see the screen: without the sentence about the default, a client
+ * The spending ceiling for one occurrence, including Numo and delegated work.
+ * Without the sentence about the default, a client
  * resets it to 100 “to avoid getting in the way” and reopens exactly the hole the
  * ceiling is meant to close.
  */
 const MAX_SPEND_PERCENT_PROPERTY = {
   type: "number",
   description:
-    "Cap on what ONE run of this routine may spend, as a percentage (1–100) of " +
+    "Cap on what ONE occurrence, including Numo and delegated code work, may spend, as a percentage (1–100) of " +
     "the owner's monthly usage budget. OMIT IT unless the user asks for a cap: " +
     "the default (15) leaves room for a routine to run all month without eating " +
     "the budget, and passing 100 removes the cap entirely. Raise it for a " +
@@ -135,16 +135,12 @@ export const CREATE_ROUTINE_PARAMETERS = {
     prompt: {
       type: "string",
       description:
-        "The INSTRUCTION the agent receives at every run, in the user's language. It " +
+        "The instruction Numo receives at every occurrence, in the user's language. It " +
         "must stand on its own: say what to look at, what counts as a finding, and " +
-        "what to do with one (open a pull request, or just report). The agent cannot " +
-        "ask you anything once it has started.",
+        "what to do with one. Numo may use Minddy tools, delegate repository work, " +
+        "or pause the conversation when owner input is genuinely required.",
     },
     ...ROUTINE_SCHEDULE_PROPERTIES,
-    base_branch: {
-      type: "string",
-      description: "Branch the runs start from. Omit for the repository's default branch.",
-    },
     max_spend_percent: MAX_SPEND_PERCENT_PROPERTY,
   } as Record<string, unknown>,
   // `minute`, `weekdays`, and `days_of_month` remain outside `required`: the latter
@@ -173,7 +169,6 @@ export const UPDATE_ROUTINE_PARAMETERS = {
         "true re-arms it on its next occurrence.",
     },
     ...ROUTINE_SCHEDULE_PROPERTIES,
-    base_branch: { type: "string", description: "New base branch." },
     max_spend_percent: MAX_SPEND_PERCENT_PROPERTY,
   } as Record<string, unknown>,
   required: ["routine_id"],

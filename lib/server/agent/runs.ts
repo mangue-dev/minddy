@@ -1214,6 +1214,9 @@ export async function runsForRoutine(
     .from("agent_runs")
     .select("*")
     .eq("routine_id", routineId)
+    // Delegated workers belong to their parent Numo occurrence and would
+    // otherwise appear as a duplicate history row.
+    .is("parent_numo_turn_id", null)
     .order("created_at", { ascending: false })
     .limit(limit);
   return (data ?? []) as AgentRun[];
@@ -1620,7 +1623,7 @@ export async function stampRunResult(
     // Use `afterOrNow`, not a detached promise: the HTTP response can finish before
     // these writes, and an unretained promise can die with the invocation (see
     // lib/server/after-safe.ts).
-    if (run.routine_id) {
+    if (run.routine_id && !run.parent_numo_turn_id) {
       afterOrNow(async () => {
         await notifyRoutineOfRunEnd(run);
         await stampRoutineRunEnd(run);

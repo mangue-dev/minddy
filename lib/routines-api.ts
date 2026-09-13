@@ -80,8 +80,7 @@ export interface RoutineInput {
   /** No title: minddy writes it from the instruction (see `titleFor`). */
   prompt: string;
   promptMentions?: AssistantMention[];
-  baseBranch?: string | null;
-  /** Ceiling for a passage, as a % of the monthly budget. Absent = the defect (90%). */
+  /** Per-occurrence cap as a percentage of monthly usage. Default: 15. */
   maxSpendPercent?: number;
   frequency: RoutineFrequency;
   hour: number;
@@ -89,6 +88,22 @@ export interface RoutineInput {
   weekdays?: number[] | null;
   daysOfMonth?: number[] | null;
   timezone: string;
+}
+
+export interface RoutineRunSummary extends Omit<
+  AgentRunSummary,
+  "reasoning_level" | "key_mode" | "triggered_by"
+> {
+  kind: "numo" | "legacy_agent";
+  reasoning_level: AgentRunSummary["reasoning_level"] | null;
+  key_mode: AgentRunSummary["key_mode"] | null;
+  triggered_by: "routine";
+  numo_status: import("./assistant-types").NumoTurnStatus | null;
+  numo_conversation_id: string | null;
+  conversation_id?: string | null;
+  origin: "scheduled" | "manual" | null;
+  scheduled_for?: string | null;
+  work_run_id?: string | null;
 }
 
 export async function fetchRoutinesApi(): Promise<{ routines: Routine[] }> {
@@ -101,7 +116,6 @@ export async function createRoutineApi(
   // Measure the shape of the gesture, never the instruction itself.
   trackEvent("routine_created", {
     frequency: input.frequency,
-    has_branch: !!input.baseBranch,
     // The chosen spending limit: this is the setting we want to know if it
     // is TOUCHED, and in what sense — a defect that no one moves is not
     // the correct default.
@@ -137,14 +151,14 @@ export async function deleteRoutineApi(routineId: string): Promise<{ ok: true }>
 /** “Previous Runs” — the runs of the routine, with the most recent one at the top. */
 export async function fetchRoutineRunsApi(
   routineId: string,
-): Promise<{ runs: AgentRunSummary[] }> {
+): Promise<{ runs: RoutineRunSummary[] }> {
   return parseJson(await fetch(`/api/routines/${routineId}/runs`));
 }
 
 /** “Launch now”: a move outside of the calendar, without moving the deadline. */
 export async function runRoutineNowApi(
   routineId: string,
-): Promise<{ run: AgentRunSummary }> {
+): Promise<{ occurrence: { id: string; conversation_id: string } }> {
   trackEvent("routine_run_now", {});
   return parseJson(
     await fetch(`/api/routines/${routineId}/run`, { method: "POST" }),
