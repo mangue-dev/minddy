@@ -2631,6 +2631,7 @@
     "reasoningMinimal": "Mínimo",
     "reasoningXhigh": "Muito profundo",
     "reasoningMax": "Máximo",
+    "modelSettingsReset": "Restaurar os padrões da conta",
     "environment": "Ambiente",
     "environmentCloud": "Nuvem",
     "environmentCloudHint": "Uma máquina descartável, em um novo clone do repositório.",

@@ -15,6 +15,7 @@ import {
 } from "@/lib/server/ai-runtime";
 import { isLocalAgentProvider } from "@/lib/agent-providers";
 import { getAssistantReasoningLevel } from "@/lib/server/assistant/reasoning";
+import { conversationReasoningLevels } from "@/lib/conversation-settings";
 
 const MAX_MODEL_LENGTH = 300;
 
@@ -131,7 +132,9 @@ export async function resolveNumoTurnConfiguration(input: {
     }
   }
 
-  const allowedReasoning = reasoningLevelsFor(modelEntry?.reasoning);
+  const allowedReasoning = conversationReasoningLevels(
+    reasoningLevelsFor(modelEntry?.reasoning),
+  );
   const configuredReasoning = await getAssistantReasoningLevel();
   if (hasExplicitReasoning && !allowedReasoning.includes(persistedReasoningLevel)) {
     throw new NumoConversationConfigError(

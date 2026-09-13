@@ -15,7 +15,7 @@ describe("notificationTargetPath", () => {
         numo_conversation_id: "parent conversation",
         numo_work_id: "run/1",
       }),
-    ).toBe("/agents?conversation=parent%20conversation&work=run%2F1");
+    ).toBe("/numo?conversation=parent%20conversation&work=run%2F1");
   });
 
   it("opens an agent conversation even without a ticket", () => {

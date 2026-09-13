@@ -237,10 +237,13 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
   // the mirror catches up with an open conversation DURING the restart.
   useEffect(() => {
     if (!restored) return;
-    if (serverPointerRef.current === state.conversationId) return;
-    serverPointerRef.current = state.conversationId;
-    void setActiveConversation(state.conversationId);
-  }, [restored, state.conversationId]);
+    const conversationId = state.routineOccurrence
+      ? null
+      : state.conversationId;
+    if (serverPointerRef.current === conversationId) return;
+    serverPointerRef.current = conversationId;
+    void setActiveConversation(conversationId);
+  }, [restored, state.conversationId, state.routineOccurrence]);
 
   /**
  * The pointer read again WITHOUT opening the panel, for surfaces which must

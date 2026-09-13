@@ -13,7 +13,7 @@ export async function listNumoConversations(supabase: SupabaseClient, projectId?
   // PostgREST caps responses; page through the stable total order instead of
   // silently dropping older conversations from a merged history.
   for (let offset = 0; ; offset += 500) {
-    let query = supabase.from("numo_conversation_history").select("*")
+    let query = supabase.from("numo_user_conversation_history").select("*")
       .order("updated_at", { ascending: false }).order("id", { ascending: true })
       .range(offset, offset + 499);
     if (projectId) query = query.eq("project_id", projectId);

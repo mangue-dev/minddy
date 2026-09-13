@@ -808,7 +808,7 @@ export function AgentsPage() {
             href: `/agents?run=${encodeURIComponent(realSelected.conversationId)}`,
             label: agentSessionTitle(realSelected, t("freeSessionTitle")),
           }
-        : { href: "/agents", label: t("title") }
+        : { href: "/numo", label: t("title") }
   );
 
   // Keeps a valid selection: when the selected session disappears (or a
@@ -839,7 +839,7 @@ export function AgentsPage() {
     // The URL stops pointing to the entry you just left. She would lie to
     // reloading, and above all it would make the following navigation towards
     // this same entry: pushing the current address changes nothing.
-    if (composeParam || issueParam || runParam) router.replace("/agents");
+    if (composeParam || issueParam || runParam) router.replace("/numo");
   };
 
   // “New”: a blank conversation, right away — same gesture as arriving
@@ -852,7 +852,7 @@ export function AgentsPage() {
     setSelectedKey(FREE_COMPOSE_PARAM);
     setMobileDetail(true);
     setComposeNonce((n) => n + 1);
-    if (composeParam || issueParam || runParam) router.replace("/agents");
+    if (composeParam || issueParam || runParam) router.replace("/numo");
   };
 
   /**

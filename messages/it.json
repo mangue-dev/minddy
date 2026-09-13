@@ -2631,6 +2631,7 @@
     "reasoningMinimal": "Minimo",
     "reasoningXhigh": "Molto profondo",
     "reasoningMax": "Massimo",
+    "modelSettingsReset": "Ripristina i valori predefiniti dell'account",
     "environment": "Ambiente",
     "environmentCloud": "Nuvola",
     "environmentCloudHint": "Una macchina temporanea con un nuovo clone del repository.",

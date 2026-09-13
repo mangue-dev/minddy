@@ -26,6 +26,7 @@ export const PROTECTED_PREFIXES = [
   "/billing",
   "/admin",
   "/agents",
+  "/numo",
   "/routines",
   "/pull-requests",
   "/statistics",

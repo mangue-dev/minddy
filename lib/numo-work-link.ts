@@ -10,7 +10,7 @@ export function numoWorkDetailPath(work: NumoWorkLink): string {
   if (work.work_conversation_id && work.conversation_id !== work.work_conversation_id) {
     const conversation = encodeURIComponent(work.conversation_id);
     const run = encodeURIComponent(work.id);
-    return `/agents?conversation=${conversation}&work=${run}`;
+    return `/numo?conversation=${conversation}&work=${run}`;
   }
   return work.detail_href;
 }

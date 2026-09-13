@@ -1,4 +1,5 @@
 import { gitIdentityFlags, sq, type RepoHost } from "./repo-host";
+import { commitMessageWithSignoff } from "./commit-message";
 
 /**
  * WORKING IN SOMEONE ELSE'S DEPOT (MIN-358, decision D2).
@@ -494,7 +495,7 @@ export async function commitTurnAndPush(
   if (parentTree.stdout.trim() !== tree) {
     const commit = await host.exec(
       `git ${gitIdentityFlags(opts.committer)} commit-tree ${sq(tree)} -p ${sq(parent)}` +
-        ` -m ${sq(opts.message)}`,
+        ` -m ${sq(commitMessageWithSignoff(opts.message, opts.committer))}`,
       { timeoutMs: 120_000 },
     );
     headSha = commit.stdout.trim();

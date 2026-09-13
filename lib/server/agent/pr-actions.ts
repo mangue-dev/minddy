@@ -1013,7 +1013,7 @@ export async function startNumoPrReview(input: {
       return {
         conversationId: thread.conversation_id,
         turnId: reserved.event.turn_id,
-        detailHref: `/agents?conversation=${encodeURIComponent(thread.conversation_id)}`,
+        detailHref: `/numo?conversation=${encodeURIComponent(thread.conversation_id)}`,
       };
     }
     if (!reserved.created) return null;
@@ -1042,7 +1042,7 @@ export async function startNumoPrReview(input: {
       return {
         conversationId: thread.conversation_id,
         turnId: pendingInput.turnId,
-        detailHref: `/agents?conversation=${encodeURIComponent(thread.conversation_id)}`,
+        detailHref: `/numo?conversation=${encodeURIComponent(thread.conversation_id)}`,
       };
     }
 

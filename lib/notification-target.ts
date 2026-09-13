@@ -59,7 +59,7 @@ export function notificationTargetPath(n: NotificationTarget): string | null {
     const work = n.numo_work_id
       ? `&work=${encodeURIComponent(n.numo_work_id)}`
       : "";
-    return `/agents?conversation=${conversation}${work}`;
+    return `/numo?conversation=${conversation}${work}`;
   }
   if (n.agent_conversation_id) return `/agents?run=${n.agent_conversation_id}`;
   if (!n.project_id) return null;

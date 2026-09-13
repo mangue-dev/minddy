@@ -1,8 +1,11 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { AgentsPage } from "@/components/agents/agents-page";
-import { NumoPage } from "@/components/assistant/numo-page";
 import { AgentsPlanGate } from "@/components/billing/agents-plan-gate";
+import {
+  numoPathFromSearchParams,
+  usesLegacyAgentSurface,
+} from "@/lib/numo-route";
 
 export default async function AgentsRoute({
   searchParams,
@@ -18,19 +21,15 @@ export default async function AgentsRoute({
 
   // Existing work and launch deep links keep their detail surface until they
   // are folded into the common conversation timeline by MIN-524 and MIN-525.
-  const usesLegacyAgentSurface = ["run", "issue", "compose"].some(
-    (key) => params[key] !== undefined,
-  );
+  if (!usesLegacyAgentSurface(params)) {
+    redirect(numoPathFromSearchParams(params));
+  }
 
   return (
     <Suspense fallback={null}>
-      {usesLegacyAgentSurface ? (
-        <AgentsPlanGate>
-          <AgentsPage />
-        </AgentsPlanGate>
-      ) : (
-        <NumoPage />
-      )}
+      <AgentsPlanGate>
+        <AgentsPage />
+      </AgentsPlanGate>
     </Suspense>
   );
 }
