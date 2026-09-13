@@ -39,6 +39,10 @@ import {
 import { scheduleCycleCapture } from "@/lib/server/cycles";
 import { statusAllowsCycle } from "@/lib/cycle";
 import type { IssueStatus } from "@/lib/issue-constants";
+import {
+  validateCycleMoveSnapshot,
+  type CycleMovePrecondition,
+} from "@/lib/cycle-move";
 import { scheduleFeedbackStatusSync } from "@/lib/server/feedback/status-sync";
 import { scheduleRemoteStatusPush } from "@/lib/server/git/issue-push";
 import { scheduleStatusAutomations } from "@/lib/server/automations/hooks";
@@ -63,7 +67,14 @@ import type { RepoProviderId } from "@/lib/repo-providers";
  * the same signal RLS invisibility gives.
  */
 export type UpdateIssueResult =
-  | { ok: true; issue: Record<string, unknown> & { category_ids: string[] } }
+  | {
+      ok: true;
+      issue: Record<string, unknown> & { category_ids: string[] };
+      /** False when a guarded idempotent mutation already had the requested value. */
+      changed: boolean;
+      /** Whether this write reassigned the issue, including the cycle-owner side effect. */
+      assignmentChanged: boolean;
+    }
   | {
       ok: false;
       status: number;
@@ -79,6 +90,9 @@ export type UpdateIssueResult =
         | "invalidPosition"
         | "invalidCycle"
         | "triageCannotJoinCycle"
+        | "closedIssueCannotJoinCycle"
+        | "cycleSourceChanged"
+        | "cycleAssignmentChanged"
         | "planTooLong"
         | "noFieldsToUpdate"
         | "issueNotFound"
@@ -109,6 +123,7 @@ export async function updateIssueFields({
   mcpKeyId = null,
   forgeSync = null,
   expectedUpdatedAt = null,
+  cycleMove = null,
 }: {
   issueId: string;
   actorId: string;
@@ -134,6 +149,13 @@ export async function updateIssueFields({
   forgeSync?: RepoProviderId | null;
   /** Compare-and-swap base for read-modify-write callers such as plan tools. */
   expectedUpdatedAt?: string | null;
+  /**
+   * Preconditions for an explicit move between two resolved cycle windows.
+   * They are checked against the same snapshot used by the update CAS, so a
+   * stale prepared selection cannot move an issue from a different cycle or
+   * silently take over an assignment that changed in the meantime.
+   */
+  cycleMove?: CycleMovePrecondition | null;
 }): Promise<UpdateIssueResult> {
   const updates: Record<string, unknown> = {};
 
@@ -333,6 +355,42 @@ export async function updateIssueFields({
     // that we have the right to fill out is therefore ours.
     if (!(await cycleBelongsToUser(service, updates.cycle_id, actorId))) {
       return { ok: false, status: 400, errorKey: "invalidCycle" };
+    }
+  }
+
+  if (cycleMove) {
+    if (updates.cycle_id !== cycleMove.targetCycleId) {
+      return { ok: false, status: 400, errorKey: "invalidCycle" };
+    }
+    const validation = validateCycleMoveSnapshot(
+      {
+        status: before.status as IssueStatus,
+        assignee_id: (before.assignee_id as string | null) ?? null,
+        cycle_id: (before.cycle_id as string | null) ?? null,
+      },
+      cycleMove,
+    );
+    if (validation === "closedIssueCannotJoinCycle") {
+      return { ok: false, status: 400, errorKey: validation };
+    }
+    if (validation === "triageCannotJoinCycle") {
+      return { ok: false, status: 400, errorKey: validation };
+    }
+    if (validation === "cycleAssignmentChanged") {
+      return { ok: false, status: 409, errorKey: validation };
+    }
+    // Repeating a completed move is a successful no-op. This keeps the domain
+    // action idempotent without emitting duplicate events or touching dates.
+    if (validation === "unchanged") {
+      return {
+        ok: true,
+        issue: mapIssueRow(before),
+        changed: false,
+        assignmentChanged: false,
+      };
+    }
+    if (validation === "cycleSourceChanged") {
+      return { ok: false, status: 409, errorKey: validation };
     }
   }
   if ("automation_override" in updates) {
@@ -752,10 +810,14 @@ export async function updateIssueFields({
 
   // Same reason as at creation: `data` was read before Smart Assign
   // do not write, only the returned ticket carries the correction.
+  const issue = mapIssueRow(
+    smartAssignee ? { ...data, assignee_id: smartAssignee } : data,
+  ) as Record<string, unknown> & { category_ids: string[] };
   return {
     ok: true,
-    issue: mapIssueRow(
-      smartAssignee ? { ...data, assignee_id: smartAssignee } : data,
-    ),
+    issue,
+    changed: true,
+    assignmentChanged:
+      (issue.assignee_id ?? null) !== (before.assignee_id ?? null),
   };
 }

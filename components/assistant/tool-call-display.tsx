@@ -847,6 +847,15 @@ const TOOL_META: Record<string, ToolMeta> = {
       return t("addedToCycle", { count: added });
     },
   },
+  move_issues: {
+    icon: IterationCw,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("movingBetweenCycles");
+      if (!success) return t("moveBetweenCyclesFailed");
+      const moved = typeof result?.moved === "number" ? result.moved : 0;
+      return t("movedBetweenCycles", { count: moved });
+    },
+  },
   remove_issues_from_cycle: {
     icon: IterationCw,
     getLabel: (_args, result, success, status, t) => {

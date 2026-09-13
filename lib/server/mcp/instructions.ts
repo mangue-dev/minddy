@@ -85,8 +85,10 @@ export const MCP_FULL_USAGE_GUIDE =
       "The key owner may have a " +
       "CYCLE: their personal, cross-project week/fortnight ('what am I working on " +
       "right now'). minddy_get_cycle reads it, minddy_fill_cycle tops it up with the " +
-      "deterministic engine, minddy_add_to_cycle / minddy_remove_from_cycle move " +
-      "individual issues; adding assigns the issue to the owner and never changes " +
+      "deterministic engine, minddy_add_to_cycle adds individual issues, " +
+      "minddy_move_to_cycle moves selected issues between the current and next " +
+      "cycles, and minddy_remove_from_cycle removes them; adding assigns the issue " +
+      "to the owner and cycle moves never change " +
       "its status. An issue in triage is never in a cycle: it can't be added to " +
       "one, and moving a cycled issue back to triage takes it out. " +
       "The key owner also has a SCRATCHPAD: one personal, cross-project notes doc of " +

@@ -55,6 +55,7 @@ const EXPECTED_TOOL_NAMES = [
   "minddy_list_pages",
   "minddy_list_projects",
   "minddy_list_routines",
+  "minddy_move_to_cycle",
   "minddy_promote_feedback",
   "minddy_remove_from_cycle",
   "minddy_respond_feedback",

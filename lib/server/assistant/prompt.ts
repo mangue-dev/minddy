@@ -993,7 +993,7 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
   if (ctx.cycleId) {
     lines.push(
       `- Their cycle (personal, cross-project week/fortnight): ${ctx.cycleLabel ?? "(current)"} (id: ${ctx.cycleId}).`,
-      `When the user says "mon cycle", "ma semaine", "remplis mon cycle" or a steering phrase like "priorise les fixs UI", they mean this cycle — use get_cycle / fill_cycle / add_issues_to_cycle / remove_issues_from_cycle. Steering phrases become fill_cycle weight boosts, never forced picks. Speak in effort sizes or % of capacity, never raw points.`,
+      `When the user says "mon cycle", "ma semaine", "remplis mon cycle" or a steering phrase like "priorise les fixs UI", they mean this cycle — use get_cycle / fill_cycle / add_issues_to_cycle / move_issues / remove_issues_from_cycle. Use move_issues with target_cycle: "next" for an explicit request to move selected current-cycle issues into the next cycle. Steering phrases become fill_cycle weight boosts, never forced picks. Speak in effort sizes or % of capacity, never raw points.`,
     );
   }
   // PINNED context: the user designated it himself (@ button on

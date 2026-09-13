@@ -203,6 +203,20 @@ describe("Numo tool contracts", () => {
       expect(scoped?.function.parameters.required, name).toContain("project_id");
     }
   });
+
+  it("exposes an explicit current-or-next cycle move", () => {
+    const move = tool("move_issues");
+
+    expect(move?.function.parameters.required).toEqual([
+      "issue_ids",
+      "target_cycle",
+    ]);
+    expect(move?.function.parameters.properties.target_cycle).toMatchObject({
+      enum: ["current", "next"],
+    });
+    expect(move?.function.description).toMatch(/never changes status/i);
+    expect(move?.function.description).toMatch(/assignment changes per item/i);
+  });
 });
 
 

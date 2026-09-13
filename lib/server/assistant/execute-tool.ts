@@ -104,9 +104,11 @@ import {
   fillCycleForUser,
   getCycleOverview,
   getCyclePrefsForUser,
+  todayInTz,
   toCycleInfo,
 } from "@/lib/server/cycles";
-import { todayISO, type FillWeights } from "@/lib/cycle";
+import { moveIssuesBetweenCycles } from "@/lib/server/cycle-issues";
+import type { FillWeights } from "@/lib/cycle";
 import {
   getScratchpad,
   mutateScratchpad,
@@ -223,6 +225,8 @@ export interface ToolContext {
   /** Service client (auth admin lookups). */
   service: SupabaseClient;
   locale: string;
+  /** User or routine IANA timezone used for calendar-bound cycle resolution. */
+  timezone?: string;
   /** Landing status for issues Numo creates without an explicit status —
       the user's Account → Preferences choice. Defaults to 'triage'. */
   numoDefaultStatus?: IssueStatusValue;
@@ -1080,6 +1084,7 @@ export async function executeTool(
       toolName === "get_cycle" ||
       toolName === "fill_cycle" ||
       toolName === "add_issues_to_cycle" ||
+      toolName === "move_issues" ||
       toolName === "remove_issues_from_cycle"
     ) {
       return executeCycleTool(toolName, args, ctx);
@@ -3055,7 +3060,7 @@ async function executeCycleTool(
     service: ctx.service,
     userId: ctx.userId,
     prefs,
-    today: todayISO(),
+    today: todayInTz(ctx.timezone),
   });
   const current = ensured.current;
 
@@ -3069,6 +3074,7 @@ async function executeCycleTool(
       userId: ctx.userId,
       prefs,
       which,
+      today: todayInTz(ctx.timezone),
     });
     if (!r.ok) return toolError(r.error);
     return {
@@ -3100,6 +3106,45 @@ async function executeCycleTool(
         cycle: toCycleInfo(current),
       },
       success: true,
+    };
+  }
+
+  if (toolName === "move_issues") {
+    const ids = parseIssueIds(args);
+    if (!ids) return toolError("issue_ids must be 1–50 issue ids.");
+    const targetCycle =
+      args.target_cycle === "current" || args.target_cycle === "next"
+        ? args.target_cycle
+        : null;
+    if (!targetCycle) {
+      return toolError("target_cycle must be 'current' or 'next'.");
+    }
+    const move = await moveIssuesBetweenCycles({
+      service: ctx.service,
+      userId: ctx.userId,
+      actorId: ctx.userId,
+      prefs,
+      timezone: ctx.timezone,
+      issueIds: ids,
+      targetCycle,
+      viaAssistant: true,
+    });
+    if (!move.ok) return toolError(move.error);
+    const result = move.result;
+    return {
+      result: {
+        moved: result.moved_ids.length,
+        moved_ids: result.moved_ids,
+        unchanged_ids: result.unchanged_ids,
+        failed: result.failed,
+        source_cycle: toCycleInfo(result.source),
+        target_cycle: toCycleInfo(result.target),
+        status_changed: false,
+        assigned_to_user_id: ctx.userId,
+        assignment_changed_ids: result.assignment_changed_ids,
+      },
+      success:
+        result.moved_ids.length + result.unchanged_ids.length > 0,
     };
   }
 
