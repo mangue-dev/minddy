@@ -175,6 +175,34 @@ describe("visibility — a personal run is not the project run", () => {
 });
 
 describe("GET — resumability", () => {
+  it("exposes validated delegation artifacts without exposing worker checkpoints", async () => {
+    const delegationResult = {
+      version: 1,
+      status: "completed",
+      summary: "Implemented the requested change.",
+      changedFiles: ["components/example.tsx"],
+      verificationPerformed: [{ command: "npm test", status: "passed" }],
+      artifacts: [{ kind: "commit", ref: "abc123", url: "https://example.com/commit/abc123" }],
+      unresolvedDecisions: [],
+    };
+    getRun.mockResolvedValue({
+      id: RUN,
+      project_id: "proj-1",
+      created_by: "user-1",
+      routine_id: null,
+      chain_id: null,
+      pull_request_id: null,
+      status: "completed",
+      delegation_result: delegationResult,
+      checkpoint: { messages: [] },
+    });
+
+    const body = await (await get()).json();
+
+    expect(body.run.delegation_result).toEqual(delegationResult);
+    expect(body.run).not.toHaveProperty("checkpoint");
+  });
+
   it("exposes a failed run with a checkpoint as resumable without exposing the checkpoint", async () => {
     getRun.mockResolvedValue({
       id: RUN,

@@ -6,6 +6,18 @@ import en from "@/messages/en.json";
 const P = "11111111-1111-1111-1111-111111111111";
 
 describe("notificationTargetPath", () => {
+  it("opens delegated work inside the parent Numo conversation", () => {
+    expect(
+      notificationTargetPath({
+        project_id: P,
+        issue_id: null,
+        agent_conversation_id: "worker-conversation",
+        numo_conversation_id: "parent conversation",
+        numo_work_id: "run/1",
+      }),
+    ).toBe("/agents?conversation=parent%20conversation&work=run%2F1");
+  });
+
   it("opens an agent conversation even without a ticket", () => {
     expect(
       notificationTargetPath({

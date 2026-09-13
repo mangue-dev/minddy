@@ -874,6 +874,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       try {
         const detail = await fetchNumoConversation(conversationId);
         if (loadGeneration !== loadGenerationRef.current) return;
+        const conversationProjectId = detail.conversation.project_id ?? projectId;
+        liveConvRef.current = { id: conversationId, projectId: conversationProjectId };
         const messages = [...detail.messages, ...detail.actions]
           .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
         const model = detail.conversation.model ?? null;
@@ -891,12 +893,17 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             type: "LOAD_HISTORY",
             messages,
             conversationId,
-            projectId,
+            projectId: conversationProjectId,
             model,
             reasoningLevel,
           });
         } else {
-          dispatch({ type: "LOAD_HISTORY", messages, conversationId, projectId });
+          dispatch({
+            type: "LOAD_HISTORY",
+            messages,
+            conversationId,
+            projectId: conversationProjectId,
+          });
         }
 
         // Check if server is still generating for this conversation
@@ -911,7 +918,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           workerInput: pendingWorkerInput(response.pending_input),
         });
         if (status === "generating" || status === "queued" || status === "running" || status === "waiting_work" || status === "stopping") {
-          startPolling(conversationId, projectId);
+          startPolling(conversationId, conversationProjectId);
         } else if (status === "error" || status === "failed" || status === "retryable" || status === "reconciling") {
           dispatch({
             type: "ERROR",

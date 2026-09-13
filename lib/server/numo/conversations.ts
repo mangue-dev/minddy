@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { NumoConversation, NumoConversationDetail, NumoLegacySource } from "@/lib/assistant-types";
 import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { publicSkillsMetadata } from "@/lib/server/assistant/skills";
+import { numoWorkDetailPath, type NumoWorkLink } from "@/lib/numo-work-link";
 
 export const NUMO_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -54,9 +55,13 @@ export async function resolveNumoConversation(
 ): Promise<{ conversationId: string; workId: string | null; detailHref: string | null } | null> {
   if (source === "run") {
     const { data, error } = await supabase.from("numo_work")
-      .select("id, conversation_id, detail_href").eq("id", id).maybeSingle();
+      .select("id, conversation_id, work_conversation_id, detail_href").eq("id", id).maybeSingle();
     if (error) throw new Error(error.message);
-    return data ? { conversationId: data.conversation_id, workId: data.id, detailHref: data.detail_href } : null;
+    return data ? {
+      conversationId: data.conversation_id,
+      workId: data.id,
+      detailHref: numoWorkDetailPath(data),
+    } : null;
   }
   if (source === "agent") {
     const { data: origin, error } = await supabase.from("numo_work_origins")
@@ -100,7 +105,16 @@ export async function getNumoConversationDetail(supabase: SupabaseClient, id: st
     },
     messages: safeMessages.filter((m) => m.kind !== "action"),
     actions: safeMessages.filter((m) => m.kind === "action"),
-    work,
+    work: work.map((row) => {
+      const candidate = row as Partial<NumoWorkLink>;
+      if (
+        typeof candidate.id !== "string" ||
+        typeof candidate.conversation_id !== "string" ||
+        typeof candidate.work_conversation_id !== "string" ||
+        typeof candidate.detail_href !== "string"
+      ) return row;
+      return { ...row, detail_href: numoWorkDetailPath(candidate as NumoWorkLink) };
+    }),
     contexts, artifacts, turns,
   } as unknown as NumoConversationDetail;
 }

@@ -25,6 +25,9 @@ export interface NotificationRow {
   issue_id: string | null;
   /** Conversation de code visee, qu'elle ait ou non un ticket en contexte. */
   agent_conversation_id?: string | null;
+  /** Parent Numo conversation and exact delegated run shown by this notification. */
+  numo_conversation_id?: string | null;
+  numo_work_id?: string | null;
   /** Set instead of issue_id when the notification points at an objective. */
   objective_id?: string | null;
   /** Set instead of issue_id/objective_id for a feedback-post notification. */
@@ -463,6 +466,12 @@ export async function insertNotifications(
         del = r.agent_conversation_id
           ? del.eq("agent_conversation_id", r.agent_conversation_id)
           : del.is("agent_conversation_id", null);
+        del = r.numo_conversation_id
+          ? del.eq("numo_conversation_id", r.numo_conversation_id)
+          : del.is("numo_conversation_id", null);
+        del = r.numo_work_id
+          ? del.eq("numo_work_id", r.numo_work_id)
+          : del.is("numo_work_id", null);
         // A ROUTINE notification (MIN-185) has no ticket: without this
         // second filter, the `issue_id is null` above would move the line
         // of ALL routines in the account — two routines fail the same

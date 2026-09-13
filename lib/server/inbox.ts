@@ -142,6 +142,7 @@ export async function readInboxNotifications({
     { data: pages },
     { data: projects },
     { data: projectLinks },
+    { data: delegatedWork },
   ] = await Promise.all([
     issueIds.length && projectIds.length
       ? service
@@ -240,6 +241,21 @@ export async function readInboxNotifications({
             repo_full_name: string;
           }[],
         }),
+    conversationIds.length
+      ? service
+          .from("numo_work")
+          .select("id, conversation_id, legacy_conversation_id, project_id, updated_at")
+          .in("legacy_conversation_id", conversationIds)
+          .order("updated_at", { ascending: false })
+      : Promise.resolve({
+          data: [] as {
+            id: string;
+            conversation_id: string;
+            legacy_conversation_id: string;
+            project_id: string;
+            updated_at: string;
+          }[],
+        }),
   ]);
 
   const issueMap = new Map((issues ?? []).map((item) => [item.id, item]));
@@ -259,6 +275,16 @@ export async function readInboxNotifications({
   const pageMap = new Map((pages ?? []).map((item) => [item.id, item]));
   const projectMap = new Map((projects ?? []).map((item) => [item.id, item]));
   const commentMap = new Map((comments ?? []).map((item) => [item.id, item]));
+  const delegatedWorkMap = new Map<string, {
+    id: string;
+    conversation_id: string;
+    project_id: string;
+  }>();
+  for (const item of delegatedWork ?? []) {
+    if (!delegatedWorkMap.has(item.legacy_conversation_id)) {
+      delegatedWorkMap.set(item.legacy_conversation_id, item);
+    }
+  }
 
   const inProject = <T extends { project_id: string }>(
     item: T | undefined,
@@ -428,6 +454,18 @@ export async function readInboxNotifications({
           : undefined;
       const comment = commentFor(n);
       const fromNumo = Boolean(n.via_assistant || comment?.via_assistant);
+      const delegated = n.agent_conversation_id
+        ? delegatedWorkMap.get(n.agent_conversation_id)
+        : undefined;
+      const delegatedTarget = delegated?.project_id === n.project_id
+        ? delegated
+        : undefined;
+      const numoConversationId = typeof n.numo_conversation_id === "string"
+        ? n.numo_conversation_id
+        : delegatedTarget?.conversation_id ?? null;
+      const numoWorkId = typeof n.numo_work_id === "string"
+        ? n.numo_work_id
+        : delegatedTarget?.id ?? null;
       const viaMcp = !fromNumo && Boolean(n.via_mcp || comment?.via_mcp);
       const keyActor = viaMcp && keyAllowedFor(n)
         ? keyActors.get(keyIdFor(n) as string)
@@ -441,6 +479,8 @@ export async function readInboxNotifications({
         issue_id: n.issue_id,
         agent_conversation_id: n.agent_conversation_id ?? null,
         agent_conversation_title: conversationFor(n)?.title ?? null,
+        numo_conversation_id: numoConversationId,
+        numo_work_id: numoWorkId,
         issue_number: issue?.number ?? null,
         issue_title: issue?.title ?? null,
         objective_id: n.objective_id ?? null,

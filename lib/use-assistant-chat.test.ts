@@ -164,6 +164,17 @@ describe("Numo conversation settings", () => {
     });
   });
 
+  it("restores the conversation project when opened from a parent-work link", async () => {
+    const linked = detail();
+    linked.conversation.project_id = "project-from-detail";
+    h.detail.mockResolvedValue(linked);
+    await act(async () => root.render(createElement(Probe)));
+
+    await act(async () => value.loadConversation(conversationId, null));
+
+    expect(value.state.conversationProjectId).toBe("project-from-detail");
+  });
+
   it("sends explicit null choices so an in-flight reset cannot reuse stale persistence", async () => {
     h.webFetch.mockResolvedValue(new Response(
       'event: done\ndata: {"status":"completed"}\n\n',

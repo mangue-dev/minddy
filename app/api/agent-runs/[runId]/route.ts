@@ -54,6 +54,7 @@ function sanitizeRun(run: AgentRun) {
     created_at: run.created_at,
     updated_at: run.updated_at,
     awaiting_input: run.awaiting_input,
+    delegation_result: run.delegation_result ?? null,
     // The conversation environment (MIN-359), frozen at launch: it is
     // him that the locked chip of the composer and the note of the thread read.
     local_exec: run.local_exec,

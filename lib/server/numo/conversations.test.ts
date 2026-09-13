@@ -79,9 +79,18 @@ describe("Numo conversation adapter", () => {
     expect(db.calls).toContainEqual({ table: "numo_messages", method: "order", args: ["source", { ascending: true }] });
   });
 
-  it("resolves a run to its parent identity and original work detail", async () => {
-    const db = database({ numo_work: [{ id: "run", conversation_id: id, detail_href: "/agents?run=run" }] });
-    expect(await resolveNumoConversation(db.client, "run", "run")).toEqual({ conversationId: id, workId: "run", detailHref: "/agents?run=run" });
+  it("resolves delegated work to its parent conversation detail", async () => {
+    const db = database({ numo_work: [{
+      id: "run",
+      conversation_id: id,
+      work_conversation_id: "51400000-0000-4000-8000-000000000099",
+      detail_href: "/agents?run=run",
+    }] });
+    expect(await resolveNumoConversation(db.client, "run", "run")).toEqual({
+      conversationId: id,
+      workId: "run",
+      detailHref: `/agents?conversation=${id}&work=run`,
+    });
   });
 
   it("uses an accessible origin for legacy agent links and otherwise preserves their mapping", async () => {

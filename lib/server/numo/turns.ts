@@ -54,6 +54,7 @@ import { finalizeAgentDelegationResult } from "@/lib/server/agent/delegation";
 import {
   deliverAgentDelegationResult,
   getRun,
+  notifyDelegatedAgentRun,
   type AgentRun,
 } from "@/lib/server/agent/runs";
 import { withoutWebSearch } from "@/lib/server/web-search";
@@ -927,6 +928,20 @@ export async function executeNumoTurn(input: {
       outcome: result.fullContent || null,
       costUsd: recordedOperationCost ?? fallbackCostUsd,
     });
+    if (
+      claimed.active_run_id &&
+      (status === "completed" || status === "waiting_input")
+    ) {
+      const worker = await getRun(claimed.active_run_id);
+      if (worker?.parent_numo_turn_id === claimed.id) {
+        const notificationType = status === "waiting_input"
+          ? "agent_question"
+          : worker.status === "failed" || worker.status === "canceled"
+            ? "agent_failed"
+            : "agent_done";
+        await notifyDelegatedAgentRun(worker, notificationType);
+      }
+    }
     if (status === "waiting_work" && result.suspension?.kind === "work") {
       const worker = await getRun(result.suspension.runId);
       if (worker && ["completed", "failed", "canceled"].includes(worker.status)) {
