@@ -23,10 +23,14 @@ export default async function AgentsRoute({
   );
 
   return (
-    <AgentsPlanGate>
-      <Suspense fallback={null}>
-        {usesLegacyAgentSurface ? <AgentsPage /> : <NumoPage />}
-      </Suspense>
-    </AgentsPlanGate>
+    <Suspense fallback={null}>
+      {usesLegacyAgentSurface ? (
+        <AgentsPlanGate>
+          <AgentsPage />
+        </AgentsPlanGate>
+      ) : (
+        <NumoPage />
+      )}
+    </Suspense>
   );
 }

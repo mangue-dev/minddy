@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -102,6 +102,10 @@ export function ConversationList({
   const [conversations, setConversations] = useState<ConversationWithProject[]>(
     []
   );
+  // Keep optimistic actions serializable between renders. A second menu action
+  // can arrive before React commits the first one, so the closure alone is not
+  // a reliable picture of the list to patch or roll back.
+  const conversationsRef = useRef(conversations);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -114,6 +118,7 @@ export function ConversationList({
 
     void fetchConversations().then((data) => {
       if (active) {
+        conversationsRef.current = data;
         setConversations(data);
         setLoaded(true);
       }
@@ -126,27 +131,65 @@ export function ConversationList({
 
   const patchConversation = useCallback(
     async (id: string, patch: { pinned?: boolean; archived?: boolean }) => {
-      const previous = conversations;
-      setConversations((current) =>
-        current.map((conversation) =>
-          conversation.id === id
-            ? {
-                ...conversation,
-                ...(patch.pinned !== undefined
-                  ? { pinned_at: patch.pinned ? new Date().toISOString() : null }
-                  : {}),
-                ...(patch.archived !== undefined
-                  ? { archived_at: patch.archived ? new Date().toISOString() : null }
-                  : {}),
-              }
-            : conversation,
-        ),
+      const before = conversationsRef.current;
+      const previous = before.find((conversation) => conversation.id === id);
+      if (!previous) return;
+      const nextPinnedAt =
+        patch.pinned === undefined
+          ? undefined
+          : patch.pinned
+            ? new Date().toISOString()
+            : null;
+      const nextArchivedAt =
+        patch.archived === undefined
+          ? undefined
+          : patch.archived
+            ? new Date().toISOString()
+            : null;
+      const optimistic = before.map((conversation) =>
+        conversation.id === id
+          ? {
+              ...conversation,
+              ...(nextPinnedAt !== undefined ? { pinned_at: nextPinnedAt } : {}),
+              ...(nextArchivedAt !== undefined
+                ? { archived_at: nextArchivedAt }
+                : {}),
+            }
+          : conversation,
       );
-      if (await updateConversation(id, patch)) return;
-      setConversations(previous);
+      conversationsRef.current = optimistic;
+      setConversations(optimistic);
+
+      try {
+        if (await updateConversation(id, patch)) return;
+      } catch {
+        // The rollback below is also needed when the request cannot reach the
+        // server (for example, after losing the network connection).
+      }
+
+      // Revert only values that still belong to this request. A later action
+      // may already have changed the same conversation while this request was
+      // in flight; putting back the whole list would erase that newer choice.
+      const rolledBack = conversationsRef.current.map((conversation) =>
+        conversation.id === id
+          ? {
+              ...conversation,
+              ...(nextPinnedAt !== undefined &&
+              conversation.pinned_at === nextPinnedAt
+                ? { pinned_at: previous.pinned_at }
+                : {}),
+              ...(nextArchivedAt !== undefined &&
+              conversation.archived_at === nextArchivedAt
+                ? { archived_at: previous.archived_at }
+                : {}),
+            }
+          : conversation,
+      );
+      conversationsRef.current = rolledBack;
+      setConversations(rolledBack);
       toast.error(t("historyUpdateFailed"));
     },
-    [conversations, t],
+    [t],
   );
 
   const handleConfirmDelete = useCallback(async () => {
@@ -156,7 +199,9 @@ export function ConversationList({
     setPendingDelete(null);
     const ok = await deleteConversation(convId);
     if (ok) {
-      setConversations((prev) => prev.filter((c) => c.id !== convId));
+      const next = conversationsRef.current.filter((c) => c.id !== convId);
+      conversationsRef.current = next;
+      setConversations(next);
       if (activeConversationId === convId) {
         onNew();
       }
