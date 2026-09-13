@@ -481,6 +481,7 @@
     "unreadConversation": "Unread conversation",
     "conversations": "Conversations",
     "noConversations": "No conversations yet",
+    "loadMore": "Load more",
     "filterConversations": "Filter {count, plural, =0 {conversations} one {# conversation} other {# conversations}}…",
     "pinnedConversations": "Pinned",
     "conversationActions": "Conversation actions",

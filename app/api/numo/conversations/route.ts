@@ -1,6 +1,13 @@
 import type { NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { getNumoConversation, getNumoConversationConfig, listNumoConversations, NUMO_UUID } from "@/lib/server/numo/conversations";
+import {
+  getNumoConversation,
+  getNumoConversationConfig,
+  listNumoConversations,
+  MAX_NUMO_CONVERSATIONS_PAGE_SIZE,
+  NUMO_CONVERSATIONS_PAGE_SIZE,
+  NUMO_UUID,
+} from "@/lib/server/numo/conversations";
 import { isReasoningLevel } from "@/lib/agent-reasoning";
 import {
   isNumoConversationConfigError,
@@ -13,8 +20,13 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const projectId = request.nextUrl.searchParams.get("projectId");
   if (projectId && !NUMO_UUID.test(projectId)) return Response.json({ error: "Invalid project ID" }, { status: 400 });
+  const requestedLimit = request.nextUrl.searchParams.get("limit");
+  const limit = requestedLimit === null ? NUMO_CONVERSATIONS_PAGE_SIZE : Number(requestedLimit);
+  if (!Number.isInteger(limit) || limit < 1 || limit > MAX_NUMO_CONVERSATIONS_PAGE_SIZE) {
+    return Response.json({ error: "Invalid conversation limit" }, { status: 400 });
+  }
   try {
-    return Response.json(await listNumoConversations(auth.supabase, projectId));
+    return Response.json(await listNumoConversations(auth.supabase, projectId, limit));
   } catch {
     return Response.json({ error: "Unable to read conversations" }, { status: 500 });
   }

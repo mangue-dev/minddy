@@ -39,6 +39,7 @@ import { isNumoConversationUnread } from "@/lib/numo-conversation-unread";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 
 type ConversationWithProject = NumoConversation;
+const CONVERSATIONS_PAGE_SIZE = 50;
 
 /** All conversations, ordered by recency independently of attached projects. */
 interface ConversationListProps {
@@ -105,22 +106,34 @@ export function ConversationList({
   // The list leaves EMPTY: without this flag, “no conversation” is displayed on
   // fetch time, even when there are dozens.
   const [loaded, setLoaded] = useState(false);
+  const [limit, setLimit] = useState(CONVERSATIONS_PAGE_SIZE);
+  const [hasMore, setHasMore] = useState(false);
+  const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
     let active = true;
 
-    void fetchConversations().then((data) => {
+    setFetching(true);
+    void fetchConversations(limit).then((page) => {
       if (active) {
-        conversationsRef.current = data;
-        setConversations(data);
+        conversationsRef.current = page.conversations;
+        setConversations(page.conversations);
+        setHasMore(page.hasMore);
         setLoaded(true);
+        setFetching(false);
+      }
+    }).catch(() => {
+      if (active) {
+        setHasMore(false);
+        setLoaded(true);
+        setFetching(false);
       }
     });
 
     return () => {
       active = false;
     };
-  }, [activeConversationId, refreshKey]);
+  }, [activeConversationId, limit, refreshKey]);
 
   const patchConversation = useCallback(
     async (id: string, patch: { pinned?: boolean; archived?: boolean }) => {
@@ -379,6 +392,19 @@ export function ConversationList({
             </div>
           );
         })}
+
+        {hasMore && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-2 self-center"
+            disabled={fetching}
+            onClick={() => setLimit((value) => value + CONVERSATIONS_PAGE_SIZE)}
+          >
+            {fetching && <Loader2 className="animate-spin" />}
+            {t("loadMore")}
+          </Button>
+        )}
       </div>
 
       <AlertDialog
