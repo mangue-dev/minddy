@@ -187,6 +187,17 @@ function createSkillNode(skill: RepositorySkillSummary): HTMLSpanElement {
   return pill;
 }
 
+function focusContentEditableAtEnd(element: HTMLElement) {
+  element.focus();
+  const selection = window.getSelection();
+  if (!selection) return;
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
 export interface ChatInputContextAttachments {
   resources: ResourceLike[];
   pending: PendingResource[];
@@ -277,6 +288,8 @@ export interface ChatInputProps {
   /** In-memory HTML snapshot used to move one draft between Numo surfaces. */
   draftHtml?: string;
   onDraftHtmlChange?: (html: string) => void;
+  /** Focus a restored draft at its end, ready to continue writing. */
+  restoreCaretAtEnd?: boolean;
   /** Shared upload queue paired with the retained Numo draft. */
   attachmentUploads?: AttachmentUploads;
   /**
@@ -334,6 +347,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       initialValue,
       draftHtml,
       onDraftHtmlChange,
+      restoreCaretAtEnd = false,
       attachmentUploads,
       leadingControls,
       beam,
@@ -1225,7 +1239,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       setIsEmpty(!el.textContent?.trim());
       syncMentionSlots();
       syncSkillSlots();
-    }, [draftHtml, syncMentionSlots, syncSkillSlots]);
+      if (restoreCaretAtEnd) {
+        requestAnimationFrame(() => {
+          if (editorRef.current === el && el.isConnected) {
+            focusContentEditableAtEnd(el);
+          }
+        });
+      }
+    }, [draftHtml, restoreCaretAtEnd, syncMentionSlots, syncSkillSlots]);
 
     // One-shot pre-filling (editing): we write the initial text, caret in
     // fine, ready for editing — the Agent Launch Composer uses this to
@@ -1252,14 +1273,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const focusEditorAtEnd = useCallback(() => {
       const el = editorRef.current;
       if (!el || disabled) return;
-      el.focus();
-      const sel = window.getSelection();
-      if (!sel) return;
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      range.collapse(false);
-      sel.removeAllRanges();
-      sel.addRange(range);
+      focusContentEditableAtEnd(el);
     }, [disabled]);
 
     const handleContainerMouseDown = useCallback(
@@ -1271,7 +1285,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         // his CHILD React: his events go back so far. Without this
         // guardrail, clicking a menu entry returned focus to the editor —
         // and Radix, seeing the focus leave, closed the menu immediately.
-        if (target.closest('[data-slot="popover-content"], [role="dialog"]')) return;
+        if (
+          target.closest('[data-slot="popover-content"], [role="dialog"]') &&
+          !e.currentTarget.contains(target)
+        ) {
+          return;
+        }
         e.preventDefault();
         focusEditorAtEnd();
       },

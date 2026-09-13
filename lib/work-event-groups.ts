@@ -4,6 +4,15 @@ export type WorkEvent<T> = {
   content: T;
   count?: number;
   active?: boolean;
+  /** Tool calls represented by this event, used for an accurate group heading. */
+  toolCalls?: Array<{
+    id: string;
+    name: string;
+    arguments?: string;
+    status: "running" | "complete";
+    result?: unknown;
+    success?: boolean;
+  }>;
   /** Changes when a new one-time credential needs to be shown. Contains call IDs only. */
   revealKey?: string;
 };

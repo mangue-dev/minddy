@@ -14,7 +14,6 @@ import {
   toast,
 } from "mangue-ui";
 import {
-  ChevronDown,
   ChevronRight,
   Ellipsis,
   Globe,
@@ -1061,7 +1060,7 @@ function groupRows(
   return rows;
 }
 
-/** Minimalist activity feed inside a collapsible section. */
+/** Minimalist activity feed, always visible; only long runs of events collapse. */
 export function IssueActivity({
   items,
   ctx,
@@ -1103,63 +1102,48 @@ export function IssueActivity({
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
 }) {
   const t = useTranslations("Timeline");
-  const [open, setOpen] = useState(true);
   const mentions = useDescriptionMentions(projectId, ctx.members);
   const rows = groupRows(items);
 
   return (
     <div className="flex flex-col">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="flex items-center justify-between py-1 text-sm font-medium outline-none"
-      >
-        <span>{t("activity")}</span>
-        <ChevronDown
-          className={cn(
-            "size-4 text-muted-foreground transition-transform",
-            !open && "-rotate-90"
-          )}
-        />
-      </button>
+      <span className="py-1 text-sm font-medium">{t("activity")}</span>
 
-      {open &&
-        (rows.length === 0 ? (
-          <p className="mt-2 text-xs text-muted-foreground">{t("noActivity")}</p>
-        ) : (
-          <ol className="mt-2 flex flex-col gap-3">
-            {rows.map((row, i) => {
-              if (row.type === "comment") {
-                return (
-                  <CommentCard
-                    key={`c-${row.item.comment.id}`}
-                    item={row.item}
-                    ctx={ctx}
-                    currentUserId={currentUserId}
-                    projectId={projectId}
-                    mentions={mentions}
-                    header={commentHeader?.(row.item.comment)}
-                    allowAttachments={allowAttachments}
-                    liveTable={entity === "page" ? "page_comments" : "comments"}
-                    onReply={onReply}
-                    onEditComment={onEditComment}
-                    onDeleteComment={onDeleteComment}
-                    onDeleteAttachment={onDeleteAttachment}
-                  />
-                );
-              }
-              if (row.items.length > 2) {
-                return (
-                  <EventsGroup key={`g-${i}`} items={row.items} ctx={ctx} entity={entity} />
-                );
-              }
-              return row.items.map((it) => (
-                <EventRow key={`e-${it.event.id}`} item={it} ctx={ctx} entity={entity} />
-              ));
-            })}
-          </ol>
-        ))}
+      {rows.length === 0 ? (
+        <p className="mt-2 text-xs text-muted-foreground">{t("noActivity")}</p>
+      ) : (
+        <ol className="mt-2 flex flex-col gap-3">
+          {rows.map((row, i) => {
+            if (row.type === "comment") {
+              return (
+                <CommentCard
+                  key={`c-${row.item.comment.id}`}
+                  item={row.item}
+                  ctx={ctx}
+                  currentUserId={currentUserId}
+                  projectId={projectId}
+                  mentions={mentions}
+                  header={commentHeader?.(row.item.comment)}
+                  allowAttachments={allowAttachments}
+                  liveTable={entity === "page" ? "page_comments" : "comments"}
+                  onReply={onReply}
+                  onEditComment={onEditComment}
+                  onDeleteComment={onDeleteComment}
+                  onDeleteAttachment={onDeleteAttachment}
+                />
+              );
+            }
+            if (row.items.length > 2) {
+              return (
+                <EventsGroup key={`g-${i}`} items={row.items} ctx={ctx} entity={entity} />
+              );
+            }
+            return row.items.map((it) => (
+              <EventRow key={`e-${it.event.id}`} item={it} ctx={ctx} entity={entity} />
+            ));
+          })}
+        </ol>
+      )}
     </div>
   );
 }

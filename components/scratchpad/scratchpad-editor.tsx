@@ -50,6 +50,15 @@ import {
   MarkdownLinkMark,
 } from "@/components/markdown-link-mark";
 import { MarkdownLinkMenu } from "@/components/markdown-link-menu";
+import { handleNodeLinkClick } from "@/components/editor-node-link";
+import {
+  MENTION_HYDRATION_META,
+  MentionNode,
+  MentionSuggest,
+  hydrateMentions,
+} from "@/components/markdown-mention";
+import { MentionLinksProvider } from "@/components/mention-links";
+import type { MarkdownEditorMentions } from "@/components/markdown-editor";
 
 /** mm:ss for the dictation timer. */
 function formatTime(ms: number): string {
@@ -87,7 +96,8 @@ const PROSE = cn(
  */
 const EDITOR_PROPS = {
   attributes: { class: PROSE },
-  handleClick: handleMarkdownLinkClick,
+  handleClick: (view: Parameters<typeof handleMarkdownLinkClick>[0], pos: number, event: MouseEvent) =>
+    handleNodeLinkClick(event) || handleMarkdownLinkClick(view, pos, event),
   // Keep the caret off the bottom edge: ProseMirror scrolls it into view
   // with this much room to spare, so writing at the end of a long note
   // happens comfortably above the fold instead of on the last visible pixel
@@ -167,6 +177,7 @@ export function ScratchpadEditor({
   applyExternalRef,
   removeSettledRef,
   startAllRef,
+  mentions,
 }: {
   initialValue: string;
   onChange: (markdown: string) => void;
@@ -196,6 +207,8 @@ export function ScratchpadEditor({
   removeSettledRef?: MutableRefObject<(() => number) | null>;
   /** Populated with an action that sets all tasks yet to be done in the notebook to "in progress" (returns how many) — the header gestures, which carry over the entire note. */
   startAllRef?: MutableRefObject<(() => number) | null>;
+  /** Cross-project references placed with "@" in the notebook. */
+  mentions?: MarkdownEditorMentions;
 }) {
   const t = useTranslations("Scratchpad");
   const tDictate = useTranslations("Dictate");
@@ -208,6 +221,8 @@ export function ScratchpadEditor({
   });
 
   const editorRef = useRef<Editor | null>(null);
+  const mentionsRef = useRef(mentions);
+  mentionsRef.current = mentions;
   // Tiptap can normalize the initial markdown, so this baseline is refreshed
   // from the live editor in `onCreate` before any user edit is submitted.
   const initialContentRef = useRef(initialValue);
@@ -432,6 +447,11 @@ export function ScratchpadEditor({
         ScratchpadParagraph,
         ScratchpadTaskList,
         ScratchpadTaskItem,
+        MentionNode,
+        MentionSuggest.configure({
+          items: () => mentionsRef.current?.options ?? [],
+          onQuery: () => mentionsRef.current?.onQuery?.(),
+        }),
         HeadingFromListInput,
         Arrows,
         Markdown.configure({
@@ -494,12 +514,25 @@ export function ScratchpadEditor({
         removeSettledRef.current = () => removeSettledFnRef.current();
       if (startAllRef) startAllRef.current = () => startAllFnRef.current();
     },
-    onUpdate: ({ editor }) => {
+    onUpdate: ({ editor, transaction }) => {
+      if (transaction.getMeta(MENTION_HYDRATION_META)) return;
       scheduleCommit(getMarkdown(editor));
     },
     onBlur: () => flush(),
   });
   editorRef.current = editor ?? editorRef.current;
+
+  // Existing notebook text is still stored as plain Markdown. Rehydrate its
+  // references after the picker data arrives, without turning that visual
+  // upgrade into an autosave or an undoable edit.
+  const scan = mentions?.scan;
+  useEffect(() => {
+    if (!editor || !scan || editor.isFocused) return;
+    queueMicrotask(() => {
+      if (editor.isDestroyed || editor.isFocused) return;
+      hydrateMentions(editor, scan);
+    });
+  }, [editor, scan]);
 
   // Persist any pending edit when the modal closes (component unmounts).
   useEffect(
@@ -574,8 +607,10 @@ export function ScratchpadEditor({
           if (e.target === e.currentTarget) editor?.commands.focus("end");
         }}
       >
-        <EditorContent editor={editor} />
-        <MarkdownLinkMenu editor={editor} />
+        <MentionLinksProvider value={mentions?.links ?? null}>
+          <EditorContent editor={editor} />
+          <MarkdownLinkMenu editor={editor} />
+        </MentionLinksProvider>
 
         {dictating && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm">

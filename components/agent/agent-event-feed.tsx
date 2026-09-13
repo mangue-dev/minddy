@@ -915,11 +915,23 @@ function TurnGroup({
       }
       const calls = item.message.tool_calls ?? [];
       if (calls.length > 0) {
+        const toolCalls = calls.map((call) => {
+          const result = ctx.results.get(call.id);
+          return {
+            id: call.id,
+            name: call.function.name,
+            arguments: call.function.arguments,
+            status: result?.status ?? "running",
+            result: result?.result,
+            success: result?.success ?? true,
+          };
+        });
         events.push({
           key: `${item.message.id}-actions`,
           kind: "action",
           count: calls.length,
-          active: calls.some((call) => ctx.results.get(call.id)?.status === "running"),
+          active: toolCalls.some((call) => call.status === "running"),
+          toolCalls,
           revealKey: liveSecretRevealKey(calls.map((call) => ({
             id: call.id,
             name: call.function.name,

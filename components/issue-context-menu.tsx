@@ -61,12 +61,20 @@ function actionMatches(action: ContextMenuAction, query: string): boolean {
 }
 
 /** Sheet: a clickable item, possibly with a shortcut on the right. */
-function LeafItem({ action }: { action: ContextMenuAction }) {
+function LeafItem({
+  action,
+  onActionSelect,
+}: {
+  action: ContextMenuAction;
+  onActionSelect?: (action: ContextMenuAction) => void;
+}) {
   return (
     <DropdownMenuItem
       variant={action.variant}
       disabled={action.disabled}
-      onSelect={() => action.onSelect?.()}
+      onSelect={() =>
+        onActionSelect ? onActionSelect(action) : action.onSelect?.()
+      }
     >
       {action.icon}
       <span className="truncate">{action.label}</span>
@@ -80,7 +88,13 @@ function LeafItem({ action }: { action: ContextMenuAction }) {
 }
 
 /** Branch or leaf depending on the presence of children. */
-function ActionNode({ action }: { action: ContextMenuAction }) {
+function ActionNode({
+  action,
+  onActionSelect,
+}: {
+  action: ContextMenuAction;
+  onActionSelect?: (action: ContextMenuAction) => void;
+}) {
   if (action.children && action.children.length > 0) {
     return (
       <DropdownMenuSub>
@@ -90,13 +104,17 @@ function ActionNode({ action }: { action: ContextMenuAction }) {
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent>
           {action.children.map((child) => (
-            <LeafItem key={child.id} action={child} />
+            <LeafItem
+              key={child.id}
+              action={child}
+              onActionSelect={onActionSelect}
+            />
           ))}
         </DropdownMenuSubContent>
       </DropdownMenuSub>
     );
   }
-  return <LeafItem action={action} />;
+  return <LeafItem action={action} onActionSelect={onActionSelect} />;
 }
 
 /** Corps commun aux deux ancrages : recherche optionnelle + liste d'actions. */
@@ -104,10 +122,12 @@ function ActionMenuBody({
   actions,
   open,
   searchable,
+  onActionSelect,
 }: {
   actions: ContextMenuAction[];
   open: boolean;
   searchable: boolean;
+  onActionSelect?: (action: ContextMenuAction) => void;
 }) {
   const t = useTranslations("Picker");
   const [query, setQuery] = React.useState("");
@@ -193,7 +213,7 @@ function ActionMenuBody({
  filtered) would be an orphan bar: we only make it between two visible
  entries. */}
             {action.separatorBefore && i > 0 && <DropdownMenuSeparator />}
-            <ActionNode action={action} />
+            <ActionNode action={action} onActionSelect={onActionSelect} />
           </React.Fragment>
         ))
       )}
@@ -245,6 +265,14 @@ export function IssueContextMenu({
           actions={actions}
           open={!!position}
           searchable={searchable}
+          onActionSelect={(action) => {
+            // Menus that open another floating surface must finish their own
+            // close cycle first. Otherwise Radix's focus restoration dismisses
+            // the freshly opened picker, which made due dates and objectives
+            // appear to do nothing from a card's context menu.
+            onClose();
+            requestAnimationFrame(() => action.onSelect?.());
+          }}
         />
       </DropdownMenuContent>
     </DropdownMenu>

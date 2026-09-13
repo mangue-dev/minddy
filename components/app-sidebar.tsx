@@ -27,7 +27,7 @@ import { isMacWindowControlsZone } from "@/lib/sidebar-window-controls";
 import { isSidebarPointerTarget } from "@/lib/sidebar-pointer-target";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import {
   Button,
   DropdownMenu,
@@ -96,18 +96,13 @@ import {
   SIDEBAR_COMPACT_CONTROL_CLASS,
   SIDEBAR_TOOLTIP_DELAY_MS,
 } from "@/lib/sidebar-control-styles";
-import type { Locale } from "@/i18n/config";
-import type { MessageKey } from "@/lib/i18n-keys";
-import {
-  CHANGELOG_ENTRIES,
-  formatChangelogAge,
-  formatChangelogDate,
-} from "@/lib/changelog";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { MessageKey } from "@/lib/i18n-keys";
+import { CHANGELOG_ENTRIES } from "@/lib/changelog";
 import type { Project } from "@/lib/types";
 
 /** Expanded width shared with the hidden navigation overlay. */
@@ -891,7 +886,6 @@ function ChangelogButton({
 }) {
   const t = useTranslations("Nav");
   const tc = useTranslations("Changelog");
-  const locale = useLocale() as Locale;
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMounted, setDialogMounted] = useState(false);
@@ -946,19 +940,6 @@ function ChangelogButton({
                     `entry_${entry.id}_title` as MessageKey<"Changelog">,
                   )}
                 </span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <time
-                      dateTime={entry.date}
-                      className="shrink-0 text-xs tabular-nums text-muted-foreground"
-                    >
-                      {formatChangelogAge(entry.date, locale)}
-                    </time>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {formatChangelogDate(entry.date, locale)}
-                  </TooltipContent>
-                </Tooltip>
               </li>
             ))}
           </ol>

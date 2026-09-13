@@ -26,6 +26,7 @@ export const AssistantChatInput = forwardRef<
       ref={ref}
       draftHtml={draftHtml}
       onDraftHtmlChange={setDraftHtml}
+      restoreCaretAtEnd
       attachmentUploads={uploads}
     />
   );

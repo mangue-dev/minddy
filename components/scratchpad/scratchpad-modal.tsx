@@ -21,6 +21,7 @@ import { useScratchpadDoc } from "@/lib/use-scratchpad-query";
 import { ScratchpadEditor } from "@/components/scratchpad/scratchpad-editor";
 import { SLASH_MENU_ATTR } from "@/components/scratchpad/slash-command";
 import { useLaunchAgentNote } from "@/components/scratchpad/use-launch-agent-note";
+import { useNumoMentionables } from "@/lib/use-numo-mentionables";
 import {
   Tooltip,
   TooltipContent,
@@ -87,6 +88,9 @@ function ScratchpadBody() {
   const t = useTranslations("Scratchpad");
   const { isOpen, setOpen } = useScratchpad();
   const { user } = useAuth();
+  // The notebook spans projects, so its mention picker uses the same global
+  // source as Numo's global composer and only loads when "@" is typed.
+  const { mentionables, links, scan, onMentionQuery } = useNumoMentionables(null);
 
   const markdownRef = useRef<(() => string) | null>(null);
   const applyRef = useRef<
@@ -276,6 +280,12 @@ function ScratchpadBody() {
               applyExternalRef={applyRef}
               removeSettledRef={removeSettledRef}
               startAllRef={startAllRef}
+              mentions={{
+                options: mentionables,
+                links,
+                scan,
+                onQuery: () => onMentionQuery(true),
+              }}
             />
           )}
         </div>

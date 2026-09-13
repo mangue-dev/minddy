@@ -56,6 +56,7 @@ async function render(calls: Call[], active = true, reasoning = true) {
       key: "tools",
       kind: "action",
       count: calls.length,
+      toolCalls: calls,
       revealKey: liveSecretRevealKey(calls),
       content: createElement(ToolCallList, { items: calls }),
     },
@@ -76,11 +77,62 @@ async function render(calls: Call[], active = true, reasoning = true) {
 }
 
 function actionToggle() {
-  return [...container.querySelectorAll("button")].find((button) => /^\d+ actions$/.test(button.textContent ?? ""))!;
+  return [...container.querySelectorAll("button")].find(
+    (button) =>
+      button.hasAttribute("aria-expanded") &&
+      !/^(Working|Worked)\b/.test(button.textContent ?? ""),
+  )!;
 }
 const inputs = () => [...container.querySelectorAll("input")];
 
 describe("one-time credentials in work accordions", () => {
+  it("uses the live action name, then an action-family summary", async () => {
+    await render([integration({ status: "running", result: undefined })]);
+    expect(actionToggle().textContent).toContain("Creating integration…");
+    expect(actionToggle().querySelector(".text-shimmer")).not.toBeNull();
+
+    await render([
+      integration(),
+      {
+        id: "command-2",
+        name: "run_command",
+        arguments: JSON.stringify({ command: "npm test" }),
+        status: "complete",
+      },
+    ]);
+    expect(actionToggle().textContent).toContain("1 command run, 1 update");
+    expect(actionToggle().querySelector(".text-shimmer")).toBeNull();
+  });
+
+  it("does not let a thinking event keep a completed action group active", async () => {
+    const calls = [integration()];
+    const events: WorkEvent<ReactNode>[] = [
+      { key: "reasoning", kind: "action", active: true, content: "Reasoning" },
+      {
+        key: "tools",
+        kind: "action",
+        count: calls.length,
+        toolCalls: calls,
+        content: createElement(ToolCallList, { items: calls }),
+      },
+    ];
+    await act(async () => root.render(createElement(NextIntlClientProvider, {
+      locale: "en",
+      messages,
+      timeZone: "UTC",
+      now: new Date("2026-09-05T12:00:10Z"),
+      children: createElement(WorkAccordion, {
+        active: true,
+        startedAt: "2026-09-05T12:00:00Z",
+        endedAt: null,
+        children: createElement(WorkEvents, { events }),
+      }),
+    })));
+
+    expect(actionToggle().textContent).toContain("1 update");
+    expect(actionToggle().querySelector(".text-shimmer")).toBeNull();
+  });
+
   it("opens an existing group when a running integration call returns its credential", async () => {
     await render([integration({ status: "running", result: undefined })]);
     expect(actionToggle().getAttribute("aria-expanded")).toBe("false");

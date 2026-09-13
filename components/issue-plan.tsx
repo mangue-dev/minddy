@@ -157,7 +157,6 @@ export function IssuePlan({
     return (
       <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-10 text-center">
         <p className="text-sm font-medium">{t("emptyTitle")}</p>
-        <p className="max-w-sm text-xs text-muted-foreground">{t("emptyHint")}</p>
         {/* The two ways of having the plan written, then - behind - the one
  which consists of writing it yourself. */}
         {(onWriteWithAgent || onCopyPrompt) && (
