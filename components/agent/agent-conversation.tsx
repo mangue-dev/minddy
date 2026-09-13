@@ -705,12 +705,11 @@ export function AgentConversation({
           )}
         </div>
 
-        {/* Historical steering/interruption for an existing run.
-          Terminaled to the same max width as the wire and centered. On the Agents PAGE it
-          sits just above the mobile navigation bar, so in the
-          gradient that it projects: `dock-above-nav` outputs it (see globals.css).
-          In the modal, the class costs nothing — the Sheet is its own
-          contexte d'empilement. */}
+        {/* Historical steering and interruption controls for an existing run.
+          They use the same centered maximum width as the event feed. On the
+          Agents page, `dock-above-nav` keeps them above the mobile navigation
+          gradient (see globals.css). In the modal, the class has no effect
+          because the Sheet creates its own stacking context. */}
         {phase !== "loading" && (
           <div className="dock-above-nav shrink-0">
             <div className="mx-auto w-full max-w-[800px]">

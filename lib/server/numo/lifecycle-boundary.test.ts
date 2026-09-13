@@ -84,4 +84,18 @@ describe("unified Numo lifecycle boundary", () => {
     expect(production.some(({ file }) => file.endsWith("session-compose.tsx"))).toBe(false);
     expect(production.some(({ file }) => file.endsWith("agent-compose-draft.ts"))).toBe(false);
   });
+
+  it("opens a fresh Numo conversation and clears invalid mobile history selections", () => {
+    const agentsPage = source("components/agents/agents-page.tsx");
+
+    expect(agentsPage).toMatch(
+      /const startNewSession = \(\) => \{\s*resetAssistant\(\);\s*router\.push\("\/numo"\);\s*\}/,
+    );
+    expect(agentsPage).toMatch(
+      /if \(!resolved\) \{\s*setSelectedKey\(null\);\s*setMobileDetail\(false\);/,
+    );
+    expect(agentsPage).toMatch(
+      /if \(realSelected\?\.runId === session\.runId\) \{\s*setSelectedKey\(null\);\s*setMobileDetail\(false\);/,
+    );
+  });
 });

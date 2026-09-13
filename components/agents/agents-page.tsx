@@ -43,6 +43,7 @@ import {
 } from "@/lib/use-agent-runs";
 import { useProjects } from "@/lib/projects-context";
 import { useAgentReads } from "@/lib/use-agent-reads";
+import { useAssistantChatContext } from "@/lib/assistant-chat-context";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { issueIdentifier } from "@/lib/issue-constants";
@@ -509,6 +510,7 @@ export function AgentsPage() {
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const { sessions, loading, refetch } = useAgentSessionsQuery();
   const { reads, markRead } = useAgentReads();
+  const { reset: resetAssistant } = useAssistantChatContext();
   const isWide = useIsWideViewport();
 
   // Deep links resolve a persisted run or the newest historical run for an issue.
@@ -645,6 +647,7 @@ export function AgentsPage() {
     const resolved = sessionForKey(selectedKey);
     if (!resolved) {
       setSelectedKey(null);
+      setMobileDetail(false);
       return;
     }
     // Deep-link by TICKET (`?issue=`): the selection retains the CONVERSATION
@@ -664,7 +667,10 @@ export function AgentsPage() {
   };
 
   // “New” leaves the historical adapter and opens the common Numo surface.
-  const startNewSession = () => router.push("/numo");
+  const startNewSession = () => {
+    resetAssistant();
+    router.push("/numo");
+  };
 
   /**
    * Rename: we write `agent_runs.title`, the first step of the waterfall
@@ -719,7 +725,10 @@ export function AgentsPage() {
     setDeleting(true);
     try {
       await deleteAgentRunApi(session.runId);
-      if (selectedKey === session.conversationId) setSelectedKey(null);
+      if (realSelected?.runId === session.runId) {
+        setSelectedKey(null);
+        setMobileDetail(false);
+      }
       setDeleteTarget(null);
       await refetch();
       toast.success(t("sessionDeleted"));
