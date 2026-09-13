@@ -93,6 +93,8 @@ function parseWorkerInput(raw: unknown): WorkerInputCorrelation | null | undefin
 const NUMO_INTENT_SOURCES = new Set([
   "home",
   "issue",
+  "objective",
+  "feedback",
   "page",
   "scratchpad",
   "pull_request",

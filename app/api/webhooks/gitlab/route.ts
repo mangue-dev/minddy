@@ -420,6 +420,7 @@ interface NoteEvent {
   /** `note` carries the body of the message: it is the only signal of a written `@numo`
       depuis GitLab (MIN-162). */
   object_attributes?: {
+    id?: number;
     noteable_type?: string;
     position?: unknown;
     note?: string | null;
@@ -463,7 +464,7 @@ async function handleNote(
   // GitHub. The anti-echo of a message posted from minddy is the one that
   // `recordForgePrGesture` has just been applied: we replay it here on the same
   // gesture, because the trace and the pass are not triggered at the same place.
-  if (!payload.object_attributes?.note) return;
+  if (!payload.object_attributes?.note || payload.object_attributes.id == null) return;
   const pr = await findPullRequestByNumber({
     provider: "gitlab",
     repoFullName,
@@ -486,6 +487,7 @@ async function handleNote(
     prNumber: iid,
     body: payload.object_attributes.note,
     authorLogin: payload.user?.username ?? null,
+    sourceEventId: String(payload.object_attributes.id ?? ""),
   });
 }
 

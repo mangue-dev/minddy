@@ -10,7 +10,7 @@ import type { PrScope } from "./pr-actions";
 import {
   claimDenialNotice,
   claimMemberMention,
-  isForgeAuthorMember,
+  forgeAuthorMemberId,
   MENTION_LIMIT_PER_AUTHOR,
 } from "./forge-mention-guard";
 
@@ -159,6 +159,7 @@ export async function handleForgeNumoMention(opts: {
   prNumber: number;
   body: string | null | undefined;
   authorLogin: string | null;
+  sourceEventId: string;
 }): Promise<void> {
   const body = opts.body ?? "";
   if (!mentionsNumo(body)) return;
@@ -186,12 +187,12 @@ export async function handleForgeNumoMention(opts: {
     // MIN-330 — authorization BEFORE debit: a stranger must not consume
     // the counter of a deposit (this would be a denial of service to members), it
     // has his own, which only serves to answer him once.
-    const member = await isForgeAuthorMember({
+    const actorId = await forgeAuthorMemberId({
       provider: opts.provider,
       projectIds,
       authorLogin: opts.authorLogin,
     });
-    const throttle = member
+    const throttle = actorId
       ? await claimMemberMention({
           provider: opts.provider,
           repoFullName: opts.repoFullName,
@@ -199,8 +200,8 @@ export async function handleForgeNumoMention(opts: {
         })
       : { allowed: false, notify: false };
 
-    if (!member || !throttle.allowed) {
-      const notify = member
+    if (!actorId || !throttle.allowed) {
+      const notify = actorId
         ? throttle.notify
         : await claimDenialNotice({
             provider: opts.provider,
@@ -209,7 +210,7 @@ export async function handleForgeNumoMention(opts: {
           });
       console.warn(
         `[pr-mention] denied @numo on ${opts.repoFullName}#${opts.prNumber} ` +
-          `(${opts.authorLogin ?? "unknown author"}): ${member ? "rate limit" : "not a member"}`,
+          `(${opts.authorLogin ?? "unknown author"}): ${actorId ? "rate limit" : "not a member"}`,
       );
       if (!notify) return;
       // Resolving the range COSTS a forge token: we only do it for the
@@ -219,7 +220,7 @@ export async function handleForgeNumoMention(opts: {
       if (scope) {
         await replyOnPr(
           scope,
-          member ? DENIAL_BODIES.throttled : DENIAL_BODIES.notMember(opts.authorLogin),
+          actorId ? DENIAL_BODIES.throttled : DENIAL_BODIES.notMember(opts.authorLogin),
         );
       }
       return;
@@ -234,8 +235,10 @@ export async function handleForgeNumoMention(opts: {
     await startNumoPrReview({
       scope,
       userId,
+      actorId,
       supabase: getServiceClient(),
       projectId: projectIds[0] ?? null,
+      sourceEventId: opts.sourceEventId,
       question: { author: opts.authorLogin, body },
     });
   } catch (err) {

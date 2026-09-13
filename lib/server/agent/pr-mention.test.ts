@@ -113,7 +113,7 @@ const createPullRequestComment = vi.fn(async (_opts: { body: string }) => ({
   id: 1,
   html_url: "u",
 }));
-const startNumoPrReview = vi.fn(async (_input: { userId: string }) => null);
+const startNumoPrReview = vi.fn(async (_input: { userId: string; actorId?: string }) => null);
 
 vi.mock("./pr-actions", () => ({
   resolvePrScope: vi.fn(async () => ({
@@ -133,6 +133,7 @@ function mention(login: string | null, body = "@numo peux-tu relire ?") {
     prNumber: 42,
     body,
     authorLogin: login,
+    sourceEventId: "forge-comment-1",
   });
 }
 
@@ -189,9 +190,10 @@ describe("handleForgeNumoMention — qui a le droit", () => {
     expect(createPullRequestComment).not.toHaveBeenCalled();
   });
 
-  it("impute la relecture au OWNER du projet, jamais à l'auteur du commentaire", async () => {
+  it("keeps billing with the owner and the private conversation with the commenter", async () => {
     await mention("collegue");
     expect(startNumoPrReview.mock.calls[0][0].userId).toBe(OWNER_ID);
+    expect(startNumoPrReview.mock.calls[0][0].actorId).toBe(MEMBER_ID);
   });
 });
 
