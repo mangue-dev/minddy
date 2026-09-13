@@ -20,6 +20,12 @@ describe("common Numo intent entry", () => {
     expect(contents).not.toContain("setAgentComposeDraft");
   });
 
+  it("waits for page persistence before handing page tasks to Numo", () => {
+    const contents = source("components/pages/page-task-surface.tsx");
+    expect(contents).toContain("flush()\n          .then");
+    expect(contents).not.toContain("flush().finally");
+  });
+
   it("keeps PR review and fix intent in the common conversation", () => {
     const contents = source("components/pull-requests/pr-detail.tsx");
     expect(contents).toContain('source: "pull_request"');

@@ -7,6 +7,7 @@
 
 import { useMemo, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { toast } from "mangue-ui";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { buildPageTaskPrompt } from "@/lib/pages-prompt";
 import {
@@ -47,28 +48,33 @@ export function PageTaskSurface({
           page: pageTitle,
           mcp: false,
         });
-        void flush().finally(() =>
-          openIntent({
-            source: "page",
-            action: "custom",
-            projectId,
-            prompt,
-            pageContext: { projectId, pageId, pageTitle },
-          })
-        );
+        void flush()
+          .then(() =>
+            openIntent({
+              source: "page",
+              action: "custom",
+              projectId,
+              prompt,
+              pageContext: { projectId, pageId, pageTitle },
+            })
+          )
+          .catch(() => toast.error(t("saveFailed")));
       },
 
       promote: (note) => {
         // The panel does not unmount the editor, but persist the new task state
         // before Numo rereads the page.
-        void flush();
-        openIntent({
-          source: "page",
-          action: "promote",
-          projectId,
-          prompt: t("promotePrompt", { note, page: pageTitle }),
-          pageContext: { projectId, pageId, pageTitle },
-        });
+        void flush()
+          .then(() =>
+            openIntent({
+              source: "page",
+              action: "promote",
+              projectId,
+              prompt: t("promotePrompt", { note, page: pageTitle }),
+              pageContext: { projectId, pageId, pageTitle },
+            })
+          )
+          .catch(() => toast.error(t("saveFailed")));
       },
     }),
     [t, projectId, pageId, pageTitle, flush, openIntent]
