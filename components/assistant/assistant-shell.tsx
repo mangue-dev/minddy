@@ -90,6 +90,7 @@ import Link from "next/link";
 import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
 import { ReasoningBlock } from "@/components/agent/reasoning-block";
 import { assistantMessageReasoning } from "@/lib/assistant-reasoning";
+import { isDelegatedWorkToolCall } from "@/lib/delegated-work-state";
 
 const STARTERS = [
   {
@@ -810,6 +811,8 @@ export const AssistantShell = forwardRef<
                       block.summary,
                     );
                     const events: WorkEvent<ReactNode>[] = [];
+                    const delegatedWorkCards: ReactNode[] = [];
+                    const delegatedWorkCallIds = new Set<string>();
                     const addReasoning = (
                       key: string,
                       reasoning: ReturnType<typeof assistantMessageReasoning>,
@@ -830,8 +833,26 @@ export const AssistantShell = forwardRef<
                           content: renderMessage({ ...msg, tool_calls: [] }),
                         });
                       }
-                      const calls = (msg.tool_calls ?? []).filter((call) =>
+                      const visibleCalls = (msg.tool_calls ?? []).filter((call) =>
                         !(call.function.name === "ask_user" && msg.id === activeAskUser?.messageId),
+                      );
+                      const delegatedCalls = visibleCalls.filter((call) =>
+                        isDelegatedWorkToolCall({ name: call.function.name }),
+                      );
+                      if (delegatedCalls.length > 0) {
+                        for (const call of delegatedCalls) {
+                          delegatedWorkCallIds.add(call.id);
+                        }
+                        delegatedWorkCards.push(
+                          renderMessage({
+                            ...msg,
+                            content: null,
+                            tool_calls: delegatedCalls,
+                          }),
+                        );
+                      }
+                      const calls = visibleCalls.filter((call) =>
+                        !isDelegatedWorkToolCall({ name: call.function.name }),
                       );
                       if (calls.length > 0) {
                         events.push({
@@ -871,7 +892,24 @@ export const AssistantShell = forwardRef<
                           content: <StreamingMessage content={state.streamingContent} activeToolCalls={[]} />,
                         });
                       }
-                      const calls = state.activeToolCalls.filter((call) => call.name !== "ask_user");
+                      const delegatedCalls = state.activeToolCalls.filter((call) =>
+                        isDelegatedWorkToolCall(call) &&
+                        !delegatedWorkCallIds.has(call.id),
+                      );
+                      if (delegatedCalls.length > 0) {
+                        delegatedWorkCards.push(
+                          <StreamingMessage
+                            key="streaming-delegated-work"
+                            content=""
+                            activeToolCalls={delegatedCalls}
+                          />,
+                        );
+                      }
+                      const calls = state.activeToolCalls.filter(
+                        (call) =>
+                          call.name !== "ask_user" &&
+                          !isDelegatedWorkToolCall(call),
+                      );
                       if (calls.length > 0) {
                         events.push({
                           key: "streaming-actions",
@@ -896,6 +934,7 @@ export const AssistantShell = forwardRef<
                             <WorkEvents events={events} />
                           </WorkAccordion>
                         )}
+                        {delegatedWorkCards}
                         {block.summary ? renderMessage(block.summary) : null}
                         {block.active &&
                         !streamingIsWork &&

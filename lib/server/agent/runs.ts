@@ -1680,6 +1680,48 @@ export async function notifyAgentRun(
   }
 }
 
+/** Notify only after Numo has mediated a delegated worker result into its parent conversation. */
+export async function notifyDelegatedAgentRun(
+  run: Pick<
+    AgentRun,
+    | "id"
+    | "created_by"
+    | "project_id"
+    | "issue_id"
+    | "conversation_id"
+    | "parent_numo_conversation_id"
+    | "parent_numo_turn_id"
+    | "routine_id"
+  >,
+  type: "agent_done" | "agent_question" | "agent_failed",
+): Promise<void> {
+  if (
+    !run.created_by ||
+    !run.parent_numo_conversation_id ||
+    !run.parent_numo_turn_id ||
+    run.routine_id
+  ) return;
+  try {
+    await insertNotifications(
+      getServiceClient(),
+      [{
+        user_id: run.created_by,
+        project_id: run.project_id,
+        type,
+        issue_id: run.issue_id,
+        agent_conversation_id: run.conversation_id,
+        numo_conversation_id: run.parent_numo_conversation_id,
+        numo_work_id: run.id,
+        actor_id: null,
+        via_assistant: true,
+      }],
+      { replaceUnread: true },
+    );
+  } catch (error) {
+    console.error("[agent-runs] delegated notification failed:", (error as Error).message);
+  }
+}
+
 /** Run affected by a PR sync (to align the issue status on the calling side).
     `issueId` null = run notebook: no issue to align. */
 export interface SyncedPrRun {

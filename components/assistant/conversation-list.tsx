@@ -39,6 +39,7 @@ import { fetchConversations, deleteConversation, setActiveConversation, updateCo
 import type { NumoConversation } from "@/lib/assistant-types";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { isNumoConversationUnread } from "@/lib/numo-conversation-unread";
 import {
   matchesFilter,
   SidebarFilterField,
@@ -244,6 +245,7 @@ export function ConversationList({
   const renderConversation = (conversation: ConversationWithProject) => {
     const isPinned = Boolean(conversation.pinned_at);
     const isArchived = Boolean(conversation.archived_at);
+    const unread = isNumoConversationUnread(conversation, activeConversationId);
     return (
       <div
         key={conversation.id}
@@ -283,6 +285,12 @@ export function ConversationList({
           </span>
           {conversation.status === "generating" && (
             <Loader2 className="size-3 shrink-0 animate-spin text-primary group-hover:hidden group-focus-within:hidden" />
+          )}
+          {unread && (
+            <span
+              className="size-2 shrink-0 rounded-full bg-primary group-hover:hidden group-focus-within:hidden"
+              aria-label={t("unreadConversation")}
+            />
           )}
         </button>
 

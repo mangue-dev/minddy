@@ -222,6 +222,9 @@ export interface MyNotification {
   /** Targeted code conversation, including when it has no tickets. */
   agent_conversation_id: string | null;
   agent_conversation_title: string | null;
+  /** Parent conversation and delegated run for legacy worker notifications. */
+  numo_conversation_id?: string | null;
+  numo_work_id?: string | null;
   issue_number: number | null;
   issue_title: string | null;
   /** Set instead of the issue fields when the notification points at an objective. */

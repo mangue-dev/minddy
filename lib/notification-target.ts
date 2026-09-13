@@ -18,6 +18,10 @@ export interface NotificationTarget {
   issue_id: string | null;
   /** Conversation de l'agent de code, independante de ses contextes. */
   agent_conversation_id?: string | null;
+  /** Parent Numo conversation for a delegated worker notification retained from an older client. */
+  numo_conversation_id?: string | null;
+  /** Delegated run to reveal when opening the parent conversation. */
+  numo_work_id?: string | null;
   objective_id?: string | null;
   feedback_post_id?: string | null;
   /** A ROUTINE (MIN-185): its executions are read in the routine, and
@@ -50,6 +54,13 @@ export function notificationTargetPath(n: NotificationTarget): string | null {
   // The pull request too: its page is global, and a PR without a ticket has nothing
   // else to open — this is even the normal case of a human RA.
   if (n.pull_request_id) return `/pull-requests?pr=${n.pull_request_id}`;
+  if (n.numo_conversation_id) {
+    const conversation = encodeURIComponent(n.numo_conversation_id);
+    const work = n.numo_work_id
+      ? `&work=${encodeURIComponent(n.numo_work_id)}`
+      : "";
+    return `/agents?conversation=${conversation}${work}`;
+  }
   if (n.agent_conversation_id) return `/agents?run=${n.agent_conversation_id}`;
   if (!n.project_id) return null;
   if (n.objective_id) {
@@ -94,6 +105,8 @@ export const NOTIFICATION_TARGET_PARAMS = [
   "routine",
   "pr",
   "run",
+  "conversation",
+  "work",
 ] as const;
 
 /** The i18n key of the phrase "who did what", namespace `Inbox`. Typed as

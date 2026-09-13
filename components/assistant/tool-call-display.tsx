@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
 import { matchAskUserAnswers, parseAskUserQuestions } from "@/lib/ask-user";
 import { SeedProposalCard } from "./seed-proposal-card";
 import { liveSecretOf, SecretCallout } from "./secret-callout";
+import type { DelegatedWorkCall } from "./delegated-work-card";
+import { isDelegatedWorkToolCall } from "@/lib/delegated-work-state";
 import { useGroupedActions } from "./work-events";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { SeedProposal } from "@/lib/seed/types";
@@ -72,6 +75,11 @@ interface ToolCallItem {
   result?: unknown;
   success?: boolean;
 }
+
+const DelegatedWorkCard = dynamic(
+  () => import("./delegated-work-card").then((module) => module.DelegatedWorkCard),
+  { ssr: false },
+);
 
 interface ToolCallListProps {
   items: ToolCallItem[];
@@ -1457,7 +1465,10 @@ export function ToolCallList({
   const calloutIds = new Set(
     [...askUserCallouts, ...seedCallouts].map((i) => i.id),
   );
-  const rowItems = items.filter((i) => !calloutIds.has(i.id));
+  const delegatedWork = items.filter(isDelegatedWorkToolCall);
+  const rowItems = items.filter(
+    (i) => !calloutIds.has(i.id) && !isDelegatedWorkToolCall(i),
+  );
 
   const renderRows = () => {
     if (rowItems.length === 0) return null;
@@ -1529,6 +1540,9 @@ export function ToolCallList({
   return (
     <div className="flex w-full flex-col gap-1.5">
       {renderRows()}
+      {delegatedWork.map((item) => (
+        <DelegatedWorkCard key={item.id} call={item as DelegatedWorkCall} />
+      ))}
       {!askUserHidden &&
         askUserCallouts.map((item) => (
           <AskUserSummaryRow

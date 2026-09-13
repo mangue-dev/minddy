@@ -20,6 +20,7 @@ import { lengthBucket } from "./analytics-sanitize";
 import type { AssistantMention } from "./assistant-types";
 import type { ResourceInput } from "./types";
 import type { PullRequestReadiness } from "./pr-readiness";
+import type { AgentDelegationResult } from "./server/agent/agent-contract";
 
 /**
  * Code agent client fetchers (MIN-46): launch a run on an issue and
@@ -121,6 +122,8 @@ export interface AgentRunSummary {
   /** The last round ended on an ask_user: the run WAITS for the response from
    * the user → YELLOW point (same reading rules as unread). */
   awaiting_input: boolean;
+  /** Validated handoff facts persisted for work delegated by Numo. */
+  delegation_result?: AgentDelegationResult | null;
   /**
    * The conversation turns to the user's MACHINE (MIN-359), not
    * in a microVM. FROZEN at launch, such as the model, reasoning and

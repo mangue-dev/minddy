@@ -55,7 +55,7 @@ vi.mock("@/lib/server/numo/turns", () => ({
   executeNumoTurn: (...args: unknown[]) => h.executeNumo(...args),
 }));
 
-const { notifyAgentRun, stampRunResult } = await import("./runs");
+const { notifyAgentRun, notifyDelegatedAgentRun, stampRunResult } = await import("./runs");
 
 const terminalRun = {
   id: "run-1",
@@ -118,6 +118,35 @@ describe("agent run notifications", () => {
       routine_id: null,
       parent_numo_turn_id: "33333333-3333-4333-8333-333333333333",
     }, "agent_question");
+
+    expect(h.notifications).toHaveLength(0);
+  });
+
+  it("creates one parent-targeted notification after Numo mediates delegated work", async () => {
+    await notifyDelegatedAgentRun({
+      ...terminalRun,
+      routine_id: null,
+      parent_numo_conversation_id: "22222222-2222-4222-8222-222222222222",
+      parent_numo_turn_id: "33333333-3333-4333-8333-333333333333",
+    }, "agent_done");
+
+    expect(h.notifications).toEqual([
+      expect.objectContaining({
+        type: "agent_done",
+        agent_conversation_id: "conversation-1",
+        numo_conversation_id: "22222222-2222-4222-8222-222222222222",
+        numo_work_id: "run-1",
+        via_assistant: true,
+      }),
+    ]);
+  });
+
+  it("leaves delegated routine occurrences to the routine notifier", async () => {
+    await notifyDelegatedAgentRun({
+      ...terminalRun,
+      parent_numo_conversation_id: "22222222-2222-4222-8222-222222222222",
+      parent_numo_turn_id: "33333333-3333-4333-8333-333333333333",
+    }, "agent_done");
 
     expect(h.notifications).toHaveLength(0);
   });
