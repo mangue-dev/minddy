@@ -52,6 +52,56 @@ SELECT pg_temp.assert_numo(NOT EXISTS (
 SELECT pg_temp.assert_numo((SELECT count(*) = 2 FROM public.numo_conversation_ids
  WHERE assistant_id = '51400000-0000-4000-8000-000000000020' OR agent_id = '51400000-0000-4000-8000-000000000020'), 'colliding source UUIDs remain distinct');
 
+-- Exercise a current Numo turn beside the migrated histories. Repeating the
+-- browser request and event simulates refresh/retry without duplicating work.
+INSERT INTO public.conversations (id, user_id, project_id, title) VALUES
+ ('51400000-0000-4000-8000-000000000029', '51400000-0000-4000-8000-000000000001', '51400000-0000-4000-8000-000000000010', 'Unified lifecycle');
+SELECT count(*) FROM public.begin_numo_turn(
+  '51400000-0000-4000-8000-000000000029',
+  '51400000-0000-4000-8000-000000000001',
+  '51400000-0000-4000-8000-000000000063',
+  '51400000-0000-4000-8000-000000000064',
+  '{"source":"fab","action":"discuss"}',
+  'openai/gpt-5.6', 'high', 'Continue from the FAB',
+  '{"projectId":"51400000-0000-4000-8000-000000000010"}', '{}'
+);
+SELECT count(*) FROM public.begin_numo_turn(
+  '51400000-0000-4000-8000-000000000029',
+  '51400000-0000-4000-8000-000000000001',
+  '51400000-0000-4000-8000-000000000063',
+  '51400000-0000-4000-8000-000000000064',
+  '{"source":"fab","action":"discuss"}',
+  'openai/gpt-5.6', 'high', 'Continue from the FAB',
+  '{"projectId":"51400000-0000-4000-8000-000000000010"}', '{}'
+);
+SELECT count(*) FROM public.claim_numo_turn(
+  (SELECT id FROM public.numo_assistant_turns WHERE conversation_id = '51400000-0000-4000-8000-000000000029'),
+  '51400000-0000-4000-8000-000000000065', false
+);
+SELECT public.append_numo_turn_event(
+  (SELECT id FROM public.numo_assistant_turns WHERE conversation_id = '51400000-0000-4000-8000-000000000029'),
+  '51400000-0000-4000-8000-000000000066', 'content_delta', '{"delta":"Accepted"}'
+);
+SELECT public.append_numo_turn_event(
+  (SELECT id FROM public.numo_assistant_turns WHERE conversation_id = '51400000-0000-4000-8000-000000000029'),
+  '51400000-0000-4000-8000-000000000066', 'content_delta', '{"delta":"Accepted"}'
+);
+INSERT INTO public.assistant_messages (conversation_id, turn_id, role, content, metadata)
+SELECT '51400000-0000-4000-8000-000000000029', id, 'assistant', 'Accepted', '{}'
+FROM public.numo_assistant_turns
+WHERE conversation_id = '51400000-0000-4000-8000-000000000029';
+SELECT count(*) FROM public.checkpoint_numo_turn(
+  (SELECT id FROM public.numo_assistant_turns WHERE conversation_id = '51400000-0000-4000-8000-000000000029'),
+  '51400000-0000-4000-8000-000000000065', 'completed', '{}', NULL, NULL,
+  'Accepted', 0.01
+);
+SELECT pg_temp.assert_numo((SELECT count(*) = 10 FROM public.numo_conversation_ids), 'backfill plus current inserts produce ten stable mappings');
+SELECT pg_temp.assert_numo((SELECT count(*) = 4 FROM public.numo_conversation_ids WHERE assistant_id IS NOT NULL), 'four assistant histories map one-to-one');
+SELECT pg_temp.assert_numo((SELECT count(*) = 6 FROM public.numo_conversation_ids WHERE agent_id IS NOT NULL), 'six worker histories map one-to-one');
+SELECT pg_temp.assert_numo((SELECT count(*) = 1 FROM public.numo_assistant_turns WHERE conversation_id = '51400000-0000-4000-8000-000000000029'), 'duplicate request keeps one durable turn');
+SELECT pg_temp.assert_numo((SELECT count(*) = 1 FROM public.numo_turn_events WHERE turn_id = (SELECT id FROM public.numo_assistant_turns WHERE conversation_id = '51400000-0000-4000-8000-000000000029')), 'duplicate event keeps one replay record');
+SELECT pg_temp.assert_numo((SELECT status = 'idle' FROM public.conversations WHERE id = '51400000-0000-4000-8000-000000000029'), 'completed durable turn returns the conversation to idle');
+
 INSERT INTO public.agent_runs (id, conversation_id, project_id, created_by, status, created_at, pr_number, pr_url) VALUES
  ('51400000-0000-4000-8000-000000000030', '51400000-0000-4000-8000-000000000020', '51400000-0000-4000-8000-000000000010', '51400000-0000-4000-8000-000000000001', 'completed', '2026-09-01', 42, 'https://example.test/pull/42'),
  ('51400000-0000-4000-8000-000000000031', '51400000-0000-4000-8000-000000000020', '51400000-0000-4000-8000-000000000010', '51400000-0000-4000-8000-000000000001', 'completed', '2026-09-01', NULL, NULL),
@@ -99,7 +149,7 @@ INSERT INTO public.agent_conversation_contexts (conversation_id, kind, resource_
 
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '51400000-0000-4000-8000-000000000001', true);
-SELECT pg_temp.assert_numo((SELECT count(*) = 4 FROM public.numo_user_conversation_history), 'owner sees each user-initiated chat and standalone history once');
+SELECT pg_temp.assert_numo((SELECT count(*) = 5 FROM public.numo_user_conversation_history), 'owner sees each user-initiated chat and standalone history once');
 SELECT pg_temp.assert_numo((SELECT count(*) = 1 FROM public.numo_conversation_history WHERE legacy_id = '51400000-0000-4000-8000-000000000028'), 'routine conversation remains addressable by durable identity');
 SELECT pg_temp.assert_numo((SELECT count(*) = 0 FROM public.numo_user_conversation_history WHERE legacy_id = '51400000-0000-4000-8000-000000000028'), 'routine conversation stays out of user history after a follow-up message');
 SELECT pg_temp.assert_numo((SELECT content = 'Follow-up on a routine run' FROM public.numo_messages WHERE id = '51400000-0000-4000-8000-000000000046'), 'routine follow-up remains in the routine conversation timeline');

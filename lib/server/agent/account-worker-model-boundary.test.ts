@@ -30,8 +30,6 @@ describe("account worker model boundary", () => {
       "lib/server/agent/launch.ts",
       "lib/server/assistant/execute-tool.ts",
       "lib/server/agent/issue-tools.ts",
-      "app/api/agent-runs/route.ts",
-      "app/api/issues/[id]/agent/route.ts",
       "app/api/pull-requests/[prId]/route.ts",
       "app/api/routines/route.ts",
       "app/api/routines/[id]/route.ts",

@@ -10,7 +10,6 @@ describe("server-only Numo launch surfaces", () => {
   it("does not expose an environment selector in any worker composer", () => {
     for (const file of [
       "components/agent/agent-conversation.tsx",
-      "components/agents/session-compose.tsx",
       "components/pull-requests/pr-detail.tsx",
     ]) {
       const source = read(file);
@@ -18,6 +17,7 @@ describe("server-only Numo launch surfaces", () => {
       expect(source).not.toContain("localExec:");
       expect(source).not.toContain("localWorktree:");
     }
+    expect(existsSync(join(__dirname, "../components/agents/session-compose.tsx"))).toBe(false);
   });
 
   it("keeps historical local diffs visible while disabling continuation", () => {

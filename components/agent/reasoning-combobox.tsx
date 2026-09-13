@@ -23,7 +23,7 @@ import {
 
 /**
  * Picker of the REASONING level of an agent session (MIN-122) — the counterpart
- * of the BranchCombobox, simpler: short and CLOSED list, therefore no field
+ * of a compact selector, simpler: short and CLOSED list, therefore no field
  * de recherche ni de saisie libre.
  *
  * WHAT IT LISTS DEPENDS ON THE MODEL, and cannot not depend on it: the

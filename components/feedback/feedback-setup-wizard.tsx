@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Textarea, toast } from "mangue-ui";
@@ -29,10 +28,7 @@ import {
   useIntegrationsQuery,
 } from "@/lib/use-integrations-query";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
-import {
-  FREE_COMPOSE_PARAM,
-  setAgentComposeDraft,
-} from "@/lib/agent-compose-draft";
+import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import { integrationKeyEnvLine } from "@/lib/feedback/integration-contract";
 
@@ -95,7 +91,7 @@ export function FeedbackSetupWizard({
 }) {
   const t = useTranslations("Settings");
   const tCommon = useTranslations("Common");
-  const router = useRouter();
+  const { openIntent } = useAssistantPanel();
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<Mode>("board");
   const [sso, setSso] = useState(true);
@@ -293,19 +289,17 @@ export function FeedbackSetupWizard({
     }
   };
 
-  /**
-   * Entrust the prompt to Numo: same path as “launch an agent” from the
-   * notebook (conversation draft without ticket + compose from the page
-   * Agents), with the project already chosen. We go through composing it rather than
-   * launch from here: the user rereads the instructions, chooses their model and its
-   * basic branch — an agent run on its repository does not start with a click without
-   * revue.
-   */
+  /** Hand the generated implementation request to the shared Numo conversation. */
   const handOffToNumo = () => {
     if (!prompt) return;
-    setAgentComposeDraft({ kind: "free", prompt, projectId });
     handleOpenChange(false);
-    router.push(`/agents?compose=${FREE_COMPOSE_PARAM}`);
+    openIntent({
+      source: "feedback",
+      action: "implement",
+      projectId,
+      prompt,
+      pageContext: { projectId },
+    });
   };
 
   const stepDefs: Record<StepId, WizardStep<StepId>> = {

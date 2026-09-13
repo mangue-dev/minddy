@@ -48,11 +48,6 @@ import { usePublishCurrentView } from "@/lib/current-view-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import {
-  FREE_COMPOSE_PARAM,
-  setAgentComposeDraft,
-  useAgentComposeDraft,
-} from "@/lib/agent-compose-draft";
-import {
   deleteAgentRunApi,
   isAgentSessionUnread,
   renameAgentRunApi,
@@ -79,11 +74,6 @@ const AgentSessionDetail = dynamic(
     import("@/components/agents/agent-session-detail").then(
       (m) => m.AgentSessionDetail,
     ),
-  { ssr: false, loading: DetailLoading },
-);
-
-const SessionCompose = dynamic(
-  () => import("@/components/agents/session-compose").then((m) => m.SessionCompose),
   { ssr: false, loading: DetailLoading },
 );
 
@@ -296,14 +286,12 @@ function SessionGroupRows({
   open,
   showAll,
   collapsible,
-  canLaunch,
   selectedKey,
   reads,
   fmtDay,
   onToggle,
   onShowAll,
   onSelect,
-  onNewSession,
   onRename,
   onDelete,
   onTogglePinned,
@@ -314,20 +302,12 @@ function SessionGroupRows({
   open: boolean;
   showAll: boolean;
   collapsible: boolean;
-  /**
-   * Does the project have a linked DEPOSIT? Without it, the agent has nothing to clone: ​​the
-   * “+” does not apply. Past conversations remain (the
-   * deposit could have been untied afterwards).
-   */
-  canLaunch: boolean;
   selectedKey: string | null;
   reads: Record<string, string>;
   fmtDay: (at: string) => string;
   onToggle: () => void;
   onShowAll: () => void;
   onSelect: (key: string) => void;
-  /** “+” from hover: blank conversation, this project already chosen. */
-  onNewSession: () => void;
   /** Right click on a line: rename / delete this conversation. */
   onRename: (session: AgentSessionListItem) => void;
   onTogglePinned: (session: AgentSessionListItem) => void;
@@ -374,31 +354,6 @@ function SessionGroupRows({
             )}
             aria-label={awaiting ? t("awaitingAnswer") : t("unread")}
           />
-        ) : null
-      }
-      actions={
-        /* Without a joint project, nothing to pre-choose; without linked deposit, nothing to launch:
- in both cases the shortcut does not exist. */
-        group.project && canLaunch ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                onClick={onNewSession}
-                aria-label={t("newInProject", { project: group.project.name })}
-                // Invisible, it does not click: on the finger, where there is no
-                // hover, the right edge of a header would otherwise open a
-                // conversation without anything announcing it.
-                className="pointer-events-none size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/project:pointer-events-auto group-hover/project:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
-              >
-                <Plus className="size-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t("newInProject", { project: group.project.name })}
-            </TooltipContent>
-          </Tooltip>
         ) : null
       }
     >
@@ -540,26 +495,9 @@ function SessionNameDialog({
  * conversation, and only one at a time: browse the projects, or filter (the
  * filter unfolds everything and lifts the cup of five).
  *
- * **The default view is a BLANK CONVERSATION** (`SessionCompose`), not the
- * last session: arriving here means wanting to speak to the agent, not rereading this
- * that we already told him. A conversation is read by choosing it from the list.
- * This is the `FREE_COMPOSE_PARAM` selection key — it does not designate any session
- * real, and the list shows NOTHING for her: a conversation does not enter into the
- * column only when it really exists, that is to say at the first message sent.
- *
- * “Launch Agent” entry points:
- * • OUTCOME (MIN-46): the ticket button (card or panel) places a DRAFT
- * (`useAgentComposeDraft`, kind "issue") and navigate here with `?compose=<issueId>`.
- * This is the ONLY path to a conversation anchored to a ticket — the page, it,
- * no longer offers a ticket selector.
- * • FREE SUBJECT: the “New” button on this page (blank conversation, without
- * draft), the NOTEBOOK (MIN-84) and the integration wizards, which pose a
- * draft kind "free" with pre-written text and navigate with `?compose=new`.
- * The pane opens the launch composer (`SessionCompose`: project + model +
- *    raisonnement + branche).
- * Purely optimistic in both cases: if the user does not send the 1st
- * message, nothing existed; as soon as he sends it, the actual run takes over in
- * the same section and appears in the list.
+ * New work is intentionally absent from this compatibility surface. Voluntary
+ * requests enter the shared Numo composer; this page keeps existing worker
+ * histories, artifacts, and controls accessible.
  */
 export function AgentsPage() {
   const t = useTranslations("Agents");
@@ -570,41 +508,20 @@ export function AgentsPage() {
   const queryClient = useQueryClient();
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const { sessions, loading, refetch } = useAgentSessionsQuery();
-  // Projects where the agent can work (linked repository) — only they carry the
-  // “+” in their header. Same request as dial, so only one call.
   const { reads, markRead } = useAgentReads();
   const isWide = useIsWideViewport();
 
-  // Deep-link (“Open agent” from elsewhere): ?run=<runId> opens THIS
-  // conversation ; ?issue=<issueId> opens the most recent ticket (it is no longer
-  // the key to no conversation — cf. `sessionForKey`); ?compose=<issueId>
-  // opens it as a launch draft; ?compose=new the draft WITHOUT a ticket.
+  // Deep links resolve a persisted run or the newest historical run for an issue.
   const searchParams = useSearchParams();
   const issueParam = searchParams.get("issue");
   const runParam = searchParams.get("run");
-  const composeParam = searchParams.get("compose");
 
-  const draft = useAgentComposeDraft();
-  // The draft is only honored if the URL indicates it AGAIN: a navigation to
-  // /agents without `?compose=` (return later) ignores it, even if it is lying around in memory.
-  const draftHonored =
-    !!draft &&
-    (draft.kind === "issue"
-      ? composeParam === draft.issueId
-      : composeParam === FREE_COMPOSE_PARAM);
-  const issueDraft = draftHonored && draft?.kind === "issue" ? draft : null;
-  // Draft WITHOUT a ticket: it only PRE-WRITE the blank conversation (a
-  // note in the notebook, an integration prompt). The “New” button does not pose any problems
-  // none — a blank conversation has nothing to pre-write.
-  const freeDraft = draftHonored && draft?.kind === "free" ? draft : null;
-
-  // Current selection. `FREE_COMPOSE_PARAM` is not the key to ANY session: it is
-  // the blank conversation, and that's where we arrive by default.
+  // The selected key always identifies persisted historical work.
   const [selectedKey, setSelectedKey] = useState<string | null>(
-    composeParam ?? issueParam ?? runParam ?? FREE_COMPOSE_PARAM,
+    issueParam ?? runParam,
   );
   const [mobileDetail, setMobileDetail] = useState(
-    !!composeParam || !!issueParam || !!runParam,
+    !!issueParam || !!runParam,
   );
   // Related issue open in side panel (on top of page, no navigation).
   const [panel, setPanel] = useState<{ projectId: string; issueId: string } | null>(null);
@@ -617,13 +534,6 @@ export function AgentsPage() {
   // Ignore an obsolete response if the same conversation is toggled again
   // before its first pin request settles.
   const pinMutationSequence = useRef(new Map<string, number>());
-  // Go back to composing it NEW with each “New” (and with each pre-written text
-  // received): without this, a message typed and then abandoned would drag on in the conversation
-  // next “virgin” — which would no longer be.
-  const [composeNonce, setComposeNonce] = useState(0);
-  // Pre-chosen draft of the next blank conversation, when it is open
-  // from the header of a project. `null` = the composer chooses his default.
-  const [newSessionProjectId, setNewSessionProjectId] = useState<string | null>(null);
   // Accordion of the list: FOLDED projects (everything is unfolded by default - we
   // arrives to see, not to open) and those from whom we have asked all the
   // conversations. Two sets, the absence being worth the current case.
@@ -643,74 +553,7 @@ export function AgentsPage() {
     }
   };
 
-  // Draft selection key: the intended issue (kind “issue”) or the draft marker
-  // the blank conversation (kind "free" — no run, therefore no real key).
-  const draftKey = issueDraft ? issueDraft.issueId : freeDraft ? FREE_COMPOSE_PARAM : null;
-
-  // The REAL draft of the draft, found in the context: the draft does not
-  // carries only the id and the key of the project, but the header of the conversation paints its
-  // ORB — without `icon_url`, it displayed the generated orb where the project has a
-  // real icon, then switched to the correct one at the first message sent.
-  const draftProject = issueDraft
-    ? projects.find((p) => p.id === issueDraft.projectId) ?? null
-    : null;
-
-  // Synthetic entry of the ISSUE draft, shaped like a real session for
-  // cross the same detail pane (`AgentSessionDetail`). No real run:
-  // `runId` is a marker, the pane opens in compose and the conversation handles the
-  // live passage. (The TICKET-FREE draft has its own section, `SessionCompose`.)
-  const draftItem: AgentSessionListItem | null = issueDraft
-    ? {
-        conversationId: `draft:${issueDraft.issueId}`,
-        runId: `draft:${issueDraft.issueId}`,
-        status: "queued",
-        model: null,
-        triggered_by: "button",
-        // No title: the draft has no run yet, so nothing has been generated.
-        // Its component is therefore called “MIN-42: <ticket title>”, while the
-        // premier message parte.
-        title: null,
-        pullRequest: null,
-        pr_number: null,
-        pr_url: null,
-        pr_state: null,
-        created_at: "",
-        updated_at: "",
-        issue: {
-          id: issueDraft.issueId,
-          number: issueDraft.issueNumber,
-          title: issueDraft.issueTitle,
-        },
-        // The draft does not appear in the list, but its detail section does.
-        // carries the project orb: it therefore comes from the REAL project (name and icon),
-        // and not just the scraps that the draft carries.
-        project: {
-          id: issueDraft.projectId,
-          key: issueDraft.projectKey,
-          name: draftProject?.name ?? issueDraft.projectKey,
-          icon_url: draftProject?.icon_url ?? null,
-          orb_seed: draftProject?.orb_seed ?? null,
-        },
-        working: false,
-        pinned: false,
-        lastCompletedAt: null,
-        awaitingInput: false,
-      }
-    : null;
-
-  const issueComposeSelected =
-    !!issueDraft && selectedKey === issueDraft.issueId;
-  // The blank conversation: the default view, what “New” reopens, and what
-  // that the notebook and the wizards pre-write.
-  const freeComposeActive = selectedKey === FREE_COMPOSE_PARAM;
-  const composeSelected = issueComposeSelected || freeComposeActive;
-
   // Tracks param changes (client navigation to another entry).
-  useEffect(() => {
-    if (!composeParam) return;
-    setSelectedKey(composeParam);
-    setMobileDetail(true);
-  }, [composeParam]);
   useEffect(() => {
     if (!issueParam) return;
     setSelectedKey(issueParam);
@@ -721,23 +564,6 @@ export function AgentsPage() {
     setSelectedKey(runParam);
     setMobileDetail(true);
   }, [runParam]);
-  // A POSTED draft opens its pane, even if the URL does not move:
-  // `router.push` to the CURRENT address is inert, so the params effects
-  // above do not play again. This is exactly the case of a second note thrown
-  // from the notebook (`?compose=new` already in the bar) — the draft existed
-  // fine, but the selection had remained on open conversation in the meantime.
-  // The selection therefore follows the draft, not just the parameter. Compose it
-  // is reworked so that the pre-written text replaces the previous one.
-  useEffect(() => {
-    if (!draftKey) return;
-    setSelectedKey(draftKey);
-    setMobileDetail(true);
-    setComposeNonce((n) => n + 1);
-    // The draft itself says its project (or lets you choose): the pre-choice
-    // of a previous “+” no longer has a say.
-    setNewSessionProjectId(null);
-  }, [draft, draftKey]);
-
   /**
    * The conversation designated by a selection key. It's a run (the case
    * current: a line in the list, `?run=`) — but a deep-link can also
@@ -756,7 +582,7 @@ export function AgentsPage() {
 
   // Resolve the selected historical conversation for the detail pane.
   const realSelected = sessionForKey(selectedKey);
-  const activeItem = issueComposeSelected ? draftItem : realSelected;
+  const activeItem = realSelected;
 
   // The DISPLAYED conversation never has a bubble: it is marked read when it is opened AND
   // at each new end of run as long as it remains visible (dependence on
@@ -764,7 +590,7 @@ export function AgentsPage() {
   // mobile, the detail pane open; otherwise (mobile list or compose) we do not score,
   // so as not to erase the bubble of a session that we are not watching. The sessions
   // WITHOUT TICKET have no read/unread tracking (personal, no issue to anchor).
-  const shownReal = !composeSelected && (isWide || mobileDetail) ? realSelected : null;
+  const shownReal = isWide || mobileDetail ? realSelected : null;
   useEffect(() => {
     const id = shownReal?.conversationId;
     if (id) markRead(id);
@@ -772,7 +598,7 @@ export function AgentsPage() {
 
   /**
    * Publishes the active issue to Numo: it resolves “this issue” (and its PR in the case
-   * appropriate), reads it and can act on it — draft included (issue without PR).
+   * appropriate), reads it and can act on it.
    *
    * The routines page carries its own helper context; here, only the
    * visible conversation publishes its ticket.
@@ -803,7 +629,7 @@ export function AgentsPage() {
   // conversation. Compose it blank
   // is not the sight of anything: we then retain the bare page.
   usePublishCurrentView(
-    realSelected && !composeSelected
+    realSelected
         ? {
             href: `/agents?run=${encodeURIComponent(realSelected.conversationId)}`,
             label: agentSessionTitle(realSelected, t("freeSessionTitle")),
@@ -813,47 +639,32 @@ export function AgentsPage() {
 
   // Keeps a valid selection: when the selected session disappears (or a
   // deep-link designates a session which no longer exists), we return to the conversation
-  // blank — never on ANOTHER conversation, that we didn't ask to read. We don't
-  // touches nothing during a compose (no session to validate) nor as long as the list
-  // has not arrived (loading / deep-link preselection).
+  // no selection — never on ANOTHER conversation that we didn't ask to read.
   useEffect(() => {
-    if (composeSelected) return;
     if (sessions.length === 0) return;
     const resolved = sessionForKey(selectedKey);
     if (!resolved) {
-      setSelectedKey(FREE_COMPOSE_PARAM);
+      setSelectedKey(null);
       return;
     }
     // Deep-link by TICKET (`?issue=`): the selection retains the CONVERSATION
     // that he opened, not the ticket — otherwise no line is highlighted, and the
     // part would follow a ticket whose conversations are no longer one.
     if (resolved.conversationId !== selectedKey) setSelectedKey(resolved.conversationId);
-  }, [sessions, selectedKey, composeSelected]);
+  }, [sessions, selectedKey]);
 
-  // Select a REAL session: abandon the current draft (never sent →
-  // deleted, such as leaving the page). Purely UI, no run existed.
+  // Select a persisted historical session.
   const selectReal = (key: string) => {
-    if (draft) setAgentComposeDraft(null);
     setSelectedKey(key);
     setMobileDetail(true);
     // The URL stops pointing to the entry you just left. She would lie to
     // reloading, and above all it would make the following navigation towards
     // this same entry: pushing the current address changes nothing.
-    if (composeParam || issueParam || runParam) router.replace("/numo");
+    if (issueParam || runParam) router.replace("/agents");
   };
 
-  // “New”: a blank conversation, right away — same gesture as arriving
-  // on the page. Any draft currently in progress is abandoned (never sent)
-  // and compose it from scratch, text included. Launched from the header of a
-  // project, she leaves with this project already chosen (composing it allows it to change).
-  const startNewSession = (projectId?: string) => {
-    if (draft) setAgentComposeDraft(null);
-    setNewSessionProjectId(projectId ?? null);
-    setSelectedKey(FREE_COMPOSE_PARAM);
-    setMobileDetail(true);
-    setComposeNonce((n) => n + 1);
-    if (composeParam || issueParam || runParam) router.replace("/numo");
-  };
+  // “New” leaves the historical adapter and opens the common Numo surface.
+  const startNewSession = () => router.push("/numo");
 
   /**
    * Rename: we write `agent_runs.title`, the first step of the waterfall
@@ -908,7 +719,7 @@ export function AgentsPage() {
     setDeleting(true);
     try {
       await deleteAgentRunApi(session.runId);
-      if (selectedKey === session.conversationId) setSelectedKey(FREE_COMPOSE_PARAM);
+      if (selectedKey === session.conversationId) setSelectedKey(null);
       setDeleteTarget(null);
       await refetch();
       toast.success(t("sessionDeleted"));
@@ -1023,7 +834,6 @@ export function AgentsPage() {
                 open={filtering || !collapsedGroups.has(PINNED_GROUP_KEY)}
                 showAll={filtering || expandedGroups.has(PINNED_GROUP_KEY)}
                 collapsible={!filtering}
-                canLaunch={false}
                 selectedKey={selectedKey}
                 reads={reads}
                 fmtDay={fmtDay}
@@ -1032,7 +842,6 @@ export function AgentsPage() {
                   setExpandedGroups((prev) => toggledSet(prev, PINNED_GROUP_KEY))
                 }
                 onSelect={selectReal}
-                onNewSession={() => startNewSession()}
                 onRename={setRenameTarget}
                 onTogglePinned={(session) => void togglePinnedSession(session)}
                 onDelete={setDeleteTarget}
@@ -1062,36 +871,17 @@ export function AgentsPage() {
         )}
       </SecondarySidebar>
 
-      {/* ── Right: session conversation, or blank conversation ───── */}
+      {/* ── Right: selected historical worker conversation ───────── */}
       <div
         className={cn(
           "min-h-0 min-w-0 flex-1 flex-col md:flex",
           mobileDetail ? "flex" : "hidden",
         )}
       >
-        {freeComposeActive ? (
-          <SessionCompose
-            // The pre-filling of the composer is one-shot (montage): a “New”,
-            // or a NEW note launched from the notebook, must go up a composer
-            // new rather than keeping the text from the previous one.
-            key={`${composeNonce}:${freeDraft?.prompt ?? ""}`}
-            initialText={freeDraft?.prompt}
-            initialProjectId={freeDraft?.projectId ?? newSessionProjectId ?? undefined}
-            onBack={() => setMobileDetail(false)}
-          />
-        ) : activeItem ? (
+        {activeItem ? (
           <AgentSessionDetail
             key={activeItem.runId}
             item={activeItem}
-            compose={issueComposeSelected}
-            composeInitialText={issueComposeSelected ? issueDraft?.prompt : undefined}
-            // Framing (“Generate plan” / “Check plan”) and control
-            // (“Check implementation”): the ticket does not start at
-            // launch, it keeps its status. The draft carries the intention of
-            // original button, not what the composer contains when sending.
-            composeIntent={
-              issueComposeSelected ? issueDraft?.intent ?? "implement" : undefined
-            }
             onBack={() => setMobileDetail(false)}
             onOpenIssue={(issueId, projectId) => setPanel({ projectId, issueId })}
           />

@@ -1618,7 +1618,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                       // Sending blocked with explanation: a native <button disabled>
                       // no longer emits pointer events (the Radix tooltip no longer emits
                       // would never open) → same assembly as the locked chip
-                      // of the BranchCombobox, the outer <span> carries the hover.
+                      // of a compact picker, the outer <span> carries the hover.
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className="inline-flex cursor-not-allowed">

@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { numoPathFromSearchParams, usesLegacyAgentSurface } from "./numo-route";
 
 describe("Numo route compatibility", () => {
-  it("keeps code-agent launch parameters on the legacy surface", () => {
+  it("keeps only historical worker parameters on the legacy surface", () => {
     expect(usesLegacyAgentSurface({ run: "run-1" })).toBe(true);
     expect(usesLegacyAgentSurface({ issue: "issue-1" })).toBe(true);
-    expect(usesLegacyAgentSurface({ compose: "new" })).toBe(true);
+    expect(usesLegacyAgentSurface({ compose: "new" })).toBe(false);
     expect(usesLegacyAgentSurface({ conversation: "conversation-1" })).toBe(
       false,
     );

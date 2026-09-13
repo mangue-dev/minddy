@@ -14,6 +14,8 @@ describe("common Numo intent entry", () => {
     "components/scratchpad/use-launch-agent-note.ts",
     "components/pages/page-task-surface.tsx",
     "components/home/home-numo-composer.tsx",
+    "components/feedback/feedback-setup-wizard.tsx",
+    "components/integrations/create-integration-wizard.tsx",
   ])("routes the %s voluntary request through openIntent", (file) => {
     const contents = source(file);
     expect(contents).toContain("openIntent");
@@ -44,30 +46,17 @@ describe("common Numo intent entry", () => {
   it.each([
     "app/api/issues/[id]/agent/route.ts",
     "app/api/agent-runs/route.ts",
-    "lib/server/agent/pr-actions.ts",
-  ])("keeps the %s legacy adapter out of direct worker launch", (file) => {
+  ])("retires the %s launch adapter explicitly", (file) => {
     const contents = source(file);
-    expect(contents).toContain("startNumoIntent");
+    expect(contents).toContain('error: "numoRequired"');
+    expect(contents).toContain("status: 410");
+    expect(contents).not.toContain("startNumoIntent");
     expect(contents).not.toContain("launchAgentRun({");
   });
 
-  it("retains mentions and attachments on legacy requests", () => {
-    for (const file of [
-      "app/api/issues/[id]/agent/route.ts",
-      "app/api/agent-runs/route.ts",
-    ]) {
-      const contents = source(file);
-      expect(contents).toContain("mentions: parseAgentMentions(body.mentions)");
-      expect(contents).toContain("attachments,");
-    }
-  });
-
-  it.each([
-    "app/api/issues/[id]/agent/route.ts",
-    "app/api/agent-runs/route.ts",
-  ])("rejects retired local execution in %s", (file) => {
-    const contents = source(file);
-    expect(contents).toContain('error: "localExecutionRetired"');
-    expect(contents).toContain("status: 410");
+  it("keeps PR actions inside Numo without a direct worker launch", () => {
+    const contents = source("lib/server/agent/pr-actions.ts");
+    expect(contents).toContain("startNumoIntent");
+    expect(contents).not.toContain("launchAgentRun({");
   });
 });

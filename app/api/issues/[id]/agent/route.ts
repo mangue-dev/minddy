@@ -1,28 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getLocale } from "next-intl/server";
-
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { pickIssuePullRequests, type IssuePrRow } from "@/lib/server/agent/activity";
-import type { AgentLaunchIntent } from "@/lib/server/agent/launch";
-import { parseAgentMentions } from "@/lib/agent-mentions";
 import {
   canReadConversationRecord,
   isSharedRun,
   type ConversationAccessRecord,
   type RunAnchors,
 } from "@/lib/server/agent/run-access";
-import { parseResourcesInput } from "@/lib/server/attachments";
-import type { AttachmentInput } from "@/lib/types";
 import { agentRunCanResume } from "@/lib/agent-run-resumability";
-import {
-  buildAgentLaunchMessage,
-  isAgentLaunchMode,
-} from "@/lib/server/agent/launch-message";
-import {
-  numoIntentErrorResponse,
-  startNumoIntent,
-} from "@/lib/server/numo/start-intent";
 
 /** The `RUN_COLUMNS` columns this file needs to slice. */
 type RunRow = RunAnchors & {
@@ -33,18 +19,13 @@ type RunRow = RunAnchors & {
 /**
  * Code Agent Runs from an issue (MIN-46).
  * GET → lists the runs of the issue VISIBLE BY THE CALLER + his pull request.
- * POST → compatibility adapter that creates a common Numo conversation for
- * the issue intent. Repository work can only start later through Numo's
- * internal delegation tool.
+ * POST is a tombstone: new work enters through Numo, while GET keeps historical
+ * worker records accessible.
  */
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// The launch kick drains the first chunk in after(): you need the same
-// window as the cron route (270s budget) otherwise the function is killed in full
-// round and the run remains stuck in 'running'.
 export const runtime = "nodejs";
-export const maxDuration = 300;
 
 // `created_by`, `chain_id`, `routine_id`, and `parent_numo_turn_id` are read only
 // to decide visibility. The service-key query needs them before it can return a
@@ -127,129 +108,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json({ runs, pullRequest });
 }
 
-// Length terminals (MIN-118): the setpoint is persisted as is in
-// agent_runs; model and branch are short identifiers. Beyond that we truncate.
-const MAX_PROMPT_LENGTH = 20_000;
-const MAX_BRANCH_LENGTH = 255;
-
-export async function POST(request: NextRequest, { params }: RouteContext) {
-  const { id } = await params;
-  const auth = await getAuthedUser(request);
-  if (!auth.ok) return auth.response;
-
-  const { data: issue } = await auth.supabase
-    .from("issues")
-    .select("id, project_id, number, title, plan, effort")
-    .eq("id", id)
-    .maybeSingle();
-  if (!issue) return NextResponse.json({ error: "Issue not found" }, { status: 404 });
-  const { data: project } = await auth.supabase
-    .from("projects")
-    .select("id, key")
-    .eq("id", issue.project_id)
-    .maybeSingle();
-  if (!project) return NextResponse.json({ error: "Issue not found" }, { status: 404 });
-
-  type LaunchBody = {
-    prompt?: string;
-    baseBranch?: string;
-    intent?: AgentLaunchIntent;
-    mentions?: unknown;
-    attachments?: unknown;
-    /** Legacy desktop-local fields are parsed only so stale clients receive
-     * the explicit retirement response instead of silently running elsewhere. */
-    localExec?: unknown;
-    localWorktree?: unknown;
-    /** Explicit acknowledgement shown only by the trusted local UI. */
-    localIssueContextConfirmed?: unknown;
-  };
-  let body: LaunchBody = {};
-  try {
-    // `null` is valid JSON: assigning it would do a 500 on `body.model`
-    // two lines below. Same guard as POST /api/agent-runs (MIN-118).
-    const parsed: unknown = await request.json();
-    if (parsed && typeof parsed === "object") body = parsed as LaunchBody;
-  } catch {
-    // empty body accepted
-  }
-  if ("model" in body || "reasoningLevel" in body || "forced" in body) {
-    return NextResponse.json(
-      {
-        error: "workerConfigurationManagedInSettings",
-        code: "workerConfigurationManagedInSettings",
-      },
-      { status: 400 },
-    );
-  }
-  if (
-    body.localExec === true ||
-    body.localWorktree === true ||
-    body.localIssueContextConfirmed === true
-  ) {
-    return NextResponse.json(
-      { error: "localExecutionRetired", code: "localExecutionRetired" },
-      { status: 410 },
-    );
-  }
-  const prompt =
-    typeof body.prompt === "string" && body.prompt.trim()
-      ? body.prompt.trim().slice(0, MAX_PROMPT_LENGTH)
-      : undefined;
-  const baseBranch =
-    typeof body.baseBranch === "string" && body.baseBranch.trim()
-      ? body.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
-      : undefined;
-  const resources = parseResourcesInput(body.attachments, `chat/${auth.user.id}/`, 5);
-  if (resources === null) {
-    return NextResponse.json({ error: "Invalid attachments" }, { status: 400 });
-  }
-  const attachments = resources.filter((resource): resource is AttachmentInput => resource.kind !== "link");
-  const requestedIntent =
-    body.intent === "plan" || body.intent === "verify" || body.intent === "custom"
-      ? body.intent
-      : "implement";
-  const message = isAgentLaunchMode(requestedIntent)
-    ? await buildAgentLaunchMessage({
-        mode: requestedIntent,
-        issue,
-        projectKey: project.key,
-        locale: await getLocale(),
-        extra: [prompt, baseBranch ? `Requested base branch: ${baseBranch}` : null]
-          .filter(Boolean)
-          .join("\n\n"),
-      })
-    : prompt;
-  if (!message) {
-    return NextResponse.json(
-      { error: "promptRequired", code: "promptRequired" },
-      { status: 400 },
-    );
-  }
-  try {
-    const started = await startNumoIntent({
-      supabase: auth.supabase,
-      userId: auth.user.id,
-      userMetadata: auth.user.user_metadata,
-      projectId: project.id,
-      prompt: message,
-      locale: await getLocale(),
-      source: "issue",
-      action: requestedIntent,
-      context: {
-        projectId: project.id,
-        issueId: issue.id,
-        issueIdentifier: `${project.key}-${issue.number}`,
-        issueTitle: issue.title,
-      },
-      mentions: parseAgentMentions(body.mentions),
-      attachments,
-    });
-    return NextResponse.json({
-      conversation: { id: started.conversationId },
-      turn: { id: started.turnId },
-      detail_href: started.detailHref,
-    }, { status: 202 });
-  } catch (error) {
-    return numoIntentErrorResponse(error);
-  }
+/** Retired launch endpoint kept as an explicit tombstone for stale clients. */
+export async function POST() {
+  return NextResponse.json(
+    { error: "numoRequired", code: "numoRequired" },
+    { status: 410 },
+  );
 }

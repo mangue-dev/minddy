@@ -29,11 +29,9 @@ import {
  * live / targeted issue in composition) and all behavior comes from the heart.
  *
  * `initialRunId` opens a specific run: this is the role that remains for this modal,
- * hot RESUMPTION of an existing conversation from the exit panel
- * (“Open conversation” by `AgentRunPanel`). The LAUNCH no longer happens
- * by a modal: it redirects to the Agents page (`/agents?compose=…`). Without
- * `initialRunId` the modal falls on the last session of the issue (or compose),
- * but no callers use it that way anymore.
+ * hot RESUMPTION of an existing conversation from the issue panel
+ * (“Open conversation” by `AgentRunPanel`). New work starts in Numo; this
+ * modal only opens an existing worker session.
  */
 export function AgentChatModal({
   open,
@@ -42,18 +40,15 @@ export function AgentChatModal({
   issueIdentifier,
   projectId,
   initialRunId = null,
-  compose = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   issueId: string;
-  /** Readable identifier (MIN-42) — displayed in the header in phase compose. */
+  /** Readable identifier (MIN-42) — displayed while the run is loading. */
   issueIdentifier: string;
   projectId?: string | null;
   /** Open THIS run (otherwise: session at work, otherwise the last session). */
   initialRunId?: string | null;
-  /** Forces the compose phase (“Launch a NEW agent”). */
-  compose?: boolean;
 }) {
   const t = useTranslations("Agent");
   const tc = useTranslations("Common");
@@ -82,7 +77,6 @@ export function AgentChatModal({
           issueIdentifier={issueIdentifier}
           projectId={projectId}
           initialRunId={initialRunId}
-          initialCompose={compose}
           headerActions={
             <>
               <Tooltip>
