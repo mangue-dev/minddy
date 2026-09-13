@@ -36,6 +36,8 @@ const STOP_REASONS: Record<Locale, Record<string, string>> = {
     verification_failed: "la vérification de l'implémentation a échoué",
     interrupted: "quelqu'un a interrompu le run en cours",
     run_failed: "un run s'est terminé en échec",
+    numo_failed: "l'opération Numo s'est terminée en échec",
+    numo_outcome_missing: "Numo n'a pas enregistré le résultat de l'étape",
     max_steps: "la chaîne a atteint son nombre maximum d'étapes",
     noRepo: "le projet n'a pas de dépôt lié",
     unsupportedProvider: "la forge du dépôt lié ne permet pas de faire travailler l'agent",
@@ -58,6 +60,8 @@ const STOP_REASONS: Record<Locale, Record<string, string>> = {
     verification_failed: "the implementation failed its own check",
     interrupted: "someone interrupted the running session",
     run_failed: "a session ended in failure",
+    numo_failed: "the Numo operation ended in failure",
+    numo_outcome_missing: "Numo did not record the step outcome",
     max_steps: "the chain reached its maximum number of steps",
     noRepo: "the project has no linked repository",
     unsupportedProvider: "the linked repository's forge cannot host the agent",
@@ -81,6 +85,8 @@ const STOP_REASONS: Record<Locale, Record<string, string>> = {
       "die Implementierung ihre eigene Prüfung nicht bestanden hat",
     interrupted: "jemand die laufende Sitzung unterbrochen hat",
     run_failed: "eine Sitzung fehlgeschlagen ist",
+    numo_failed: "der Numo-Vorgang fehlgeschlagen ist",
+    numo_outcome_missing: "Numo kein Ergebnis für den Schritt gespeichert hat",
     max_steps: "die Kette ihre maximale Schrittzahl erreicht hat",
     noRepo: "das Projekt kein verknüpftes Repository hat",
     unsupportedProvider:
@@ -107,6 +113,8 @@ const STOP_REASONS: Record<Locale, Record<string, string>> = {
     verification_failed: "a implementação não passou na própria verificação",
     interrupted: "alguém interrompeu a sessão em andamento",
     run_failed: "uma sessão terminou com falha",
+    numo_failed: "a operação do Numo terminou com falha",
+    numo_outcome_missing: "o Numo não registrou o resultado da etapa",
     max_steps: "a cadeia atingiu o número máximo de etapas",
     noRepo: "o projeto não tem um repositório vinculado",
     unsupportedProvider:
@@ -133,6 +141,8 @@ const STOP_REASONS: Record<Locale, Record<string, string>> = {
       "l'implementazione non ha superato la propria verifica",
     interrupted: "qualcuno ha interrotto la sessione in corso",
     run_failed: "una sessione è terminata con un errore",
+    numo_failed: "l'operazione Numo è terminata con un errore",
+    numo_outcome_missing: "Numo non ha registrato il risultato del passaggio",
     max_steps: "la catena ha raggiunto il numero massimo di passaggi",
     noRepo: "il progetto non ha un repository collegato",
     unsupportedProvider:
@@ -158,6 +168,8 @@ const STOP_REASONS: Record<Locale, Record<string, string>> = {
     verification_failed: "la implementación no superó su propia verificación",
     interrupted: "alguien interrumpió la sesión en curso",
     run_failed: "una sesión terminó con un error",
+    numo_failed: "la operación de Numo terminó con un error",
+    numo_outcome_missing: "Numo no registró el resultado del paso",
     max_steps: "la cadena alcanzó el número máximo de pasos",
     noRepo: "el proyecto no tiene un repositorio vinculado",
     unsupportedProvider:

@@ -105,4 +105,11 @@ describe("notifyChainOfRunEnd", () => {
     expect(chain.recomputeChainSpend).not.toHaveBeenCalled();
     expect(engine.scheduleAutomations).not.toHaveBeenCalled();
   });
+
+  it("a delegated worker leaves chain progress to its parent Numo turn", async () => {
+    notifyChainOfRunEnd(run({ parent_numo_turn_id: "turn-1" }));
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+    expect(chain.recomputeChainSpend).not.toHaveBeenCalled();
+    expect(engine.scheduleAutomations).not.toHaveBeenCalled();
+  });
 });

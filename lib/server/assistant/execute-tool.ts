@@ -243,6 +243,8 @@ export interface ToolContext {
   operationBudgetUsd?: number | null;
   operationBudgetPercent?: number | null;
   routineId?: string | null;
+  /** Automation chain that owns this parent Numo operation, if any. */
+  automationChainId?: string | null;
   /** Exact pending worker decision available only during a mediation turn. */
   workerInput?: WorkerInputCorrelation;
 }
@@ -820,6 +822,72 @@ export async function executeTool(
         },
         success: true,
         pause: true,
+      };
+    }
+    if (toolName === "report_automation_outcome") {
+      if (!ctx.automationChainId || !ctx.turnId) {
+        return toolError(
+          "report_automation_outcome is only available inside an automated Numo operation.",
+        );
+      }
+      const outcome = args.outcome === "ok" || args.outcome === "failed"
+        ? args.outcome
+        : null;
+      const summary = typeof args.summary === "string"
+        ? args.summary.trim().slice(0, 2_000)
+        : "";
+      const blockers = delegationStrings(args.blockers, 20);
+      if (!outcome || !summary) {
+        return toolError("outcome and summary are required.");
+      }
+      if (outcome === "ok" && blockers.length > 0) {
+        return toolError("An ok automation outcome cannot carry blockers.");
+      }
+      const { data, error } = await ctx.service
+        .from("numo_automation_operations")
+        .update({
+          outcome,
+          outcome_summary: summary,
+          outcome_blockers: blockers,
+        })
+        .eq("chain_id", ctx.automationChainId)
+        .eq("turn_id", ctx.turnId)
+        .is("outcome", null)
+        .select("id")
+        .maybeSingle();
+      if (error) return toolError(error.message);
+      if (!data) {
+        const { data: existing, error: existingError } = await ctx.service
+          .from("numo_automation_operations")
+          .select("outcome, outcome_summary, outcome_blockers")
+          .eq("chain_id", ctx.automationChainId)
+          .eq("turn_id", ctx.turnId)
+          .maybeSingle();
+        if (existingError) return toolError(existingError.message);
+        const sameBlockers = Array.isArray(existing?.outcome_blockers)
+          && existing.outcome_blockers.length === blockers.length
+          && existing.outcome_blockers.every(
+            (blocker: unknown, index: number) => blocker === blockers[index],
+          );
+        if (
+          existing?.outcome === outcome
+          && existing.outcome_summary === summary
+          && sameBlockers
+        ) {
+          return {
+            result: { recorded: true, reused: true, outcome, summary, blockers },
+            success: true,
+          };
+        }
+        return toolError(
+          existing?.outcome
+            ? "This automation outcome was already recorded."
+            : "The current Numo turn is not bound to this automation chain.",
+        );
+      }
+      return {
+        result: { recorded: true, outcome, summary, blockers },
+        success: true,
       };
     }
 
@@ -1769,6 +1837,7 @@ export async function executeTool(
             projectKey: access.project.key,
             locale: ctx.locale,
             extra: durableDelegation ? legacyPrompt : objective,
+            fromChain: !!ctx.automationChainId,
           });
         }
         if (issueSource) {
@@ -1852,7 +1921,7 @@ export async function executeTool(
                 ? { issueId }
                 : { projectId }),
           userId: ctx.userId,
-          triggeredBy: ctx.triggerSource ?? "chat",
+          triggeredBy: ctx.automationChainId ? "automation" : ctx.triggerSource ?? "chat",
           prompt: message,
           continueRunId:
             typeof args.continuation_run_id === "string"
@@ -1875,6 +1944,7 @@ export async function executeTool(
             : {}),
           budgetUsd: ctx.operationBudgetUsd ?? null,
           routineId: ctx.routineId ?? null,
+          chainId: ctx.automationChainId ?? null,
           // Framing does not start the ticket; implement and check, yes.
           ...(mode ? { intent: intentForLaunchMode(mode) } : {}),
         });

@@ -126,6 +126,10 @@ const OK_STATUSES = new Set(["completed"]);
  */
 export function notifyChainOfRunEnd(run: AgentRun): void {
   if (!run.chain_id || !run.issue_id) return;
+  // A delegated worker reports back to its parent Numo turn. Advancing here
+  // would skip Numo's interpretation and could execute the next step while the
+  // parent still has tools, follow-up work, or a question outstanding.
+  if (run.parent_numo_turn_id) return;
   inBackground(async () => {
     const { recomputeChainSpend } = await import("./chain");
     // Recalculation, not accumulation: a run can cross several pauses, and `cost_usd`

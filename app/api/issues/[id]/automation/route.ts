@@ -3,9 +3,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { activeRunForChain, requestInterrupt } from "@/lib/server/agent/runs";
+import { requestNumoTurnStop } from "@/lib/server/numo/turns";
 import {
+  activeNumoAutomationOperation,
   cancelPendingChain,
   latestChainForIssue,
+  lastNumoAutomationOperation,
   lastRunOfChain,
   resumeChain,
   type AgentChain,
@@ -206,6 +209,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     // test, stopping a parked channel interrupted the session that the user
     // had launched by hand to do the work itself: the gesture “I
     // get rid of automation” killed his own agent.
+    const operation = await activeNumoAutomationOperation(chain.id);
+    if (operation?.turn) {
+      await requestNumoTurnStop(operation.operation.conversation_id, chain.owner_id);
+    }
     const active = await activeRunForChain(chain.id);
     if (active) await requestInterrupt(active.id);
     await haltChain(chain, "interrupted");
@@ -245,15 +252,21 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   // breakpoint had interrupted, and there is nothing else to attach it to.
   // No run at all (a rule that stops before running one): nothing has
   // failed, and saying so would trigger the engine to shut down on `run_failed`.
-  const last = await lastRunOfChain(resumed.id);
+  const [operation, last] = await Promise.all([
+    lastNumoAutomationOperation(resumed.id),
+    lastRunOfChain(resumed.id),
+  ]);
   scheduleAutomations({
     issueId: id,
     projectId: issue.project_id as string,
     chainId: resumed.id,
     event: {
       type: "run_finished",
-      intent: last?.intent ?? "plan",
-      outcome: !last || last.status === "completed" ? "ok" : "failed",
+      intent: operation?.operation.mode ?? last?.intent ?? "plan",
+      outcome: operation?.operation.outcome
+        ?? (operation?.turn
+          ? operation.turn.status === "completed" ? "ok" : "failed"
+          : !last || last.status === "completed" ? "ok" : "failed"),
     },
   });
   return NextResponse.json({ ok: true, chain: publicChain(resumed) });
