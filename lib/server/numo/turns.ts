@@ -34,6 +34,7 @@ import { authorizedSkillsNotes } from "@/lib/server/assistant/skills";
 import { commandNote } from "@/lib/server/assistant/commands";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import {
+  AUTOMATION_WORKER_MEDIATION_ASSISTANT_TOOLS,
   AUTOMATION_ASSISTANT_TOOLS,
   CONVERSATION_ASSISTANT_TOOLS,
   WORKER_MEDIATION_ASSISTANT_TOOLS,
@@ -571,7 +572,9 @@ async function buildExecutionInput(input: {
 
   let tools: AssistantToolDef[] = input.background
     ? workerInput
-      ? WORKER_MEDIATION_ASSISTANT_TOOLS
+      ? intent.automation
+        ? AUTOMATION_WORKER_MEDIATION_ASSISTANT_TOOLS
+        : WORKER_MEDIATION_ASSISTANT_TOOLS
       : intent.automation ? AUTOMATION_ASSISTANT_TOOLS : []
     : intent.automation ? AUTOMATION_ASSISTANT_TOOLS : CONVERSATION_ASSISTANT_TOOLS;
   if (!intent.webSearchEnabled) tools = withoutWebSearch(tools);

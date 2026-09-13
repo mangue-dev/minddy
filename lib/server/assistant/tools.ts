@@ -2385,3 +2385,13 @@ export const WORKER_MEDIATION_ASSISTANT_TOOLS = [
   CONVERSATION_ASSISTANT_TOOLS.find((tool) => tool.function.name === "ask_user")!,
   ANSWER_CODE_WORKER_TOOL,
 ];
+
+/**
+ * An automation has no person waiting at the other end of the conversation.
+ * It may answer a worker from the chain context, or conclude the operation as
+ * blocked, but it must never turn a worker question into a user-input wait.
+ */
+export const AUTOMATION_WORKER_MEDIATION_ASSISTANT_TOOLS = [
+  ...AUTOMATION_ASSISTANT_TOOLS,
+  ANSWER_CODE_WORKER_TOOL,
+];
