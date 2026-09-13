@@ -1050,6 +1050,7 @@ function PageSurface({
                 waits for what is pending to be written (MIN-274). */}
             <PageTaskSurface
               projectId={projectId}
+              pageId={pageId}
               pageTitle={title}
               flush={flush}
             >

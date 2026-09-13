@@ -59,6 +59,35 @@ export async function validateMessageContext(
     }
     next.issueProjectIds = issues.map((item) => item!.projectId!);
   }
+  if (next?.pullRequestId) {
+    const { data: pullRequest } = await supabase
+      .from("pull_requests")
+      .select("id, provider, repo_full_name, number, state, head_branch, base_branch, issue_id")
+      .eq("id", next.pullRequestId)
+      .maybeSingle();
+    if (!pullRequest) return null;
+    if (next.issueId && pullRequest.issue_id && pullRequest.issue_id !== next.issueId) {
+      return null;
+    }
+    let linkQuery = supabase
+      .from("project_git_links")
+      .select("project_id")
+      .eq("provider", pullRequest.provider)
+      .eq("repo_full_name", pullRequest.repo_full_name);
+    if (next.projectId) linkQuery = linkQuery.eq("project_id", next.projectId);
+    const { data: links } = await linkQuery.limit(1);
+    const projectId = (links?.[0] as { project_id?: string } | undefined)?.project_id;
+    if (!projectId || !(await visibleProject(projectId))) return null;
+    next.projectId = projectId;
+    next.prNumber = Number(pullRequest.number);
+    next.prState = String(pullRequest.state ?? "");
+    next.prHeadRef = typeof pullRequest.head_branch === "string"
+      ? pullRequest.head_branch
+      : undefined;
+    next.prBaseRef = typeof pullRequest.base_branch === "string"
+      ? pullRequest.base_branch
+      : undefined;
+  }
   for (const [field, table, softDeleted] of [
     ["feedbackId", "feedback_posts", true],
     ["routineId", "agent_routines", true],

@@ -86,7 +86,7 @@ function GlobalBoardInner() {
   const myUserId = user?.id ?? null;
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const { openCreateIssue } = useCreate();
-  const openAssistant = useAssistantPanel().open;
+  const { open: openAssistant, openIntent } = useAssistantPanel();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -469,7 +469,9 @@ function GlobalBoardInner() {
       ),
     onSetCategories: setCategories,
     onDeleteIssue: (id: string, pid: string) => deleteIssue(id, pid),
-    onAskNumo: (selectedIssues: Issue[]) => openAssistant({
+    onAskNumo: (selectedIssues: Issue[]) => openIntent({
+      source: selectedIssues.length > 1 ? "bulk" : "issue",
+      action: "discuss",
       projectId: null,
       pageContext: issuesPageContext(selectedIssues, (issue) => {
         const project = projectMap.get(issue.project_id);

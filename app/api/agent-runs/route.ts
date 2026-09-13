@@ -1,14 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getLocale } from "next-intl/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 import { parseAgentMentions } from "@/lib/agent-mentions";
 import { parseResourcesInput } from "@/lib/server/attachments";
-import { promptWithAttachments } from "@/lib/server/agent/prompt-attachments";
 import type { AttachmentInput } from "@/lib/types";
 import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
+import {
+  numoIntentErrorResponse,
+  startNumoIntent,
+} from "@/lib/server/numo/start-intent";
 
 /**
  * GLOBAL list of code agent (Numo) conversations, all projects
@@ -29,7 +32,8 @@ import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
  * (read states remain indexed by ticket: two conversations from the same ticket
  * therefore become read together).
  *
- * POST = launch a run without a ticket: { projectId, prompt, baseBranch? }.
+ * POST is a compatibility adapter for old ticketless launch clients. It now
+ * creates a common Numo conversation and never a standalone worker session.
  */
 
 export const runtime = "nodejs";
@@ -237,43 +241,12 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ sessions });
 }
 
-// POST notebook terminals: the note is a free text (persisted in `prompt` of the
-// run), model and branch of short identifiers.
+// Compatibility request limits for old notebook-style clients.
 // A notebook may contain MAX_SCRATCHPAD_LENGTH characters, and its prompt adds
 // framing around that content. Keep enough headroom for the framing so a large
 // notebook is never silently cut before it reaches the agent.
 const MAX_PROMPT_LENGTH = MAX_SCRATCHPAD_LENGTH + 8_192;
 const MAX_BRANCH_LENGTH = 255;
-
-const LAUNCH_ERROR_STATUS: Record<string, number> = {
-  issueNotFound: 404,
-  noRepo: 409,
-  unsupportedProvider: 409,
-  alreadyRunning: 409,
-  quotaExceeded: 402,
-  managedServiceUnavailable: 503,
-  executionBackendUnavailable: 503,
-  workerConfigurationManagedInSettings: 400,
-  noModelForProvider: 400,
-  providerEndpointUnavailableFromSandbox: 409,
-  localExecutionRetired: 410,
-  modelAbovePlan: 403,
-  promptRequired: 400,
-};
-
-function launchErrorResponse(result: Extract<LaunchResult, { ok: false }>) {
-  const status = LAUNCH_ERROR_STATUS[result.error] ?? 400;
-  return NextResponse.json(
-    {
-      error: result.error,
-      code: result.error,
-      run: result.run,
-      quota: result.quota,
-      modelLimit: result.modelLimit,
-    },
-    { status },
-  );
-}
 
 /**
  * Launch a run WITHOUT A TICKET (MIN-84, called “carnet” — the notebook was the
@@ -301,6 +274,7 @@ export async function POST(request: NextRequest) {
      * the explicit retirement response instead of silently running elsewhere. */
     localExec?: unknown;
     localWorktree?: unknown;
+    localIssueContextConfirmed?: unknown;
   };
   try {
     const parsed: unknown = await request.json();
@@ -318,6 +292,16 @@ export async function POST(request: NextRequest) {
         code: "workerConfigurationManagedInSettings",
       },
       { status: 400 },
+    );
+  }
+  if (
+    body.localExec === true ||
+    body.localWorktree === true ||
+    body.localIssueContextConfirmed === true
+  ) {
+    return NextResponse.json(
+      { error: "localExecutionRetired", code: "localExecutionRetired" },
+      { status: 410 },
     );
   }
 
@@ -354,18 +338,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid attachments" }, { status: 400 });
   }
   const attachments = resources.filter((resource): resource is AttachmentInput => resource.kind !== "link");
-  const promptWithFiles = await promptWithAttachments(prompt, attachments);
-
-  const result = await launchAgentRun({
-    projectId,
-    userId: auth.user.id,
-    triggeredBy: "button",
-    prompt: promptWithFiles,
-    baseBranch,
-    promptMentions: parseAgentMentions(body.mentions),
-    localExec: body.localExec === true,
-    localWorktree: body.localWorktree === true,
-  });
-  if (!result.ok) return launchErrorResponse(result);
-  return NextResponse.json({ run: result.run });
+  try {
+    const started = await startNumoIntent({
+      supabase: auth.supabase,
+      userId: auth.user.id,
+      userMetadata: auth.user.user_metadata,
+      projectId,
+      prompt: baseBranch
+        ? `${prompt}\n\nRequested base branch: ${baseBranch}`
+        : prompt,
+      locale: await getLocale(),
+      source: "home",
+      action: "custom",
+      context: { projectId },
+      mentions: parseAgentMentions(body.mentions),
+      attachments,
+    });
+    return NextResponse.json({
+      conversation: { id: started.conversationId },
+      turn: { id: started.turnId },
+      detail_href: started.detailHref,
+    }, { status: 202 });
+  } catch (error) {
+    return numoIntentErrorResponse(error);
+  }
 }

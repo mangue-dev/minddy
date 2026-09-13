@@ -1,4 +1,5 @@
 import type { ReasoningLevel } from "./agent-reasoning";
+import type { ResourceInput } from "./types";
 
 // ── Numo (AI assistant) shared types ─────────────────────────────────
 
@@ -292,10 +293,14 @@ export interface AssistantPageContext {
   /** The routine open in the Agents page's Routines tab, when any (MIN-185). */
   routineId?: string;
   routineTitle?: string;
-  /** The pull request open on the Pull Requests page, when any (MIN-66). It maps
-      to `issueId` above (the issue the code agent implemented). */
+  /** Canonical Minddy pull-request row. Unlike `prRunId`, this also exists for
+      human pull requests and survives worker changes. */
+  pullRequestId?: string;
   prNumber?: number;
   prState?: string;
+  /** Selected head/base refs retained with the voluntary request. */
+  prHeadRef?: string;
+  prBaseRef?: string;
   /** Canonical agent run id backing the PR — what read_pull_request resolves. */
   prRunId?: string;
   /** The saved kanban view currently selected on the board, when any. */
@@ -315,6 +320,46 @@ export interface AssistantPageContext {
   pageIcon?: string | null;
 }
 
+/** Where a voluntary request entered Numo. This is product context, not an
+ * execution choice: repository work is still delegated by Numo itself. */
+export type NumoIntentSource =
+  | "home"
+  | "issue"
+  | "page"
+  | "scratchpad"
+  | "pull_request"
+  | "bulk";
+
+/** The distinction the originating action promised to preserve. */
+export type NumoIntentAction =
+  | "discuss"
+  | "implement"
+  | "plan"
+  | "verify"
+  | "custom"
+  | "review"
+  | "fix"
+  | "promote";
+
+/**
+ * The single client-side entry contract for a voluntary Numo request.
+ *
+ * Every source supplies the original wording plus structured source context.
+ * Model selection, Minddy tools and code-worker delegation remain decisions of
+ * the common conversation runtime rather than fields on this payload.
+ */
+export interface NumoIntent {
+  source: NumoIntentSource;
+  action: NumoIntentAction;
+  projectId: string | null;
+  /** Omit when the gesture only opens the shared composer with source context. */
+  prompt?: string;
+  pageContext?: AssistantPageContext;
+  mentions?: AssistantMention[];
+  command?: AssistantCommandId;
+  attachments?: ResourceInput[];
+}
+
 // Request body for chat endpoint
 export interface AssistantChatRequest {
   /** Idempotency key for one user intent. Reuse it when the same POST is retried. */
@@ -322,6 +367,8 @@ export interface AssistantChatRequest {
   conversationId?: string;
   projectId?: string;
   message: string;
+  /** Voluntary entry provenance, persisted with the user message. */
+  intent?: Pick<NumoIntent, "source" | "action">;
   /** Exact pending delegated-worker question answered by this card submission. */
   workerInput?: {
     parentTurnId: string;

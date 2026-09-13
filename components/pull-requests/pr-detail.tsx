@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Badge,
@@ -84,7 +85,6 @@ import {
   useFileDrop,
 } from "@/components/resources";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
-import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
 import {
   usePullRequestQuery,
@@ -97,7 +97,6 @@ import {
   maintainPullRequestApi,
   postPullRequestCommentApi,
   prEndpoint,
-  requestPullRequestAiReviewApi,
   submitPullRequestReviewApi,
   type ChecksSummary,
   type CheckState,
@@ -145,6 +144,8 @@ import {
   unresolvedReviewThreads,
 } from "@/lib/pr-unresolved-conversations";
 import type { MessageKey } from "@/lib/i18n-keys";
+import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import type { AssistantPageContext } from "@/lib/assistant-types";
 import { parseForgeLogin, prIdentifier, type RepoProviderId } from "@/lib/repo-providers";
 import {
   Tooltip,
@@ -564,10 +565,11 @@ export function PrDetail({
 }) {
   const t = useTranslations("PullRequests");
   const tAgent = useTranslations("Agent");
+  const router = useRouter();
   const agentErrorMessage = useAgentErrorMessage();
+  const { openIntent } = useAssistantPanel();
   const isSend = useIsSendShortcut();
   const format = useFormatter();
-  const { cloudExecutionConfigured } = useAgentModelsQuery();
 
   const {
     pr,
@@ -655,7 +657,6 @@ export function PrDetail({
   // rechargement.
   const reviewSession = usePrReviewSession(item.prId);
   const [aiReviewDialog, setAiReviewDialog] = useState(false);
-  const [startingAiReview, setStartingAiReview] = useState(false);
   const [tab, setTab] = useState<PullRequestDetailTab>("activity");
   const [unresolvedSidebarOpen, setUnresolvedSidebarOpen] = useState(false);
   // Soft fade up and down the feed — the same as the agent conversation and
@@ -669,8 +670,6 @@ export function PrDetail({
   // it is she who certifies, when sent, that we always respond to this message.
 
   const isWorking = !!item.activeRunId;
-  const aiReviewBackendUnavailable = !cloudExecutionConfigured;
-  const reviewExecutionAvailable = cloudExecutionConfigured;
   // What THIS git account can do on this repository (MIN-144). A human gesture leaves
   // of the person's account: without account, or without right, the affordance
   // DISAPPEARS — it’s the banner that explains, once, at the top.
@@ -686,21 +685,13 @@ export function PrDetail({
     !!canComment,
     "conversation",
   );
-  // “And restart Numo” only exists if a run already carries this PR: it is
-  // ITS runs the new comes into branch (MIN-143). A human RA does not
-  // nothing to inherit.
-  //
-  // The TICKET does not fall into this condition (MIN-292). He was there, and he
-  // closed the gesture on the PRs opened by a NOTEBOOK session — that is to say
-  // on PRs from Numo, with their branch and their runs, to which the screen responded
-  // “Numo never worked on this pull request.” The lineage of a RA without
-  // ticket, it is the PR itself: the server reads it by its number.
+  // A fix request is anchored to the selected PR itself, not to a historical
+  // worker run. This keeps the action available for human-authored PRs too.
   const canRelaunch =
     item.pr_state !== "merged" &&
     item.pr_state !== "closed" &&
     !!pr?.head &&
-    !!item.project &&
-    reviewExecutionAvailable;
+    !!item.project;
   // `item` comes from the list (DB value, possibly late by a webhook),
   // `pr` of the forge's GET (the truth): the forge wins as soon as it responds.
   const isDraft = pr?.draft ?? item.pr_state === "draft";
@@ -758,6 +749,32 @@ export function PrDetail({
     reviewSession.run?.status === "completed"
       ? `/agents?run=${encodeURIComponent(reviewSession.run.runId)}`
       : null;
+
+  const prPageContext = useMemo<AssistantPageContext | null>(
+    () =>
+      item.project
+        ? {
+            projectId: item.project.id,
+            pullRequestId: item.prId,
+            prNumber: item.pr_number,
+            prState: item.pr_state,
+            prHeadRef: pr?.head ?? item.head_branch ?? undefined,
+            prBaseRef: pr?.base,
+            prRunId: item.runId ?? undefined,
+            ...(item.issue
+              ? {
+                  issueId: item.issue.id,
+                  issueIdentifier: issueIdentifier(
+                    item.project.key,
+                    item.issue.number,
+                  ),
+                  issueTitle: item.issue.title,
+                }
+              : {}),
+          }
+        : null,
+    [item, pr?.base, pr?.head],
+  );
 
   // Review progress belongs to one exact diff. A force-push or a different PR
   // invalidates every local file marker rather than carrying stale completion
@@ -1005,7 +1022,6 @@ export function PrDetail({
   // serveur refusera en `noEffect`.
   const reviewHasNoEffect =
     reviewVerdict === "request_changes" && !postVerdict && !relaunching;
-  const relaunchBackendUnavailable = relaunching && !cloudExecutionConfigured;
   // What prevents the review from leaving, and its wording: the button on the foot of
   // dialog and the shortcut ⌘/Ctrl+Enter of the field read both — otherwise the
   // button would send what the button refuses.
@@ -1014,7 +1030,6 @@ export function PrDetail({
     !reviewVerdict ||
     reviewUploads.uploading ||
     reviewHasNoEffect ||
-    relaunchBackendUnavailable ||
     (!reviewMessage.trim() && reviewVerdict !== "approve");
   const reviewSubmitLabel =
     reviewFromFiles
@@ -1027,22 +1042,36 @@ export function PrDetail({
 
   const submitReview = async () => {
     if (!reviewVerdict || submitting || reviewUploads.uploading || reviewHasNoEffect) return;
-    if (relaunchBackendUnavailable) {
-      toast.error(tAgent("errorExecutionBackendUnavailable"));
-      return;
-    }
     const message = reviewMessage.trim();
     // Approving without a word is legitimate; comment or request changes
     // without saying anything is not (and both providers reject an empty body).
     if (!message && reviewVerdict !== "approve") return;
     setSubmitting(true);
     try {
-      const result = await submitPullRequestReviewApi(item.prId, {
-        verdict: reviewVerdict,
-        message,
-        relaunch: relaunching && reviewVerdict === "request_changes",
-        postVerdict,
-      });
+      // A Numo-only fix has no forge-side effect. Sending it through the
+      // review endpoint would be rejected as `noEffect` before this component
+      // can hand the request to the common conversation below.
+      const result = !postVerdict && relaunching
+        ? { published: "none" as const }
+        : await submitPullRequestReviewApi(item.prId, {
+            verdict: reviewVerdict,
+            message,
+            relaunch: false,
+            postVerdict,
+          });
+      if (
+        relaunching &&
+        reviewVerdict === "request_changes" &&
+        prPageContext
+      ) {
+        openIntent({
+          source: "pull_request",
+          action: "fix",
+          projectId: item.project?.id ?? null,
+          prompt: message,
+          pageContext: prPageContext,
+        });
+      }
       // Three outcomes, three messages: the verdict has passed, the forge has folded it
       // in comments (an App cannot approve its own PR — say so,
       // rather than suggesting a green pellet), or there was none
@@ -1071,45 +1100,20 @@ export function PrDetail({
     }
   };
 
-  /**
-   * “Have it verified by Numo” (MIN-141) — available on ANY PR, including
-   * those that Numo has not opened: re-reading only requires a diff, where
-   * "relaunch Numo" needs a branch to inherit from.
-   *
-   * The account worker model and reasoning are resolved by the server when the
-   * review starts and are then frozen with the server-sandbox session.
-   */
-  const openAiReviewDialog = () => {
-    if (!cloudExecutionConfigured) {
-      toast.error(tAgent("errorExecutionBackendUnavailable"));
-      return;
-    }
-    setAiReviewDialog(true);
-  };
+  /** Open the confirmation for a common Numo PR-review intent. */
+  const openAiReviewDialog = () => setAiReviewDialog(true);
 
-  /**
-   * Throws the pass and opens the backboard. The answer does not wait for him: it makes
-   * the session, and this is the panel that shows the rest live.
-   */
-  const startAiReview = async () => {
-    if (startingAiReview) return;
-    if (aiReviewBackendUnavailable) {
-      toast.error(tAgent("errorExecutionBackendUnavailable"));
-      return;
-    }
-    setStartingAiReview(true);
-    try {
-      await requestPullRequestAiReviewApi(item.prId);
-      setAiReviewDialog(false);
-      // The pass is seen in the line: bring it back, otherwise it is played under a
-      // tab that nobody looks at.
-      setTab("activity");
-      await reviewSession.refetch();
-    } catch (err) {
-      toast.error(agentErrorMessage(err));
-    } finally {
-      setStartingAiReview(false);
-    }
+  /** Preserve the selected PR/ref while handing the review request to Numo. */
+  const startAiReview = () => {
+    if (!prPageContext) return;
+    setAiReviewDialog(false);
+    openIntent({
+      source: "pull_request",
+      action: "review",
+      projectId: item.project?.id ?? null,
+      prompt: `${t("aiReview")}: ${t("numoReviewDialogDescription")}`,
+      pageContext: prPageContext,
+    });
   };
 
   // The PR thread is FLAT on the GitHub side (endpoint issues/{n}/comments: none
@@ -1165,12 +1169,10 @@ export function PrDetail({
       const { review } = await postPullRequestCommentApi(item.prId, body);
       setCommentBody("");
       await refetchComments();
-      // The message MENTIONED Numo: his pass is already open on the server side
-      // (MIN-162). We'll get her right away — that's what makes
-      // appear the living card in place of the future verdict, instead of
-      // leave a minute of silence during which nothing says but the gesture
-      // worked.
-      if (review) await reviewSession.refetch();
+      // A PR @Numo mention is admitted as a common conversation on the server.
+      // Open that exact durable conversation instead of looking for a worker
+      // review session that no longer owns the user-facing request.
+      if (review) router.push(review.detailHref);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -1491,7 +1493,7 @@ export function PrDetail({
                     <DropdownMenuItem
                       // Keep the entry visible while its label explains why it is disabled.
                       disabled={
-                        aiReviewActive || reviewUpToDate || !reviewExecutionAvailable
+                        aiReviewActive || reviewUpToDate || !prPageContext
                       }
                       onSelect={openAiReviewDialog}
                     >
@@ -1515,7 +1517,7 @@ export function PrDetail({
                       variant="outline"
                       size="sm"
                       disabled={
-                        aiReviewActive || reviewUpToDate || !reviewExecutionAvailable
+                        aiReviewActive || reviewUpToDate || !prPageContext
                       }
                       onClick={openAiReviewDialog}
                     >
@@ -1596,7 +1598,7 @@ export function PrDetail({
                   data-testid="pr-action-numo-review"
                   className="2xl:hidden"
                   disabled={
-                    aiReviewActive || reviewUpToDate || !reviewExecutionAvailable
+                    aiReviewActive || reviewUpToDate || !prPageContext
                   }
                   onSelect={openAiReviewDialog}
                 >
@@ -2212,26 +2214,20 @@ export function PrDetail({
       <FormDialog
         open={aiReviewDialog}
         onOpenChange={(next) => {
-          if (!next && !startingAiReview) setAiReviewDialog(false);
+          if (!next) setAiReviewDialog(false);
         }}
         title={t("aiReview")}
         description={t("numoReviewDialogDescription")}
         className="sm:max-w-md"
         submitLabel={t("numoReviewStart")}
-        submitIcon={startingAiReview ? <Spinner /> : <NumoIcon animated={false} />}
-        submitDisabled={aiReviewBackendUnavailable}
-        submitting={startingAiReview}
+        submitIcon={<NumoIcon animated={false} />}
+        submitDisabled={!prPageContext}
+        submitting={false}
         cancelLabel={t("cancel")}
         onCancel={() => setAiReviewDialog(false)}
-        onSubmit={() => void startAiReview()}
+        onSubmit={startAiReview}
       >
-          <div className="flex flex-wrap items-center gap-1.5">
-            {aiReviewBackendUnavailable ? (
-              <p className="w-full text-xs text-amber-600 dark:text-amber-400">
-                {tAgent("errorExecutionBackendUnavailable")}
-              </p>
-            ) : null}
-          </div>
+        <div />
       </FormDialog>
 
       {/* Review dialogue — all three verdicts share the same form;
@@ -2429,13 +2425,8 @@ export function PrDetail({
             <p className="text-xs text-muted-foreground">{t("reviewNoVerdictHint")}</p>
           ) : null}
 
-          {/* The gesture that minddy has and that GitHub does not: the request for
-              changes can restart Numo on this same PR (MIN-68).
-              ABSENT on a PR without a run (MIN-143): Numo inherits the job by
-              PREVIOUS runs of this lineage — his ticket, or the PR
-              itself when it does not have one (MIN-292) —, and a human PR does not
-              has none: he would start from a new branch instead of starting again
-              this one. The gesture is hidden rather than broken. */}
+          {/* A request for changes can also ask Numo to revise this exact PR.
+              The PR id and head ref, rather than worker history, preserve lineage. */}
           {reviewVerdict === "request_changes" && reviewMode === "write" && canRelaunch ? (
             item.busyRunId ? (
               <Tooltip>
@@ -2459,17 +2450,6 @@ export function PrDetail({
                 <span className="text-sm">{t("reviewRelaunchNumo")}</span>
               </label>
             )
-          ) : null}
-
-          {/* Worker model and reasoning remain controlled by Account settings. */}
-          {reviewVerdict === "request_changes" && relaunching ? (
-            <div className="flex flex-wrap items-center gap-1.5">
-              {relaunchBackendUnavailable ? (
-                <p className="w-full text-xs text-amber-600 dark:text-amber-400">
-                  {tAgent("errorExecutionBackendUnavailable")}
-                </p>
-              ) : null}
-            </div>
           ) : null}
 
       </FormDialog>

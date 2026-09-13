@@ -941,12 +941,6 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `- Open issue: ${ctx.issueIdentifier ?? "(unknown identifier)"}${ctx.issueTitle ? ` — "${ctx.issueTitle}"` : ""} (id: ${ctx.issueId})${ctx.projectId ? ` in project (id: ${ctx.projectId})` : ""}.`,
       `When the user says "ce ticket", "cette issue", "this issue", or similar, they mean the issue above — use its id directly, do not search for it.${ctx.projectId ? ` If a tool needs a project_id, use ${ctx.projectId}.` : ""}`,
     );
-    if (ctx.prNumber != null) {
-      lines.push(
-        `- Open pull request: #${ctx.prNumber}${ctx.prState ? ` (${ctx.prState})` : ""}, attached to that issue (opened by the code agent or by a human — both live on the same page).`,
-        `When the user says "cette PR", "this pull request", "la PR", "le diff", they mean this PR. To read or explain what it changes, call read_pull_request with the issue id above. To make changes to it, launch_code_agent on that same issue.`,
-      );
-    }
   } else if (ctx.issueIds?.length) {
     // Group selection of a board: the list IS the request ("these tickets"),
     // so each ticket arrives with its id — no search to do again.
@@ -980,6 +974,12 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `- Open routine: "${ctx.routineTitle ?? "(untitled)"}" (id: ${ctx.routineId}).`,
       `When the user says "cette routine", "this routine", "sa consigne", "change son heure", "mets-la en pause" or gives an instruction with no explicit target, they mean the routine above — pass that exact id to update_routine. To read what it currently does (its instruction, its cadence, its model), call list_routines with that exact routine_id${ctx.projectId ? ` on project ${ctx.projectId}` : ""}; do not ask the user to repeat it.`,
       `Two things about routines that change your answer: only the project's OWNER can create or change one, because it is their usage budget that leaves at every occurrence — a member gets a refusal you must relay plainly rather than retry. And rewriting the instruction REWRITES the routine's title, which minddy derives from it; say so when you change it.`,
+    );
+  }
+  if (ctx.pullRequestId) {
+    lines.push(
+      `- Open pull request: #${ctx.prNumber ?? "?"}${ctx.prState ? ` (${ctx.prState})` : ""} (pull request id: ${ctx.pullRequestId})${ctx.prHeadRef ? `, head ref ${ctx.prHeadRef}` : ""}${ctx.prBaseRef ? `, base ref ${ctx.prBaseRef}` : ""}.`,
+      `When the user says "cette PR", "this pull request", "la PR", or "the diff", they mean this exact pull request. Read it with read_pull_request { pull_request_id: "${ctx.pullRequestId}" }. For a read-only code review, delegate with launch_code_agent mode "review" and this pull_request_id; to revise its existing branch, use mode "fix".`,
     );
   }
   if (ctx.viewId) {

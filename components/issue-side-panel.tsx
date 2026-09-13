@@ -66,14 +66,9 @@ import {
   isLatestAgentRunResumable,
   isAgentRunWorking,
 } from "@/lib/agent-api";
-import {
-  setAgentComposeDraft,
-  type AgentComposeIntent,
-} from "@/lib/agent-compose-draft";
-import { usePlanGates } from "@/lib/use-billing-query";
+import type { NumoIntentAction } from "@/lib/assistant-types";
+import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
-import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
-import { getDesktopBridge } from "@/lib/desktop/bridge";
 import {
   agentLaunchPromptVariant,
   agentPlanPromptVariant,
@@ -190,6 +185,7 @@ export function IssueSidePanel({
   const tPlan = useTranslations("Plan");
   const tAgent = useTranslations("Agent");
   const { openIssue: openGlobalIssue } = useIssuePanelActions();
+  const { openIntent } = useAssistantPanel();
   // The panel mounts with its board: warm the editor chunk once the page has
   // painted, so opening a ticket never shows the loading fallback.
   useIdleMarkdownEditorPreload();
@@ -267,19 +263,6 @@ export function IssueSidePanel({
   // requests, feedback board). The PR travels with it, served by the same route and
   // read on `pull_requests`: a ticket can carry one without any run.
   const { runs, pullRequest } = useIssueAgentRunsQuery(issue?.id ?? null);
-  const { agentsAllowed } = usePlanGates();
-  // Agent + PR unavailable without linked deposit (MIN-80): the server rejects all
-  // way a `noRepo` launch, we therefore remove the option upstream. Permissive as long
-  // that the query loads → no flash on the current case (project WITH repository).
-  const { link: repoLink, loading: repoLinkLoading } = useProjectGitLinkQuery(
-    issue?.project_id ?? null
-  );
-  // In the desktop app a local run needs NO linked repository: it plays on the
-  // folder attached to this machine. In the browser the link stays the only
-  // door (the server refuses a `noRepo` cloud launch anyway).
-  const desktopAvailable = useMemo(() => !!getDesktopBridge(), []);
-  const agentsEnabled =
-    agentsAllowed && (repoLinkLoading || repoLink != null || desktopAvailable);
   const agentWorking = runs.some((r) => isAgentRunWorking(r.status));
   const latestRun = runs[0] ?? null;
   // Only the latest run can reopen its conversation; newer runs supersede any
@@ -374,28 +357,25 @@ export function IssueSidePanel({
       .filter((r): r is ChipRelation => r !== null);
   }, [issue?.id, relations, allIssues]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Agent de code (MIN-46 / MIN-68) ──────────────────────────────────────
-  // Two entry points, as on the maps:
-  // • open the existing conversation — here in modal on the last run, to
-  // keep the ticket in front of you (the card navigates to /agents);
-  // • start a NEW session — create an optimistic draft of the composition and
-  // opens its composer (`?compose=`), even if the ticket already has a session.
-  const composeAgentSession = useCallback(
-    (prompt: string, intent: AgentComposeIntent = "implement") => {
+  // New work enters the common Numo conversation. Historical worker sessions
+  // remain available only as navigation to existing execution details.
+  const entrustToNumo = useCallback(
+    (prompt: string, action: NumoIntentAction = "implement") => {
       if (!issue) return;
-      setAgentComposeDraft({
-        kind: "issue",
-        issueId: issue.id,
-        issueNumber: issue.number,
-        issueTitle: issue.title,
+      openIntent({
+        source: "issue",
+        action,
         projectId: issue.project_id,
-        projectKey,
         prompt,
-        intent,
+        pageContext: {
+          projectId: issue.project_id,
+          issueId: issue.id,
+          issueIdentifier: issueIdentifier(projectKey, issue.number),
+          issueTitle: issue.title,
+        },
       });
-      router.push(`/agents?compose=${issue.id}`);
     },
-    [issue, projectKey, router]
+    [issue, projectKey, openIntent]
   );
 
   const startNewAgentSession = useCallback(() => {
@@ -407,47 +387,35 @@ export function IssueSidePanel({
     // from the user, the same menu entry populated the dial once
     // out of two, without anything announcing the difference.
     const identifier = issueIdentifier(projectKey, issue.number);
-    composeAgentSession(
+    entrustToNumo(
       `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`,
     );
-  }, [issue, projectKey, composeAgentSession, tAgent]);
+  }, [issue, projectKey, entrustToNumo, tAgent]);
 
-  // “Write with Numo” / “Check the plan with Numo” (Plan tab):
-  // new session whose instructions are to FRAME the ticket — write the plan
-  // when there is none, take it again point by point when it exists — then
-  // stop. Always a new session, even if the ticket already has one: the
-  // composer opens with the instruction, the user sends it (or the fine).
-  // `intent: "plan"`: this launch does NOT start the ticket (the
-  // server does not pass it "in progress") — planning is not starting.
+  // Planning remains an explicit intent and does not move the issue status.
   const writePlanWithAgent = useCallback(() => {
     if (!issue) return;
     const identifier = issueIdentifier(projectKey, issue.number);
-    composeAgentSession(
+    entrustToNumo(
       `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent(`launchPrompt.${agentPlanPromptVariant(issue)}`)}`,
       "plan"
     );
-  }, [issue, projectKey, composeAgentSession, tAgent]);
+  }, [issue, projectKey, entrustToNumo, tAgent]);
 
-  // “Check implementation”: new session that rereads the work ALREADY done
-  // facing the plan and the ticket comments, then fixes the proven bugs.
-  // `intent: "verify"`: the ticket does not move — check the work done
-  // is not the start, and a review ticket must remain there.
+  // Verification remains distinct from implementation and leaves status alone.
   const verifyWithAgent = useCallback(() => {
     if (!issue) return;
     const identifier = issueIdentifier(projectKey, issue.number);
-    composeAgentSession(
+    entrustToNumo(
       `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent("launchPrompt.verifyImplementation")}`,
       "verify"
     );
-  }, [issue, projectKey, composeAgentSession, tAgent]);
+  }, [issue, projectKey, entrustToNumo, tAgent]);
 
-  // ⇧A: ticket already with a session → we open it; otherwise we start a new one.
-  // Plan without agents (MIN-72): the shortcut is inert, the menu entries absent.
+  // ⇧A always starts a new common Numo request for this issue.
   const launchAgent = useCallback(() => {
-    if (!agentsEnabled) return;
-    if (hasAgentSession) setChatOpen(true);
-    else startNewAgentSession();
-  }, [agentsEnabled, hasAgentSession, startNewAgentSession]);
+    startNewAgentSession();
+  }, [startNewAgentSession]);
 
   // `?pr=` and not `?run=`: the link must work as well for a PR as for no run
   // has not opened — a human PR, or a hand-attached PR (MIN-163).
@@ -570,7 +538,7 @@ export function IssueSidePanel({
       handOffIssueApi(issue.id);
       if (target === "launch") {
         const identifier = issueIdentifier(projectKey, issue.number);
-        composeAgentSession(
+        entrustToNumo(
           `${tAgent("launchPrompt.head", { identifier })}\n\n${instructions}`,
           "custom"
         );
@@ -591,14 +559,14 @@ export function IssueSidePanel({
       );
       toast.success(t("promptCopied"));
     },
-    [issue, promptContext, projectKey, composeAgentSession, tAgent, t]
+    [issue, promptContext, projectKey, entrustToNumo, tAgent, t]
   );
 
   // “Copy prompt” and “Launch Numo agent”: two submenus, each
   // with the “plan” sheet (generate or verify, depending on the ticket) and
   // “Implement the ticket” (hook shared with the board cards).
   const agentActions = useAgentMenuActions({
-    agentsEnabled,
+    agentsEnabled: true,
     hasSession: hasAgentSession,
     hasPlan: issueHasPlan,
     onCopyPrompt: () => void copyPrompt(),
@@ -779,7 +747,7 @@ export function IssueSidePanel({
     // “See the pull request” as soon as there is one, REGARDLESS OF ITS STATUS: one
     // Closed PR remains what happened on this ticket, and it's often her
     // that we are looking for. The header chip is silent about it.
-    ...(agentsEnabled && pullRequest
+    ...(pullRequest
       ? [
           {
             id: "open-pr",
@@ -873,14 +841,12 @@ export function IssueSidePanel({
               )}
               {/* Code Agent: the only state that deserves the header (at work,
                   or a PR to reread) — the rest is in the “⋯” menu. */}
-              {agentsEnabled && (
-                <IssueAgentChip
-                  working={agentWorking}
-                  pr={pullRequest}
-                  onOpenConversation={() => setChatOpen(true)}
-                  onOpenPr={openPr}
-                />
-              )}
+              <IssueAgentChip
+                working={agentWorking}
+                pr={pullRequest}
+                onOpenConversation={() => setChatOpen(true)}
+                onOpenPr={openPr}
+              />
               {/* Voice editing — Numo turns dictated commands into field updates */}
               {numoBusy ? (
                 <>
@@ -984,16 +950,13 @@ export function IssueSidePanel({
                   key={issue.id}
                   plan={issue.plan}
                   onCommit={(plan) => void patch({ plan })}
-                  // Numo only appears where it can work: a linked repository
-                  // (the same door as ⇧A / the “⋯” menu). The prompts
-                  // Copyable ones work with any external agent.
-                  onWriteWithAgent={agentsEnabled ? writePlanWithAgent : undefined}
+                  // Internal actions always enter Numo. Copyable prompts remain
+                  // available for intentional external-agent workflows.
+                  onWriteWithAgent={writePlanWithAgent}
                   onCopyPrompt={() => void copyPlanPrompt()}
-                  onImplementWithAgent={
-                    agentsEnabled ? startNewAgentSession : undefined
-                  }
+                  onImplementWithAgent={startNewAgentSession}
                   onCopyImplementPrompt={() => void copyPrompt()}
-                  onVerifyWithAgent={agentsEnabled ? verifyWithAgent : undefined}
+                  onVerifyWithAgent={verifyWithAgent}
                   onCopyVerifyPrompt={() => void copyVerifyPrompt()}
                 />
               </TabsContent>

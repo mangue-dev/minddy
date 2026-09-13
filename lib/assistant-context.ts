@@ -17,6 +17,7 @@ import type {
 export type AssistantContextKind =
   | "project"
   | "issue"
+  | "pull_request"
   | "issues"
   | "objective"
   | "feedback"
@@ -119,6 +120,16 @@ export function contextChips(
       tooltip: ctx.issueIdentifiers?.length
         ? ctx.issueIdentifiers.join(", ")
         : t("contextIssuesSelected", { count: ctx.issueIds.length }),
+    });
+  }
+
+  if (ctx?.pullRequestId) {
+    const label = ctx.prNumber != null ? `#${ctx.prNumber}` : "Pull request";
+    chips.push({
+      key: "pull_request",
+      kind: "pull_request",
+      label,
+      tooltip: ctx.prHeadRef ? `${label} · ${ctx.prHeadRef}` : label,
     });
   }
 
@@ -233,13 +244,17 @@ const FIELDS_BY_KEY: Record<string, (keyof AssistantPageContext)[]> = {
   project: ["projectId"],
   inbox: ["inbox"],
   settings: ["settings"],
-  // The PR follows its ticket: it only exists in the prompt attached to it.
   issue: [
     "issueId",
     "issueIdentifier",
     "issueTitle",
+  ],
+  pull_request: [
+    "pullRequestId",
     "prNumber",
     "prState",
+    "prHeadRef",
+    "prBaseRef",
     "prRunId",
   ],
   issues: ["issueIds", "issueProjectIds", "issueIdentifiers", "issueTitles"],

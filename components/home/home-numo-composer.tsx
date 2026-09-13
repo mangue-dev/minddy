@@ -52,7 +52,7 @@ import { useNumoMentionables } from "@/lib/use-numo-mentionables";
  */
 export function HomeNumoComposer() {
   const t = useTranslations("Home");
-  const { open } = useAssistantPanel();
+  const { openIntent } = useAssistantPanel();
   const { mentionables, onMentionQuery } = useNumoMentionables(null);
   const commands = useSlashCommands();
   const resumable = useResumableConversation();
@@ -67,7 +67,9 @@ export function HomeNumoComposer() {
       commands={commands}
       leadingControls={<ConversationSettings />}
       onSend={(message, attachments, mentions, command) =>
-        open({
+        openIntent({
+          source: "home",
+          action: "discuss",
           projectId: null,
           prompt: message,
           mentions,

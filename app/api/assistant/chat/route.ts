@@ -90,6 +90,38 @@ function parseWorkerInput(raw: unknown): WorkerInputCorrelation | null | undefin
   return { parentTurnId, runId, questionId };
 }
 
+const NUMO_INTENT_SOURCES = new Set([
+  "home",
+  "issue",
+  "page",
+  "scratchpad",
+  "pull_request",
+  "bulk",
+]);
+const NUMO_INTENT_ACTIONS = new Set([
+  "discuss",
+  "implement",
+  "plan",
+  "verify",
+  "custom",
+  "review",
+  "fix",
+  "promote",
+]);
+
+function parseNumoIntent(raw: unknown): AssistantChatRequest["intent"] {
+  if (!raw || typeof raw !== "object") return undefined;
+  const intent = raw as Record<string, unknown>;
+  if (
+    !NUMO_INTENT_SOURCES.has(intent.source as string) ||
+    !NUMO_INTENT_ACTIONS.has(intent.action as string)
+  ) return undefined;
+  return {
+    source: intent.source as NonNullable<AssistantChatRequest["intent"]>["source"],
+    action: intent.action as NonNullable<AssistantChatRequest["intent"]>["action"],
+  };
+}
+
 /** What a pinned pill can refer to, and what an “@” can quote. THE
  * two tables are side by side because they follow each other: what is pinned to the
  * @ button is also quoted in the text. */
@@ -199,6 +231,9 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
     pageId: pick("pageId"),
     pageTitle: pick("pageTitle"),
     pageIcon: pick("pageIcon"),
+    pullRequestId: pick("pullRequestId"),
+    prHeadRef: pick("prHeadRef"),
+    prBaseRef: pick("prBaseRef"),
   };
   const hasAnything = Object.values(ctx).some((v) => v !== undefined);
   return hasAnything ? ctx : null;
@@ -298,6 +333,7 @@ export async function POST(request: NextRequest) {
   let pageContext = parsePageContext(body.pageContext);
   if (projectId && !pageContext?.projectId) pageContext = { ...pageContext, projectId };
   let mentions = parseMentions(body.mentions);
+  const numoIntent = parseNumoIntent(body.intent);
   const command = parseCommand(body.command);
   const skillSelections = parseSelectedSkills(body.skills, body.skillPaths, projectId);
   if (skillSelections === null) {
@@ -652,6 +688,7 @@ export async function POST(request: NextRequest) {
         ...(mentions.length > 0 ? { mentions } : {}),
         ...(command ? { command } : {}),
         ...(selectedSkills.length > 0 ? { skills: selectedSkills } : {}),
+        ...(numoIntent ? { intent: numoIntent } : {}),
       },
       ...(configuration.runtime.mode === "platform"
         ? {

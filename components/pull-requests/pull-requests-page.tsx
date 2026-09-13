@@ -658,18 +658,27 @@ export function PullRequestsPage() {
     label: selected ? `${t("title")} · ${selected.title}` : t("title"),
   });
 
-  // Publishes the selected PR to Numo: it resolves “this PR”, reads it
-  // (read_pull_request) and can initiate changes to the linked issue.
+  // Publish the selected PR to Numo even when it has no linked issue. The PR id
+  // is the stable repository-work anchor; issue details remain optional context.
   useAssistantContext(
-    selected && selected.project && selected.issue
+    selected && selected.project
       ? {
           projectId: selected.project.id,
-          issueId: selected.issue.id,
-          issueIdentifier: issueIdentifier(selected.project.key, selected.issue.number),
-          issueTitle: selected.issue.title,
+          pullRequestId: selected.prId,
           prNumber: selected.pr_number,
           prState: selected.pr_state,
+          prHeadRef: selected.head_branch ?? undefined,
           prRunId: selected.runId ?? undefined,
+          ...(selected.issue
+            ? {
+                issueId: selected.issue.id,
+                issueIdentifier: issueIdentifier(
+                  selected.project.key,
+                  selected.issue.number,
+                ),
+                issueTitle: selected.issue.title,
+              }
+            : {}),
         }
       : null,
   );

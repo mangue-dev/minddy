@@ -15,6 +15,7 @@ import { usePathname } from "next/navigation";
 import type {
   AssistantCommandId,
   AssistantMention,
+  NumoIntent,
   AssistantPageContext,
 } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
@@ -49,6 +50,8 @@ export interface OpenAssistantOptions {
    * "ce ticket" and edit it directly. Persists for the opened session.
    */
   pageContext?: AssistantPageContext;
+  /** Provenance retained when an old caller still uses `open` directly. */
+  intent?: Pick<NumoIntent, "source" | "action">;
 }
 
 export interface AssistantPanelContextValue {
@@ -89,6 +92,8 @@ export interface AssistantPanelContextValue {
   /** `ownerId` counts surfaces: several can be mounted at once. */
   setFabSuppressed: (suppressed: boolean, ownerId: string) => void;
   open: (opts?: OpenAssistantOptions) => void;
+  /** The common entry for every voluntary request to Numo. */
+  openIntent: (intent: NumoIntent) => void;
   close: () => void;
   toggle: () => void;
   /** Called by the panel after consuming pendingOptions. */
@@ -168,6 +173,21 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
     setIsOpen(true);
   }, []);
 
+  const openIntent = useCallback(
+    (intent: NumoIntent) => {
+      open({
+        projectId: intent.projectId,
+        prompt: intent.prompt,
+        pageContext: intent.pageContext,
+        mentions: intent.mentions,
+        command: intent.command,
+        attachments: intent.attachments,
+        intent: { source: intent.source, action: intent.action },
+      });
+    },
+    [open],
+  );
+
   const close = useCallback(() => {
     trackEvent("assistant_closed", {});
     setIsOpen(false);
@@ -203,6 +223,7 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
       fabSuppressed: fabOwners.size > 0,
       setFabSuppressed,
       open,
+      openIntent,
       close,
       toggle,
       clearPendingOptions,
@@ -217,6 +238,7 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
       fabOwners,
       setFabSuppressed,
       open,
+      openIntent,
       close,
       toggle,
       clearPendingOptions,

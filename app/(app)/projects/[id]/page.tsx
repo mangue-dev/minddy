@@ -136,7 +136,7 @@ function ProjectBoard() {
   // Import and priming by Numo are reserved for the owner (the API
   // reserve): the empty board only shows what is actually within range.
   const isOwner = !!project && project.owner_id === myUserId;
-  const { open: openAssistant } = useAssistantPanel();
+  const { open: openAssistant, openIntent } = useAssistantPanel();
 
   // Right-click "Add to cycle" (MIN-32) — the cycle is canonical on /all, but
   // picking work into your week from a project board must work too. The patch
@@ -384,7 +384,9 @@ function ProjectBoard() {
   const handleAskNumoForIssues = useCallback(
     (selectedIssues: Issue[]) => {
       if (!project) return;
-      openAssistant({
+      openIntent({
+        source: selectedIssues.length > 1 ? "bulk" : "issue",
+        action: "discuss",
         projectId: project.id,
         pageContext: {
           projectId: project.id,
@@ -394,7 +396,7 @@ function ProjectBoard() {
         },
       });
     },
-    [openAssistant, project],
+    [openIntent, project],
   );
   const handleUpdateIssue = useCallback(
     (id: string, patch: IssueUpdateInput) => {

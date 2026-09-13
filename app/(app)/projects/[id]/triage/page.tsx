@@ -93,7 +93,7 @@ export default function TriagePage() {
   const { objectives } = useObjectivesQuery(projectId);
   const { addRelation } = useIssueRelationsQuery(projectId);
   const mentions = useDescriptionMentions(projectId, members);
-  const { open: openAssistant } = useAssistantPanel();
+  const { openIntent } = useAssistantPanel();
 
   const triageIssues = useMemo(
     () =>
@@ -185,7 +185,9 @@ export default function TriagePage() {
   const handleAskNumo = useCallback(
     (targets: Issue[]) => {
       if (!project || targets.length === 0) return;
-      openAssistant({
+      openIntent({
+        source: targets.length > 1 ? "bulk" : "issue",
+        action: "discuss",
         projectId,
         pageContext: {
           projectId,
@@ -195,7 +197,7 @@ export default function TriagePage() {
         },
       });
     },
-    [openAssistant, project, projectId]
+    [openIntent, project, projectId]
   );
 
   // Publish the selected triage issue to Numo so "accepte ce ticket" resolves.

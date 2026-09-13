@@ -284,6 +284,13 @@ export async function postIssueAutomationApi(
   );
 }
 
+export interface NumoIntentStartResponse {
+  conversation: { id: string };
+  turn: { id: string };
+  detail_href: string;
+}
+
+/** Legacy issue launch client. The server now returns a Numo conversation. */
 export async function launchAgentRunApi(
   issueId: string,
   body: {
@@ -296,7 +303,7 @@ export async function launchAgentRunApi(
     mentions?: AssistantMention[];
     attachments?: ResourceInput[];
   },
-): Promise<{ run: AgentRunSummary }> {
+): Promise<NumoIntentStartResponse> {
   // The prompt is NEVER sent — only its presence and length.
   trackEvent("agent_launched", {
     has_branch: !!body.baseBranch,
@@ -327,13 +334,8 @@ export async function fetchIssueRepoBranchesApi(
 // ── Runs WITHOUT TICKET (MIN-84): free subject, anchored to a project ───────────────
 
 /**
- * Launch a run WITHOUT TICKET: anchored to a project (the repository to be cloned) + a text
- * free as instruction. Each launch is a self-contained conversation.
- *
- * Called “notebook” everywhere on the server side: the notebook was the first
- * point of entry (MIN-84). Today they come from almost everywhere — the
- * blank conversation from the Agents page, the integration wizards — and the subject
- * is free: only the project is obligatory.
+ * Legacy ticketless launch client. The project and free-form request now enter
+ * a common Numo conversation; any repository work is delegated internally.
  */
 export async function launchNotebookAgentApi(body: {
   projectId: string;
@@ -341,7 +343,7 @@ export async function launchNotebookAgentApi(body: {
   mentions?: AssistantMention[];
   attachments?: ResourceInput[];
   baseBranch?: string;
-}): Promise<{ run: AgentRunSummary }> {
+}): Promise<NumoIntentStartResponse> {
   trackEvent("agent_launched", {
     has_branch: !!body.baseBranch,
     provider: "unknown",
@@ -897,7 +899,9 @@ export async function submitPullRequestReviewApi(
   /** `none` = no verdict was given (desired), `comment` = the forge has it
    * folded up due to not being able to carry it (self-review). */
   published: "review" | "comment" | "none";
-  run?: { id: string };
+  conversation?: { id: string };
+  turn?: { id: string };
+  detail_href?: string;
 }> {
   trackEvent("pr_review_submitted", { verdict: input.verdict });
   return parseJson(
@@ -924,7 +928,7 @@ export async function submitPullRequestReviewApi(
  */
 export async function requestPullRequestAiReviewApi(
   prId: string,
-): Promise<{ ok: true; review: PrReviewRunSummary }> {
+): Promise<{ ok: true } & NumoIntentStartResponse> {
   trackEvent("pr_ai_review_requested");
   return parseJson(
     await fetch(prEndpoint(prId), {
@@ -1451,7 +1455,11 @@ export async function postPullRequestCommentApi(
   body: string,
 ): Promise<{
   comment: PullRequestComment;
-  review?: PrReviewRunSummary | null;
+  review?: {
+    conversationId: string;
+    turnId: string;
+    detailHref: string;
+  } | null;
 }> {
   return parseJson(
     await fetch(`${prEndpoint(prId)}/comments`, {
