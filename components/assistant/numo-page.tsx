@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import { AppContentHeader } from "@/components/app-content-header";
 import { AssistantShell } from "@/components/assistant/assistant-shell";
 import { useAssistantChatContext } from "@/lib/assistant-chat-context";
 import { updateConversation } from "@/lib/assistant-api";
@@ -14,7 +15,7 @@ import {
 export function NumoPage() {
   useSuppressAssistantFab();
   const searchParams = useSearchParams();
-  const { scopeProjectId, state, loadConversation } = useAssistantChatContext();
+  const { scopeProjectId, state, loadConversation, reset } = useAssistantChatContext();
   const { isOpen, close } = useAssistantPanel();
   const consumedLinkedConversationId = useRef<string | null>(null);
 
@@ -25,6 +26,10 @@ export function NumoPage() {
   }, [close, isOpen]);
 
   const linkedConversationId = searchParams.get("conversation");
+  useEffect(() => {
+    if (!linkedConversationId && state.routineOccurrence) reset();
+  }, [linkedConversationId, reset, state.routineOccurrence]);
+
   useEffect(() => {
     if (!linkedConversationId) {
       consumedLinkedConversationId.current = null;
@@ -38,8 +43,11 @@ export function NumoPage() {
   }, [linkedConversationId, loadConversation, state.conversationId]);
 
   return (
-    <div className="h-full min-h-0 flex-1 overflow-hidden">
-      <AssistantShell projectId={scopeProjectId} />
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+      <AppContentHeader />
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <AssistantShell projectId={scopeProjectId} />
+      </div>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
 } from "./grep-pattern";
 import { resolveWithin, resolveReadable, assertNotGit } from "./repo-path";
 import type { HarnessLayout } from "./harness-layout";
+import { commitMessageWithSignoff } from "./commit-message";
 import { PR_BASE_TAG } from "./pr-refs";
 
 export { PR_BASE_TAG } from "./pr-refs";
@@ -421,7 +422,9 @@ export async function commitAndPush(
     if (staged.exitCode !== 0)
       throw new Error(`git add failed: ${staged.stderr || staged.stdout}`);
     const commit = await host.exec(
-      `git ${gitIdentityFlags(opts.committer)} commit -m ${sq(opts.message)}`,
+      `git ${gitIdentityFlags(opts.committer)} commit -m ${sq(
+        commitMessageWithSignoff(opts.message, opts.committer),
+      )}`,
     );
     if (commit.exitCode !== 0)
       throw new Error(`git commit failed: ${commit.stderr || commit.stdout}`);

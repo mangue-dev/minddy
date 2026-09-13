@@ -131,6 +131,8 @@ describe("commitAndPush sur un vrai dépôt git", () => {
   it("commite sous l'identité passée, sans toucher à celle du dépôt", async () => {
     const { stdout: author } = await sh(`git log -1 --format='%an <%ae>'`, repo);
     expect(author.trim()).toBe(`${COMMITTER.name} <${COMMITTER.email}>`);
+    const { stdout: message } = await sh(`git log -1 --format='%B'`, repo);
+    expect(message).toContain(`Signed-off-by: ${COMMITTER.name} <${COMMITTER.email}>`);
     const { stdout: configured } = await sh(`git config user.email`, repo);
     expect(configured.trim()).toBe("numo@minddy.app");
   });

@@ -92,6 +92,8 @@ import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
 import { ReasoningBlock } from "@/components/agent/reasoning-block";
 import { assistantMessageReasoning } from "@/lib/assistant-reasoning";
 import { isDelegatedWorkToolCall } from "@/lib/delegated-work-state";
+import { SidebarFilterField } from "@/components/sidebar-filter-field";
+import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 
 const STARTERS = [
   {
@@ -156,6 +158,8 @@ export interface AssistantShellProps {
   /** What the user is currently viewing — rides on every message sent from
    *  this shell so Numo can resolve "ce ticket". */
   pageContext?: AssistantPageContext | null;
+  /** Render one durable conversation inside another page without history chrome. */
+  embeddedConversationId?: string | null;
 }
 
 export const AssistantShell = forwardRef<
@@ -170,6 +174,7 @@ export const AssistantShell = forwardRef<
     onToggleDisplayMode,
     onClose,
     pageContext = null,
+    embeddedConversationId = null,
   },
   ref
 ) {
@@ -202,8 +207,18 @@ export const AssistantShell = forwardRef<
   const [refreshKey, setRefreshKey] = useState(0);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyQuery, setHistoryQuery] = useState("");
+  const [visibleConversationCount, setVisibleConversationCount] = useState(0);
 
-  useEffect(() => requestRestore(), [requestRestore]);
+  useEffect(() => {
+    if (embeddedConversationId) {
+      if (state.conversationId !== embeddedConversationId) {
+        void loadConversation(embeddedConversationId, null);
+      }
+      return;
+    }
+    requestRestore();
+  }, [embeddedConversationId, loadConversation, requestRestore, state.conversationId]);
   // Portal target for the history popover. When the shell lives inside a modal
   // Sheet/Dialog, Radix's `react-remove-scroll` blocks wheel/touch scrolling on
   // anything portaled to <body> (outside its allowed subtree). Resolving the
@@ -578,28 +593,50 @@ export const AssistantShell = forwardRef<
       />
     ) : null;
 
-  const sidebarContent = (
-    <div className="flex h-full flex-col bg-muted/30">
-      <div className="min-h-0 flex-1 overflow-y-auto p-2">
-        <ConversationList
-          activeConversationId={state.conversationId}
-          onSelect={(id, convProjectId) => {
-            handleSelectConversation(id, convProjectId);
-            setMobileSidebarOpen(false);
-          }}
-          onNew={() => {
-            handleNewConversation();
-            setMobileSidebarOpen(false);
-          }}
-          refreshKey={refreshKey}
-        />
-      </div>
+  const sidebarFilter = {
+    value: historyQuery,
+    onChange: setHistoryQuery,
+    placeholder: t("filterConversations", { count: visibleConversationCount }),
+    clearLabel: tc("clearFilter"),
+  };
+  const newConversationButton = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
+          aria-label={t("newConversation")}
+          onClick={handleNewConversation}
+        >
+          <Plus className="size-4" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{t("newConversation")}</TooltipContent>
+    </Tooltip>
+  );
+  const sidebarList = (
+    <div className="p-2">
+      <ConversationList
+        activeConversationId={state.conversationId}
+        onSelect={(id, convProjectId) => {
+          handleSelectConversation(id, convProjectId);
+          setMobileSidebarOpen(false);
+        }}
+        onNew={() => {
+          handleNewConversation();
+          setMobileSidebarOpen(false);
+        }}
+        refreshKey={refreshKey}
+        query={historyQuery}
+        onVisibleCountChange={setVisibleConversationCount}
+      />
     </div>
   );
 
   // Compact-mode header: no permanent sidebar; conversations live in a
   // Popover. The new-conversation and close buttons are grouped on the right.
-  const compactHeader = compact ? (
+  const compactHeader = compact && !embeddedConversationId ? (
     <div
       ref={historyAnchorRef}
       className="flex shrink-0 items-center gap-1 px-3 py-2.5"
@@ -626,21 +663,27 @@ export const AssistantShell = forwardRef<
           align="start"
           sideOffset={6}
           container={historyContainer}
-          className="flex max-h-[360px] w-72 flex-col gap-0 overflow-y-auto p-1.5"
+          className="flex max-h-[360px] w-72 flex-col gap-0 overflow-hidden p-0"
         >
-          <ConversationList
-            activeConversationId={state.conversationId}
-            onSelect={(id, convProjectId) => {
-              handleSelectConversation(id, convProjectId);
-              setHistoryOpen(false);
-            }}
-            onNew={() => {
-              handleNewConversation();
-              setHistoryOpen(false);
-            }}
-            refreshKey={refreshKey}
-            hideNewButton
-          />
+          <div className="flex h-11 shrink-0 items-center border-b border-border px-3">
+            <SidebarFilterField {...sidebarFilter} />
+          </div>
+          <div className="scrollbar-quiet min-h-0 flex-1 overflow-y-auto p-1.5">
+            <ConversationList
+              activeConversationId={state.conversationId}
+              onSelect={(id, convProjectId) => {
+                handleSelectConversation(id, convProjectId);
+                setHistoryOpen(false);
+              }}
+              onNew={() => {
+                handleNewConversation();
+                setHistoryOpen(false);
+              }}
+              refreshKey={refreshKey}
+              query={historyQuery}
+              onVisibleCountChange={setVisibleConversationCount}
+            />
+          </div>
         </PopoverContent>
       </Popover>
 
@@ -712,6 +755,16 @@ export const AssistantShell = forwardRef<
   // Writing the provider around the `return` would have reindented two hundred lines
   // from JSX for a direction line.
   const unavailable = !aiAvailability.loading && !aiAvailability.available;
+  const embeddedConversationFailed = Boolean(
+    embeddedConversationId &&
+      state.conversationId !== embeddedConversationId &&
+      state.status === "error",
+  );
+  const embeddedConversationLoading = Boolean(
+    embeddedConversationId &&
+      state.conversationId !== embeddedConversationId &&
+      !embeddedConversationFailed,
+  );
   const shell = unavailable ? (
     <div className="relative flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
       {onClose ? (
@@ -742,8 +795,13 @@ export const AssistantShell = forwardRef<
     <div className="flex h-full overflow-hidden">
       {/* Permanent sidebar — only outside compact mode. */}
       {!compact && (
-        <SecondarySidebar title={t("title")} hiddenOnMobile>
-          {sidebarContent}
+        <SecondarySidebar
+          title={t("title")}
+          filter={sidebarFilter}
+          actions={newConversationButton}
+          hiddenOnMobile
+        >
+          {sidebarList}
         </SecondarySidebar>
       )}
 
@@ -752,7 +810,15 @@ export const AssistantShell = forwardRef<
         <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
           <SheetContent side="left" className="w-[280px] p-0 md:hidden">
             <SheetTitle className="sr-only">{t("title")}</SheetTitle>
-            {sidebarContent}
+            <div className="flex h-full min-h-0 flex-col bg-sidebar">
+              <div className="secondary-sidebar-header flex h-[60px] shrink-0 items-center gap-2 border-b border-border px-4">
+                <SidebarFilterField {...sidebarFilter} />
+                {newConversationButton}
+              </div>
+              <div className="scrollbar-quiet min-h-0 flex-1 overflow-y-auto">
+                {sidebarList}
+              </div>
+            </div>
           </SheetContent>
         </Sheet>
       )}
@@ -781,7 +847,16 @@ export const AssistantShell = forwardRef<
           </div>
         )}
 
-        {!hasMessages && restoring ? (
+        {embeddedConversationFailed ? (
+          <div className="flex flex-1 items-center justify-center px-4">
+            <div
+              className="max-w-lg rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+              role="alert"
+            >
+              {state.error}
+            </div>
+          </div>
+        ) : embeddedConversationLoading || (!hasMessages && restoring) ? (
           /* Restoring the last conversation — quiet loader, no greeting flash. */
           <div className="flex flex-1 items-center justify-center">
             <NumoIcon

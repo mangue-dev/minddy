@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   AlertDialog,
@@ -25,25 +24,19 @@ import {
 import {
   Archive,
   ArchiveRestore,
-  CalendarClock,
   Ellipsis,
   History,
   Loader2,
   Pin,
   PinOff,
-  Plus,
   Trash2,
 } from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
 import { fetchConversations, deleteConversation, setActiveConversation, updateConversation } from "@/lib/assistant-api";
 import type { NumoConversation } from "@/lib/assistant-types";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
-import { AppTooltip } from "@/components/ui/app-tooltip";
 import { isNumoConversationUnread } from "@/lib/numo-conversation-unread";
-import {
-  matchesFilter,
-  SidebarFilterField,
-} from "@/components/sidebar-filter-field";
+import { matchesFilter } from "@/components/sidebar-filter-field";
 
 type ConversationWithProject = NumoConversation;
 
@@ -54,9 +47,8 @@ interface ConversationListProps {
   onSelect: (conversationId: string, projectId: string | null) => void;
   onNew: () => void;
   refreshKey?: number;
-  /** Hide the inline "new conversation" button (useful when the host UI
-   *  already exposes one). */
-  hideNewButton?: boolean;
+  query: string;
+  onVisibleCountChange?: (count: number) => void;
 }
 
 // Buckets in chronological order (most recent first).
@@ -94,7 +86,8 @@ export function ConversationList({
   onSelect,
   onNew,
   refreshKey,
-  hideNewButton = false,
+  query,
+  onVisibleCountChange,
 }: ConversationListProps) {
   const t = useTranslations("Assistant");
   const tc = useTranslations("Common");
@@ -109,7 +102,6 @@ export function ConversationList({
   const conversationsRef = useRef(conversations);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
   // The list leaves EMPTY: without this flag, “no conversation” is displayed on
   // fetch time, even when there are dozens.
   const [loaded, setLoaded] = useState(false);
@@ -242,6 +234,10 @@ export function ConversationList({
     [conversations, query],
   );
 
+  useEffect(() => {
+    onVisibleCountChange?.(visibleCount);
+  }, [onVisibleCountChange, visibleCount]);
+
   const renderConversation = (conversation: ConversationWithProject) => {
     const isPinned = Boolean(conversation.pinned_at);
     const isArchived = Boolean(conversation.archived_at);
@@ -288,7 +284,7 @@ export function ConversationList({
           )}
           {unread && (
             <span
-              className="size-2 shrink-0 rounded-full bg-primary group-hover:hidden group-focus-within:hidden"
+              className="size-2 shrink-0 rounded-full bg-blue-500"
               aria-label={t("unreadConversation")}
             />
           )}
@@ -347,42 +343,6 @@ export function ConversationList({
   return (
     <>
       <div className="flex flex-col gap-1">
-        <div className="flex gap-1">
-          {!hideNewButton && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onNew}
-              className="min-w-0 flex-1 justify-start gap-2"
-            >
-              <Plus className="size-4" />
-              {t("newConversation")}
-            </Button>
-          )}
-          <AppTooltip label={t("routines")}>
-            <Button
-              asChild
-              variant={hideNewButton ? "outline" : "ghost"}
-              size={hideNewButton ? "sm" : "icon-sm"}
-              className={hideNewButton ? "flex-1 justify-start gap-2" : undefined}
-            >
-              <Link href="/routines" onClick={closePanel}>
-                <CalendarClock className="size-4" />
-                {hideNewButton ? t("routines") : null}
-              </Link>
-            </Button>
-          </AppTooltip>
-        </div>
-
-        <div className="mt-1 flex h-9 items-center px-2">
-          <SidebarFilterField
-            value={query}
-            onChange={setQuery}
-            placeholder={t("filterConversations", { count: visibleCount })}
-            clearLabel={tc("clearFilter")}
-          />
-        </div>
-
         {loaded && conversations.length === 0 && (
           <EmptyScene
             size="compact"

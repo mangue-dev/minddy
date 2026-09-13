@@ -7,7 +7,19 @@ import type { OpenAssistantOptions } from "./assistant-panel-context";
 
 const h = vi.hoisted(() => ({
   panel: { isOpen: true, pendingOptions: null as OpenAssistantOptions | null, routeProjectId: "a" as string | null, close: vi.fn() },
-  state: { conversationId: "conversation", conversationProjectId: "a", messages: [{ role: "user", content: "Earlier message" }], status: "idle" },
+  state: {
+    conversationId: "conversation",
+    conversationProjectId: "a",
+    messages: [{ role: "user", content: "Earlier message" }],
+    status: "idle",
+    routineOccurrence: null as {
+      id: string;
+      routine_id: string;
+      origin: "scheduled" | "manual";
+      scheduled_for: string | null;
+      created_at: string;
+    } | null,
+  },
   load: vi.fn(), reset: vi.fn(), send: vi.fn(), abort: vi.fn(), active: vi.fn(), pointer: vi.fn(),
   router: { push: vi.fn(), refresh: vi.fn() },
   theme: { setTheme: vi.fn() }, auth: { refreshUser: vi.fn() },
@@ -32,7 +44,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   h.panel = { ...h.panel, isOpen: true, pendingOptions: null, routeProjectId: "a" };
-  h.state = { ...h.state, status: "idle" };
+  h.state = { ...h.state, status: "idle", routineOccurrence: null };
   h.active.mockResolvedValue({ conversationId: "conversation", projectId: "a" });
   root = createRoot(document.createElement("div"));
 });
@@ -83,5 +95,22 @@ describe("persistent conversation context", () => {
     expect(value.restoring).toBe(false);
     expect(value.scopeProjectId).toBe("b");
     expect(h.reset).not.toHaveBeenCalled();
+  });
+
+  it("keeps routine-owned conversations out of the active Numo pointer", async () => {
+    h.state = {
+      ...h.state,
+      routineOccurrence: {
+        id: "occurrence",
+        routine_id: "routine",
+        origin: "scheduled",
+        scheduled_for: "2026-09-13T08:00:00.000Z",
+        created_at: "2026-09-13T08:00:00.000Z",
+      },
+    };
+
+    await render();
+
+    expect(h.pointer).toHaveBeenLastCalledWith(null);
   });
 });

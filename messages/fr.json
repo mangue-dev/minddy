@@ -2631,6 +2631,7 @@
     "reasoningMinimal": "Minimal",
     "reasoningXhigh": "Très poussé",
     "reasoningMax": "Maximum",
+    "modelSettingsReset": "Revenir aux valeurs du compte",
     "environment": "Environnement",
     "environmentCloud": "Cloud",
     "environmentCloudHint": "Une machine jetable, sur un clone neuf du dépôt.",

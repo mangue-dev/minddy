@@ -6,4 +6,8 @@ describe("routeHasSecondaryNav", () => {
   it("reserves the secondary sidebar while the trash route hydrates", () => {
     expect(routeHasSecondaryNav("/trash")).toBe(true);
   });
+
+  it("reserves the secondary sidebar on the canonical Numo route", () => {
+    expect(routeHasSecondaryNav("/numo")).toBe(true);
+  });
 });

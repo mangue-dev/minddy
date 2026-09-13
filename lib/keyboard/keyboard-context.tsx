@@ -140,7 +140,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
           go("/pull-requests");
           return true;
         case "j":
-          go("/agents");
+          go("/numo");
           return true;
         case "u":
           go("/routines");

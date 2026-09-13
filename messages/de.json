@@ -2631,6 +2631,7 @@
     "reasoningMinimal": "Minimal",
     "reasoningXhigh": "Sehr tief",
     "reasoningMax": "Maximal",
+    "modelSettingsReset": "Auf Kontostandards zurücksetzen",
     "environment": "Umgebung",
     "environmentCloud": "Cloud",
     "environmentCloudHint": "Eine Wegwerfmaschine auf einem neuen Klon des Repositorys.",

@@ -231,6 +231,8 @@ describe("le tour qui a travaillé", () => {
   it("commite sous l'identité passée, sans réécrire celle de l'utilisateur", async () => {
     const { stdout: author } = await sh(`git log -1 --format='%an <%ae>' ${runWorkRef(RUN_ID)}`, repo);
     expect(author.trim()).toBe(`${COMMITTER.name} <${COMMITTER.email}>`);
+    const { stdout: message } = await sh(`git log -1 --format='%B' ${runWorkRef(RUN_ID)}`, repo);
+    expect(message).toContain(`Signed-off-by: ${COMMITTER.name} <${COMMITTER.email}>`);
     const { stdout: configured } = await sh(`git config user.email`, repo);
     expect(configured.trim()).toBe("humaine@example.com");
   });

@@ -30,7 +30,8 @@ ALTER TABLE public.conversations DISABLE TRIGGER register_numo_identity;
 ALTER TABLE public.agent_conversations DISABLE TRIGGER register_numo_identity;
 INSERT INTO public.conversations (id, user_id, project_id, title) VALUES
  ('51400000-0000-4000-8000-000000000020', '51400000-0000-4000-8000-000000000001', '51400000-0000-4000-8000-000000000010', 'Private chat'),
- ('51400000-0000-4000-8000-000000000027', '51400000-0000-4000-8000-000000000001', NULL, 'No project');
+ ('51400000-0000-4000-8000-000000000027', '51400000-0000-4000-8000-000000000001', NULL, 'No project'),
+ ('51400000-0000-4000-8000-000000000028', '51400000-0000-4000-8000-000000000001', NULL, 'Routine conversation');
 INSERT INTO public.agent_conversations (id, owner_id, project_id, visibility, title) VALUES
  ('51400000-0000-4000-8000-000000000020', '51400000-0000-4000-8000-000000000001', '51400000-0000-4000-8000-000000000010', 'private', 'Two runs'),
  ('51400000-0000-4000-8000-000000000021', '51400000-0000-4000-8000-000000000001', '51400000-0000-4000-8000-000000000010', 'project', 'Linked work'),
@@ -58,7 +59,24 @@ INSERT INTO public.agent_runs (id, conversation_id, project_id, created_by, stat
 INSERT INTO public.assistant_messages (id, conversation_id, role, content, tool_name, tool_call_id, metadata) VALUES
  ('51400000-0000-4000-8000-000000000040', '51400000-0000-4000-8000-000000000020', 'tool', '{"launched":true,"run_id":"51400000-0000-4000-8000-000000000032"}', 'launch_code_agent', 'call-original', '{"success":true}'),
  ('51400000-0000-4000-8000-000000000044', '51400000-0000-4000-8000-000000000020', 'user', 'Private attachment', NULL, NULL, '{"attachments":[{"storage_path":"chat/owner/original.pdf","file_name":"original.pdf"}]}'),
- ('51400000-0000-4000-8000-000000000045', '51400000-0000-4000-8000-000000000020', 'tool', 'invalid historical JSON', 'launch_code_agent', 'call-invalid', '{"success":true}');
+ ('51400000-0000-4000-8000-000000000045', '51400000-0000-4000-8000-000000000020', 'tool', 'invalid historical JSON', 'launch_code_agent', 'call-invalid', '{"success":true}'),
+ ('51400000-0000-4000-8000-000000000046', '51400000-0000-4000-8000-000000000028', 'user', 'Follow-up on a routine run', NULL, NULL, '{}');
+INSERT INTO public.agent_routines (
+  id, project_id, owner_id, title, prompt, frequency
+) VALUES (
+  '51400000-0000-4000-8000-000000000060',
+  '51400000-0000-4000-8000-000000000010',
+  '51400000-0000-4000-8000-000000000001',
+  'Daily review', 'Review the repository', 'daily'
+);
+INSERT INTO public.numo_routine_occurrences (
+  id, routine_id, origin, conversation_id, request_id
+) VALUES (
+  '51400000-0000-4000-8000-000000000061',
+  '51400000-0000-4000-8000-000000000060', 'manual',
+  '51400000-0000-4000-8000-000000000028',
+  '51400000-0000-4000-8000-000000000062'
+);
 INSERT INTO public.agent_messages (id, conversation_id, run_id, role, content, source) VALUES
  ('51400000-0000-4000-8000-000000000041', '51400000-0000-4000-8000-000000000020', '51400000-0000-4000-8000-000000000030', 'assistant', 'Original worker summary', 'assistant_summary'),
  ('51400000-0000-4000-8000-000000000043', '51400000-0000-4000-8000-000000000021', '51400000-0000-4000-8000-000000000032', 'assistant', 'Linked worker summary', 'assistant_summary');
@@ -81,7 +99,10 @@ INSERT INTO public.agent_conversation_contexts (conversation_id, kind, resource_
 
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '51400000-0000-4000-8000-000000000001', true);
-SELECT pg_temp.assert_numo((SELECT count(*) = 4 FROM public.numo_conversation_history), 'owner sees each chat and standalone history once');
+SELECT pg_temp.assert_numo((SELECT count(*) = 4 FROM public.numo_user_conversation_history), 'owner sees each user-initiated chat and standalone history once');
+SELECT pg_temp.assert_numo((SELECT count(*) = 1 FROM public.numo_conversation_history WHERE legacy_id = '51400000-0000-4000-8000-000000000028'), 'routine conversation remains addressable by durable identity');
+SELECT pg_temp.assert_numo((SELECT count(*) = 0 FROM public.numo_user_conversation_history WHERE legacy_id = '51400000-0000-4000-8000-000000000028'), 'routine conversation stays out of user history after a follow-up message');
+SELECT pg_temp.assert_numo((SELECT content = 'Follow-up on a routine run' FROM public.numo_messages WHERE id = '51400000-0000-4000-8000-000000000046'), 'routine follow-up remains in the routine conversation timeline');
 SELECT pg_temp.assert_numo((SELECT count(*) = 2 FROM public.numo_work WHERE legacy_conversation_id = '51400000-0000-4000-8000-000000000020'), 'multiple runs remain work references');
 SELECT pg_temp.assert_numo((SELECT conversation_id = '51400000-0000-4000-8000-000000000020' FROM public.numo_work WHERE id = '51400000-0000-4000-8000-000000000032'), 'launch resolves to the parent chat');
 SELECT pg_temp.assert_numo((SELECT ref = 'legacy-preserved-branch' AND run_id = '51400000-0000-4000-8000-000000000030' FROM public.numo_artifacts WHERE id = '51400000-0000-4000-8000-000000000050'), 'artifact identity and work links are preserved');

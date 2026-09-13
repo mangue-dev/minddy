@@ -491,6 +491,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   }, []);
 
   const isAgents = pathname.startsWith("/agents");
+  const isNumo = pathname.startsWith("/numo");
   const isRoutines = pathname.startsWith("/routines");
   const { counts: triageCounts } = useTriageCountsQuery();
 
@@ -853,9 +854,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 key: "go-agents",
                 label: t("agents"),
                 icon: NumoNavIcon,
-                href: "/agents",
+                href: "/numo",
                 keys: ["G", "J"],
-                onSelect: () => router.push("/agents"),
+                onSelect: () => router.push("/numo"),
               },
               {
                 // ROUTINES (MIN-185) have their own page and their own
@@ -1359,8 +1360,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     key: "agents",
     label: t("agents"),
     icon: NumoNavIcon,
-    href: "/agents",
-    active: isAgents && !isRoutines,
+    href: "/numo",
+    active: (isNumo || isAgents) && !isRoutines,
     shortcut: "J",
     showBadgeCollapsed: true,
     disabled: !agentsAllowed,

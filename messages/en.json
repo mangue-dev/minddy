@@ -2631,6 +2631,7 @@
     "reasoningMinimal": "Minimal",
     "reasoningXhigh": "Very deep",
     "reasoningMax": "Maximum",
+    "modelSettingsReset": "Reset to account defaults",
     "environment": "Environment",
     "environmentCloud": "Cloud",
     "environmentCloudHint": "A throwaway machine, on a fresh clone of the repository.",

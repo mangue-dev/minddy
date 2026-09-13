@@ -14,3 +14,14 @@ export function commitMessageFromReply(reply: string, identifier: string): strin
   if (cleaned.length >= 8) return cleaned.length <= 72 ? cleaned : `${cleaned.slice(0, 69)}…`;
   return `wip(${identifier}): agent update`;
 }
+
+/** Add the DCO trailer for the same identity Git uses to author the commit. */
+export function commitMessageWithSignoff(
+  message: string,
+  author: { name: string; email: string },
+): string {
+  const trailer = `Signed-off-by: ${author.name} <${author.email}>`;
+  const lines = message.trimEnd().split("\n");
+  if (lines.some((line) => line.trim() === trailer)) return message.trimEnd();
+  return `${message.trimEnd()}\n\n${trailer}`;
+}

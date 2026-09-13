@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 
 import { AgentConversation } from "@/components/agent/agent-conversation";
+import { AssistantShell } from "@/components/assistant/assistant-shell";
 import { AppContentHeader } from "@/components/app-content-header";
 import { EmptyScene } from "@/components/empty-scene";
 import { Markdown } from "@/components/markdown";
@@ -182,12 +183,6 @@ export function RoutineDetail({
   const openRun: RoutineRunSummary | null =
     runs.find((r) => r.id === openRunId) ?? null;
   const openRoutineRun = (run: RoutineRunSummary) => {
-    if (run.numo_conversation_id) {
-      router.push(
-        `/agents?conversation=${encodeURIComponent(run.numo_conversation_id)}`,
-      );
-      return;
-    }
     setOpenRunId(run.id);
   };
 
@@ -324,6 +319,52 @@ export function RoutineDetail({
    * the one that exists — it is up to the part that receives it to know where it is read.
    */
   if (openRun) {
+    const headerTitle = (
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t("backToRuns")}
+          onClick={() => setOpenRunId(null)}
+        >
+          <ChevronLeft />
+        </Button>
+        {project ? (
+          <ProjectOrb
+            seed={projectOrbSeed(project)}
+            iconUrl={project.icon_url}
+            className="size-4 shrink-0"
+          />
+        ) : null}
+        <span className="truncate text-sm font-medium">
+          {format.dateTime(new Date(openRun.created_at), {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })}
+        </span>
+      </div>
+    );
+
+    if (openRun.kind === "numo" && openRun.numo_conversation_id) {
+      return (
+        <div className="flex h-full min-h-0 flex-col overflow-hidden">
+          <AppContentHeader contentClassName="gap-2">
+            {headerTitle}
+            <div className="ml-auto flex shrink-0 items-center">
+              <PrHeaderAction run={openRun} />
+            </div>
+          </AppContentHeader>
+          <div className="min-h-0 flex-1">
+            <AssistantShell
+              projectId={routine.project_id}
+              compact
+              embeddedConversationId={openRun.numo_conversation_id}
+            />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
         <AgentConversation
@@ -331,31 +372,7 @@ export function RoutineDetail({
           noteRunId={openRun.id}
           projectId={project?.id ?? null}
           active
-          headerTitle={
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("backToRuns")}
-                onClick={() => setOpenRunId(null)}
-              >
-                <ChevronLeft />
-              </Button>
-              {project ? (
-                <ProjectOrb
-                  seed={projectOrbSeed(project)}
-                  iconUrl={project.icon_url}
-                  className="size-4 shrink-0"
-                />
-              ) : null}
-              <span className="truncate text-sm font-medium">
-                {format.dateTime(new Date(openRun.created_at), {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                })}
-              </span>
-            </div>
-          }
+          headerTitle={headerTitle}
           headerActions={<PrHeaderAction run={openRun} />}
         />
       </div>
@@ -927,7 +944,7 @@ function PrHeaderAction({ run }: { run: RoutineRunSummary }) {
     run.pr_state === "merged" || run.pr_state === "closed"
       ? run.pr_state
       : null;
-  const open = () => router.push(`/pull-requests?run=${run.id}`);
+  const open = () => router.push(`/pull-requests?run=${run.work_run_id ?? run.id}`);
   return closed ? (
     <button
       type="button"

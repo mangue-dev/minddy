@@ -266,6 +266,6 @@ export async function startNumoIntent(
   return {
     conversationId: conversation.id,
     turnId: turn.id,
-    detailHref: `/agents?conversation=${encodeURIComponent(conversation.id)}`,
+    detailHref: `/numo?conversation=${encodeURIComponent(conversation.id)}`,
   };
 }

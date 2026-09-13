@@ -325,7 +325,8 @@ export function AppBreadcrumb({
   const isAdmin = pathname.startsWith("/admin");
   const isAllGlobal = pathname === "/all";
   const isPullRequests = pathname.startsWith("/pull-requests");
-  const isAgents = pathname.startsWith("/agents");
+  const isAgents =
+    pathname.startsWith("/agents") || pathname.startsWith("/numo");
   const isRoutines = pathname.startsWith("/routines");
 
   return (

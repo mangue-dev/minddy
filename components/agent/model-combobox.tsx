@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Check, ChevronsUpDown, ListPlus } from "lucide-react";
 import {
@@ -85,6 +85,8 @@ export function ModelCombobox({
   disabledTooltip,
   allowDefault = true,
   variant = "field",
+  triggerContent,
+  triggerClassName,
   scope = "user",
   capability = "text",
 }: {
@@ -112,6 +114,10 @@ export function ModelCombobox({
    * `compact`: small pill (logo + name) for the bar of a chat composer.
    */
   variant?: "field" | "compact";
+  /** Optional compact trigger layout while retaining the same model picker. */
+  triggerContent?: ReactNode;
+  /** Additional compact trigger styles for host-specific layouts. */
+  triggerClassName?: string;
   /**
    * Catalog queried. `user` (default) = the active provider of the account;
    * `platform` = the OpenRouter platform key, for the admin config.
@@ -279,23 +285,30 @@ export function ModelCombobox({
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            className="h-8 shrink gap-1.5 rounded-full border border-transparent bg-transparent px-1.5 text-xs font-medium text-foreground/80 hover:bg-muted/50"
+            className={cn(
+              "h-8 shrink gap-1.5 rounded-full border border-transparent bg-transparent px-1.5 text-xs font-medium text-foreground/80 hover:bg-muted/50",
+              triggerClassName,
+            )}
           >
-            {value
-              ? logoFor(value)
-              : defaultModelId
-                ? logoFor(defaultModelId)
-                : null}
-            <span className="max-w-[9rem] truncate">
-              {/* Always the real name of the model: even when we follow “the default”,
- we display the resolved model (fallback on the label if unknown). */}
-              {value
-                ? formatModelName(value)
-                : defaultModelId
-                  ? formatModelName(defaultModelId)
-                  : defaultLabel}
-            </span>
-            <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
+            {triggerContent ?? (
+              <>
+                {value
+                  ? logoFor(value)
+                  : defaultModelId
+                    ? logoFor(defaultModelId)
+                    : null}
+                <span className="max-w-[9rem] truncate">
+                  {/* Always the real name of the model: even when we follow “the default”,
+   we display the resolved model (fallback on the label if unknown). */}
+                  {value
+                    ? formatModelName(value)
+                    : defaultModelId
+                      ? formatModelName(defaultModelId)
+                      : defaultLabel}
+                </span>
+                <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
+              </>
+            )}
           </Button>
         ) : (
           <Button

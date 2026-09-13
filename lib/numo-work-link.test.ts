@@ -8,7 +8,7 @@ describe("numoWorkDetailPath", () => {
       conversation_id: "parent conversation",
       work_conversation_id: "worker-conversation",
       detail_href: "/agents?run=legacy",
-    })).toBe("/agents?conversation=parent%20conversation&work=run%2F1");
+    })).toBe("/numo?conversation=parent%20conversation&work=run%2F1");
   });
 
   it("keeps standalone work on its dedicated surface", () => {

@@ -13,6 +13,7 @@ describe("routeDisposition", () => {
       "/settings/account",
       "/auth/callback",
       "/agents",
+      "/numo",
     ]) {
       expect(routeDisposition(path), path).toBe("allow");
     }

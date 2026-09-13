@@ -52,8 +52,9 @@ beforeEach(() => { vi.clearAllMocks(); });
 describe("Numo conversation adapter", () => {
   it("reads beyond the PostgREST row cap with a deterministic tie-breaker", async () => {
     const rows = Array.from({ length: 501 }, (_, n) => ({ id: String(n), updated_at: "2026-09-01" }));
-    const db = database({ numo_conversation_history: rows });
+    const db = database({ numo_user_conversation_history: rows });
     expect(await listNumoConversations(db.client)).toEqual(rows);
+    expect(db.from).toHaveBeenCalledWith("numo_user_conversation_history");
     expect(db.calls.filter((c) => c.method === "range").map((c) => c.args)).toEqual([[0, 499], [500, 999]]);
     expect(db.calls.filter((c) => c.method === "order").slice(0, 2).map((c) => c.args)).toEqual([
       ["updated_at", { ascending: false }], ["id", { ascending: true }],
@@ -89,7 +90,7 @@ describe("Numo conversation adapter", () => {
     expect(await resolveNumoConversation(db.client, "run", "run")).toEqual({
       conversationId: id,
       workId: "run",
-      detailHref: `/agents?conversation=${id}&work=run`,
+      detailHref: `/numo?conversation=${id}&work=run`,
     });
   });
 
@@ -137,7 +138,7 @@ describe("Numo conversation routes", () => {
   });
 
   it("returns an error instead of disguising a database failure as an empty history", async () => {
-    const db = database({}, "numo_conversation_history");
+    const db = database({}, "numo_user_conversation_history");
     auth.get.mockResolvedValue({ ok: true, user: { id: userId }, supabase: db.client });
     expect((await list(request("/api/numo/conversations"))).status).toBe(500);
   });

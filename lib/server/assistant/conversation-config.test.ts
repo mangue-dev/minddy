@@ -71,12 +71,15 @@ describe("Numo conversation configuration", () => {
       .rejects.toMatchObject({ code: "model_unavailable", status: 422 });
   });
 
-  it("rejects a reasoning level the selected model does not support", async () => {
+  it("lets every Numo model disable explicit reasoning", async () => {
     await expect(resolveNumoTurnConfiguration({
       userId: "user",
       model: "chosen-model",
       reasoningLevel: "off",
-    })).rejects.toMatchObject({ code: "reasoning_unsupported", status: 422 });
+    })).resolves.toMatchObject({
+      model: "chosen-model",
+      reasoningLevel: "off",
+    });
   });
 
   it("does not apply Minddy's plan ceiling to a BYOK model", async () => {
