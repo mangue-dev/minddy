@@ -156,6 +156,7 @@ SELECT set_config('request.jwt.claim.sub', '51400000-0000-4000-8000-000000000001
 SELECT pg_temp.assert_numo((SELECT count(*) = 5 FROM public.numo_user_conversation_history), 'owner sees each user-initiated chat and standalone history once');
 SELECT pg_temp.assert_numo((SELECT count(*) = 1 FROM public.numo_conversation_history WHERE legacy_id = '51400000-0000-4000-8000-000000000028'), 'routine conversation remains addressable by durable identity');
 SELECT pg_temp.assert_numo((SELECT count(*) = 0 FROM public.numo_user_conversation_history WHERE legacy_id = '51400000-0000-4000-8000-000000000028'), 'routine conversation stays out of user history after a follow-up message');
+SELECT pg_temp.assert_numo(public.is_numo_routine_conversation('51400000-0000-4000-8000-000000000028'), 'owner can identify their own routine conversation');
 SELECT pg_temp.assert_numo((SELECT content = 'Follow-up on a routine run' FROM public.numo_messages WHERE id = '51400000-0000-4000-8000-000000000046'), 'routine follow-up remains in the routine conversation timeline');
 SELECT pg_temp.assert_numo((SELECT count(*) = 2 FROM public.numo_work WHERE legacy_conversation_id = '51400000-0000-4000-8000-000000000020'), 'multiple runs remain work references');
 SELECT pg_temp.assert_numo((SELECT conversation_id = '51400000-0000-4000-8000-000000000020' FROM public.numo_work WHERE id = '51400000-0000-4000-8000-000000000032'), 'launch resolves to the parent chat');
@@ -202,6 +203,7 @@ END $$;
 SELECT set_config('request.jwt.claim.sub', '51400000-0000-4000-8000-000000000003', true);
 SELECT pg_temp.assert_numo((SELECT count(*) = 1 FROM public.numo_conversation_history), 'outsider sees only their own project');
 SELECT pg_temp.assert_numo((SELECT count(*) = 0 FROM public.numo_work), 'cross-project runs remain inaccessible');
+SELECT pg_temp.assert_numo(NOT public.is_numo_routine_conversation('51400000-0000-4000-8000-000000000028'), 'routine predicate does not disclose another user''s conversation');
 RESET ROLE;
 DELETE FROM public.project_members WHERE project_id = '51400000-0000-4000-8000-000000000010' AND user_id = '51400000-0000-4000-8000-000000000002';
 SET LOCAL ROLE authenticated;
