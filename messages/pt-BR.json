@@ -6138,5 +6138,24 @@
     "importStorageFull": "O armazenamento do projeto está cheio. Libere espaço e tente novamente.",
     "importFailed": "Não foi possível concluir a importação. Tente novamente; a mesma importação não será adicionada duas vezes.",
     "exportArchive": "Arquivo do banco (.zip)"
+  },
+  "AppTabs": {
+    "label": "Abas do aplicativo",
+    "newTab": "Nova aba",
+    "close": "Fechar aba",
+    "closeNamed": "Fechar {name}",
+    "pin": "Fixar aba",
+    "unpin": "Desafixar aba",
+    "rename": "Renomear aba",
+    "name": "Nome da aba",
+    "renameHint": "Deixe o nome vazio para usar o nome da página.",
+    "loading": "Carregando abas…",
+    "retry": "Tentar novamente",
+    "saveFailed": "Não foi possível salvar suas alterações. Mantenha esta aba aberta e tente novamente.",
+    "syncFailed": "Não foi possível sincronizar as abas. Verifique sua conexão e tente novamente.",
+    "conflict": "Esta aba foi alterada em outra janela. Repita a ação.",
+    "lastTab": "Mantenha pelo menos uma aba aberta.",
+    "unavailableProject": "Projeto indisponível",
+    "destinationUnavailable": "Este destino não está disponível. Escolha outra página ou feche a aba."
   }
 }

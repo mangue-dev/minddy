@@ -8,12 +8,19 @@ import {
 
 import {
   keysForProjectEvent,
+  keysForUserEvent,
+  USER_SCOPE_KEYS,
   projectScopeKeys,
   type BroadcastChange,
 } from "./realtime-keys";
 
 const PROJECT = "11111111-1111-4111-8111-111111111111";
 const PAGE = "44444444-4444-4444-8444-444444444444";
+
+it("refreshes application tabs on account broadcasts and reconnect", () => {
+  expect(keysForUserEvent(change("app_tabs"))).toEqual([{ key: ["app-tabs"], refetch: "active" }]);
+  expect(USER_SCOPE_KEYS).toContainEqual(["app-tabs"]);
+});
 
 function change(
   table: string,

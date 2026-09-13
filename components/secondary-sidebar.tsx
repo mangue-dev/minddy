@@ -117,7 +117,7 @@ export function SecondarySidebar({
           of the list, what restricts it, what can be created there. It's the only one
           pinned strip of the pane — everything that drives the list should be here, and
           not in `children`, which scrolls with it. */}
-      <div className="secondary-sidebar-header flex h-[60px] shrink-0 items-center gap-2 border-b border-border px-4">
+      <div className="secondary-sidebar-header flex h-[var(--app-content-header-height)] shrink-0 items-center gap-2 border-b border-border px-4">
         {filter ? (
           <SidebarFilterField {...filter} />
         ) : title ? (
@@ -202,7 +202,7 @@ function SecondarySidebarGutter({
           which crosses the entire screen. */}
       <div
         aria-hidden
-        className="secondary-sidebar-header-placeholder absolute inset-x-0 top-0 h-[60px] border-b border-border"
+        className="secondary-sidebar-header-placeholder absolute inset-x-0 top-0 h-[var(--app-content-header-height)] border-b border-border"
       />
       <div
         ref={setSlot}

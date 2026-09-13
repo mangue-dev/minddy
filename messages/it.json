@@ -6138,5 +6138,24 @@
     "importStorageFull": "Lo spazio di archiviazione del progetto è pieno. Libera spazio e riprova.",
     "importFailed": "Impossibile completare l’importazione. Riprova: la stessa importazione non verrà aggiunta due volte.",
     "exportArchive": "Archivio del database (.zip)"
+  },
+  "AppTabs": {
+    "label": "Schede dell’applicazione",
+    "newTab": "Nuova scheda",
+    "close": "Chiudi scheda",
+    "closeNamed": "Chiudi {name}",
+    "pin": "Fissa scheda",
+    "unpin": "Sblocca scheda",
+    "rename": "Rinomina scheda",
+    "name": "Nome della scheda",
+    "renameHint": "Lascia il nome vuoto per usare quello della pagina.",
+    "loading": "Caricamento delle schede…",
+    "retry": "Riprova",
+    "saveFailed": "Non è stato possibile salvare le modifiche. Tieni aperta questa scheda e riprova.",
+    "syncFailed": "Non è stato possibile sincronizzare le schede. Controlla la connessione e riprova.",
+    "conflict": "Questa scheda è cambiata in un’altra finestra. Ripeti l’azione.",
+    "lastTab": "Tieni aperta almeno una scheda.",
+    "unavailableProject": "Progetto non disponibile",
+    "destinationUnavailable": "Questa destinazione non è disponibile. Scegli un’altra pagina o chiudi la scheda."
   }
 }

@@ -43,7 +43,7 @@ describe("application content header", () => {
   });
 
   it("keeps its fixed geometry and horizontal overflow behavior", () => {
-    expect(source).toContain("h-[60px] shrink-0");
+    expect(source).toContain("h-[var(--app-content-header-height)] shrink-0");
     expect(source).toContain("overflow-x-auto overflow-y-hidden");
     expect(source).toContain("overscroll-x-contain");
     expect(source).toContain("items-center px-3.5");
@@ -72,7 +72,7 @@ describe("application content header", () => {
     );
   });
 
-  it("keeps the trash content pane under a 60 px action header", () => {
+  it("keeps the trash content pane under the shared action header", () => {
     expect(trash).toContain("<AppContentHeader");
     expect(trash).not.toContain('<header className="flex h-[60px]');
   });
@@ -95,17 +95,18 @@ describe("application content header", () => {
     expect(admin).not.toContain('className="md:hidden"\n          contentClassName');
   });
 
-  it("keeps every 60 px application strip on an audited chrome contract", () => {
+  it("keeps every shared-height application strip on an audited chrome contract", () => {
     const files = [
       ...tsxFiles(join(process.cwd(), "app/(app)")),
       ...tsxFiles(join(process.cwd(), "components")),
     ];
     const strips = files.flatMap((file) => {
       const content = readFileSync(file, "utf8");
-      return [...content.matchAll(/<[^>]+h-\[60px\][^>]*>/gs)].map(
+      return [...content.matchAll(/<[^>]+h-\[var\(--app-content-header-height\)\][^>]*>/gs)].map(
         ([tag]) => ({ file, tag }),
       );
     });
+    expect(strips.length).toBeGreaterThanOrEqual(5);
     const contracts = [
       "app-content-header",
       "compact-window-controls-clearance",

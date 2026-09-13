@@ -1,4 +1,5 @@
 "use client";
+import { useAppTabChange } from "@/lib/use-app-tab-change";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useParams, useRouter, useSearchParams } from "next/navigation";
@@ -962,6 +963,7 @@ export function FeedbackTeamPage() {
     [openAssistant, projectId]
   );
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
+  useAppTabChange(() => setOpenIssueId(null));
   const openIssue: Issue | null = issues.find((i) => i.id === openIssueId) ?? null;
   const handleAddRelation = useCallback(
     (sourceId: string, type: IssueRelationType, targetId: string) => {

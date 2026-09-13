@@ -84,6 +84,9 @@ const notificationSettingsBridge: Partial<DesktopBridge> =
 const bridge: DesktopBridge = {
   version: readVersion(),
   platform: process.platform,
+  setWindowChrome(theme: "light" | "dark") {
+    ipcRenderer.send("minddy:window-chrome", theme);
+  },
   notificationCapabilities,
   ...nativePushBridge,
   ...notificationSettingsBridge,

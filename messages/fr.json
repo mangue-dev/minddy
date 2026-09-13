@@ -6138,5 +6138,24 @@
     "importStorageFull": "Le stockage du projet est plein. Libérez de l’espace et réessayez.",
     "importFailed": "L’import n’a pas pu aboutir. Réessayez : le même import ne sera pas ajouté deux fois.",
     "exportArchive": "Archive de la base (.zip)"
+  },
+  "AppTabs": {
+    "label": "Onglets de l’application",
+    "newTab": "Nouvel onglet",
+    "close": "Fermer l’onglet",
+    "closeNamed": "Fermer {name}",
+    "pin": "Épingler l’onglet",
+    "unpin": "Désépingler l’onglet",
+    "rename": "Renommer l’onglet",
+    "name": "Nom de l’onglet",
+    "renameHint": "Laissez le nom vide pour utiliser celui de la page.",
+    "loading": "Chargement des onglets…",
+    "retry": "Réessayer",
+    "saveFailed": "Vos modifications n’ont pas pu être enregistrées. Gardez cet onglet ouvert et réessayez.",
+    "syncFailed": "Les onglets n’ont pas pu être synchronisés. Vérifiez votre connexion et réessayez.",
+    "conflict": "Cet onglet a changé dans une autre fenêtre. Réessayez votre action.",
+    "lastTab": "Gardez au moins un onglet ouvert.",
+    "unavailableProject": "Projet indisponible",
+    "destinationUnavailable": "Cette destination est indisponible. Choisissez une autre page ou fermez l’onglet."
   }
 }

@@ -40,7 +40,14 @@ export function DesktopChrome() {
     const platform = desktopBridgePlatform(bridge, navigator.platform);
     root.setAttribute("data-desktop-app", "");
     if (platform) root.setAttribute("data-desktop-platform", platform);
+    if (bridge.setWindowChrome) root.setAttribute("data-integrated-caption-controls", "");
+    const syncTheme = () => bridge.setWindowChrome?.(root.classList.contains("dark") ? "dark" : "light");
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
     return () => {
+      observer.disconnect();
+      root.removeAttribute("data-integrated-caption-controls");
       root.removeAttribute("data-desktop-app");
       root.removeAttribute("data-desktop-platform");
     };

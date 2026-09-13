@@ -14,10 +14,11 @@ describe("desktopWindowFrameOptions", () => {
   });
 
   it.each(["win32", "linux"] as const)(
-    "uses native window chrome and an auto-hidden menu bar on %s",
+    "integrates native caption controls and preserves the auto-hidden menu bar on %s",
     (platform) => {
       expect(desktopWindowFrameOptions(platform)).toEqual({
-        frame: true,
+        titleBarStyle: "hidden",
+        titleBarOverlay: { color: "#191a1b", symbolColor: "#eeeeee", height: 44 },
         autoHideMenuBar: true,
       });
     }

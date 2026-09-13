@@ -15,6 +15,7 @@
 // display it (the recording status, the conflict banner) and give it
 // the editor, the only surface capable of adopting a merged document.
 
+import { useAppTabDeparture } from "@/lib/app-tabs-context";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
@@ -446,6 +447,7 @@ function PageSurface({
      rendering, and the editor can already be unmounted. */
   const flushRef = useRef(flush);
   flushRef.current = flush;
+  useAppTabDeparture(autosave.flushBeforeNavigation);
   useEffect(() => { onNavigationReady?.(autosave.flushBeforeNavigation); }, [onNavigationReady, autosave.flushBeforeNavigation]);
   const titleRef = useRef(title);
   titleRef.current = title;

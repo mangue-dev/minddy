@@ -67,7 +67,7 @@ describe("desktopServerUnavailableHtml", () => {
     expect(html.toLowerCase()).not.toContain("internet");
   });
 
-  it("limits the local drag band to macOS", () => {
+  it("provides a 44 px drag band on Windows while the server is unavailable", () => {
     const html = desktopServerUnavailableHtml(
       "https://minddy.example.com",
       "https://minddy.example.com/home",
@@ -76,7 +76,8 @@ describe("desktopServerUnavailableHtml", () => {
     );
 
     expect(html).toContain('data-desktop-platform="win32"');
-    expect(html).toContain('html[data-desktop-platform="darwin"] .desktop-drag-band');
+    expect(html).toContain('html[data-desktop-platform] .desktop-drag-band');
+    expect(html).toContain('height: 44px; -webkit-app-region: drag');
   });
 
   it("escapes rendered values and refuses a retry on another origin", () => {

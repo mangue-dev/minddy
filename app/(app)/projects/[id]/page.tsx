@@ -1,4 +1,5 @@
 "use client";
+import { useAppTabChange } from "@/lib/use-app-tab-change";
 
 import {
   Suspense,
@@ -193,6 +194,7 @@ function ProjectBoard() {
   const [createMounted, setCreateMounted] = useState(false);
   const [createStatus, setCreateStatus] = useState<IssueStatus | undefined>(undefined);
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
+  useAppTabChange(() => setOpenIssueId(null));
   const [sidePanelMounted, setSidePanelMounted] = useState(false);
   // Which tab the side panel shows when it (re)opens on an issue.
   const [openIssueTab, setOpenIssueTab] = useState<"description" | "plan">(

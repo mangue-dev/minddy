@@ -12,6 +12,9 @@ import { useCreate } from "@/lib/create-context";
 import { useGlobalBoardQuery } from "@/lib/use-global-board-query";
 import { useBoardViews } from "@/lib/use-board-views";
 import { usePublishCurrentView } from "@/lib/current-view-context";
+import { useAppTabLocalState } from "@/lib/app-tab-local-state";
+import { useAppTabChange } from "@/lib/use-app-tab-change";
+import { useOptionalAppTabs } from "@/lib/app-tabs-context";
 import { buildViewHref } from "@/lib/saved-view-href";
 import { filterIssues, visibleStatuses } from "@/lib/view-filter";
 import { STATUSES } from "@/lib/issue-constants";
@@ -127,9 +130,10 @@ function GlobalBoardInner() {
 
   // Cycle mode (MIN-32) — a MODE of this board, not a saved view. Restored
   // from its own localStorage slot after mount (SSR renders view mode).
-  const [cycleMode, setCycleMode] = useState(false);
+  const appTabs = useOptionalAppTabs();
+  const [cycleMode, setCycleMode] = useAppTabLocalState("global-cycle-mode", false);
   // null = the current cycle; a past/upcoming id when browsing the selector.
-  const [selectedCycleId, setSelectedCycleId] = useState<string | null>(null);
+  const [selectedCycleId, setSelectedCycleId] = useAppTabLocalState<string | null>("global-selected-cycle", null);
   const switchCycleMode = useCallback((next: boolean) => {
     setCycleMode(next);
     setSelectedCycleId(null);
@@ -139,8 +143,9 @@ function GlobalBoardInner() {
     } catch {
       /* localStorage unavailable — mode just won't be remembered. */
     }
-  }, []);
+  }, [setCycleMode, setSelectedCycleId]);
   useEffect(() => {
+    if (appTabs) return;
     try {
       if (window.localStorage.getItem(CYCLE_MODE_KEY)) setCycleMode(true);
     } catch {
@@ -149,7 +154,7 @@ function GlobalBoardInner() {
   }, []);
   useEffect(() => {
     if (rawViewParam === "cycle") {
-      switchCycleMode(true);
+      if (!cycleMode) switchCycleMode(true);
       consumeViewParam();
       return;
     }
@@ -160,7 +165,7 @@ function GlobalBoardInner() {
     // where he said. It's the same gesture as clicking on a view pad
     // in the toolbar, which exits the cycle before selecting.
     if (rawViewParam) switchCycleMode(false);
-  }, [rawViewParam, switchCycleMode, consumeViewParam]);
+  }, [rawViewParam, switchCycleMode, consumeViewParam, cycleMode]);
 
   const {
     views,
@@ -259,6 +264,7 @@ function GlobalBoardInner() {
   }, []);
 
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
+  useAppTabChange(() => setOpenIssueId(null));
   const [openIssueTab, setOpenIssueTab] = useState<"description" | "plan">(
     "description"
   );

@@ -21,6 +21,7 @@ import { SidebarVisibilityProvider } from "@/lib/sidebar-visibility-context";
 import { UndoProvider } from "@/lib/undo/undo-context";
 import { BulkActionsProvider } from "@/lib/bulk-actions-context";
 import { CurrentViewProvider } from "@/lib/current-view-context";
+import { AppTabsProvider } from "@/lib/app-tabs-context";
 import { IssuePanelProvider } from "@/lib/issue-panel-context";
 import { AppShellChrome } from "@/components/app-shell-chrome";
 import { AssistantFab } from "@/components/assistant-fab";
@@ -103,7 +104,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
  publish here. Above the shell, therefore:
  it is the palette which reads. */}
                                 <CurrentViewProvider>
+                                  <AppTabsProvider>
                                   <AppShellChrome>{children}</AppShellChrome>
+                                  </AppTabsProvider>
                                 </CurrentViewProvider>
                               </BulkActionsProvider>
                             </CreateProvider>

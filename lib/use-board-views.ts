@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useOptionalAppTabs } from "./app-tabs-context";
 import { useTranslations } from "next-intl";
 import { toast } from "mangue-ui";
 import {
@@ -80,6 +81,11 @@ export function useBoardViews(
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [rawConfig, setRawConfig] = useState<ViewConfig>(DEFAULT_CONFIG);
   const storageKey = storageKeyOf(scope);
+  const appTabs = useOptionalAppTabs();
+  const localKey = appTabs?.activeId ? `${appTabs.activeId}:${storageKey}` : null;
+  const restoreKey = localKey ?? storageKey;
+  const remembered = localKey ? appTabs?.session.getLocalState<{ id: string | null; config: ViewConfig }>(localKey) : undefined;
+
   const restoredKeyRef = useRef<string | null>(null);
   // Signature of the config we last applied from the active view — lets us tell
   // an external change to that view (Numo, a teammate) apart from the user's own
@@ -89,9 +95,9 @@ export function useBoardViews(
   // Reset the working view state the instant the scope changes — during
   // render, so no frame shows the previous board's view before the restore
   // effect runs.
-  const [prevKey, setPrevKey] = useState(storageKey);
-  if (prevKey !== storageKey) {
-    setPrevKey(storageKey);
+  const [prevKey, setPrevKey] = useState(restoreKey);
+  if (prevKey !== restoreKey) {
+    setPrevKey(restoreKey);
     setActiveViewId(null);
     setRawConfig(DEFAULT_CONFIG);
   }
@@ -173,6 +179,16 @@ export function useBoardViews(
   // pill — so a saved view's filters and sort survive a page reload.
   useEffect(() => {
     if (viewsLoading || orderedViews.length === 0) return;
+    if (restoredKeyRef.current !== restoreKey && remembered) {
+      const view = orderedViews.find((v) => v.id === remembered.id);
+      if (view) {
+        restoredKeyRef.current = restoreKey;
+        setActiveViewId(view.id);
+        setRawConfig(remembered.config);
+        if (viewParam) onViewParamConsumed();
+        return;
+      }
+    }
     if (viewParam) {
       const target =
         viewParam === "my"
@@ -180,16 +196,18 @@ export function useBoardViews(
           : orderedViews.find((v) => v.id === viewParam);
       onViewParamConsumed();
       if (target) {
-        restoredKeyRef.current = storageKey;
+        restoredKeyRef.current = restoreKey;
         setActiveViewId(target.id);
-        setRawConfig(configOf(target));
+        // A restored tab may receive its URL after its working filters have
+        // already been restored. Acknowledge that selection without resetting it.
+        if (target.id !== activeViewId) setRawConfig(configOf(target));
         writeStoredView(storageKey, target.id);
         return;
       }
       // Unknown target: consumed above, fall through to the normal restore.
     }
-    if (restoredKeyRef.current === storageKey) return;
-    restoredKeyRef.current = storageKey;
+    if (restoredKeyRef.current === restoreKey) return;
+    restoredKeyRef.current = restoreKey;
     const savedId = readStoredView(storageKey);
     const view =
       (savedId ? orderedViews.find((v) => v.id === savedId) : undefined) ??
@@ -197,7 +215,12 @@ export function useBoardViews(
     setActiveViewId(view.id);
     setRawConfig(configOf(view));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onViewParamConsumed is an event callback, not a dependency
-  }, [storageKey, viewsLoading, orderedViews, viewParam]);
+  }, [restoreKey, storageKey, viewsLoading, orderedViews, viewParam]);
+
+  useEffect(() => {
+    if (!localKey || restoredKeyRef.current !== restoreKey || !activeViewId) return;
+    appTabs?.session.setLocalState(localKey, { id: activeViewId, config: rawConfig });
+  }, [localKey, restoreKey, activeViewId, rawConfig, appTabs?.session]);
 
   // Keep the working config in sync when the ACTIVE view's stored config changes
   // underneath us — Numo editing it (incl. the "Ask Numo" / generate-a-view

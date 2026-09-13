@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
-import { WINDOW_BUTTONS_WIDTH } from "@/components/desktop-window-buttons";
-import { useHoldWindowButtons, useWideLayout } from "@/lib/use-window-buttons";
 import { transitions } from "@/lib/motion";
 
 /** Left-edge target that recalls hidden navigation. */
@@ -56,11 +54,6 @@ export function SidebarNavOverlay({
   const closePanel = useCallback(() => {
     if (!pinned) setOpen(false);
   }, [pinned]);
-
-  // The macOS buttons follow the bar that houses them: put away, they leave
-  // with her. See lib/use-window-buttons.ts for what “remove” means.
-  const wide = useWideLayout();
-  useHoldWindowButtons("sidebar-hidden", wide && !shown);
 
   /**
  * What closes the block is GEOMETRY, not a `onPointerLeave`.
@@ -116,21 +109,7 @@ export function SidebarNavOverlay({
     // Exiting the WINDOW from the top or from the right no longer produces any
     // `pointermove`: without this the block would remain open behind another
     // tab, to reveal itself unfolded upon return.
-    const onDocumentLeave = (e: PointerEvent) => {
-      // macOS window buttons are native: entering them exits the DOM
-      // without `pointermove` exploitable. They occupy this precise corner; keep it
-      // open panel allows you to complete the gesture instead of closing it under the
-      // pointer. As soon as he returns to the page, `onMove` takes over the decision.
-      // Same protection when crossing the upper band of the panel: the
-      // window moving grip can swallow up the next move,
-      // especially if the pointer is going fast. Without this net, the navigation
-      // close before the cursor even reaches its filter or controls.
-      if (
-        (e.clientX <= WINDOW_BUTTONS_WIDTH || e.clientX <= width) &&
-        e.clientY <= 60
-      ) {
-        return;
-      }
+    const onDocumentLeave = () => {
       closePanel();
     };
     document.documentElement.addEventListener("pointerleave", onDocumentLeave);

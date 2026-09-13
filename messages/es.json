@@ -6138,5 +6138,24 @@
     "importStorageFull": "El almacenamiento del proyecto está lleno. Libera espacio e inténtalo de nuevo.",
     "importFailed": "No se pudo completar la importación. Inténtalo de nuevo; la misma importación no se añadirá dos veces.",
     "exportArchive": "Archivo de la base (.zip)"
+  },
+  "AppTabs": {
+    "label": "Pestañas de la aplicación",
+    "newTab": "Nueva pestaña",
+    "close": "Cerrar pestaña",
+    "closeNamed": "Cerrar {name}",
+    "pin": "Fijar pestaña",
+    "unpin": "Desfijar pestaña",
+    "rename": "Renombrar pestaña",
+    "name": "Nombre de la pestaña",
+    "renameHint": "Deja el nombre vacío para usar el de la página.",
+    "loading": "Cargando pestañas…",
+    "retry": "Reintentar",
+    "saveFailed": "No se pudieron guardar tus cambios. Mantén esta pestaña abierta e inténtalo de nuevo.",
+    "syncFailed": "No se pudieron sincronizar las pestañas. Comprueba tu conexión e inténtalo de nuevo.",
+    "conflict": "Esta pestaña cambió en otra ventana. Repite la acción.",
+    "lastTab": "Mantén al menos una pestaña abierta.",
+    "unavailableProject": "Proyecto no disponible",
+    "destinationUnavailable": "Este destino no está disponible. Elige otra página o cierra la pestaña."
   }
 }

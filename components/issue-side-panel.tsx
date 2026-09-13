@@ -1,4 +1,5 @@
 "use client";
+import { useAppTabDeparture } from "@/lib/app-tabs-context";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -682,6 +683,18 @@ export function IssueSidePanel({
   // A take being transcribed (the audio is gone, the text is not
   // income): with the Numo suite, this is the window where closing loses dictation.
   const [transcribing, setTranscribing] = useState(false);
+  const pendingWrites = useRef(new Set<Promise<boolean>>());
+  useAppTabDeparture(async () => {
+    if (!open) return true;
+    if (transcribing || numoBusy) {
+      toast.info(t("dictationInFlight"), { id: "dictation-in-flight" });
+      return false;
+    }
+    // A remote close must not discard a focused field that has not blurred yet.
+    if (titleEdited.current || descriptionEdited.current) return false;
+    const saved = await Promise.all(pendingWrites.current);
+    return saved.every(Boolean) && !titleEdited.current && !descriptionEdited.current;
+  });
   const handleOpenChange = (next: boolean) => {
     // Dictation edits THIS ticket: the transcript, then the Numo patch, goes there
     // land. Closing them now would throw them away — we refuse, saying so (a
@@ -696,11 +709,16 @@ export function IssueSidePanel({
   if (!issue) return null;
 
   const patch = async (updates: IssueUpdateInput) => {
-    try {
-      await onUpdate(issue.id, updates);
-    } catch (err) {
+    const write = onUpdate(issue.id, updates).then(() => true, (err) => {
+      // Keep failed text edits recoverable instead of accepting a tab departure.
+      if (updates.title !== undefined) titleEdited.current = true;
+      if (updates.description !== undefined) descriptionEdited.current = true;
       toast.error((err as Error).message);
-    }
+      return false;
+    });
+    pendingWrites.current.add(write);
+    try { return await write; }
+    finally { pendingWrites.current.delete(write); }
   };
 
   const isChild = !!issue.parent_id;

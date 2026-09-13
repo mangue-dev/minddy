@@ -117,30 +117,67 @@ Settings that cannot be discussed:
 - A user agent suffix (`minddy-desktop/<version>`), so that the server and
   the UI both know that we are in the app.
 
-**The title bar is an interface decision, not a setting.** It is
-hidden (`titleBarStyle: "hidden"`, not `frame: false` — without a frame, the
-buttons are no longer positioned from the same origin and go back into the
-corner). Three consequences stand together:
+### Application tabs and window chrome (MIN-536)
 
-- macOS no longer knows where to enter the window. `-webkit-app-region` is CSS,
-  so it is the PAGE which must say it (app/globals.css, section “app de
-  office"). **Single strip, in root layout**, as high as the header
-  of the app (60 px) and present on everything the window displays. The first
-  version hooked the socket to the shell header and mark line —
-  that is to say to the two pieces of furniture that six configurations do not have: zen mode,
-  legal pages, public board, published page, shared view, `not-found`. The
-  window was strictly still there (MIN-292). A `drag` zone swallowing the
-  click, the band is accompanied by a GLOBAL `no-drag` on everything that activates.
-- The system buttons no longer exist on their own: they light up by hand,
-  and arise **in the sidebar mark line, in place of the
-  mark**, which passes to the right. Not in a gang of their own, which would push the whole
-  column downwards and would be betrayed by a seam of another color.
-- FOLDED bar (rail), its 56 px no longer hold them: we remove them, and
-  brand takes its place. The flyover that unfolds the rail brings them back — a bar
-  unfolded over the secondary is an unfolded bar like any other. Go
-  clicking them from there means EXIT the bar from the point of view of
-  Chromium: the rail would close under the pointer and take them away, hence the
-  lookout for `app-sidebar.tsx`, who recognizes this exit at his corner.
+The authenticated web and desktop workspace has a 44 px application bar above
+both sidebars and content. It is hidden below 768 px. The sidebar inset, content
+header, and secondary sidebar header are all 50 px tall. Their single source of
+truth is `APP_CONTENT_HEADER_HEIGHT` in
+`lib/app-chrome-layout.ts`, exposed globally as `--app-content-header-height`;
+placeholders and Home loading/content spacing use the same value. The inset
+contains the existing New issue and notebook actions; its collapsed rail
+contains only the creation “+”. Search,
+inbox, sidebar visibility, application tabs, and update controls belong to the
+new bar. The sidebar toggle remains disabled below 1200 px.
+
+The bar's navigation section is 256 px wide with the primary sidebar alone or
+with navigation hidden, and 376 px with a docked secondary sidebar. A temporary
+hover reveal does not resize it. Native caption controls and the update action
+retain their space while the tab list scrolls. The application content header
+remains an additional desktop drag surface.
+
+Tabs are personal to an account. IDs, destinations, custom names, pins, and order
+synchronize between devices; the active tab and lightweight working filters are
+local to each window. Regular tabs are 150 px wide and pinned tabs are square.
+Pinning changes presentation only: every sidebar click navigates in the current
+tab. Create another tab first to keep a separate destination. New tabs start at
+Home, and the final tab cannot be closed. There is no collection-size limit.
+
+Switching tabs restores the page and its published view/selection, including
+consumed query parameters, and closes the transient issue panel. Mounted wiki
+editors, including database previews, must finish saving before an active tab
+can be switched or closed. A failed save keeps its content open. Notebook and
+Numo composer state remain shared. An explicit startup deep link takes priority
+over window restoration. Browser Back/Forward follows the window's chronological
+history in the active application tab; there are no dedicated Back/Forward UI
+buttons. Cmd/Ctrl+W still hides the desktop window.
+
+Remote destination changes never navigate the current window. A remote close
+is applied only after local editor saves succeed; failed saves retain a recovery
+tab. Mutations are serialized within a window and checked against the database
+revision, with the returned canonical row applied on success. Conflicting actions
+can be repeated using the new revision; destination writes remain pending for
+retry. The account collection is fetched in pages and excluded from the general
+localStorage query snapshot. Only the active tab's restoration metadata is stored
+in account-scoped sessionStorage and removed on sign-out.
+
+macOS uses native traffic lights at x=19, y=15, independently of sidebar state.
+Modal holds and fullscreen acknowledgements remain in place. Windows and Linux
+use Electron's hidden title bar with a 44 px native title-bar overlay, theme
+synchronization, and Chromium's title-bar safe-area geometry. A bare Alt opens the
+main-process application menu, including server recovery actions, even when the
+remote server cannot load. The separate server-picker frame is unchanged.
+
+Login, signup, and the server-unavailable screen have minimal native-control
+clearance and a drag surface, without application tabs. Interactive controls,
+menus, dialogs, and tooltips are non-draggable. The old root drag band is disabled
+when the authenticated desktop bar owns that region.
+
+Before releasing a new desktop build, verify native controls, fullscreen, zoom,
+DPI changes, and Alt menu access on actual Windows and Linux systems. Also check
+Alt with an unavailable server and Windows Snap at the supported minimum window
+size. Browser layout tests and desktop builds alone do not establish those
+platform behaviors.
 
 **SITE doesn't follow in the window — and "site" means ALL
 site** (tightened to MIN-292). The desktop app only shows two things:

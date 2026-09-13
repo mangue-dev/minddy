@@ -146,6 +146,8 @@ function keysForAgentRun(change: BroadcastChange): Invalidation[] {
 
 export function keysForUserEvent(change: BroadcastChange): Invalidation[] {
   switch (change.table) {
+    case "app_tabs":
+      return [active(["app-tabs"])];
     case "notifications":
       return [active(["notifications"])];
     // My conversations with Numo (MIN-332): they only exist for me,
@@ -478,6 +480,7 @@ export function keysForProjectEvent(
 // connection (events missed while offline). Prefix keys: ["comments"] matches
 // every ["comments", issueId] query.
 export const USER_SCOPE_KEYS: QueryKey[] = [
+  ["app-tabs"],
   ["notifications"],
   ["projects"],
   ["my-invitations"],

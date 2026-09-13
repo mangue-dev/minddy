@@ -4,6 +4,7 @@ import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import {
   BrowserWindow,
+  Menu,
   Notification as NativeNotification,
   app,
   autoUpdater as nativeAutoUpdater,
@@ -509,13 +510,12 @@ function applyWindowButtons(target?: BrowserWindow): void {
     // slide off the screen with the menu bar and return when the
     // pointer goes to top. Hiding them over is removing the ONLY
     // way to exit full screen with the mouse — a window from which you cannot
-    // no more going out. Rail mode therefore only has control over them in windowed mode.
+    // no more going out. Modal holds therefore apply only in windowed mode.
     window.setWindowButtonVisibility(fullScreen || wantsWindowButtons);
     if (!fullScreen && wantsWindowButtons) {
       // Restore the position AFTER having shown them: restoring visibility
       // recreate the standard buttons, and they return to their original corner if
-      // we don't say it again — that is, over the sidebar instead
-      // from in its brand line.
+      // we do not reapply the position in the application bar.
       window.setWindowButtonPosition(MACOS_TRAFFIC_LIGHT_POSITION);
     }
   }
@@ -524,9 +524,8 @@ function applyWindowButtons(target?: BrowserWindow): void {
   // response that `useWindowButtonsSlot` is waiting for to unfreeze its layout.
   //
   // What we announce on the page is another question than what we show: in
-  // full screen buttons exist, but NOT in the brand row — they
-  // have passed into the custody of macOS, at the top of the screen. The sidebar
-  // must therefore not keep their slot, otherwise it leaves a gap.
+  // fullscreen controls are managed by macOS outside the application bar.
+  // The bar releases their slot until the native state reports them back.
   publishWindowButtons(wantsWindowButtons && !fullScreen);
 }
 
@@ -779,8 +778,23 @@ function createWindow(
     },
   );
   if (showWhenReady) window.once("ready-to-show", () => window.show());
-  // A frameless window has no buttons: they light up here, where they belong
-  // place in the mark line, before the first display.
+  // Keep native menu access independent of the renderer and remote server.
+  // A bare Alt opens the full application menu when integrated caption controls
+  // prevent the operating system from revealing the auto-hidden menu bar.
+  if (process.platform !== "darwin") {
+    let bareAlt = false;
+    window.webContents.on("before-input-event", (event, input) => {
+      if (input.key === "Alt" && input.type === "keyDown") bareAlt = !input.control && !input.meta && !input.shift;
+      else if (input.type === "keyDown") bareAlt = false;
+      if (input.key === "Alt" && input.type === "keyUp" && bareAlt) {
+        bareAlt = false;
+        event.preventDefault();
+        const menu = Menu.getApplicationMenu();
+        if (menu && window) menu.popup({ window, x: 0, y: 44 });
+      }
+    });
+  }
+
   applyWindowButtons(window);
 
   // **The request belongs to the PAGE, it dies with it.** A reload,
@@ -1025,6 +1039,12 @@ function registerIpc(): void {
   ipcMain.on("minddy:window-buttons", (_event, visible: unknown) => {
     wantsWindowButtons = visible !== false;
     applyWindowButtons();
+  });
+
+  ipcMain.on("minddy:window-chrome", (event, theme: unknown) => {
+    if (!mainWindow || event.sender !== mainWindow.webContents || process.platform === "darwin") return;
+    if (theme !== "light" && theme !== "dark") return;
+    mainWindow.setTitleBarOverlay({ height: 44, color: theme === "dark" ? "#191a1b" : "#fafafa", symbolColor: theme === "dark" ? "#eeeeee" : "#222222" });
   });
 
   // Status replay, TARGETED at the requesting subscriber (MIN-310).

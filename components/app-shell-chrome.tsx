@@ -80,6 +80,9 @@ import {
 import { usePlanGates } from "@/lib/use-billing-query";
 import { MobileNavActions } from "@/components/mobile-nav-actions";
 import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
+import { AppTopBar } from "@/components/app-top-bar";
+import { useOptionalAppTabs } from "@/lib/app-tabs-context";
+import { useAppTabChange } from "@/lib/use-app-tab-change";
 import { HeaderWindowButtonsSlot } from "@/components/desktop-window-buttons";
 import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
@@ -370,6 +373,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const tPages = useTranslations("Pages");
   const { agentsAllowed, projectLimitReached } = usePlanGates();
   const pathname = usePathname();
+  const appTabs = useOptionalAppTabs();
+  const activeAppTabId = appTabs?.activeId;
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
@@ -388,6 +393,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     closeIssue: closeIssuePanel,
   } = useIssuePanelActions();
   const previousPathname = useRef(pathname);
+  useAppTabChange(closeIssuePanel);
   useEffect(() => {
     if (previousPathname.current !== pathname) closeIssuePanel();
     previousPathname.current = pathname;
@@ -1646,6 +1652,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   });
 
   return (
+    <div className="app-workspace flex h-dvh w-full min-w-0 flex-col overflow-hidden">
+      {appTabs && <AppTopBar hidden={sidebarHidden} secondary={secondaryNav} inbox={inboxItem} onSearch={() => handlePaletteOpenChange(true)} onSearchWarm={warmPalette} />}
     <AppShell
       // `app-shell` targets the shell's <main>; its bottom reserve follows the
       // real mobile-nav height through --mobile-nav-clearance.
@@ -1660,17 +1668,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           hidden={sidebarHidden}
           width={EXPANDED_WIDTH + (secondaryNav ? SECONDARY_WIDTH : 0)}
           dockedWidth={secondaryNav ? COLLAPSED_WIDTH + SECONDARY_WIDTH : EXPANDED_WIDTH}
-          pinned={sidebarLayerOpen || inboxOpen}
+          pinned={sidebarLayerOpen}
         >
           <AppSidebar
             sections={desktopSections}
             modeKey={modeKey}
             currentProject={currentProject}
             projects={projects}
-            inbox={inboxItem}
-            inboxOpen={inboxOpen}
-            onSearch={() => handlePaletteOpenChange(true)}
-            onSearchWarm={warmPalette}
             onScratchpadWarm={() => preloadSurface(loadScratchpadModal)}
             onLayerOpenChange={setSidebarLayerOpen}
             overlay={!sidebarHidden && secondaryNav}
@@ -1682,7 +1686,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       // absent. This native-control clearance is not an application header and
       // stays display:none everywhere else.
       header={
-        <div className="compact-window-controls-clearance h-[60px] shrink-0 items-center border-b border-border px-4">
+        <div className="compact-window-controls-clearance h-11 shrink-0 items-center border-b border-border px-4">
           <HeaderWindowButtonsSlot />
         </div>
       }
@@ -1698,7 +1702,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         />
       }
     >
-      {children}
+      <div id="app-tab-content" role={appTabs ? "tabpanel" : undefined} aria-labelledby={activeAppTabId ? `app-tab-${activeAppTabId}` : undefined} className="h-full min-h-0">{children}</div>
       {/* Command palette (⌘K / ⌘P / F, sidebar search) — same groups as
  mobile nav search, tickets enriched with actions (⌘;). The cross-project
  index also serves these actions: members and categories of the project
@@ -1737,5 +1741,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         />
       )}
     </AppShell>
+    </div>
   );
 }

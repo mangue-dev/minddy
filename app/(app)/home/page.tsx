@@ -25,15 +25,10 @@ type AuthMeta = { display_name?: string; full_name?: string; name?: string };
     he lost his center of gravity and salvation floated above nothing. */
 const HERO_COLUMN = "mx-auto w-full max-w-xl";
 
-/** Height of the shell header (`<Header/>` of mango-ui, `h-[60px]`). The area of
-    contenu commence sous lui : ce qu'on y centre tombe 30 px trop bas par rapport
-    at the WINDOW. A low gutter of this height raises the block exactly
-    half — that's all that separates the two centers.
-
-    Desktop only: below, the shell already reserves enough to clear the bar
-    floating navigation (`--mobile-nav-clearance`, globals.css), and this
-    reserve goes up the block more than the header had gone down. */
-const HEADER_OFFSET = "desktop:pb-[60px]";
+/** Offset the hero by the shared pane-header height to keep it centered.
+ * Mobile navigation already provides its own bottom clearance.
+ */
+const HEADER_OFFSET = "desktop:pb-[var(--app-content-header-height)]";
 
 /**
  * The title of the welcome: “Hello” on the first visit, something else on
