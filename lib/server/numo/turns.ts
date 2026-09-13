@@ -846,6 +846,7 @@ async function executeNumoTurnCore(input: {
       supabase: readClient,
       service,
       locale: claimed.intent.locale,
+      timezone: claimed.intent.timezone,
       numoDefaultStatus: claimed.intent.numoDefaultStatus,
       model: runtime.model,
       aiRuntime: runtime,

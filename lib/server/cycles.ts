@@ -451,13 +451,16 @@ export async function getCycleOverview({
   userId,
   prefs,
   which = "current",
+  today = todayISO(),
 }: {
   service: SupabaseClient;
   userId: string;
   prefs: CyclePrefs;
   which?: "current" | "next" | "previous";
+  /** User-local calendar day, supplied by interactive and routine callers. */
+  today?: string;
 }): Promise<{ ok: true; overview: CycleOverview } | { ok: false; error: string }> {
-  const ensured = await ensureCycles({ service, userId, prefs, today: todayISO() });
+  const ensured = await ensureCycles({ service, userId, prefs, today });
   const cycle =
     which === "next"
       ? (ensured.upcoming[0] ?? null)

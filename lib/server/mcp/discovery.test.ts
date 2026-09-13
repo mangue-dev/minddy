@@ -55,6 +55,7 @@ const EXPECTED_TOOL_NAMES = [
   "minddy_list_pages",
   "minddy_list_projects",
   "minddy_list_routines",
+  "minddy_move_to_cycle",
   "minddy_promote_feedback",
   "minddy_remove_from_cycle",
   "minddy_respond_feedback",
@@ -76,6 +77,10 @@ interface ListedTool {
   name: string;
   title?: string;
   description?: string;
+  inputSchema?: {
+    properties?: Record<string, unknown>;
+    required?: string[];
+  };
   annotations?: {
     readOnlyHint?: boolean;
     destructiveHint?: boolean;
@@ -240,5 +245,16 @@ describe("MCP cold-start discovery", () => {
     expect(repeatedInitializationCost).toBeLessThanOrEqual(50_000);
     expect(MCP_FULL_USAGE_GUIDE.length).toBeGreaterThan(10_000);
     expect(MCP_FULL_USAGE_GUIDE).toContain("minddy_update_plan_task");
+  });
+
+  it("uses the same explicit timezone contract to read and move cycles", async () => {
+    const { listings } = await coldStart();
+    const tools = listings[0].tools;
+
+    for (const name of ["minddy_get_cycle", "minddy_move_to_cycle"]) {
+      const tool = tools.find((candidate) => candidate.name === name);
+      expect(tool?.inputSchema?.properties).toHaveProperty("timezone");
+      expect(tool?.inputSchema?.required).toContain("timezone");
+    }
   });
 });

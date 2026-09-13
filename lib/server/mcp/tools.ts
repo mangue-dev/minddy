@@ -112,7 +112,9 @@ import {
   fillCycleForUser,
   getCycleOverview,
   getCyclePrefsForUser,
+  todayInTz,
 } from "@/lib/server/cycles";
+import { moveIssuesBetweenCycles } from "@/lib/server/cycle-issues";
 import {
   getScratchpad,
   setScratchpad,
@@ -145,6 +147,7 @@ import {
 import { registerPageTools } from "@/lib/server/mcp/page-tools";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
+import { isKnownTimezone } from "@/lib/routine-schedule";
 import { readInboxNotifications } from "@/lib/server/inbox";
 import { buildInboxToolResult } from "@/lib/inbox-tool";
 import {
@@ -3501,13 +3504,20 @@ export function registerMinddyTools(
         "the issues in it (with identifiers, across all projects), and the best " +
         "next candidates from their assigned pool (reco-scored, `blocks` relations " +
         "respected). Points are an internal capacity unit: talk to humans in " +
-        "effort sizes or percentages, never raw points. Reading also reconciles " +
+        "effort sizes or percentages, never raw points. The timezone resolves " +
+        "cycle boundaries in the owner's local calendar. Reading also reconciles " +
         "the timeline (cycle creation, rollover, one-shot auto-fill).",
       inputSchema: z.object({
         which: z
           .enum(["current", "next", "previous"])
           .optional()
           .describe("Which cycle to read. Default: current."),
+        timezone: z
+          .string()
+          .refine(isKnownTimezone, "timezone must be a valid IANA name")
+          .describe(
+            "The owner's IANA timezone, such as 'Europe/Paris'. Never guess or substitute UTC.",
+          ),
       }),
       annotations: READ_ONLY,
     },
@@ -3519,6 +3529,7 @@ export function registerMinddyTools(
         userId: scope.userId,
         prefs: scope.prefs,
         which: args.which,
+        today: todayInTz(args.timezone),
       });
       if (!r.ok) return fail("not_found", r.error);
       return ok(r.overview);
@@ -3677,6 +3688,86 @@ export function registerMinddyTools(
           });
       }
       return ok({ added, failed, cycle_id: ensured.current.id });
+    },
+  );
+
+  server.registerTool(
+    "minddy_move_to_cycle",
+    {
+      title: "Move between cycles",
+      description:
+        "Move issues (1–50) of a project between the key owner's CURRENT and " +
+        "NEXT cycles. target_cycle is explicit: 'next' moves from current to " +
+        "next; 'current' moves back from next. Each issue must still be open, " +
+        "assigned to the owner, and in the expected source cycle. The action " +
+        "revalidates each issue, NEVER changes status, and reports stale cycle " +
+        "or assignment changes per item. Repeating a completed move is safe. " +
+        "The timezone resolves cycle boundaries in the owner's local calendar.",
+      inputSchema: z.object({
+        project_id: PROJECT_ID,
+        issues: z.array(ISSUE_REF).min(1).max(50),
+        target_cycle: z.enum(["current", "next"]),
+        timezone: z
+          .string()
+          .refine(isKnownTimezone, "timezone must be a valid IANA name")
+          .describe(
+            "The owner's IANA timezone, such as 'Europe/Paris'. Never guess or substitute UTC.",
+          ),
+      }),
+      annotations: WRITE_IDEMPOTENT,
+    },
+    async (args, extra) => {
+      const scope = await requireCycle(extra);
+      if ("error" in scope) return scope.error;
+      const project = await resolveProject(scope.userId, args.project_id);
+      if ("error" in project) return project.error;
+
+      const failed: Array<{ issue: string; code?: string; error: string }> = [];
+      const identifiersById = new Map<string, string>();
+      for (const ref of args.issues) {
+        const resolved = await resolveIssueRef(project.access, ref);
+        if ("error" in resolved) {
+          failed.push({
+            issue: ref,
+            code: "issueNotFound",
+            error: `Issue '${ref}' not found in this project.`,
+          });
+          continue;
+        }
+        identifiersById.set(resolved.issue.id, resolved.issue.identifier);
+      }
+
+      const move = await moveIssuesBetweenCycles({
+        service: getServiceClient(),
+        userId: scope.userId,
+        actorId: scope.userId,
+        prefs: scope.prefs,
+        timezone: args.timezone,
+        issueIds: [...identifiersById.keys()],
+        targetCycle: args.target_cycle,
+        mcpKeyId: scope.keyId,
+      });
+      if (!move.ok) return fail("not_found", move.error);
+
+      const identifiers = (ids: string[]) =>
+        ids.map((id) => identifiersById.get(id) ?? id);
+      failed.push(
+        ...move.result.failed.map((item) => ({
+          issue: identifiersById.get(item.issue_id) ?? item.issue_id,
+          code: item.code,
+          error: item.error,
+        })),
+      );
+      return ok({
+        moved: identifiers(move.result.moved_ids),
+        unchanged: identifiers(move.result.unchanged_ids),
+        failed,
+        source_cycle_id: move.result.source.id,
+        target_cycle_id: move.result.target.id,
+        status_changed: false,
+        assigned_to_user_id: scope.userId,
+        assignment_changed: identifiers(move.result.assignment_changed_ids),
+      });
     },
   );
 

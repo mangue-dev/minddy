@@ -1743,6 +1743,30 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "move_issues",
+      description:
+        "Move selected issues between the user's CURRENT and NEXT cycles. target_cycle is explicit: 'next' moves issues from current to next; 'current' moves them back from next. Issues must still be open, assigned to the user, and in the expected source cycle. The action revalidates each issue, NEVER changes status, and reports stale cycle or assignment changes per item. Repeating a completed move is safe.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_ids: {
+            type: "array",
+            items: { type: "string" },
+            description: "Issue ids from get_cycle.",
+          },
+          target_cycle: {
+            type: "string",
+            enum: ["current", "next"],
+            description: "The cycle the issues should move into.",
+          },
+        },
+        required: ["issue_ids", "target_cycle"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "remove_issues_from_cycle",
       description:
         "Remove issues (1–50, by id) from the user's CURRENT cycle. Assignment and status are untouched — the issues simply leave the cycle.",
@@ -2165,6 +2189,7 @@ export const ACCOUNT_TOOLS = new Set([
   "get_cycle",
   "fill_cycle",
   "add_issues_to_cycle",
+  "move_issues",
   "remove_issues_from_cycle",
   "get_scratchpad",
   "add_scratchpad_tasks",
