@@ -79,7 +79,7 @@ BEGIN
      OR p_origin NOT IN ('scheduled', 'manual')
      OR (p_origin = 'scheduled' AND p_scheduled_for IS NULL)
      OR (p_origin = 'manual' AND p_scheduled_for IS NOT NULL)
-     OR pg_catalog.nullif(pg_catalog.btrim(p_title), '') IS NULL THEN
+     OR nullif(pg_catalog.btrim(p_title), '') IS NULL THEN
     RAISE EXCEPTION 'routine_occurrence_invalid' USING ERRCODE = '22023';
   END IF;
 

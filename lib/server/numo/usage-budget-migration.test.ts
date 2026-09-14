@@ -68,7 +68,7 @@ describe("Numo operation usage migration", () => {
       "resume_agent_run_with_budget",
     );
     expect(create).toContain(
-      "if pg_catalog.nullif(p_values->>'parent_numo_turn_id', '') is not null",
+      "if nullif(p_values->>'parent_numo_turn_id', '') is not null",
     );
     expect(create).toContain("from public.numo_assistant_turns");
     expect(create).toContain("for update");
