@@ -208,6 +208,8 @@ const RETRYABLE_READ_TOOLS = new Set([
   "list_views",
   "get_account_settings",
   "list_inbox",
+  "get_user_stats",
+  "get_plan_usage",
   "list_trash",
   "list_agent_models",
   "get_cycle",

@@ -62,6 +62,29 @@ describe("Numo tool contracts", () => {
     expect(listRoutines?.function.description).toMatch(/full instruction/i);
   });
 
+  it("advertises read-only user statistics tools without parameters (MIN-501)", () => {
+    for (const name of ["get_user_stats", "get_plan_usage"]) {
+      const stats = tool(name);
+
+      expect(stats, name).toBeDefined();
+      expect(stats?.function.parameters.properties).toEqual({});
+      expect(stats?.function.parameters.required).toBeUndefined();
+      // Both are reads of the user's own numbers: they must never be
+      // advertised as able to change settings, plan or budget.
+      expect(stats?.function.description).toMatch(/read-only/i);
+      expect(stats?.function.description).not.toMatch(/update_|create_|launch_/i);
+    }
+
+    const stats = tool("get_user_stats");
+    expect(stats?.function.description).toMatch(/active days/i);
+    expect(stats?.function.description).toMatch(/completed/i);
+    expect(stats?.function.description).toMatch(/median time per ticket/i);
+
+    const usage = tool("get_plan_usage");
+    expect(usage?.function.description).toMatch(/budget/i);
+    expect(usage?.function.description).toMatch(/routine/i);
+  });
+
   it("keeps worker model and reasoning out of delegation tools", () => {
     for (const name of ["launch_code_agent", "create_routine", "update_routine"]) {
       const properties = tool(name)?.function.parameters.properties;

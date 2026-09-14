@@ -29,6 +29,7 @@ import {
   FileX,
   Filter,
   FolderTree,
+  Gauge,
   GitMerge,
   GitPullRequest,
   GitPullRequestCreate,
@@ -811,6 +812,20 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (_args, _result, _success, status, t) => {
       if (status === "running") return t("loadingAccountSettings");
       return t("accountSettingsLoaded");
+    },
+  },
+  get_user_stats: {
+    icon: Activity,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("loadingUserStats");
+      return success ? t("userStatsLoaded") : t("loadUserStatsFailed");
+    },
+  },
+  get_plan_usage: {
+    icon: Gauge,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("loadingPlanUsage");
+      return success ? t("planUsageLoaded") : t("loadPlanUsageFailed");
     },
   },
   update_account_settings: {
