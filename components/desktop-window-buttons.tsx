@@ -57,7 +57,7 @@ export function WindowButtonDecoys() {
 }
 
 function WindowControlGlyph({ action }: { action: "close" | "minimize" | "fullscreen" }) {
-  const className = "size-2.5 opacity-0 transition-opacity group-hover/window-controls:opacity-100";
+  const className = "size-3 opacity-0 transition-opacity group-hover/window-controls:opacity-100";
   if (action === "close") {
     return <svg viewBox="0 0 85.4 85.4" className={className} aria-hidden>
       <path d="m22.5 57.8 35.3-35.3c1.4-1.4 3.6-1.4 5 0l.1.1c1.4 1.4 1.4 3.6 0 5L27.6 62.9c-1.4 1.4-3.6 1.4-5 0l-.1-.1c-1.3-1.4-1.3-3.6 0-5Z" fill="#7e0b05" />
