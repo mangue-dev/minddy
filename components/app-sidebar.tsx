@@ -950,34 +950,39 @@ export function AppSidebar({
         {back && (
           <motion.div
             key={`back:${back.href}:${back.label}`}
-            className="flex h-9 shrink-0 items-center"
+            className="shrink-0 pt-[calc((var(--app-content-header-height)-2.25rem)/2)]"
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 16 }}
             transition={shellTransition}
           >
-            <button
-              type="button"
-              onClick={() => router.push(back.href)}
-              className={cn(
-                "flex h-9 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg text-sm font-semibold text-sidebar-foreground outline-hidden transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
-                GUTTER,
-              )}
-            >
-              <ChevronLeft className="size-3.5 shrink-0" aria-hidden />
-              <span className="min-w-0 truncate">{back.label}</span>
-            </button>
+            {/* Same geometry as a nav row — gutter, 36 px height, rounded
+                control, regular weight — it is a row, not a title stuck to
+                the border. */}
+            <div className={GUTTER}>
+              <button
+                type="button"
+                onClick={() => router.push(back.href)}
+                className={cn(
+                  "flex h-9 w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg text-sm font-medium transition-colors",
+                  ROW_PL,
+                  "pr-3",
+                  "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
+                )}
+              >
+                <ChevronLeft className="size-[18px] shrink-0" aria-hidden />
+                <span className="min-w-0 truncate">{back.label}</span>
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
-      <div ref={setSlot} className="flex min-h-0 flex-1 flex-col" />
+      {/* Same horizontal gutter as the level-1 rows: whatever the level or
+          the page, the options start and end at the same width. */}
+      <div ref={setSlot} className={cn("flex min-h-0 flex-1 flex-col", GUTTER)} />
     </>
   );
 
-
-  const dx = reduce ? 0 : undefined;
-  void dx;
-    /** The bar itself, for the desktop window-buttons safe area tests. */
   const railId = useId();
 
   // Navigation resets any transient state the route left behind; there is no

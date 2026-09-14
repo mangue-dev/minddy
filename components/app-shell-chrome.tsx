@@ -1343,19 +1343,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       const base = `/projects/${currentProject.id}`;
       return [
         {
+          // Project mode keeps ONLY the project context: back home, the
+          // project switcher, and the project's own items (MIN-546 review).
           items: [
-            inboxItem,
-            pullRequestsItem,
-            agentsItem,
-            routinesItem,
-            {
-              key: "all-global",
-              label: t("allIssues"),
-              icon: LayoutGrid,
-              href: "/all",
-              active: pathname === "/all",
-              shortcut: "B",
-            },
             {
               key: "home-back",
               label: t("home"),
@@ -1477,6 +1467,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               label: p.name,
               icon: projectOrbIcon(projectOrbSeed(p), p.icon_url),
               href: `/projects/${p.id}`,
+              // Entering a project swaps the whole sidebar the same way a
+              // level-2 page does: the row says so with its chevron.
+              descends: true,
               ...countBadges(toTriage, t("triageBadge", { count: toTriage })),
             };
           }),
