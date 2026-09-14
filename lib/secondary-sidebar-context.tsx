@@ -14,23 +14,28 @@ import {
  * of pull requests, agent sessions, triage, returns.
  *
  * It is written IN the page, with the selection state which controls the detail just
- * next to it; it is DISPLAYED in the application frame, to the left of the header,
- * full height, stuck to the primary sidebar. It's a second level of
- * navigation, not a piece of content — and the breadcrumb header starts
- * so AFTER it, as it starts after the primary.
+ * next to it; on desktop it is DISPLAYED INSIDE the primary sidebar, which
+ * becomes modular: its nav options give way and the page's column is
+ * teleported there, below a back row (MIN-546). The primary never
+ * resizes — there is no longer a gutter of its own next to it.
  *
- * This context is the thread between the two halves: a teleport point
- * (`slot`, installed by the chassis) and a count of the mounted bars (`present`, which
- * switches the primary to rail). The portal is what allows the bar to change place in the DOM without leaving its component: the selection, the filters and the queries stay where they are read.
+ * This context is the thread between the two halves: two teleport points
+ * (`headerSlot` for the page's filter/actions strip, `slot` for its item
+ * list, both installed by the primary sidebar) and a count of the mounted
+ * bars (`present`). The portals let the bar change place in the DOM without
+ * leaving its component: the selection, filters and queries stay where they are read.
  *
  * Under `desktop` (768 px) none of this applies: the bar remains where
  * it is written, in the page, and the mobile behavior does not move.
  */
 interface SecondarySidebar {
-  /** The frame element where pages teleport their bar (desktop only). */
+  /** The frame element where pages teleport their bar's header (desktop only). */
+  headerSlot: HTMLElement | null;
+  setHeaderSlot: (el: HTMLElement | null) => void;
+  /** The frame element where pages teleport their bar's body (desktop only). */
   slot: HTMLElement | null;
   setSlot: (el: HTMLElement | null) => void;
-  /** Does a page go up a secondary bar? The primary then goes on rail. */
+  /** Does a page mount a secondary bar? The primary then swaps to it (level 2/3). */
   present: boolean;
   /** To be called when mounting a bar; the rendered function removes it from the account. */
   register: () => () => void;
@@ -53,6 +58,7 @@ export function SecondarySidebarProvider({
 }: {
   children: ReactNode;
 }) {
+  const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   // An ACCOUNT, not a boolean: between two pages with a secondary bar, the old one
   // disassembles after mounting the new one. A boolean would fall back to false
@@ -66,8 +72,8 @@ export function SecondarySidebarProvider({
   }, []);
 
   const value = useMemo<SecondarySidebar>(
-    () => ({ slot, setSlot, present: count > 0, register }),
-    [slot, count, register],
+    () => ({ headerSlot, setHeaderSlot, slot, setSlot, present: count > 0, register }),
+    [headerSlot, slot, count, register],
   );
 
   return (
@@ -78,17 +84,14 @@ export function SecondarySidebarProvider({
 }
 
 /**
- * Routes whose page mounts a secondary bar.
+ * Routes whose page mounts a secondary bar, i.e. where the primary sidebar
+ * descends to level 2 (global pages) or 3 (project pages).
  *
- * The above count is the truth, and it is sufficient — EXCEPT before hydration:
- * at server rendering no bar is yet mounted, the primary would therefore leave
- * unfolded and the content full width, to reorganize suddenly to
- * hydration. This table gives the answer from the server's HTML, and the
- * account takes control again just after.
- *
- * It therefore does not need to be exact for the application to be fair: a
- * route forgotten here costs a rearrangement on the first display, not a bug. A
- * page whose bar disappears (empty list) corrects itself.
+ * This static route answer runs the level switch (MIN-546) from the server's
+ * HTML, before any bar is mounted: no mounted-count dance, no width to
+ * reserve — the primary sidebar keeps its width. It does not need to be exact
+ * for the application to be fair: a route forgotten here costs one level miss
+ * on the first display, not a bug.
  */
 export function routeHasSecondaryNav(pathname: string): boolean {
   if (pathname.startsWith("/trash")) return true;

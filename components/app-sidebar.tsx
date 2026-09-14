@@ -13,8 +13,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
-import { isSidebarPointerTarget } from "@/lib/sidebar-pointer-target";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import {
@@ -54,6 +53,7 @@ import {
   Check,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   Home,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -65,6 +65,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
+import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { projectIdFromPath, projectTabHref } from "@/lib/project-id-from-path";
 import { usePrefetchProject } from "@/lib/use-prefetch-project";
 import { usePrefetchPages } from "@/lib/use-pages-query";
@@ -85,9 +86,9 @@ import type { MessageKey } from "@/lib/i18n-keys";
 import { CHANGELOG_ENTRIES } from "@/lib/changelog";
 import type { Project } from "@/lib/types";
 
-/** Expanded width shared with the hidden navigation overlay. */
-export const EXPANDED_WIDTH = 256;
-export const COLLAPSED_WIDTH = 56;
+/** Expanded width the sidebar keeps on every level — the old secondary
+ * column's width (MIN-546): the sidebar never resizes anymore. */
+export const EXPANDED_WIDTH = 320;
 
 /**
  * ─── The icon column ────────────────────── ──────────────────────
@@ -96,29 +97,27 @@ export const COLLAPSED_WIDTH = 56;
  * folded: it is the only mark that survives the animation, and see it slide
  * of a few pixels makes the whole bar look like it's floating.
  *
- * The timing starts from the rail, where the icon is in the middle:
+ * The timing historically started from the 56 px rail, where the icon is in the
+ * middle:
  *
  * rail 56 = 10 (gutter) + 9 + 18 (icon) + 9 + 10
  * └── center at 28, left edge at 19 ──┘
  *
- * Hence two constants held by hand in the two states — the gutter of
- * the nav (`px-2.5`) and the withdrawal of the line (`pl-[9px]`). Change them without
- * redoing the addition resets the offset.
+ * Hence two constants held by hand — the gutter of the nav (`px-2.5`) and
+ * the withdrawal of the line (`pl-[9px]`). Change them without redoing the
+ * addition resets the offset.
  *
- * What counts is the CENTER at 28, not the edge at 19: the edge is only enough
- * for 18 px glyphs. Two exceptions, therefore, both based on
- * the center — the account avatar (22 px, indented by 7) and the logo (26 px of
- * large, viewBox 104×96 at `h-6`), which we CENTER in the 36 px box instead
- * to align it from the left: placed at 19, it extended 4 px to the right.
+ * What counts is the CENTER of the icon, not the edge: the edge is only enough
+ * for 18 px glyphs. Two exceptions, both based on the center — the account
+ * avatar (22 px, indented by 7) and the logo (26 px of large, viewBox
+ * 104×96 at `h-6`).
  */
-/** Nav, foot and brand line gutter. Both states. */
+/** Nav, foot and brand line gutter. */
 const GUTTER = "px-2.5";
-/** Removing a line: 18 px icon → left edge 19 px from the bar. */
+/** Removing a line: 18 px icon. */
 const ROW_PL = "pl-[9px]";
 /** Same for the account avatar, wider by 4 px. */
 const AVATAR_PL = "pl-[7px]";
-/** The box of a folded line: 9 + 18 + 9. Center at 28 from the bar. */
-const ROW_BOX = "w-9";
 /**
  * Tooltips in the bar wait before appearing. Without this delay they
  * spring up under the pointer which only crosses the bar to
@@ -131,25 +130,11 @@ const ROW_BOX = "w-9";
 export type AppNavItem = NavItem & {
   shortcut?: string;
   /**
-   * Replays the `badge` in a corner of the icon when the sidebar is FOLDED (the
-   * normal badges are not returned there due to lack of space). To be worn by EVERYONE
-   * input that signals something — “agent in progress” spinner, pad
-   * unread, queue counter: rail mode is that of the pages where we sort,
-   * and this is precisely where the line must not disappear.
-   *
-   * The corner only holds a COMPACT shape (≈ 14 px). A larger badge —
-   * a three-character counter, two marks side by side — goes through
-   * `badgeCollapsed`, which gives it its folded version.
+   * This page descends in the sidebar's navigation levels (MIN-546): reaching
+   * it swaps the primary sidebar to the page's teleported bar. The row bears
+   * a chevron-right, after any badge, to say so before clicking.
    */
-  showBadgeCollapsed?: boolean;
-  /**
-   * What the corner patch bears in place of the `badge`, when the latter is not there
-   * would not hold: counter capped at “9+” (`countBadgeCollapsed`), or a
-   * only marks of a badge which combines several. Real case: the entrance
-   * “Home” in project mode combines the Smart Assign triangle and a counter;
-   * folded, it keeps the triangle, and the counter only in default.
-   */
-  badgeCollapsed?: ReactNode;
+  descends?: boolean;
   /** Additional right-click actions for rows that represent editable objects. */
   contextActions?: ContextMenuAction[];
 };
@@ -170,31 +155,21 @@ const ProductFeedbackDialog = dynamic(
 /* ─── Brand ────────────────────────────────────────────────────────── */
 
 function SidebarQuickActions({
-  collapsed,
   onScratchpadWarm,
 }: {
-  collapsed: boolean;
   onScratchpadWarm?: () => void;
 }) {
   return (
     <div className={cn("flex w-full min-w-0 shrink-0 gap-1")}>
-      <NewMenu variant="sidebar" collapsed={collapsed} />
-      {!collapsed ? (
-        <ScratchpadTrigger variant="sidebar" onWarm={onScratchpadWarm} />
-      ) : null}
+      <NewMenu variant="sidebar" collapsed={false} />
+      <ScratchpadTrigger variant="sidebar" onWarm={onScratchpadWarm} />
     </div>
   );
 }
 
 /* ─── Nav ──────────────────────────────────────────────────────────── */
 
-function SidebarRow({
-  item,
-  collapsed,
-}: {
-  item: AppNavItem;
-  collapsed: boolean;
-}) {
+function SidebarRow({ item }: { item: AppNavItem }) {
   const Icon = item.icon;
   const active = item.active;
   const tk = useTranslations("Keyboard");
@@ -203,44 +178,39 @@ function SidebarRow({
   // While a G-chord is armed, surface this row's second key as a Kbd hint
   // (AutoKap-style) — takes the trailing slot over the badge for the moment.
   const chordPrefix = useChordPrefix();
-  const hint =
-    !collapsed && chordPrefix === CHORD_PREFIX && item.shortcut
-      ? item.shortcut
-      : null;
+  const hint = chordPrefix === CHORD_PREFIX && item.shortcut ? item.shortcut : null;
 
   const rowClass = cn(
     "group relative flex h-9 cursor-pointer items-center gap-3 rounded-lg text-sm font-medium transition-colors",
-    // The left indent is the SAME in both states (see the column of
-    // icons at the head of the file): the icon does not move when the bar is animated.
-    // Folded, the line closes at 36 px on its icon — 9 + 18 + 9.
+    // The left indent aligns the 18 px icons with the account avatar and
+    // the keyboard chord hints from the same edge.
     ROW_PL,
-    collapsed ? cn(ROW_BOX, "gap-0 pr-[9px]") : "pr-3",
+    "pr-3",
     active
       ? "bg-sidebar-accent text-sidebar-accent-foreground"
       : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
     item.disabled && "pointer-events-none opacity-50",
   );
 
-  const collapsedBadge = item.badgeCollapsed ?? item.badge;
-
   const inner = (
     <>
       {Icon ? <Icon className="h-[18px] w-[18px] shrink-0" /> : null}
-      {!collapsed ? <span className="truncate">{item.label}</span> : null}
+      <span className="min-w-0 truncate">{item.label}</span>
       {hint ? (
         <Kbd size="sm" className="ml-auto shrink-0">
           {hint}
         </Kbd>
-      ) : !collapsed && item.badge != null ? (
-        <span className="ml-auto flex items-center">{item.badge}</span>
-      ) : null}
-      {/* Folded: the badge (“current agent” spinner / unread badge) folds
-          in the corner of the icon — otherwise the information disappears in rail mode. */}
-      {collapsed && item.showBadgeCollapsed && collapsedBadge != null ? (
-        <span className="absolute right-1 top-1 flex items-center justify-center rounded-full bg-sidebar">
-          {collapsedBadge}
+      ) : (item.badge != null || item.descends) && (
+        <span className="ml-auto flex items-center gap-2">
+          {item.badge}
+          {item.descends ? (
+            <ChevronRight
+              className="size-3.5 shrink-0 text-sidebar-foreground/40"
+              aria-hidden
+            />
+          ) : null}
         </span>
-      ) : null}
+      )}
     </>
   );
 
@@ -298,7 +268,7 @@ function SidebarRow({
         onClick={item.onClick}
         disabled={item.disabled}
         onContextMenu={openContextMenu}
-        className={cn(rowClass, "text-left", !collapsed && "w-full")}
+        className={cn(rowClass, "text-left", "w-full")}
         whileTap={{ scale: 0.97 }}
         transition={transitions.snappy}
       >
@@ -311,17 +281,9 @@ function SidebarRow({
   // varies (MIN-313). Wrapping conditionally would change the TYPE of
   // the element rendered at this position, and React does not reconcile two types
   // different: it dismantles the subtree and mounts a new one, therefore the DOM node
-  // is replaced and the focus it had falls on <body>. Here relaxation
-  // is daily — `collapsed` switches each time the bar is hovered: we
-  // clicks a project entry, `onFocusCapture` only retains the focus
-  // keyboard, the pointer leaves, 70 ms later the focused line is
-  // replaced, and the tab starts again from the top of the document.
+  // is replaced and the focus it had falls on <body>.
   row = (
-    <Tooltip
-      delayDuration={SIDEBAR_TOOLTIP_DELAY_MS}
-      disableHoverableContent
-      open={collapsed || item.shortcut ? undefined : false}
-    >
+    <Tooltip delayDuration={SIDEBAR_TOOLTIP_DELAY_MS} disableHoverableContent>
       <TooltipTrigger asChild>{row}</TooltipTrigger>
       <TooltipContent side="right" className="flex items-center gap-2">
         <span>{item.tooltip ?? item.label}</span>
@@ -353,13 +315,11 @@ function SidebarRow({
 
 function SidebarNav({
   sections,
-  collapsed,
   currentProject,
   projects,
   onMenuOpenChange,
 }: {
   sections: AppNavSection[];
-  collapsed: boolean;
   currentProject: Project | null;
   projects: Project[];
   onMenuOpenChange?: (open: boolean) => void;
@@ -373,7 +333,7 @@ function SidebarNav({
     >
       {sections.map((section, index) => (
         <div key={section.key ?? index} className={cn(index > 0 && "mt-4")}>
-          {section.label && !collapsed ? (
+          {section.label ? (
             <div
               className={cn(
                 "truncate pt-1 pr-3 pb-1 text-[11px] font-medium tracking-wide text-sidebar-foreground/45",
@@ -391,11 +351,10 @@ function SidebarNav({
                     homeItem={item}
                     currentProject={currentProject}
                     projects={projects}
-                    collapsed={collapsed}
                     onMenuOpenChange={onMenuOpenChange}
                   />
                 ) : (
-                  <SidebarRow item={item} collapsed={collapsed} />
+                  <SidebarRow item={item} />
                 )}
               </li>
             ))}
@@ -410,20 +369,17 @@ function ProjectContextRow({
   homeItem,
   currentProject,
   projects,
-  collapsed,
   onMenuOpenChange,
 }: {
   homeItem: AppNavItem;
   currentProject: Project;
   projects: Project[];
-  collapsed: boolean;
   onMenuOpenChange?: (open: boolean) => void;
 }) {
   const t = useTranslations("Nav");
   const tk = useTranslations("Keyboard");
   const pathname = usePathname();
   const prefetchProject = usePrefetchProject();
-  const compactBadge = homeItem.badgeCollapsed ?? homeItem.badge;
   const homeActions = useNavigationContextActions(homeItem.href);
   const [homeMenuPosition, setHomeMenuPosition] = useState<{ x: number; y: number } | null>(null);
 
@@ -432,9 +388,7 @@ function ProjectContextRow({
       aria-label={currentProject.name}
       className={cn(
         "flex h-9 cursor-pointer items-center rounded-lg text-sm font-medium text-sidebar-foreground/70 outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
-        collapsed
-          ? cn(ROW_BOX, ROW_PL, "gap-0 pr-[9px]")
-          : "min-w-0 flex-1 gap-2 px-2.5 text-left",
+        "min-w-0 flex-1 gap-2 px-2.5 text-left",
       )}
     >
       <ProjectOrb
@@ -442,64 +396,48 @@ function ProjectContextRow({
         iconUrl={currentProject.icon_url}
         className="size-[18px] rounded-[5px]"
       />
-      {!collapsed ? (
-        <>
-          <span className="min-w-0 flex-1 truncate">{currentProject.name}</span>
-          <ChevronDown
-            className="size-3.5 shrink-0 text-sidebar-foreground/45"
-            aria-hidden
-          />
-        </>
-      ) : null}
+      <span className="min-w-0 flex-1 truncate">{currentProject.name}</span>
+      <ChevronDown
+        className="size-3.5 shrink-0 text-sidebar-foreground/45"
+        aria-hidden
+      />
     </DropdownMenuTrigger>
   );
 
   return (
     <>
     <DropdownMenu onOpenChange={onMenuOpenChange}>
-      {collapsed ? (
+      <div className="flex items-center gap-1">
         <Tooltip delayDuration={SIDEBAR_TOOLTIP_DELAY_MS} disableHoverableContent>
-          <TooltipTrigger asChild>{projectTrigger}</TooltipTrigger>
-          <TooltipContent side="right">{currentProject.name}</TooltipContent>
+          <TooltipTrigger asChild>
+            <MotionLink
+              href={homeItem.href as string}
+              aria-label={homeItem.label}
+              onContextMenu={(event) => {
+                event.preventDefault();
+                setHomeMenuPosition({ x: event.clientX, y: event.clientY });
+              }}
+              className="relative flex h-9 w-12 shrink-0 cursor-pointer items-center justify-center gap-0.5 rounded-lg outline-hidden text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground"
+              whileTap={{ scale: 0.97 }}
+              transition={transitions.snappy}
+            >
+              <ChevronLeft className="size-3.5" aria-hidden />
+              <Home className="size-[18px]" aria-hidden />
+            </MotionLink>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="flex items-center gap-2">
+            <span>{homeItem.label}</span>
+            {homeItem.shortcut ? (
+              <KbdSequence
+                keys={[[CHORD_PREFIX.toUpperCase()], [homeItem.shortcut]]}
+                separator={tk("then")}
+                size="sm"
+              />
+            ) : null}
+          </TooltipContent>
         </Tooltip>
-      ) : (
-        <div className="flex items-center gap-1">
-          <Tooltip delayDuration={SIDEBAR_TOOLTIP_DELAY_MS} disableHoverableContent>
-            <TooltipTrigger asChild>
-              <MotionLink
-                href={homeItem.href as string}
-                aria-label={homeItem.label}
-                onContextMenu={(event) => {
-                  event.preventDefault();
-                  setHomeMenuPosition({ x: event.clientX, y: event.clientY });
-                }}
-                className="relative flex h-9 w-12 shrink-0 cursor-pointer items-center justify-center gap-0.5 rounded-lg outline-hidden text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground"
-                whileTap={{ scale: 0.97 }}
-                transition={transitions.snappy}
-              >
-                <ChevronLeft className="size-3.5" aria-hidden />
-                <Home className="size-[18px]" aria-hidden />
-                {compactBadge != null ? (
-                  <span className="absolute right-0.5 top-0.5 flex items-center justify-center rounded-full bg-sidebar">
-                    {compactBadge}
-                  </span>
-                ) : null}
-              </MotionLink>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="flex items-center gap-2">
-              <span>{homeItem.label}</span>
-              {homeItem.shortcut ? (
-                <KbdSequence
-                  keys={[[CHORD_PREFIX.toUpperCase()], [homeItem.shortcut]]}
-                  separator={tk("then")}
-                  size="sm"
-                />
-              ) : null}
-            </TooltipContent>
-          </Tooltip>
-          {projectTrigger}
-        </div>
-      )}
+        {projectTrigger}
+      </div>
 
       <DropdownMenuContent side="right" align="start" sideOffset={6} className="w-60">
         <DropdownMenuLabel>{t("projects")}</DropdownMenuLabel>
@@ -540,10 +478,8 @@ function ProjectContextRow({
 /* ─── Footer ───────────────────────────────────────────────────────── */
 
 function AccountButton({
-  collapsed,
   onMenuOpenChange,
 }: {
-  collapsed: boolean;
   onMenuOpenChange?: (open: boolean) => void;
 }) {
   const t = useTranslations("Nav");
@@ -589,7 +525,7 @@ function AccountButton({
   return (
     <Popover open={confirmationOpen} onOpenChange={setConfirmationOpen}>
       <PopoverAnchor asChild>
-        <div className={collapsed ? ROW_BOX : "w-full"}>
+        <div>
           <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger
               className={cn(
@@ -597,17 +533,13 @@ function AccountButton({
                 // The avatar is 22 px: its own removal refocuses it on the same
                 // vertical than the 18 px icons (see the icons column).
                 AVATAR_PL,
-                collapsed
-                  ? cn(ROW_BOX, "pr-[7px]")
-                  : "w-full gap-3 pr-3 text-left",
+                "w-full gap-3 pr-3 text-left",
               )}
             >
               <UserAvatar seed={seed} className="size-[22px] max-w-none" />
-              {!collapsed && (
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                  {name}
-                </span>
-              )}
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                {name}
+              </span>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
@@ -879,74 +811,85 @@ function ChangelogButton({
 }
 
 function SidebarFooter({
-  collapsed,
   onMenuOpenChange,
   portalOwner,
 }: {
-  collapsed: boolean;
   onMenuOpenChange?: (open: boolean) => void;
   portalOwner: string;
 }) {
   const { productFeedbackIntegrationEnabled, productFeedbackUrl } = useRuntimeConfig();
   return (
-    <div className="flex flex-col gap-0.5">
-      <div className="flex items-center gap-0.5">
-        <div
-          className={cn(
-            // Keep the rail-sized account slot while the aside widens. The
-            // trailing controls are clipped at the right edge instead of
-            // crossing the avatar during the first animation frames.
-            !collapsed && "min-w-9 flex-1",
-          )}
-        >
-          <AccountButton
-            collapsed={collapsed}
-            onMenuOpenChange={onMenuOpenChange}
-          />
-        </div>
-        {!collapsed ? (
-          <>
-            <UsageIndicator
-              variant="sidebar"
-              onOpenChange={onMenuOpenChange}
-            />
-            <ChangelogButton
-              portalOwner={portalOwner}
-              productFeedbackIntegrationEnabled={productFeedbackIntegrationEnabled}
-              productFeedbackUrl={productFeedbackUrl}
-              onMenuOpenChange={onMenuOpenChange}
-            />
-          </>
-        ) : null}
+    <div className="flex items-center gap-0.5">
+      <div className="min-w-9 flex-1">
+        <AccountButton onMenuOpenChange={onMenuOpenChange} />
       </div>
+      <UsageIndicator
+        variant="sidebar"
+        onOpenChange={onMenuOpenChange}
+      />
+      <ChangelogButton
+        portalOwner={portalOwner}
+        productFeedbackIntegrationEnabled={productFeedbackIntegrationEnabled}
+        productFeedbackUrl={productFeedbackUrl}
+        onMenuOpenChange={onMenuOpenChange}
+      />
     </div>
   );
 }
 
-/* ─── Shell ────────────────────────────────────────────────────────── */
-
-/** Delay before fallback when the pointer leaves the bar in rail mode. Quite short
- * so that the fold follows the gesture, long enough to tolerate a brush. */
-const RAIL_CLOSE_DELAY_MS = 70;
+/* ─── Levels (MIN-546) ─────────────────────────────────────────────── */
 
 /**
- * The desktop sidebar. Hand-rolled (rather than mangue-ui's <Sidebar>) so the
- * nav region can animate the home ↔ project swap like AutoKap: the logo and
- * footer stay put while only the nav fades/slides — project enters from the
- * right, home from the left. `modeKey` ("home" | `project-<id>`) drives the
- * swap; navigating between a project's sub-pages keeps the same key (no replay).
+ * Where the back row of a level 2/3 sidebar returns, and how the current
+ * page is named there.
  *
- * `overlay` is RAIL mode: the page has a secondary sidebar, and the
- * primary gives way to it. It only keeps its 56 px of icons in the flow
- * and unfolds ABOVE the secondary on hover (or when focus passes
- * keyboard), without ever shifting anything — the layout of a two-bar page is the
- * same, primary bar open or not.
+ * Global pages go back to the home level; a project page goes back to the
+ * project's Tickets page. Pure static route mapping: the level switches from
+ * the server's HTML, no mounted-count involved.
+ */
+export function secondaryNavBackTarget(
+  pathname: string,
+  t: (key: MessageKey<"Nav">) => string
+): { label: string; href: string } | null {
+  const project = /\/projects\/([^/]+)\/(triage|feedback|objectives|pages|settings)(?:\/|$)/.exec(
+    pathname,
+  );
+  if (project) {
+    const labels: Record<string, MessageKey<"Nav">> = {
+      triage: "triage",
+      feedback: "feedback",
+      objectives: "objectives",
+      pages: "pages",
+      settings: "projectSettings",
+    };
+    return { label: t(labels[project[2]]), href: `/projects/${project[1]}` };
+  }
+  if (pathname.startsWith("/trash")) return { label: t("trash"), href: "/home" };
+  if (pathname.startsWith("/pull-requests")) return { label: t("pullRequests"), href: "/home" };
+  if (pathname.startsWith("/agents") || pathname.startsWith("/numo"))
+    return { label: t("agents"), href: "/home" };
+  if (pathname.startsWith("/routines")) return { label: t("routines"), href: "/home" };
+  if (pathname.startsWith("/settings")) return { label: t("accountSettings"), href: "/home" };
+  if (pathname.startsWith("/admin")) return { label: t("adminDashboard"), href: "/home" };
+  return null;
+}
+
+
+/**
+ * The desktop sidebar — the MODULAR primary (MIN-546).
  *
- * This is the ONLY fallback. There is no longer a button to fold the bar by hand,
- * nor ⌘B: the rail exists where a second bar needs the space, and
- * everywhere else the bar is simply open. A manual fallback in addition to
- * this one was two bars folded for two different reasons, one of which
- * that you had to know a shortcut to undo.
+ * Hand-rolled (rather than mangue-ui's <Sidebar>) so the navigation can play
+ * its level swaps: the top band (quick actions, then the page's filter strip)
+ * and the footer stay put while only the panel between them fades/slides —
+ * level 2 enters from the right, level 1 from the left. `modeKey` ("home" |
+ * `project-<id>`) keys the level-1 panel; the panel itself is chosen by the
+ * route: `routeHasSecondaryNav` routes swap the nav for the page's teleported
+ * secondary bar, under the back row. The aside NEVER resizes: a level change
+ * is a content swap inside the same column, and nothing outside moves.
+ *
+ * The teleport points (`headerSlot`, `slot`) are installed by the level-2/3
+ * panel and stay mounted across route changes within it — the pages' bars
+ * portal INTO the sidebar. Under 768 px none of this renders (mobile shell).
  */
 export function AppSidebar({
   sections,
@@ -955,7 +898,6 @@ export function AppSidebar({
   projects,
   onScratchpadWarm,
   onLayerOpenChange,
-  overlay = false,
 }: {
   sections: AppNavSection[];
   modeKey: string;
@@ -963,301 +905,159 @@ export function AppSidebar({
   projects: Project[];
   onScratchpadWarm?: () => void;
   onLayerOpenChange?: (open: boolean) => void;
-  overlay?: boolean;
 }) {
   const reduce = useReducedMotion();
-  const dx = modeKey === "home" ? -16 : 16;
+  const t = useTranslations("Nav");
+  const pathname = usePathname();
+  const router = useRouter();
+  const { setHeaderSlot, setSlot } = useSecondarySidebar();
 
-  // Rail mode: which unfolds the bar. Hover, keyboard focus (tab
-  // in the nav should read it), and the account menu — it arises out of the
-  // bar (Radix portal), so going there would count as leaving it.
-  const [hovered, setHovered] = useState(false);
-  const [focusWithin, setFocusWithin] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  // The active route names which level the sidebar shows. Route-derived, so
+  // the server HTML already carries the right one; the `present` count is not
+  // consulted — the level switches as the URL switches, and the teleported
+  // bar arrives with it.
+  const back = secondaryNavBackTarget(pathname, t);
+
+  // Menus open out of the bar (Radix portal); while one is up, the hidden
+  // navigation overlay must stay pinned (see SidebarNavOverlay).
   const handleMenuOpenChange = useCallback(
     (open: boolean) => {
-      setMenuOpen(open);
       onLayerOpenChange?.(open);
     },
     [onLayerOpenChange],
   );
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** The bar itself, to know if the pointer returns to it (see below). */
-  const railRef = useRef<HTMLElement>(null);
-  const railId = useId();
-  /** The pointer return watcher, and what to remove it. */
-  useEffect(() => () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-  }, []);
-  useEffect(
-    () => () => onLayerOpenChange?.(false),
-    [onLayerOpenChange],
-  );
 
-  // Belt and suspenders: navigation dismantles the line that had the focus,
-  // and a `blur` then has no one to reach. Without this reset, the
-  // bar could remain unfolded on the next page.
-  //
-  // SURVOL leaves with it, and for the same reason. Resetting from below
-  // is connected to the rail mode output: it therefore sees nothing when we go
-  // from one secondary bar page to ANOTHER — `overlay` never falls back.
-  // This is the path of the palette: we fly over the bar, ⌘K puts on his veil
-  // over it (the bar is no longer the target of the pointer, its `pointerleave`
-  // may never come), we choose a page on the keyboard, and we arrive primary
-  // UNFOLDED over the secondary, pointer at the other end of the screen.
-  //
-  // Falling back upon arrival is what we want anyway, including when
-  // it's a click IN the bar that navigated: that's what the
-  // comment from `onFocusCapture`, and `onPointerMove` catches up at the slightest
-  // movement in the case of the pointer remaining on it.
-  const routeKey = usePathname();
-  useEffect(() => {
-    setFocusWithin(false);
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-    setHovered(false);
-  }, [routeKey]);
-
-  // Same story for hover and account menu, but when EXIT mode
-  // rail: their installers are connected to `overlay`. Exit a barred page
-  // secondary PASSING THROUGH THE BAR (we hover over it, it is unfolded, we
-  // click “Home”) so disconnect `onPointerLeave` with the pointer still
-  // above: no one will ever see it come out, and `hovered` remains true for
-  // always. The next secondary bar page — reached by the palette,
-  // so without going back over the bar — then opened primary UNFOLDED
-  // over the secondary, pointer at the other end of the screen, and nothing
-  // couldn't close it.
-  //
-  // Outside rail mode these two states are not read: resetting them does not
-  // changes nothing to what we see, and guarantees that we return to the clean rail.
-  useEffect(() => {
-    if (overlay) return;
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-    // The pointer watcher goes with it: exiting rail mode while it waits
-    // returning the pointer would leave it connected to a bar that no longer has
-    // nothing to close.
-    setHovered(false);
-    setMenuOpen(false);
-  }, [overlay]);
-
-  const openRail = () => {
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-    // The pointer return watcher is DISARMED here (MIN-314): the bar
-    // has just regained control, he has nothing left to decide. Without that, he
-    // remained connected and closed the rail at the first mouse movement —
-    // sometimes minutes later, unrelated to the gesture that armed him.
-    setHovered(true);
-  };
-
-  /**
-   * Arm the fallback — and never REPELL him back if he is already armed. The deadline is here
-   * to tolerate a brush, not to recharge: the net below
-   * calls this every `pointermove` off the bar, and a timer resets
-   * zero on each movement would only fire when the pointer stops.
-   */
-  const scheduleClose = () => {
-    if (closeTimer.current) return;
-    closeTimer.current = setTimeout(() => {
-      closeTimer.current = null;
-      setHovered(false);
-    }, RAIL_CLOSE_DELAY_MS);
-  };
-
-  const closeRail = () => { scheduleClose(); };
-
-  /**
-   * The net: **`pointerleave` is not guaranteed.** It assumes that the bar is
-   * the target of the pointer when it leaves — but a veil can intervene
-   * while hovering over it (the palette, a dialog box), and the pointer
-   * then leaves without the bar finding out. `hovered` remains true, the primary
-   * remains unfolded over the secondary, and nothing closes it anymore
-   * that we did not return to fly over it to come out.
-   *
-   * As long as the bar is unfolded BY HOVER, we therefore check at the source:
-   * a movement of the pointer outside the bar closes it, wherever it comes from.
-   *
-   * Nothing to do with `onPointerMove` on the bar, which does the opposite (open) —
-   * and nothing that costs: neither state nor return, one `contains` per movement, and
-   * only while the bar is unfolded (MIN-323).
-   *
-   * ⚠ Does not break MIN-291: on native macOS buttons, the page does not receive
-   * NO movement. The returning watcher therefore keeps control in this case.
-   */
-  useEffect(() => {
-    if (!overlay || !hovered) return;
-    const onMove = (event: PointerEvent) => {
-      if (isSidebarPointerTarget(railRef.current, event.target)) {
-        openRail();
-        return;
-      }
-      scheduleClose();
-    };
-    document.addEventListener("pointermove", onMove);
-    return () => document.removeEventListener("pointermove", onMove);
-    // Both helpers only read refs, so stale closures do not change the behavior.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [overlay, hovered]);
-
-  const collapsed = overlay && !(hovered || focusWithin || menuOpen);
-
-  // Two widths, and that's the whole mechanism: that which the bar OCCUPIES in
-  // the flow, and that which it MEASURES. In rail mode the first one stays on the rail
-  // whatever happens — the bar unfolds over the secondary, never to
-  // side. Outside rail mode the two are equal, and the bar is therefore in the flow
-  // without making it look that way.
-  //
-  // This ghost is also what makes the MODE CHANGE animable: quit
-  // a page with a secondary sidebar does not change any structure, only
-  // widths — 56 → 256 here, 320 → 0 for the gutter next door, on the same
-  // curve. Everything to the right slides one block instead of jumping.
-  const flowWidth = overlay ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
-  const asideWidth = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
   const shellTransition = reduce ? { duration: 0 } : transitions.shell;
 
-  return (
+  const level1 = (
+    <SidebarNav
+      sections={sections}
+      currentProject={currentProject}
+      projects={projects}
+      onMenuOpenChange={handleMenuOpenChange}
+    />
+  );
+
+  /**
+   * Level 2/3 panel: the back row — one level up, named after the current
+   * page — and, under it, the empty frame the page's bar teleports into.
+   * The panel stays mounted across sibling routes (pull requests →
+   * routines); only the back row swaps.
+   */
+  const level2 = back && (
     <>
-      {/* `initial` explicit, and not `initial={false}`: it is he who framer
-          written in the server's HTML. Without width at first display, the
-          gutter would start from zero and the whole frame would return to its place at
-          hydration. In editing it is already the target: nothing comes alive. */}
-      <motion.div
-        aria-hidden
-        className="h-full shrink-0"
-        initial={{ width: flowWidth }}
-        animate={{ width: flowWidth }}
-        transition={shellTransition}
-      />
-      <motion.aside
-        id={railId}
-        ref={railRef}
-        data-collapsed={collapsed}
-        data-rail-hovered={overlay && hovered ? "" : undefined}
-        initial={{ width: asideWidth }}
-        animate={{ width: asideWidth }}
-        transition={shellTransition}
-        onPointerEnter={overlay ? openRail : undefined}
-        // Arriving on a page with a secondary sidebar FOLDS the bar under a
-        // pointer that does not move: it is the click on the entry that navigated,
-        // so the pointer was already there and no `pointerenter` will come.
-        // The slightest movement catches this state, instead of waiting for an exit
-        // and a return.
-        //
-        // Disconnected as soon as the bar is open (MIN-323): `openRail` has
-        // then nothing more to do, and without this guard each movement of
-        // pointer on an unfolded bar crossed a `setState`.
-        onPointerMove={overlay && !hovered ? openRail : undefined}
-        // The EVENT has passed, and it matters: this is the exit location
-        // which says if the pointer goes to the macOS buttons (see closeRail).
-        onPointerLeave={overlay ? (e) => {
-          if (!isSidebarPointerTarget(railRef.current, e.relatedTarget)) {
-            closeRail();
-          }
-        } : undefined}
-        onFocusCapture={
-          overlay
-            ? (e) => {
-                // `:focus-visible`, and not “has focus”: CLICK an entry
-                // gives it the focus, and the bar then remained unfolded for a
-                // once the pointer left - we had just navigated,
-                // this is the precise moment when it must retreat. Only the focus
-                // COMING FROM THE KEYBOARD (tabulation) holds it, because there there is no
-                // has no pointer to reopen it.
-                const el = e.target as HTMLElement;
-                if (el.matches?.(":focus-visible")) setFocusWithin(true);
-              }
-            : undefined
-        }
-        onBlurCapture={
-          overlay
-            ? (e) => {
-                // A loss of focus that does not designate ANY new target is
-                // not necessarily an exit from the bar (MIN-313): that's what
-                // produces disabling of the window — the menu bar
-                // macOS, a ⌘Tab. Falling back on this would close the bar under a
-                // pointer which has not moved.
-                //
-                // But this is ALSO what a click on an area not produced
-                // focusable of the page: the focus falls on the document, and
-                // sticking to “no target, we keep” left the bar
-                // unfolded over the secondary for good, after a
-                // simple tab in it. What separates the two is
-                // who has the hand: the window still has it, or it has lost it.
-                const next = e.relatedTarget as Node | null;
-                if (next === null) {
-                  if (!document.hasFocus()) return;
-                  if (e.currentTarget.contains(document.activeElement)) return;
-                  setFocusWithin(false);
-                  return;
-                }
-                if (!e.currentTarget.contains(next)) {
-                  setFocusWithin(false);
-                }
-              }
-            : undefined
-        }
+      <AnimatePresence mode="wait" initial={false}>
+        {back && (
+          <motion.div
+            key={`back:${back.href}:${back.label}`}
+            className="flex h-9 shrink-0 items-center"
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 16 }}
+            transition={shellTransition}
+          >
+            <button
+              type="button"
+              onClick={() => router.push(back.href)}
+              className={cn(
+                "flex h-9 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg text-sm font-semibold text-sidebar-foreground outline-hidden transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
+                GUTTER,
+              )}
+            >
+              <ChevronLeft className="size-3.5 shrink-0" aria-hidden />
+              <span className="min-w-0 truncate">{back.label}</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <div ref={setSlot} className="flex min-h-0 flex-1 flex-col" />
+    </>
+  );
+
+
+  const dx = reduce ? 0 : undefined;
+  void dx;
+    /** The bar itself, for the desktop window-buttons safe area tests. */
+  const railId = useId();
+
+  // Navigation resets any transient state the route left behind; there is no
+  // hover/fold machine anymore — the rail is gone (MIN-546).
+  useEffect(() => {
+    onLayerOpenChange?.(false);
+    return () => onLayerOpenChange?.(false);
+  }, [onLayerOpenChange]);
+
+  return (
+    <motion.aside
+      id={railId}
+      initial={{ width: EXPANDED_WIDTH }}
+      animate={{ width: EXPANDED_WIDTH }}
+      transition={shellTransition}
+      className={cn(
+        "flex h-full flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
+      )}
+    >
+      {/* The top band COMMANDS the column: level 1 keeps the creation
+          controls, level 2/3 shows the page's filter strip teleported here.
+          Pinned strip — what drives the list should be here. */}
+      <div
         className={cn(
-          // Always superimposed on its own ghost, rail mode or not:
-          // This is what makes switching from one to the other a simple matter.
-          // widths. Out of rail mode the ghost is exactly its width,
-          // and nothing is seen.
-          "absolute inset-y-0 left-0 z-40 flex h-full flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
-          // Unfolded over the secondary, the two bars share the same
-          // background: without a cast shadow, only the border separates them, and it
-          // disappears in dark theme. An explicit shadow rather than
-          // `shadow-2xl`, which cannot be seen on a black background. She blends in instead
-          // to disappear suddenly: leave a page with a secondary sidebar by
-          // hovering over the bar turns it off at the same time as everything snaps back into place.
-          "transition-shadow duration-200",
-          overlay && !collapsed && "shadow-[8px_0_32px_-8px_rgba(0,0,0,0.45)]",
+          "sidebar-brand-row relative flex h-[var(--app-content-header-height)] shrink-0 items-center border-b border-border",
+          // Level 2/3: the teleported filter strip carries its own gutter, so
+          // the band's px-2.5 must not wrap it a second time.
+          !back && GUTTER,
         )}
       >
-        {/* Keep the shared-height inset and creation controls mounted across rail transitions. */}
+        <div className={cn("flex h-full w-full min-w-0 items-center", back && "hidden")}>
+          <SidebarQuickActions onScratchpadWarm={onScratchpadWarm} />
+        </div>
         <div
+          ref={setHeaderSlot}
           className={cn(
-            "sidebar-brand-row relative flex h-[var(--app-content-header-height)] shrink-0 items-center border-b border-border",
-            GUTTER,
+            "relative h-[var(--app-content-header-height)] w-full min-w-0",
+            !back && "hidden",
           )}
-        >
-          <SidebarQuickActions collapsed={collapsed} onScratchpadWarm={onScratchpadWarm} />
-        </div>
+        />
+      </div>
 
-        {/* Keep the same markup during hydration and when motion preferences change. */}
+      {/* Both levels live in the same flex-1 area, stacked absolutely so a
+          swap animates over a stable layout instead of resizing anything. */}
+      <div className="relative flex min-h-0 flex-1 flex-col">
         <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={modeKey}
-            className="flex min-h-0 flex-1 flex-col"
-            initial={{ opacity: 0, x: dx }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: dx }}
-            transition={reduce ? { duration: 0 } : transitions.fade}
-          >
-            <SidebarNav
-              sections={sections}
-              collapsed={collapsed}
-              currentProject={currentProject}
-              projects={projects}
-              onMenuOpenChange={handleMenuOpenChange}
-            />
-          </motion.div>
+          {back ? (
+            <motion.div
+              key="secondary-level"
+              className="absolute inset-0 flex min-h-0 flex-col pr-0"
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 16 }}
+              transition={shellTransition}
+            >
+              {level2}
+            </motion.div>
+          ) : (
+            <motion.div
+              key={modeKey}
+              className="absolute inset-0 flex min-h-0 flex-col"
+              initial={{ opacity: 0, x: modeKey === "home" ? -16 : 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: modeKey === "home" ? -16 : 16 }}
+              transition={reduce ? { duration: 0 } : transitions.fade}
+            >
+              {level1}
+            </motion.div>
+          )}
         </AnimatePresence>
+      </div>
 
-        {/* Footer */}
-        <div className={cn("pt-2 pb-2.5", GUTTER)}>
-          <SidebarFooter
-            portalOwner={railId}
-            collapsed={collapsed}
-            onMenuOpenChange={handleMenuOpenChange}
-          />
-        </div>
-      </motion.aside>
-    </>
+      {/* The account line is the only option present on EVERY level — the
+          separator keeps it apart from whichever level runs above it. */}
+      <div className={cn("border-t border-border pt-2 pb-2.5", GUTTER)}>
+        <SidebarFooter
+          portalOwner={railId}
+          onMenuOpenChange={handleMenuOpenChange}
+        />
+      </div>
+    </motion.aside>
   );
 }

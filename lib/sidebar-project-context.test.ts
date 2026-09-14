@@ -24,13 +24,12 @@ describe("primary sidebar project context", () => {
     expect(sidebar).toContain("<DropdownMenuTrigger");
   });
 
-  it("shows only the current project orb in rail mode", () => {
+  it("shows the split context control (home + current project)", () => {
     const contextRow = sidebar.slice(sidebar.indexOf("function ProjectContextRow"));
-    expect(contextRow).toContain("collapsed ? (");
     expect(contextRow).toContain("<ProjectOrb");
-    expect(contextRow.indexOf("collapsed ? (")).toBeLessThan(
-      contextRow.indexOf("<ChevronLeft"),
-    );
+    expect(contextRow).toContain("<ChevronLeft");
+    expect(contextRow).toContain("<ChevronDown");
+    expect(contextRow).toContain("<DropdownMenuTrigger");
   });
 
   it("keeps project data and menu state wired through the persistent sidebar", () => {
@@ -41,15 +40,13 @@ describe("primary sidebar project context", () => {
     expect(sidebar.match(/onMenuOpenChange=\{handleMenuOpenChange\}/g)).toHaveLength(2);
     expect(shell).toContain("pinned={sidebarLayerOpen}");
     expect(shell).toContain("onLayerOpenChange={setSidebarLayerOpen}");
-    expect(shell).toContain("overlay={!sidebarHidden && secondaryNav}");
   });
 
   it("hosts the inbox in the top bar independently of sidebar expansion", () => {
     expect(shell).toMatch(/<AppTopBar\b[^>]*inbox=\{inboxItem\}/);
     expect(topBar).toMatch(/<AppTopActions\b[^>]*inbox=\{inbox\}/);
     expect(shell).toContain("<InboxPopover open={inboxOpen} onOpenChange={setInboxOpen}");
-    expect(sidebar).toContain("!(hovered || focusWithin || menuOpen)");
-    expect(sidebar).not.toContain("inboxOpen");
+    expect(sidebar).toContain("onLayerOpenChange?.(open)");
   });
 
   it("keeps the current project tab when building switch destinations", () => {
