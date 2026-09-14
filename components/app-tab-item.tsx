@@ -29,8 +29,8 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, on
     "app-tab group relative flex h-[34px] shrink-0 items-center rounded-md text-sm",
     tab.pinned ? "w-[34px]" : "w-[200px]",
     active
-      ? "bg-background text-sidebar-foreground"
-      : "bg-sidebar-accent text-muted-foreground hover:bg-sidebar-accent/80",
+      ? "bg-[var(--app-tab-active-background)] text-sidebar-foreground"
+      : "bg-[var(--app-tab-background)] text-muted-foreground hover:brightness-95 dark:hover:brightness-110",
   )}
     onContextMenu={(event) => { event.preventDefault(); setMenu({ x: event.clientX, y: event.clientY }); }}>
     <Tooltip disableHoverableContent>

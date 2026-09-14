@@ -404,6 +404,8 @@ a.markdown-link::before {
   --card: oklch(1 0 0);
   --popover: oklch(1 0 0);
   --sidebar-border: oklch(0.912 0.008 264);
+  --app-tab-background: color-mix(in oklab, var(--sidebar-accent) 94%, var(--foreground));
+  --app-tab-active-background: var(--background);
 }
 /* Keep content slightly lighter than both sidebar levels, including floating
    navigation. The shared surface scale below also covers cards and popovers. */
@@ -424,6 +426,8 @@ a.markdown-link::before {
   --sidebar-accent: oklch(0.236 0.005 264);
   --secondary: oklch(0.249 0.005 264);
   --accent: oklch(0.257 0.005 264);
+  --app-tab-background: var(--sidebar-accent);
+  --app-tab-active-background: color-mix(in oklab, var(--sidebar-accent) 92%, white);
 
   /* Fields and neutral badges stay above the surface; hover adds another step. */
   --control: oklch(0.240 0.005 264);
