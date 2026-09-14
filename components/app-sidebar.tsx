@@ -380,7 +380,6 @@ function ProjectContextRow({
   projects: Project[];
   onMenuOpenChange?: (open: boolean) => void;
 }) {
-  const t = useTranslations("Nav");
   const tk = useTranslations("Keyboard");
   const pathname = usePathname();
   const prefetchProject = usePrefetchProject();
@@ -443,8 +442,9 @@ function ProjectContextRow({
         {projectTrigger}
       </div>
 
+      {/* No label above the switcher list: the row itself names the project,
+            the menu holds nothing but projects. */}
       <DropdownMenuContent side="right" align="start" sideOffset={6} className="w-60">
-        <DropdownMenuLabel>{t("projects")}</DropdownMenuLabel>
         {projects.map((project) => {
           const href = projectTabHref(pathname, project.id);
           const current = project.id === currentProject.id;
