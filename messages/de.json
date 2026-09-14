@@ -1817,6 +1817,7 @@
       "palette": "Befehlspalette",
       "search": "Suchen",
       "filterList": "Liste filtern",
+      "toggleSidebar": "Seitenleiste ein- oder ausblenden",
       "undo": "Letzte Aktion rückgängig machen",
       "redo": "Letzte Aktion wiederherstellen",
       "cheatsheet": "Tastenkürzel anzeigen",
