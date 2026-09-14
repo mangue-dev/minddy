@@ -124,9 +124,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
  times in the desktop app — the site banner
  does not go there (MIN-291). */}
                             <DesktopAnalyticsPrompt />
-                            {/* The macOS buttons are native: nothing happens
- in front of them, so they are erased for the duration of a
- dialog box (MIN-291). */}
+                            {/* Stable renderer-owned macOS controls are used in
+ the authenticated shell and yield to native controls in full screen. */}
                             <DesktopWindowButtons />
                             {/* Obligatory suspense: it reads `useSearchParams`,
  because the target of a notification lives in the

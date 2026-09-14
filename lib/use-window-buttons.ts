@@ -92,7 +92,8 @@ function pushToBridge(): void {
  */
 export function useHoldWindowButtons(reason: string, active: boolean): void {
   useEffect(() => {
-    if (!active || !macDesktopBridge()) return;
+    const bridge = macDesktopBridge();
+    if (!active || !bridge || bridge.performWindowControl) return;
     watchContradiction();
     holds.add(reason);
     pushToBridge();
@@ -437,6 +438,9 @@ export function useWindowButtonsSlot(hosts = true): WindowButtonsSlot {
   }, [started]);
 
   if (!hosts) return CLOSED;
+  if (macDesktopBridge()?.performWindowControl) {
+    return { reserved: visible, decoy: visible, ready };
+  }
   const reserved = modal || settling ? frozen.current : visible;
   return { reserved, decoy: reserved && !visible, ready };
 }

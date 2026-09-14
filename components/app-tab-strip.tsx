@@ -1,5 +1,23 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  MouseSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type CollisionDetection,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Plus, Loader2, AlertCircle, Home } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Input } from "mangue-ui";
@@ -26,7 +44,8 @@ export function AppTabStrip() {
   const nav = useTranslations("Nav");
   const common = useTranslations("Common");
   const strip = useRef<HTMLDivElement>(null);
-  const dragged = useRef<string | null>(null);
+  const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: 6 } }));
+  const [dragged, setDragged] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<AppTab | null>(null);
   const [name, setName] = useState("");
@@ -41,6 +60,38 @@ export function AppTabStrip() {
     });
   };
   const errorKey = error === "save_failed" ? "saveFailed" : error === "conflict" ? "conflict" : error === "last_tab" ? "lastTab" : error === "destination_unavailable" ? "destinationUnavailable" : "syncFailed";
+  const collisionDetection: CollisionDetection = (args) => {
+    const source = tabs.find((tab) => tab.id === String(args.active.id));
+    if (!source) return [];
+    return closestCenter({
+      ...args,
+      droppableContainers: args.droppableContainers.filter((container) =>
+        tabs.some((tab) => tab.id === String(container.id) && tab.pinned === source.pinned)
+      ),
+    });
+  };
+  const finishDrag = (event: DragEndEvent) => {
+    setDragged(null);
+    const active = String(event.active.id);
+    const over = event.over ? String(event.over.id) : null;
+    if (!over || active === over) return;
+    const source = tabs.find((tab) => tab.id === active);
+    const target = tabs.find((tab) => tab.id === over);
+    if (!source || !target || source.pinned !== target.pinned) return;
+    const group = tabs.filter((tab) => tab.pinned === source.pinned);
+    const from = group.findIndex((tab) => tab.id === active);
+    const to = group.findIndex((tab) => tab.id === over);
+    const reordered = arrayMove(group, from, to);
+    void session.move(active, reordered[to + 1]?.id ?? null);
+  };
+  const draggedTab = dragged ? tabs.find((tab) => tab.id === dragged) : undefined;
+  const describe = (tab: AppTab) => {
+    const { section, projectId } = appTabRoute(tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href);
+    const project = projectId ? projectById.get(projectId) : undefined;
+    const sectionLabel = nav(routeLabels[section] ?? "home");
+    const label = tab.custom_name ?? (projectId ? `${sectionLabel} - ${project?.name ?? t("unavailableProject")}` : sectionLabel);
+    return { section, projectId, project, label };
+  };
   return <>
     <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden px-2">
       <div ref={strip} role="tablist" aria-label={t("label")} aria-busy={loading || busy}
@@ -57,38 +108,13 @@ export function AppTabStrip() {
           else return;
           event.preventDefault(); controls[next]?.focus();
         }}>
+        <DndContext sensors={sensors} collisionDetection={collisionDetection}
+          onDragStart={(event: DragStartEvent) => setDragged(String(event.active.id))}
+          onDragCancel={() => setDragged(null)} onDragEnd={finishDrag}>
+        <SortableContext items={tabs.map((tab) => tab.id)} strategy={horizontalListSortingStrategy}>
         {tabs.map((tab) => {
-          const { section, projectId } = appTabRoute(tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href);
-          const project = projectId ? projectById.get(projectId) : undefined;
-          const sectionLabel = nav(routeLabels[section] ?? "home");
-          const label = tab.custom_name ?? (projectId ? `${sectionLabel} - ${project?.name ?? t("unavailableProject")}` : sectionLabel);
-          return <div key={tab.id} role="presentation" draggable={!busy} className="shrink-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-            onDragStart={(event) => {
-              dragged.current = tab.id;
-              event.dataTransfer.effectAllowed = "move";
-              event.dataTransfer.setData("text/plain", tab.id);
-            }}
-            onDragEnd={() => { dragged.current = null; }}
-            onDragOver={(event) => {
-              if (tabs.find((row) => row.id === dragged.current)?.pinned !== tab.pinned) return;
-              event.preventDefault(); event.dataTransfer.dropEffect = "move";
-              const viewport = strip.current;
-              if (viewport) {
-                const bounds = viewport.getBoundingClientRect();
-                if (event.clientX > bounds.right - 30) viewport.scrollLeft += 30;
-                else if (event.clientX < bounds.left + 30) viewport.scrollLeft -= 30;
-              }
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              const id = dragged.current;
-              if (!id || id === tab.id) return;
-              const bounds = event.currentTarget.getBoundingClientRect();
-              const group = tabs.filter((row) => row.pinned === tab.pinned && row.id !== id);
-              const beforeId = event.clientX < bounds.left + bounds.width / 2 ? tab.id : group[group.findIndex((row) => row.id === tab.id) + 1]?.id ?? null;
-              void session.move(id, beforeId);
-              dragged.current = null;
-            }}
+          const { section, projectId, project, label } = describe(tab);
+          return <SortableAppTab key={tab.id} id={tab.id} disabled={busy}
             onKeyDown={(event) => {
               if (!event.altKey || !event.shiftKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
               event.preventDefault(); event.stopPropagation();
@@ -102,8 +128,21 @@ export function AppTabStrip() {
             onActivate={() => { if (!busy) void session.activate(tab.id); }} onClose={() => close(tab.id)}
             onPin={() => { void session.update(tab.id, { pinned: !tab.pinned }); }}
             onRename={() => { setName(tab.custom_name ?? ""); setRenaming(tab); }} onFocus={() => setFocused(tab.id)} />
-          </div>;
+          </SortableAppTab>;
         })}
+        </SortableContext>
+        <DragOverlay dropAnimation={null}>
+          {draggedTab && (() => {
+            const { section, projectId, project, label } = describe(draggedTab);
+            return <div className={draggedTab.pinned
+              ? "flex h-[34px] w-[34px] items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-foreground shadow-lg"
+              : "flex h-[34px] w-[200px] items-center gap-2 rounded-lg bg-sidebar-accent px-2.5 text-sm text-sidebar-foreground shadow-lg"}>
+              <AppTabIcon section={section} project={project} projectId={projectId} />
+              {!draggedTab.pinned && <span className="truncate">{label}</span>}
+            </div>;
+          })()}
+        </DragOverlay>
+        </DndContext>
         {loading && <Loader2 aria-label={t("loading")} className="size-4 shrink-0 animate-spin" />}
       </div>
       <Tooltip><TooltipTrigger asChild><button type="button" aria-label={t("newTab")} disabled={busy || loading || loadError}
@@ -131,4 +170,18 @@ export function AppTabStrip() {
       </DialogContent>
     </Dialog>
   </>;
+}
+
+function SortableAppTab({ id, disabled, onKeyDown, children }: {
+  id: string;
+  disabled: boolean;
+  onKeyDown: React.KeyboardEventHandler<HTMLDivElement>;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, transform, transition, isDragging, listeners } = useSortable({ id, disabled });
+  return <div ref={setNodeRef} role="presentation" {...listeners} onKeyDown={onKeyDown}
+    className={isDragging ? "shrink-0 opacity-40" : "shrink-0"}
+    style={{ transform: CSS.Transform.toString(transform), transition, WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+    {children}
+  </div>;
 }

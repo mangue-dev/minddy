@@ -25,7 +25,7 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, on
     return () => observer.disconnect();
   }, [label, tab.pinned]);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  return <div role="presentation" className={cn("app-tab group relative flex h-[34px] shrink-0 items-center rounded-lg text-sm text-muted-foreground hover:bg-sidebar-accent/60", tab.pinned ? "w-[34px]" : "w-[150px]", active && "bg-sidebar-accent text-sidebar-foreground")}
+  return <div role="presentation" className={cn("app-tab group relative flex h-[34px] shrink-0 items-center rounded-lg text-sm text-muted-foreground hover:bg-sidebar-accent/60", tab.pinned ? "w-[34px]" : "w-[200px]", active && "bg-sidebar-accent text-sidebar-foreground")}
     onContextMenu={(event) => { event.preventDefault(); setMenu({ x: event.clientX, y: event.clientY }); }}>
     <Tooltip disableHoverableContent>
       <TooltipTrigger asChild>
@@ -45,10 +45,10 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, on
       </TooltipTrigger>
       {(tab.pinned || truncated) && <TooltipContent side="bottom">{label}</TooltipContent>}
     </Tooltip>
-    {!tab.pinned && <button type="button" aria-label={t("closeNamed", { name: label })} disabled={last || busy}
-      tabIndex={-1} onClick={onClose} className="absolute right-1 flex size-5 items-center justify-center rounded opacity-0 hover:bg-background/60 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-0">
+    {!tab.pinned && <Tooltip delayDuration={500} disableHoverableContent><TooltipTrigger asChild><button type="button" aria-label={t("closeNamed", { name: label })} disabled={last || busy}
+      tabIndex={-1} onPointerDown={(event) => event.stopPropagation()} onClick={onClose} className="absolute right-1 flex size-5 items-center justify-center rounded-full opacity-0 hover:bg-background/60 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-0">
       <X className="size-3" aria-hidden />
-    </button>}
+    </button></TooltipTrigger><TooltipContent side="bottom">{t("close")}</TooltipContent></Tooltip>}
     <IssueContextMenu position={menu} searchable={false} onClose={() => { setMenu(null); ref.current?.focus(); }} actions={[
       { id: "pin", label: t(tab.pinned ? "unpin" : "pin"), icon: tab.pinned ? <PinOff /> : <Pin />, onSelect: onPin, disabled: busy },
       { id: "rename", label: t("rename"), icon: <Pencil />, onSelect: onRename, disabled: busy },

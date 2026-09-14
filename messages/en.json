@@ -6139,6 +6139,11 @@
     "importFailed": "The import could not be completed. Try again; the same import will not be added twice.",
     "exportArchive": "Database archive (.zip)"
   },
+  "WindowControls": {
+    "close": "Close window",
+    "minimize": "Minimize window",
+    "fullscreen": "Enter full screen"
+  },
   "AppTabs": {
     "label": "Application tabs",
     "newTab": "New tab",

@@ -46,6 +46,20 @@ describe("application tab sessions", () => {
     await session.retry();
     expect(transport.create).toHaveBeenCalledTimes(2); session.dispose();
   });
+  it("renders a new tab before a slow departure guard permits activation", async () => {
+    const { session } = setup(); await session.initialize("/home");
+    const active = session.getSnapshot().activeId;
+    let finish!: (saved: boolean) => void;
+    session.registerDeparture(() => new Promise((resolve) => { finish = resolve; }));
+    const creation = session.create();
+    expect(session.getSnapshot().tabs).toHaveLength(3);
+    expect(session.getSnapshot().activeId).toBe(active);
+    await vi.waitFor(() => expect(finish).toBeTypeOf("function"));
+    finish(true);
+    await creation;
+    expect(session.getSnapshot().activeId).not.toBe(active);
+    session.dispose();
+  });
   it("removes a closed tab immediately and ignores stale refetches until confirmation", async () => {
     const { session, transport, rows, navigate } = setup(); await session.initialize("/home");
     const id = session.getSnapshot().activeId!;

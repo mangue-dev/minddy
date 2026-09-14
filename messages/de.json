@@ -6139,6 +6139,11 @@
     "importFailed": "Der Import konnte nicht abgeschlossen werden. Versuche es erneut; derselbe Import wird nicht zweimal hinzugefügt.",
     "exportArchive": "Datenbankarchiv (.zip)"
   },
+  "WindowControls": {
+    "close": "Fenster schließen",
+    "minimize": "Fenster minimieren",
+    "fullscreen": "Vollbildmodus aktivieren"
+  },
   "AppTabs": {
     "label": "Anwendungstabs",
     "newTab": "Neuer Tab",

@@ -138,7 +138,7 @@ remains an additional desktop drag surface.
 
 Tabs are personal to an account. IDs, destinations, custom names, pins, and order
 synchronize between devices; the active tab and lightweight working filters are
-local to each window. Regular tabs are 150 px wide and pinned tabs are square.
+local to each window. Regular tabs are 200 px wide and pinned tabs are square.
 Pinning changes presentation only: every sidebar click navigates in the current
 tab. Create another tab first to keep a separate destination. New tabs start at
 Home, and the final tab cannot be closed. There is no collection-size limit.
@@ -183,7 +183,9 @@ is shown; no capability is inferred from the origin or app version.
 
 Login, signup, and the server-unavailable screen have minimal native-control
 clearance and a drag surface, without application tabs. Interactive controls,
-menus, dialogs, and tooltips are non-draggable. The old root drag band is disabled
+menus, dialogs, and tooltips are non-draggable. On macOS, authenticated screens
+use stable renderer-owned traffic lights so opening a dialog does not switch
+between native and HTML controls; native controls return in full screen. The old root drag band is disabled
 when the authenticated desktop bar owns that region.
 
 Before releasing a new desktop build, verify native controls, fullscreen, zoom,
@@ -233,15 +235,12 @@ would have gone, and the measure would have remained extinguished for everyone w
 or a choice. As long as no response is given, consent is worth `null`
 and PostHog remains cookie- and identity-free — nothing is surreptitiously measured.
 
-**A dialog box removes them, without anything moving.** They are native, and
-no `z-index` passes in front: a dialogue kept them across its corner,
-over his own veil. We therefore remove them - but the brand line keeps
-their PLACE, frozen at what it was worth at the opening, and draws three pellets
-identically inert
-([app-sidebar.tsx](../components/app-sidebar.tsx), `WindowButtonDecoys`). They
-go under the veil like the rest of the app. Without this lure, the brand would jump
-from one end of the bar to the other each time a dialog is opened, for an object
-that we don't even look at.
+**Authenticated screens use renderer-owned controls.** Native traffic lights
+cannot sit below a renderer dialog because no CSS `z-index` can cover them.
+Switching between native controls and HTML placeholders also caused a visible
+flash. The authenticated shell therefore keeps three interactive HTML controls
+mounted across dialogs (`WindowButtonDecoys`) and sends their close, minimize,
+and full-screen actions through the preload bridge.
 
 Their geometry is **noted on a pixel-decoded system screenshot by
 pixel**, and not deducted: left edges at 19, 42 and 65, top at 22, **14 px from
@@ -249,15 +248,14 @@ diameter**, so 23 px from center to center. The first version included
 the origin given to `trafficLightPosition` and an assumed step of 20 px — the only
 of the three values which was correct was the origin, and the shift could be seen.
 
-And the request **belongs to the page**: it dies with it. A reload
-while a dialog is open otherwise leaves the buttons hidden forever,
-with no one left to return them.
+The custom-controls request **belongs to the authenticated page** and is reset
+on full document navigation. Sign-in and other pages outside the application
+shell retain the native controls.
 
-**And in full screen, we never hide them.** macOS takes them to the top of
-the screen, under his own care; hiding them on top removes the only way to
-exit with the mouse. The page must still learn it so as not to
-keep their place - hence two distinct notions, what the bar DEMANDS and what
-that the buttons DO, and a round trip over the bridge
+**In full screen, native controls return.** macOS takes them to the top of the
+screen under its own care; hiding them there removes the mouse's standard exit.
+The page learns that state so it releases the HTML controls and their slot
+through a round trip over the bridge
 ([lib/use-window-buttons.ts](../lib/use-window-buttons.ts)).
 
 **The only real pitfall is authentication.** minddy suggests Google and GitHub

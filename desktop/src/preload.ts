@@ -188,6 +188,14 @@ const bridge: DesktopBridge = {
     ipcRenderer.send("minddy:window-buttons", visible);
   },
 
+  setCustomWindowControls(active: boolean) {
+    ipcRenderer.send("minddy:custom-window-controls", active);
+  },
+
+  performWindowControl(action: "close" | "minimize" | "fullscreen") {
+    ipcRenderer.send("minddy:window-control", action);
+  },
+
   onWindowButtons(handler: (visible: boolean) => void) {
     const listener = (_event: unknown, visible: boolean) => handler(visible);
     ipcRenderer.on("minddy:window-buttons-state", listener);
