@@ -584,7 +584,7 @@ function ObjectivesInner() {
             )}
           </EmptyScene>
         ) : (
-          <div className="flex flex-col gap-1 px-2 pt-2 pb-4">
+          <div className="flex flex-col gap-1 pt-2 pb-4">
             {listed.map((objective) => (
               <ObjectiveRow
                 projectId={projectId}

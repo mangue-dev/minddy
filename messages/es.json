@@ -1817,6 +1817,7 @@
       "palette": "Paleta de comandos",
       "search": "Buscar",
       "filterList": "Filtrar la lista",
+      "toggleSidebar": "Mostrar u ocultar la barra lateral",
       "undo": "Deshacer la última acción",
       "redo": "Rehacer la última acción",
       "cheatsheet": "Mostrar atajos de teclado",

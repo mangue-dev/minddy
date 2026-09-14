@@ -4,8 +4,10 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { KbdSequence } from "@/components/ui/kbd";
 import { SIDEBAR_TOOLTIP_DELAY_MS } from "@/lib/sidebar-control-styles";
 import { useSidebarVisibility } from "@/lib/sidebar-visibility-context";
+import { resolveKeyToken } from "@/lib/keyboard/shortcuts";
 
 export function SidebarVisibilityButton({ collapsed }: { collapsed: boolean }) {
   const t = useTranslations("Nav");
@@ -35,7 +37,12 @@ export function SidebarVisibilityButton({ collapsed }: { collapsed: boolean }) {
   return (
     <Tooltip delayDuration={SIDEBAR_TOOLTIP_DELAY_MS} disableHoverableContent>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent side="bottom">{label}</TooltipContent>
+      <TooltipContent side="bottom" className="flex items-center gap-2">
+        <span>{label}</span>
+        {/* The command twin of the gesture: ⌘ B as two chips side by side
+            (⌘ / Ctrl per platform, client-only for the symbol). */}
+        <KbdSequence keys={[[resolveKeyToken("mod"), "B"]]} />
+      </TooltipContent>
     </Tooltip>
   );
 }

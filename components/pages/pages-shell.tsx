@@ -215,7 +215,7 @@ export function PagesShell() {
         }
       >
         {loading ? (
-          <div className="flex flex-col gap-1.5 px-2 pt-2">
+          <div className="flex flex-col gap-1.5 pt-2">
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-7 rounded-md" />
             ))}

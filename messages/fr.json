@@ -1817,6 +1817,7 @@
       "palette": "Palette de commandes",
       "search": "Rechercher",
       "filterList": "Filtrer la liste",
+      "toggleSidebar": "Afficher ou masquer la barre latérale",
       "undo": "Annuler la dernière action",
       "redo": "Rétablir l'action annulée",
       "cheatsheet": "Afficher les raccourcis clavier",

@@ -60,7 +60,7 @@ export function SidebarNavRail({
 
   return (
     <nav aria-label={label}>
-      <ul className="flex flex-col gap-1 px-2 pt-2 pb-4">
+      <ul className="flex flex-col gap-1 pt-2 pb-4">
         {items.map((item) => {
           const Icon = item.icon;
           const active = item.value === value;

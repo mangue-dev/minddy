@@ -10,9 +10,8 @@ import { AppUpdateAction } from "./app-update-action";
 import { WINDOW_BUTTONS_WIDTH } from "./desktop-window-buttons";
 import type { AppNavItem } from "./app-sidebar";
 
-export function AppTopBar({ hidden, secondary, inbox, onSearch, onSearchWarm, onNewTab }: {
+export function AppTopBar({ hidden, inbox, onSearch, onSearchWarm, onNewTab }: {
   hidden: boolean;
-  secondary: boolean;
   inbox: AppNavItem;
   onSearch: () => void;
   onSearchWarm: () => void;
@@ -20,7 +19,7 @@ export function AppTopBar({ hidden, secondary, inbox, onSearch, onSearchWarm, on
 }) {
   const reduce = useReducedMotion();
   const native = useWindowButtonsSlot(useWideLayout());
-  const width = appTopBarNavigationWidth(hidden, secondary);
+  const width = appTopBarNavigationWidth(hidden);
   return <div className="app-top-bar relative z-40 hidden h-11 shrink-0 items-center border-b border-border bg-sidebar text-sidebar-foreground desktop:flex">
     <div className="app-titlebar-safe-area flex min-w-0 flex-1 items-center">
       <motion.div initial={{ width }} animate={{ width }} transition={reduce ? { duration: 0 } : transitions.shell}

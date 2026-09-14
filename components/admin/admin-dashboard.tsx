@@ -257,7 +257,7 @@ export function AdminDashboard() {
               {tCommon("noFilterMatch")}
             </p>
           ) : (
-            <ul className="flex flex-col gap-1 px-2 pt-2 pb-4">
+            <ul className="flex flex-col gap-1 pt-2 pb-4">
               {matches.map((section) => {
                 const Icon = section.icon;
                 return (

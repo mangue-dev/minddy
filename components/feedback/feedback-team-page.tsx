@@ -1222,7 +1222,7 @@ export function FeedbackTeamPage() {
                a rounded pellet in an 8 px gutter, not a banner
                pleine largeur. Quatre listes qui se ressemblent doivent se
                resemble even in the form of their selection. */
-            <ul className="flex flex-col gap-1 px-2 pt-2 pb-4">
+            <ul className="flex flex-col gap-1 pt-2 pb-4">
               {listedPosts.map((post) => (
                 <li key={post.id}>
                   <FeedbackRow

@@ -822,7 +822,7 @@ export function PullRequestsPage() {
             )}
           </EmptyScene>
         ) : (
-          <div className="flex flex-col gap-2 px-2 pt-2 pb-4">
+          <div className="flex flex-col gap-2 pt-2 pb-4">
             {/* A project, its pull requests — same accordion as the column of
                 agent conversations (`SidebarProjectGroup`). It is he who
                 carries the project, and that’s why the lines don’t carry it

@@ -35,10 +35,11 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useSidebarVisibility } from "@/lib/sidebar-visibility-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { eventKey } from "@/lib/keyboard/event-key";
-import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
+import { matchesModShiftCombo, matchesModCombo } from "@/lib/keyboard/mod-combo";
 import { trackEvent } from "@/lib/analytics";
 
 /** Leader key that arms a navigation chord. */
@@ -90,6 +91,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { toggle: toggleAssistant } = useAssistantPanel();
   const { open: openScratchpad } = useScratchpad();
+  const { toggle: toggleSidebarVisibility } = useSidebarVisibility();
   const { present: secondaryPresent } = useSecondarySidebar();
   const [chordPrefix, setChordPrefix] = useState<string | null>(null);
   const [cheatsheetOpen, setCheatsheetOpen] = useState(false);
@@ -108,6 +110,8 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
   toggleAssistantRef.current = toggleAssistant;
   const openScratchpadRef = useRef(openScratchpad);
   openScratchpadRef.current = openScratchpad;
+  const toggleSidebarRef = useRef(toggleSidebarVisibility);
+  toggleSidebarRef.current = toggleSidebarVisibility;
   const secondaryPresentRef = useRef(secondaryPresent);
   secondaryPresentRef.current = secondaryPresent;
   // Mirrors chordPrefix synchronously for the listener (state is async).
@@ -194,6 +198,17 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
         e.stopImmediatePropagation();
         if (isTypingTarget(e.target) || isDialogOpen()) return;
         openScratchpadRef.current("shortcut");
+        disarm();
+        return;
+      }
+      // ⌘B hides or shows the navigation column (MIN-546 review). Allowed
+      // while typing — a letter in a filter field is not ⌘B — but never
+      // under a dialog, which owns the screen.
+      if (matchesModCombo(e, "b")) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (isDialogOpen()) return;
+        toggleSidebarRef.current();
         disarm();
         return;
       }

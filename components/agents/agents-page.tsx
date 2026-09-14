@@ -811,7 +811,7 @@ export function AgentsPage() {
         {loading ? (
           /* In the form of a list: two projects, a few conversations of a
              ligne dessous. */
-          <div className="flex flex-col gap-2 px-2 pt-2">
+          <div className="flex flex-col gap-2 pt-2">
             {[0, 1].map((g) => (
               <div key={g} className="flex flex-col gap-1">
                 <Skeleton className="h-6 w-32 rounded-md" />
@@ -835,7 +835,7 @@ export function AgentsPage() {
             {tCommon("noFilterMatch")}
           </p>
         ) : (
-          <div className="flex flex-col gap-2 px-2 pt-2 pb-4">
+          <div className="flex flex-col gap-2 pt-2 pb-4">
             {/* A project, its conversations. No synthetic entry: one
  draft is not a conversation — the column only shows this
  that exists, that is, from the first message sent. */}

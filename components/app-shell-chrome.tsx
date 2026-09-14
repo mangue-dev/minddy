@@ -90,19 +90,10 @@ import { NumoIcon } from "@/components/numo-icon";
 import {
   AppSidebar,
   EXPANDED_WIDTH,
-  COLLAPSED_WIDTH,
   type AppNavItem,
   type AppNavSection,
 } from "@/components/app-sidebar";
-import {
-  SecondarySidebarSlot,
-  SECONDARY_WIDTH,
-} from "@/components/secondary-sidebar";
 import { SidebarNavOverlay } from "@/components/sidebar-nav-overlay";
-import {
-  routeHasSecondaryNav,
-  useSecondarySidebar,
-} from "@/lib/secondary-sidebar-context";
 import {
   settingsSectionHref,
   useSettingsSections,
@@ -291,55 +282,12 @@ function countBadge(count: number, label?: string) {
 }
 
 /**
- * The same counter, FOLDED into a corner pad for rail mode: the line is not there
- * is more than an icon, and the number placed at the end no longer has an end to
- * to set down. Without it, the queue simply disappears as soon as a page has
- * a secondary sidebar — that is to say on the same pages where we sort.
- *
- * Three differences with the unfolded version, all imposed by the 36 px box:
- *
- * - **Ceiling at “9+”**, not “99+”. This is not a choice of taste:
- * pellet is anchored at the top RIGHT of the box and grows towards the left,
- * i.e. over the icon. Three characters clear it, and the rail does not
- * shows more than a counter without saying what.
- * - **Background to the color of the bar**, where the unfolded version has no background
- * at all: placed directly on the lines of the icon, a bare number cannot be read.
- * A TINTED tablet would make a second shape to read; to the background color,
- * it is not visible — it simply cuts out the icon, and the number looks
- * placed on top, without adding anything. The `px` makes it breathe: without it, the
- * The cut stops at the number and an icon stroke touches it.
- * - **`aria-label` carries the EXACT** count when the display peaks: “9+”
- * read aloud says nothing of what awaits.
- *
- * Its size is that of the “current agent” spinner (14 px), with one or two
- * pixels: everything that folds into this corner holds the same place.
+ * The badge of an entry that carries a COUNTER. Zero does nothing: the row
+ * stays bare.
  */
-function countBadgeCollapsed(count: number, label?: string) {
-  return (
-    <span
-      className="flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-sidebar px-[3px] text-[10px] font-medium leading-none tabular-nums text-sidebar-foreground/90"
-      aria-label={label ?? String(count)}
-    >
-      {count > 9 ? "9+" : count}
-    </span>
-  );
-}
-
-/**
- * The badge fields of an entry that carries a COUNTER, unfolded and folded
- * with a single gesture - the forgetting of the second is invisible as long as we do not go on
- * a secondary sidebar page. Zero does nothing: the line remains bare.
- */
-function countBadges(
-  count: number,
-  label?: string
-): Pick<AppNavItem, "badge" | "badgeCollapsed" | "showBadgeCollapsed"> {
+function countBadges(count: number, label?: string): Pick<AppNavItem, "badge"> {
   if (count <= 0) return {};
-  return {
-    badge: countBadge(count, label),
-    badgeCollapsed: countBadgeCollapsed(count, label),
-    showBadgeCollapsed: true,
-  };
+  return { badge: countBadge(count, label) };
 }
 
 /**
@@ -462,12 +410,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // still mounted (see routeHasSecondaryNav). Without it, the server's HTML
   // would leave primary sidebar unfolded and full width content, for all
   // reorganize suddenly for hydration.
-  const { present: secondaryPresent } = useSecondarySidebar();
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
-  const secondaryNav =
-    secondaryPresent || (!hydrated && routeHasSecondaryNav(pathname));
-
   const currentProjectId = projectIdFromPath(pathname);
   const currentProject = projects.find((p) => p.id === currentProjectId) ?? null;
   const projectById = useMemo(
@@ -703,14 +645,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           : null}
       </span>
     ) : undefined;
-  const homeBadgeCollapsed =
-    smartAssignBadge ??
-    (triageElsewhere > 0
-      ? countBadgeCollapsed(
-          triageElsewhere,
-          t("triageElsewhereBadge", { count: triageElsewhere })
-        )
-      : undefined);
 
   // Agents: a spinner on the tab as soon as a session is WORKING (generation in
   // course), all projects combined; otherwise a blue bubble if at least one session has
@@ -1358,6 +1292,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     href: "/pull-requests",
     active: pathname.startsWith("/pull-requests"),
     shortcut: "R",
+    descends: true,
     disabled: !agentsAllowed,
     tooltip: agentsAllowed ? undefined : tBilling("agentsGateTitle"),
     ...countBadges(
@@ -1372,7 +1307,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     href: "/numo",
     active: (isNumo || isAgents) && !isRoutines,
     shortcut: "J",
-    showBadgeCollapsed: true,
+    descends: true,
     disabled: !agentsAllowed,
     tooltip: agentsAllowed ? undefined : tBilling("agentsGateTitle"),
     badge:
@@ -1398,6 +1333,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     href: "/routines",
     active: isRoutines,
     shortcut: "U",
+    descends: true,
     disabled: !agentsAllowed,
     tooltip: agentsAllowed ? undefined : tBilling("agentsGateTitle"),
   };
@@ -1407,19 +1343,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       const base = `/projects/${currentProject.id}`;
       return [
         {
+          // Project mode keeps ONLY the project context: back home, the
+          // project switcher, and the project's own items (MIN-546 review).
           items: [
-            inboxItem,
-            pullRequestsItem,
-            agentsItem,
-            routinesItem,
-            {
-              key: "all-global",
-              label: t("allIssues"),
-              icon: LayoutGrid,
-              href: "/all",
-              active: pathname === "/all",
-              shortcut: "B",
-            },
             {
               key: "home-back",
               label: t("home"),
@@ -1427,8 +1353,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               href: "/home",
               shortcut: "H",
               badge: homeBadge,
-              showBadgeCollapsed: true,
-              badgeCollapsed: homeBadgeCollapsed,
             },
           ],
         },
@@ -1451,6 +1375,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               active:
                 pathname.startsWith(`${base}/objectives`) || !!objectiveBoardId,
               shortcut: "O",
+              descends: true,
             },
             // Between Objectives and Triage: the project wiki can be read with what
             // says WHERE the project is GOING, and not with the files that we empty. Sorting,
@@ -1463,6 +1388,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               href: `${base}/pages`,
               active: pathname.startsWith(`${base}/pages`),
               shortcut: "W",
+              descends: true,
             },
             {
               key: "triage",
@@ -1471,6 +1397,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               href: `${base}/triage`,
               active: pathname.startsWith(`${base}/triage`),
               shortcut: "T",
+              descends: true,
               ...countBadges(
                 triageCount,
                 t("triageBadge", { count: triageCount })
@@ -1483,6 +1410,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               href: `${base}/feedback`,
               active: pathname.startsWith(`${base}/feedback`),
               shortcut: "F",
+              descends: true,
               ...countBadges(
                 feedbackCount,
                 t("feedbackBadge", { count: feedbackCount })
@@ -1495,6 +1423,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               href: `${base}/settings`,
               active: pathname.startsWith(`${base}/settings`),
               shortcut: "S",
+              descends: true,
             },
           ],
         },
@@ -1523,7 +1452,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             active: pathname.startsWith("/home"),
             shortcut: "H",
             badge: smartAssignBadge,
-            showBadgeCollapsed: true,
           },
         ],
       },
@@ -1539,6 +1467,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               label: p.name,
               icon: projectOrbIcon(projectOrbSeed(p), p.icon_url),
               href: `/projects/${p.id}`,
+              // Entering a project swaps the whole sidebar the same way a
+              // level-2 page does: the row says so with its chevron.
+              descends: true,
               ...countBadges(toTriage, t("triageBadge", { count: toTriage })),
             };
           }),
@@ -1553,9 +1484,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               icon: projectOrbIcon(draftOrbSeed(d), draftIconUrl(d)),
               onClick: () => openProjectDraft(d),
               badge: draftBadge(tProjects("draftBadge")),
-              // On the rail, the line is reduced to its orb: without the pellet of
-              // corner, a draft would be indistinguishable from a project.
-              showBadgeCollapsed: true,
               tooltip: tProjects("draftResume", { name: d.name }),
               contextActions: [
                 {
@@ -1578,15 +1506,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             icon: Plus,
             onClick: openCreateProject,
             disabled: projectLimitReached,
-            tooltip: projectLimitReached
-              ? tBilling("projectLimitTooltip")
-              : undefined,
           },
         ],
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, objectiveBoardId, projects, projectDrafts, openProjectDraft, deleteProjectDraft, inboxCount, triageCount, feedbackCount, triageCounts, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, homeBadge, homeBadgeCollapsed, t, tProjects]);
+  }, [currentProject, pathname, objectiveBoardId, projects, projectDrafts, openProjectDraft, deleteProjectDraft, inboxCount, triageCount, feedbackCount, triageCounts, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, homeBadge, t, tProjects]);
 
   // Inbox is a compact top control on desktop. Mobile keeps the regular row,
   // where there is no primary sidebar to host that control.
@@ -1676,7 +1601,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       {appTabs && (
         <AppTopBar
           hidden={sidebarHidden}
-          secondary={secondaryNav}
           inbox={inboxItem}
           onSearch={() => handlePaletteOpenChange(true)}
           onSearchWarm={warmPalette}
@@ -1687,16 +1611,17 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       // `app-shell` targets the shell's <main>; its bottom reserve follows the
       // real mobile-nav height through --mobile-nav-clearance.
       className="app-shell"
-      // The navigation block contains the primary sidebar followed by the
-      // landing point where pages teleport their secondary sidebar.
+      // The navigation block is the modular primary sidebar (MIN-546): one
+      // fixed-width column that hosts every navigation level, including the
+      // pages' secondary bars — teleported in by SecondarySidebar.
       //
       // Hidden sidebars remain available from the left-edge overlay without
       // reserving space. Page content and Numo keep their normal behavior.
       sidebar={
         <SidebarNavOverlay
           hidden={sidebarHidden}
-          width={EXPANDED_WIDTH + (secondaryNav ? SECONDARY_WIDTH : 0)}
-          dockedWidth={secondaryNav ? COLLAPSED_WIDTH + SECONDARY_WIDTH : EXPANDED_WIDTH}
+          width={EXPANDED_WIDTH}
+          dockedWidth={EXPANDED_WIDTH}
           pinned={sidebarLayerOpen}
         >
           <AppSidebar
@@ -1706,9 +1631,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             projects={projects}
             onScratchpadWarm={() => preloadSurface(loadScratchpadModal)}
             onLayerOpenChange={setSidebarLayerOpen}
-            overlay={!sidebarHidden && secondaryNav}
           />
-          <SecondarySidebarSlot reserve={secondaryNav} />
         </SidebarNavOverlay>
       }
       // Narrow macOS windows use the mobile shell, so the primary sidebar is
