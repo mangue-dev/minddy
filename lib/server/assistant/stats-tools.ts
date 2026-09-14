@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { computeStreaks, heatmapTotals } from "@/lib/stats-derive";
 import { getUserStats } from "@/lib/server/stats";
 import { getUserUsage, segmentizeUsage } from "@/lib/server/usage";
+import { managedServices } from "@/lib/managed-services";
 import type { UserStats } from "@/lib/types";
 
 /**
@@ -158,6 +159,12 @@ export async function readPlanUsageTool({
       // Routine passages and Numo-owned workers only, like the Agents page:
       // delegated workers are mediated in their parent conversation.
       .is("parent_numo_turn_id", null)
+      // `agent_runs_select` admits any project-visible conversation, so on a
+      // shared project a teammate's run would otherwise occupy the list and
+      // present its cost next to this user's ledger. Routine passages are
+      // launched as the routine owner, so `created_by` is always the account
+      // that pays for the run.
+      .eq("created_by", userId)
       .order("created_at", { ascending: false })
       .limit(RECENT_RUNS_LIMIT),
   ]);
@@ -170,19 +177,26 @@ export async function readPlanUsageTool({
 
   const usage: Partial<PlanUsageToolResult> = {};
   if (usageRes.status === "fulfilled") {
+    // Same gate as /api/billing/usage (MIN-72): with managed AI off — the
+    // normal self-hosted case — there is no Minddy AI allowance and no usage
+    // to report, whatever the resolved plan or raw ledger say.
+    const ai = managedServices().ai;
     const { billing, period, usedUsd } = usageRes.value;
-    const includedUsd = billing.plan.includedUsageUsd;
+    const includedUsd = ai ? billing.plan.includedUsageUsd : 0;
+    const billedUsd = ai ? usedUsd : 0;
     usage.plan = {
       planId: billing.planId,
       includedUsd,
-      usedUsd,
-      remainingUsd: Math.max(0, includedUsd - usedUsd),
+      usedUsd: billedUsd,
+      remainingUsd: Math.max(0, includedUsd - billedUsd),
       periodStart: period.start,
       nextResetAt: period.end,
     };
-    usage.segments = segmentizeUsage(usageRes.value.byFeature).filter(
-      (segment) => segment.usd > 0,
-    );
+    usage.segments = ai
+      ? segmentizeUsage(usageRes.value.byFeature).filter(
+          (segment) => segment.usd > 0,
+        )
+      : [];
   }
 
   if (runsRes.status === "fulfilled" && !runsRes.value.error) {

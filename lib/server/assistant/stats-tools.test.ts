@@ -9,7 +9,6 @@ import {
 import type { UserStats } from "@/lib/types";
 
 /** MIN-501 — Numo reads the user's statistics, read-only. */
-
 vi.mock("@/lib/server/usage", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/server/usage")>();
   return {
@@ -18,7 +17,17 @@ vi.mock("@/lib/server/usage", async (importOriginal) => {
   };
 });
 
+vi.mock("@/lib/managed-services", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/managed-services")>();
+  return {
+    ...actual,
+    managedServices: vi.fn(actual.managedServices),
+  };
+});
+
 import { getUserUsage } from "@/lib/server/usage";
+import { managedServices } from "@/lib/managed-services";
 
 const statsFixture: UserStats = {
   totals: {
@@ -198,6 +207,7 @@ describe("readPlanUsageTool", () => {
     const query = {
       select: () => query,
       is: () => query,
+      eq: vi.fn(() => query),
       order: () => query,
       limit: () => Promise.resolve({ data: runs, error }),
     };
@@ -205,6 +215,11 @@ describe("readPlanUsageTool", () => {
   }
 
   it("returns plan budget, spend segments and recent runs", async () => {
+    vi.mocked(managedServices).mockReturnValue({
+      billing: true,
+      ai: true,
+      forge: true,
+    });
     vi.mocked(getUserUsage).mockResolvedValue({
       billing: {
         planId: "free",
@@ -288,6 +303,53 @@ describe("readPlanUsageTool", () => {
         completedAt: "2026-09-12T08:02:00Z",
       },
     ]);
+    // Teammates' project-visible runs must not leak into this user's
+    // execution summary (agent_runs_select is project-wide).
+    const query = fakeSupabase([], null);
+    await readPlanUsageTool({ userId: "user-9", supabase: query });
+    const runQuery = (query.from as ReturnType<typeof vi.fn>).mock.results[0]
+      .value as Record<string, ReturnType<typeof vi.fn>>;
+    expect(runQuery.eq).toHaveBeenCalledWith("created_by", "user-9");
+  });
+
+  it("reports zero usage and no segments when managed AI is off", async () => {
+    vi.mocked(getUserUsage).mockResolvedValue({
+      billing: {
+        planId: "free",
+        plan: { includedUsageUsd: 5 },
+        source: "default",
+        account: null,
+        stripeConfigured: false,
+      },
+      period: {
+        start: "2026-09-01T00:00:00.000Z",
+        end: "2026-10-01T00:00:00.000Z",
+      },
+      usedUsd: 1.5,
+      byFeature: { agent_code: 1.5 },
+    } as Awaited<ReturnType<typeof getUserUsage>>);
+    vi.mocked(managedServices).mockReturnValue({
+      billing: true,
+      ai: false,
+      forge: true,
+    });
+
+    const result = await readPlanUsageTool({
+      userId: "user-1",
+      supabase: fakeSupabase([], null),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.usage.plan).toEqual({
+      planId: "free",
+      includedUsd: 0,
+      usedUsd: 0,
+      remainingUsd: 0,
+      periodStart: "2026-09-01T00:00:00.000Z",
+      nextResetAt: "2026-10-01T00:00:00.000Z",
+    });
+    expect(result.usage.segments).toEqual([]);
   });
 
   it("still answers when only one of the two halves fails", async () => {
