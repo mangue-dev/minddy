@@ -1,3 +1,4 @@
+import { appTabsQueryKey } from "./use-app-tabs-query";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import { isPersistableKey, wasRestoredBeforeMount } from "./query-provider";
@@ -14,6 +15,9 @@ import { agentActivityQueryKey } from "@/components/agent/agent-activity-context
 // either saturates localStorage with the palette index or restores a completed
 // agent run as active after reload.
 describe("isPersistableKey", () => {
+  it("keeps unbounded application tabs out of the shared disk snapshot", () => {
+    expect(isPersistableKey(appTabsQueryKey("owner"))).toBe(false);
+  });
   it("persists content caches", () => {
     expect(isPersistableKey(["projects"])).toBe(true);
     expect(isPersistableKey(["issues", "p1"])).toBe(true);

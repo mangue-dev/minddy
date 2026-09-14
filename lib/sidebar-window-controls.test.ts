@@ -1,40 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { WINDOW_BUTTONS_WIDTH } from "./sidebar-window-controls";
+import { APP_TOP_BAR_HEIGHT } from "./app-chrome-layout";
+import { MACOS_TRAFFIC_LIGHT_POSITION } from "./desktop/window-frame";
 
-import {
-  isMacWindowControlsZone,
-  TITLEBAR_HEIGHT,
-  WINDOW_BUTTONS_WIDTH,
-} from "./sidebar-window-controls";
-
-describe("primary sidebar macOS window controls", () => {
-  it("keeps the rail open throughout the native-control visibility transition", () => {
-    expect(
-      isMacWindowControlsZone("darwin", {
-        clientX: WINDOW_BUTTONS_WIDTH,
-        clientY: TITLEBAR_HEIGHT,
-      }),
-    ).toBe(true);
-  });
-
-  it("does not reserve the corner in a browser or on another desktop platform", () => {
-    const point = { clientX: 24, clientY: 24 };
-
-    expect(isMacWindowControlsZone(undefined, point)).toBe(false);
-    expect(isMacWindowControlsZone("win32", point)).toBe(false);
-  });
-
-  it("does not retain the rail after the pointer leaves the titlebar corner", () => {
-    expect(
-      isMacWindowControlsZone("darwin", {
-        clientX: WINDOW_BUTTONS_WIDTH + 1,
-        clientY: 24,
-      }),
-    ).toBe(false);
-    expect(
-      isMacWindowControlsZone("darwin", {
-        clientX: 24,
-        clientY: TITLEBAR_HEIGHT + 1,
-      }),
-    ).toBe(false);
+describe("application bar native control geometry", () => {
+  it("contains all three native controls without overlapping the next action", () => {
+    expect(MACOS_TRAFFIC_LIGHT_POSITION.x + 2 * 23 + 14).toBeLessThan(WINDOW_BUTTONS_WIDTH);
+    expect(MACOS_TRAFFIC_LIGHT_POSITION.y + 14).toBeLessThan(APP_TOP_BAR_HEIGHT);
+    expect(2 * MACOS_TRAFFIC_LIGHT_POSITION.y + 14).toBe(APP_TOP_BAR_HEIGHT);
   });
 });

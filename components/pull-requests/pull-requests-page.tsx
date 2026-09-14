@@ -331,6 +331,7 @@ function PrRow({
     <button
       type="button"
       data-sidebar-filter-result
+      data-navigation-href={`/pull-requests?pr=${encodeURIComponent(pr.prId)}`}
       onClick={onSelect}
       // The DERIVED selection of the page, not the CLICKS state: both
       // diverge in the two most common opening cases — upon arrival

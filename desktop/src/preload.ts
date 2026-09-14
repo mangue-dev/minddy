@@ -84,6 +84,10 @@ const notificationSettingsBridge: Partial<DesktopBridge> =
 const bridge: DesktopBridge = {
   version: readVersion(),
   platform: process.platform,
+  integratedWindowChrome: process.argv.includes("--minddy-integrated-chrome=1"),
+  setWindowChrome(theme: "light" | "dark") {
+    ipcRenderer.send("minddy:window-chrome", theme);
+  },
   notificationCapabilities,
   ...nativePushBridge,
   ...notificationSettingsBridge,
@@ -182,6 +186,14 @@ const bridge: DesktopBridge = {
 
   setWindowButtonsVisible(visible: boolean) {
     ipcRenderer.send("minddy:window-buttons", visible);
+  },
+
+  setCustomWindowControls(active: boolean) {
+    ipcRenderer.send("minddy:custom-window-controls", active);
+  },
+
+  performWindowControl(action: "close" | "minimize" | "fullscreen") {
+    ipcRenderer.send("minddy:window-control", action);
   },
 
   onWindowButtons(handler: (visible: boolean) => void) {

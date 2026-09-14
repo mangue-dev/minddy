@@ -17,6 +17,7 @@ import { oauthCallbackUrl } from "./oauth-callback-url";
 import { beginDesktopAuthTurn } from "./desktop/auth-turn";
 import type { DesktopAuthLink } from "./desktop/auth-link";
 import { clearPersistedQueryCache } from "./query-provider";
+import { clearAppTabsWindowState } from "./app-tabs-storage";
 import { readInterfaceLocale } from "./interface-locale";
 import { useAnalytics } from "./use-analytics";
 import { browserRuntimeConfig } from "./runtime-config-provider";
@@ -220,6 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         );
       } else if (event === "SIGNED_OUT") {
+        clearAppTabsWindowState();
         track("user_signed_out", {});
         reset();
       }
@@ -361,6 +363,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // next account on this machine would rehydrate the data of this one
     // before his own requests are successful.
     clearPersistedQueryCache();
+    clearAppTabsWindowState();
     window.location.href = "/login";
   }, []);
 

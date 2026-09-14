@@ -265,6 +265,7 @@ export function AdminDashboard() {
                     <button
                       type="button"
                       data-sidebar-filter-result
+                      data-navigation-href={`/admin?tab=${encodeURIComponent(section.tab)}&${ADMIN_SECTION_PARAM}=${encodeURIComponent(section.id)}`}
                       onClick={() => openSection(section)}
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:bg-muted/60"
                     >
@@ -289,6 +290,7 @@ export function AdminDashboard() {
             items={items}
             value={active}
             onValueChange={setActive}
+            hrefForValue={(value) => value === DEFAULT_TAB ? "/admin" : `/admin?tab=${encodeURIComponent(value)}`}
           />
         )}
       </SecondarySidebar>

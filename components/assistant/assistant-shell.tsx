@@ -811,7 +811,7 @@ export const AssistantShell = forwardRef<
           <SheetContent side="left" className="w-[280px] p-0 md:hidden">
             <SheetTitle className="sr-only">{t("title")}</SheetTitle>
             <div className="flex h-full min-h-0 flex-col bg-sidebar">
-              <div className="secondary-sidebar-header flex h-[60px] shrink-0 items-center gap-2 border-b border-border px-4">
+              <div className="secondary-sidebar-header flex h-[var(--app-content-header-height)] shrink-0 items-center gap-2 border-b border-border px-4">
                 <SidebarFilterField {...sidebarFilter} />
                 {newConversationButton}
               </div>

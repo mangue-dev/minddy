@@ -1778,7 +1778,9 @@
     "newIssueInProject": "New issue in this project",
     "copyPageTitle": "Copy page title",
     "copyIssueTitle": "Copy issue title",
-    "openLinkedObjective": "Open linked objective"
+    "openLinkedObjective": "Open linked objective",
+    "newTabSearchPlaceholder": "Search a screen to open in a new tab…",
+    "bulkSearchPlaceholder": "{count, plural, one {Action for # selected issue…} other {Actions for # selected issues…}}"
   },
   "Keyboard": {
     "then": "then",
@@ -6138,5 +6140,30 @@
     "importStorageFull": "Project storage is full. Free some space and try again.",
     "importFailed": "The import could not be completed. Try again; the same import will not be added twice.",
     "exportArchive": "Database archive (.zip)"
+  },
+  "WindowControls": {
+    "close": "Close window",
+    "minimize": "Minimize window",
+    "fullscreen": "Enter full screen"
+  },
+  "AppTabs": {
+    "label": "Application tabs",
+    "newTab": "New tab",
+    "moreTabs": "More tabs",
+    "close": "Close tab",
+    "closeNamed": "Close {name}",
+    "pin": "Pin tab",
+    "unpin": "Unpin tab",
+    "rename": "Rename tab",
+    "name": "Tab name",
+    "renameHint": "Leave the name empty to use the page name.",
+    "loading": "Loading tabs…",
+    "retry": "Try again",
+    "saveFailed": "Your changes could not be saved. Keep this tab open and try again.",
+    "syncFailed": "Tabs could not be synchronized. Check your connection and try again.",
+    "conflict": "This tab changed in another window. Try your action again.",
+    "lastTab": "Keep at least one tab open.",
+    "unavailableProject": "Unavailable project",
+    "destinationUnavailable": "This destination is unavailable. Choose another page or close the tab."
   }
 }

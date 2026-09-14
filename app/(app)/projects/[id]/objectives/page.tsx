@@ -207,12 +207,14 @@ function ObjectiveFilterMenu({
  * status, its progress, its manager.
  */
 function ObjectiveRow({
+  projectId,
   objective,
   selected,
   progress,
   lead,
   onSelect,
 }: {
+  projectId: string;
   objective: Objective;
   selected: boolean;
   progress: { done: number; total: number; percent: number };
@@ -225,6 +227,7 @@ function ObjectiveRow({
     <button
       type="button"
       data-sidebar-filter-result
+      data-navigation-href={`/projects/${projectId}/objectives?open=${encodeURIComponent(objective.id)}`}
       onClick={onSelect}
       aria-current={selected ? "true" : undefined}
       className={cn(
@@ -584,6 +587,7 @@ function ObjectivesInner() {
           <div className="flex flex-col gap-1 px-2 pt-2 pb-4">
             {listed.map((objective) => (
               <ObjectiveRow
+                projectId={projectId}
                 key={objective.id}
                 objective={objective}
                 selected={objective.id === selectedId}

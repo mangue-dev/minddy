@@ -67,7 +67,7 @@ export function desktopServerUnavailableHtml(
       ${desktopShellStyles(interFontDataUrl)}
       body { min-height: 100vh; display: grid; place-items: center; }
       .desktop-drag-band { display: none; }
-      html[data-desktop-platform="darwin"] .desktop-drag-band { display: block; position: fixed; inset: 0 0 auto; height: 60px; -webkit-app-region: drag; }
+      html[data-desktop-platform] .desktop-drag-band { display: block; position: fixed; inset: 0 0 auto; height: 44px; -webkit-app-region: drag; }
       main { width: min(100% - 48px, 540px); text-align: center; }
       .shell-brand { justify-content: center; margin-bottom: 56px; }
       .status { width: 48px; height: 48px; margin: 0 auto 22px; }

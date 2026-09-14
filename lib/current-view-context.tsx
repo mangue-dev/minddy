@@ -19,9 +19,9 @@
  * in a ref, not in a state: otherwise each selection change — a
  * PR clicked, a changed board view — would go back through the provider and
  * would re-render the entire shell and the page under it, for a value that
- * no one displays. The palette only questions it at the moment when it has
- * need: `resolveHref()` when clicking on “Save”, `resolveLabel()` when
- * l'ouverture du champ de nom.
+ * the broad provider tree needs to display. The tab route synchronizer subscribes
+ * through useSyncExternalStore; the palette reads resolveHref()/resolveLabel()
+ * when its actions are invoked.
  *
  * Ownership: the same lock as `useAssistantContext` — a page that is
  * disassembles only unpublishes if it is still the owner, otherwise navigation
@@ -37,6 +37,7 @@ import {
   useId,
   useMemo,
   useRef,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { buildViewHref } from "@/lib/saved-view-href";
@@ -57,6 +58,7 @@ export interface CurrentViewSnapshot {
 interface CurrentViewContextValue {
   publish: (snapshot: CurrentViewSnapshot | null, ownerId: string) => void;
   read: () => CurrentViewSnapshot | null;
+  subscribe: (listener: () => void) => () => void;
 }
 
 const CurrentViewContext = createContext<CurrentViewContextValue | null>(null);
@@ -64,6 +66,7 @@ const CurrentViewContext = createContext<CurrentViewContextValue | null>(null);
 export function CurrentViewProvider({ children }: { children: ReactNode }) {
   const snapshotRef = useRef<CurrentViewSnapshot | null>(null);
   const ownerRef = useRef<string | null>(null);
+  const listeners = useRef(new Set<() => void>());
 
   // Stable identity, for good: no consumer ever returns to
   // because of a publication.
@@ -73,14 +76,20 @@ export function CurrentViewProvider({ children }: { children: ReactNode }) {
         if (next) {
           ownerRef.current = ownerId;
           snapshotRef.current = next;
+          listeners.current.forEach((listener) => listener());
           return;
         }
         // Only the current owner has the right to delete.
         if (ownerRef.current !== ownerId) return;
         ownerRef.current = null;
         snapshotRef.current = null;
+        listeners.current.forEach((listener) => listener());
       },
       read: () => snapshotRef.current,
+      subscribe: (listener) => {
+        listeners.current.add(listener);
+        return () => { listeners.current.delete(listener); };
+      },
     }),
     []
   );
@@ -90,6 +99,13 @@ export function CurrentViewProvider({ children }: { children: ReactNode }) {
       {children}
     </CurrentViewContext.Provider>
   );
+}
+
+const emptySnapshot = () => null;
+const emptySubscription = () => () => {};
+export function useCurrentViewSnapshot() {
+  const context = useContext(CurrentViewContext);
+  return useSyncExternalStore(context?.subscribe ?? emptySubscription, context?.read ?? emptySnapshot, emptySnapshot);
 }
 
 /**

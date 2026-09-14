@@ -1778,7 +1778,9 @@
     "newIssueInProject": "Nuovo ticket in questo progetto",
     "copyPageTitle": "Copia titolo della pagina",
     "copyIssueTitle": "Copia titolo del ticket",
-    "openLinkedObjective": "Apri obiettivo collegato"
+    "openLinkedObjective": "Apri obiettivo collegato",
+    "newTabSearchPlaceholder": "Cerca una schermata da aprire in una nuova scheda…",
+    "bulkSearchPlaceholder": "{count, plural, one {Azione per # ticket selezionato…} other {Azioni per # ticket selezionati…}}"
   },
   "Keyboard": {
     "then": "allora",
@@ -6138,5 +6140,30 @@
     "importStorageFull": "Lo spazio di archiviazione del progetto è pieno. Libera spazio e riprova.",
     "importFailed": "Impossibile completare l’importazione. Riprova: la stessa importazione non verrà aggiunta due volte.",
     "exportArchive": "Archivio del database (.zip)"
+  },
+  "WindowControls": {
+    "close": "Chiudi finestra",
+    "minimize": "Riduci finestra",
+    "fullscreen": "Passa a schermo intero"
+  },
+  "AppTabs": {
+    "label": "Schede dell’applicazione",
+    "newTab": "Nuova scheda",
+    "moreTabs": "Altre schede",
+    "close": "Chiudi scheda",
+    "closeNamed": "Chiudi {name}",
+    "pin": "Fissa scheda",
+    "unpin": "Sblocca scheda",
+    "rename": "Rinomina scheda",
+    "name": "Nome della scheda",
+    "renameHint": "Lascia il nome vuoto per usare quello della pagina.",
+    "loading": "Caricamento delle schede…",
+    "retry": "Riprova",
+    "saveFailed": "Non è stato possibile salvare le modifiche. Tieni aperta questa scheda e riprova.",
+    "syncFailed": "Non è stato possibile sincronizzare le schede. Controlla la connessione e riprova.",
+    "conflict": "Questa scheda è cambiata in un’altra finestra. Ripeti l’azione.",
+    "lastTab": "Tieni aperta almeno una scheda.",
+    "unavailableProject": "Progetto non disponibile",
+    "destinationUnavailable": "Questa destinazione non è disponibile. Scegli un’altra pagina o chiudi la scheda."
   }
 }

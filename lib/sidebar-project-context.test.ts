@@ -10,6 +10,10 @@ const shell = readFileSync(
   join(process.cwd(), "components/app-shell-chrome.tsx"),
   "utf8",
 );
+const topBar = readFileSync(
+  join(process.cwd(), "components/app-top-bar.tsx"),
+  "utf8",
+);
 
 describe("primary sidebar project context", () => {
   it("replaces the project-mode Home row with a split context control", () => {
@@ -35,15 +39,17 @@ describe("primary sidebar project context", () => {
     expect(shell.match(/projects=\{projects\}/g)).toHaveLength(1);
     expect(sidebar.match(/<SidebarNav\s/g)).toHaveLength(1);
     expect(sidebar.match(/onMenuOpenChange=\{handleMenuOpenChange\}/g)).toHaveLength(2);
-    expect(shell).toContain("pinned={sidebarLayerOpen || inboxOpen}");
+    expect(shell).toContain("pinned={sidebarLayerOpen}");
     expect(shell).toContain("onLayerOpenChange={setSidebarLayerOpen}");
     expect(shell).toContain("overlay={!sidebarHidden && secondaryNav}");
   });
 
-  it("keeps the rail expanded while the inbox popover owns focus", () => {
-    expect(shell).toContain("inboxOpen={inboxOpen}");
+  it("hosts the inbox in the top bar independently of sidebar expansion", () => {
+    expect(shell).toMatch(/<AppTopBar\b[^>]*inbox=\{inboxItem\}/);
+    expect(topBar).toMatch(/<AppTopActions\b[^>]*inbox=\{inbox\}/);
     expect(shell).toContain("<InboxPopover open={inboxOpen} onOpenChange={setInboxOpen}");
-    expect(sidebar).toContain("!(hovered || focusWithin || menuOpen || inboxOpen)");
+    expect(sidebar).toContain("!(hovered || focusWithin || menuOpen)");
+    expect(sidebar).not.toContain("inboxOpen");
   });
 
   it("keeps the current project tab when building switch destinations", () => {

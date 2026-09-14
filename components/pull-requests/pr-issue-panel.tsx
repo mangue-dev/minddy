@@ -1,4 +1,5 @@
 "use client";
+import { useAppTabChange } from "@/lib/use-app-tab-change";
 
 import { useCallback, useState } from "react";
 import { toast } from "mangue-ui";
@@ -27,6 +28,7 @@ export function PrIssuePanel({
   issueId: string;
   onClose: () => void;
 }) {
+  useAppTabChange(onClose);
   const { projects } = useProjects();
   const project = projects.find((p) => p.id === projectId) ?? null;
 

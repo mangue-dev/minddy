@@ -1778,7 +1778,9 @@
     "newIssueInProject": "Neues Ticket in diesem Projekt",
     "copyPageTitle": "Seitentitel kopieren",
     "copyIssueTitle": "Tickettitel kopieren",
-    "openLinkedObjective": "Verknüpftes Ziel öffnen"
+    "openLinkedObjective": "Verknüpftes Ziel öffnen",
+    "newTabSearchPlaceholder": "Bildschirm für einen neuen Tab suchen…",
+    "bulkSearchPlaceholder": "{count, plural, one {Aktion für # ausgewähltes Problem…} other {Aktionen für # ausgewählte Probleme…}}"
   },
   "Keyboard": {
     "then": "dann",
@@ -6138,5 +6140,30 @@
     "importStorageFull": "Der Projektspeicher ist voll. Gib Speicherplatz frei und versuche es erneut.",
     "importFailed": "Der Import konnte nicht abgeschlossen werden. Versuche es erneut; derselbe Import wird nicht zweimal hinzugefügt.",
     "exportArchive": "Datenbankarchiv (.zip)"
+  },
+  "WindowControls": {
+    "close": "Fenster schließen",
+    "minimize": "Fenster minimieren",
+    "fullscreen": "Vollbildmodus aktivieren"
+  },
+  "AppTabs": {
+    "label": "Anwendungstabs",
+    "newTab": "Neuer Tab",
+    "moreTabs": "Weitere Tabs",
+    "close": "Tab schließen",
+    "closeNamed": "{name} schließen",
+    "pin": "Tab anheften",
+    "unpin": "Tab lösen",
+    "rename": "Tab umbenennen",
+    "name": "Tabname",
+    "renameHint": "Lass den Namen leer, um den Seitennamen zu verwenden.",
+    "loading": "Tabs werden geladen…",
+    "retry": "Erneut versuchen",
+    "saveFailed": "Deine Änderungen konnten nicht gespeichert werden. Lass diesen Tab geöffnet und versuche es erneut.",
+    "syncFailed": "Die Tabs konnten nicht synchronisiert werden. Prüfe deine Verbindung und versuche es erneut.",
+    "conflict": "Dieser Tab wurde in einem anderen Fenster geändert. Wiederhole die Aktion.",
+    "lastTab": "Lass mindestens einen Tab geöffnet.",
+    "unavailableProject": "Projekt nicht verfügbar",
+    "destinationUnavailable": "Dieses Ziel ist nicht verfügbar. Wähle eine andere Seite oder schließe den Tab."
   }
 }

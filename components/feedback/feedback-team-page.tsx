@@ -1,4 +1,5 @@
 "use client";
+import { useAppTabChange } from "@/lib/use-app-tab-change";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useParams, useRouter, useSearchParams } from "next/navigation";
@@ -672,6 +673,7 @@ function AuthorValue({
  * in “there is…”, because a return is judged by its freshness more than by its day.
  */
 function FeedbackRow({
+  projectId,
   post,
   selected,
   boardEnabled,
@@ -681,6 +683,7 @@ function FeedbackRow({
   teamLanguage,
   onSelect,
 }: {
+  projectId: string;
   post: TeamFeedbackListItem;
   selected: boolean;
   boardEnabled: boolean;
@@ -711,6 +714,7 @@ function FeedbackRow({
       ref={askNumoRef}
       type="button"
       data-sidebar-filter-result
+      data-navigation-href={`/projects/${projectId}/feedback?post=${encodeURIComponent(post.id)}`}
       onClick={onSelect}
       aria-current={selected ? "true" : undefined}
       className={cn(
@@ -962,6 +966,7 @@ export function FeedbackTeamPage() {
     [openAssistant, projectId]
   );
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
+  useAppTabChange(() => setOpenIssueId(null));
   const openIssue: Issue | null = issues.find((i) => i.id === openIssueId) ?? null;
   const handleAddRelation = useCallback(
     (sourceId: string, type: IssueRelationType, targetId: string) => {
@@ -1221,6 +1226,7 @@ export function FeedbackTeamPage() {
               {listedPosts.map((post) => (
                 <li key={post.id}>
                   <FeedbackRow
+                    projectId={projectId}
                     post={post}
                     selected={selectedId === post.id}
                     boardEnabled={boardEnabled}

@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import type { CSSProperties } from "react";
+import { APP_CONTENT_HEADER_HEIGHT } from "@/lib/app-chrome-layout";
 import { headers } from "next/headers";
 import { Inter, Instrument_Serif } from "next/font/google";
 import {
@@ -174,7 +176,12 @@ export default async function RootLayout({
   const clientMessages = publicClientMessages(messages);
 
   return (
-    <html lang={locale} suppressHydrationWarning data-scroll-behavior="smooth">
+    <html
+      lang={locale}
+      suppressHydrationWarning
+      data-scroll-behavior="smooth"
+      style={{ "--app-content-header-height": `${APP_CONTENT_HEADER_HEIGHT}px` } as CSSProperties}
+    >
       <head>
         {/* Theme applied BEFORE the first paint. Injected out of React tree
             (useServerInsertedHTML) : un <script> rendu par un composant fait

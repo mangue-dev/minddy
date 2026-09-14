@@ -418,7 +418,9 @@ function serverUnavailableResponse(request: NextRequest): NextResponse {
 
 export async function proxy(request: NextRequest) {
   try {
-    return await routeRequest(request);
+    const response = await routeRequest(request);
+    response.headers.set("x-minddy-desktop-chrome", "1");
+    return response;
   } catch (error) {
     if (!isBackendUnavailableError(error)) throw error;
     console.warn("[proxy] Backend unavailable:", error);
@@ -597,6 +599,11 @@ async function routeRequest(request: NextRequest) {
     // Even on redirection: an app URL does not have to appear in an index,
     // if only as “page with redirection”.
     redirect.headers.set("X-Robots-Tag", "noindex, nofollow");
+    // Preserve token rotation or deletion when an expired session redirects to
+    // sign-in. Otherwise the next request reuses the same invalid refresh token.
+    for (const { name, value, options } of refreshedCookies) {
+      redirect.cookies.set(name, value, { ...options, ...SESSION_COOKIE_OPTIONS });
+    }
     return redirect;
   }
 

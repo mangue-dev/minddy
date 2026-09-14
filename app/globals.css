@@ -45,7 +45,7 @@
 }
 
 /* In the Electron app, the fixed strip that allows you to move the window covers
-   the first 60 pixels. When the compact navigation panel
+   the first 44 pixels. When the compact navigation panel
    navigation compact is stored, its edge must pass ABOVE this strip
    and become a web zone again; otherwise a hover of the top-left corner cannot
    never recall navigation. Once opened, it goes back under the panel
@@ -404,6 +404,8 @@ a.markdown-link::before {
   --card: oklch(1 0 0);
   --popover: oklch(1 0 0);
   --sidebar-border: oklch(0.912 0.008 264);
+  --app-tab-background: color-mix(in oklab, var(--sidebar-accent) 55%, transparent);
+  --app-tab-active-background: var(--background);
 }
 /* Keep content slightly lighter than both sidebar levels, including floating
    navigation. The shared surface scale below also covers cards and popovers. */
@@ -424,6 +426,8 @@ a.markdown-link::before {
   --sidebar-accent: oklch(0.236 0.005 264);
   --secondary: oklch(0.249 0.005 264);
   --accent: oklch(0.257 0.005 264);
+  --app-tab-background: color-mix(in oklab, var(--sidebar-accent) 55%, transparent);
+  --app-tab-active-background: color-mix(in oklab, var(--sidebar-accent) 92%, white);
 
   /* Fields and neutral badges stay above the surface; hover adds another step. */
   --control: oklch(0.240 0.005 264);
@@ -2268,11 +2272,8 @@ html:has(.app-shell) [data-radix-scroll-area-viewport][style*="overflow-y: scrol
    start again at the next one. Hence the inversion: **a single strip, in the layout
    root, on everything the window displays.**
 
-   It is the height of the app header (60 px, the horizontal line which
-   crosses minddy — same height as the mark line and title of the
-   secondary bar). It is therefore not one more band in the app: it
-   covers exactly what was ALREADY movable, and doesn't change anything
-   than where there was nothing.
+   Its 44 px height matches the native application bar. Authenticated desktop
+   layouts disable this fallback while their own bar provides the drag region.
 
    It starts from `top: 0`: the traffic lights are drawn by macOS
    ABOVE the web view and it is the system that serves them, not the page. */
@@ -2284,7 +2285,7 @@ html[data-desktop-platform="darwin"] .desktop-drag-band {
   display: block;
   position: fixed;
   inset: 0 0 auto 0;
-  height: 60px;
+  height: 44px;
   /* Under the veils of dialogue (50): a strip that would move the window
      over an open modal would be a hold where the app says "reply
      d'abord ». */
@@ -2295,7 +2296,7 @@ html[data-desktop-platform="darwin"] .desktop-drag-band {
 /* ⚠ **A `drag` zone SWALLOWS the event**, including what is drawn
    over: regions are rectangles sent to the system, resolved
    before the page sees anything. Without this global exception, everything
-   what clicks in the first 60 pixels of any screen
+   what clicks in the first 44 pixels of any screen
    would become a window handle — the palette, the “New” button, the
    tabs of a board, the link of a legal page.
 
@@ -2401,10 +2402,10 @@ html[data-desktop-platform="darwin"] .secondary-sidebar-header
    carries `tabindex="-1"`, it is therefore taken; but the sails, no — they don’t
    only carry a `data-slot`, and the one on the palette comes from its own package
    and wore nothing at all. But “click next to close” is a click ON
-   the veil: in the first 60 pixels, it fell into the band, macOS
+   the veil: in the first 44 pixels, it fell into the band, macOS
    swallowed it, and the window began to slide under the cursor instead of the
    dialog closes. Deterministic, a hundred times out of a hundred, and only above
-   60 px.
+   44 px.
 
    Assumed counterpart: sail open, the strip no longer moves the window.
    This is the same choice as that already made for the band itself (`z-index: 30`,
@@ -2429,42 +2430,8 @@ html[data-desktop-platform="darwin"]
   backdrop-filter: none;
 }
 
-/* ⚠ **Neither the shell header nor the mark line carries a socket** (MIN-309).
-
-   They each wore one, and both were REDUNDANT: the band
-   above is `position: fixed; inset: 0 0 auto 0; height: 60px`, it covers
-   already exactly the brand line and the first 60 pixels of the header,
-   with a rectangle that NEVER moves.
-
-   Theirs, yes. `.sidebar-brand-row` is a child of `motion.aside` whose
-   framer animates the width 56 ↔ 256 px on each hover of the bar, and the header
-   shifts with the gutter. However, the map of regions is derived from the layout:
-   Blink collects it at the end of the layout and sends it to the browser process, which
-   sole arbiter if a `mousedown` belongs to the window or the page. She
-   was therefore reconstructed and resent at each frame of the animation — a
-   thirty times on ProMotion for a simple hover —, and while it
-   changes it is OUTDATED: an arbitration rendered on a card of an image of
-   delay causes macOS to consume support which was intended for control.
-
-   If a header higher than 60 px should become enterable again one day, set the
-   taken on a pseudo-element `fixed` — not on the header, whose rectangle
-   follows the animated width. */
-
-/* MIN-488: expanded macOS sidebars use the top-left space for native window
-   controls, so only search and inbox remain on the right. The collapsed rail
-   hides those actions and restores the Minddy mark. Web, Windows, and Linux
-   always keep the mark visible. */
-html[data-desktop-platform="darwin"]
-  [data-rail-hovered]
-  .sidebar-brand-row {
-  -webkit-app-region: no-drag;
-}
-
-html[data-desktop-platform="darwin"]
-  [data-collapsed="false"]
-  .sidebar-brand-mark {
-  display: none;
-}
+/* The sidebar inset now contains creation actions beneath the application bar. */
+.sidebar-brand-row { -webkit-app-region: no-drag; }
 
 /* ─── Toasts (sonner) — Geist-style solid status pills ──────────────────────
    Repaints every typed toast as a self-contained colored pill with white
@@ -2564,4 +2531,63 @@ html[data-desktop-platform="darwin"]
   background: var(--toast-error);
   border-color: var(--toast-error);
   color: #fff;
+}
+
+/* The full-width application bar and lower workspace share one viewport. */
+.app-workspace > .app-shell {
+  height: auto;
+  min-height: 0;
+  flex: 1;
+  max-height: none;
+  max-width: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding-top: 0;
+}
+.app-workspace { padding-top: env(safe-area-inset-top); }
+.app-titlebar-safe-area { height: 44px; }
+@media (min-width: 2200px) {
+  html:not([data-desktop-app]) .app-workspace {
+    max-height: var(--spacing-app-max-h);
+    max-width: var(--spacing-app-max-w);
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  }
+}
+@media (min-width: 768px) {
+  .app-top-bar { display: flex; }
+  html[data-desktop-app]:has(.app-top-bar) .desktop-drag-band { display: none; }
+}
+html[data-desktop-app] .app-top-bar,
+html[data-desktop-app] .app-content-header { -webkit-app-region: drag; }
+html[data-desktop-app] :is(button, a, input, textarea, select, [role="tab"], [role="tablist"], [role="menu"], [role="menuitem"], [role="tooltip"], [role="dialog"], [contenteditable="true"], [tabindex]) {
+  -webkit-app-region: no-drag;
+}
+html[data-integrated-caption-controls]:not([data-desktop-platform="darwin"]) .app-titlebar-safe-area {
+  margin-left: env(titlebar-area-x, 0px);
+  width: env(titlebar-area-width, 100%);
+  flex: none;
+}
+html[data-integrated-caption-controls]:not(:has(.app-top-bar)) .desktop-drag-band {
+  display: block;
+  position: fixed;
+  inset: 0 0 auto;
+  height: 44px;
+  z-index: 30;
+  -webkit-app-region: drag;
+}
+@media (max-width: 767px) {
+  html[data-integrated-caption-controls]:not([data-desktop-platform="darwin"]) .app-workspace::before {
+    content: "";
+    display: block;
+    height: 44px;
+    flex-shrink: 0;
+    -webkit-app-region: drag;
+  }
+}
+.app-update-slot button { max-width: 100%; }
+@media print {
+  .app-top-bar { display: none !important; }
 }

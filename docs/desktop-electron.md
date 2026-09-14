@@ -117,30 +117,82 @@ Settings that cannot be discussed:
 - A user agent suffix (`minddy-desktop/<version>`), so that the server and
   the UI both know that we are in the app.
 
-**The title bar is an interface decision, not a setting.** It is
-hidden (`titleBarStyle: "hidden"`, not `frame: false` — without a frame, the
-buttons are no longer positioned from the same origin and go back into the
-corner). Three consequences stand together:
+### Application tabs and window chrome (MIN-536)
 
-- macOS no longer knows where to enter the window. `-webkit-app-region` is CSS,
-  so it is the PAGE which must say it (app/globals.css, section “app de
-  office"). **Single strip, in root layout**, as high as the header
-  of the app (60 px) and present on everything the window displays. The first
-  version hooked the socket to the shell header and mark line —
-  that is to say to the two pieces of furniture that six configurations do not have: zen mode,
-  legal pages, public board, published page, shared view, `not-found`. The
-  window was strictly still there (MIN-292). A `drag` zone swallowing the
-  click, the band is accompanied by a GLOBAL `no-drag` on everything that activates.
-- The system buttons no longer exist on their own: they light up by hand,
-  and arise **in the sidebar mark line, in place of the
-  mark**, which passes to the right. Not in a gang of their own, which would push the whole
-  column downwards and would be betrayed by a seam of another color.
-- FOLDED bar (rail), its 56 px no longer hold them: we remove them, and
-  brand takes its place. The flyover that unfolds the rail brings them back — a bar
-  unfolded over the secondary is an unfolded bar like any other. Go
-  clicking them from there means EXIT the bar from the point of view of
-  Chromium: the rail would close under the pointer and take them away, hence the
-  lookout for `app-sidebar.tsx`, who recognizes this exit at his corner.
+The authenticated web and desktop workspace has a 44 px application bar above
+both sidebars and content. It is hidden below 768 px. The sidebar inset, content
+header, and secondary sidebar header are all 50 px tall. Their single source of
+truth is `APP_CONTENT_HEADER_HEIGHT` in
+`lib/app-chrome-layout.ts`, exposed globally as `--app-content-header-height`;
+placeholders and Home loading/content spacing use the same value. The inset
+contains the existing New issue and notebook actions; its collapsed rail
+contains only the creation “+”. Search,
+inbox, sidebar visibility, application tabs, and update controls belong to the
+new bar. The sidebar toggle remains disabled below 1200 px.
+
+The bar's navigation section is 256 px wide with the primary sidebar alone or
+with navigation hidden, and 376 px with a docked secondary sidebar. A temporary
+hover reveal does not resize it. Native caption controls and the update action
+retain their space while the tab list scrolls. The application content header
+remains an additional desktop drag surface.
+
+Tabs are personal to an account. IDs, destinations, custom names, pins, and order
+synchronize between devices; the active tab and lightweight working filters are
+local to each window. Regular tabs are 200 px wide and pinned tabs are square.
+Pinning changes presentation only: every sidebar click navigates in the current
+tab. Create another tab first to keep a separate destination. New tabs start at
+Home, and the final tab cannot be closed. There is no collection-size limit.
+Drag a tab to reorder it within its pinned or regular group; Alt+Shift+Left/Right
+provides the same action from the keyboard. Regular-tab name tooltips appear
+only when the label overflows. Pinned tabs always expose their hidden name.
+
+Switching tabs restores the page and its published view/selection, including
+consumed query parameters, and closes the transient issue panel. Mounted wiki
+editors, including database previews, must finish saving before an active tab
+can be switched or closed. A failed save keeps its content open. Notebook and
+Numo composer state remain shared. An explicit startup deep link takes priority
+over window restoration. Browser Back/Forward follows the window's chronological
+history in the active application tab; there are no dedicated Back/Forward UI
+buttons. Cmd/Ctrl+W still hides the desktop window.
+
+Remote destination changes never navigate the current window. A remote close
+is applied only after local editor saves succeed; failed saves retain a recovery
+tab. Mutations are serialized within a window and checked against the database
+revision, with the returned canonical row applied on success. Network writes
+do not block the navigation queue. Creation and
+closure update the strip after departure guards succeed. Failed creates retain
+the same ID and local content for retry; failed closes restore the tab without
+redirecting the active editor. Reorders are optimistic and roll back on failure.
+Conflicting actions can be repeated using the new revision; destination writes remain pending for
+retry. The account collection is fetched in pages and excluded from the general
+localStorage query snapshot. Only the active tab's restoration metadata is stored
+in account-scoped sessionStorage and removed on sign-out.
+
+macOS uses native traffic lights at x=19, y=15, independently of sidebar state.
+Modal holds and fullscreen acknowledgements remain in place. Windows and Linux
+start with the native frame for compatibility with older self-hosted renderers.
+Only a main document from the selected origin advertising
+`x-minddy-desktop-chrome: 1` opts into Electron's hidden title bar with a 44 px native title-bar overlay, theme
+synchronization, and Chromium's title-bar safe-area geometry. A bare Alt opens the
+main-process application menu, including server recovery actions, even when the
+remote server cannot load. The separate server-picker frame is unchanged.
+When the document capability changes, the shell replaces the window after the
+load completes, preserving committed session cookies, bounds, visibility, and
+maximized/fullscreen state. The replacement has the appropriate frame before it
+is shown; no capability is inferred from the origin or app version.
+
+Login, signup, and the server-unavailable screen have minimal native-control
+clearance and a drag surface, without application tabs. Interactive controls,
+menus, dialogs, and tooltips are non-draggable. On macOS, authenticated screens
+use stable renderer-owned traffic lights so opening a dialog does not switch
+between native and HTML controls; native controls return in full screen. The old root drag band is disabled
+when the authenticated desktop bar owns that region.
+
+Before releasing a new desktop build, verify native controls, fullscreen, zoom,
+DPI changes, and Alt menu access on actual Windows and Linux systems. Also check
+Alt with an unavailable server and Windows Snap at the supported minimum window
+size. Browser layout tests and desktop builds alone do not establish those
+platform behaviors.
 
 **SITE doesn't follow in the window — and "site" means ALL
 site** (tightened to MIN-292). The desktop app only shows two things:
@@ -183,15 +235,12 @@ would have gone, and the measure would have remained extinguished for everyone w
 or a choice. As long as no response is given, consent is worth `null`
 and PostHog remains cookie- and identity-free — nothing is surreptitiously measured.
 
-**A dialog box removes them, without anything moving.** They are native, and
-no `z-index` passes in front: a dialogue kept them across its corner,
-over his own veil. We therefore remove them - but the brand line keeps
-their PLACE, frozen at what it was worth at the opening, and draws three pellets
-identically inert
-([app-sidebar.tsx](../components/app-sidebar.tsx), `WindowButtonDecoys`). They
-go under the veil like the rest of the app. Without this lure, the brand would jump
-from one end of the bar to the other each time a dialog is opened, for an object
-that we don't even look at.
+**Authenticated screens use renderer-owned controls.** Native traffic lights
+cannot sit below a renderer dialog because no CSS `z-index` can cover them.
+Switching between native controls and HTML placeholders also caused a visible
+flash. The authenticated shell therefore keeps three interactive HTML controls
+mounted across dialogs (`WindowButtonDecoys`) and sends their close, minimize,
+and full-screen actions through the preload bridge.
 
 Their geometry is **noted on a pixel-decoded system screenshot by
 pixel**, and not deducted: left edges at 19, 42 and 65, top at 22, **14 px from
@@ -199,15 +248,14 @@ diameter**, so 23 px from center to center. The first version included
 the origin given to `trafficLightPosition` and an assumed step of 20 px — the only
 of the three values which was correct was the origin, and the shift could be seen.
 
-And the request **belongs to the page**: it dies with it. A reload
-while a dialog is open otherwise leaves the buttons hidden forever,
-with no one left to return them.
+The custom-controls request **belongs to the authenticated page** and is reset
+on full document navigation. Sign-in and other pages outside the application
+shell retain the native controls.
 
-**And in full screen, we never hide them.** macOS takes them to the top of
-the screen, under his own care; hiding them on top removes the only way to
-exit with the mouse. The page must still learn it so as not to
-keep their place - hence two distinct notions, what the bar DEMANDS and what
-that the buttons DO, and a round trip over the bridge
+**In full screen, native controls return.** macOS takes them to the top of the
+screen under its own care; hiding them there removes the mouse's standard exit.
+The page learns that state so it releases the HTML controls and their slot
+through a round trip over the bridge
 ([lib/use-window-buttons.ts](../lib/use-window-buttons.ts)).
 
 **The only real pitfall is authentication.** minddy suggests Google and GitHub

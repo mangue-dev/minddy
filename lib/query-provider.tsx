@@ -86,6 +86,7 @@ const PERSIST_BUSTER = "v1";
  * a repeat of this list.**
  */
 const NON_PERSISTED_KEY_PREFIXES: string[][] = [
+  ["app-tabs"], // Unbounded account collection; only local activation uses sessionStorage.
   ["me", "search-index"],
   ["me", "board-issues"], // short-lived resume snapshot; duplicates full issue rows
   ["agent-run"], // ["agent-run", runId]

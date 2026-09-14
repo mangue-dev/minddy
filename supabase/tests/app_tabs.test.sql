@@ -1,0 +1,30 @@
+BEGIN;
+CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
+SELECT plan(13);
+INSERT INTO auth.users(id, email) VALUES
+ ('53600000-0000-4000-8000-000000000001', 'tabs-one@example.test'),
+ ('53600000-0000-4000-8000-000000000002', 'tabs-two@example.test');
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '53600000-0000-4000-8000-000000000001', true);
+SELECT is(public.mutate_app_tab('ensure')->'tab'->>'href', '/home', 'initial tab opens Home');
+SELECT public.mutate_app_tab('ensure');
+SELECT is((SELECT count(*)::int FROM public.app_tabs), 1, 'initialization is idempotent');
+SELECT is(public.mutate_app_tab('close', (SELECT id FROM public.app_tabs), 1)->>'code', 'last_tab', 'final tab cannot close');
+SELECT public.mutate_app_tab('create', '53600000-0000-4000-8000-000000000010');
+SELECT public.mutate_app_tab('create', '53600000-0000-4000-8000-000000000010');
+SELECT is((SELECT count(*)::int FROM public.app_tabs), 2, 'retrying creation does not duplicate a tab');
+SELECT is(public.mutate_app_tab('update', '53600000-0000-4000-8000-000000000010', 1, '{"pinned":true,"custom_name":"Focus"}')->'tab'->>'revision', '2', 'a successful patch advances the revision');
+SELECT is(public.mutate_app_tab('update', '53600000-0000-4000-8000-000000000010', 1, '{"custom_name":"Old"}')->>'code', 'conflict', 'stale writes are rejected');
+SELECT is((SELECT custom_name FROM public.app_tabs WHERE id = '53600000-0000-4000-8000-000000000010'), 'Focus', 'stale writes do not alter current data');
+SELECT throws_ok($$DELETE FROM public.app_tabs$$, '42501', NULL, 'direct deletion cannot bypass final-tab protection');
+SELECT set_config('request.jwt.claim.sub', '53600000-0000-4000-8000-000000000002', true);
+SELECT is((SELECT count(*)::int FROM public.app_tabs), 0, 'another account cannot read the first account');
+SELECT is(public.mutate_app_tab('close', '53600000-0000-4000-8000-000000000010', 2)->>'code', 'not_found', 'another account cannot close the tab');
+SELECT set_config('request.jwt.claim.sub', '53600000-0000-4000-8000-000000000001', true);
+SELECT public.mutate_app_tab('close', '53600000-0000-4000-8000-000000000010', 2);
+SELECT is(public.mutate_app_tab('update', '53600000-0000-4000-8000-000000000010', 2, '{"href":"/all"}')->>'code', 'not_found', 'autosave does not recreate a remotely closed tab');
+SET LOCAL ROLE anon;
+SELECT throws_ok($$SELECT * FROM public.app_tabs$$, '42501', NULL, 'anonymous reads are denied');
+SELECT throws_ok($$SELECT public.mutate_app_tab('ensure')$$, '42501', NULL, 'anonymous mutation is denied');
+SELECT * FROM finish();
+ROLLBACK;

@@ -494,6 +494,7 @@ function RoutineRow({
     <button
       type="button"
       data-sidebar-filter-result
+      data-navigation-href={`/routines?routine=${encodeURIComponent(routine.id)}`}
       onClick={onSelect}
       className={cn(
         // `pr-3` and not `pr-2`: the status point (paused, missed passage)

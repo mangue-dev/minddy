@@ -1,38 +1,22 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-
-const source = readFileSync(
-  join(process.cwd(), "components/app-sidebar.tsx"),
-  "utf8",
-);
-
+const sidebar = readFileSync("components/app-sidebar.tsx", "utf8");
+const actions = readFileSync("components/app-top-actions.tsx", "utf8");
+const topBar = readFileSync("components/app-top-bar.tsx", "utf8");
 describe("primary sidebar chrome", () => {
-  it("anchors the inbox badge to its icon instead of the control corner", () => {
-    expect(source).toContain(
-      '<span className="relative flex size-[18px] shrink-0">',
-    );
-    expect(source).toContain(
-      'className="absolute -right-2 -top-1.5 flex items-center justify-center rounded-full bg-sidebar"',
-    );
+  it("keeps the inbox badge anchored to its icon in the global bar", () => {
+    expect(actions.includes('className="relative flex size-[18px] shrink-0"')).toBe(true);
+    expect(actions.includes('data-inbox-trigger={inboxTrigger || undefined}')).toBe(true);
   });
-
-  it("never draws modal window-button decoys in the collapsed rail", () => {
-    expect(source).toContain(
-      "{!collapsed && windowButtons.decoy && <WindowButtonDecoys />}",
-    );
+  it("moves creation actions into the shared-height inset without duplicating them", () => {
+    expect(sidebar.includes('sidebar-brand-row relative flex h-[var(--app-content-header-height)]')).toBe(true);
+    expect(sidebar.match(/<SidebarQuickActions/g)).toHaveLength(1);
+    expect(sidebar.includes('<SidebarBrand')).toBe(false);
+    expect(sidebar.includes('<SidebarTopActions')).toBe(false);
+    expect(sidebar.includes('pt-[calc((var(--app-content-header-height)-2.25rem)/2)]')).toBe(true);
   });
-
-  it("uses the stable desktop platform for the native-control pointer gap", () => {
-    expect(source).toContain(
-      "document.documentElement.dataset.desktopPlatform",
-    );
-    expect(source).not.toContain("windowButtons.reserved && e.clientX");
-  });
-
-  it("marks the no-drag titlebar only for a hovered rail", () => {
-    expect(source).toContain(
-      'data-rail-hovered={overlay && hovered ? "" : undefined}',
-    );
+  it("keeps native controls outside the rail and hidden navigation", () => {
+    expect(sidebar.includes('useHoldWindowButtons')).toBe(false);
+    expect(topBar.includes('native.decoy && <WindowButtonDecoys')).toBe(true);
   });
 });

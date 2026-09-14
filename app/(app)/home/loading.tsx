@@ -11,7 +11,7 @@ import { Skeleton } from "mangue-ui";
 // promises blocks to keep none shakes the page more than it announces.
 export default function HomeLoading() {
   return (
-    <section className="grid min-h-full grid-rows-[1fr_auto_1fr] px-6 desktop:pb-[60px]">
+    <section className="grid min-h-full grid-rows-[1fr_auto_1fr] px-6 desktop:pb-[var(--app-content-header-height)]">
       <div className="mx-auto flex w-full max-w-xl items-end pb-5 pt-10">
         <Skeleton className="mx-auto h-8 w-64" />
       </div>

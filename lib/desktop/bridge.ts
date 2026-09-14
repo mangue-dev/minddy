@@ -45,6 +45,10 @@ export interface DesktopNativePushRegistration {
 }
 
 export interface DesktopBridge {
+  /** Actual frame mode; older shells do not negotiate this capability. */
+  readonly integratedWindowChrome?: boolean;
+  /** Match integrated caption controls to the page theme; absent in older shells. */
+  setWindowChrome?(theme: "light" | "dark"): void;
   /** The version of the shell (`app.getVersion()`), to display it. */
   readonly version: string;
   /**
@@ -122,6 +126,10 @@ export interface DesktopBridge {
    * vraiment revient par `onWindowButtons`.
    */
   setWindowButtonsVisible(visible: boolean): void;
+  /** Use renderer-owned macOS controls while the authenticated shell is mounted. */
+  setCustomWindowControls?(active: boolean): void;
+  /** Perform an action from a renderer-owned macOS window control. */
+  performWindowControl?(action: "close" | "minimize" | "fullscreen"): void;
   /**
    * What the buttons REALLY do — the only thing the focus on
    * page has the right to rely. Returns unsubscribe, and replays the status

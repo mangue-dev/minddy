@@ -6,7 +6,6 @@ import {
   useId,
   useRef,
   useState,
-  type ComponentType,
   type MouseEvent,
   type ReactNode,
 } from "react";
@@ -14,16 +13,6 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
-import { useDesktopUpdateStatus } from "@/lib/desktop/use-update-status";
-import { useWindowsStoreUpdateAvailable } from "@/lib/desktop/use-windows-store-update";
-import { useNewVersion } from "@/lib/use-new-version";
-import {
-  useHoldWindowButtons,
-  useWideLayout,
-  useWindowButtonsSlot,
-} from "@/lib/use-window-buttons";
-import { WindowButtonDecoys } from "@/components/desktop-window-buttons";
-import { isMacWindowControlsZone } from "@/lib/sidebar-window-controls";
 import { isSidebarPointerTarget } from "@/lib/sidebar-pointer-target";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -51,6 +40,7 @@ import {
   IssueContextMenu,
   type ContextMenuAction,
 } from "@/components/issue-context-menu";
+import { useNavigationContextActions } from "@/components/navigation-context-actions";
 import {
   LogOut,
   Megaphone,
@@ -60,29 +50,20 @@ import {
   ArrowUpRight,
   Shield,
   CircleHelp,
-  Search,
   Trash2,
-  ArrowDownToLine,
-  ShoppingBag,
-  RefreshCw,
-  Loader2,
   Check,
   ChevronDown,
   ChevronLeft,
   Home,
-  type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { useIsAdmin } from "@/lib/use-is-admin";
 import { useMyAvatarSource } from "@/lib/use-my-avatar";
-import { MinddyLogo } from "@/components/minddy-logo";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
-import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
-import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import { transitions } from "@/lib/motion";
 import { projectIdFromPath, projectTabHref } from "@/lib/project-id-from-path";
 import { usePrefetchProject } from "@/lib/use-prefetch-project";
@@ -90,7 +71,6 @@ import { usePrefetchPages } from "@/lib/use-pages-query";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { NewMenu } from "@/components/new-menu";
 import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
-import { SidebarVisibilityButton } from "@/components/sidebar-visibility-button";
 import { UsageIndicator } from "@/components/usage-indicator";
 import {
   SIDEBAR_COMPACT_CONTROL_CLASS,
@@ -170,11 +150,7 @@ export type AppNavItem = NavItem & {
    * folded, it keeps the triangle, and the counter only in default.
    */
   badgeCollapsed?: ReactNode;
-  /**
-   * Right-click actions on the row. Reserved for entries that bear a
-   * OBJECT that we can do something with — a draft of a project, which we throw away
-   * from there rather than reopening it. A navigation entry does not have one.
-   */
+  /** Additional right-click actions for rows that represent editable objects. */
   contextActions?: ContextMenuAction[];
 };
 export type AppNavSection = Omit<NavSection, "items"> & { items: AppNavItem[] };
@@ -193,133 +169,6 @@ const ProductFeedbackDialog = dynamic(
 
 /* ─── Brand ────────────────────────────────────────────────────────── */
 
-/** Minddy mark for web, Windows, Linux, and the collapsed macOS rail. */
-function SidebarBrand() {
-  return (
-    <Link
-      href="/home"
-      aria-label="minddy"
-      className={cn(
-        "sidebar-brand-mark inline-flex shrink-0 items-center justify-center text-sidebar-foreground",
-        ROW_BOX,
-      )}
-    >
-      <MinddyLogo className={cn("h-6 w-auto", ENV_LOGO_TINT[getAppEnv()])} />
-    </Link>
-  );
-}
-
-function SidebarTopAction({
-  icon: Icon,
-  label,
-  href,
-  onClick,
-  onWarm,
-  badge,
-  shortcut,
-  inboxTrigger,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-  href?: string;
-  onClick?: () => void;
-  onWarm?: () => void;
-  badge?: ReactNode;
-  shortcut?: ReactNode;
-  inboxTrigger?: boolean;
-}) {
-  const className = cn(
-    SIDEBAR_COMPACT_CONTROL_CLASS,
-    "text-sidebar-foreground/65 hover:text-sidebar-foreground",
-  );
-  const content = (
-    <span className="relative flex size-[18px] shrink-0">
-      <Icon className="size-[18px]" />
-      {badge != null ? (
-        <span className="absolute -right-2 -top-1.5 flex items-center justify-center rounded-full bg-sidebar">
-          {badge}
-        </span>
-      ) : null}
-    </span>
-  );
-  const control = href ? (
-    <Link href={href} aria-label={label} className={className}>
-      {content}
-    </Link>
-  ) : (
-    <button
-      type="button"
-      aria-label={label}
-      className={className}
-      onClick={onClick}
-      data-inbox-trigger={inboxTrigger || undefined}
-      aria-haspopup={inboxTrigger ? "dialog" : undefined}
-      onPointerEnter={onWarm}
-      onFocus={onWarm}
-    >
-      {content}
-    </button>
-  );
-
-  return (
-    <Tooltip
-      delayDuration={SIDEBAR_TOOLTIP_DELAY_MS}
-      disableHoverableContent
-    >
-      <TooltipTrigger asChild>{control}</TooltipTrigger>
-      <TooltipContent side="bottom" className="flex items-center gap-2">
-        <span>{label}</span>
-        {shortcut}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function SidebarTopActions({
-  collapsed,
-  inbox,
-  onSearch,
-  onSearchWarm,
-}: {
-  collapsed: boolean;
-  inbox: AppNavItem;
-  onSearch: () => void;
-  onSearchWarm?: () => void;
-}) {
-  const t = useTranslations("Nav");
-  const tk = useTranslations("Keyboard");
-  const modKey = useModKey();
-  if (collapsed) return null;
-
-  return (
-    <div className="ml-auto flex shrink-0 items-center gap-1">
-      <SidebarTopAction
-        icon={Search}
-        label={t("searchPlaceholder")}
-        onClick={onSearch}
-        onWarm={onSearchWarm}
-        shortcut={<KbdSequence keys={[[modKey, "K"]]} size="sm" />}
-      />
-      <SidebarTopAction
-        icon={inbox.icon!}
-        label={inbox.label}
-        onClick={inbox.onClick}
-        inboxTrigger
-        badge={inbox.badgeCollapsed ?? inbox.badge}
-        shortcut={
-          inbox.shortcut ? (
-            <KbdSequence
-              keys={[[CHORD_PREFIX.toUpperCase()], [inbox.shortcut]]}
-              separator={tk("then")}
-              size="sm"
-            />
-          ) : null
-        }
-      />
-    </div>
-  );
-}
-
 function SidebarQuickActions({
   collapsed,
   onScratchpadWarm,
@@ -328,7 +177,7 @@ function SidebarQuickActions({
   onScratchpadWarm?: () => void;
 }) {
   return (
-    <div className={cn("flex shrink-0 gap-1 pt-3", GUTTER)}>
+    <div className={cn("flex w-full min-w-0 shrink-0 gap-1")}>
       <NewMenu variant="sidebar" collapsed={collapsed} />
       {!collapsed ? (
         <ScratchpadTrigger variant="sidebar" onWarm={onScratchpadWarm} />
@@ -349,6 +198,8 @@ function SidebarRow({
   const Icon = item.icon;
   const active = item.active;
   const tk = useTranslations("Keyboard");
+  const navigationActions = useNavigationContextActions(item.href);
+  const contextActions = [...navigationActions, ...(item.contextActions ?? [])];
   // While a G-chord is armed, surface this row's second key as a Kbd hint
   // (AutoKap-style) — takes the trailing slot over the badge for the moment.
   const chordPrefix = useChordPrefix();
@@ -417,7 +268,7 @@ function SidebarRow({
     x: number;
     y: number;
   } | null>(null);
-  const openContextMenu = item.contextActions?.length
+  const openContextMenu = contextActions.length
     ? (e: MouseEvent) => {
         e.preventDefault();
         setMenuPosition({ x: e.clientX, y: e.clientY });
@@ -485,7 +336,7 @@ function SidebarRow({
     </Tooltip>
   );
 
-  if (!item.contextActions?.length) return row;
+  if (!contextActions.length) return row;
   return (
     <>
       {row}
@@ -493,7 +344,7 @@ function SidebarRow({
       <IssueContextMenu
         position={menuPosition}
         onClose={() => setMenuPosition(null)}
-        actions={item.contextActions}
+        actions={contextActions}
         searchable={false}
       />
     </>
@@ -516,7 +367,7 @@ function SidebarNav({
   return (
     <nav
       className={cn(
-        "scrollbar-quiet flex-1 overflow-x-hidden overflow-y-auto pt-1 pb-2",
+        "scrollbar-quiet flex-1 overflow-x-hidden overflow-y-auto pt-[calc((var(--app-content-header-height)-2.25rem)/2)] pb-2",
         GUTTER,
       )}
     >
@@ -573,6 +424,8 @@ function ProjectContextRow({
   const pathname = usePathname();
   const prefetchProject = usePrefetchProject();
   const compactBadge = homeItem.badgeCollapsed ?? homeItem.badge;
+  const homeActions = useNavigationContextActions(homeItem.href);
+  const [homeMenuPosition, setHomeMenuPosition] = useState<{ x: number; y: number } | null>(null);
 
   const projectTrigger = (
     <DropdownMenuTrigger
@@ -602,6 +455,7 @@ function ProjectContextRow({
   );
 
   return (
+    <>
     <DropdownMenu onOpenChange={onMenuOpenChange}>
       {collapsed ? (
         <Tooltip delayDuration={SIDEBAR_TOOLTIP_DELAY_MS} disableHoverableContent>
@@ -615,6 +469,10 @@ function ProjectContextRow({
               <MotionLink
                 href={homeItem.href as string}
                 aria-label={homeItem.label}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  setHomeMenuPosition({ x: event.clientX, y: event.clientY });
+                }}
                 className="relative flex h-9 w-12 shrink-0 cursor-pointer items-center justify-center gap-0.5 rounded-lg outline-hidden text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground"
                 whileTap={{ scale: 0.97 }}
                 transition={transitions.snappy}
@@ -669,6 +527,13 @@ function ProjectContextRow({
         })}
       </DropdownMenuContent>
     </DropdownMenu>
+    <IssueContextMenu
+      position={homeMenuPosition}
+      onClose={() => setHomeMenuPosition(null)}
+      actions={homeActions}
+      searchable={false}
+    />
+    </>
   );
 }
 
@@ -1013,277 +878,6 @@ function ChangelogButton({
   );
 }
 
-function FooterRow({
-  icon: Icon,
-  label,
-  expandedLabel = label,
-  onClick,
-  collapsed,
-  active = false,
-  disabled = false,
-  iconClassName,
-  iconCollapsedOnly = false,
-  centerLabel = false,
-  trailingIcon: TrailingIcon,
-  ariaControls,
-  ariaExpanded,
-  className,
-}: {
-  icon: LucideIcon;
-  label: string;
-  expandedLabel?: string;
-  onClick: () => void;
-  collapsed: boolean;
-  active?: boolean;
-  /**
-   * A line that only NOTICES — downloading an update in
-   * course. It keeps its place, its tooltip and its wording; only the gesture
-   * disappears.
-   *
-   * ⚠ `aria-disabled` and NOT `disabled`: a deactivated button no longer emits
-   * pointer event, so no more `pointerenter` — and the tooltip of the
-   * rail mode, which is the ONLY place the label reads when the bar is
-   * folded, would never open. We therefore remove the action (the `onClick` is not
-   * not plugged in) without removing the line at the pointer.
-   */
-  disabled?: boolean;
-  iconClassName?: string;
-  iconCollapsedOnly?: boolean;
-  centerLabel?: boolean;
-  trailingIcon?: LucideIcon;
-  ariaControls?: string;
-  ariaExpanded?: boolean;
-  className?: string;
-}) {
-  const btn = (
-    <button
-      type="button"
-      onClick={disabled ? undefined : onClick}
-      aria-disabled={disabled || undefined}
-      aria-controls={ariaControls}
-      aria-expanded={ariaExpanded}
-      aria-haspopup={ariaControls ? "dialog" : undefined}
-      className={cn(
-        "relative flex h-9 items-center rounded-lg text-sm font-medium transition-colors",
-        disabled
-          ? "cursor-default"
-          : "cursor-pointer hover:bg-sidebar-accent hover:text-foreground",
-        active ? "bg-sidebar-accent text-foreground" : "text-muted-foreground",
-        ROW_PL,
-        collapsed ? cn(ROW_BOX, "pr-[9px]") : "w-full gap-3 pr-3 text-left",
-        centerLabel && !collapsed && "px-[9px]",
-        className,
-      )}
-    >
-      {collapsed || !iconCollapsedOnly ? (
-        <Icon className={cn(
-          "size-[18px] shrink-0",
-          centerLabel && !collapsed && "absolute left-[9px]",
-          iconClassName,
-        )} />
-      ) : null}
-      {/* `truncate` (so no line break): the label remains mounted
-          while the bar animates from 56 to 256 px, and without it “Share a
-          return” folds into three lines in the first images of the
-          unfolding before laying flat again. Cut cleanly, it is simply
-          cropped by the `overflow-hidden` of the bar — we see nothing. */}
-      {!collapsed && (
-        <span
-          className={cn(
-            "min-w-0 flex-1 truncate",
-            centerLabel && "px-6 text-center",
-          )}
-        >
-          {expandedLabel}
-        </span>
-      )}
-      {!collapsed && TrailingIcon && <TrailingIcon className="size-4 shrink-0" />}
-    </button>
-  );
-  // Same reason as `SidebarRow`: unconditional rendering, controlled opening. A
-  // conditional envelope changes the type of the root, therefore replaces the node
-  // and loses focus with each tilt of the rail (MIN-313).
-  return (
-    <Tooltip
-      delayDuration={SIDEBAR_TOOLTIP_DELAY_MS}
-      disableHoverableContent
-      open={collapsed ? undefined : false}
-    >
-      <TooltipTrigger asChild>{btn}</TooltipTrigger>
-      <TooltipContent side="right">{label}</TooltipContent>
-    </Tooltip>
-  );
-}
-
-/**
- * Persistent update entry for the desktop shell, Microsoft Store package, and
- * deployed web app. A desktop update takes priority because updating the shell
- * also reloads the current web app.
- */
-function UpdateFooterCard({
-  collapsed,
-  onOpenChange,
-}: {
-  collapsed: boolean;
-  onOpenChange?: (open: boolean) => void;
-}) {
-  const tNav = useTranslations("Nav");
-  const tWebUpdate = useTranslations("NewVersion");
-  const tCommon = useTranslations("Common");
-  const confirmationId = useId();
-  const confirmationTitleId = `${confirmationId}-title`;
-  const confirmationDescriptionId = `${confirmationId}-description`;
-  const [confirmationOpen, setConfirmationOpen] = useState(false);
-  const desktopStatus = useDesktopUpdateStatus();
-  const windowsStoreUpdateAvailable = useWindowsStoreUpdateAvailable();
-  const webUpdate = useNewVersion();
-  const hasDirectDesktopUpdate = desktopStatus.state !== "idle";
-  const isStoreUpdate =
-    !hasDirectDesktopUpdate && windowsStoreUpdateAvailable;
-  const isWebUpdate = !hasDirectDesktopUpdate && !isStoreUpdate;
-  if (isWebUpdate && !webUpdate.visible) return null;
-
-  const ready =
-    isWebUpdate || isStoreUpdate || desktopStatus.state === "ready";
-  const pending = isWebUpdate && webUpdate.refreshing;
-  const label =
-    desktopStatus.state !== "idle"
-      ? tNav(
-          desktopStatus.state === "ready"
-            ? "updateReady"
-            : "updateDownloading",
-          { version: desktopStatus.version },
-        )
-      : isStoreUpdate
-        ? tNav("windowsStoreUpdateReady")
-        : tWebUpdate("title");
-  const actionLabel = isWebUpdate
-    ? tWebUpdate("refresh")
-    : isStoreUpdate
-      ? tNav("windowsStoreUpdateAction")
-      : tNav("updateAction");
-  const confirmationTitle = isWebUpdate
-    ? tWebUpdate("confirmTitle")
-    : tNav("updateConfirmTitle");
-  const confirmationDescription = isWebUpdate
-    ? tWebUpdate("confirmDescription")
-    : tNav("updateConfirmDescription");
-  const handleConfirmationOpenChange = (open: boolean) => {
-    setConfirmationOpen(open);
-    onOpenChange?.(open);
-  };
-  const applyUpdate = () => {
-    handleConfirmationOpenChange(false);
-    if (isWebUpdate) {
-      webUpdate.refresh();
-      return;
-    }
-    if (isStoreUpdate) {
-      getDesktopBridge()?.openWindowsStoreUpdate?.();
-      return;
-    }
-    getDesktopBridge()?.installUpdate();
-  };
-  const confirmation = (
-    <PopoverContent
-      id={confirmationId}
-      role="dialog"
-      aria-labelledby={confirmationTitleId}
-      aria-describedby={confirmationDescriptionId}
-      side="top"
-      align="end"
-      sideOffset={8}
-      collisionPadding={10}
-      className="w-72 gap-3 rounded-xl p-3"
-    >
-      <PopoverHeader>
-        <PopoverTitle id={confirmationTitleId}>
-          {confirmationTitle}
-        </PopoverTitle>
-        <PopoverDescription id={confirmationDescriptionId}>
-          {confirmationDescription}
-        </PopoverDescription>
-      </PopoverHeader>
-      <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => handleConfirmationOpenChange(false)}
-        >
-          {tCommon("cancel")}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          disabled={pending}
-          className="bg-[#0085FF] text-white hover:bg-[#0085FF]/90"
-          onClick={applyUpdate}
-        >
-          {pending && <Loader2 className="animate-spin" />}
-          {actionLabel}
-        </Button>
-      </div>
-    </PopoverContent>
-  );
-
-  const row = (
-    <FooterRow
-      icon={
-        isWebUpdate
-          ? RefreshCw
-          : isStoreUpdate
-            ? ShoppingBag
-            : ready
-              ? ArrowDownToLine
-              : Loader2
-      }
-      iconClassName={!ready || pending ? "animate-spin" : undefined}
-      iconCollapsedOnly={ready && !pending}
-      centerLabel={ready}
-      className={
-        ready
-          ? cn(
-              "my-px h-[34px] bg-[#0085FF] text-white hover:bg-[#0085FF]/90 hover:text-white",
-              collapsed && "mx-px w-[34px] px-2",
-            )
-          : undefined
-      }
-      label={label}
-      expandedLabel={ready ? actionLabel : label}
-      collapsed={collapsed}
-      disabled={!ready || pending}
-      ariaControls={
-        ready && !pending && !isStoreUpdate ? confirmationId : undefined
-      }
-      ariaExpanded={
-        ready && !pending && !isStoreUpdate ? confirmationOpen : undefined
-      }
-      onClick={
-        isStoreUpdate
-          ? applyUpdate
-          : () => handleConfirmationOpenChange(true)
-      }
-    />
-  );
-
-  // Keep one 36 px action row in both sidebar modes. The rail shows its icon;
-  // the same blue surface widens in place and swaps to the action label when
-  // the sidebar expands, matching the geometry used by navigation rows.
-  if (isStoreUpdate) return row;
-  return (
-    <Popover
-      open={confirmationOpen}
-      onOpenChange={handleConfirmationOpenChange}
-    >
-      <PopoverAnchor asChild>
-        <div className="w-full">{row}</div>
-      </PopoverAnchor>
-      {confirmation}
-    </Popover>
-  );
-}
-
 function SidebarFooter({
   collapsed,
   onMenuOpenChange,
@@ -1296,12 +890,6 @@ function SidebarFooter({
   const { productFeedbackIntegrationEnabled, productFeedbackUrl } = useRuntimeConfig();
   return (
     <div className="flex flex-col gap-0.5">
-      {/* Update actions stay above the stable account/status row. */}
-      <UpdateFooterCard
-        collapsed={collapsed}
-        onOpenChange={onMenuOpenChange}
-      />
-      <SidebarVisibilityButton collapsed={collapsed} />
       <div className="flex items-center gap-0.5">
         <div
           className={cn(
@@ -1365,10 +953,6 @@ export function AppSidebar({
   modeKey,
   currentProject,
   projects,
-  inbox,
-  inboxOpen = false,
-  onSearch,
-  onSearchWarm,
   onScratchpadWarm,
   onLayerOpenChange,
   overlay = false,
@@ -1377,10 +961,6 @@ export function AppSidebar({
   modeKey: string;
   currentProject: Project | null;
   projects: Project[];
-  inbox: AppNavItem;
-  inboxOpen?: boolean;
-  onSearch: () => void;
-  onSearchWarm?: () => void;
   onScratchpadWarm?: () => void;
   onLayerOpenChange?: (open: boolean) => void;
   overlay?: boolean;
@@ -1406,10 +986,8 @@ export function AppSidebar({
   const railRef = useRef<HTMLElement>(null);
   const railId = useId();
   /** The pointer return watcher, and what to remove it. */
-  const returnWatcher = useRef<(() => void) | null>(null);
   useEffect(() => () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
-    returnWatcher.current?.();
   }, []);
   useEffect(
     () => () => onLayerOpenChange?.(false),
@@ -1439,7 +1017,6 @@ export function AppSidebar({
       clearTimeout(closeTimer.current);
       closeTimer.current = null;
     }
-    returnWatcher.current?.();
     setHovered(false);
   }, [routeKey]);
 
@@ -1464,7 +1041,6 @@ export function AppSidebar({
     // The pointer watcher goes with it: exiting rail mode while it waits
     // returning the pointer would leave it connected to a bar that no longer has
     // nothing to close.
-    returnWatcher.current?.();
     setHovered(false);
     setMenuOpen(false);
   }, [overlay]);
@@ -1478,76 +1054,7 @@ export function AppSidebar({
     // has just regained control, he has nothing left to decide. Without that, he
     // remained connected and closed the rail at the first mouse movement —
     // sometimes minutes later, unrelated to the gesture that armed him.
-    returnWatcher.current?.();
     setHovered(true);
-  };
-
-  /**
-   * Does the pointer move out of the bar THROUGH THE macOS BUTTONS? (MIN-291)
-   *
-   * They are native: drawn over the page, they receive no DOM event and emit
-   * none. Moving to them from an expanded rail is therefore a sidebar exit
-   * from Chromium's point of view. Closing the rail at that point would hide
-   * the controls before the pointer can finish its gesture.
-   *
-   * Detect the stable macOS titlebar corner rather than the asynchronous
-   * window-button visibility result. The result is temporarily false while an
-   * expanding rail asks Electron to restore the controls, which is exactly
-   * when this guard is needed.
-   */
-  const leavesThroughWindowButtons = (e: { clientX: number; clientY: number }) =>
-    isMacWindowControlsZone(
-      document.documentElement.dataset.desktopPlatform,
-      e,
-    );
-
-  /**
-   * The pointer has gone to the buttons: we do not close, and we wait to
-   * REVIEW it to decide. As long as it is on them, the page receives nothing;
-   * his first return movement says if he enters the bar (she resumes
-   * hand) or if it is elsewhere (we close it). Without this lookout, the rail
-   * would remain open indefinitely — and this is exactly the fault that the
-   * comments above describe, only worse.
-   */
-  const watchPointerReturn = () => {
-    returnWatcher.current?.();
-    const onMove = (event: PointerEvent) => {
-      disarm();
-      if (isSidebarPointerTarget(railRef.current, event.target)) return;
-      closeRail();
-    };
-    /**
-     * The EMERGENCY withdrawal (MIN-314). The watcher above has no bounds:
-     * it waits for a `pointermove` which may never come — the red light HIDES
-     * the window instead of destroying it (desktop/src/main.ts), it is therefore
-     * rail row unfolded and reopened as is, lookout still armed. A
-     * sequence entirely on the keyboard then left the bar unfolded
-     * over the secondary, until the first mouse movement.
-     *
-     * ⚠ **Not a timer.** This would reopen the fault that MIN-291 closed:
-     * a rail that closes under a pointer on its way to the buttons. We
-     * clings to what says that the gesture is FINISHED — the window has lost its
-     * hand, or it is no longer visible.
-     */
-    const onGiveUp = () => {
-      disarm();
-      closeRail();
-    };
-    const onVisibility = () => {
-      if (document.hidden) onGiveUp();
-    };
-
-    const disarm = () => {
-      document.removeEventListener("pointermove", onMove);
-      window.removeEventListener("blur", onGiveUp);
-      document.removeEventListener("visibilitychange", onVisibility);
-      returnWatcher.current = null;
-    };
-
-    document.addEventListener("pointermove", onMove, { once: true });
-    window.addEventListener("blur", onGiveUp);
-    document.addEventListener("visibilitychange", onVisibility);
-    returnWatcher.current = disarm;
   };
 
   /**
@@ -1564,13 +1071,7 @@ export function AppSidebar({
     }, RAIL_CLOSE_DELAY_MS);
   };
 
-  const closeRail = (e?: { clientX: number; clientY: number }) => {
-    if (e && leavesThroughWindowButtons(e)) {
-      watchPointerReturn();
-      return;
-    }
-    scheduleClose();
-  };
+  const closeRail = () => { scheduleClose(); };
 
   /**
    * The net: **`pointerleave` is not guaranteed.** It assumes that the bar is
@@ -1605,35 +1106,7 @@ export function AppSidebar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [overlay, hovered]);
 
-  const collapsed = overlay && !(hovered || focusWithin || menuOpen || inboxOpen);
-
-  /**
-   * macOS buttons, in the desktop app (MIN-291). They land on the
-   * mark line, in place of the mark — and we remove them when the bar
-   * is FOLDED: 56 px does not hold three buttons plus the mark, and the
-   * leaving it would overflow the navigation.
-   *
-   * It is `collapsed` who decides, not `overlay`: the bar unfolded ABOVE
-   * the secondary is an unfolded bar like any other, it has its 256 px and
-   * must therefore take back the buttons. Flying over the rail brings them back, leaving it
-   * puts them aside — it's the same gesture that makes navigation
-   * readable, and it is valid for everything that the mark line contains.
-   *
-   * What we deliver, on the other hand, does not follow the request but the RESULT — the
-   * full screen takes them elsewhere without the bar knowing anything about it. And one
-   * dialog box removes them without the place moving: we then draw
-   * lures, otherwise the mark would jump at each opening. See
-   * lib/use-window-buttons.ts.
-   *
-   * ⚠ **And only when the bar is RENDERED.** Under 768 px the AppShell
-   * cache, but it remains mounted: without `wide`, it continued to request the
-   * removal of the buttons as soon as its rail — invisible — folded, and their
-   * keep a place that no one was looking at. The corner then returns to
-   * the header (`HeaderWindowButtonsSlot`), which occupies it for real.
-   */
-  const wide = useWideLayout();
-  useHoldWindowButtons("rail", wide && collapsed);
-  const windowButtons = useWindowButtonsSlot(wide);
+  const collapsed = overlay && !(hovered || focusWithin || menuOpen);
 
   // Two widths, and that's the whole mechanism: that which the bar OCCUPIES in
   // the flow, and that which it MEASURES. In rail mode the first one stays on the rail
@@ -1685,7 +1158,7 @@ export function AppSidebar({
         // which says if the pointer goes to the macOS buttons (see closeRail).
         onPointerLeave={overlay ? (e) => {
           if (!isSidebarPointerTarget(railRef.current, e.relatedTarget)) {
-            closeRail(e);
+            closeRail();
           }
         } : undefined}
         onFocusCapture={
@@ -1746,30 +1219,15 @@ export function AppSidebar({
           overlay && !collapsed && "shadow-[8px_0_32px_-8px_rgba(0,0,0,0.45)]",
         )}
       >
-        {/* The top row keeps one stable DOM structure while the rail opens and
-            closes, so keyboard focus is preserved. On macOS it hosts the native
-            window controls; CSS hides the logo there, leaving search and inbox on
-            the right. Web, Windows, and Linux keep the logo on the left. */}
+        {/* Keep the shared-height inset and creation controls mounted across rail transitions. */}
         <div
           className={cn(
-            "sidebar-brand-row relative flex h-[60px] shrink-0 items-center border-b border-border",
+            "sidebar-brand-row relative flex h-[var(--app-content-header-height)] shrink-0 items-center border-b border-border",
             GUTTER,
           )}
         >
-          {!collapsed && windowButtons.decoy && <WindowButtonDecoys />}
-          <SidebarBrand />
-          <SidebarTopActions
-            collapsed={collapsed}
-            inbox={inbox}
-            onSearch={onSearch}
-            onSearchWarm={onSearchWarm}
-          />
+          <SidebarQuickActions collapsed={collapsed} onScratchpadWarm={onScratchpadWarm} />
         </div>
-
-        <SidebarQuickActions
-          collapsed={collapsed}
-          onScratchpadWarm={onScratchpadWarm}
-        />
 
         {/* Keep the same markup during hydration and when motion preferences change. */}
         <AnimatePresence mode="wait" initial={false}>

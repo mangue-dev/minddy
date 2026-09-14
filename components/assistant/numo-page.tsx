@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { AppContentHeader } from "@/components/app-content-header";
 import { AssistantShell } from "@/components/assistant/assistant-shell";
 import { useAssistantChatContext } from "@/lib/assistant-chat-context";
+import { usePublishCurrentView } from "@/lib/current-view-context";
 import { updateConversation } from "@/lib/assistant-api";
 import {
   useAssistantPanel,
@@ -41,6 +42,8 @@ export function NumoPage() {
     if (state.conversationId === linkedConversationId) return;
     void loadConversation(linkedConversationId, null);
   }, [linkedConversationId, loadConversation, state.conversationId]);
+
+  usePublishCurrentView({ href: state.conversationId ? `/numo?conversation=${encodeURIComponent(state.conversationId)}` : "/numo" });
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
