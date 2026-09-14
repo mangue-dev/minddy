@@ -100,6 +100,9 @@ export const CHEATSHEET: CheatsheetSection[] = [
       // (triage, returns, pull requests, sessions, settings). It REDUCES the list
       // displayed — the palette searches everywhere and takes it elsewhere.
       { id: "gen.filterList", labelKey: "filterList", keys: [["/"]] },
+      // Hide or show the whole navigation column (MIN-546 review): the
+      // sidebar-visibility button carries the same shortcut.
+      { id: "gen.toggleSidebar", labelKey: "toggleSidebar", keys: [["mod", "B"]] },
       { id: "gen.undo", labelKey: "undo", keys: [["mod", "Z"]] },
       { id: "gen.redo", labelKey: "redo", keys: [["mod", "⇧", "Z"]] },
       { id: "gen.cheatsheet", labelKey: "cheatsheet", keys: [["?"]] },

@@ -1817,6 +1817,7 @@
       "palette": "Command palette",
       "search": "Search",
       "filterList": "Filter the list",
+      "toggleSidebar": "Hide or show the sidebar",
       "undo": "Undo last action",
       "redo": "Redo last action",
       "cheatsheet": "Show keyboard shortcuts",
