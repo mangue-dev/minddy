@@ -13,7 +13,10 @@ describe("application tab destinations", () => {
   });
   it("canonicalizes ordering and resolves project sections", () => {
     expect(normalizeAppTabLocation("/all/?view=b&tab=a")).toBe("/all?tab=a&view=b");
-    expect(appTabRoute("/projects/p?view=b")).toEqual({ section: "tickets", projectId: "p" });
-    expect(appTabRoute("/projects/p/pages/a")).toEqual({ section: "pages", projectId: "p" });
+    expect(appTabRoute("/projects/p?view=b")).toEqual({ section: "tickets", projectId: "p", objectiveId: null });
+    expect(appTabRoute("/projects/p/pages/a")).toEqual({ section: "pages", projectId: "p", objectiveId: null });
+  });
+  it("exposes the objective param so tabs can name an objective's tickets", () => {
+    expect(appTabRoute("/projects/p?objective=o")).toEqual({ section: "tickets", projectId: "p", objectiveId: "o" });
   });
 });

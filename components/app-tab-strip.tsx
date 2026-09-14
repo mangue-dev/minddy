@@ -24,7 +24,9 @@ import { useTranslations } from "next-intl";
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Input } from "mangue-ui";
 import { useAppTabs } from "@/lib/app-tabs-context";
 import { useProjects } from "@/lib/projects-context";
+import { useQueries } from "@tanstack/react-query";
 import { appTabRoute } from "@/lib/app-tab-location";
+import { objectivesQueryFn } from "@/lib/objectives-api";
 import { APP_TAB_MAX_NAME, type AppTab } from "@/lib/app-tabs";
 import { AppTabIcon } from "./app-tab-icon";
 import { AppTabItem } from "./app-tab-item";
@@ -47,6 +49,33 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   const t = useTranslations("AppTabs");
   const nav = useTranslations("Nav");
   const common = useTranslations("Common");
+  // Objective tabs name THEIR objective, not "Tickets - Project": the tickets
+  // of an objective load in the board URL (`?objective=`), so the tab resolves
+  // the objective from the projects it references. Same query key/fn as the
+  // objectives page, so the cache is shared and nothing is fetched twice.
+  const objectiveProjectIds = useMemo(
+    () => [...new Set(tabs.map((tab) => appTabRoute(tab.href)).filter((route) => route.objectiveId).map((route) => route.projectId!).filter((id) => !!id))],
+    [tabs]
+  );
+  const objectiveQueries = useQueries({
+    queries: objectiveProjectIds.map((projectId) => ({
+      queryKey: ["objectives", projectId] as const,
+      queryFn: objectivesQueryFn(projectId),
+    })),
+  });
+  // Keyed on the project ids, not the per-render queries array: useQueries
+  // returns a fresh array each render, and the map only changes with the data.
+  const objectiveQueriesKey = objectiveProjectIds.join(" ") + ":" + objectiveQueries.map((result) => result.dataUpdatedAt).join(",");
+  const objectiveById = useMemo(() => {
+    const map = new Map<string, { name: string; color: string | null }>();
+    for (const result of objectiveQueries) {
+      for (const objective of (result.data ?? []) as { id: string; name: string; color: string | null }[]) {
+        map.set(objective.id, { name: objective.name, color: objective.color });
+      }
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [objectiveQueriesKey]);
   const strip = useRef<HTMLDivElement>(null);
   const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: 6 } }));
   const [dragged, setDragged] = useState<string | null>(null);
@@ -90,11 +119,12 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   };
   const draggedTab = dragged ? tabs.find((tab) => tab.id === dragged) : undefined;
   const describe = (tab: AppTab) => {
-    const { section, projectId } = appTabRoute(tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href);
+    const { section, projectId, objectiveId } = appTabRoute(tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href);
     const project = projectId ? projectById.get(projectId) : undefined;
+    const objective = objectiveId ? objectiveById.get(objectiveId) : undefined;
     const sectionLabel = nav(routeLabels[section] ?? "home");
-    const label = tab.custom_name ?? (projectId ? `${sectionLabel} - ${project?.name ?? t("unavailableProject")}` : sectionLabel);
-    return { section, projectId, project, label };
+    const label = tab.custom_name ?? (objective?.name ?? (projectId ? `${sectionLabel} - ${project?.name ?? t("unavailableProject")}` : sectionLabel));
+    return { section, projectId, project, objectiveId, objective, label };
   };
   return <>
     <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden px-2">
@@ -117,7 +147,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           onDragCancel={() => setDragged(null)} onDragEnd={finishDrag}>
         <SortableContext items={tabs.map((tab) => tab.id)} strategy={horizontalListSortingStrategy}>
         {tabs.map((tab) => {
-          const { section, projectId, project, label } = describe(tab);
+          const { section, projectId, project, objectiveId, objective, label } = describe(tab);
           return <SortableAppTab key={tab.id} id={tab.id} disabled={busy}
             onKeyDown={(event) => {
               if (!event.altKey || !event.shiftKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
@@ -128,7 +158,8 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
               if (event.key === "ArrowRight" && index < group.length - 1) void session.move(tab.id, group[index + 2]?.id ?? null);
             }}>
           <AppTabItem tab={tab} active={tab.id === activeId} focusable={tab.id === focusId} label={label}
-            icon={<AppTabIcon section={section} project={project} projectId={projectId} />} busy={busy} last={tabs.length <= 1}
+            icon={<AppTabIcon section={section} project={project} projectId={projectId}
+              objectiveColor={objectiveId ? objective?.color ?? null : undefined} />} busy={busy} last={tabs.length <= 1}
             onActivate={() => { if (!busy) void session.activate(tab.id); }} onClose={() => close(tab.id)}
             onPin={() => { void session.update(tab.id, { pinned: !tab.pinned }); }}
             onRename={() => { setName(tab.custom_name ?? ""); setRenaming(tab); }} onFocus={() => setFocused(tab.id)} />
@@ -137,11 +168,12 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
         </SortableContext>
         <DragOverlay dropAnimation={null} modifiers={horizontalDragModifiers}>
           {draggedTab && (() => {
-            const { section, projectId, project, label } = describe(draggedTab);
+            const { section, projectId, project, objectiveId, objective, label } = describe(draggedTab);
             return <div className={draggedTab.pinned
               ? "flex h-[34px] w-[34px] items-center justify-center rounded-md bg-sidebar-accent text-sidebar-foreground shadow-lg"
               : "flex h-[34px] w-[200px] items-center gap-2 rounded-md bg-sidebar-accent px-2.5 text-sm text-sidebar-foreground shadow-lg"}>
-              <AppTabIcon section={section} project={project} projectId={projectId} />
+              <AppTabIcon section={section} project={project} projectId={projectId}
+                objectiveColor={objectiveId ? objective?.color ?? null : undefined} />
               {!draggedTab.pinned && <span className="truncate">{label}</span>}
             </div>;
           })()}

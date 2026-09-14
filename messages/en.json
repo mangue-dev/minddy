@@ -1778,7 +1778,9 @@
     "newIssueInProject": "New issue in this project",
     "copyPageTitle": "Copy page title",
     "copyIssueTitle": "Copy issue title",
-    "openLinkedObjective": "Open linked objective"
+    "openLinkedObjective": "Open linked objective",
+    "newTabSearchPlaceholder": "Search a screen to open in a new tab…",
+    "bulkSearchPlaceholder": "{count, plural, one {Action for # selected issue…} other {Actions for # selected issues…}}"
   },
   "Keyboard": {
     "then": "then",

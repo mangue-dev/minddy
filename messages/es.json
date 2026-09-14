@@ -1778,7 +1778,9 @@
     "newIssueInProject": "Nueva incidencia en este proyecto",
     "copyPageTitle": "Copiar título de la página",
     "copyIssueTitle": "Copiar título de la incidencia",
-    "openLinkedObjective": "Abrir objetivo vinculado"
+    "openLinkedObjective": "Abrir objetivo vinculado",
+    "newTabSearchPlaceholder": "Buscar una pantalla para abrir en una pestaña nueva…",
+    "bulkSearchPlaceholder": "{count, plural, one {Acción para # incidencia seleccionada…} other {Acciones para # incidencias seleccionadas…}}"
   },
   "Keyboard": {
     "then": "luego",

@@ -35,10 +35,20 @@ export function normalizeAppTabLocation(raw: unknown): string | null {
   return path + (params.size ? `?${params}` : "") + hash;
 }
 
-export function appTabRoute(href: string): { section: string; projectId: string | null } {
-  const path = (normalizeAppTabLocation(href) ?? "/home").split(/[?#]/)[0];
+export function appTabRoute(href: string): {
+  section: string;
+  projectId: string | null;
+  /** The `objective` selection param — an objective's tickets load in the
+   *  board URL, not on a dedicated page, so the tab names it. */
+  objectiveId: string | null;
+} {
+  const normalized = normalizeAppTabLocation(href) ?? "/home";
+  const [path, query] = normalized.split(/[?#]/);
   const parts = path.slice(1).split("/");
-  return parts[0] === "projects"
-    ? { section: parts[2] ?? "tickets", projectId: parts[1] }
-    : { section: parts[0], projectId: null };
+  if (parts[0] !== "projects") return { section: parts[0], projectId: null, objectiveId: null };
+  return {
+    section: parts[2] ?? "tickets",
+    projectId: parts[1],
+    objectiveId: new URLSearchParams(query).get("objective"),
+  };
 }

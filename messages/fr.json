@@ -1778,7 +1778,9 @@
     "newIssueInProject": "Nouveau ticket dans ce projet",
     "copyPageTitle": "Copier le titre de la page",
     "copyIssueTitle": "Copier le titre du ticket",
-    "openLinkedObjective": "Ouvrir l’objectif lié"
+    "openLinkedObjective": "Ouvrir l’objectif lié",
+    "newTabSearchPlaceholder": "Rechercher un écran à ouvrir dans un nouvel onglet…",
+    "bulkSearchPlaceholder": "{count, plural, one {Action pour # ticket sélectionné…} other {Actions pour # tickets sélectionnés…}}"
   },
   "Keyboard": {
     "then": "puis",

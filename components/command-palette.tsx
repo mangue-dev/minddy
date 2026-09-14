@@ -111,6 +111,7 @@ import { useMembersQuery } from "@/lib/use-members-query";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { useAnalytics } from "@/lib/use-analytics";
 import { moveIssueGroupsToEnd } from "@/lib/command-palette/group-order";
+import type { PaletteStrings } from "@/lib/command-palette/i18n";
 import { createMinddyEntityActionsProvider } from "@/lib/command-palette/registry/providers/MinddyEntityActionsProvider";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";
 import { useOptionalAppTabs } from "@/lib/app-tabs-context";
@@ -1342,6 +1343,21 @@ export function CommandPalette({
       ? categories.filter((category) => items.some((item) => item.filterCategory === category.id))
       : categories;
 
+  // The placeholder follows the mode: the new-tab launcher asks for a
+  // destination, bulk mode names the selection it acts on, and the usual
+  // generic line applies otherwise (host override of the shell's own string).
+  const paletteStrings = useMemo<PaletteStrings | undefined>(() => {
+    if (showBulk && bulkRequest) {
+      return {
+        "search.placeholder": tAction("bulkSearchPlaceholder", { count: bulkRequest.count }),
+      };
+    }
+    if (destinationOnly) {
+      return { "search.placeholder": tAction("newTabSearchPlaceholder") };
+    }
+    return undefined;
+  }, [showBulk, bulkRequest, destinationOnly, tAction]);
+
   return (
     <CommandPaletteShell
       isOpen={open}
@@ -1350,6 +1366,7 @@ export function CommandPalette({
       categories={paletteCategories}
       providers={destinationOnly ? [] : providers}
       locale={locale}
+      strings={paletteStrings}
       // The page project is a BOOST of relevance, not a filter: its
       // tickets and objectives go up, those of other projects remain there.
       actionContext={currentProjectId ? { contextId: currentProjectId } : undefined}
