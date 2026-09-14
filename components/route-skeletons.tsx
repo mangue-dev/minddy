@@ -74,7 +74,7 @@ export function ListDetailSkeleton({
   return (
     <div className="flex h-full min-h-0">
       <SecondarySidebar>
-        <div className="flex flex-col gap-2 px-2 pt-2 pb-4">
+        <div className="flex flex-col gap-2 pt-2 pb-4">
           {Array.from({ length: rows }).map((_, i) => (
             <Skeleton key={i} className={`${rowClassName} rounded-lg`} />
           ))}
@@ -123,7 +123,7 @@ export function PageTreeSkeleton({ rows = 7 }: { rows?: number }) {
   return (
     <div className="flex h-full min-h-0">
       <SecondarySidebar>
-        <div className="flex flex-col gap-1.5 px-2 pt-2 pb-4">
+        <div className="flex flex-col gap-1.5 pt-2 pb-4">
           {Array.from({ length: rows }).map((_, i) => (
             <div key={i} className="flex items-center">
               <div style={{ width: indents[i % indents.length] }} />
