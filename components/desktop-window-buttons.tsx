@@ -57,7 +57,7 @@ export function WindowButtonDecoys() {
 }
 
 function WindowControlGlyph({ action }: { action: "close" | "minimize" | "fullscreen" }) {
-  const className = "size-2 opacity-0 transition-opacity group-hover/window-controls:opacity-100";
+  const className = "size-2.5 opacity-0 transition-opacity group-hover/window-controls:opacity-100";
   if (action === "close") {
     return <svg viewBox="0 0 85.4 85.4" className={className} aria-hidden>
       <path d="m22.5 57.8 35.3-35.3c1.4-1.4 3.6-1.4 5 0l.1.1c1.4 1.4 1.4 3.6 0 5L27.6 62.9c-1.4 1.4-3.6 1.4-5 0l-.1-.1c-1.3-1.4-1.3-3.6 0-5Z" fill="#7e0b05" />
@@ -69,7 +69,7 @@ function WindowControlGlyph({ action }: { action: "close" | "minimize" | "fullsc
       <path d="M17.8 39.1h49.9c1.9 0 3.5 1.6 3.5 3.5v.1c0 1.9-1.6 3.5-3.5 3.5H17.8c-1.9 0-3.5-1.6-3.5-3.5v-.1c0-1.9 1.5-3.5 3.5-3.5Z" fill="#8c5415" />
     </svg>;
   }
-  return <svg viewBox="0 0 85.4 85.4" className={className} aria-hidden>
+  return <svg viewBox="0 0 85.4 85.4" className={`${className} rotate-90`} aria-hidden>
     <path d="M31.2 20.8h26.7c3.6 0 6.5 2.9 6.5 6.5V54L31.2 20.8Zm23.2 43.7H27.6c-3.6 0-6.5-2.9-6.5-6.5V31.2l33.3 33.3Z" fill="#176b13" />
   </svg>;
 }
