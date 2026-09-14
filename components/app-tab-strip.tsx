@@ -10,6 +10,7 @@ import {
   type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
+  type Modifier,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -35,6 +36,9 @@ const routeLabels: Record<string, MessageKey<"Nav">> = {
   "pull-requests": "pullRequests", statistics: "statistics", trash: "trash", settings: "settings", billing: "billing",
   admin: "adminDashboard", pages: "pages", tickets: "tickets", objectives: "objectives", feedback: "feedback", triage: "triage",
 };
+
+const restrictToHorizontalAxis: Modifier = ({ transform }) => ({ ...transform, y: 0 });
+const horizontalDragModifiers = [restrictToHorizontalAxis];
 
 export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; onNewTabWarm?: () => void }) {
   const { tabs, activeId, session, busy, error, loading, loadError, reload } = useAppTabs();
@@ -108,7 +112,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           else return;
           event.preventDefault(); controls[next]?.focus();
         }}>
-        <DndContext sensors={sensors} collisionDetection={collisionDetection}
+        <DndContext sensors={sensors} collisionDetection={collisionDetection} modifiers={horizontalDragModifiers}
           onDragStart={(event: DragStartEvent) => setDragged(String(event.active.id))}
           onDragCancel={() => setDragged(null)} onDragEnd={finishDrag}>
         <SortableContext items={tabs.map((tab) => tab.id)} strategy={horizontalListSortingStrategy}>
@@ -131,7 +135,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           </SortableAppTab>;
         })}
         </SortableContext>
-        <DragOverlay dropAnimation={null}>
+        <DragOverlay dropAnimation={null} modifiers={horizontalDragModifiers}>
           {draggedTab && (() => {
             const { section, projectId, project, label } = describe(draggedTab);
             return <div className={draggedTab.pinned
