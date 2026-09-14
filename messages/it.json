@@ -6147,11 +6147,6 @@
     "importFailed": "Impossibile completare l’importazione. Riprova: la stessa importazione non verrà aggiunta due volte.",
     "exportArchive": "Archivio del database (.zip)"
   },
-  "WindowControls": {
-    "close": "Chiudi finestra",
-    "minimize": "Riduci finestra",
-    "fullscreen": "Passa a schermo intero"
-  },
   "AppTabs": {
     "label": "Schede dell’applicazione",
     "newTab": "Nuova scheda",

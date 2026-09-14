@@ -6147,11 +6147,6 @@
     "importFailed": "L’import n’a pas pu aboutir. Réessayez : le même import ne sera pas ajouté deux fois.",
     "exportArchive": "Archive de la base (.zip)"
   },
-  "WindowControls": {
-    "close": "Fermer la fenêtre",
-    "minimize": "Réduire la fenêtre",
-    "fullscreen": "Passer en plein écran"
-  },
   "AppTabs": {
     "label": "Onglets de l’application",
     "newTab": "Nouvel onglet",

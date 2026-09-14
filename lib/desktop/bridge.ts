@@ -126,10 +126,6 @@ export interface DesktopBridge {
    * vraiment revient par `onWindowButtons`.
    */
   setWindowButtonsVisible(visible: boolean): void;
-  /** Use renderer-owned macOS controls while the authenticated shell is mounted. */
-  setCustomWindowControls?(active: boolean): void;
-  /** Perform an action from a renderer-owned macOS window control. */
-  performWindowControl?(action: "close" | "minimize" | "fullscreen"): void;
   /**
    * What the buttons REALLY do — the only thing the focus on
    * page has the right to rely. Returns unsubscribe, and replays the status

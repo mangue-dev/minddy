@@ -17,6 +17,6 @@ describe("primary sidebar chrome", () => {
   });
   it("keeps native controls outside the rail and hidden navigation", () => {
     expect(sidebar.includes('useHoldWindowButtons')).toBe(false);
-    expect(topBar.includes('native.decoy && <WindowButtonDecoys')).toBe(true);
+    expect(topBar.includes('WindowButtonDecoys')).toBe(false);
   });
 });

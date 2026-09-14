@@ -183,9 +183,8 @@ is shown; no capability is inferred from the origin or app version.
 
 Login, signup, and the server-unavailable screen have minimal native-control
 clearance and a drag surface, without application tabs. Interactive controls,
-menus, dialogs, and tooltips are non-draggable. On macOS, authenticated screens
-use stable renderer-owned traffic lights so opening a dialog does not switch
-between native and HTML controls; native controls return in full screen. The old root drag band is disabled
+menus, dialogs, and tooltips are non-draggable. On macOS, the traffic lights stay native, and a modal asks the main process
+to hide them while it covers the app; nothing is hidden in full screen. The old root drag band is disabled
 when the authenticated desktop bar owns that region.
 
 Before releasing a new desktop build, verify native controls, fullscreen, zoom,
@@ -235,12 +234,12 @@ would have gone, and the measure would have remained extinguished for everyone w
 or a choice. As long as no response is given, consent is worth `null`
 and PostHog remains cookie- and identity-free — nothing is surreptitiously measured.
 
-**Authenticated screens use renderer-owned controls.** Native traffic lights
-cannot sit below a renderer dialog because no CSS `z-index` can cover them.
-Switching between native controls and HTML placeholders also caused a visible
-flash. The authenticated shell therefore keeps three interactive HTML controls
-mounted across dialogs (`WindowButtonDecoys`) and sends their close, minimize,
-and full-screen actions through the preload bridge.
+**On macOS, the buttons stay native.** Native traffic lights cannot sit
+below a renderer dialog because no CSS `z-index` can cover them: while a
+modal covers the authenticated app, the page asks the main process to hide
+them, and their slot stays reserved so the layout does not jump. The MIN-536
+experiment with renderer-owned HTML controls was removed in MIN-545 — those
+fake controls ended up permanently on screen outside dialogs too.
 
 Their geometry is **noted on a pixel-decoded system screenshot by
 pixel**, and not deducted: left edges at 19, 42 and 65, top at 22, **14 px from
@@ -248,13 +247,9 @@ diameter**, so 23 px from center to center. The first version included
 the origin given to `trafficLightPosition` and an assumed step of 20 px — the only
 of the three values which was correct was the origin, and the shift could be seen.
 
-The custom-controls request **belongs to the authenticated page** and is reset
-on full document navigation. Sign-in and other pages outside the application
-shell retain the native controls.
-
-**In full screen, native controls return.** macOS takes them to the top of the
+**In full screen, the buttons are never hidden.** macOS takes them to the top of the
 screen under its own care; hiding them there removes the mouse's standard exit.
-The page learns that state so it releases the HTML controls and their slot
+The page learns that state so it releases their reserved slot
 through a round trip over the bridge
 ([lib/use-window-buttons.ts](../lib/use-window-buttons.ts)).
 
