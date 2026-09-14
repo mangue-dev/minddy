@@ -204,6 +204,7 @@ import {
   type InboxReadState,
 } from "@/lib/inbox-tool";
 import { resolveAssistantProjectId } from "./project-scope";
+import { readPlanUsageTool, readUserStatsTool } from "./stats-tools";
 
 // ── Tool execution ─────────────────────────────────────────────────────
 // Reads go through the user's RLS client (tenant isolation for free); writes
@@ -1007,6 +1008,27 @@ export async function executeTool(
       });
       return r.ok
         ? { result: { settings: r.settings }, success: true }
+        : toolError(r.error);
+    }
+
+    // ── User statistics (MIN-501 — read-only, like the Statistics page) ──
+    if (toolName === "get_user_stats") {
+      const r = await readUserStatsTool({
+        userId: ctx.userId,
+        supabase: ctx.supabase,
+        timezone: ctx.timezone,
+      });
+      return r.ok
+        ? { result: { stats: r.stats }, success: true }
+        : toolError(r.error);
+    }
+    if (toolName === "get_plan_usage") {
+      const r = await readPlanUsageTool({
+        userId: ctx.userId,
+        supabase: ctx.supabase,
+      });
+      return r.ok
+        ? { result: { usage: r.usage }, success: true }
         : toolError(r.error);
     }
 

@@ -27,6 +27,11 @@ export function getToolResultCharLimit(
     case "get_issue":
     case "list_inbox":
       return 12_000;
+    // Recent executions carry run titles (up to ~200 characters each): keep
+    // the full run list instead of a truncated tail mid-row.
+    case "get_user_stats":
+    case "get_plan_usage":
+      return 8_000;
     // A targeted routine may contain a 20,000-character instruction. The
     // default call stays compact, while this ceiling preserves the full JSON
     // when routine_id asks for the instruction before a safe replacement.
