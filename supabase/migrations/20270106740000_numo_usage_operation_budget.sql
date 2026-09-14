@@ -270,10 +270,10 @@ BEGIN
        'intent', 'deployment_url', 'loop_in_vm', 'agent_engine', 'local_exec',
        'local_issue_context_confirmed', 'local_worktree'
      ] <> '{}'::jsonb
-     OR pg_catalog.nullif(p_values->>'created_by', '')::uuid IS DISTINCT FROM p_user_id
+     OR nullif(p_values->>'created_by', '')::uuid IS DISTINCT FROM p_user_id
      OR p_values->>'key_mode' IS DISTINCT FROM 'platform'
      OR p_values->>'worker_model_source' IS DISTINCT FROM 'account'
-     OR pg_catalog.nullif(p_values->>'worker_model_provider', '') IS NULL
+     OR nullif(p_values->>'worker_model_provider', '') IS NULL
      OR p_values->>'status' IS DISTINCT FROM 'queued' THEN
     RAISE EXCEPTION 'agent_run_budget_values_invalid' USING ERRCODE = '22023';
   END IF;
@@ -282,7 +282,7 @@ BEGIN
     pg_catalog.hashtextextended(p_user_id::text, 460)
   );
 
-  IF pg_catalog.nullif(p_values->>'parent_numo_turn_id', '') IS NOT NULL THEN
+  IF nullif(p_values->>'parent_numo_turn_id', '') IS NOT NULL THEN
     SELECT * INTO v_parent
     FROM public.numo_assistant_turns
     WHERE id = (p_values->>'parent_numo_turn_id')::uuid
@@ -302,7 +302,7 @@ BEGIN
     SELECT COALESCE(SUM(cost), 0) INTO v_operation_total_spent
     FROM public.ai_usage
     WHERE numo_turn_id = v_parent.id;
-    IF pg_catalog.nullif(p_values->>'budget_usd', '') IS NOT NULL
+    IF nullif(p_values->>'budget_usd', '') IS NOT NULL
        AND v_operation_total_spent >= (p_values->>'budget_usd')::numeric THEN
       RETURN pg_catalog.jsonb_build_object(
         'run', NULL, 'granted_budget_usd', 0,
@@ -432,28 +432,28 @@ BEGIN
     loop_in_vm, agent_engine, local_exec, local_issue_context_confirmed,
     local_worktree, managed_budget_usd
   ) VALUES (
-    pg_catalog.nullif(p_values->>'conversation_id', '')::uuid,
+    nullif(p_values->>'conversation_id', '')::uuid,
     (p_values->>'project_id')::uuid,
-    pg_catalog.nullif(p_values->>'issue_id', '')::uuid,
-    pg_catalog.nullif(p_values->>'pull_request_id', '')::uuid,
-    p_values->>'pr_head_sha', pg_catalog.nullif(p_values->>'repo_link_id', '')::uuid,
-    pg_catalog.nullif(p_values->>'connection_id', '')::uuid, p_values->>'repo_provider',
+    nullif(p_values->>'issue_id', '')::uuid,
+    nullif(p_values->>'pull_request_id', '')::uuid,
+    p_values->>'pr_head_sha', nullif(p_values->>'repo_link_id', '')::uuid,
+    nullif(p_values->>'connection_id', '')::uuid, p_values->>'repo_provider',
     p_values->>'repo_external_id', p_values->>'status', p_values->>'triggered_by',
     (p_values->>'created_by')::uuid, p_values->>'prompt', p_values->'prompt_mentions',
-    pg_catalog.nullif(p_values->>'parent_numo_conversation_id', '')::uuid,
-    pg_catalog.nullif(p_values->>'parent_numo_turn_id', '')::uuid,
+    nullif(p_values->>'parent_numo_conversation_id', '')::uuid,
+    nullif(p_values->>'parent_numo_turn_id', '')::uuid,
     p_values->>'parent_numo_tool_call_id',
-    pg_catalog.nullif(p_values->>'continued_from_run_id', '')::uuid,
+    nullif(p_values->>'continued_from_run_id', '')::uuid,
     p_values->'delegation_brief', COALESCE(p_values->'delegation_attachments', '[]'::jsonb),
     p_values->>'title', p_values->>'model', (p_values->>'model_forced')::boolean,
     p_values->>'reasoning_level', p_values->>'key_mode',
     p_values->>'worker_model_source', p_values->>'worker_model_provider',
     p_values->>'base_branch', p_values->>'branch_name',
-    pg_catalog.nullif(p_values->>'pr_number', '')::integer, p_values->>'pr_url',
+    nullif(p_values->>'pr_number', '')::integer, p_values->>'pr_url',
     p_values->>'pr_state', (p_values->>'run_id')::uuid,
-    pg_catalog.nullif(p_values->>'chain_id', '')::uuid,
-    pg_catalog.nullif(p_values->>'budget_usd', '')::numeric,
-    pg_catalog.nullif(p_values->>'routine_id', '')::uuid, p_values->>'intent',
+    nullif(p_values->>'chain_id', '')::uuid,
+    nullif(p_values->>'budget_usd', '')::numeric,
+    nullif(p_values->>'routine_id', '')::uuid, p_values->>'intent',
     p_values->>'deployment_url', (p_values->>'loop_in_vm')::boolean,
     p_values->>'agent_engine', (p_values->>'local_exec')::boolean,
     (p_values->>'local_issue_context_confirmed')::boolean,
