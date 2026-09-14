@@ -639,7 +639,7 @@ export const AssistantShell = forwardRef<
   const compactHeader = compact && !embeddedConversationId ? (
     <div
       ref={historyAnchorRef}
-      className="flex shrink-0 items-center gap-1 px-3 py-2.5"
+      className="flex shrink-0 items-center gap-1 px-4 py-4"
     >
       <Popover open={historyOpen} onOpenChange={setHistoryOpen}>
         <Tooltip>
@@ -895,12 +895,12 @@ export const AssistantShell = forwardRef<
             {hasMessages ? (
               <Conversation className="min-h-0 flex-1" anchor={scrollAnchor}>
                 <ConversationContent
-                  className={
-                    compact
-                      ? `mx-auto w-full ${convoMaxW} gap-6 p-4 md:p-5`
-                      : `mx-auto w-full ${convoMaxW} gap-6 p-4 md:p-6`
-                  }
-                >
+                   className={
+                     compact
+                       ? `mx-auto w-full ${convoMaxW} gap-6 p-4 md:p-4`
+                       : `mx-auto w-full ${convoMaxW} gap-6 p-4 md:p-6`
+                   }
+                 >
                   {blocks.map((block) => {
                     if (block.kind === "message")
                       return renderMessage(block.message);
@@ -1140,7 +1140,7 @@ export const AssistantShell = forwardRef<
             <div
               className={cn(
                 `mx-auto w-full min-w-0 ${convoMaxW} shrink-0`,
-                compact ? "px-1.5 pb-1.5" : "px-2 md:px-0",
+                compact ? "px-4 pb-4" : "px-2 md:px-0",
                 // Empty states retain a small bottom cushion outside compact mode.
                 !hasMessages && !compact && "pb-2",
               )}
@@ -1160,6 +1160,9 @@ export const AssistantShell = forwardRef<
                 <AssistantChatInput
                   onNavigate={onClose}
                   ref={chatInputRef}
+                  // The composer carries its own legacy 12px click margin
+                  // (MIN-167); the shell's concentric 16px gutter replaces it.
+                  className="px-0 py-0 pb-0"
                   onSend={handleSend}
                   onAbort={abort}
                   isStreaming={isBusy}

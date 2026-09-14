@@ -1003,7 +1003,7 @@ export function AppSidebar({
       animate={{ width: EXPANDED_WIDTH }}
       transition={shellTransition}
       className={cn(
-        "flex h-full flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
+        "flex h-full flex-col overflow-hidden bg-sidebar text-sidebar-foreground",
       )}
     >
       {/* The top band COMMANDS the column: level 1 keeps the creation
@@ -1011,7 +1011,7 @@ export function AppSidebar({
           Pinned strip — what drives the list should be here. */}
       <div
         className={cn(
-          "sidebar-brand-row relative flex h-[var(--app-content-header-height)] shrink-0 items-center border-b border-border",
+          "sidebar-brand-row relative flex h-[var(--app-content-header-height)] shrink-0 items-center",
           // Level 2/3: the teleported filter strip carries its own gutter, so
           // the band's px-2.5 must not wrap it a second time.
           !back && GUTTER,
@@ -1061,7 +1061,7 @@ export function AppSidebar({
 
       {/* The account line is the only option present on EVERY level — the
           separator keeps it apart from whichever level runs above it. */}
-      <div className={cn("border-t border-border pt-2 pb-2.5", GUTTER)}>
+      <div className={cn("pt-2 pb-2.5", GUTTER)}>
         <SidebarFooter
           portalOwner={railId}
           onMenuOpenChange={handleMenuOpenChange}

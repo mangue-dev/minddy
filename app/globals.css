@@ -434,6 +434,41 @@ a.markdown-link::before {
   --control-hover: oklch(0.270 0.005 264);
 }
 
+/* ── Floating content pane (Linear-style shell, test) ────────────────────────
+   The chrome — tab strip, sidebar, and the bands they leave at the bottom and
+   on the right — fills the window with --sidebar and carries no borders: the
+   shared surface makes it one continuous frame. The content column (header
+   clearance + <main>, mangue-ui app-shell's right child) floats over it as a
+   rounded card, clear of the right and bottom window edges, flush against the
+   top bar above and the sidebar on its left. Desktop only; below 768 px the
+   shell keeps its classic full-bleed layout and floating pill navigation. */
+@media (min-width: 768px) {
+  .app-shell {
+    background: var(--sidebar);
+  }
+
+  .app-shell > div.flex.min-h-0.min-w-0.flex-1.flex-col {
+    margin-right: 12px;
+    /* The bottom band is deep enough to host the Numo chrome button. */
+    margin-bottom: 36px;
+    border-radius: 14px;
+    /* Real 1px border on the card itself: children are clipped to the padding
+       box, so the line can't be repainted or anti-aliased away by the
+       scrolling content. box-shadow/outline variants sat under the pane's
+       painted children and visibly cropped in places. */
+    background: var(--background);
+    border: 1px solid var(--border);
+  }
+
+  /* With navigation hidden, the histogram width collapses to 0 and the panel
+     would sit flush against the window edge: keep the same gutter on the left
+     as on the right, and follow the sidebar's own exit animation. */
+  .app-shell:has([data-sidebar-hidden="true"]) > div.flex.min-h-0.min-w-0.flex-1.flex-col {
+    margin-left: 12px;
+    transition: margin-left 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}
+
 /* Use Inter for headings too — Space Grotesk is no longer loaded, so remap the
    `font-display` utility (mangue-ui points it at --font-space-grotesk). */
 @theme inline {

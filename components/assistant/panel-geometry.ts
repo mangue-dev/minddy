@@ -10,16 +10,19 @@ import { cn } from "mangue-ui";
 
 export type PanelDisplayMode = "compact" | "expanded";
 
-// Compact: anchored at the bottom right (corner of the FAB), very rounded corners.
+// Compact: anchored at the bottom right, lifted above the bottom chrome band,
+// very rounded corners. The radius is CONCENTRIC with the composer inside:
+// 32px = the surface's 16px (rounded-2xl) + the 16px gutter (assistant shell
+// padding), so the input's corners keep an equal, true offset from the panel.
 const COMPACT_DESKTOP =
-  "md:!inset-auto md:!top-auto md:!left-auto md:!right-4 md:!bottom-4 " +
+  "md:!inset-auto md:!top-auto md:!left-auto md:!right-4 md:!bottom-12 " +
   // `assistant-panel-anchor` re-docks right/bottom to shell corner centered on
   // ultrawide (see globals.css); the extension does not carry it and remains centered
   // on the viewport.
   "assistant-panel-anchor " +
   "md:!w-[min(450px,calc(100vw-24px))] md:!max-w-none " +
-  "md:!h-[min(600px,calc(100dvh-32px))] " +
-  "md:rounded-[30px] md:border md:border-l md:origin-bottom-right";
+  "md:!h-[min(600px,calc(100dvh-96px))] " +
+  "md:rounded-[32px] md:border md:border-l md:origin-bottom-right";
 
 // Expanded: centered, LARGE format — exactly the geometry of the modals of
 // reading the app (task book, project creation), which are sized
