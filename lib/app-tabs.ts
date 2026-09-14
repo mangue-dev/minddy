@@ -27,6 +27,18 @@ export function sortAppTabs(tabs: readonly AppTab[]): AppTab[] {
     a.position - b.position || a.id.localeCompare(b.id));
 }
 
+/** Move within the pinned or regular group without changing pin state. */
+export function moveAppTabBefore(tabs: readonly AppTab[], id: string, beforeId: string | null): AppTab[] {
+  const moved = tabs.find((tab) => tab.id === id);
+  const before = tabs.find((tab) => tab.id === beforeId);
+  if (!moved || beforeId === id || (beforeId && (!before || before.pinned !== moved.pinned))) return [...tabs];
+  const group = sortAppTabs(tabs).filter((tab) => tab.pinned === moved.pinned && tab.id !== id);
+  const index = before ? group.findIndex((tab) => tab.id === before.id) : group.length;
+  group.splice(index, 0, moved);
+  const positions = new Map(group.map((tab, position) => [tab.id, position]));
+  return sortAppTabs(tabs.map((tab) => positions.has(tab.id) ? { ...tab, position: positions.get(tab.id)! } : tab));
+}
+
 /** Keep valid account rows; malformed destinations remain recoverable at Home. */
 export function reconcileAppTabs(tabs: readonly AppTab[], userId: string): AppTab[] {
   const unique = new Map<string, AppTab>();

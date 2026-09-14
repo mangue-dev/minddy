@@ -84,6 +84,7 @@ const notificationSettingsBridge: Partial<DesktopBridge> =
 const bridge: DesktopBridge = {
   version: readVersion(),
   platform: process.platform,
+  integratedWindowChrome: process.argv.includes("--minddy-integrated-chrome=1"),
   setWindowChrome(theme: "light" | "dark") {
     ipcRenderer.send("minddy:window-chrome", theme);
   },

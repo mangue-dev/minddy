@@ -179,7 +179,11 @@ export function useBoardViews(
   // pill — so a saved view's filters and sort survive a page reload.
   useEffect(() => {
     if (viewsLoading || orderedViews.length === 0) return;
-    if (restoredKeyRef.current !== restoreKey && remembered) {
+    const explicitView = viewParam === "my"
+      ? orderedViews.find((v) => v.kind === "my")
+      : orderedViews.find((v) => v.id === viewParam);
+    if (restoredKeyRef.current !== restoreKey && remembered &&
+        (!explicitView || explicitView.id === remembered.id)) {
       const view = orderedViews.find((v) => v.id === remembered.id);
       if (view) {
         restoredKeyRef.current = restoreKey;

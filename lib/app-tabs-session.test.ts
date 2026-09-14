@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { AppTabsSession, type AppTabsTransport } from "./app-tabs-session";
-import { createHomeTab, type AppTab } from "./app-tabs";
+import { createHomeTab, moveAppTabBefore, type AppTab } from "./app-tabs";
 import { AppTabRequestError } from "./app-tabs-api";
 
 function setup(initial: AppTab[] = [createHomeTab("owner"), createHomeTab("owner", undefined, 1)]) {
@@ -18,6 +18,7 @@ function setup(initial: AppTab[] = [createHomeTab("owner"), createHomeTab("owner
       rows = rows.map((row) => row.id === tab.id ? next : row); return next;
     }),
     close: vi.fn(async (tab) => { rows = rows.filter((row) => row.id !== tab.id); }),
+    move: vi.fn(async (tab, beforeId) => { rows = moveAppTabBefore(rows, tab.id, beforeId); return rows; }),
   };
   const session = new AppTabsSession("owner", transport);
   const navigate = vi.fn(); session.navigate = navigate; session.receive(rows);
@@ -25,6 +26,107 @@ function setup(initial: AppTab[] = [createHomeTab("owner"), createHomeTab("owner
 }
 
 describe("application tab sessions", () => {
+  it("opens new tabs immediately while outgoing synchronization is slow", async () => {
+    const { session, transport, rows, navigate } = setup(); await session.initialize("/home");
+    const original = rows()[0];
+    let finish!: (tab: AppTab) => void;
+    vi.mocked(transport.patch).mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    session.observe("/all", null);
+    await session.create();
+    const first = session.getSnapshot().activeId!;
+    expect(first).not.toBe(original.id);
+    expect(session.getSnapshot().busy).toBe(false);
+    expect(navigate).toHaveBeenLastCalledWith("/home");
+    await session.create();
+    expect(session.getSnapshot().tabs).toHaveLength(4);
+    session.receive(rows());
+    expect(session.getSnapshot().tabs).toHaveLength(4);
+    expect(session.getSnapshot().recovering).toBe(false);
+    finish({ ...original, href: "/all", revision: 2 });
+    await session.retry();
+    expect(transport.create).toHaveBeenCalledTimes(2); session.dispose();
+  });
+  it("removes a closed tab immediately and ignores stale refetches until confirmation", async () => {
+    const { session, transport, rows, navigate } = setup(); await session.initialize("/home");
+    const id = session.getSnapshot().activeId!;
+    let finish!: () => void;
+    vi.mocked(transport.close).mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    await session.close(id);
+    expect(session.getSnapshot().tabs).toHaveLength(1);
+    expect(session.getSnapshot().activeId).not.toBe(id);
+    expect(navigate).toHaveBeenCalledWith("/home");
+    session.receive(rows());
+    expect(session.getSnapshot().tabs).toHaveLength(1);
+    await session.close(session.getSnapshot().activeId!);
+    expect(transport.close).toHaveBeenCalledTimes(1);
+    finish(); await session.retry(); session.dispose();
+  });
+  it("restores a failed close without discarding local state or stealing navigation", async () => {
+    const { session, transport, navigate } = setup(); await session.initialize("/home");
+    const id = session.getSnapshot().activeId!;
+    session.setLocalState(`${id}:view`, "unsaved-filters");
+    let fail!: (error: Error) => void;
+    vi.mocked(transport.close).mockImplementationOnce(() => new Promise((_resolve, reject) => { fail = reject; }));
+    await session.close(id);
+    const active = session.getSnapshot().activeId;
+    fail(new AppTabRequestError("last_tab"));
+    await vi.waitFor(() => expect(session.getSnapshot().error).toBe("last_tab"));
+    expect(session.getSnapshot().tabs).toHaveLength(2);
+    expect(session.getSnapshot().activeId).toBe(active);
+    expect(session.getLocalState(`${id}:view`)).toBe("unsaved-filters");
+    expect(navigate).toHaveBeenCalledTimes(1); session.dispose();
+  });
+  it("retries an uncertain creation using the same ID without losing its destination", async () => {
+    const { session, transport } = setup(); await session.initialize("/home");
+    vi.mocked(transport.create).mockRejectedValueOnce(new Error("Offline"));
+    await session.create();
+    const id = session.getSnapshot().activeId!;
+    await vi.waitFor(() => expect(session.getSnapshot().error).toBe("database"));
+    session.observe("/home", null); session.observe("/all", null);
+    await session.retry();
+    expect(transport.create).toHaveBeenNthCalledWith(1, false, id);
+    expect(transport.create).toHaveBeenNthCalledWith(2, false, id);
+    expect(session.getSnapshot().tabs.find((tab) => tab.id === id)?.href).toBe("/all");
+    session.dispose();
+  });
+  it("moves optimistically and rolls back a failed reorder", async () => {
+    const { session, transport, rows } = setup(); await session.initialize("/home");
+    const [a, b] = rows();
+    let fail!: (error: Error) => void;
+    vi.mocked(transport.move).mockImplementationOnce(() => new Promise((_resolve, reject) => { fail = reject; }));
+    await session.move(b.id, a.id);
+    expect(session.getSnapshot().tabs.map((tab) => tab.id)).toEqual([b.id, a.id]);
+    session.receive(rows());
+    expect(session.getSnapshot().tabs.map((tab) => tab.id)).toEqual([b.id, a.id]);
+    fail(new Error("Offline"));
+    await vi.waitFor(() => expect(session.getSnapshot().error).toBe("database"));
+    expect(session.getSnapshot().tabs.map((tab) => tab.id)).toEqual([a.id, b.id]); session.dispose();
+  });
+  it("keeps a slow pin request from blocking creation or optimistic closure", async () => {
+    const { session, transport, rows } = setup(); await session.initialize("/home");
+    const original = rows()[0];
+    let finish!: (tab: AppTab) => void;
+    vi.mocked(transport.patch).mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    const pin = session.update(original.id, { pinned: true });
+    await session.create();
+    const created = session.getSnapshot().activeId!;
+    await session.close(created);
+    expect(session.getSnapshot().tabs).toHaveLength(2);
+    finish({ ...original, pinned: true, revision: 2 });
+    await pin; await session.retry();
+    expect(transport.close).toHaveBeenCalledWith(expect.objectContaining({ id: created, revision: 1 }));
+    expect(session.getSnapshot().tabs).toHaveLength(2); session.dispose();
+  });
+  it("restores canonical order after two queued reorders both fail", async () => {
+    const { session, transport, rows } = setup(); await session.initialize("/home");
+    const [a, b] = rows();
+    let fail!: (error: Error) => void;
+    vi.mocked(transport.move).mockImplementationOnce(() => new Promise((_resolve, reject) => { fail = reject; })).mockRejectedValueOnce(new Error("Offline"));
+    await session.move(b.id, a.id);
+    await session.move(a.id, b.id);
+    fail(new Error("Offline")); await session.retry();
+    expect(session.getSnapshot().tabs.map((tab) => tab.id)).toEqual([a.id, b.id]); session.dispose();
+  });
   it("can retry failed initial creation even when the empty list has not changed", async () => {
     const { session, transport } = setup([]);
     vi.mocked(transport.create).mockRejectedValueOnce(new Error("Offline"));

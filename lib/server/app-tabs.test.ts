@@ -1,9 +1,23 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { listAppTabs, mutateAppTab } from "./app-tabs";
+import { listAppTabs, mutateAppTab, moveAppTab } from "./app-tabs";
 import { createHomeTab } from "@/lib/app-tabs";
 
 describe("account tab operations", () => {
+  it("validates reorder inputs and delegates owner checks to the authenticated RPC", async () => {
+    const tab = createHomeTab("owner");
+    const rpc = vi.fn(async () => ({ data: { tabs: [tab] }, error: null }));
+    const client = { rpc } as unknown as SupabaseClient;
+    for (const input of [
+      { id: "bad", revision: 1, beforeId: null },
+      { id: tab.id, revision: 0, beforeId: null },
+      { id: tab.id, revision: 1, beforeId: "bad" },
+      { id: tab.id, revision: 1, beforeId: undefined },
+    ]) expect(await moveAppTab(client, input)).toEqual({ code: "invalid" });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(await moveAppTab(client, { id: tab.id, revision: 1, beforeId: null })).toEqual({ tabs: [tab] });
+    expect(rpc).toHaveBeenCalledWith("move_app_tab", { p_id: tab.id, p_revision: 1, p_before_id: null });
+  });
   it("rejects malformed fields before reaching the database", async () => {
     const rpc = vi.fn(); const client = { rpc } as unknown as SupabaseClient;
     expect(await mutateAppTab(client, "update", { id: "bad", revision: 1, patch: { pinned: true } })).toEqual({ code: "invalid" });

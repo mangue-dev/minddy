@@ -45,6 +45,8 @@ export interface DesktopNativePushRegistration {
 }
 
 export interface DesktopBridge {
+  /** Actual frame mode; older shells do not negotiate this capability. */
+  readonly integratedWindowChrome?: boolean;
   /** Match integrated caption controls to the page theme; absent in older shells. */
   setWindowChrome?(theme: "light" | "dark"): void;
   /** The version of the shell (`app.getVersion()`), to display it. */

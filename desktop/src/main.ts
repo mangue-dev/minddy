@@ -74,6 +74,7 @@ import { parseWnsHelperChannel } from "@/lib/desktop/wns";
 import { parseWindowsStoreUpdateProbe } from "@/lib/desktop/windows-store-update";
 import {
   desktopWindowFrameOptions,
+  desktopDocumentChrome,
   MACOS_TRAFFIC_LIGHT_POSITION,
 } from "@/lib/desktop/window-frame";
 import { readDesktopChannel, writeDesktopChannel } from "./channel-store";
@@ -131,6 +132,8 @@ import { trace } from "./trace";
 let pendingAuthLink: DesktopAuthLink | null = null;
 let pendingOpenPath: string | null = null;
 let mainWindow: BrowserWindow | null = null;
+const integratedFrames = new WeakMap<BrowserWindow, boolean>();
+const documentChrome = new Map<number, boolean>();
 const localNotifications = new DesktopLocalNotificationRegistry();
 /** Electron closes windows before `before-quit` during an updater relaunch. */
 let quittingForUpdate = false;
@@ -691,7 +694,8 @@ function guardNavigation(window: BrowserWindow): void {
 
 function createWindow(
   loadInitialOrigin = true,
-  showWhenReady = true
+  showWhenReady = true,
+  integrated = false,
 ): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
@@ -712,7 +716,7 @@ function createWindow(
     // macOS integrates its traffic lights into the app header. Windows and Linux
     // keep native title-bar controls while auto-hiding the fallback application
     // menu until the user presses Alt.
-    ...desktopWindowFrameOptions(process.platform),
+    ...desktopWindowFrameOptions(process.platform, integrated),
     backgroundColor: "#000000",
     show: false,
     webPreferences: {
@@ -730,6 +734,7 @@ function createWindow(
       // start — that is, right during the first render. The preload reads
       // `process.argv`, which is already there when it runs.
       additionalArguments: [
+        `--minddy-integrated-chrome=${integrated || process.platform === "darwin" ? "1" : "0"}`,
         `--minddy-version=${app.getVersion()}`,
         `--minddy-packaged=${app.isPackaged ? "1" : "0"}`,
         `--minddy-native-notifications=${nativeNotificationsAvailable ? "1" : "0"}`,
@@ -748,6 +753,8 @@ function createWindow(
       backgroundThrottling: true,
     },
   });
+
+  integratedFrames.set(window, integrated);
 
   guardNavigation(window);
   window.webContents.on(
@@ -777,7 +784,36 @@ function createWindow(
       );
     },
   );
-  if (showWhenReady) window.once("ready-to-show", () => window.show());
+  if (process.platform === "darwin" && showWhenReady) window.once("ready-to-show", () => window.show());
+  let shownOnce = false;
+  window.on("show", () => { shownOnce = true; });
+  window.webContents.on("did-finish-load", () => {
+    if (process.platform === "darwin" || mainWindow !== window) return;
+    const desired = documentChrome.get(window.webContents.id) ?? integrated;
+    if (desired === integrated) {
+      if (showWhenReady && !shownOnce) window.show();
+      return;
+    }
+    // Frame style is a constructor option. Wait for the document to finish so
+    // any rotated auth cookies are committed before loading it in a new window.
+    const visible = window.isVisible() || (showWhenReady && !shownOnce);
+    const maximized = window.isMaximized();
+    const minimized = window.isMinimized();
+    const fullScreen = window.isFullScreen();
+    const url = window.webContents.getURL();
+    const replacement = createWindow(false, visible, desired);
+    replacement.setBounds(window.getNormalBounds());
+    replacement.once("show", () => {
+      if (maximized) replacement.maximize();
+      if (fullScreen) replacement.setFullScreen(true);
+      if (minimized) replacement.minimize();
+    });
+    mainWindow = replacement;
+    window.destroy();
+    void replacement.loadURL(url);
+  });
+  const webContentsId = window.webContents.id;
+  window.on("closed", () => documentChrome.delete(webContentsId));
   // Keep native menu access independent of the renderer and remote server.
   // A bare Alt opens the full application menu when integrated caption controls
   // prevent the operating system from revealing the auto-hidden menu bar.
@@ -862,13 +898,23 @@ function createWindow(
   // last overload and refuse everything. The loop that lived here was breaking
   // `npm --prefix desktop run typecheck`, and the only other outcome would be a cast,
   // that is, turn off the only check that checks these names.
-  powerMonitor.on("suspend", () => trace("power:suspend"));
-  powerMonitor.on("resume", () => {
+  const onSuspend = () => trace("power:suspend");
+  const onResume = () => {
     trace("power:resume");
     window.webContents.send("minddy:notification:wake");
+  };
+  const onLock = () => trace("power:lock-screen");
+  const onUnlock = () => trace("power:unlock-screen");
+  powerMonitor.on("suspend", onSuspend);
+  powerMonitor.on("resume", onResume);
+  powerMonitor.on("lock-screen", onLock);
+  powerMonitor.on("unlock-screen", onUnlock);
+  window.on("closed", () => {
+    powerMonitor.removeListener("suspend", onSuspend);
+    powerMonitor.removeListener("resume", onResume);
+    powerMonitor.removeListener("lock-screen", onLock);
+    powerMonitor.removeListener("unlock-screen", onUnlock);
   });
-  powerMonitor.on("lock-screen", () => trace("power:lock-screen"));
-  powerMonitor.on("unlock-screen", () => trace("power:unlock-screen"));
 
   if (loadInitialOrigin) void window.loadURL(`${origin}${DESKTOP_ENTRY_PATH}`);
   return window;
@@ -1042,7 +1088,7 @@ function registerIpc(): void {
   });
 
   ipcMain.on("minddy:window-chrome", (event, theme: unknown) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents || process.platform === "darwin") return;
+    if (!mainWindow || event.sender !== mainWindow.webContents || process.platform === "darwin" || !integratedFrames.get(mainWindow)) return;
     if (theme !== "light" && theme !== "dark") return;
     mainWindow.setTitleBarOverlay({ height: 44, color: theme === "dark" ? "#191a1b" : "#fafafa", symbolColor: theme === "dark" ? "#eeeeee" : "#222222" });
   });
@@ -1278,6 +1324,13 @@ async function offerMicrophoneSettings(): Promise<void> {
 }
 
 function hardenSession(): void {
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    if (mainWindow && details.webContentsId === mainWindow.webContents.id) {
+      const supported = desktopDocumentChrome(details, origin);
+      if (supported !== null) documentChrome.set(details.webContentsId, supported);
+    }
+    callback({});
+  });
   session.defaultSession.setPermissionRequestHandler(
     (_wc, permission, callback, details) => {
       if (permission === "media") {

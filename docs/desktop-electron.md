@@ -142,6 +142,9 @@ local to each window. Regular tabs are 150 px wide and pinned tabs are square.
 Pinning changes presentation only: every sidebar click navigates in the current
 tab. Create another tab first to keep a separate destination. New tabs start at
 Home, and the final tab cannot be closed. There is no collection-size limit.
+Drag a tab to reorder it within its pinned or regular group; Alt+Shift+Left/Right
+provides the same action from the keyboard. Regular-tab name tooltips appear
+only when the label overflows. Pinned tabs always expose their hidden name.
 
 Switching tabs restores the page and its published view/selection, including
 consumed query parameters, and closes the transient issue panel. Mounted wiki
@@ -155,18 +158,28 @@ buttons. Cmd/Ctrl+W still hides the desktop window.
 Remote destination changes never navigate the current window. A remote close
 is applied only after local editor saves succeed; failed saves retain a recovery
 tab. Mutations are serialized within a window and checked against the database
-revision, with the returned canonical row applied on success. Conflicting actions
-can be repeated using the new revision; destination writes remain pending for
+revision, with the returned canonical row applied on success. Network writes
+do not block the navigation queue. Creation and
+closure update the strip after departure guards succeed. Failed creates retain
+the same ID and local content for retry; failed closes restore the tab without
+redirecting the active editor. Reorders are optimistic and roll back on failure.
+Conflicting actions can be repeated using the new revision; destination writes remain pending for
 retry. The account collection is fetched in pages and excluded from the general
 localStorage query snapshot. Only the active tab's restoration metadata is stored
 in account-scoped sessionStorage and removed on sign-out.
 
 macOS uses native traffic lights at x=19, y=15, independently of sidebar state.
 Modal holds and fullscreen acknowledgements remain in place. Windows and Linux
-use Electron's hidden title bar with a 44 px native title-bar overlay, theme
+start with the native frame for compatibility with older self-hosted renderers.
+Only a main document from the selected origin advertising
+`x-minddy-desktop-chrome: 1` opts into Electron's hidden title bar with a 44 px native title-bar overlay, theme
 synchronization, and Chromium's title-bar safe-area geometry. A bare Alt opens the
 main-process application menu, including server recovery actions, even when the
 remote server cannot load. The separate server-picker frame is unchanged.
+When the document capability changes, the shell replaces the window after the
+load completes, preserving committed session cookies, bounds, visibility, and
+maximized/fullscreen state. The replacement has the appropriate frame before it
+is shown; no capability is inferred from the origin or app version.
 
 Login, signup, and the server-unavailable screen have minimal native-control
 clearance and a drag surface, without application tabs. Interactive controls,

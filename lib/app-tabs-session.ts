@@ -1,4 +1,4 @@
-import { reconcileAppTabs, selectTabAfterClose, sortAppTabs, type AppTab, type AppTabPatch } from "./app-tabs";
+import { createHomeTab, moveAppTabBefore, reconcileAppTabs, selectTabAfterClose, sortAppTabs, type AppTab, type AppTabPatch } from "./app-tabs";
 import { normalizeAppTabLocation } from "./app-tab-location";
 import { AppTabRequestError } from "./app-tabs-api";
 
@@ -6,6 +6,7 @@ export interface AppTabsTransport {
   create: (ensure: boolean, id: string) => Promise<AppTab>;
   patch: (tab: AppTab, patch: AppTabPatch) => Promise<AppTab>;
   close: (tab: AppTab) => Promise<void>;
+  move: (tab: AppTab, beforeId: string | null) => Promise<AppTab[]>;
 }
 export interface AppTabsSnapshot {
   tabs: AppTab[];
@@ -21,9 +22,14 @@ export class AppTabsSession {
   private listeners = new Set<() => void>();
   private guards = new Set<() => Promise<boolean>>();
   private queue: Promise<unknown> = Promise.resolve();
+  private writes: Promise<unknown> = Promise.resolve();
+  private creating = new Set<string>();
+  private closing = new Map<string, AppTab>();
+  private locations = new Map<string, string>();
+  private order: { id: string; beforeId: string | null }[] = [];
+  private orderBase: Map<string, number> | null = null;
   private closed = new Set<string>();
   private disposed = false;
-  private pendingHref: string | null = null;
   private observedHref: string | null = null;
   private activeHref: string | null = null;
   private target: string | null = null;
@@ -35,6 +41,7 @@ export class AppTabsSession {
   setLocalState(key: string, value: unknown) { if (!this.disposed) this.localState.set(key, value); }
   private forget(id: string) {
     this.closed.add(id);
+    this.locations.delete(id);
     for (const key of this.localState.keys()) if (key.startsWith(`${id}:`)) this.localState.delete(key);
   }
   getActiveHref = () => this.activeHref;
@@ -47,6 +54,8 @@ export class AppTabsSession {
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private emit(patch: Partial<AppTabsSnapshot>) {
     if (this.disposed) return;
+    if (patch.tabs) for (const move of this.order) patch.tabs = moveAppTabBefore(patch.tabs, move.id, move.beforeId);
+    if (patch.tabs) patch.tabs = sortAppTabs(patch.tabs);
     this.snapshot = { ...this.snapshot, ...patch };
     this.listeners.forEach((listener) => listener());
   }
@@ -62,9 +71,28 @@ export class AppTabsSession {
   }
   private merge(tab: AppTab) {
     if (this.closed.has(tab.id) || this.disposed) return;
+    if (this.closing.has(tab.id)) {
+      const previous = this.closing.get(tab.id)!;
+      if (tab.revision >= previous.revision) this.closing.set(tab.id, tab);
+      return;
+    }
     const previous = this.snapshot.tabs.find((row) => row.id === tab.id);
     if (previous && previous.revision > tab.revision) return;
-    this.emit({ tabs: sortAppTabs([...this.snapshot.tabs.filter((row) => row.id !== tab.id), tab]) });
+    const href = this.locations.get(tab.id);
+    this.emit({ tabs: sortAppTabs([...this.snapshot.tabs.filter((row) => row.id !== tab.id), href ? { ...tab, href } : tab]) });
+  }
+  private report(error: unknown) {
+    if (error instanceof AppTabRequestError && error.tab) this.merge(error.tab);
+    this.emit({ error: error instanceof AppTabRequestError ? error.code : "database" });
+  }
+  /** Network latency must not hold the window's navigation queue. */
+  private persist(action: () => Promise<void>): Promise<void> {
+    const next = this.writes.then(async () => {
+      if (this.disposed) return;
+      try { await action(); } catch (error) { this.report(error); }
+    });
+    this.writes = next;
+    return next;
   }
   private run(action: () => Promise<void>): Promise<void> {
     const next = this.queue.then(async () => {
@@ -72,8 +100,7 @@ export class AppTabsSession {
       this.emit({ busy: true, error: null });
       try { await action(); }
       catch (error) {
-        if (error instanceof AppTabRequestError && error.tab) this.merge(error.tab);
-        this.emit({ error: error instanceof AppTabRequestError ? error.code : "database" });
+        this.report(error);
       } finally { this.emit({ busy: false }); }
     });
     this.queue = next;
@@ -83,13 +110,22 @@ export class AppTabsSession {
 
   /** Remote edits update rows without changing this window's route. */
   receive(rows: AppTab[]) {
-    const incoming = reconcileAppTabs(rows, this.owner).filter((tab) => !this.closed.has(tab.id));
+    if (this.orderBase) this.orderBase = new Map(rows.map((row) => [row.id, row.position]));
+    for (const tab of reconcileAppTabs(rows, this.owner)) {
+      if (this.closing.has(tab.id)) this.merge(tab);
+    }
+    const incoming = reconcileAppTabs(rows, this.owner).filter((tab) => !this.closed.has(tab.id) && !this.closing.has(tab.id));
+    for (const tab of this.snapshot.tabs) {
+      if (this.creating.has(tab.id) && !incoming.some((row) => row.id === tab.id)) incoming.push(tab);
+    }
     const active = this.active();
     const missing = active && !incoming.some((tab) => tab.id === active.id);
     const currentById = new Map(this.snapshot.tabs.map((tab) => [tab.id, tab]));
     const tabs = incoming.map((tab) => {
       const current = currentById.get(tab.id);
-      return current && current.revision > tab.revision ? current : tab;
+      const canonical = current && current.revision > tab.revision ? current : tab;
+      const href = this.locations.get(tab.id);
+      return href ? { ...canonical, href } : canonical;
     });
     if (missing) tabs.push(active);
     this.emit({ tabs: sortAppTabs(tabs), recovering: Boolean(missing) });
@@ -113,7 +149,7 @@ export class AppTabsSession {
       this.observedHref = destination;
       this.remember(chosen.id, destination);
       if (!explicit && destination !== href) { this.setTarget(destination); this.navigate(destination); }
-      else if (destination !== chosen.href) { this.pendingHref = destination; await this.flushLocation(); }
+      else if (destination !== chosen.href) { this.locations.set(chosen.id, destination); await this.flushLocation(); }
     });
   }
 
@@ -143,19 +179,35 @@ export class AppTabsSession {
     this.emit({});
     this.remember(this.snapshot.activeId, next);
     if (this.snapshot.recovering) return;
-    this.pendingHref = next;
+    this.locations.set(this.snapshot.activeId, next);
+    const tab = this.active();
+    if (tab) this.merge(tab);
     clearTimeout(this.timer);
-    this.timer = setTimeout(() => void this.run(() => this.flushLocation()), 250);
+    this.timer = setTimeout(() => void this.flushLocation(), 250);
   }
 
-  private async flushLocation() {
+  private async createOnServer(id: string) {
+    if (!this.creating.has(id)) return;
+    const tab = await this.transport.create(false, id);
+    this.creating.delete(id);
+    this.merge(tab);
+  }
+  private flushLocation() {
     clearTimeout(this.timer);
-    const href = this.pendingHref;
-    const tab = this.active();
-    if (!href || !tab || this.snapshot.recovering) return;
-    // Leave the write queued after a conflict/network failure so retry can save it.
-    this.merge(await this.transport.patch(tab, { href }));
-    if (this.pendingHref === href) this.pendingHref = null;
+    const ids = [...this.locations.keys()];
+    return this.persist(async () => {
+      for (const id of ids) {
+        if (this.closing.has(id) || this.closed.has(id)) continue;
+        const href = this.locations.get(id);
+        if (!href) continue;
+        await this.createOnServer(id);
+        const tab = this.snapshot.tabs.find((row) => row.id === id);
+        if (!tab) continue;
+        const saved = await this.transport.patch(tab, { href });
+        if (this.locations.get(id) === href) this.locations.delete(id);
+        this.merge(saved);
+      }
+    });
   }
   private select(tab: AppTab) {
     if (this.disposed) return;
@@ -164,7 +216,6 @@ export class AppTabsSession {
       this.forget(previous);
       this.emit({ tabs: this.snapshot.tabs.filter((row) => row.id !== previous) });
     }
-    this.pendingHref = null;
     this.setTarget(tab.href);
     this.activeHref = tab.href;
     this.observedHref = tab.href;
@@ -183,46 +234,97 @@ export class AppTabsSession {
   activate = (id: string) => this.run(async () => {
     if (id === this.snapshot.activeId) return;
     if (!(await this.saveEditors())) return;
-    if (!this.snapshot.recovering) await this.flushLocation();
+    if (!this.snapshot.recovering) void this.flushLocation();
     const tab = this.snapshot.tabs.find((row) => row.id === id);
     if (tab) this.select(tab);
   });
   create = () => this.run(async () => {
     if (!(await this.saveEditors())) return;
-    if (!this.snapshot.recovering) await this.flushLocation();
-    const tab = await this.transport.create(false, crypto.randomUUID());
+    if (!this.snapshot.recovering) void this.flushLocation();
+    const position = this.snapshot.tabs.reduce((maximum, row) => Math.max(maximum, row.position), -1) + 1;
+    const tab = createHomeTab(this.owner, crypto.randomUUID(), position);
+    this.creating.add(tab.id);
     this.merge(tab);
     this.select(tab);
+    void this.persist(() => this.createOnServer(tab.id));
   });
   goHome = () => this.run(async () => {
     if (!(await this.saveEditors())) return;
     const tab = this.active();
     if (!tab) return;
     if (this.snapshot.recovering) return;
-    this.pendingHref = "/home";
-    await this.flushLocation();
+    this.locations.set(tab.id, "/home");
+    void this.flushLocation();
     this.select({ ...tab, href: "/home" });
   });
-  update = (id: string, patch: AppTabPatch) => this.run(async () => {
-    const tab = this.snapshot.tabs.find((row) => row.id === id);
-    if (tab) this.merge(await this.transport.patch(tab, patch));
+  update = (id: string, patch: AppTabPatch) => {
+    this.emit({ error: null });
+    return this.persist(async () => {
+      await this.createOnServer(id);
+      const tab = this.snapshot.tabs.find((row) => row.id === id);
+      if (tab) this.merge(await this.transport.patch(tab, patch));
+    });
+  };
+  move = (id: string, beforeId: string | null) => this.run(async () => {
+    const previous = this.snapshot.tabs;
+    const tab = previous.find((row) => row.id === id);
+    if (!tab || id === beforeId || (beforeId && !previous.some((row) => row.id === beforeId && row.pinned === tab.pinned))) return;
+    const move = { id, beforeId };
+    this.orderBase ??= new Map(previous.map((row) => [row.id, row.position]));
+    this.order.push(move);
+    this.emit({ tabs: [...previous] });
+    void this.persist(async () => {
+      try {
+        await this.createOnServer(id);
+        if (beforeId) await this.createOnServer(beforeId);
+        const current = this.snapshot.tabs.find((row) => row.id === id);
+        if (!current) return;
+        const rows = await this.transport.move(current, beforeId);
+        this.order = this.order.filter((item) => item !== move);
+        this.receive(rows);
+      } catch (error) {
+        this.order = this.order.filter((item) => item !== move);
+        const positions = this.orderBase ?? new Map(previous.map((row) => [row.id, row.position]));
+        this.emit({ tabs: this.snapshot.tabs.map((row) => positions.has(row.id) ? { ...row, position: positions.get(row.id)! } : row) });
+        throw error;
+      } finally {
+        this.order = this.order.filter((item) => item !== move);
+        if (!this.order.length) this.orderBase = null;
+      }
+    });
   });
   close = (id: string) => this.run(async () => {
     if (this.snapshot.tabs.length <= 1) return;
     if (id === this.snapshot.activeId) {
       if (!(await this.saveEditors())) return;
-      await this.flushLocation();
     }
     const tab = this.snapshot.tabs.find((row) => row.id === id);
     if (!tab) return;
     const nextId = selectTabAfterClose(this.snapshot.tabs, id, this.snapshot.activeId ?? id);
-    await this.transport.close(tab);
-    this.forget(id);
+    this.closing.set(id, tab);
     this.emit({ tabs: this.snapshot.tabs.filter((row) => row.id !== id) });
     if (id === this.snapshot.activeId) {
       const next = this.snapshot.tabs.find((row) => row.id === nextId);
       if (next) this.select(next);
     }
+    void this.persist(async () => {
+      try {
+        await this.createOnServer(id);
+        await this.transport.close(this.closing.get(id) ?? tab);
+        this.closing.delete(id);
+        this.locations.delete(id);
+        this.forget(id);
+      } catch (error) {
+        if (error instanceof AppTabRequestError && error.code === "not_found") {
+          this.closing.delete(id); this.locations.delete(id); this.forget(id);
+          return;
+        }
+        const restored = error instanceof AppTabRequestError && error.tab ? error.tab : this.closing.get(id) ?? tab;
+        this.closing.delete(id);
+        this.merge(restored);
+        throw error;
+      }
+    });
   });
   recoverRemoteClose = () => this.run(async () => {
     if (!this.snapshot.recovering || !(await this.saveEditors())) return;
@@ -235,7 +337,10 @@ export class AppTabsSession {
   });
   retry = () => {
     if (!this.snapshot.activeId && this.startup) return this.initialize(this.startup.href, this.startup.restored);
-    return this.snapshot.recovering ? this.recoverRemoteClose() : this.run(() => this.flushLocation());
+    return this.snapshot.recovering ? this.recoverRemoteClose() : this.run(async () => {
+      await this.persist(async () => { for (const id of this.creating) await this.createOnServer(id); });
+      await this.flushLocation();
+    });
   };
   dispose() { this.disposed = true; this.onDispose(); clearTimeout(this.timer); clearTimeout(this.targetTimer); this.guards.clear(); this.listeners.clear(); this.localState.clear(); }
 }

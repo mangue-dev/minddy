@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Pin, PinOff, Pencil, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
@@ -13,12 +13,25 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, on
 }) {
   const t = useTranslations("AppTabs");
   const ref = useRef<HTMLButtonElement>(null);
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const [truncated, setTruncated] = useState(false);
+  useEffect(() => {
+    const element = labelRef.current;
+    if (!element) return;
+    const measure = () => setTruncated(element.scrollWidth > element.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [label, tab.pinned]);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   return <div role="presentation" className={cn("app-tab group relative flex h-[34px] shrink-0 items-center rounded-lg text-sm text-muted-foreground hover:bg-sidebar-accent/60", tab.pinned ? "w-[34px]" : "w-[150px]", active && "bg-sidebar-accent text-sidebar-foreground")}
     onContextMenu={(event) => { event.preventDefault(); setMenu({ x: event.clientX, y: event.clientY }); }}>
     <Tooltip disableHoverableContent>
       <TooltipTrigger asChild>
         <button ref={ref} type="button" role="tab" id={`app-tab-${tab.id}`} data-app-tab-id={tab.id}
+          aria-keyshortcuts="Alt+Shift+ArrowLeft Alt+Shift+ArrowRight"
+          onPointerEnter={() => { const element = labelRef.current; if (element) setTruncated(element.scrollWidth > element.clientWidth); }}
           aria-label={label} aria-selected={active} aria-controls="app-tab-content" tabIndex={focusable ? 0 : -1}
           onFocus={onFocus} onClick={onActivate} aria-disabled={busy || undefined}
           onKeyDown={(event) => {
@@ -27,10 +40,10 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, on
             }
           }}
           className={cn("flex h-full min-w-0 flex-1 items-center gap-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring", tab.pinned ? "justify-center" : "pl-2.5 pr-6")}>
-          {icon}{!tab.pinned && <span className="truncate">{label}</span>}
+          {icon}{!tab.pinned && <span ref={labelRef} className="truncate">{label}</span>}
         </button>
       </TooltipTrigger>
-      <TooltipContent side="bottom">{label}</TooltipContent>
+      {(tab.pinned || truncated) && <TooltipContent side="bottom">{label}</TooltipContent>}
     </Tooltip>
     {!tab.pinned && <button type="button" aria-label={t("closeNamed", { name: label })} disabled={last || busy}
       tabIndex={-1} onClick={onClose} className="absolute right-1 flex size-5 items-center justify-center rounded opacity-0 hover:bg-background/60 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-0">

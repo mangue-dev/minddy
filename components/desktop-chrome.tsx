@@ -40,7 +40,7 @@ export function DesktopChrome() {
     const platform = desktopBridgePlatform(bridge, navigator.platform);
     root.setAttribute("data-desktop-app", "");
     if (platform) root.setAttribute("data-desktop-platform", platform);
-    if (bridge.setWindowChrome) root.setAttribute("data-integrated-caption-controls", "");
+    if (bridge.integratedWindowChrome ?? Boolean(bridge.setWindowChrome)) root.setAttribute("data-integrated-caption-controls", "");
     const syncTheme = () => bridge.setWindowChrome?.(root.classList.contains("dark") ? "dark" : "light");
     syncTheme();
     const observer = new MutationObserver(syncTheme);

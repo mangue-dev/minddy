@@ -3,7 +3,7 @@ import { createContext, Suspense, useContext, useEffect, useMemo, useRef, useSyn
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./auth-context";
-import { createAppTab, deleteAppTab, patchAppTab } from "./app-tabs-api";
+import { createAppTab, deleteAppTab, patchAppTab, moveAppTab } from "./app-tabs-api";
 import { AppTabsSession, type AppTabsSnapshot } from "./app-tabs-session";
 import { appTabsQueryKey, useAppTabsQuery } from "./use-app-tabs-query";
 import { AppTabRouteSync } from "@/components/app-tab-route-sync";
@@ -39,6 +39,7 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
       create: (ensure, id) => write(() => createAppTab(ensure, id, abort.signal)),
       patch: (tab, patch) => write(() => patchAppTab(tab, patch, abort.signal)),
       close: (tab) => write(() => deleteAppTab(tab, abort.signal)),
+      move: (tab, beforeId) => write(() => moveAppTab(tab, beforeId, abort.signal)),
     });
     controller.onDispose = () => abort.abort();
     return controller;

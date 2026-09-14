@@ -36,7 +36,7 @@ let session:
       access_token?: string;
     }
   | null = null;
-let sessionError: { name: string; status: number } | null = null;
+let sessionError: { name: string; status: number; code?: string } | null = null;
 
 vi.mock("@supabase/ssr", () => ({
   createServerClient: (_url: string, _key: string, options: { cookies: { setAll: SetAll } }) => ({
@@ -174,6 +174,21 @@ describe("cookies refreshed while reading the session (MIN-293)", () => {
       { name: "sb-access-token", value: "neuf", options: OPTIONS },
       { name: "sb-refresh-token", value: "aussi-neuf", options: OPTIONS },
     ];
+  });
+
+  it("clears an invalid refresh token on the protected-page sign-in redirect", async () => {
+    sessionError = { name: "AuthApiError", status: 400, code: "refresh_token_not_found" };
+    refreshed = [{ name: "sb-project-auth-token", value: "", options: { ...OPTIONS, maxAge: 0 } }];
+    const response = await proxy(request("/home"));
+    expect(new URL(response.headers.get("location")!).pathname).toBe("/login");
+    expect(response.cookies.get("sb-project-auth-token")).toMatchObject({ value: "", maxAge: 0 });
+  });
+
+  it("preserves rotated cookies when redirecting to the MFA challenge", async () => {
+    session = { user: { id: "u1" }, access_token: `header.${Buffer.from(JSON.stringify({ aal: "aal1", amr: [{ method: "password" }], app_metadata: { mfa_enabled: true } })).toString("base64url")}.signature` };
+    const response = await proxy(request("/home"));
+    expect(new URL(response.headers.get("location")!).pathname).toBe("/login");
+    expect(response.cookies.get("sb-access-token")?.value).toBe("neuf");
   });
 
   it("returns the /login response for a signed-out visitor", async () => {

@@ -22,3 +22,8 @@ export async function patchAppTab(tab: AppTab, patch: AppTabPatch, signal?: Abor
 export async function deleteAppTab(tab: AppTab, signal?: AbortSignal): Promise<void> {
   await request(`/${tab.id}`, { method: "DELETE", body: JSON.stringify({ revision: tab.revision }), signal });
 }
+export async function moveAppTab(tab: AppTab, beforeId: string | null, signal?: AbortSignal): Promise<AppTab[]> {
+  return (await request<{ tabs: AppTab[] }>(`/${tab.id}/move`, {
+    method: "POST", body: JSON.stringify({ revision: tab.revision, beforeId }), signal,
+  })).tabs;
+}

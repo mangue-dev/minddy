@@ -31,6 +31,19 @@ beforeEach(() => {
 afterEach(async () => { await act(() => root.unmount()); element.remove(); });
 
 describe("application tab page restoration", () => {
+  it("opens an explicit remote destination before a different remembered view", async () => {
+    context.values.set("a:minddy:view:global", { id: "view-a", config: { ...DEFAULT_CONFIG, sort: "priority" } });
+    let board!: ReturnType<typeof useBoardViews>;
+    const consume = vi.fn();
+    function Board() {
+      board = useBoardViews({ kind: "global" }, { viewParam: "view-b", onViewParamConsumed: consume });
+      return null;
+    }
+    await act(() => root.render(createElement(Board)));
+    expect(board.activeViewId).toBe("view-b");
+    expect(board.config).toEqual(DEFAULT_CONFIG);
+    expect(consume).toHaveBeenCalledOnce();
+  });
   it("falls back to an available view when the remembered view was deleted", async () => {
     context.values.set("a:minddy:view:global", { id: "deleted", config: DEFAULT_CONFIG });
     let selected: string | null = null;

@@ -26,6 +26,7 @@ export function AppTabStrip() {
   const nav = useTranslations("Nav");
   const common = useTranslations("Common");
   const strip = useRef<HTMLDivElement>(null);
+  const dragged = useRef<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<AppTab | null>(null);
   const [name, setName] = useState("");
@@ -61,11 +62,47 @@ export function AppTabStrip() {
           const project = projectId ? projectById.get(projectId) : undefined;
           const sectionLabel = nav(routeLabels[section] ?? "home");
           const label = tab.custom_name ?? (projectId ? `${sectionLabel} - ${project?.name ?? t("unavailableProject")}` : sectionLabel);
-          return <AppTabItem key={tab.id} tab={tab} active={tab.id === activeId} focusable={tab.id === focusId} label={label}
+          return <div key={tab.id} role="presentation" draggable={!busy} className="shrink-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+            onDragStart={(event) => {
+              dragged.current = tab.id;
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData("text/plain", tab.id);
+            }}
+            onDragEnd={() => { dragged.current = null; }}
+            onDragOver={(event) => {
+              if (tabs.find((row) => row.id === dragged.current)?.pinned !== tab.pinned) return;
+              event.preventDefault(); event.dataTransfer.dropEffect = "move";
+              const viewport = strip.current;
+              if (viewport) {
+                const bounds = viewport.getBoundingClientRect();
+                if (event.clientX > bounds.right - 30) viewport.scrollLeft += 30;
+                else if (event.clientX < bounds.left + 30) viewport.scrollLeft -= 30;
+              }
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              const id = dragged.current;
+              if (!id || id === tab.id) return;
+              const bounds = event.currentTarget.getBoundingClientRect();
+              const group = tabs.filter((row) => row.pinned === tab.pinned && row.id !== id);
+              const beforeId = event.clientX < bounds.left + bounds.width / 2 ? tab.id : group[group.findIndex((row) => row.id === tab.id) + 1]?.id ?? null;
+              void session.move(id, beforeId);
+              dragged.current = null;
+            }}
+            onKeyDown={(event) => {
+              if (!event.altKey || !event.shiftKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+              event.preventDefault(); event.stopPropagation();
+              const group = tabs.filter((row) => row.pinned === tab.pinned);
+              const index = group.findIndex((row) => row.id === tab.id);
+              if (event.key === "ArrowLeft" && index > 0) void session.move(tab.id, group[index - 1].id);
+              if (event.key === "ArrowRight" && index < group.length - 1) void session.move(tab.id, group[index + 2]?.id ?? null);
+            }}>
+          <AppTabItem tab={tab} active={tab.id === activeId} focusable={tab.id === focusId} label={label}
             icon={<AppTabIcon section={section} project={project} projectId={projectId} />} busy={busy} last={tabs.length <= 1}
             onActivate={() => { if (!busy) void session.activate(tab.id); }} onClose={() => close(tab.id)}
             onPin={() => { void session.update(tab.id, { pinned: !tab.pinned }); }}
-            onRename={() => { setName(tab.custom_name ?? ""); setRenaming(tab); }} onFocus={() => setFocused(tab.id)} />;
+            onRename={() => { setName(tab.custom_name ?? ""); setRenaming(tab); }} onFocus={() => setFocused(tab.id)} />
+          </div>;
         })}
         {loading && <Loader2 aria-label={t("loading")} className="size-4 shrink-0 animate-spin" />}
       </div>
