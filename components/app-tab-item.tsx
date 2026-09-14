@@ -7,8 +7,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { IssueContextMenu } from "@/components/issue-context-menu";
 import type { AppTab } from "@/lib/app-tabs";
 
-export function AppTabItem({ tab, label, icon, active, focusable, busy, last, onActivate, onClose, onPin, onRename, onFocus }: {
+export function AppTabItem({ tab, label, icon, active, focusable, busy, last, compositeIcon, width, onActivate, onClose, onPin, onRename, onFocus }: {
   tab: AppTab; label: string; icon: ReactNode; active: boolean; focusable: boolean; busy: boolean; last: boolean;
+  /** Two icons in the slot (project orb + screen icon): a pinned tab keeps
+   *  the same side padding as the square one. EXPERIMENT (to revert). */
+  compositeIcon?: boolean;
+  /** Explicit width in px — the strip sizes regular tabs itself so they all
+   *  fit without scrolling (the last ones hide behind the "more tabs" menu). */
+  width?: number;
   onActivate: () => void; onClose: () => void; onPin: () => void; onRename: () => void; onFocus: () => void;
 }) {
   const t = useTranslations("AppTabs");
@@ -27,11 +33,12 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, on
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   return <div role="presentation" className={cn(
     "app-tab group relative flex h-[34px] shrink-0 items-center rounded-md text-sm",
-    tab.pinned ? "w-[34px]" : "w-[200px]",
+    tab.pinned ? (compositeIcon ? "w-[52px]" : "w-[34px]") : "w-[200px]",
     active
       ? "bg-[var(--app-tab-active-background)] text-sidebar-foreground"
       : "bg-[var(--app-tab-background)] text-muted-foreground hover:brightness-95 dark:hover:brightness-110",
   )}
+    style={width != null ? { width } : undefined}
     onContextMenu={(event) => { event.preventDefault(); setMenu({ x: event.clientX, y: event.clientY }); }}>
     <Tooltip disableHoverableContent>
       <TooltipTrigger asChild>

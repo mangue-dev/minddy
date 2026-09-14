@@ -6149,6 +6149,7 @@
   "AppTabs": {
     "label": "Schede dell’applicazione",
     "newTab": "Nuova scheda",
+    "moreTabs": "Altre schede",
     "close": "Chiudi scheda",
     "closeNamed": "Chiudi {name}",
     "pin": "Fissa scheda",

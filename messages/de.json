@@ -6149,6 +6149,7 @@
   "AppTabs": {
     "label": "Anwendungstabs",
     "newTab": "Neuer Tab",
+    "moreTabs": "Weitere Tabs",
     "close": "Tab schließen",
     "closeNamed": "{name} schließen",
     "pin": "Tab anheften",

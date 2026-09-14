@@ -6149,6 +6149,7 @@
   "AppTabs": {
     "label": "Onglets de l’application",
     "newTab": "Nouvel onglet",
+    "moreTabs": "Plus d'onglets",
     "close": "Fermer l’onglet",
     "closeNamed": "Fermer {name}",
     "pin": "Épingler l’onglet",

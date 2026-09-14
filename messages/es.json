@@ -6149,6 +6149,7 @@
   "AppTabs": {
     "label": "Pestañas de la aplicación",
     "newTab": "Nueva pestaña",
+    "moreTabs": "Más pestañas",
     "close": "Cerrar pestaña",
     "closeNamed": "Cerrar {name}",
     "pin": "Fijar pestaña",

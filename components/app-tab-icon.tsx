@@ -14,13 +14,27 @@ export function AppTabIcon({ section, project, projectId, objectiveColor: color 
   section: string;
   project?: Project;
   projectId: string | null;
-  /** Set when the tab carries an objective's tickets: the target in ITS
-   *  color replaces the project orb, so the tab reads as an objective. */
+  /** Set when the tab carries an objective's tickets: the OBJECTIVE icon takes
+   *  ITS color, so the tab reads as an objective. */
   objectiveColor?: string | null;
 }) {
-  if (color !== undefined) return <Target aria-hidden className="size-4 shrink-0" style={{ color: objectiveColor(color) }} />;
+  // EXPERIMENT (to revert): a project tab pairs the project orb with the
+  // screen's own icon — the orb says WHERE the tab lives, the section icon
+  // (the objective's target, in its color, when it carries an objective)
+  // says WHAT it shows.
+  if (projectId && project) {
+    const SectionIcon = color !== undefined ? Target : icons[section as keyof typeof icons] ?? Folder;
+    return (
+      <span className="flex shrink-0 items-center gap-1">
+        <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url} className="size-4 rounded-[4px]" />
+        <SectionIcon aria-hidden className="size-3.5 shrink-0"
+          style={color !== undefined ? { color: objectiveColor(color) } : undefined} />
+      </span>
+    );
+  }
+  if (color !== undefined) return <Target aria-hidden className="size-3.5 shrink-0" style={{ color: objectiveColor(color) }} />;
   if (project) return <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url} className="size-4 rounded-[4px]" />;
-  if (!projectId && (section === "numo" || section === "agents")) return <NumoIcon animated={false} className="size-4 shrink-0" />;
+  if (!projectId && (section === "numo" || section === "agents")) return <NumoIcon animated={false} className="size-3.5 shrink-0" />;
   const Icon = projectId ? Folder : icons[section as keyof typeof icons] ?? Home;
-  return <Icon aria-hidden className="size-4 shrink-0" />;
+  return <Icon aria-hidden className="size-3.5 shrink-0" />;
 }

@@ -6149,6 +6149,7 @@
   "AppTabs": {
     "label": "Abas do aplicativo",
     "newTab": "Nova aba",
+    "moreTabs": "Mais abas",
     "close": "Fechar aba",
     "closeNamed": "Fechar {name}",
     "pin": "Fixar aba",

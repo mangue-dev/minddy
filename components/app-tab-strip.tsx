@@ -19,9 +19,23 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, Loader2, AlertCircle, Home } from "lucide-react";
+import { Ellipsis, Loader2, AlertCircle, Home, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Input } from "mangue-ui";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  Input,
+} from "mangue-ui";
 import { useAppTabs } from "@/lib/app-tabs-context";
 import { useProjects } from "@/lib/projects-context";
 import { useQueries } from "@tanstack/react-query";
@@ -82,9 +96,20 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   const [focused, setFocused] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<AppTab | null>(null);
   const [name, setName] = useState("");
+  // The strip never scrolls: tabs shrink, and the tail hides behind the
+  // "more tabs" menu. This is the width the whole strip may occupy, measured
+  // on the OUTER container (flex-1 min-w-0 — its width does not depend on
+  // content); the rail itself is content-sized, capped so the trailing
+  // button stays visible right after the last tab.
+  const [available, setAvailable] = useState(0);
   useEffect(() => {
-    strip.current?.querySelector<HTMLElement>(`[data-app-tab-id="${activeId}"]`)?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
-  }, [activeId, tabs.length]);
+    const rail = strip.current;
+    if (!rail) return;
+    const observer = new ResizeObserver(() => setAvailable(rail.clientWidth));
+    observer.observe(rail);
+    setAvailable(rail.clientWidth);
+    return () => observer.disconnect();
+  }, []);
   const focusId = focused && tabs.some((tab) => tab.id === focused) ? focused : activeId;
   const close = (id: string) => {
     void session.close(id).then(() => {
@@ -124,12 +149,64 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
     const objective = objectiveId ? objectiveById.get(objectiveId) : undefined;
     const sectionLabel = nav(routeLabels[section] ?? "home");
     const label = tab.custom_name ?? (objective?.name ?? (projectId ? `${sectionLabel} - ${project?.name ?? t("unavailableProject")}` : sectionLabel));
-    return { section, projectId, project, objectiveId, objective, label };
+    // EXPERIMENT (to revert): composite = project orb + screen icon.
+    const composite = Boolean(projectId && project);
+    return { section, projectId, project, objectiveId, objective, composite, label };
   };
+  // Which tabs stay on the rail and how wide the regular ones get: they all
+  // shrink to a shared width while that fits, then the tail collapses to its
+  // minimum and hides behind the "more tabs" menu. Pinned tabs keep their
+  // exact size. Unmeasured rail (first paint) → everything visible.
+  const described = tabs.map((tab) => ({ tab, view: describe(tab) }));
+  const PINNED_COMPOSITE_W = 52;
+  const PINNED_W = 34;
+  // Regular tabs stop shrinking while the label still has a few words: below
+  // this floor the tail hides behind the "more tabs" menu instead of robbing
+  // the label down to a stray letter next to the two icons.
+  const REGULAR_MIN_W = 140;
+  const REGULAR_MAX_W = 200;
+  const TAB_GAP = 4;
+  // The trailing button (⋯ or +) sits right after the last tab, never pushed
+  // to the right edge: the rail is content-sized, capped so this button (and
+  // the error buttons, when present) keep their room.
+  const BUTTON_W = 28;
+  const buttonReserve = BUTTON_W + TAB_GAP
+    + ((loadError || error) ? BUTTON_W + TAB_GAP : 0)
+    + (error === "destination_unavailable" ? BUTTON_W + TAB_GAP : 0);
+  const pinnedWidth = (composite: boolean) => (composite ? PINNED_COMPOSITE_W : PINNED_W);
+  let visible = described;
+  let hidden: typeof described = [];
+  let regularWidth = REGULAR_MAX_W;
+  if (available > 0) {
+    const railBudget = Math.max(available - buttonReserve, 0);
+    const minOf = ({ tab, view }: (typeof described)[number]) => (tab.pinned ? pinnedWidth(view.composite) : REGULAR_MIN_W);
+    const minTotal = described.reduce((sum, d, i) => sum + minOf(d) + (i ? TAB_GAP : 0), 0);
+    if (minTotal <= railBudget) {
+      const regular = described.filter((d) => !d.tab.pinned).length;
+      const pinnedTotal = described.reduce((sum, d) => sum + (d.tab.pinned ? pinnedWidth(d.view.composite) : 0), 0);
+      regularWidth = regular
+        ? Math.min(REGULAR_MAX_W, Math.floor((railBudget - pinnedTotal - (described.length - 1) * TAB_GAP) / regular))
+        : REGULAR_MAX_W;
+    } else {
+      let used = 0;
+      let count = 0;
+      for (const d of described) {
+        const cost = minOf(d) + (count ? TAB_GAP : 0);
+        if (used + cost > railBudget) break;
+        used += cost;
+        count++;
+      }
+      count = Math.max(count, 1);
+      visible = described.slice(0, count);
+      hidden = described.slice(count);
+      regularWidth = REGULAR_MIN_W;
+    }
+  }
   return <>
-    <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden px-2">
-      <div ref={strip} role="tablist" aria-label={t("label")} aria-busy={loading || busy}
-        className="scrollbar-quiet flex min-w-0 shrink items-center gap-1 overflow-x-auto py-1"
+    <div ref={strip} className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden px-2">
+      <div role="tablist" aria-label={t("label")} aria-busy={loading || busy}
+        className="flex min-w-0 items-center gap-1 overflow-hidden py-1"
+        style={available > 0 ? { maxWidth: Math.max(available - buttonReserve, 0) } : undefined}
         onKeyDown={(event) => {
           const controls = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
           const index = controls.indexOf(document.activeElement as HTMLButtonElement);
@@ -145,9 +222,9 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
         <DndContext sensors={sensors} collisionDetection={collisionDetection} modifiers={horizontalDragModifiers}
           onDragStart={(event: DragStartEvent) => setDragged(String(event.active.id))}
           onDragCancel={() => setDragged(null)} onDragEnd={finishDrag}>
-        <SortableContext items={tabs.map((tab) => tab.id)} strategy={horizontalListSortingStrategy}>
-        {tabs.map((tab) => {
-          const { section, projectId, project, objectiveId, objective, label } = describe(tab);
+        <SortableContext items={visible.map(({ tab }) => tab.id)} strategy={horizontalListSortingStrategy}>
+        {visible.map(({ tab, view }) => {
+          const { section, projectId, project, objectiveId, objective, composite, label } = view;
           return <SortableAppTab key={tab.id} id={tab.id} disabled={busy}
             onKeyDown={(event) => {
               if (!event.altKey || !event.shiftKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
@@ -160,6 +237,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           <AppTabItem tab={tab} active={tab.id === activeId} focusable={tab.id === focusId} label={label}
             icon={<AppTabIcon section={section} project={project} projectId={projectId}
               objectiveColor={objectiveId ? objective?.color ?? null : undefined} />} busy={busy} last={tabs.length <= 1}
+            compositeIcon={composite} width={tab.pinned ? undefined : regularWidth}
             onActivate={() => { if (!busy) void session.activate(tab.id); }} onClose={() => close(tab.id)}
             onPin={() => { void session.update(tab.id, { pinned: !tab.pinned }); }}
             onRename={() => { setName(tab.custom_name ?? ""); setRenaming(tab); }} onFocus={() => setFocused(tab.id)} />
@@ -168,10 +246,11 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
         </SortableContext>
         <DragOverlay dropAnimation={null} modifiers={horizontalDragModifiers}>
           {draggedTab && (() => {
-            const { section, projectId, project, objectiveId, objective, label } = describe(draggedTab);
+            const { section, projectId, project, objectiveId, objective, composite, label } = describe(draggedTab);
             return <div className={draggedTab.pinned
-              ? "flex h-[34px] w-[34px] items-center justify-center rounded-md bg-sidebar-accent text-sidebar-foreground shadow-lg"
-              : "flex h-[34px] w-[200px] items-center gap-2 rounded-md bg-sidebar-accent px-2.5 text-sm text-sidebar-foreground shadow-lg"}>
+              ? `flex h-[34px] ${composite ? "w-[52px]" : "w-[34px]"} items-center justify-center rounded-md bg-sidebar-accent text-sidebar-foreground shadow-lg`
+              : "flex h-[34px] items-center gap-2 rounded-md bg-sidebar-accent px-2.5 text-sm text-sidebar-foreground shadow-lg"}
+              style={draggedTab.pinned ? undefined : { width: regularWidth }}>
               <AppTabIcon section={section} project={project} projectId={projectId}
                 objectiveColor={objectiveId ? objective?.color ?? null : undefined} />
               {!draggedTab.pinned && <span className="truncate">{label}</span>}
@@ -181,11 +260,37 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
         </DndContext>
         {loading && <Loader2 aria-label={t("loading")} className="size-4 shrink-0 animate-spin" />}
       </div>
-      <Tooltip><TooltipTrigger asChild><button type="button" aria-label={t("newTab")} disabled={busy || loading || loadError}
-        onClick={onNewTab} onMouseEnter={onNewTabWarm} onFocus={onNewTabWarm}
-        className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
-        <Plus className="size-4" aria-hidden />
-      </button></TooltipTrigger><TooltipContent side="bottom">{t("newTab")}</TooltipContent></Tooltip>
+      {hidden.length > 0 ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" aria-label={t("moreTabs")}
+              className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring">
+              <Ellipsis className="size-4" aria-hidden />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
+            <DropdownMenuItem disabled={busy || loading || loadError} onPointerEnter={onNewTabWarm} onFocus={onNewTabWarm}
+              onSelect={() => onNewTab()}>
+              <Plus />
+              {t("newTab")}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {hidden.map(({ tab, view }) => (
+              <DropdownMenuItem key={tab.id} onSelect={() => { if (!busy) void session.activate(tab.id); }}>
+                <AppTabIcon section={view.section} project={view.project} projectId={view.projectId}
+                  objectiveColor={view.objectiveId ? view.objective?.color ?? null : undefined} />
+                <span className="truncate">{view.label}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <Tooltip><TooltipTrigger asChild><button type="button" aria-label={t("newTab")} disabled={busy || loading || loadError}
+          onClick={onNewTab} onMouseEnter={onNewTabWarm} onFocus={onNewTabWarm}
+          className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
+          <Plus className="size-4" aria-hidden />
+        </button></TooltipTrigger><TooltipContent side="bottom">{t("newTab")}</TooltipContent></Tooltip>
+      )}
       {(loadError || error) && <Tooltip><TooltipTrigger asChild><button type="button" aria-label={t("retry")}
         onClick={() => { reload(); void session.retry(); }} className="flex size-7 shrink-0 items-center justify-center text-destructive">
         <AlertCircle className="size-4" aria-hidden /><span role="alert" className="sr-only">{t(errorKey)}</span>
