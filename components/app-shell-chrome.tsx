@@ -1506,9 +1506,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             icon: Plus,
             onClick: openCreateProject,
             disabled: projectLimitReached,
-            tooltip: projectLimitReached
-              ? tBilling("projectLimitTooltip")
-              : undefined,
           },
         ],
       },

@@ -277,28 +277,31 @@ function SidebarRow({ item }: { item: AppNavItem }) {
     );
   }
 
-  // ⚠ The `<Tooltip>` is rendered UNCONDITIONALLY, and it is its OPENING which
-  // varies (MIN-313). Wrapping conditionally would change the TYPE of
-  // the element rendered at this position, and React does not reconcile two types
-  // different: it dismantles the subtree and mounts a new one, therefore the DOM node
-  // is replaced and the focus it had falls on <body>.
-  row = (
-    <Tooltip delayDuration={SIDEBAR_TOOLTIP_DELAY_MS} disableHoverableContent>
-      <TooltipTrigger asChild>{row}</TooltipTrigger>
-      <TooltipContent side="right" className="flex items-center gap-2">
-        <span>{item.tooltip ?? item.label}</span>
-        {item.shortcut && (
-          <>
-            <Kbd size="sm">{CHORD_PREFIX.toUpperCase()}</Kbd>
-            <span>{tk("then")}</span>
-            <Kbd size="sm">{item.shortcut}</Kbd>
-          </>
-        )}
-      </TooltipContent>
-    </Tooltip>
-  );
+  // The tooltip repeats what the row already says — a project name under its
+  // own label is noise (MIN-546 review) — so only rows that carry REAL extra
+  // information (a gating explanation, the resume hint of a draft, a G-chord)
+  // get one. Entries that gain/lose their `tooltip` keep their DOM shape:
+  // the wrapper is chosen by data, not hover state.
+  const hasTooltip = Boolean(item.tooltip || item.shortcut);
 
-  if (!contextActions.length) return row;
+  if (!contextActions.length) {
+    if (!hasTooltip) return row;
+    return (
+      <Tooltip delayDuration={SIDEBAR_TOOLTIP_DELAY_MS} disableHoverableContent>
+        <TooltipTrigger asChild>{row}</TooltipTrigger>
+        <TooltipContent side="right" className="flex items-center gap-2">
+          <span>{item.tooltip ?? item.label}</span>
+          {item.shortcut && (
+            <>
+              <Kbd size="sm">{CHORD_PREFIX.toUpperCase()}</Kbd>
+              <span>{tk("then")}</span>
+              <Kbd size="sm">{item.shortcut}</Kbd>
+            </>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
   return (
     <>
       {row}
