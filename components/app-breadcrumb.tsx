@@ -264,8 +264,7 @@ function MobileBreadcrumb({
         {/* Mobile mode, under 768 px: the sidebar is no longer rendered, and
  the macOS buttons fall right on the back button below — the
  top-left corner of the window is this line. This corner guard
- pushes them out of the way, and draws the decoys when a dialogue
- removes the real ones (MIN-293). Don't render anything else.
+ pushes them out of the way (MIN-293). Don't render anything else.
 
  IN the left half, and not before it: the two halves are zero-based
  `flex-1`, so the title remains centered on the window

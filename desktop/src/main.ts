@@ -471,7 +471,6 @@ function applyAboutPanel(): void {
  */
 let wantsWindowButtons = true;
 let windowButtonsVisible = true;
-let customWindowControls = false;
 
 /**
  * What was actually PLACED on the window, so as not to put it back (MIN-311).
@@ -502,8 +501,8 @@ function applyWindowButtons(target?: BrowserWindow): void {
   if (process.platform !== "darwin" || !window) return;
   const fullScreen = window.isFullScreen();
 
-  const nativeVisible = fullScreen || (!customWindowControls && wantsWindowButtons);
-  const applied = `${fullScreen}:${wantsWindowButtons}:${customWindowControls}`;
+  const nativeVisible = fullScreen || wantsWindowButtons;
+  const applied = `${fullScreen}:${wantsWindowButtons}`;
   trace("applyWindowButtons", {
     fullScreen,
     wants: wantsWindowButtons,
@@ -531,7 +530,7 @@ function applyWindowButtons(target?: BrowserWindow): void {
   // What we announce on the page is another question than what we show: in
   // fullscreen controls are managed by macOS outside the application bar.
   // The bar releases their slot until the native state reports them back.
-  publishWindowButtons((customWindowControls || wantsWindowButtons) && !fullScreen);
+  publishWindowButtons(wantsWindowButtons && !fullScreen);
 }
 
 /**
@@ -857,7 +856,6 @@ function createWindow(
     if (details.isSameDocument || !details.isMainFrame) return;
     trace("did-start-navigation", { url: details.url });
     wantsWindowButtons = true;
-    customWindowControls = false;
     // The native application cache focuses on the WINDOW, but its reason for being
     // is the request of the page: a new document starts from scratch (MIN-311).
     appliedButtons = null;
@@ -1088,19 +1086,6 @@ function registerIpc(): void {
   ipcMain.on("minddy:window-buttons", (_event, visible: unknown) => {
     wantsWindowButtons = visible !== false;
     applyWindowButtons();
-  });
-
-  ipcMain.on("minddy:custom-window-controls", (event, active: unknown) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents || process.platform !== "darwin") return;
-    customWindowControls = active === true;
-    applyWindowButtons();
-  });
-
-  ipcMain.on("minddy:window-control", (event, action: unknown) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents || process.platform !== "darwin") return;
-    if (action === "close") mainWindow.close();
-    else if (action === "minimize") mainWindow.minimize();
-    else if (action === "fullscreen") mainWindow.setFullScreen(true);
   });
 
   ipcMain.on("minddy:window-chrome", (event, theme: unknown) => {

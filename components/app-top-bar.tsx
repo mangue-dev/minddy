@@ -7,7 +7,7 @@ import { SidebarVisibilityButton } from "./sidebar-visibility-button";
 import { AppTopActions } from "./app-top-actions";
 import { AppTabStrip } from "./app-tab-strip";
 import { AppUpdateAction } from "./app-update-action";
-import { WindowButtonDecoys, WINDOW_BUTTONS_WIDTH } from "./desktop-window-buttons";
+import { WINDOW_BUTTONS_WIDTH } from "./desktop-window-buttons";
 import type { AppNavItem } from "./app-sidebar";
 
 export function AppTopBar({ hidden, secondary, inbox, onSearch, onSearchWarm, onNewTab }: {
@@ -26,7 +26,6 @@ export function AppTopBar({ hidden, secondary, inbox, onSearch, onSearchWarm, on
       <motion.div initial={{ width }} animate={{ width }} transition={reduce ? { duration: 0 } : transitions.shell}
         className="flex h-11 shrink-0 items-center gap-1 px-[10px]">
         {native.reserved && <div aria-hidden className="shrink-0" style={{ width: WINDOW_BUTTONS_WIDTH - 10 }} />}
-        {native.decoy && <WindowButtonDecoys />}
         <SidebarVisibilityButton collapsed />
         <AppTopActions collapsed={false} inbox={inbox} onSearch={onSearch} onSearchWarm={onSearchWarm} />
       </motion.div>

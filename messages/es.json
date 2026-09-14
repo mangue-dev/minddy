@@ -6147,11 +6147,6 @@
     "importFailed": "No se pudo completar la importación. Inténtalo de nuevo; la misma importación no se añadirá dos veces.",
     "exportArchive": "Archivo de la base (.zip)"
   },
-  "WindowControls": {
-    "close": "Cerrar ventana",
-    "minimize": "Minimizar ventana",
-    "fullscreen": "Entrar en pantalla completa"
-  },
   "AppTabs": {
     "label": "Pestañas de la aplicación",
     "newTab": "Nueva pestaña",

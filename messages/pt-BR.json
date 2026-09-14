@@ -6147,11 +6147,6 @@
     "importFailed": "Não foi possível concluir a importação. Tente novamente; a mesma importação não será adicionada duas vezes.",
     "exportArchive": "Arquivo do banco (.zip)"
   },
-  "WindowControls": {
-    "close": "Fechar janela",
-    "minimize": "Minimizar janela",
-    "fullscreen": "Entrar em tela cheia"
-  },
   "AppTabs": {
     "label": "Abas do aplicativo",
     "newTab": "Nova aba",

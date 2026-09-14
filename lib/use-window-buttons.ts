@@ -93,7 +93,7 @@ function pushToBridge(): void {
 export function useHoldWindowButtons(reason: string, active: boolean): void {
   useEffect(() => {
     const bridge = macDesktopBridge();
-    if (!active || !bridge || bridge.performWindowControl) return;
+    if (!active || !bridge) return;
     watchContradiction();
     holds.add(reason);
     pushToBridge();
@@ -334,8 +334,6 @@ export function useWideLayout(): boolean {
 export interface WindowButtonsSlot {
   /** Does the brand line keep their place? (the mark goes to the right) */
   reserved: boolean;
-  /** Should we draw LURES, the real ones being removed for the duration of a modal? */
-  decoy: boolean;
   /**
    * Have we received the first state of the window?
    *
@@ -348,7 +346,7 @@ export interface WindowButtonsSlot {
   ready: boolean;
 }
 
-const CLOSED: WindowButtonsSlot = { reserved: false, decoy: false, ready: false };
+const CLOSED: WindowButtonsSlot = { reserved: false, ready: false };
 
 /**
  * What the surface that hosts them should display in their place.
@@ -366,9 +364,10 @@ const CLOSED: WindowButtonsSlot = { reserved: false, decoy: false, ready: false 
  * closing, for an object that we don't even look at.
  *
  * Hence: the place remains RESERVED — frozen at what it was worth at the time the
- * dialogue has opened — and we draw three identical pellets. They
- * go under the veil like the rest of the app, which is exactly the effect
- * that we were initially looking for.
+ * dialogue has opened. Nothing is drawn in it while a modal covers the app:
+ * the reserved width keeps the layout from jumping, and a modal is the one
+ * time nobody manipulates the window anyway (MIN-545 removed the fake
+ * pellets that used to be drawn there).
  *
  * ⚠ **Thawing cannot follow the closing of the dialog: it must follow the
  * RETURN of the buttons.** This is the whole story of the ~50 ms burst that we saw
@@ -438,9 +437,6 @@ export function useWindowButtonsSlot(hosts = true): WindowButtonsSlot {
   }, [started]);
 
   if (!hosts) return CLOSED;
-  if (macDesktopBridge()?.performWindowControl) {
-    return { reserved: visible, decoy: visible, ready };
-  }
   const reserved = modal || settling ? frozen.current : visible;
-  return { reserved, decoy: reserved && !visible, ready };
+  return { reserved, ready };
 }
