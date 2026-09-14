@@ -950,7 +950,7 @@ export function AppSidebar({
         {back && (
           <motion.div
             key={`back:${back.href}:${back.label}`}
-            className="shrink-0 pt-[calc((var(--app-content-header-height)-2.25rem)/2)]"
+            className="shrink-0 pt-[calc((var(--app-content-header-height)-2.25rem)/2)] pb-2"
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 16 }}
