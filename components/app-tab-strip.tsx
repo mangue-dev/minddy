@@ -36,7 +36,7 @@ const routeLabels: Record<string, MessageKey<"Nav">> = {
   admin: "adminDashboard", pages: "pages", tickets: "tickets", objectives: "objectives", feedback: "feedback", triage: "triage",
 };
 
-export function AppTabStrip() {
+export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; onNewTabWarm?: () => void }) {
   const { tabs, activeId, session, busy, error, loading, loadError, reload } = useAppTabs();
   const { projects } = useProjects();
   const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
@@ -146,7 +146,8 @@ export function AppTabStrip() {
         {loading && <Loader2 aria-label={t("loading")} className="size-4 shrink-0 animate-spin" />}
       </div>
       <Tooltip><TooltipTrigger asChild><button type="button" aria-label={t("newTab")} disabled={busy || loading || loadError}
-        onClick={() => { void session.create(); }} className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
+        onClick={onNewTab} onMouseEnter={onNewTabWarm} onFocus={onNewTabWarm}
+        className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
         <Plus className="size-4" aria-hidden />
       </button></TooltipTrigger><TooltipContent side="bottom">{t("newTab")}</TooltipContent></Tooltip>
       {(loadError || error) && <Tooltip><TooltipTrigger asChild><button type="button" aria-label={t("retry")}

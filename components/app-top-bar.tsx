@@ -10,8 +10,13 @@ import { AppUpdateAction } from "./app-update-action";
 import { WindowButtonDecoys, WINDOW_BUTTONS_WIDTH } from "./desktop-window-buttons";
 import type { AppNavItem } from "./app-sidebar";
 
-export function AppTopBar({ hidden, secondary, inbox, onSearch, onSearchWarm }: {
-  hidden: boolean; secondary: boolean; inbox: AppNavItem; onSearch: () => void; onSearchWarm: () => void;
+export function AppTopBar({ hidden, secondary, inbox, onSearch, onSearchWarm, onNewTab }: {
+  hidden: boolean;
+  secondary: boolean;
+  inbox: AppNavItem;
+  onSearch: () => void;
+  onSearchWarm: () => void;
+  onNewTab: () => void;
 }) {
   const reduce = useReducedMotion();
   const native = useWindowButtonsSlot(useWideLayout());
@@ -25,8 +30,8 @@ export function AppTopBar({ hidden, secondary, inbox, onSearch, onSearchWarm }: 
         <SidebarVisibilityButton collapsed />
         <AppTopActions collapsed={false} inbox={inbox} onSearch={onSearch} onSearchWarm={onSearchWarm} />
       </motion.div>
-      <AppTabStrip />
-      <div className="app-update-slot mr-2 max-w-48 shrink-0"><AppUpdateAction collapsed={false} /></div>
+      <AppTabStrip onNewTab={onNewTab} onNewTabWarm={onSearchWarm} />
+      <div className="app-update-slot mr-2 w-fit shrink-0"><AppUpdateAction collapsed={false} compact /></div>
     </div>
   </div>;
 }

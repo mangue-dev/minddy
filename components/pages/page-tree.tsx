@@ -54,6 +54,7 @@ import {
   usePageDocumentMenu,
   type PageMenuTarget,
 } from "@/components/pages/page-document-actions";
+import { useNavigationContextActions } from "@/components/navigation-context-actions";
 
 /** Ligne d'arbre : 28 px de haut, 16 px de retrait par niveau. */
 const INDENT = 16;
@@ -356,6 +357,8 @@ function PageRow({
   onDragEnd?: () => void;
 }) {
   const t = useTranslations("Pages");
+  const href = `/projects/${page.project_id}/pages/${page.id}`;
+  const navigationActions = useNavigationContextActions(href);
   const [menuOpen, setMenuOpen] = useState(false);
   // Right click: the position of the pointer, or `null` when the menu is closed.
   const [menuPosition, setMenuPosition] = useState<{
@@ -452,7 +455,7 @@ function PageRow({
       </button>
 
       <Link
-        href={`/projects/${page.project_id}/pages/${page.id}`}
+        href={href}
         prefetch={false}
         data-sidebar-filter-result
         onMouseEnter={() => onPrefetch(page.id)}
@@ -554,7 +557,7 @@ function PageRow({
     <IssueContextMenu
       position={menuPosition}
       onClose={() => setMenuPosition(null)}
-      actions={actions}
+      actions={[...navigationActions, ...actions]}
       searchable={false}
     />
     </>

@@ -112,6 +112,8 @@ import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { useAnalytics } from "@/lib/use-analytics";
 import { moveIssueGroupsToEnd } from "@/lib/command-palette/group-order";
 import { createMinddyEntityActionsProvider } from "@/lib/command-palette/registry/providers/MinddyEntityActionsProvider";
+import { normalizeAppTabLocation } from "@/lib/app-tab-location";
+import { useOptionalAppTabs } from "@/lib/app-tabs-context";
 import type {
   Issue,
   Member,
@@ -205,6 +207,16 @@ function isFullIssue(issue: PaletteIssue): issue is Issue {
   return "category_ids" in issue;
 }
 
+function paletteDestinationHref(raw: string | undefined): string | null {
+  const normalized = normalizeAppTabLocation(raw);
+  if (!normalized || !raw) return null;
+  const source = new URL(raw, "https://minddy.invalid");
+  const destination = new URL(normalized, "https://minddy.invalid");
+  if (source.pathname.replace(/\/$/, "") !== destination.pathname || source.hash !== destination.hash) return null;
+  if ([...source.searchParams].some(([key, value]) => destination.searchParams.get(key) !== value)) return null;
+  return normalized;
+}
+
 /** Numo's face as a static action icon (no blinking in the popover). */
 const NumoActionIcon = (props: SVGProps<SVGSVGElement>) => (
   <NumoIcon animated={false} {...props} />
@@ -219,6 +231,8 @@ export interface CommandPaletteProps {
   /** Cross-project index (MIN-91) — read here for the members and categories of
    *  projects other than the one in the URL, which the ⌘; actions need. */
   searchIndex?: SearchIndexResponse | null;
+  destinationOnly?: boolean;
+  onDestinationSelect?: (href: string) => void;
 }
 
 export function CommandPalette({
@@ -226,6 +240,8 @@ export function CommandPalette({
   open,
   onOpenChange,
   searchIndex,
+  destinationOnly = false,
+  onDestinationSelect,
 }: CommandPaletteProps) {
   const { track } = useAnalytics();
   const locale = useLocale();
@@ -239,6 +255,7 @@ export function CommandPalette({
   const tAction = useTranslations("CommandPaletteActions");
   const pathname = usePathname();
   const router = useRouter();
+  const appTabs = useOptionalAppTabs();
   const queryClient = useQueryClient();
   const { user, updateUserMetadata } = useAuth();
   const { projects } = useProjects();
@@ -386,7 +403,7 @@ export function CommandPalette({
     const mapped = groups.flatMap((g, gi) => {
       const cat = g.key ?? g.heading ?? `group-${gi}`;
       return g.items
-        .filter((it) => !HIDDEN_KEYS.has(it.key))
+        .filter((it) => !HIDDEN_KEYS.has(it.key) && (!destinationOnly || paletteDestinationHref(it.href) !== null))
         .map((it): CpPaletteItem => {
           const Icon = it.icon;
           const issue = it.entityType === "issue" ? (it.data as PaletteIssue) : null;
@@ -418,14 +435,16 @@ export function CommandPalette({
               // `it.key` is a stable identifier (cmd-*, ticket id) —
               // never the translated wording, which would fragment the stats.
               track("command_executed", { command_id: it.key, category: cat });
-              it.onSelect?.();
+              const destination = paletteDestinationHref(it.href);
+              if (destinationOnly && destination) onDestinationSelect?.(destination);
+              else it.onSelect?.();
             },
           };
         });
     });
 
     // “Change theme”: Enter/⌘; opens the select inline (provider "theme")
-    mapped.push({
+    if (!destinationOnly) mapped.push({
       id: "cmd-theme",
       title: themeLabel,
       keywords: ["theme", "thème", "apparence", "appearance", "dark", "light", "sombre", "clair"],
@@ -453,7 +472,9 @@ export function CommandPalette({
         href: view.href,
         execute: () => {
           track("saved_view_opened", {});
-          router.push(view.href);
+          const destination = paletteDestinationHref(view.href);
+          if (destinationOnly && destination) onDestinationSelect?.(destination);
+          else router.push(view.href);
         },
       });
     }
@@ -462,7 +483,7 @@ export function CommandPalette({
     // per view, when we reopen the views every day. No `execute` → the
     // select opens the inline name field (provider "saved-view-actions"),
     // like the grouped mode fields. The screen is only read upon validation.
-    mapped.push({
+    if (!destinationOnly) mapped.push({
       id: "cmd-save-view",
       title: tNav("saveCurrentView"),
       keywords: [
@@ -484,7 +505,7 @@ export function CommandPalette({
     });
 
     return mapped;
-  }, [groups, themeLabel, track, savedViews, router, tNav, projects]);
+  }, [groups, themeLabel, track, savedViews, router, tNav, projects, destinationOnly, onDestinationSelect]);
 
   // === Contextual issue actions (⌘; / →) ===
   // Each action opens an inline form with one field: the select opens
@@ -809,13 +830,7 @@ export function CommandPalette({
           openLinkedObjective: tAction("openLinkedObjective"),
         },
         navigate: (href) => router.push(href),
-        openInNewTab: (href) => {
-          window.open(
-            new URL(href, window.location.origin).href,
-            "_blank",
-            "noopener,noreferrer"
-          );
-        },
+        openInNewTab: (href) => { void appTabs?.session.create(href); },
         copyText: async (value, confirmation, resolveHref) => {
           const text = resolveHref
             ? new URL(value, window.location.origin).href
@@ -827,7 +842,7 @@ export function CommandPalette({
           openCreateIssue({ projectId, objectiveId }),
         openCreateObjective: (projectId) => openCreateObjective({ projectId }),
       }),
-    [openCreateIssue, openCreateObjective, router, tAction]
+    [appTabs, openCreateIssue, openCreateObjective, router, tAction]
   );
 
   // === “Change the theme”: a single item, the inline select makes the submenu ===
@@ -1321,7 +1336,11 @@ export function CommandPalette({
   // normal content (navigation, creation, etc.).
   const showBulk = bulkMode && !!bulkRequest;
   const paletteItems = showBulk ? bulkItems : items;
-  const paletteCategories = showBulk ? bulkCategories : categories;
+  const paletteCategories = showBulk
+    ? bulkCategories
+    : destinationOnly
+      ? categories.filter((category) => items.some((item) => item.filterCategory === category.id))
+      : categories;
 
   return (
     <CommandPaletteShell
@@ -1329,21 +1348,21 @@ export function CommandPalette({
       onClose={() => onOpenChange(false)}
       items={paletteItems}
       categories={paletteCategories}
-      providers={providers}
+      providers={destinationOnly ? [] : providers}
       locale={locale}
       // The page project is a BOOST of relevance, not a filter: its
       // tickets and objectives go up, those of other projects remain there.
       actionContext={currentProjectId ? { contextId: currentProjectId } : undefined}
-      storagePrefix="minddy-cp"
+      storagePrefix={destinationOnly ? "minddy-cp-destinations" : "minddy-cp"}
       actionsShortcutKey=";"
-      favorites={favorites}
-      onToggleFavorite={handleToggleFavorite}
+      favorites={destinationOnly ? [] : favorites}
+      onToggleFavorite={destinationOnly ? undefined : handleToggleFavorite}
       onToast={(message, type) => {
         if (type === "error") toast.error(message);
         else if (type === "success") toast.success(message);
         else toast(message);
       }}
-quickAi={{
+quickAi={destinationOnly ? undefined : {
         icon: <NumoActionIcon className="size-4" />,
         onSelect: (query) => {
           // Filled query → auto-sent to Numo; empty query → the panel just

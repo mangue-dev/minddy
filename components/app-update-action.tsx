@@ -25,6 +25,7 @@ function FooterRow({
   ariaControls,
   ariaExpanded,
   className,
+  compact = false,
 }: {
   icon: LucideIcon;
   label: string;
@@ -41,6 +42,7 @@ function FooterRow({
   ariaControls?: string;
   ariaExpanded?: boolean;
   className?: string;
+  compact?: boolean;
 }) {
   const btn = (
     <button
@@ -51,13 +53,18 @@ function FooterRow({
       aria-expanded={ariaExpanded}
       aria-haspopup={ariaControls ? "dialog" : undefined}
       className={cn(
-        "relative flex h-9 items-center rounded-lg text-sm font-medium transition-colors",
+        "relative flex items-center rounded-lg text-sm font-medium transition-colors",
         disabled
           ? "cursor-default"
           : "cursor-pointer hover:bg-sidebar-accent hover:text-foreground",
         active ? "bg-sidebar-accent text-foreground" : "text-muted-foreground",
+        compact ? "h-8" : "h-9",
         "pl-[9px]",
-        collapsed ? cn("w-9", "pr-[9px]") : "w-full gap-3 pr-3 text-left",
+        collapsed
+          ? cn("w-9", "pr-[9px]")
+          : compact
+            ? "w-auto gap-2 pr-[9px] text-left"
+            : "w-full gap-3 pr-3 text-left",
         centerLabel && !collapsed && "px-[9px]",
         className,
       )}
@@ -104,9 +111,11 @@ function FooterRow({
 export function AppUpdateAction({
   collapsed,
   onOpenChange,
+  compact = false,
 }: {
   collapsed: boolean;
   onOpenChange?: (open: boolean) => void;
+  compact?: boolean;
 }) {
   const tNav = useTranslations("Nav");
   const tWebUpdate = useTranslations("NewVersion");
@@ -225,7 +234,8 @@ export function AppUpdateAction({
       className={
         ready
           ? cn(
-              "my-px h-[34px] bg-[#0085FF] text-white hover:bg-[#0085FF]/90 hover:text-white",
+              "my-px bg-[#0085FF] text-white hover:bg-[#0085FF]/90 hover:text-white",
+              compact ? "h-8" : "h-[34px]",
               collapsed && "mx-px w-[34px] px-2",
             )
           : undefined
@@ -234,6 +244,7 @@ export function AppUpdateAction({
       expandedLabel={ready ? actionLabel : label}
       collapsed={collapsed}
       disabled={!ready || pending}
+      compact={compact}
       ariaControls={
         ready && !pending && !isStoreUpdate ? confirmationId : undefined
       }
@@ -256,7 +267,7 @@ export function AppUpdateAction({
       onOpenChange={handleConfirmationOpenChange}
     >
       <PopoverAnchor asChild>
-        <div className="w-full">{row}</div>
+        <div className={compact ? "w-fit" : "w-full"}>{row}</div>
       </PopoverAnchor>
       {confirmation}
     </Popover>

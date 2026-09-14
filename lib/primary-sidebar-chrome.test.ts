@@ -13,6 +13,7 @@ describe("primary sidebar chrome", () => {
     expect(sidebar.match(/<SidebarQuickActions/g)).toHaveLength(1);
     expect(sidebar.includes('<SidebarBrand')).toBe(false);
     expect(sidebar.includes('<SidebarTopActions')).toBe(false);
+    expect(sidebar.includes('pt-[calc((var(--app-content-header-height)-2.25rem)/2)]')).toBe(true);
   });
   it("keeps native controls outside the rail and hidden navigation", () => {
     expect(sidebar.includes('useHoldWindowButtons')).toBe(false);

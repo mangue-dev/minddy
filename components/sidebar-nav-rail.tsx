@@ -43,10 +43,12 @@ export function SidebarNavRail({
   value,
   onValueChange,
   label,
+  hrefForValue,
 }: {
   items: SidebarNavRailItem[];
   value: string;
   onValueChange: (value: string) => void;
+  hrefForValue?: (value: string) => string;
   /** The list name for a screen reader (the screen title). */
   label: string;
 }) {
@@ -66,6 +68,7 @@ export function SidebarNavRail({
             <li key={item.value}>
               <button
                 type="button"
+                data-navigation-href={hrefForValue?.(item.value)}
                 onClick={() => onValueChange(item.value)}
                 aria-current={active ? "true" : undefined}
                 className={cn(

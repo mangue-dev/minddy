@@ -326,6 +326,7 @@ function SettingsTabs({
                     <button
                       type="button"
                       data-sidebar-filter-result
+                      data-navigation-href={settingsSectionHref(section, projectId ?? undefined)}
                       onClick={() => openSection(section)}
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:bg-muted/60"
                     >
@@ -353,6 +354,10 @@ function SettingsTabs({
             items={visibleTabs}
             value={activeTab}
             onValueChange={setActiveTab}
+            hrefForValue={(value) => {
+              const base = projectId ? `/projects/${projectId}/settings` : "/settings";
+              return value === defaultTab ? base : `${base}?tab=${encodeURIComponent(value)}`;
+            }}
           />
         )}
       </SecondarySidebar>

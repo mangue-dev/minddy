@@ -268,6 +268,7 @@ export function ConversationList({
         <button
           type="button"
           data-sidebar-filter-result
+          data-navigation-href={conversation.detail_href ?? `/numo?conversation=${encodeURIComponent(conversation.id)}`}
           className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm outline-none"
           onClick={() => {
             void updateConversation(conversation.id, { read: true }).catch(

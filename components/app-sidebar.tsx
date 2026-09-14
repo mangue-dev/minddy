@@ -40,6 +40,7 @@ import {
   IssueContextMenu,
   type ContextMenuAction,
 } from "@/components/issue-context-menu";
+import { useNavigationContextActions } from "@/components/navigation-context-actions";
 import {
   LogOut,
   Megaphone,
@@ -149,11 +150,7 @@ export type AppNavItem = NavItem & {
    * folded, it keeps the triangle, and the counter only in default.
    */
   badgeCollapsed?: ReactNode;
-  /**
-   * Right-click actions on the row. Reserved for entries that bear a
-   * OBJECT that we can do something with — a draft of a project, which we throw away
-   * from there rather than reopening it. A navigation entry does not have one.
-   */
+  /** Additional right-click actions for rows that represent editable objects. */
   contextActions?: ContextMenuAction[];
 };
 export type AppNavSection = Omit<NavSection, "items"> & { items: AppNavItem[] };
@@ -201,6 +198,8 @@ function SidebarRow({
   const Icon = item.icon;
   const active = item.active;
   const tk = useTranslations("Keyboard");
+  const navigationActions = useNavigationContextActions(item.href);
+  const contextActions = [...navigationActions, ...(item.contextActions ?? [])];
   // While a G-chord is armed, surface this row's second key as a Kbd hint
   // (AutoKap-style) — takes the trailing slot over the badge for the moment.
   const chordPrefix = useChordPrefix();
@@ -269,7 +268,7 @@ function SidebarRow({
     x: number;
     y: number;
   } | null>(null);
-  const openContextMenu = item.contextActions?.length
+  const openContextMenu = contextActions.length
     ? (e: MouseEvent) => {
         e.preventDefault();
         setMenuPosition({ x: e.clientX, y: e.clientY });
@@ -337,7 +336,7 @@ function SidebarRow({
     </Tooltip>
   );
 
-  if (!item.contextActions?.length) return row;
+  if (!contextActions.length) return row;
   return (
     <>
       {row}
@@ -345,7 +344,7 @@ function SidebarRow({
       <IssueContextMenu
         position={menuPosition}
         onClose={() => setMenuPosition(null)}
-        actions={item.contextActions}
+        actions={contextActions}
         searchable={false}
       />
     </>
@@ -368,7 +367,7 @@ function SidebarNav({
   return (
     <nav
       className={cn(
-        "scrollbar-quiet flex-1 overflow-x-hidden overflow-y-auto pt-1 pb-2",
+        "scrollbar-quiet flex-1 overflow-x-hidden overflow-y-auto pt-[calc((var(--app-content-header-height)-2.25rem)/2)] pb-2",
         GUTTER,
       )}
     >
@@ -425,6 +424,8 @@ function ProjectContextRow({
   const pathname = usePathname();
   const prefetchProject = usePrefetchProject();
   const compactBadge = homeItem.badgeCollapsed ?? homeItem.badge;
+  const homeActions = useNavigationContextActions(homeItem.href);
+  const [homeMenuPosition, setHomeMenuPosition] = useState<{ x: number; y: number } | null>(null);
 
   const projectTrigger = (
     <DropdownMenuTrigger
@@ -454,6 +455,7 @@ function ProjectContextRow({
   );
 
   return (
+    <>
     <DropdownMenu onOpenChange={onMenuOpenChange}>
       {collapsed ? (
         <Tooltip delayDuration={SIDEBAR_TOOLTIP_DELAY_MS} disableHoverableContent>
@@ -467,6 +469,10 @@ function ProjectContextRow({
               <MotionLink
                 href={homeItem.href as string}
                 aria-label={homeItem.label}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  setHomeMenuPosition({ x: event.clientX, y: event.clientY });
+                }}
                 className="relative flex h-9 w-12 shrink-0 cursor-pointer items-center justify-center gap-0.5 rounded-lg outline-hidden text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground"
                 whileTap={{ scale: 0.97 }}
                 transition={transitions.snappy}
@@ -521,6 +527,13 @@ function ProjectContextRow({
         })}
       </DropdownMenuContent>
     </DropdownMenu>
+    <IssueContextMenu
+      position={homeMenuPosition}
+      onClose={() => setHomeMenuPosition(null)}
+      actions={homeActions}
+      searchable={false}
+    />
+    </>
   );
 }
 

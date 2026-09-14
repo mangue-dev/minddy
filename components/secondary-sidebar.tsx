@@ -4,6 +4,7 @@ import {
   useEffect,
   useLayoutEffect,
   useState,
+  type MouseEvent,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
@@ -12,6 +13,9 @@ import { cn, useMediaQuery } from "mangue-ui";
 import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { SidebarFilterField } from "@/components/sidebar-filter-field";
 import { transitions } from "@/lib/motion";
+import { normalizeAppTabLocation } from "@/lib/app-tab-location";
+import { IssueContextMenu } from "@/components/issue-context-menu";
+import { useNavigationContextActions } from "@/components/navigation-context-actions";
 
 /** Width of the column (`w-80`), shared by the shutter, its gutter, and the
  * hidden navigation overlay, which adds it to that of the primary. */
@@ -90,6 +94,12 @@ export function SecondarySidebar({
   // by road (routeHasSecondaryNav), and make the bar here before knowing
   // where it goes would diverge the hydration.
   const [mounted, setMounted] = useState(false);
+  const [navigationMenu, setNavigationMenu] = useState<{
+    x: number;
+    y: number;
+    href: string;
+  } | null>(null);
+  const navigationActions = useNavigationContextActions(navigationMenu?.href);
 
   useIsoLayoutEffect(() => {
     setMounted(true);
@@ -101,8 +111,21 @@ export function SecondarySidebar({
   const hoisted = !isMobileLayout && slot !== null;
 
   const aside = (
+    <>
     <aside
       aria-label={title}
+      onContextMenu={(event: MouseEvent<HTMLElement>) => {
+        if (event.defaultPrevented || !(event.target instanceof Element)) return;
+        const target = event.target.closest<HTMLElement>(
+          "a[href], [data-navigation-href]",
+        );
+        if (!target || !event.currentTarget.contains(target)) return;
+        const href = target.dataset.navigationHref ?? target.getAttribute("href");
+        const destination = normalizeAppTabLocation(href);
+        if (!destination) return;
+        event.preventDefault();
+        setNavigationMenu({ x: event.clientX, y: event.clientY, href: destination });
+      }}
       className={cn(
         "min-h-0 flex-col",
         hoisted
@@ -135,6 +158,13 @@ export function SecondarySidebar({
         {children}
       </div>
     </aside>
+    <IssueContextMenu
+      position={navigationMenu}
+      onClose={() => setNavigationMenu(null)}
+      actions={navigationActions}
+      searchable={false}
+    />
+    </>
   );
 
   return hoisted ? createPortal(aside, slot) : aside;

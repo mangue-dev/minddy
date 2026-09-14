@@ -238,13 +238,16 @@ export class AppTabsSession {
     const tab = this.snapshot.tabs.find((row) => row.id === id);
     if (tab) this.select(tab);
   });
-  create = () => {
+  create = (href: string = "/home") => {
     if (this.disposed) return Promise.resolve();
+    const destination = normalizeAppTabLocation(href) ?? "/home";
     const position = this.snapshot.tabs.reduce((maximum, row) => Math.max(maximum, row.position), -1) + 1;
-    const tab = createHomeTab(this.owner, crypto.randomUUID(), position);
+    const tab = { ...createHomeTab(this.owner, crypto.randomUUID(), position), href: destination };
     this.creating.add(tab.id);
+    if (destination !== "/home") this.locations.set(tab.id, destination);
     this.merge(tab);
     void this.persist(() => this.createOnServer(tab.id));
+    if (destination !== "/home") void this.flushLocation();
     return this.run(async () => {
       if (!(await this.saveEditors())) return;
       if (!this.snapshot.recovering) void this.flushLocation();

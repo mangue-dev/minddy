@@ -60,6 +60,19 @@ describe("application tab sessions", () => {
     expect(session.getSnapshot().activeId).not.toBe(active);
     session.dispose();
   });
+  it("creates, activates, and persists a selected destination", async () => {
+    const { session, transport, navigate } = setup(); await session.initialize("/home");
+    await session.create("/routines?routine=routine-1");
+    const created = session.getSnapshot().tabs.find((tab) => tab.id === session.getSnapshot().activeId);
+    expect(created?.href).toBe("/routines?routine=routine-1");
+    expect(navigate).toHaveBeenLastCalledWith("/routines?routine=routine-1");
+    await session.retry();
+    expect(transport.patch).toHaveBeenCalledWith(
+      expect.objectContaining({ id: created?.id }),
+      { href: "/routines?routine=routine-1" },
+    );
+    session.dispose();
+  });
   it("removes a closed tab immediately and ignores stale refetches until confirmation", async () => {
     const { session, transport, rows, navigate } = setup(); await session.initialize("/home");
     const id = session.getSnapshot().activeId!;

@@ -24,6 +24,7 @@ import {
   IssueContextMenu,
   type ContextMenuAction,
 } from "@/components/issue-context-menu";
+import { useNavigationContextActions } from "@/components/navigation-context-actions";
 import { EmptyScene } from "@/components/empty-scene";
 import { FormDialog } from "@/components/form-dialog";
 import { agentSessionStatusKey } from "@/components/agents/agent-session-status";
@@ -153,6 +154,7 @@ function SessionRow({
   onDelete: () => void;
 }) {
   const t = useTranslations("Agents");
+  const navigationActions = useNavigationContextActions(`/agents?run=${encodeURIComponent(session.conversationId)}`);
   // Right click: the position of the pointer, or `null` when the menu is closed.
   // Same assembly as the Pages tree (components/pages/page-tree.tsx).
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
@@ -259,7 +261,7 @@ function SessionRow({
     <IssueContextMenu
       position={menuPosition}
       onClose={() => setMenuPosition(null)}
-      actions={actions}
+      actions={[...navigationActions, ...actions]}
       searchable={false}
     />
     </>
