@@ -284,24 +284,25 @@ function SidebarRow({ item }: { item: AppNavItem }) {
   // the wrapper is chosen by data, not hover state.
   const hasTooltip = Boolean(item.tooltip || item.shortcut);
 
-  if (!contextActions.length) {
-    if (!hasTooltip) return row;
-    return (
-      <Tooltip delayDuration={SIDEBAR_TOOLTIP_DELAY_MS} disableHoverableContent>
-        <TooltipTrigger asChild>{row}</TooltipTrigger>
-        <TooltipContent side="right" className="flex items-center gap-2">
-          <span>{item.tooltip ?? item.label}</span>
-          {item.shortcut && (
-            <>
-              <Kbd size="sm">{CHORD_PREFIX.toUpperCase()}</Kbd>
-              <span>{tk("then")}</span>
-              <Kbd size="sm">{item.shortcut}</Kbd>
-            </>
-          )}
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
+  row = (
+    <Tooltip
+      delayDuration={SIDEBAR_TOOLTIP_DELAY_MS}
+      disableHoverableContent
+      open={hasTooltip ? undefined : false}
+    >
+      <TooltipTrigger asChild>{row}</TooltipTrigger>
+      <TooltipContent side="right" className="flex items-center gap-2">
+        <span>{item.tooltip ?? item.label}</span>
+        {item.shortcut && (
+          <>
+            <Kbd size="sm">{CHORD_PREFIX.toUpperCase()}</Kbd>
+            <span>{tk("then")}</span>
+            <Kbd size="sm">{item.shortcut}</Kbd>
+          </>
+        )}
+      </TooltipContent>
+    </Tooltip>
+  );
   return (
     <>
       {row}
