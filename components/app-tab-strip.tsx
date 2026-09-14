@@ -135,8 +135,8 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           {draggedTab && (() => {
             const { section, projectId, project, label } = describe(draggedTab);
             return <div className={draggedTab.pinned
-              ? "flex h-[34px] w-[34px] items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-foreground shadow-lg"
-              : "flex h-[34px] w-[200px] items-center gap-2 rounded-lg bg-sidebar-accent px-2.5 text-sm text-sidebar-foreground shadow-lg"}>
+              ? "flex h-[34px] w-[34px] items-center justify-center rounded-md bg-sidebar-accent text-sidebar-foreground shadow-lg"
+              : "flex h-[34px] w-[200px] items-center gap-2 rounded-md bg-sidebar-accent px-2.5 text-sm text-sidebar-foreground shadow-lg"}>
               <AppTabIcon section={section} project={project} projectId={projectId} />
               {!draggedTab.pinned && <span className="truncate">{label}</span>}
             </div>;

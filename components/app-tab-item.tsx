@@ -25,7 +25,13 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, on
     return () => observer.disconnect();
   }, [label, tab.pinned]);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  return <div role="presentation" className={cn("app-tab group relative flex h-[34px] shrink-0 items-center rounded-lg text-sm text-muted-foreground hover:bg-sidebar-accent/60", tab.pinned ? "w-[34px]" : "w-[200px]", active && "bg-sidebar-accent text-sidebar-foreground")}
+  return <div role="presentation" className={cn(
+    "app-tab group relative flex h-[34px] shrink-0 items-center rounded-md text-sm",
+    tab.pinned ? "w-[34px]" : "w-[200px]",
+    active
+      ? "bg-background text-sidebar-foreground"
+      : "bg-sidebar-accent text-muted-foreground hover:bg-sidebar-accent/80",
+  )}
     onContextMenu={(event) => { event.preventDefault(); setMenu({ x: event.clientX, y: event.clientY }); }}>
     <Tooltip disableHoverableContent>
       <TooltipTrigger asChild>
@@ -39,7 +45,7 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, on
               event.preventDefault(); const box = event.currentTarget.getBoundingClientRect(); setMenu({ x: box.left, y: box.bottom });
             }
           }}
-          className={cn("flex h-full min-w-0 flex-1 items-center gap-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring", tab.pinned ? "justify-center" : "pl-2.5 pr-6")}>
+          className={cn("flex h-full min-w-0 flex-1 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring", tab.pinned ? "justify-center" : "pl-2.5 pr-6")}>
           {icon}{!tab.pinned && <span ref={labelRef} className="truncate">{label}</span>}
         </button>
       </TooltipTrigger>
