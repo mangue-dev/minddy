@@ -46,7 +46,7 @@ describe("application content header", () => {
     expect(source).toContain("h-[var(--app-content-header-height)] shrink-0");
     expect(source).toContain("overflow-x-auto overflow-y-hidden");
     expect(source).toContain("overscroll-x-contain");
-    expect(source).toContain("items-center px-3.5");
+    expect(source).toContain("items-center px-3");
   });
 
   it("owns equal edge padding instead of letting pages widen it", () => {

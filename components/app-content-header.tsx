@@ -31,7 +31,7 @@ export function AppContentHeader({
     >
       <div
         className={cn(
-          "flex h-full min-w-full flex-nowrap items-center px-3.5",
+          "flex h-full min-w-full flex-nowrap items-center px-3",
           contentClassName,
         )}
       >

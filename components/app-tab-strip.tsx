@@ -203,7 +203,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
     }
   }
   return <>
-    <div ref={strip} className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden px-2">
+    <div ref={strip} className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden pr-2">
       <div role="tablist" aria-label={t("label")} aria-busy={loading || busy}
         className="flex min-w-0 items-center gap-1 overflow-hidden py-1"
         style={available > 0 ? { maxWidth: Math.max(available - buttonReserve, 0) } : undefined}

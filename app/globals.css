@@ -434,6 +434,86 @@ a.markdown-link::before {
   --control-hover: oklch(0.270 0.005 264);
 }
 
+/* ── Floating content pane (Linear-style shell, test) ────────────────────────
+   The chrome — tab strip, sidebar, and the bands they leave at the bottom and
+   on the right — fills the window with --sidebar and carries no borders: the
+   shared surface makes it one continuous frame. The content column (header
+   clearance + <main>, mangue-ui app-shell's right child) floats over it as a
+   rounded card, clear of the right and bottom window edges, flush against the
+   top bar above and the sidebar on its left. Desktop only; below 768 px the
+   shell keeps its classic full-bleed layout and floating pill navigation.
+
+   `--app-pane-radius` is the single source of the pane's corner rounding: the
+   content column and every pane-mirror modal (scratchpad notebook, wizard,
+   what's-new, skill preview, Numo/agent shells in expanded mode) read it, so
+   they all follow the same curve. */
+:root {
+  --app-pane-radius: 16px;
+}
+
+@media (min-width: 768px) {
+  .app-shell {
+    background: var(--sidebar);
+  }
+
+  .app-shell > div.flex.min-h-0.min-w-0.flex-1.flex-col {
+    margin-right: 12px;
+    /* The bottom band is deep enough to host the Numo chrome button. */
+    margin-bottom: 36px;
+    border-radius: var(--app-pane-radius);
+    /* Real 1px border on the card itself: children are clipped to the padding
+       box, so the line can't be repainted or anti-aliased away by the
+       scrolling content. box-shadow/outline variants sat under the pane's
+       painted children and visibly cropped in places. */
+    background: var(--background);
+    border: 1px solid var(--border);
+  }
+
+  /* With navigation hidden, the histogram width collapses to 0 and the panel
+     would sit flush against the window edge: keep the same gutter on the left
+     as on the right, and follow the sidebar's own exit animation. */
+  .app-shell:has([data-sidebar-hidden="true"]) > div.flex.min-h-0.min-w-0.flex-1.flex-col {
+    margin-left: 12px;
+    transition: margin-left 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* Pane-mirroring modals (scratchpad notebook, project-creation wizard,
+     what's-new, skill preview, reading full-screen, Numo/agent shells in
+     expanded mode): modals that VISUALLY REPLACE the content pane — the exact
+     same box (below the tab strip, over the sidebar width, clear of the
+     right/bottom window bands), same radius and border. Everything under
+     !important: the pane mirror must not lose a single rule to the dialog
+     primitives' centering/size classes — and to the `!`-prefixed utilities on
+     them. */
+  .scratchpad-shell-dialog,
+  .dialog-pane-mirror {
+    position: fixed !important;
+    inset: 44px 12px 36px 320px !important;
+    /* mangue-ui centers the dialog with the INDIVIDUAL properties
+       (`-translate-x/y-1/2` in Tailwind v4 = `translate`), and its open/close
+       animation runs on scale — neither is reached by `transform: none`. */
+    transform: none !important;
+    translate: none !important;
+    scale: none !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    /* !important on the radius too: the pane mirror must not lose a single
+       rule to the dialog primitives' own classes (e.g. !rounded-2xl). */
+    border-radius: var(--app-pane-radius) !important;
+    border: 1px solid var(--border) !important;
+    background: var(--background) !important;
+    box-shadow: none !important;
+    transition: left 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  body:has([data-sidebar-hidden="true"]) .scratchpad-shell-dialog,
+  body:has([data-sidebar-hidden="true"]) .dialog-pane-mirror {
+    left: 12px !important;
+  }
+}
+
 /* Use Inter for headings too — Space Grotesk is no longer loaded, so remap the
    `font-display` utility (mangue-ui points it at --font-space-grotesk). */
 @theme inline {

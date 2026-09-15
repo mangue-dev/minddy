@@ -71,7 +71,6 @@ import { usePrefetchProject } from "@/lib/use-prefetch-project";
 import { usePrefetchPages } from "@/lib/use-pages-query";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { NewMenu } from "@/components/new-menu";
-import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
 import { UsageIndicator } from "@/components/usage-indicator";
 import {
   SIDEBAR_COMPACT_CONTROL_CLASS,
@@ -154,15 +153,10 @@ const ProductFeedbackDialog = dynamic(
 
 /* ─── Brand ────────────────────────────────────────────────────────── */
 
-function SidebarQuickActions({
-  onScratchpadWarm,
-}: {
-  onScratchpadWarm?: () => void;
-}) {
+function SidebarQuickActions() {
   return (
     <div className={cn("flex w-full min-w-0 shrink-0 gap-1")}>
       <NewMenu variant="sidebar" collapsed={false} />
-      <ScratchpadTrigger variant="sidebar" onWarm={onScratchpadWarm} />
     </div>
   );
 }
@@ -900,14 +894,12 @@ export function AppSidebar({
   modeKey,
   currentProject,
   projects,
-  onScratchpadWarm,
   onLayerOpenChange,
 }: {
   sections: AppNavSection[];
   modeKey: string;
   currentProject: Project | null;
   projects: Project[];
-  onScratchpadWarm?: () => void;
   onLayerOpenChange?: (open: boolean) => void;
 }) {
   const reduce = useReducedMotion();
@@ -968,14 +960,21 @@ export function AppSidebar({
                 type="button"
                 onClick={() => router.push(back.href)}
                 className={cn(
-                  "flex h-9 w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg text-sm font-medium transition-colors",
+                  "relative flex h-9 w-full min-w-0 cursor-pointer items-center rounded-lg text-sm font-medium transition-colors",
                   ROW_PL,
                   "pr-3",
                   "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
                 )}
               >
-                <ChevronLeft className="size-[18px] shrink-0" aria-hidden />
-                <span className="min-w-0 truncate">{back.label}</span>
+                {/* Out of the flow: the label is centered on the FULL row
+                    width, the chevron does not push it off-center. */}
+                <ChevronLeft
+                  className="absolute left-[9px] top-1/2 size-[18px] shrink-0 -translate-y-1/2"
+                  aria-hidden
+                />
+                <span className="min-w-0 flex-1 truncate text-center">
+                  {back.label}
+                </span>
               </button>
             </div>
           </motion.div>
@@ -1003,7 +1002,7 @@ export function AppSidebar({
       animate={{ width: EXPANDED_WIDTH }}
       transition={shellTransition}
       className={cn(
-        "flex h-full flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
+        "flex h-full flex-col overflow-hidden bg-sidebar text-sidebar-foreground",
       )}
     >
       {/* The top band COMMANDS the column: level 1 keeps the creation
@@ -1011,14 +1010,18 @@ export function AppSidebar({
           Pinned strip — what drives the list should be here. */}
       <div
         className={cn(
-          "sidebar-brand-row relative flex h-[var(--app-content-header-height)] shrink-0 items-center border-b border-border",
+          "sidebar-brand-row relative flex h-[var(--app-content-header-height)] shrink-0 items-center",
           // Level 2/3: the teleported filter strip carries its own gutter, so
           // the band's px-2.5 must not wrap it a second time.
           !back && GUTTER,
+          // Level 1 closes the band with the same hairline the level-2/3
+          // filter strip draws (border-b on its header): the command row is
+          // separated from the option rows below on every level.
+          !back && "border-b border-border",
         )}
       >
         <div className={cn("flex h-full w-full min-w-0 items-center", back && "hidden")}>
-          <SidebarQuickActions onScratchpadWarm={onScratchpadWarm} />
+          <SidebarQuickActions />
         </div>
         <div
           ref={setHeaderSlot}
@@ -1057,11 +1060,31 @@ export function AppSidebar({
             </motion.div>
           )}
         </AnimatePresence>
+        {/* Fades: scrolling options dissolve into the panel instead of being
+            clipped hard against the band and the footer. The top fade lives
+            on level 2/3 ONLY: it milestones the back row, which level 1 does
+            not have (its first row is a plain option, e.g. pull requests,
+            and a fade there just dims it). Starts BELOW the first row —
+            geometry: row top padding + h-9 (2.25rem) + pb-2. Kept short
+            (h-5): the panel's own scroll gap is wide, and a taller fade
+            would sit on the first option row. */}
+        {back ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-[calc((var(--app-content-header-height)-2.25rem)/2+2.25rem+0.5rem)] h-5 bg-gradient-to-b from-sidebar to-transparent"
+          />
+        ) : null}
+        {/* Bottom fade, on every level: options dissolve just above the
+            account line. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-sidebar to-transparent"
+        />
       </div>
 
       {/* The account line is the only option present on EVERY level — the
           separator keeps it apart from whichever level runs above it. */}
-      <div className={cn("border-t border-border pt-2 pb-2.5", GUTTER)}>
+      <div className={cn("pt-2 pb-2.5", GUTTER)}>
         <SidebarFooter
           portalOwner={railId}
           onMenuOpenChange={handleMenuOpenChange}
