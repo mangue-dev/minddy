@@ -208,10 +208,7 @@ export async function relaunchNumoWorkerRun(input: {
   // is a billable turn on the OWNER's key — same budget control as /steer.
   const ownerId = run.created_by;
   if (!ownerId) return { ok: false, code: "not_found" };
-  const quota =
-    ownerId === input.userId
-      ? await checkAgentQuota(input.userId)
-      : await checkAgentQuota(ownerId);
+  const quota = await checkAgentQuota(ownerId);
   if (!quota.allowed) return { ok: false, code: "quota_exceeded" };
   const budget = managedResumeBudget(run, quota);
   if (!budget) return { ok: false, code: "quota_exceeded" };

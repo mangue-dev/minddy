@@ -195,52 +195,52 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
         )}
         data-delegated-work-id={runId ?? call.id}
       >
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-sm font-medium leading-5">{title}</p>
-          <div
-            className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground"
-            aria-live="polite"
-          >
-            <span
-              className={cn(
-                "inline-flex items-center gap-1",
-                state === "waiting_input" && "text-amber-700 dark:text-amber-400",
-                state === "failed" && "text-destructive",
-              )}
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-2 text-sm font-medium leading-5">{title}</p>
+            <div
+              className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground"
+              aria-live="polite"
             >
-              <StateIcon
+              <span
                 className={cn(
-                  "size-3.5",
-                  (state === "starting" || state === "queued" || state === "running") &&
-                    "animate-spin",
+                  "inline-flex items-center gap-1",
+                  state === "waiting_input" && "text-amber-700 dark:text-amber-400",
+                  state === "failed" && "text-destructive",
                 )}
-                aria-hidden
+              >
+                <StateIcon
+                  className={cn(
+                    "size-3.5",
+                    (state === "starting" || state === "queued" || state === "running") &&
+                      "animate-spin",
+                  )}
+                  aria-hidden
+                />
+                {t(`delegatedWorkState_${state}`)}
+              </span>
+              <NumoModelLine
+                model={run?.model}
+                reasoningLevel={run?.reasoning_level}
+                label={run?.reasoning_level ? t(REASONING_LABEL_KEYS[run.reasoning_level]) : ""}
               />
-              {t(`delegatedWorkState_${state}`)}
-            </span>
-            <NumoModelLine
-              model={run?.model}
-              reasoningLevel={run?.reasoning_level}
-              label={run?.reasoning_level ? t(REASONING_LABEL_KEYS[run.reasoning_level]) : ""}
-            />
-            {changedFileCount > 0 ? (
-              <span>{t("filesChanged", { count: changedFileCount })}</span>
-            ) : null}
+              {changedFileCount > 0 ? (
+                <span>{t("filesChanged", { count: changedFileCount })}</span>
+              ) : null}
+            </div>
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            disabled={!runId}
+            onClick={() => setDetailsOpen(true)}
+          >
+            <NumoIcon animated={false} className="size-4" />
+            {t("delegatedWorkView")}
+          </Button>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="shrink-0"
-          disabled={!runId}
-          onClick={() => setDetailsOpen(true)}
-        >
-          <NumoIcon animated={false} className="size-4" />
-          {t("delegatedWorkView")}
-        </Button>
-      </div>
         {run?.pr_url || run?.branch_name || artifacts.length > 0 ? (
           <div className="flex flex-wrap items-center gap-3 border-t pt-2 text-xs text-muted-foreground">
             {run?.branch_name ? (
