@@ -103,6 +103,8 @@ export const CHEATSHEET: CheatsheetSection[] = [
       // Hide or show the whole navigation column (MIN-546 review): the
       // sidebar-visibility button carries the same shortcut.
       { id: "gen.toggleSidebar", labelKey: "toggleSidebar", keys: [["mod", "B"]] },
+      // Account settings, the standard macOS “preferences” gesture.
+      { id: "gen.accountSettings", labelKey: "accountSettings", keys: [["mod", ","]] },
       { id: "gen.undo", labelKey: "undo", keys: [["mod", "Z"]] },
       { id: "gen.redo", labelKey: "redo", keys: [["mod", "⇧", "Z"]] },
       { id: "gen.cheatsheet", labelKey: "cheatsheet", keys: [["?"]] },

@@ -37,17 +37,16 @@ export function HomeTip() {
   const shortcut = tip ? tipShortcut(tip) : undefined;
 
   return (
-    // `mt-auto` glue it to the bottom of the row, which is the bottom of the page: the
-    // row is worth `1fr` whatever she wears, so putting the trick here doesn't move
-    // not compose it remained in the exact center of the window.
-    <p className="mt-auto flex min-h-5 justify-center pt-8 text-xs text-muted-foreground">
+    // Full row width, `mt-auto` glues it to the foot of the page; the container
+    // itself is content-sized and centered.
+    <p className="mt-auto flex justify-center pt-8 text-xs text-muted-foreground">
       {tip && (
-        /* Roomy wrap: wide max width, balanced long text. The bulb sits LEFT
-           of the text, vertically centered on the FIRST line (items-start
-           + a small offset), so a wrap reads as one hint, not two elements. */
-        <span className="flex max-w-[36rem] items-start justify-center gap-x-2">
+        /* Its own container: content width bounded by the hint's max width,
+           centered on the WHOLE row (mx-auto + w-fit) — the text keeps
+           its natural left alignment inside the container. */
+        <span className="mx-auto flex w-fit max-w-[36rem] items-center gap-x-2">
           <Lightbulb
-            className="mt-[2.5px] size-3.5 shrink-0"
+            className="size-3.5 shrink-0"
             aria-hidden
           />
           <span className="text-balance">

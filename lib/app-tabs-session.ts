@@ -138,12 +138,29 @@ export class AppTabsSession {
     return this.run(async () => {
       if (this.snapshot.activeId) return;
       if (!this.snapshot.tabs.length) this.merge(await this.transport.create(true, crypto.randomUUID()));
+      const normalized = normalizeAppTabLocation(href) ?? "/home";
       const explicit = href !== "/home";
-      const chosen = (!explicit && restored ? this.snapshot.tabs.find((tab) => tab.id === restored.id) : null)
+      // The load destination claims the row that CONVENTIONALLY ALREADY shows it:
+      // a live reload (the URL still points at the tab the previous session left
+      // open) restores that tab, a typed or shared deep link reuses a tab that
+      // already displays it, and only otherwise the first row. Defaulting to
+      // `tabs[0]` unconditionally is what ground the first tab's location under
+      // the load URL — the home tab turned into a replica of the current page.
+      const restoredHref = restored ? normalizeAppTabLocation(restored.href) : null;
+      const restoredTab = restored ? this.snapshot.tabs.find((tab) => tab.id === restored.id) : null;
+      const chosen =
+        (restoredTab && (!explicit || restoredHref === normalized)
+          ? restoredTab
+          : explicit
+            ? this.snapshot.tabs.find((tab) => tab.href === normalized) ?? this.snapshot.tabs[0]
+            : null)
         ?? this.snapshot.tabs[0];
       if (!chosen || this.disposed) return;
-      const destination = explicit ? normalizeAppTabLocation(href) ?? "/home"
-        : restored?.id === chosen.id ? normalizeAppTabLocation(restored.href) ?? chosen.href : chosen.href;
+      const destination = explicit
+        ? normalized
+        : restoredTab && restoredTab.id === chosen.id
+          ? restoredHref ?? chosen.href
+          : chosen.href;
       this.emit({ activeId: chosen.id });
       this.activeHref = destination;
       this.observedHref = destination;

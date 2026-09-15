@@ -197,6 +197,20 @@ describe("application tab sessions", () => {
     expect(session.getSnapshot().tabs.find((row) => row.id === session.getSnapshot().activeId)?.href).toBe("/agents?run=a");
     session.dispose();
   });
+  it("restores on reload without overwriting another tab's location", async () => {
+    // The load-time race: a reload lands on the URL the previous session left
+    // open (an active tab, not the first row); the first row must keep its own
+    // href instead of being overwritten with that URL.
+    const first = { ...createHomeTab("owner"), href: "/home" };
+    const second = { ...createHomeTab("owner", undefined, 1), href: "/all?view=x" };
+    const { session, transport, navigate, rows } = setup([first, second]);
+    await session.initialize("/all?view=x", { id: second.id, href: "/all?view=x" });
+    expect(session.getSnapshot().activeId).toBe(second.id);
+    expect(transport.patch).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(rows().find((row) => row.id === first.id)?.href).toBe("/home");
+    session.dispose();
+  });
   it("restores local activation without changing a different window", async () => {
     const { session, rows, navigate } = setup();
     await session.initialize("/home", { id: rows()[1].id, href: "/all?view=a" });

@@ -615,11 +615,16 @@ a.markdown-link::before {
 
   /* On ultrawide (≥2200px) the shell becomes a centered map (mango-ui
      AppShell places `.ultrawide-canvas` on the body), so we re-anchor the FAB
-     Numo and its compact panel — both in `fixed` — at the bottom right corner of the
-     shell rather than at the edge of the viewport. Offset = shell centering margin
+     Numo and its compact panel — both in `fixed` — at the bottom right corner of
+     the shell rather than at the edge of the viewport. Offset = shell centering margin
      + 8px: for the FAB of 44px, this 8px keeps its radius of 22px concentric
      at 30px corner of shell (30 − 8 = 22); the panel shares exactly the
      same corner to open where the FAB is.
+
+     Web only: in the desktop app (hiddenInset window) the shell fills the
+     viewport at every size — the canvas maths would pull the buttons toward
+     the window's centre, parking them inside the content pane. The plain
+     `right-3 bottom-1` anchoring is the correct one there at any width.
 
      Why @layer utilities + !important: the panel is positioned with
      !important Tailwind utilities (md:!right-4 …) that live in this layer.
@@ -627,8 +632,8 @@ a.markdown-link::before {
      a layered !important beats a non-layered one regardless of specificity —
      an off-layer rule would silently lose. Declared in @layer
      utilities, it's the specificity that decides (0,2,0 beats the 0,1,0 of md:). */
-  .ultrawide-canvas .assistant-fab-anchor,
-  .ultrawide-canvas .assistant-panel-anchor {
+  html:not([data-desktop-app]) .ultrawide-canvas .assistant-fab-anchor,
+  html:not([data-desktop-app]) .ultrawide-canvas .assistant-panel-anchor {
     right: calc((100dvw - var(--spacing-app-max-w)) / 2 + 8px) !important;
     bottom: calc(max(0px, (100dvh - var(--spacing-app-max-h)) / 2) + 8px) !important;
   }
@@ -636,7 +641,7 @@ a.markdown-link::before {
   /* Same re-anchoring for the “new version” headband (MIN-157), which lives at
      same corner: same `right`, and a `bottom` shifted by 4.5rem to remain
      stacked ABOVE the FAB rather than on top of it. */
-  .ultrawide-canvas .new-version-anchor {
+  html:not([data-desktop-app]) .ultrawide-canvas .new-version-anchor {
     right: calc((100dvw - var(--spacing-app-max-w)) / 2 + 8px) !important;
     bottom: calc(
       max(0px, (100dvh - var(--spacing-app-max-h)) / 2) + 8px + 4.5rem

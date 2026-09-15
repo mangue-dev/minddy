@@ -261,7 +261,7 @@ function SessionRow({
     <IssueContextMenu
       position={menuPosition}
       onClose={() => setMenuPosition(null)}
-      actions={[...navigationActions, ...actions]}
+      actions={[...actions, ...navigationActions]}
       searchable={false}
     />
     </>

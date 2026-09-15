@@ -749,7 +749,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       key: "goto",
       heading: t("goTo"),
       items: [
-        { key: "go-home", label: t("home"), icon: Home, href: "/home", keys: ["G", "H"], onSelect: () => router.push("/home") },
+        { key: "go-home", label: t("home"), icon: Home, href: "/home", keys: ["G", "H"], entityType: "navigation", onSelect: () => router.push("/home") },
         { key: "go-inbox", label: t("inbox"), icon: Inbox, keys: ["G", "I"], onSelect: openInbox },
         {
           key: "open-notes",
@@ -767,6 +767,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 icon: GitPullRequest,
                 href: "/pull-requests",
                 keys: ["G", "R"],
+                entityType: "navigation",
                 onSelect: () => router.push("/pull-requests"),
               },
               {
@@ -775,6 +776,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 icon: NumoNavIcon,
                 href: "/numo",
                 keys: ["G", "J"],
+                entityType: "navigation",
                 onSelect: () => router.push("/numo"),
               },
               {
@@ -785,6 +787,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 icon: CalendarClock,
                 href: "/routines",
                 keys: ["G", "U"],
+                entityType: "navigation",
                 keywords: [
                   "routine",
                   "routines",
@@ -799,12 +802,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               },
             ]
           : []),
-        {
+         {
           key: "go-all-global",
           label: t("allIssues"),
           icon: LayoutGrid,
           href: "/all",
           keys: ["G", "B"],
+          entityType: "navigation",
           onSelect: () => router.push("/all"),
         },
         {
@@ -815,6 +819,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           label: t("cycle"),
           icon: IterationCw,
           href: "/all?view=cycle",
+          entityType: "navigation",
           keywords: [
             "cycle",
             "sprint",
@@ -832,6 +837,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           label: t("accountSettings"),
           icon: Settings,
           href: "/settings",
+          entityType: "navigation",
           onSelect: () => router.push("/settings"),
         },
         {
@@ -906,6 +912,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             metaText,
             href: base,
             contextId,
+            entityType: "navigation",
             onSelect: () => router.push(base),
           },
           {
@@ -917,6 +924,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             metaText,
             href: `${base}/objectives`,
             contextId,
+            entityType: "navigation",
             onSelect: () => router.push(`${base}/objectives`),
           },
           // Between Objectives and Triage, as in the sidebar: the palette says
@@ -930,6 +938,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             metaText,
             href: `${base}/pages`,
             contextId,
+            entityType: "navigation",
             onSelect: () => router.push(`${base}/pages`),
           },
           {
@@ -941,6 +950,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             metaText,
             href: `${base}/triage`,
             contextId,
+            entityType: "navigation",
             onSelect: () => router.push(`${base}/triage`),
           },
           {
@@ -952,6 +962,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             metaText,
             href: `${base}/feedback`,
             contextId,
+            entityType: "navigation",
             onSelect: () => router.push(`${base}/feedback`),
           },
           {
@@ -963,6 +974,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             metaText,
             href: `${base}/settings`,
             contextId,
+            entityType: "navigation",
             onSelect: () => router.push(`${base}/settings`),
           },
         );
@@ -1037,6 +1049,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       // search keywords), and the project orb comes from `contextId`.
       contextId: project?.id,
       href: settingsSectionHref(s, project?.id),
+      entityType: "navigation",
       onSelect: () => router.push(settingsSectionHref(s, project?.id)),
     });
 
