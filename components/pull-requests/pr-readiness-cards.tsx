@@ -43,6 +43,7 @@ import {
 } from "mangue-ui";
 
 import { CheckLogo } from "@/components/pull-requests/pr-check-logo";
+import { NumoIcon } from "@/components/numo-icon";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import type {
@@ -130,6 +131,19 @@ interface PrStatusCard {
   };
 }
 
+/** The Numo review gesture, as its own card (MIN-548): running, already
+    done, or waiting to be asked. `requested` carries the action. */
+export interface PrNumoReviewCardSpec {
+  kind: "running" | "current" | "requested";
+  label: string;
+  /** The session, when one exists — the whole card opens it. */
+  href: string | null;
+  /** Live clock of a running review. */
+  startedAt: string | null;
+  /** Settled duration of the completed pass. */
+  durationMs: number | null;
+}
+
 interface PrStatusCardsProps {
   readiness: PullRequestReadiness | null;
   checks: ChecksSummary | null;
@@ -145,6 +159,8 @@ interface PrStatusCardsProps {
   onOpenReviewApprove: () => void;
   onStartFileReview: () => void;
   onRerunCheck: (check: PullRequestCheck) => void;
+  numoReview: PrNumoReviewCardSpec | null;
+  onRequestReview: () => void;
 }
 
 export function PrStatusCards(props: PrStatusCardsProps) {
@@ -160,6 +176,7 @@ export function PrStatusCards(props: PrStatusCardsProps) {
       props.deploymentUrl,
       props.unresolvedThreads,
       props.acting,
+      props.numoReview,
     ],
   );
   if (cards.length === 0) return null;
@@ -276,6 +293,47 @@ function buildStatusCards(
         testId: "pr-card-view-deployment",
       },
     });
+  }
+
+  // ── Numo review ─────────────────────────────────────────────────────────
+  // One card for ONE gesture (have Numo proofread), whatever its phase:
+  // running (orange, ticking), up to date (green, opens the session), or
+  // waiting for the ask (orange, the action takes the card on hover). It
+  // takes the gesture out of the header more menu (MIN-548).
+  const numoReview = props.numoReview;
+  if (numoReview) {
+    if (numoReview.kind === "requested") {
+      push({
+        id: "numo-review",
+        tone: "progress",
+        title: numoReview.label,
+        durationMs: null,
+        startedAt: null,
+        donutParts: null,
+        avatars: null,
+        iconKind: "mergeability",
+        action: {
+          label: t("aiReview"),
+          onClick: props.onRequestReview,
+          disabled: busy,
+          testId: "pr-card-numo-review",
+        },
+      });
+    } else {
+      push({
+        id: "numo-review",
+        tone: numoReview.kind === "running" ? "progress" : "success",
+        title: numoReview.label,
+        durationMs: numoReview.durationMs,
+        startedAt: numoReview.startedAt,
+        donutParts: null,
+        avatars: null,
+        iconKind: "mergeability",
+        onSelect: numoReview.href
+          ? () => window.open(numoReview.href as string, "_self")
+          : undefined,
+      });
+    }
   }
 
   // ── Blockers ────────────────────────────────────────────────────────────
@@ -505,6 +563,8 @@ function PrStatusCardView({
           <Check />
         ) : card.id === "deployment" ? (
           <ArrowUpRight />
+        ) : card.id === "numo-review" ? (
+          <NumoIcon animated={false} />
         ) : (
           blockerIcon(card.iconKind)
         )}

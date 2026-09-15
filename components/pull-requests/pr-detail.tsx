@@ -47,7 +47,6 @@ import {
   X,
 } from "lucide-react";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
-import Link from "next/link";
 import { AppContentHeader } from "@/components/app-content-header";
 import { BotBadge, GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
@@ -828,6 +827,43 @@ export function PrDetail({
         ? t("numoReviewRerun")
         : t("aiReview");
 
+  // The review gesture lives in ONE card (MIN-548) — running, up to date, or
+  // waiting for the ask — instead of entries buried in the header menus.
+  // A review that is up to date but whose session went unreadable says
+  // nothing an action could serve: no card.
+  const numoReviewCard =
+    !prPageContext || (reviewUpToDate && !completedReviewSessionHref)
+      ? null
+      : aiReviewActive
+        ? {
+            kind: "running" as const,
+            label: aiReviewLabel,
+            href: reviewSession.run
+              ? `/agents?run=${encodeURIComponent(reviewSession.run.runId)}`
+              : null,
+            startedAt: reviewSession.run?.createdAt ?? null,
+            durationMs: null,
+          }
+        : reviewUpToDate && completedReviewSessionHref
+          ? {
+              kind: "current" as const,
+              label: aiReviewLabel,
+              href: completedReviewSessionHref,
+              startedAt: null,
+              durationMs:
+                reviewSession.run?.createdAt && reviewSession.run?.completedAt
+                  ? Date.parse(reviewSession.run.completedAt) -
+                    Date.parse(reviewSession.run.createdAt)
+                  : null,
+            }
+          : {
+              kind: "requested" as const,
+              label: aiReviewLabel,
+              href: null,
+              startedAt: null,
+              durationMs: null,
+            };
+
   // The card reports an active or interrupted review. A completed run has
   // already posted its outcome into the PR, so the persistent banner disappears;
   // its session remains available from the PR actions instead.
@@ -1510,53 +1546,9 @@ export function PrDetail({
                       <MessageSquare />
                       {t("reviewComment")}
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      // Keep the entry visible while its label explains why it is disabled.
-                      disabled={
-                        aiReviewActive || reviewUpToDate || !prPageContext
-                      }
-                      onSelect={openAiReviewDialog}
-                    >
-                      <NumoIcon animated={false} />
-                      {aiReviewLabel}
-                    </DropdownMenuItem>
-                    {completedReviewSessionHref ? (
-                      <DropdownMenuItem asChild>
-                        <Link href={completedReviewSessionHref}>
-                          <NumoIcon animated={false} />
-                          {t("numoReviewOpenSession")}
-                        </Link>
-                      </DropdownMenuItem>
-                    ) : null}
                   </DropdownMenuContent>
                 </DropdownMenu>
-              ) : (
-                <>
-                  {!reviewUpToDate || !completedReviewSessionHref ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={
-                        aiReviewActive || reviewUpToDate || !prPageContext
-                      }
-                      onClick={openAiReviewDialog}
-                    >
-                      {aiReviewActive ? <Spinner /> : <NumoIcon animated={false} />}
-                      {/* Use the same status-aware label as the menu entry. */}
-                      {aiReviewLabel}
-                    </Button>
-                  ) : null}
-                  {completedReviewSessionHref ? (
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={completedReviewSessionHref}>
-                        <NumoIcon animated={false} />
-                        {t("numoReviewOpenSession")}
-                      </Link>
-                    </Button>
-                  ) : null}
-                </>
-              )}
+              ) : null}
 
               {canWrite ? (
                 <Button
@@ -1618,28 +1610,6 @@ export function PrDetail({
                   <NumoIcon animated={false} />
                   {t("reviewRequestChanges")}
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  data-testid="pr-action-numo-review"
-                  className="2xl:hidden"
-                  disabled={
-                    aiReviewActive || reviewUpToDate || !prPageContext
-                  }
-                  onSelect={openAiReviewDialog}
-                >
-                  <NumoIcon animated={false} />
-                  {aiReviewLabel}
-                </DropdownMenuItem>
-                {completedReviewSessionHref ? (
-                  <DropdownMenuItem asChild>
-                    <Link
-                      data-testid="pr-action-numo-session"
-                      href={completedReviewSessionHref}
-                    >
-                      <NumoIcon animated={false} />
-                      {t("numoReviewOpenSession")}
-                    </Link>
-                  </DropdownMenuItem>
-                ) : null}
                 {canComment ? (
                   <>
                     <DropdownMenuSeparator className="2xl:hidden" />
@@ -1846,6 +1816,8 @@ export function PrDetail({
             onOpenReviewApprove={() => openReview("approve")}
             onStartFileReview={startFileReview}
             onRerunCheck={(check) => void handleRerunCheck(check)}
+            numoReview={numoReviewCard}
+            onRequestReview={openAiReviewDialog}
           />
 
           {/* GitHub style tabs: the thread on one side, the code on the other. */}
