@@ -3895,7 +3895,16 @@
     "cardChangesRequested": "{count, plural, =0 {Changes requested} one {Changes requested} other {# reviewers requested changes}}",
     "cardApprovalsMissing": "{count, plural, one {# approval missing} other {# approvals missing}}",
     "checksPopoverTitle": "{count, plural, one {# check} other {# checks}}",
-    "scrollToTop": "Back to top"
+    "scrollToTop": "Back to top",
+    "commentMoreActions": "Comment actions",
+    "editComment": "Edit",
+    "editCommentPlaceholder": "Edit the comment…",
+    "saveChanges": "Save",
+    "edited": "(edited)",
+    "viewPreviousVersions": "View previous versions",
+    "previousVersionsTitle": "Previous versions",
+    "previousVersionsLast": "most recent version",
+    "previousVersionsEmpty": "No previous version recorded."
   },
   "Triage": {
     "projectNotFound": "Project not found",

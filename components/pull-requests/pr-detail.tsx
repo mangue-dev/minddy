@@ -32,10 +32,12 @@ import {
   ChevronDown,
   ChevronLeft,
   Copy,
+  Ellipsis,
   Eye,
   ExternalLink,
   GitPullRequest,
   GitPullRequestDraft,
+  History,
   Link2,
   MessageSquare,
   MoreHorizontal,
@@ -86,16 +88,20 @@ import {
 } from "@/lib/use-agent-runs";
 import {
   actOnPullRequestApi,
+  fetchPullRequestCommentEditsApi,
   maintainPullRequestApi,
   postPullRequestCommentApi,
   prEndpoint,
   submitPullRequestReviewApi,
+  updatePullRequestCommentApi,
   type PullRequestCheck,
   type MergeMethod,
   type PullRequestComment,
+  type PullRequestCommentEdit,
   type PullRequestCommit,
   type PullRequestListItem,
   type PullRequestReviewComment,
+  type PrEndpoint,
   type ReviewVerdict,
 } from "@/lib/agent-api";
 import {
@@ -279,23 +285,45 @@ function buildFeed(
   return sortTimelineOlderFirst(entries);
 }
 
-/** A conversation message, as a self-contained card (MIN-548): no rail, no
-    bubble pointer — the ticket timeline comment template. */
+/**
+ * A conversation message, as a self-contained card (MIN-548): no rail, no
+ * bubble pointer — the ticket timeline comment template.
+ *
+ * The header carries ONE hover-revealed more menu (Ellipsis) instead of a
+ * standalone quote button: editing one's own message (MIN-548) added a second
+ * gesture, and two buttons appearing on hover was one too many. The menu
+ * holds Edit (own human message only), Quote, and — when the message was
+ * edited — the list of its previous versions, fetched lazily on menu open.
+ */
 function ThreadComment({
+  endpoint,
   commentId,
   user,
   createdAt,
+  updatedAt,
   body,
+  canEdit,
+  onEdited,
   onQuoteReply,
   quotingNumo,
   forceBot,
   reactions,
   activity,
 }: {
+  /** Routes of this PR — the edit composer reuses them (mentions, uploads). */
+  endpoint: PrEndpoint;
   commentId: number;
   user: { login: string; avatar_url: string | null } | null;
   createdAt: string | null;
+  /** Last edit at the forge — the "(edited)" marker compares it to `createdAt`. */
+  updatedAt?: string | null;
   body: string;
+  /** The viewer may edit THIS message: own human message with an account on
+      the forge. The PR body is excluded — editing it is out of scope. */
+  canEdit?: boolean;
+  /** Refetch the thread after a saved edit: the card alone does not own the
+      comments query, and the cache must not show the old body. */
+  onEdited?: () => void;
   /** Absent when there is no composition where to cite: to cite without power
       answering leads nowhere (MIN-144). */
   onQuoteReply?: () => void;
@@ -316,6 +344,48 @@ function ThreadComment({
   const now = useNow();
   const list = reactions?.byComment.get(commentId) ?? [];
   const when = normalizeForgeInstant(createdAt, now);
+  const edited = !!updatedAt && updatedAt !== createdAt;
+  // The history only exists when the forge says the message moved: opening the
+  // menu on an unedited message would fire a useless request every hover.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [edits, setEdits] = useState<PullRequestCommentEdit[] | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Lazily on menu open, and only once: previous versions never change —
+  // a snapshot is frozen at the moment it was taken.
+  useEffect(() => {
+    if (!menuOpen || !edited || edits) return;
+    let cancelled = false;
+    fetchPullRequestCommentEditsApi(endpoint, commentId)
+      .then(({ edits: rows }) => {
+        if (!cancelled) setEdits(rows);
+      })
+      .catch(() => {
+        // An unreadable history hides the menu entry rather than failing.
+        if (!cancelled) setEdits([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [menuOpen, edited, edits, endpoint, commentId]);
+
+  const save = async () => {
+    const next = draft.trim();
+    if (!next || saving) return;
+    setSaving(true);
+    try {
+      await updatePullRequestCommentApi(endpoint, { commentId, body: next });
+      setEditing(false);
+      onEdited?.();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <article
@@ -338,40 +408,147 @@ function ThreadComment({
               {format.relativeTime(when, now)}
             </span>
           ) : null}
+          {edited ? (
+            <span className="shrink-0 text-xs text-muted-foreground/60">{t("edited")}</span>
+          ) : null}
           <span className="min-w-0 flex-1" />
-          {onQuoteReply ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
+          {editing ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-my-1 text-muted-foreground"
+              onClick={() => {
+                setEditing(false);
+                setDraft("");
+              }}
+            >
+              {t("cancel")}
+            </Button>
+          ) : (canEdit || onQuoteReply || edited) ? (
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+              <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
+                  aria-label={t("commentMoreActions")}
                   className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                  onClick={onQuoteReply}
                 >
-                  <Reply className="size-4" />
+                  <Ellipsis className="size-4" />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
-              </TooltipContent>
-            </Tooltip>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {canEdit ? (
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setDraft(body);
+                      setEditing(true);
+                    }}
+                  >
+                    <Pencil />
+                    {t("editComment")}
+                  </DropdownMenuItem>
+                ) : null}
+                {onQuoteReply ? (
+                  <DropdownMenuItem onClick={onQuoteReply}>
+                    <Reply />
+                    {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
+                  </DropdownMenuItem>
+                ) : null}
+                {edited && edits && edits.length > 0 ? (
+                  <DropdownMenuItem onSelect={() => setHistoryOpen(true)}>
+                    <History />
+                    {t("viewPreviousVersions")}
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : null}
         </header>
         {activity ? <div>{activity}</div> : null}
-        <Markdown
-          allowRawHtml
-          linkVariant="plain"
-          className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit"
-        >
-          {body}
-        </Markdown>
+        {editing ? (
+          // Inline edit state: the same composer as the thread — mentions,
+          // uploads, preview — anchored under the message it rewrites. The
+          // original text is the starting draft; Cancel throws it away.
+          <PrCommentComposer
+            endpoint={endpoint}
+            value={draft}
+            onChange={(transform) => setDraft((current) => transform(current))}
+            onSubmit={() => void save()}
+            onCancel={() => {
+              setEditing(false);
+              setDraft("");
+            }}
+            posting={saving}
+            placeholder={t("editCommentPlaceholder")}
+            submitLabel={t("saveChanges")}
+            autoFocus
+          />
+        ) : (
+          <Markdown
+            allowRawHtml
+            linkVariant="plain"
+            className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit"
+          >
+            {body}
+          </Markdown>
+        )}
         {reactions && (list.length > 0 || reactions.canReact) ? (
           <div>
             <CommentReactionChips commentId={commentId} reactions={reactions} list={list} />
           </div>
         ) : null}
       </div>
+      {historyOpen ? (
+        <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("previousVersionsTitle")}</DialogTitle>
+            </DialogHeader>
+            <div className="flex max-h-96 min-w-0 flex-col gap-4 overflow-y-auto">
+              {edits && edits.length > 0 ? (
+                edits.map((edit, index) => {
+                  const editedWhen = normalizeForgeInstant(edit.created_at, now);
+                  return (
+                    // Oldest-first, like the timeline of the thread: the
+                    // original at the top, the version the current body
+                    // replaced at the bottom.
+                    <div key={edit.created_at + index} className="flex flex-col gap-1.5">
+                      <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+                        <GitLogin
+                          login={edit.edited_by}
+                          className="font-medium text-foreground"
+                        />
+                        {editedWhen ? format.relativeTime(editedWhen, now) : null}
+                        {index === edits.length - 1 ? (
+                          <span className="text-muted-foreground/60">
+                            {t("previousVersionsLast")}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="rounded-md border border-border bg-background px-3 py-2">
+                        <Markdown
+                          allowRawHtml
+                          linkVariant="plain"
+                          className="text-sm text-foreground [&_code]:bg-primary/10 [&_code]:text-primary"
+                        >
+                          {edit.body}
+                        </Markdown>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-muted-foreground">{t("previousVersionsEmpty")}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" size="sm" onClick={() => setHistoryOpen(false)}>
+                {t("close")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </article>
   );
 }
@@ -1704,6 +1881,7 @@ export function PrDetail({
                       // The body of the PR is not a commentary, but it
                       // reacts like one: the server translates this zero into the
                       // subject each forge expects.
+                      endpoint={prEndpoint(item.prId)}
                       commentId={PR_BODY_COMMENT_ID}
                       user={pr?.user ?? null}
                       createdAt={pr?.createdAt ?? null}
@@ -1739,13 +1917,25 @@ export function PrDetail({
                       );
                     }
                     const c = entry.comment;
+                    // Editing stays on the person's OWN message (MIN-548):
+                    // same login at the forge, a connected account, and never
+                    // a bot's — Numo's messages are read-only.
+                    const canEdit =
+                      canComment &&
+                      !!viewer?.login &&
+                      c.user?.login === viewer.login &&
+                      !isNumoComment(c.user?.login);
                     return (
                       <ThreadComment
                         key={entry.key}
+                        endpoint={prEndpoint(item.prId)}
                         commentId={c.id}
                         user={c.user}
                         createdAt={c.created_at}
+                        updatedAt={c.updated_at}
                         body={c.body}
+                        canEdit={canEdit}
+                        onEdited={() => void refetchComments()}
                         onQuoteReply={
                           canComment
                             ? () => quoteReply(c.body ?? "", c.user?.login)

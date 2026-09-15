@@ -203,6 +203,10 @@ export interface PullRequestComment {
   body: string;
   user: { login: string; avatar_url: string | null } | null;
   created_at: string;
+  /** Last edit AT THE FORGE — the "(edited)" marker. `null` when GitHub has
+      never carried it (or the comment was never edited): compare against
+      `created_at` to decide. */
+  updated_at?: string | null;
   html_url: string;
 }
 
@@ -1508,6 +1512,7 @@ interface RawComment {
   body?: string;
   user?: { login?: string; avatar_url?: string; type?: string } | null;
   created_at: string;
+  updated_at?: string | null;
   html_url: string;
 }
 
@@ -1517,6 +1522,7 @@ function toComment(c: RawComment): PullRequestComment {
     body: c.body ?? "",
     user: c.user ? { login: c.user.login ?? "", avatar_url: c.user.avatar_url ?? null } : null,
     created_at: c.created_at,
+    updated_at: c.updated_at ?? null,
     html_url: c.html_url,
   };
 }
@@ -2341,4 +2347,32 @@ export async function createPullRequestComment(opts: {
     },
   );
   return toComment(created);
+}
+
+/**
+ * Rewrite the body of a thread comment. On GitHub a PR IS an issue, so a
+ * conversation comment is addressed by its own id under
+ * `issues/comments/{id}` — the PR number plays no part there, and `number`
+ * is ignored (same arrangement as `commentIds` on the reactions surface).
+ * Returns the updated comment, whose `updated_at` now differs from
+ * `created_at` — the "(edited)" marker reads it.
+ */
+export async function updatePullRequestComment(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  commentId: number;
+  body: string;
+}): Promise<PullRequestComment> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const updated = await ghJson<RawComment>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/issues/comments/${opts.commentId}`,
+    opts.token,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: opts.body }),
+    },
+  );
+  return toComment(updated);
 }

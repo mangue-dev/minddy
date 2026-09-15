@@ -1215,6 +1215,7 @@ interface RawNote {
   type?: string | null; // "DiffNote" for notes anchored to diff
   author?: { username?: string; avatar_url?: string | null } | null;
   created_at: string;
+  updated_at?: string | null;
   position?: RawPosition | null;
   original_position?: RawPosition | null;
   /** Thread resolution, carried by each resolvable note (MIN-139). */
@@ -1247,6 +1248,9 @@ function toComment(
       ? { login: n.author.username ?? "", avatar_url: n.author.avatar_url ?? null }
       : null,
     created_at: n.created_at,
+    // GitLab carries it like GitHub: last edit of the note — the marker
+    // "(edited)" compares it against `created_at`.
+    updated_at: n.updated_at ?? null,
     html_url: noteUrl(repoFullName, iid, n.id),
   };
 }
@@ -1361,6 +1365,32 @@ export async function createMergeRequestNote(opts: {
     },
   );
   return toComment(opts.repoFullName, opts.number, created);
+}
+
+/**
+ * Rewrites the body of a conversation note. A note is addressed by the MR
+ * iid AND its own id (`PUT …/merge_requests/{iid}/notes/{note_id}`) — the
+ * three fields of the call are all used, unlike GitHub which ignores
+ * `number`. Returns the updated note, whose `updated_at` now differs
+ * from `created_at`.
+ */
+export async function updateMergeRequestNote(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  commentId: number;
+  body: string;
+}): Promise<PullRequestComment> {
+  const updated = await glJson<RawNote>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/notes/${opts.commentId}`,
+    opts.token,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: opts.body }),
+    },
+  );
+  return toComment(opts.repoFullName, opts.number, updated);
 }
 
 interface RawDiscussion {

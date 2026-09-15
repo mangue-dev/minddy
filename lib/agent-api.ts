@@ -916,6 +916,9 @@ export interface PullRequestComment {
   body: string;
   user: { login: string; avatar_url: string | null } | null;
   created_at: string;
+  /** Last edit AT THE FORGE — the "(edited)" marker reads `updated_at` vs
+      `created_at`. `null` when the forge never carried it. */
+  updated_at?: string | null;
   html_url: string;
 }
 
@@ -1392,5 +1395,44 @@ export async function postPullRequestCommentApi(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ body }),
     }),
+  );
+}
+
+/**
+ * A PREVIOUS version of a thread comment — the snapshot taken when the
+ * message was edited (by minddy, or by its webhook echo when the forge sends
+ * the old body). Served oldest-first.
+ */
+export interface PullRequestCommentEdit {
+  body: string;
+  edited_by: string | null;
+  created_at: string;
+}
+
+/**
+ * Rewrites a thread comment on the forge, under the connected account.
+ * The server snapshots the PREVIOUS body first, so "previous versions" can
+ * list it afterwards.
+ */
+export async function updatePullRequestCommentApi(
+  prId: string,
+  input: { commentId: number; body: string },
+): Promise<{ comment: PullRequestComment }> {
+  return parseJson(
+    await fetch(`${prEndpoint(prId)}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ commentId: input.commentId, body: input.body }),
+    }),
+  );
+}
+
+/** Previous versions of one comment, oldest-first. */
+export async function fetchPullRequestCommentEditsApi(
+  prId: string,
+  commentId: number,
+): Promise<{ edits: PullRequestCommentEdit[] }> {
+  return parseJson(
+    await fetch(`${prEndpoint(prId)}/comment-edits?commentId=${commentId}`),
   );
 }

@@ -15,6 +15,7 @@ import {
 } from "@/lib/pr-events";
 import { hasRecentPrEvent } from "./pr-activity";
 import { broadcastPrChanged } from "./pr-live";
+import { recordPrCommentEditQuiet } from "./pr-comment-edits";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import { mentionsNumo } from "@/lib/server/assistant/comment-agent";
 import type { PrReviewRunSummary, PrReviewSession } from "@/lib/pr-review-session";
@@ -938,6 +939,58 @@ export async function createPrCommentResponse(
     // until the next fortuitous refreshment — a minute of silence after a
     // “@numo”, during which nothing says that the gesture worked.
     return NextResponse.json({ comment, ...(review ? { review } : {}) });
+  } catch (err) {
+    return forgeErrorResponse(err);
+  }
+}
+
+/**
+ * Edits an existing thread comment (MIN-548). Human gesture, under the
+ * person's git account like the create. The CURRENT body is snapshotted into
+ * `pr_comment_edits` BEFORE the forge write — best effort: a failed snapshot
+ * must not block the edit (the history has a gap, the edit still lands).
+ * The thread broadcast goes out like the create path, then the updated
+ * comment — whose `updated_at` now carries the "(edited)" marker — is
+ * returned.
+ */
+export async function updatePrCommentResponse(
+  scope: PrScope,
+  payload: { commentId: number; body: string },
+): Promise<NextResponse> {
+  // Same level as the create: composing a comment only needs `read`, and
+  // editing one is the same gesture.
+  const actor = await requireActor(scope, "read");
+  if (!actor.ok) return actor.response;
+  try {
+    // Snapshot FIRST, from the forge's own state: if the read fails, we still
+    // edit — the history simply starts with this edit.
+    let previous: string | null = null;
+    try {
+      const comments = await scope.forge.listPullRequestComments(scope.call);
+      previous = comments.find((c) => c.id === payload.commentId)?.body ?? null;
+    } catch (err) {
+      console.error("[pr-actions] edit snapshot read failed:", (err as Error).message);
+    }
+    if (previous != null) {
+      await recordPrCommentEditQuiet({
+        provider: scope.target.provider,
+        repoFullName: scope.target.repoFullName,
+        prNumber: scope.pr.number,
+        commentId: payload.commentId,
+        body: previous,
+        editedBy: actor.actor.login,
+      });
+    }
+    const comment = await scope.forge.updatePullRequestComment({
+      ...actorCall(actor.actor, scope),
+      commentId: payload.commentId,
+      body: payload.body.slice(0, MAX_COMMENT_BODY_LENGTH),
+    });
+    // Direct (MIN-161): the thread, among everyone who watches this PR — the
+    // webhook echo (`issue_comment`/note update) would only repeat it later,
+    // and GitLab does not deliver a note-edit echo at all.
+    broadcastPrChanged(scope.pr.id, ["conversation"]);
+    return NextResponse.json({ comment });
   } catch (err) {
     return forgeErrorResponse(err);
   }

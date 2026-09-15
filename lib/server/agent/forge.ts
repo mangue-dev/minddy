@@ -74,7 +74,7 @@ export type MergeMethod = "merge" | "squash" | "rebase";
  * | Numo review comments (pr-tools.ts) | agent | run token |
  * | `mergePullRequest`, `closePullRequest`, `markReadyForReview` | human | `actorCall` |
  * | `submitReview` (the person's verdict) | human | `actorCall` |
- * | `createPullRequestComment`, `createPullRequestReviewComment`, `replyToPullRequestReviewComment` from UI PR | human | `actorCall` |
+ * | `createPullRequestComment`, `updatePullRequestComment`, `createPullRequestReviewComment`, `replyToPullRequestReviewComment` from UI PR | human | `actorCall` |
  * | `setReviewThreadResolved` | human | `actorCall` |
  * | `setReviewCommentReaction`, `setConversationReaction` | human | `actorCall` + `login` |
  *
@@ -360,6 +360,21 @@ export interface Forge {
     body: string;
   }): Promise<PullRequestComment>;
   /**
+   * Rewrites the body of a conversation comment. HUMAN gesture (see the
+   * identity table below): it starts from the person's git account, like the
+   * create. GitHub ignores `number` (the comment is addressed by its own id),
+   * GitLab requires the MR iid — same arrangement as `createPullRequestComment`.
+   * Returns the updated comment; its `updated_at`, when the forge carries one,
+   * powers the "(edited)" marker.
+   */
+  updatePullRequestComment(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    commentId: number;
+    body: string;
+  }): Promise<PullRequestComment>;
+  /**
  * The images pasted into the PR — its body, its feed, its line remarks —
  * indexed by asset ID, each under an ACTUALLY serverable URL
  * (MIN-162). This is what the markdown body doesn't give: the URL it carries
@@ -553,6 +568,7 @@ const githubForge: Forge = {
   listTimeline: github.listPullRequestTimeline,
   getLatestSuccessfulDeploymentUrl: github.getLatestSuccessfulDeploymentUrl,
   createPullRequestComment: github.createPullRequestComment,
+  updatePullRequestComment: github.updatePullRequestComment,
   listImageAssets: github.listPullRequestImageAssets,
   listPullRequestReviewComments: github.listPullRequestReviewComments,
   // GitHub requires `commit_id` = the HEAD of the PR, read on the spot with each sending
@@ -632,6 +648,7 @@ const gitlabForge: Forge = {
   listTimeline: gitlab.listMergeRequestTimeline,
   getLatestSuccessfulDeploymentUrl: gitlab.getLatestSuccessfulDeploymentUrl,
   createPullRequestComment: gitlab.createMergeRequestNote,
+  updatePullRequestComment: gitlab.updateMergeRequestNote,
   // See the `listImageAssets` doc: the GitLab image mechanism is a
   // path relative to the project, not a signed asset. Nothing measured, therefore nothing
   // invented — the MR returns as before.
