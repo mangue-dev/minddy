@@ -2748,6 +2748,7 @@ function toReviewRunSummary(run: AgentRun): PrReviewRunSummary {
     model: run.model,
     createdAt: run.created_at,
     completedAt: (run as AgentRun & { completed_at?: string | null }).completed_at ?? null,
+    conversationId: run.parent_numo_conversation_id ?? null,
   };
 }
 

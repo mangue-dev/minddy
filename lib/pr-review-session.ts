@@ -30,6 +30,12 @@ export interface PrReviewRunSummary {
   createdAt: string;
   /** End of last response, or null until there was one. */
   completedAt: string | null;
+  /**
+   * The Numo conversation this pass lives in (`parent_numo_conversation_id`):
+   * the whole session is readable there, and the FAB opens on it. `null` for
+   * a run launched before the delegation lineage existed.
+   */
+  conversationId: string | null;
 }
 
 /** Response from GET `./ai-review`: the session, and how to decide to restart one. */

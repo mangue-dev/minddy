@@ -154,6 +154,8 @@ export interface PrNumoReviewCardSpec {
   label: string;
   /** The session, when one exists — the whole card opens it. */
   href: string | null;
+  /** Opens the pass IN the Numo panel — the whole card is the gesture. */
+  onOpen: (() => void) | null;
   /** Live clock of a running review. */
   startedAt: string | null;
   /** Settled duration of the completed pass. */
@@ -175,6 +177,9 @@ interface PrStatusCardsProps {
   onOpenReviewApprove: () => void;
   onStartFileReview: () => void;
   numoReview: PrNumoReviewCardSpec | null;
+  /** A correction run works on this pull request right now (a Numo fix,
+      not a reread): its own card, the whole surface opens the Numo panel. */
+  fixRun: { startedAt: string | null; onOpen: () => void } | null;
   onRequestReview: () => void;
   /** The fix gesture of a failing PR (MIN-548 review): copy the prompt, or
       hand the PR to Numo. `null` = nothing is failing. */
@@ -199,6 +204,7 @@ export function PrStatusCards(props: PrStatusCardsProps) {
       props.unresolvedThreads,
       props.acting,
       props.numoReview,
+      props.fixRun,
       props.fix,
     ],
   );
@@ -411,11 +417,36 @@ function buildStatusCards(
         donutParts: null,
         avatars: null,
         iconKind: "mergeability",
-        onSelect: numoReview.href
-          ? () => window.open(numoReview.href as string, "_self")
-          : undefined,
+        // The pass lives in Numo's panel: hovering says so, clicking opens
+        // it there — the forge page is only the fallback of a run too old
+        // to carry its conversation.
+        hoverLabel: t("numoReviewOpenSession"),
+        onSelect:
+          numoReview.onOpen ??
+          (numoReview.href
+            ? () => window.open(numoReview.href as string, "_self")
+            : undefined),
       });
     }
+  }
+
+  // ── Numo fix ────────────────────────────────────────────────────────────
+  // A correction run (a fix handed to Numo, NOT a reread) is working on this
+  // pull request: same card language as a running review, but its verb is
+  // fixing. The whole surface opens the Numo panel, where the work lives.
+  if (props.fixRun) {
+    push({
+      id: "numo-fix",
+      tone: "progress",
+      title: t("numoFixRunning"),
+      durationMs: null,
+      startedAt: props.fixRun.startedAt,
+      donutParts: null,
+      avatars: null,
+      iconKind: "mergeability",
+      hoverLabel: t("numoReviewOpenSession"),
+      onSelect: props.fixRun.onOpen,
+    });
   }
 
   // ── Blockers ────────────────────────────────────────────────────────────
@@ -674,7 +705,7 @@ function PrStatusCardView({
           <Check />
         ) : card.id === "deployment" ? (
           <ArrowUpRight />
-        ) : card.id === "numo-review" ? (
+        ) : card.id === "numo-review" || card.id === "numo-fix" ? (
           <NumoIcon animated={false} />
         ) : card.id === "fix" ? (
           <Wrench />

@@ -63,7 +63,6 @@ import {
   useCommentReactions,
   type CommentReactions,
 } from "@/components/pull-requests/pr-review-comments";
-import { PrReviewCard } from "@/components/pull-requests/pr-review-thread";
 import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-timeline";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { PrReadinessBadge, PrReadinessControl } from "@/components/pull-requests/pr-readiness";
@@ -84,6 +83,7 @@ import {
   usePrCommentsQuery,
   usePrCommitsQuery,
   usePrReviewCommentsQuery,
+  useAgentRunQuery,
 } from "@/lib/use-agent-runs";
 import {
   actOnPullRequestApi,
@@ -94,6 +94,7 @@ import {
   prEndpoint,
   submitPullRequestReviewApi,
   updatePullRequestCommentApi,
+  isAgentRunWorking,
   type MergeMethod,
   type PullRequestComment,
   type PullRequestCommentEdit,
@@ -145,6 +146,7 @@ import {
   type PrDeploymentStory,
 } from "@/lib/pr-deployment-story";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantChatContext } from "@/lib/assistant-chat-context";
 import type { AssistantPageContext } from "@/lib/assistant-types";
 import { parseForgeLogin, prIdentifier } from "@/lib/repo-providers";
 import {
@@ -602,7 +604,8 @@ export function PrDetail({
   const tAgent = useTranslations("Agent");
   const router = useRouter();
   const agentErrorMessage = useAgentErrorMessage();
-  const { openIntent } = useAssistantPanel();
+  const { openIntent, open: openAssistant } = useAssistantPanel();
+  const { loadConversation } = useAssistantChatContext();
   const isSend = useIsSendShortcut();
   const format = useFormatter();
 
@@ -897,6 +900,22 @@ export function PrDetail({
         ? t("numoReviewRerun")
         : t("aiReview");
 
+  // The pass lives in a Numo conversation (`parent_numo_conversation_id`):
+  // the FAB opens ON it, no detour through the forge page. Loading first
+  // marks the choice, so the panel's restore can never override it with
+  // the stale pointer it reads in flight.
+  const openReviewConversation = useCallback(() => {
+    const conversationId = reviewSession.run?.conversationId;
+    if (!conversationId) return;
+    void loadConversation(conversationId, item.project?.id ?? null);
+    openAssistant();
+  }, [
+    reviewSession.run?.conversationId,
+    loadConversation,
+    openAssistant,
+    item.project?.id,
+  ]);
+
   // The review gesture lives in ONE card (MIN-548) — running, up to date, or
   // waiting for the ask — instead of entries buried in the header menus.
   // A review that is up to date but whose session went unreadable says
@@ -911,6 +930,9 @@ export function PrDetail({
             href: reviewSession.run
               ? `/agents?run=${encodeURIComponent(reviewSession.run.runId)}`
               : null,
+            onOpen: reviewSession.run?.conversationId
+              ? openReviewConversation
+              : null,
             startedAt: reviewSession.run?.createdAt ?? null,
             durationMs: null,
           }
@@ -919,6 +941,9 @@ export function PrDetail({
               kind: "current" as const,
               label: aiReviewLabel,
               href: completedReviewSessionHref,
+              onOpen: reviewSession.run?.conversationId
+                ? openReviewConversation
+                : null,
               startedAt: null,
               durationMs:
                 reviewSession.run?.createdAt && reviewSession.run?.completedAt
@@ -930,15 +955,28 @@ export function PrDetail({
               kind: "requested" as const,
               label: aiReviewLabel,
               href: null,
+              onOpen: null,
               startedAt: null,
               durationMs: null,
             };
 
-  // The card reports an active or interrupted review. A completed run has
-  // already posted its outcome into the PR, so the persistent banner disappears;
-  // its session remains available from the PR actions instead.
-  const reviewCard =
-    reviewSession.run?.status === "completed" ? null : reviewSession.run;
+  // A CORRECTION run — a fix handed to Numo, not a reread — is working on
+  // this pull request right now. The review session's own run is excluded:
+  // it already tells its story from the review card. Its own card says the
+  // fixing is under way and opens the Numo panel, where the work lives.
+  const busyFixRunId =
+    item.busyRunId && item.busyRunId !== reviewSession.run?.runId
+      ? item.busyRunId
+      : null;
+  const busyFixRunQuery = useAgentRunQuery(busyFixRunId);
+  const busyFixRun = busyFixRunQuery.run;
+  const fixRunCard =
+    busyFixRun && isAgentRunWorking(busyFixRun.status)
+      ? {
+          startedAt: busyFixRun.started_at ?? busyFixRun.created_at,
+          onOpen: openAssistant,
+        }
+      : null;
 
   const act = async (
     action: "merge" | "close" | "reopen" | "ready_for_review" | "convert_to_draft",
@@ -1717,7 +1755,7 @@ export function PrDetail({
                   size="icon-sm"
                   aria-label={t("moreActions")}
                 >
-                  {aiReviewActive ? <Spinner /> : <MoreHorizontal />}
+                  <MoreHorizontal />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -1963,6 +2001,7 @@ export function PrDetail({
             onOpenReviewApprove={() => openReview("approve")}
             onStartFileReview={startFileReview}
             numoReview={numoReviewCard}
+            fixRun={fixRunCard}
             onRequestReview={openAiReviewDialog}
             fix={fixCard}
           />
@@ -2005,7 +2044,7 @@ export function PrDetail({
             <TabsContent value="activity" className="mt-4 flex flex-col gap-3">
               {loading || commentsLoading ? (
                 <Skeleton className="h-16 rounded-lg" />
-              ) : !prDescription && feed.length === 0 && !reviewCard ? (
+              ) : !prDescription && feed.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t("noComments")}</p>
               ) : (
                 // MIN-548: the activity is a plain stack of cards and lines —
@@ -2104,13 +2143,9 @@ export function PrDetail({
                         reactions={threadReactions}
                       />
                     );
-                  })}
-                  {/* The proofreading session, where its verdict falls —
-                      and clickable: this is how we will see what the agent has
-                      read, and answered. */}
-                  {reviewCard ? <PrReviewCard run={reviewCard} /> : null}
-                </div>
-              )}
+                   })}
+                 </div>
+               )}
 
               {canComment ? (
                 <div data-testid="pr-comment-composer-region" className="pt-1">
