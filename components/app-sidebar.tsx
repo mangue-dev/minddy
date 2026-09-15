@@ -960,14 +960,21 @@ export function AppSidebar({
                 type="button"
                 onClick={() => router.push(back.href)}
                 className={cn(
-                  "flex h-9 w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg text-sm font-medium transition-colors",
+                  "relative flex h-9 w-full min-w-0 cursor-pointer items-center rounded-lg text-sm font-medium transition-colors",
                   ROW_PL,
                   "pr-3",
                   "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
                 )}
               >
-                <ChevronLeft className="size-[18px] shrink-0" aria-hidden />
-                <span className="min-w-0 truncate">{back.label}</span>
+                {/* Out of the flow: the label is centered on the FULL row
+                    width, the chevron does not push it off-center. */}
+                <ChevronLeft
+                  className="absolute left-[9px] top-1/2 size-[18px] shrink-0 -translate-y-1/2"
+                  aria-hidden
+                />
+                <span className="min-w-0 flex-1 truncate text-center">
+                  {back.label}
+                </span>
               </button>
             </div>
           </motion.div>
@@ -1007,6 +1014,10 @@ export function AppSidebar({
           // Level 2/3: the teleported filter strip carries its own gutter, so
           // the band's px-2.5 must not wrap it a second time.
           !back && GUTTER,
+          // Level 1 closes the band with the same hairline the level-2/3
+          // filter strip draws (border-b on its header): the command row is
+          // separated from the option rows below on every level.
+          !back && "border-b border-border",
         )}
       >
         <div className={cn("flex h-full w-full min-w-0 items-center", back && "hidden")}>
@@ -1049,6 +1060,26 @@ export function AppSidebar({
             </motion.div>
           )}
         </AnimatePresence>
+        {/* Fades: scrolling options dissolve into the panel instead of being
+            clipped hard against the band and the footer. The top fade lives
+            on level 2/3 ONLY: it milestones the back row, which level 1 does
+            not have (its first row is a plain option, e.g. pull requests,
+            and a fade there just dims it). Starts BELOW the first row —
+            geometry: row top padding + h-9 (2.25rem) + pb-2. Kept short
+            (h-5): the panel's own scroll gap is wide, and a taller fade
+            would sit on the first option row. */}
+        {back ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-[calc((var(--app-content-header-height)-2.25rem)/2+2.25rem+0.5rem)] h-5 bg-gradient-to-b from-sidebar to-transparent"
+          />
+        ) : null}
+        {/* Bottom fade, on every level: options dissolve just above the
+            account line. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-sidebar to-transparent"
+        />
       </div>
 
       {/* The account line is the only option present on EVERY level — the
