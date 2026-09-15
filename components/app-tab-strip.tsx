@@ -58,7 +58,6 @@ import { pagesKey } from "@/lib/use-pages-query";
 import type { PageSummary } from "@/lib/pages-api";
 import { routinesQueryKey } from "@/lib/use-routines-query";
 import { fetchRoutinesApi, type Routine } from "@/lib/routines-api";
-import { countBadges } from "@/components/nav-badge";
 import { AppTabIcon } from "./app-tab-icon";
 import { AppTabItem } from "./app-tab-item";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -176,7 +175,8 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
 
   // Notification badges on the tabs follow the same rules as the sidebar (same
   // counters, same caching): open PRs on the PR tab, working/unread marks on
-  // the Agents/Numo tab.
+  // the Agents/Numo tab. They ride the tab ICON's top-right corner (half over
+  // the icon), so the ring punches through the corner pixels.
   const openPrCount = useOpenPullRequestCountQuery();
   const { agentsAllowed } = usePlanGates();
   const { sessions: agentSessions } = useAgentSessionsQuery();
@@ -188,12 +188,22 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   const anyAgentUnread = agentSessions.some((sessionItem) => isAgentSessionUnread(sessionItem, agentReads));
   const sectionBadges = (section: string): ReactNode => {
     if (section === "pull-requests") {
-      return agentsAllowed ? (countBadges(openPrCount, nav("pullRequestsBadge", { count: openPrCount })).badge ?? null) : null;
+      if (!agentsAllowed || openPrCount <= 0) return null;
+      return (
+        <span
+          aria-label={nav("pullRequestsBadge", { count: openPrCount })}
+          className="flex min-w-3.5 items-center justify-center rounded-full bg-foreground px-1 text-[9px] font-semibold leading-[1.4] tabular-nums text-background ring-2 ring-sidebar"
+        >
+          {openPrCount > 99 ? "99+" : openPrCount}
+        </span>
+      );
     }
     if (!agentsAllowed || (section !== "numo" && section !== "agents")) return null;
-    if (anyAgentWorking) return <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />;
-    if (anyAgentAwaiting) return <span className="mr-px size-2 shrink-0 rounded-full bg-yellow-500" aria-label={nav("agentsAwaiting")} />;
-    if (anyAgentUnread) return <span className="mr-px size-2 shrink-0 rounded-full bg-blue-500" aria-label={nav("agentsUnread")} />;
+    if (anyAgentWorking) return (
+      <span className="flex items-center rounded-full bg-sidebar ring-2 ring-sidebar"><Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" /></span>
+    );
+    if (anyAgentAwaiting) return <span className="size-2.5 shrink-0 rounded-full bg-yellow-500 ring-2 ring-sidebar" aria-label={nav("agentsAwaiting")} />;
+    if (anyAgentUnread) return <span className="size-2.5 shrink-0 rounded-full bg-blue-500 ring-2 ring-sidebar" aria-label={nav("agentsUnread")} />;
     return null;
   };
 

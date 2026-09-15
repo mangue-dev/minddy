@@ -62,12 +62,13 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
             }
           }}
           className={cn("flex h-full min-w-0 flex-1 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring", tab.pinned ? "justify-center" : "pl-2.5 pr-6")}>
-          {/* The badge rides the ICON (top-right corner), so it works on the
-              square pinned tabs too — not inside the tab's right padding. */}
+          {/* The badge sits ON the icon's top-right corner (half over the
+              icon glyphs), so it works on the square pinned tabs too — not
+              inside the tab's right padding. */}
           <span className="relative flex shrink-0 items-center">
             {icon}
             {badge != null && (
-              <span className="pointer-events-none absolute -right-1.5 -top-1 flex items-center">{badge}</span>
+              <span className="pointer-events-none absolute -top-1 right-0 flex translate-x-1/2 items-center">{badge}</span>
             )}
           </span>
           {!tab.pinned && <span ref={labelRef} className="truncate">{label}</span>}
