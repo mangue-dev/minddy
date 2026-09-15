@@ -44,7 +44,6 @@ export function ProjectRecurrencesSection({
   projectId,
   projectKey,
   title,
-  description,
 }: {
   projectId: string;
   projectKey: string;
@@ -107,9 +106,7 @@ export function ProjectRecurrencesSection({
   return (
     <SettingsGroup
       anchor={SETTINGS_SECTIONS.projectRecurrences}
-      icon={Repeat}
       title={title}
-      description={description}
       variant={rows !== null && rows.length === 0 ? "block" : "rows"}
     >
       {rows === null ? (

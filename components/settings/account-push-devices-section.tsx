@@ -1,46 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  Button,
-  ConfirmDeleteDialog,
-  IconButton,
-  Spinner,
-  Switch,
-  toast,
-} from "mangue-ui";
-import { BellRing, Monitor, Send, Settings2, Smartphone, Trash2 } from "lucide-react";
+import {useCallback, useEffect, useState} from "react";
+import {useFormatter, useLocale, useTranslations} from "next-intl";
+import {useQueryClient} from "@tanstack/react-query";
+import {Button, ConfirmDeleteDialog, IconButton, Spinner, Switch, toast} from "mangue-ui";
+import {Monitor, Send, Settings2, Smartphone, Trash2} from "lucide-react";
 
-import {
-  deletePushDeviceApi,
-  setPushDeviceEnabledApi,
-  testPushDeviceApi,
-} from "@/lib/push-devices-api";
-import { pushDevicesQueryKey, usePushDevicesQuery } from "@/lib/use-push-devices-query";
-import {
-  currentEndpoint,
-  isPushSupported,
-  isIOS,
-  isStandalone,
-  pushPermission,
-  subscribeThisDevice,
-  unsubscribeThisDevice,
-} from "@/lib/push/client";
-import { trackEvent } from "@/lib/analytics";
-import { getDesktopBridge, isDesktop } from "@/lib/desktop/bridge";
+import {deletePushDeviceApi, setPushDeviceEnabledApi, testPushDeviceApi} from "@/lib/push-devices-api";
+import {pushDevicesQueryKey, usePushDevicesQuery} from "@/lib/use-push-devices-query";
+import {currentEndpoint, isPushSupported, isIOS, isStandalone, pushPermission, subscribeThisDevice, unsubscribeThisDevice} from "@/lib/push/client";
+import {trackEvent} from "@/lib/analytics";
+import {getDesktopBridge, isDesktop} from "@/lib/desktop/bridge";
 import type { LinuxBackgroundNotificationState } from "@/lib/desktop/linux-background";
-import { isMobileDeviceLabel } from "@/lib/device-label";
-import {
-  SettingsEmpty,
-  SettingsGroup,
-  SettingsListRow,
-  SettingsRow,
-} from "@/components/settings/settings-ui";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
+import {isMobileDeviceLabel} from "@/lib/device-label";
+import {SettingsEmpty, SettingsGroup, SettingsListRow, SettingsRow} from "@/components/settings/settings-ui";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import type { PushDevice } from "@/lib/types";
-import { AppTooltip } from "@/components/ui/app-tooltip";
+import {AppTooltip} from "@/components/ui/app-tooltip";
 
 /**
  * “Push notifications” (MIN-183) — the card by which you turn on, turn off and
@@ -311,9 +287,7 @@ export function AccountPushDevicesSection() {
     <>
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountPushDevices}
-        icon={BellRing}
         title={t("devicesTitle")}
-        description={t("devicesDesc")}
       >
         <SettingsRow
           htmlFor="push-this-device"

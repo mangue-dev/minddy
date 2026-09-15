@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { Badge, Button, Input, Spinner, toast } from "mangue-ui";
-import { LogOut, Settings2, Trash2, TriangleAlert } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
-import { useProjects } from "@/lib/projects-context";
-import { removeMemberApi } from "@/lib/members-api";
-import { isValidKey, normalizeKey } from "@/lib/project-key";
-import { projectOrbSeed } from "@/lib/project-orb-colors";
-import { ProjectIconPicker } from "@/components/project-icon-picker";
-import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
+import {useEffect, useState} from "react";
+import {useRouter} from "next/navigation";
+import {useTranslations} from "next-intl";
+import {Badge, Button, Input, Spinner, toast} from "mangue-ui";
+import {LogOut, Trash2} from "lucide-react";
+import {useAuth} from "@/lib/auth-context";
+import {useProjects} from "@/lib/projects-context";
+import {removeMemberApi} from "@/lib/members-api";
+import {isValidKey, normalizeKey} from "@/lib/project-key";
+import {projectOrbSeed} from "@/lib/project-orb-colors";
+import {ProjectIconPicker} from "@/components/project-icon-picker";
+import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import type { Project } from "@/lib/types";
 
 /**
@@ -96,9 +96,7 @@ export function ProjectGeneralSection({
       <>
         <SettingsGroup
           anchor={SETTINGS_SECTIONS.projectGeneral}
-          icon={Settings2}
           title={t("generalSectionTitle")}
-          description={t("ownerOnlyHint")}
         >
           <SettingsRow
             label={t("nameLabel")}
@@ -118,9 +116,7 @@ export function ProjectGeneralSection({
  row that repeats word for word the title above it. */}
         <SettingsGroup
           anchor={SETTINGS_SECTIONS.projectLeave}
-          icon={LogOut}
           title={t("leaveProjectLabel")}
-          description={t("leaveProjectHint")}
           action={
             <Button
               type="button"
@@ -145,9 +141,7 @@ export function ProjectGeneralSection({
       <form onSubmit={handleSave}>
         <SettingsGroup
           anchor={SETTINGS_SECTIONS.projectGeneral}
-          icon={Settings2}
           title={t("generalSectionTitle")}
-          description={t("generalSectionDesc")}
           footer={
             <>
               {error && <p className="mr-auto text-sm text-destructive">{error}</p>}
@@ -205,10 +199,8 @@ export function ProjectGeneralSection({
 
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.projectDanger}
-        icon={TriangleAlert}
         tone="destructive"
         title={t("dangerZoneTitle")}
-        description={t("dangerZoneDesc")}
       >
         <SettingsRow
           label={t("deleteProjectLabel")}

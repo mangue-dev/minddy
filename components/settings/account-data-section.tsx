@@ -1,25 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  Button,
-  Input,
-  Spinner,
-  toast,
-} from "mangue-ui";
-import { Download, Trash2, Upload } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
-import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
+import {useEffect, useRef, useState} from "react";
+import {useTranslations} from "next-intl";
+import {AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Button, Input, Spinner, toast} from "mangue-ui";
+import {Download, Upload} from "lucide-react";
+import {useAuth} from "@/lib/auth-context";
+import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 
 /**
  * Account settings → “Personal data” (MIN-119).
@@ -171,9 +158,7 @@ export function AccountDataSection() {
     <>
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountDataImport}
-        icon={Upload}
         title={t("importTitle")}
-        description={t("importDesc")}
       >
         <SettingsRow
           label={t("importButton")}
@@ -205,9 +190,7 @@ export function AccountDataSection() {
 
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountDataExport}
-        icon={Download}
         title={t("exportTitle")}
-        description={t("exportDesc")}
       >
         <SettingsRow
           label={t("exportButton")}
@@ -225,10 +208,8 @@ export function AccountDataSection() {
  a second red border inside the first. */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountDataDelete}
-        icon={Trash2}
         tone="destructive"
         title={t("deleteTitle")}
-        description={t("deleteDesc")}
       >
         <SettingsRow
           label={t("deleteWhatTitle")}

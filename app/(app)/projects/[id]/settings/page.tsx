@@ -112,9 +112,7 @@ export default function ProjectSettingsPage() {
       content: (
         <SettingsGroup
           anchor={SETTINGS_SECTIONS.projectCategories}
-          icon={Tags}
           title={t("categoriesTab")}
-          description={t("categoriesSectionDesc")}
           variant="block"
         >
           <ProjectCategories projectId={project.id} />
@@ -128,9 +126,7 @@ export default function ProjectSettingsPage() {
       content: (
         <SettingsGroup
           anchor={SETTINGS_SECTIONS.projectMembers}
-          icon={Users}
           title={t("membersTab")}
-          description={t("membersSectionDesc")}
           variant="block"
         >
           <ProjectMembers projectId={project.id} enabled />

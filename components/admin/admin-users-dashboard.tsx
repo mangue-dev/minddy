@@ -1,52 +1,16 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
-import { useFormatter, useTranslations } from "next-intl";
-import {
-  Badge,
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  Skeleton,
-  Spinner,
-  Switch,
-  cn,
-  toast,
-} from "mangue-ui";
-import {
-  EyeOff,
-  Gauge,
-  Gift,
-  RotateCcw,
-  Search,
-  UserRound,
-  X,
-} from "lucide-react";
-import { UserAvatar } from "@/components/user-avatar";
-import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
-import { BILLING_PLANS, type BillingPlanId } from "@/lib/billing-plans";
-import {
-  DEFAULT_GIFT_DURATION,
-  GIFT_DURATIONS,
-  giftExpiresAt,
-  type GiftDuration,
-} from "@/lib/billing-gift";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import type {ReactNode} from "react";
+import {useFormatter, useTranslations} from "next-intl";
+import {Badge, Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, Skeleton, Spinner, Switch, cn, toast} from "mangue-ui";
+import {EyeOff, RotateCcw, Search, X} from "lucide-react";
+import {UserAvatar} from "@/components/user-avatar";
+import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {BILLING_PLANS} from "@/lib/billing-plans";
+import type {BillingPlanId} from "@/lib/billing-plans";
+import {DEFAULT_GIFT_DURATION, GIFT_DURATIONS, giftExpiresAt} from "@/lib/billing-gift";
+import type {GiftDuration} from "@/lib/billing-gift";
 import type {
   AdminQuotaReset,
   AdminQuotaResetsResponse,
@@ -54,17 +18,10 @@ import type {
   AdminUsersResponse,
 } from "@/lib/types";
 import type { MessageKey } from "@/lib/i18n-keys";
-import { useAdminCapabilities } from "@/lib/use-admin-capabilities";
-import { giftSectionVisible } from "@/lib/admin-tabs";
-import {
-  ADMIN_SECTIONS,
-  adminSectionAnchor,
-} from "@/lib/admin-sections";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import {useAdminCapabilities} from "@/lib/use-admin-capabilities";
+import {giftSectionVisible} from "@/lib/admin-tabs";
+import {ADMIN_SECTIONS, adminSectionAnchor} from "@/lib/admin-sections";
+import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 
 /**
  * `/admin` → “Users” tab (MIN-90): THE view of the app’s accounts.
@@ -523,9 +480,7 @@ function UserSheet({
 
           {/* ── The account ─────────────────────── ──────────────────────── */}
           <SettingsGroup
-            icon={UserRound}
             title={t("users.accountTitle")}
-            description={t("users.accountSubtitle")}
           >
             <SettingsRow
               label={t("users.signedUp")}
@@ -580,9 +535,7 @@ function UserSheet({
 
           {/* ── Budget d'usage ────────────────────────────────────────── */}
           <SettingsGroup
-            icon={Gauge}
             title={t("users.usageTitle")}
-            description={t("users.usageDescription")}
             help={t("users.usageSubtitle")}
             // How much has already been offered over this period: that is the question
             // that we ask ourselves before offering one more, so it is
@@ -680,9 +633,7 @@ function UserSheet({
           {/* ── Plan: offer, for a time or without limit ───────────── */}
           {giftVisible(user) ? (
           <SettingsGroup
-            icon={Gift}
             title={t("billing.title")}
-            description={t("billing.subtitle")}
             help={t("billing.help")}
             footer={
               <Button size="sm" onClick={() => void savePlan()} disabled={savingPlan}>

@@ -1,22 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {useEffect, useState} from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
-import { Badge, Button, Spinner, Switch, toast } from "mangue-ui";
-import { TriangleAlert, UserRound, WandSparkles } from "lucide-react";
-import { useProjects } from "@/lib/projects-context";
-import { useMembersQuery } from "@/lib/use-members-query";
-import { UserAvatar } from "@/components/user-avatar";
-import { displayName } from "@/lib/display-name";
-import { userIdsWithoutRule } from "@/lib/smart-assign-config";
-import { EmptyScene } from "@/components/empty-scene";
-import {
-  SettingsGroup,
-  SettingsRow,
-} from "@/components/settings/settings-ui";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import { AutoTextarea } from "@/components/auto-textarea";
+import {useTranslations} from "next-intl";
+import {Badge, Button, Spinner, Switch, toast} from "mangue-ui";
+import {TriangleAlert, UserRound} from "lucide-react";
+import {useProjects} from "@/lib/projects-context";
+import {useMembersQuery} from "@/lib/use-members-query";
+import {UserAvatar} from "@/components/user-avatar";
+import {displayName} from "@/lib/display-name";
+import {userIdsWithoutRule} from "@/lib/smart-assign-config";
+import {EmptyScene} from "@/components/empty-scene";
+import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
+import {AutoTextarea} from "@/components/auto-textarea";
 import type { Project } from "@/lib/types";
 
 /** Project-level Smart Assign preferences (MIN-31): the opt-in switch and, on
@@ -113,11 +110,7 @@ export function SmartAssignSection({
     <form onSubmit={saveRules}>
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.projectSmartAssign}
-        icon={WandSparkles}
         title={t("smartAssignTab")}
-        description={
-          isOwner ? t("smartAssignToggleHint") : t("smartAssignOwnerOnlyHint")
-        }
         action={
           <Switch
             id="smart-assign-enabled"

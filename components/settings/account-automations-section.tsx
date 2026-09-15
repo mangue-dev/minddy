@@ -1,51 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-  Badge,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Skeleton,
-  Switch,
-  toast,
-} from "mangue-ui";
-import { FolderKanban, Workflow } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
-import { useProjects } from "@/lib/projects-context";
-import {
-  SettingsGroup,
-  SettingsListRow,
-  SettingsRow,
-} from "@/components/settings/settings-ui";
-import { EmptyScene } from "@/components/empty-scene";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import { AutomationPresetPicker } from "@/components/automations/automation-preset-picker";
-import { ProjectOrb } from "@/components/project-orb";
-import { projectOrbSeed } from "@/lib/project-orb-colors";
-import {
-  AUTOMATION_EFFORTS_META_KEY,
-  AUTOMATION_START_DELAY_CHOICES,
-  AUTOMATION_START_DELAY_META_KEY,
-  AUTOMATION_PRESET_META_KEY,
-  presetRules,
-  resolveAutomationEfforts,
-  resolveAutomationPreset,
-  resolveAutomationStartDelayMinutes,
-  stepCostUsd,
-  simulateIssueLifetime,
-  simulatedRunModes,
-  type AutomationPresetId,
-} from "@/lib/automations";
-import { useBillingSummary } from "@/lib/use-billing-query";
-import { EFFORTS, type IssueEffort } from "@/lib/issue-constants";
+import {useEffect, useState} from "react";
+import {useTranslations} from "next-intl";
+import {Accordion, AccordionContent, AccordionItem, AccordionTrigger, Badge, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton, Switch, toast} from "mangue-ui";
+import {FolderKanban} from "lucide-react";
+import {useAuth} from "@/lib/auth-context";
+import {useProjects} from "@/lib/projects-context";
+import {SettingsGroup, SettingsListRow, SettingsRow} from "@/components/settings/settings-ui";
+import {EmptyScene} from "@/components/empty-scene";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
+import {AutomationPresetPicker} from "@/components/automations/automation-preset-picker";
+import {ProjectOrb} from "@/components/project-orb";
+import {projectOrbSeed} from "@/lib/project-orb-colors";
+import {AUTOMATION_EFFORTS_META_KEY, AUTOMATION_START_DELAY_CHOICES, AUTOMATION_START_DELAY_META_KEY, AUTOMATION_PRESET_META_KEY, presetRules, resolveAutomationEfforts, resolveAutomationPreset, resolveAutomationStartDelayMinutes, stepCostUsd, simulateIssueLifetime, simulatedRunModes} from "@/lib/automations";
+import type {AutomationPresetId} from "@/lib/automations";
+import {useBillingSummary} from "@/lib/use-billing-query";
+import {EFFORTS} from "@/lib/issue-constants";
+import type {IssueEffort} from "@/lib/issue-constants";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
@@ -202,9 +173,7 @@ export function AccountAutomationsSection() {
     <>
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountAutomations}
-        icon={Workflow}
         title={t("title")}
-        description={t("description")}
         help={t("presetHint")}
       >
         {/* 1. What preset? Its description is VISIBLE: it is the only thing you read before arming a spending loop. The selector
@@ -335,9 +304,7 @@ export function AccountAutomationsSection() {
  which replaces the old general toggle for project settings. */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountAutomationsProjects}
-        icon={FolderKanban}
         title={t("projectsTitle")}
-        description={t("projectsHint")}
       >
         {projectsLoading ? (
           <div className="flex flex-col gap-2 py-3">

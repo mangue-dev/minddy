@@ -1,22 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import {useEffect, useState} from "react";
+import {useTranslations} from "next-intl";
 import Link from "next/link";
-import { Button, Input, Spinner, toast } from "mangue-ui";
-import { Download, User } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
-import { isDesktop } from "@/lib/desktop/bridge";
-import { emailLocalPart } from "@/lib/display-name";
-import { useAnalytics } from "@/lib/use-analytics";
-import {
-  useMyAvatarSource,
-  useRegenerateAvatar,
-  useUploadAvatar,
-} from "@/lib/use-my-avatar";
-import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import { UserAvatarPicker } from "@/components/user-avatar-picker";
+import {Button, Input, Spinner, toast} from "mangue-ui";
+import {Download} from "lucide-react";
+import {useAuth} from "@/lib/auth-context";
+import {isDesktop} from "@/lib/desktop/bridge";
+import {emailLocalPart} from "@/lib/display-name";
+import {useAnalytics} from "@/lib/use-analytics";
+import {useMyAvatarSource, useRegenerateAvatar, useUploadAvatar} from "@/lib/use-my-avatar";
+import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
+import {UserAvatarPicker} from "@/components/user-avatar-picker";
 
 /** Read a string key off the user's auth metadata. */
 function metaString(meta: Record<string, unknown>, key: string): string {
@@ -108,9 +104,7 @@ export function AccountProfileSection() {
   return (
     <SettingsGroup
       anchor={SETTINGS_SECTIONS.accountProfile}
-      icon={User}
       title={ta("profileSectionTitle")}
-      description={ta("profileSectionDesc")}
       footer={
         <Button onClick={() => void save()} disabled={busy || !dirty}>
           {busy && <Spinner />}

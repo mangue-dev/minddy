@@ -1,23 +1,18 @@
 "use client";
 
-import { useRuntimeConfig } from "@/lib/runtime-config-provider";
+import {useRuntimeConfig} from "@/lib/runtime-config-provider";
 
-import { useEffect, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { Switch } from "mangue-ui";
-import { BarChart3 } from "lucide-react";
+import {useEffect, useState} from "react";
+import {useLocale, useTranslations} from "next-intl";
+import {Switch} from "mangue-ui";
+
 import Link from "next/link";
 
-import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import { useAuth } from "@/lib/auth-context";
-import {
-  ANALYTICS_CONSENT_META_KEY,
-  readConsent,
-  resolveAnalyticsConsent,
-  writeConsent,
-} from "@/lib/cookie-consent";
-import { localizedHref } from "@/lib/locale-href";
+import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
+import {useAuth} from "@/lib/auth-context";
+import {ANALYTICS_CONSENT_META_KEY, readConsent, resolveAnalyticsConsent, writeConsent} from "@/lib/cookie-consent";
+import {localizedHref} from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 
 /**
@@ -74,9 +69,7 @@ export function AccountAnalyticsSection() {
   return (
     <SettingsGroup
       anchor={SETTINGS_SECTIONS.accountAnalytics}
-      icon={BarChart3}
       title={t("title")}
-      description={t("description")}
     >
       <SettingsRow
         htmlFor="analytics-consent"

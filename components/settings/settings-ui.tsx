@@ -56,19 +56,12 @@ export function SettingsGroup({
 }: {
   /** Optional DOM destination for non-settings catalogs, such as Admin search. */
   id?: string;
-  /** Dormant legacy header props: the in-card header is gone for good — the
-   *  component renders no icon/avatar/description. Call sites keep passing
-   *  them and will shed them progressively. */
-  icon?: LucideIcon;
-  /** Full-width visual in place of the icon pad (e.g. a provider logo). */
-  avatar?: ReactNode;
   /** Settings catalog entry ([lib/settings-sections.ts]): the map
  * becomes reachable from ⌘K, who opens it then expands and highlights it.
  * The type prohibits an anchor absent from the catalog — the opposite (an entry in the
  * catalog that no one returns) is held by settings-sections.test.ts. */
   anchor?: SettingsSectionId;
   title: string;
-  description?: string;
   /** Long prose, taken off the page behind a ⓘ. */
   help?: ReactNode;
   /** Control to the right of the title — the master switch of the group. It
@@ -106,38 +99,43 @@ export function SettingsGroup({
         <div className="flex shrink-0 items-center gap-2.5">{action}</div>
       )}
     </header>
-    <section
-      id={anchor ? settingsSectionAnchor(anchor) : id}
-      className={cn(
-        "rounded-xl border bg-card text-card-foreground",
-        /* `scroll-mt`: the shell unrolls the card CENTERING it, but a card
+    {/* An empty group draws NOTHING below the title line: a card with a
+        border and zero content would render as a stray 1px gray line
+        (e.g. the public board section while it is off). */}
+    {(hasBody || footer) && (
+      <section
+        id={anchor ? settingsSectionAnchor(anchor) : id}
+        className={cn(
+          "rounded-xl border bg-card text-card-foreground",
+          /* `scroll-mt`: the shell unrolls the card CENTERING it, but a card
  higher than the window is aligned at the top — under the sticky header
  without this margin. */
-        (anchor || id) && "scroll-mt-20",
-        destructive ? "border-destructive/30" : "border-border",
-      )}
-    >
-      {hasBody && (
-        <FieldGroup
-          className={cn(
-            variant === "rows" ? "divide-y divide-border px-4" : "p-4",
-          )}
-        >
-          {children}
-        </FieldGroup>
-      )}
+          (anchor || id) && "scroll-mt-20",
+          destructive ? "border-destructive/30" : "border-border",
+        )}
+      >
+        {hasBody && (
+          <FieldGroup
+            className={cn(
+              variant === "rows" ? "divide-y divide-border px-4" : "p-4",
+            )}
+          >
+            {children}
+          </FieldGroup>
+        )}
 
-      {footer && (
-        <div
-          className={cn(
-            "flex items-center justify-end gap-2 border-t px-4 py-3",
-            destructive ? "border-destructive/30" : "border-border",
-          )}
-        >
-          {footer}
-        </div>
-      )}
-    </section>
+        {footer && (
+          <div
+            className={cn(
+              "flex items-center justify-end gap-2 border-t px-4 py-3",
+              destructive ? "border-destructive/30" : "border-border",
+            )}
+          >
+            {footer}
+          </div>
+        )}
+      </section>
+    )}
   </div>;
 }
 

@@ -1,34 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Switch,
-  toast,
-} from "mangue-ui";
-import { CalendarClock, IterationCw, ListPlus } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
-import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
-import {
-  CYCLES_ENABLED_META_KEY,
-  CYCLE_AUTO_CAPTURE_COMPLETED_META_KEY,
-  CYCLE_AUTO_CAPTURE_STARTED_META_KEY,
-  CYCLE_DURATION_WEEKS_META_KEY,
-  CYCLE_INTENSITIES,
-  CYCLE_INTENSITY_META_KEY,
-  CYCLE_START_DOW_META_KEY,
-  CYCLE_UPCOMING_COUNT_META_KEY,
-  resolveCyclePrefs,
-  type CyclePrefs,
-} from "@/lib/cycle-prefs";
+import {useEffect, useState} from "react";
+import {useLocale, useTranslations} from "next-intl";
+import {useQueryClient} from "@tanstack/react-query";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch, toast} from "mangue-ui";
+
+import {useAuth} from "@/lib/auth-context";
+import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
+import {GLOBAL_BOARD_KEY} from "@/lib/use-global-board-query";
+import {CYCLES_ENABLED_META_KEY, CYCLE_AUTO_CAPTURE_COMPLETED_META_KEY, CYCLE_AUTO_CAPTURE_STARTED_META_KEY, CYCLE_DURATION_WEEKS_META_KEY, CYCLE_INTENSITIES, CYCLE_INTENSITY_META_KEY, CYCLE_START_DOW_META_KEY, CYCLE_UPCOMING_COUNT_META_KEY, resolveCyclePrefs} from "@/lib/cycle-prefs";
+import type {CyclePrefs} from "@/lib/cycle-prefs";
 
 /**
  * Account → Cycles (MIN-32): every knob of the personal cross-project cycle.
@@ -86,9 +68,7 @@ export function AccountCyclesSection() {
     <>
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountCyclesEnable}
-        icon={IterationCw}
         title={t("enableTitle")}
-        description={t("enableDesc")}
         action={
           <Switch
             id="cycles-enabled"
@@ -104,9 +84,7 @@ export function AccountCyclesSection() {
 
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountCyclesCadence}
-        icon={CalendarClock}
         title={t("cadenceTitle")}
-        description={t("cadenceDesc")}
       >
         <SettingsRow
           htmlFor="cycles-duration"
@@ -217,9 +195,7 @@ export function AccountCyclesSection() {
 
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountCyclesCapture}
-        icon={ListPlus}
         title={t("captureTitle")}
-        description={t("captureDesc")}
       >
         <SettingsRow
           htmlFor="cycles-capture-started"

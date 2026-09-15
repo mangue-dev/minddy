@@ -234,9 +234,7 @@ export function ProjectIntegrations({
   return (
     <SettingsGroup
       anchor={SETTINGS_SECTIONS.projectIntegrations}
-      icon={Plug}
       title={t("integrationsTab")}
-      description={t("integrationsSectionDesc")}
       variant="block"
       /* The gesture lives at the end of the title; when there is nothing to list, it moves down
  in the scene and is not shown twice. */

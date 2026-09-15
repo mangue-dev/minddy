@@ -1,57 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useId, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
-import {
-  Button,
-  Input,
-  Textarea,
-  Checkbox,
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-  toast,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "mangue-ui";
-import { Ellipsis, Plug, Plus, TriangleAlert } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Field, FieldLabel } from "@/components/ui/field";
-import { McpServiceLogo } from "@/components/mcp-service-logo";
-import { SettingsGroup } from "@/components/settings/settings-ui";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import { MCP_PRESETS, mcpPresetForUrl, type McpPreset } from "@/lib/mcp-catalog";
-import { mcpConnectionNeedsAuth, type McpConnection } from "@/lib/mcp-client";
-import {
-  MCP_AUTHORIZATION_PARAM,
-  prepareMcpAuthorization,
-} from "@/lib/mcp-authorization";
-import { getDesktopBridge } from "@/lib/desktop/bridge";
-import { useAuth } from "@/lib/auth-context";
-import {
-  MCP_CONNECTIONS_QUERY_KEY as queryKey,
-  useMcpConnections,
-} from "@/lib/use-mcp-connections";
+import {useCallback, useEffect, useId, useState} from "react";
+import {useQueryClient} from "@tanstack/react-query";
+import {useSearchParams} from "next/navigation";
+import {useTranslations} from "next-intl";
+import {Button, Input, Textarea, Checkbox, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Accordion, AccordionItem, AccordionTrigger, AccordionContent, toast, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem} from "mangue-ui";
+import {Ellipsis, Plus, TriangleAlert} from "lucide-react";
+import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
+import {Field, FieldLabel} from "@/components/ui/field";
+import {McpServiceLogo} from "@/components/mcp-service-logo";
+import {SettingsGroup} from "@/components/settings/settings-ui";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
+import {MCP_PRESETS, mcpPresetForUrl} from "@/lib/mcp-catalog";
+import type {McpPreset} from "@/lib/mcp-catalog";
+import {mcpConnectionNeedsAuth} from "@/lib/mcp-client";
+import type {McpConnection} from "@/lib/mcp-client";
+import {MCP_AUTHORIZATION_PARAM, prepareMcpAuthorization} from "@/lib/mcp-authorization";
+import {getDesktopBridge} from "@/lib/desktop/bridge";
+import {useAuth} from "@/lib/auth-context";
+import {MCP_CONNECTIONS_QUERY_KEY as queryKey, useMcpConnections} from "@/lib/use-mcp-connections";
 
 const endpoint = "/api/account/mcp-connections";
 const connectionChannel = "minddy:mcp-connections";
@@ -754,9 +721,7 @@ export function AccountMcpClients() {
   return (
     <SettingsGroup
       anchor={SETTINGS_SECTIONS.accountMcpClients}
-      icon={Plug}
       title={t("title")}
-      description={t("description")}
       variant="block"
       action={
         <Tooltip>

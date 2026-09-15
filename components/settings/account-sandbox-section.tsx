@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { useQueryClient } from "@tanstack/react-query";
-import { Badge, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, toast } from "mangue-ui";
-import { Server } from "lucide-react";
-import { SettingsEmpty, SettingsGroup, SettingsRow } from "./settings-ui";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import { saveAgentPreferencesApi } from "@/lib/agent-keys-api";
-import { agentPreferencesQueryKey, useAgentPreferencesQuery } from "@/lib/use-agent-preferences-query";
-import { isSandboxRegion, isSandboxSize, SANDBOX_RESOURCES, SANDBOX_SIZES, sandboxUsagePercentPerHour, type SandboxPreferences } from "@/lib/agent-sandbox-config";
-import { useBillingSummary } from "@/lib/use-billing-query";
+import {useState} from "react";
+import {useLocale, useTranslations} from "next-intl";
+import {useQueryClient} from "@tanstack/react-query";
+import {Badge, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, toast} from "mangue-ui";
+
+import {SettingsEmpty, SettingsGroup, SettingsRow} from "./settings-ui";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
+import {saveAgentPreferencesApi} from "@/lib/agent-keys-api";
+import {agentPreferencesQueryKey, useAgentPreferencesQuery} from "@/lib/use-agent-preferences-query";
+import {isSandboxRegion, isSandboxSize, SANDBOX_RESOURCES, SANDBOX_SIZES, sandboxUsagePercentPerHour} from "@/lib/agent-sandbox-config";
+import type {SandboxPreferences} from "@/lib/agent-sandbox-config";
+import {useBillingSummary} from "@/lib/use-billing-query";
 
 export function AccountSandboxSection() {
   const t = useTranslations("Account");
@@ -43,9 +44,7 @@ export function AccountSandboxSection() {
   return (
     <SettingsGroup
       anchor={SETTINGS_SECTIONS.accountSandbox}
-      icon={Server}
       title={t("sandboxTitle")}
-      description={t("sandboxDesc")}
       action={<Badge variant="secondary">{t("sandboxExperimental")}</Badge>}
     >
       {loading ? <SettingsEmpty>{tc("loading")}</SettingsEmpty> : error ? (

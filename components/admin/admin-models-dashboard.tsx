@@ -1,75 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import {
-  Bot,
-  KeyRound,
-  MessageSquareHeart,
-  Mic,
-  Plus,
-  Sparkles,
-  Trash2,
-  Workflow,
-  type LucideIcon,
-} from "lucide-react";
-import {
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Skeleton,
-  Spinner,
-  Switch,
-  Textarea,
-  toast,
-} from "mangue-ui";
+import {useCallback, useEffect, useMemo, useState} from "react";
+import {useLocale, useTranslations} from "next-intl";
+import {Plus, Trash2} from "lucide-react";
+import {Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton, Spinner, Switch, Textarea, toast} from "mangue-ui";
 import type { MessageKey } from "@/lib/i18n-keys";
-import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
-import { HelpHint } from "@/components/settings/help-hint";
-import { ModelCombobox } from "@/components/agent/model-combobox";
-import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
-import { ByokModelCombobox } from "@/components/admin/byok-model-combobox";
-import { ProviderLogo } from "@/components/model-logo";
-import { formatModelName } from "@/lib/model-display";
-import { getAgentProvider } from "@/lib/agent-providers";
-import {
-  byokProviderFromConfigKey,
-  modelKeyFromByokConfigKey,
-  type ByokCatalogProvider,
-} from "@/lib/byok-model-catalog";
-import {
-  AI_MODEL_CONFIG_FIELDS,
-  AI_MODEL_CONFIG_GROUPS,
-  isSuffixableField,
-  modelSuffixKey,
-  MODEL_SUFFIXES,
-  type AiConfigField,
-  type AiConfigGroup,
-  type ModelSuffix,
-} from "@/lib/ai-model-config";
-import {
-  DEFAULT_SUBAGENT_FAVORITES,
-  parseSubagentFavorites,
-  SUBAGENT_THINKING_EFFORTS,
-  type FavoriteSubagentModel,
-  type SubagentThinkingEffort,
-} from "@/lib/subagent-favorites";
-import { DEFAULT_RECOMMENDED_MODELS, parseRecommendedModels } from "@/lib/recommended-models";
-import {
-  REASONING_LEVELS,
-  toReasoningLevel,
-} from "@/lib/agent-reasoning";
-import { formatMultiplier } from "@/lib/model-multiplier";
-import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
-import {
-  ADMIN_SECTIONS,
-  adminSectionAnchor,
-  type AdminSectionId,
-} from "@/lib/admin-sections";
+import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {HelpHint} from "@/components/settings/help-hint";
+import {ModelCombobox} from "@/components/agent/model-combobox";
+import {ReasoningCombobox} from "@/components/agent/reasoning-combobox";
+import {ByokModelCombobox} from "@/components/admin/byok-model-combobox";
+
+import {formatModelName} from "@/lib/model-display";
+import {getAgentProvider} from "@/lib/agent-providers";
+import {byokProviderFromConfigKey, modelKeyFromByokConfigKey} from "@/lib/byok-model-catalog";
+import type {ByokCatalogProvider} from "@/lib/byok-model-catalog";
+import {AI_MODEL_CONFIG_FIELDS, AI_MODEL_CONFIG_GROUPS, isSuffixableField, modelSuffixKey, MODEL_SUFFIXES} from "@/lib/ai-model-config";
+import type {AiConfigField, AiConfigGroup, ModelSuffix} from "@/lib/ai-model-config";
+import {DEFAULT_SUBAGENT_FAVORITES, parseSubagentFavorites, SUBAGENT_THINKING_EFFORTS} from "@/lib/subagent-favorites";
+import type {FavoriteSubagentModel, SubagentThinkingEffort} from "@/lib/subagent-favorites";
+import {DEFAULT_RECOMMENDED_MODELS, parseRecommendedModels} from "@/lib/recommended-models";
+import {REASONING_LEVELS, toReasoningLevel} from "@/lib/agent-reasoning";
+import {formatMultiplier} from "@/lib/model-multiplier";
+import {useAgentModelsQuery} from "@/lib/use-agent-models-query";
+import {ADMIN_SECTIONS, adminSectionAnchor} from "@/lib/admin-sections";
+import type {AdminSectionId} from "@/lib/admin-sections";
 
 type ConfigValues = Record<string, string | null>;
 
@@ -174,18 +129,7 @@ export function AdminModelsDashboard() {
             <SettingsGroup
               key={group}
               id={adminSectionAnchor(MODEL_GROUP_SECTIONS[group])}
-              icon={GROUP_ICONS[group]}
               title={t(`groups.${group}.title`)}
-              // Optional description: some groups explain themselves through
-              // the descriptions of their fields.
-              description={
-                // Cast: the key only exists for certain groups (2 out of 4),
-                // what the guy can't say — `t.has` is the safeguard,
-                // at execution.
-                t.has(`groups.${group}.desc` as AdminKey)
-                  ? t(`groups.${group}.desc` as AdminKey)
-                  : undefined
-              }
             >
               {fieldsByGroup[group].map((field) => (
                 <ConfigRow
@@ -222,7 +166,7 @@ export function AdminModelsDashboard() {
               />
             ))}
             {byokByProvider.other.length > 0 ? (
-              <SettingsGroup icon={KeyRound} title={t("groups.byokOther")}>
+              <SettingsGroup title={t("groups.byokOther")}>
                 {byokByProvider.other.map((field) => (
                   <ConfigRow
                     key={field.key}
@@ -241,16 +185,6 @@ export function AdminModelsDashboard() {
     </div>
   );
 }
-
-/** Section icon of each model-config family — same grammar as /settings. */
-const GROUP_ICONS: Record<AiConfigGroup, LucideIcon> = {
-  assistant: Sparkles,
-  automations: Workflow,
-  agent: Bot,
-  byok: KeyRound,
-  voice: Mic,
-  feedback: MessageSquareHeart,
-};
 
 const MODEL_GROUP_SECTIONS: Record<AiConfigGroup, AdminSectionId> = {
   assistant: ADMIN_SECTIONS.modelsAssistant,
@@ -286,7 +220,6 @@ function ByokProviderSection({
 
   return (
     <SettingsGroup
-      avatar={<ProviderLogo provider={provider} size={16} />}
       title={getAgentProvider(provider)?.label ?? provider}
     >
       {ordered.map((field) => {

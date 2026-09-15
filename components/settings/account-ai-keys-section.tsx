@@ -1,37 +1,25 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { useQueryClient } from "@tanstack/react-query";
-import { Switch, toast } from "mangue-ui";
-import { Bot, KeyRound, SlidersHorizontal } from "lucide-react";
-import {
-  SettingsEmpty,
-  SettingsGroup,
-  SettingsRow,
-} from "@/components/settings/settings-ui";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import { ModelCombobox } from "@/components/agent/model-combobox";
-import { AccountSandboxSection } from "./account-sandbox-section";
-import { ByokConnectPanel } from "@/components/settings/byok-connect-panel";
-import {
-  saveAgentPreferencesApi,
-  updateAiKeyPreferencesApi,
-  type AiKey,
-} from "@/lib/agent-keys-api";
-import {
-  agentModelsQueryKey,
-  useAgentModelsQuery,
-  useReasoningLevelsFor,
-} from "@/lib/use-agent-models-query";
-import {
-  agentPreferencesQueryKey,
-  useAgentPreferencesQuery,
-} from "@/lib/use-agent-preferences-query";
-import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
-import { ReasoningCombobox } from "@/components/agent/reasoning-combobox";
-import { aiKeysQueryKey, useAiKeysQuery } from "@/lib/use-ai-keys-query";
-import { AI_SURFACE_DEFINITIONS, type AiSurface, type ByokModelKey } from "@/lib/ai-surfaces";
-import { isLocalAgentProvider } from "@/lib/agent-providers";
+import {useTranslations} from "next-intl";
+import {useQueryClient} from "@tanstack/react-query";
+import {Switch, toast} from "mangue-ui";
+
+import {SettingsEmpty, SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
+import {ModelCombobox} from "@/components/agent/model-combobox";
+import {AccountSandboxSection} from "./account-sandbox-section";
+import {ByokConnectPanel} from "@/components/settings/byok-connect-panel";
+import {saveAgentPreferencesApi, updateAiKeyPreferencesApi} from "@/lib/agent-keys-api";
+import type {AiKey} from "@/lib/agent-keys-api";
+import {agentModelsQueryKey, useAgentModelsQuery, useReasoningLevelsFor} from "@/lib/use-agent-models-query";
+import {agentPreferencesQueryKey, useAgentPreferencesQuery} from "@/lib/use-agent-preferences-query";
+import {nearestReasoningLevel} from "@/lib/agent-reasoning";
+import type {ReasoningLevel} from "@/lib/agent-reasoning";
+import {ReasoningCombobox} from "@/components/agent/reasoning-combobox";
+import {aiKeysQueryKey, useAiKeysQuery} from "@/lib/use-ai-keys-query";
+import {AI_SURFACE_DEFINITIONS} from "@/lib/ai-surfaces";
+import type {AiSurface, ByokModelKey} from "@/lib/ai-surfaces";
+import {isLocalAgentProvider} from "@/lib/agent-providers";
 
 /**
  * “Code agent” section of account settings (MIN-46): the provider and
@@ -89,9 +77,7 @@ export function AccountAiKeysSection() {
           surrounding card changes, not its contents. */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountAiProvider}
-        icon={KeyRound}
         title={t("aiProviderTitle")}
-        description={t("aiProviderDesc")}
         variant="block"
       >
         <ByokConnectPanel />
@@ -115,9 +101,7 @@ export function AccountAiKeysSection() {
       {!keysLoading && !byokKey ? (
         <SettingsGroup
           anchor={SETTINGS_SECTIONS.accountAgent}
-          icon={Bot}
           title={t("agentTab")}
-          description={t("agentSectionDesc")}
         >
           <AgentPreferenceRows
             loading={prefLoading}
@@ -191,9 +175,7 @@ function ByokSurfacePreferences({
   return (
     <SettingsGroup
       anchor={SETTINGS_SECTIONS.accountAgent}
-      icon={SlidersHorizontal}
       title={t("byokSurfacesTitle")}
-      description={t("byokSurfacesDesc")}
     >
       {AI_SURFACE_DEFINITIONS.filter(
         (surface) => !isLocalAgentProvider(key.provider) || surface.id === "agent",
