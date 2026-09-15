@@ -25,17 +25,12 @@ import {
 } from "mangue-ui";
 import { CheckCheck, ChevronDown, Copy, ListFilter } from "lucide-react";
 
-import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { NumoIcon } from "@/components/numo-icon";
-import {
-  PrActivityItem,
-  PrActivityTimeline,
-} from "@/components/pull-requests/pr-activity-timeline";
 import {
   useReviewReplies,
   useThreadResolution,
 } from "@/components/pull-requests/pr-review-comments";
-import { ReviewConversationCard } from "@/components/pull-requests/pr-timeline";
+import { ReviewConversationStack } from "@/components/pull-requests/pr-timeline";
 import type { PrEndpoint } from "@/lib/agent-api";
 import {
   buildPullRequestFeedbackPrompt,
@@ -199,28 +194,16 @@ export function PrUnresolvedConversations({
           </SidePanelHeader>
 
           <SidePanelBody className="min-h-0 bg-background px-4 py-4">
-            <PrActivityTimeline>
-              {threads.map((thread) => (
-                <PrActivityItem
-                  key={thread.id}
-                  marker={
-                    <ForgeUserAvatar
-                      user={thread.root.user}
-                      className="size-8 ring-2 ring-background"
-                    />
-                  }
-                >
-                  <div data-testid="pr-unresolved-conversation">
-                    <ReviewConversationCard
-                      thread={thread}
-                      replies={replies}
-                      resolution={canResolve ? resolution : undefined}
-                      readOnly={!canComment}
-                    />
-                  </div>
-                </PrActivityItem>
-              ))}
-            </PrActivityTimeline>
+            {/* The same conversation stack as the Activity tab, without the
+                rail: each card stands alone, its own file header locates it. */}
+            <ReviewConversationStack
+              listTestId="pr-unresolved-conversations-list"
+              itemTestId="pr-unresolved-conversation"
+              threads={threads}
+              replies={replies}
+              resolution={canResolve ? resolution : undefined}
+              readOnly={!canComment}
+            />
           </SidePanelBody>
         </SidePanelContent>
       </SidePanel>

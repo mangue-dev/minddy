@@ -285,64 +285,51 @@ export function PrTimelineReview({
         </div>
       </article>
       {comments.length > 0 ? (
-        <ul
-          data-testid="pr-activity-review-threads"
-          className="ml-3 flex flex-col gap-3 border-l border-border pl-4"
-        >
-          {threads.map((thread) => (
-            <ReviewCommentBlock
-              key={thread.id}
-              thread={thread}
-              replies={replies}
-              resolution={canResolve ? resolution : undefined}
-              readOnly={!canComment}
-            />
-          ))}
-        </ul>
+        <ReviewConversationStack
+          threads={threads}
+          replies={replies}
+          resolution={canResolve ? resolution : undefined}
+          readOnly={!canComment}
+        />
       ) : null}
     </div>
   );
 }
 
-/**
- * A review point, rendered as GitHub renders it in the thread: the file, the
- * CODE it's talking about, then the comment itself.
- *
- * The three parts are in this order for a reason. The path locates, the code
- * shows what we're talking about — a line comment without its extract is a
- * sentence without a subject, and that's exactly what made these blocks unreadable — and
- * the clear separation (background, border, avatar) says that what follows is someone
- * speaking, not a continuation of the diff.
- *
- * The first two parts are `PrHunk`, that is to say the rendering of the tab
- * Files: the same code, in the same page, cannot have two appearances
- * depending on the tab from which it is viewed. Without a hunk (GitLab does not use any),
- * the extract disappears and the anchor `fichier:ligne` alone carries the context: the
- * block is still read.
- */
-export function ReviewCommentBlock({
-  thread,
+/** The stack of review conversations, shared by the Activity tab and the
+    unresolved conversations panel: self-contained cards in a plain column —
+    no rail, no connector line; each card locates itself with its own file
+    header. */
+export function ReviewConversationStack({
+  threads,
   replies,
   resolution,
   readOnly,
+  listTestId = "pr-activity-review-threads",
+  itemTestId,
 }: {
-  thread: ReturnType<
-    typeof groupReviewThreads<PullRequestReviewComment>
-  >[number];
+  threads: ReturnType<typeof groupReviewThreads<PullRequestReviewComment>>;
   replies: ReturnType<typeof useReviewReplies>;
   resolution?: ReturnType<typeof useThreadResolution>;
   readOnly: boolean;
+  /** Test hook of the list itself; the panel gives its own. */
+  listTestId?: string;
+  /** Test hook of each conversation surface (the panel marks its own). */
+  itemTestId?: string;
 }) {
   return (
-    <li className="relative">
-      <span aria-hidden className="absolute -left-4 top-4 w-4 border-t border-border" />
-      <ReviewConversationCard
-        thread={thread}
-        replies={replies}
-        resolution={resolution}
-        readOnly={readOnly}
-      />
-    </li>
+    <ul data-testid={listTestId} className="flex flex-col gap-3">
+      {threads.map((thread) => (
+        <li key={thread.id} data-testid={itemTestId}>
+          <ReviewConversationCard
+            thread={thread}
+            replies={replies}
+            resolution={resolution}
+            readOnly={readOnly}
+          />
+        </li>
+      ))}
+    </ul>
   );
 }
 

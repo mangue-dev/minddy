@@ -10,14 +10,18 @@
  * illustration, a title, and when the forge dates it, a duration (ticking
  * while work runs, frozen once it settles).
  *
+ * Cards read in a fixed order: the fix card leads, unresolved conversations
+ * follow, then every error before every in-progress story before every
+ * settled one.
+ *
  * The grid is a bento: same height for every card, wrapping line by line —
  * no carousel, no horizontal scroll. A card never needs the whole width, but
  * may take it.
  *
  * Cards are interactive where a quick fix exists: hover blurs the content and
  * reveals a centered action button ("Update branch", "View deployment"…),
- * while click-through cards (checks, unresolved comments) open the matching
- * surface directly.
+ * while click-through cards (checks, unresolved conversations) open the
+ * matching surface directly.
  */
 
 import { useMemo, type ReactNode } from "react";
@@ -547,7 +551,7 @@ function buildStatusCards(
         push({
           id: blocker.id,
           tone,
-          title: t("cardUnresolvedComments", { count: blocker.count ?? 0 }),
+          title: t("cardUnresolvedConversations", { count: blocker.count ?? 0 }),
           durationMs: null,
           startedAt: null,
           donutParts: null,
@@ -626,7 +630,25 @@ function buildStatusCards(
     }
   }
 
-  return cards;
+  return cards.sort((a, b) => rankCard(a.card) - rankCard(b.card));
+}
+
+/** The reading order of the cards: a blocking fix leads, the unresolved
+    conversations follow (the human words blocking the merge come before any
+    machine state), then errors before in-progress work before settled
+    stories. The sort is stable, so cards of the same verdict keep the
+    order they were built in. */
+const TONE_RANK: Record<PrStatusCardTone, number> = {
+  danger: 20,
+  progress: 30,
+  success: 40,
+  neutral: 50,
+};
+
+function rankCard(card: PrStatusCard): number {
+  if (card.id === "fix") return 0;
+  if (card.iconKind === "conversations") return 10;
+  return TONE_RANK[card.tone];
 }
 
 /** Hover over a one-gesture card: the content blurs away and one word takes

@@ -1150,7 +1150,7 @@ export function PrDiff({
                 resolution={canResolve ? orphanResolution : undefined}
                 reactions={orphanReactions}
                 readOnly={readOnly}
-                label={(count) => t("orphanComments", { count })}
+                label={(count) => t("orphanConversations", { count })}
               />
             </div>
           ) : null}
