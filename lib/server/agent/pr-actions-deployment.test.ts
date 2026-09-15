@@ -6,7 +6,7 @@ describe("pull request detail deployment", () => {
   it("resolves the deployment from the live forge head", async () => {
     const getLatestSuccessfulDeploymentUrl = vi
       .fn()
-      .mockResolvedValue("https://preview.example.com/live");
+      .mockResolvedValue({ url: "https://preview.example.com/live", durationMs: 124_000 });
     const listChecks = vi.fn().mockResolvedValue({
       checks: [],
       deploymentUrl: null,
@@ -82,8 +82,10 @@ describe("pull request detail deployment", () => {
           startedAt: null,
           completedAt: null,
         }),
-        getLatestSuccessfulDeploymentUrl: async () =>
-          "https://immutable-commit.example.com/",
+        getLatestSuccessfulDeploymentUrl: async () => ({
+            url: "https://immutable-commit.example.com/",
+            durationMs: null,
+          }),
       },
     } as unknown as PrScope;
 
@@ -96,7 +98,10 @@ describe("pull request detail deployment", () => {
   it("does not look up an unqualified branch name for a fork pull request", async () => {
     const getLatestSuccessfulDeploymentUrl = vi
       .fn()
-      .mockResolvedValue("https://immutable-head.example.com/");
+      .mockResolvedValue({
+        url: "https://immutable-head.example.com/",
+        durationMs: 84_000,
+      });
     const scope = {
       pr: { head_sha: "stored-head" },
       target: { provider: "github" },

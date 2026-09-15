@@ -42,7 +42,7 @@ describe("pull request deployment URLs", () => {
         branch: "feature/preview",
         sha: "abc",
       }),
-    ).resolves.toBe("https://app-git-feature-preview-acme.vercel.app/");
+    ).resolves.toEqual({ url: "https://app-git-feature-preview-acme.vercel.app/", durationMs: null });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -77,7 +77,7 @@ describe("pull request deployment URLs", () => {
         branch: "feature/preview",
         sha: "abc",
       }),
-    ).resolves.toBe("https://commit.example.com/");
+    ).resolves.toEqual({ url: "https://commit.example.com/", durationMs: null });
   });
 
   it("returns the newest successful GitHub branch environment URL", async () => {
@@ -109,7 +109,7 @@ describe("pull request deployment URLs", () => {
         branch: "feature/preview",
         sha: "abc 123",
       }),
-    ).resolves.toBe("https://preview.example.com/pr-42");
+    ).resolves.toEqual({ url: "https://preview.example.com/pr-42", durationMs: null });
 
     const deploymentCall = fetchMock.mock.calls
       .map(([input]) => String(input))
@@ -136,7 +136,7 @@ describe("pull request deployment URLs", () => {
         branch: "feature/preview",
         sha: "abc",
       }),
-    ).resolves.toBe("https://commit.example.com/");
+    ).resolves.toEqual({ url: "https://commit.example.com/", durationMs: null });
 
     const listCalls = fetchMock.mock.calls
       .map(([input]) => String(input))
@@ -164,7 +164,7 @@ describe("pull request deployment URLs", () => {
         number: 42,
         sha: "abc",
       }),
-    ).resolves.toBe("https://deploy.example.com/output");
+    ).resolves.toEqual({ url: "https://deploy.example.com/output", durationMs: null });
   });
 
   it("matches the GitLab deployment to the pull request head", async () => {
@@ -189,7 +189,7 @@ describe("pull request deployment URLs", () => {
         number: 42,
         sha: "abc",
       }),
-    ).resolves.toBe("https://preview.example.com/mr-42");
+    ).resolves.toEqual({ url: "https://preview.example.com/mr-42", durationMs: null });
 
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
       "/projects/acme%2Fapp/deployments?order_by=updated_at&sort=desc&status=success",
@@ -223,7 +223,7 @@ describe("pull request deployment URLs", () => {
         branch: "feature/preview",
         sha: "abc",
       }),
-    ).resolves.toBe("https://branch.example.com/");
+    ).resolves.toEqual({ url: "https://branch.example.com/", durationMs: null });
   });
 
   it("returns no GitLab action without a safe matching environment URL", async () => {

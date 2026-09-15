@@ -59,7 +59,7 @@ const json = (route, body) =>
  * an unknown road would leave if not for real, with its real
  * consequences — a call to GitHub on behalf of the demo account.
  */
-async function serveFixture(page) {
+export async function serveFixture(page) {
   const served = [];
   const unexpected = [];
   let reviewResolved = CAPTURE_ONLY;

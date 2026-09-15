@@ -7,7 +7,7 @@ import {
   Button,
   Skeleton,
 } from "mangue-ui";
-import { Check, Copy, FileDiff, ShieldCheck } from "lucide-react";
+import { Check, Copy, ShieldCheck } from "lucide-react";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { normalizeForgeInstant } from "@/lib/forge-time";
 import { PrCommitDiffSheet } from "@/components/pull-requests/pr-commit-diff-sheet";
@@ -116,30 +116,41 @@ function ShaButton({ sha }: { sha: string }) {
 }
 
 /**
- * The weight of the commit, in numbers only: since MIN-548 the row itself is
- * the entry point of the diff, so the chips stay visual — the click passes
- * through to the row.
+ * The weight of the commit, AND its way in (MIN-548): the +/− counters are
+ * themselves the button that opens the diff — the numbers sit in the same
+ * place as before, but they click.
  */
 function CommitStats({
   additions,
   deletions,
+  onOpen,
 }: {
   additions: number;
   deletions: number;
+  onOpen: () => void;
 }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="flex h-7 items-center gap-1.5 px-2 text-sm font-medium tabular-nums">
+        <button
+          type="button"
+          data-testid="pr-commit-stats"
+          aria-label={t("viewCommitDiff")}
+          className="flex h-7 items-center gap-1.5 rounded-md px-2 text-sm font-medium tabular-nums outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen();
+          }}
+        >
           <span className="text-green-700 dark:text-green-500">
             +{format.number(additions)}
           </span>
           <span className="text-red-700 dark:text-red-500">
             −{format.number(deletions)}
           </span>
-        </span>
+        </button>
       </TooltipTrigger>
       <TooltipContent side="top">{t("viewCommitDiff")}</TooltipContent>
     </Tooltip>
@@ -246,34 +257,18 @@ function CommitRow({
         </Tooltip>
       ) : null}
       <div className="flex shrink-0 items-start gap-1">
-        {/* Silent when the forge was unable to give the numbers: “+0 −0” is
-            would read as an empty commit, and that's not what we know. */}
+        {/* The two gestures read side by side (MIN-548): copy the SHA, and —
+            through its own numbers — open what the commit changes. Silent
+            when the forge was unable to give the numbers: “+0 −0” would read
+            as an empty commit, and that's not what we know. */}
+        <ShaButton sha={commit.sha} />
         {commit.additions != null && commit.deletions != null ? (
           <CommitStats
             additions={commit.additions}
             deletions={commit.deletions}
+            onOpen={openDiff}
           />
         ) : null}
-        <div className="flex flex-col items-end gap-0.5">
-          <ShaButton sha={commit.sha} />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("viewCommitDiff")}
-                className="text-muted-foreground hover:text-foreground"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openDiff();
-                }}
-              >
-                <FileDiff className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">{t("viewCommitDiff")}</TooltipContent>
-          </Tooltip>
-        </div>
       </div>
     </li>
   );

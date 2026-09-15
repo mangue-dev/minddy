@@ -516,15 +516,20 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
     ]);
     const files = diff.files;
     let deploymentUrl = readinessData.checks?.deploymentUrl ?? null;
+    let deploymentDurationMs: number | null = null;
     if (pr.headSha) {
       try {
-        deploymentUrl ??= await forge.getLatestSuccessfulDeploymentUrl({
+        // One read either way: when the checks summary already carried the
+        // URL, the outcome only fills the duration.
+        const outcome = await forge.getLatestSuccessfulDeploymentUrl({
           token: call.token,
           repoFullName: call.repoFullName,
           number: call.number,
           branch: pr.headFromBaseRepository ? pr.head : undefined,
           sha: pr.headSha,
         });
+        deploymentUrl ??= outcome?.url ?? null;
+        deploymentDurationMs = outcome?.durationMs ?? null;
       } catch (error) {
         console.error(
           "[pr-actions] deployment unreadable:",
@@ -540,6 +545,7 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
       checks: readinessData.checks,
       checksError: readinessData.checksError,
       deploymentUrl,
+      deploymentDurationMs,
       reviews: readinessData.reviews,
       reviewThreads: readinessData.reviewThreads,
       viewer: readinessData.viewer,

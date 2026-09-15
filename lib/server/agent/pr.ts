@@ -1636,6 +1636,7 @@ interface RawGithubDeploymentStatus {
   state?: string | null;
   environment_url?: string | null;
   target_url?: string | null;
+  created_at?: string | null;
 }
 
 /** Only browser-safe deployment destinations cross the API boundary. */
@@ -1659,7 +1660,7 @@ async function getVercelBranchPreviewUrl(opts: {
   token: string;
   repoFullName: string;
   number: number;
-}): Promise<string | null> {
+}): Promise<DeploymentOutcome | null> {
   const { owner, repo } = splitRepo(opts.repoFullName);
   try {
     const comments = await ghJson<RawComment[]>(
@@ -1672,7 +1673,7 @@ async function getVercelBranchPreviewUrl(opts: {
         if (!/!\[Ready\]\([^)]+\)\s+\[Ready\]\([^)]+\)/u.test(line)) continue;
         const preview = line.match(/\[Preview\]\((https?:\/\/[^)\s]+)\)/u)?.[1];
         const url = httpDeploymentUrl(preview);
-        if (url) return url;
+        if (url) return { url, durationMs: null };
       }
     }
   } catch {
@@ -1697,10 +1698,12 @@ export async function getLatestSuccessfulDeploymentUrl(opts: {
   number: number;
   branch?: string;
   sha: string;
-}): Promise<string | null> {
+}): Promise<DeploymentOutcome | null> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  const vercelBranchUrl = opts.branch ? await getVercelBranchPreviewUrl(opts) : null;
-  if (vercelBranchUrl) return vercelBranchUrl;
+  const vercelBranchOutcome = opts.branch
+    ? await getVercelBranchPreviewUrl(opts)
+    : null;
+  if (vercelBranchOutcome) return vercelBranchOutcome;
 
   const references = [
     ...(opts.branch ? [{ parameter: "ref", value: opts.branch }] : []),
@@ -1730,17 +1733,37 @@ export async function getLatestSuccessfulDeploymentUrl(opts: {
             opts.token,
           );
           if (latest?.state !== "success") return null;
-          return httpDeploymentUrl(latest.environment_url) ?? httpDeploymentUrl(latest.target_url);
+          const url =
+            httpDeploymentUrl(latest.environment_url) ??
+            httpDeploymentUrl(latest.target_url);
+          if (!url) return null;
+          // The time the environment took to settle: the status that declared
+          // success, dated from the deployment it concludes.
+          const from = Date.parse(deployment.created_at ?? "");
+          const to = Date.parse(latest.created_at ?? "");
+          const durationMs =
+            Number.isFinite(from) && Number.isFinite(to) && to >= from ? to - from : null;
+          return { url, durationMs };
         } catch {
           // A stale deployment can disappear while its siblings remain readable.
           return null;
         }
       }),
     );
-    const url = statuses.find((candidate): candidate is string => candidate !== null);
-    if (url) return url;
+    const outcome = statuses.find(
+      (candidate): candidate is NonNullable<typeof candidate> => candidate !== null,
+    );
+    if (outcome) {
+      return { url: outcome.url, durationMs: outcome.durationMs ?? null };
+    }
   }
   return null;
+}
+
+/** A usable deployment destination, with the time its environment took to settle. */
+export interface DeploymentOutcome {
+  url: string;
+  durationMs?: number | null;
 }
 
 interface RawReviewComment extends RawComment {

@@ -21,6 +21,7 @@ import type {
   ReviewSubmission,
   ReviewThreadState,
   ReviewVerdict,
+  DeploymentOutcome,
 } from "./pr";
 import type { PrTimelineEvent } from "@/lib/pr-timeline";
 import type { ChecksSummary } from "./checks-core";
@@ -345,14 +346,15 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<PrTimelineEvent[]>;
-  /** Public URL of the latest successful deployment of the PR branch, then its head. */
+  /** Public URL of the latest successful deployment of the PR branch, then
+      its head, with the time the environment took to settle. */
   getLatestSuccessfulDeploymentUrl(opts: {
     token: string;
     repoFullName: string;
     number: number;
     branch?: string;
     sha: string;
-  }): Promise<string | null>;
+  }): Promise<DeploymentOutcome | null>;
   createPullRequestComment(opts: {
     token: string;
     repoFullName: string;

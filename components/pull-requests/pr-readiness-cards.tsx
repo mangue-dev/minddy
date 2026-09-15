@@ -57,7 +57,6 @@ import type {
   ReadinessAction,
   ReadinessBlocker,
 } from "@/lib/pr-readiness";
-import type { MessageKey } from "@/lib/i18n-keys";
 
 export type PrStatusCardTone = "danger" | "progress" | "success";
 
@@ -69,18 +68,20 @@ const TONE_CARD: Record<PrStatusCardTone, string> = {
   danger: "border-destructive/30 bg-destructive/10",
 };
 
-const TONE_ICON: Record<PrStatusCardTone, string> = {
-  success:
-    "bg-emerald-600/15 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-400",
-  progress:
-    "bg-amber-600/15 text-amber-700 dark:bg-amber-400/15 dark:text-amber-400",
-  danger: "bg-destructive/15 text-destructive",
-};
-
 const TONE_TITLE: Record<PrStatusCardTone, string> = {
   success: "text-emerald-700 dark:text-emerald-400",
   progress: "text-amber-700 dark:text-amber-400",
   danger: "text-destructive",
+};
+
+/** The hover action button borrows the card's own color codes. */
+const TONE_BUTTON: Record<PrStatusCardTone, string> = {
+  success:
+    "border-emerald-600/40 bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/15 hover:border-emerald-600/50 dark:border-emerald-400/40 dark:bg-emerald-400/10 dark:text-emerald-400 dark:hover:bg-emerald-400/15",
+  progress:
+    "border-amber-600/40 bg-amber-600/10 text-amber-700 hover:bg-amber-600/15 hover:border-amber-600/50 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-400 dark:hover:bg-amber-400/15",
+  danger:
+    "border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/15 hover:border-destructive/50 dark:border-destructive/40 dark:bg-destructive/10 dark:hover:bg-destructive/15",
 };
 
 /** Alpha background of a check row, tinted by its own state. */
@@ -89,13 +90,6 @@ const CHECK_ROW_BG: Record<CheckState, string> = {
   pending: "bg-amber-500/10",
   failure: "bg-red-500/10",
   neutral: "bg-muted/50",
-};
-
-const CHECK_DOT: Record<CheckState, string> = {
-  success: "text-emerald-600 dark:text-emerald-400",
-  pending: "text-amber-500",
-  failure: "text-red-600 dark:text-red-400",
-  neutral: "text-muted-foreground",
 };
 
 /** “42 s”, “3 min 7 s”. `null` when the forge does not date the run. */
@@ -141,6 +135,8 @@ interface PrStatusCardsProps {
   checks: ChecksSummary | null;
   provider: RepoProviderId;
   deploymentUrl: string | null;
+  /** Time the successful deployment took to settle, when the forge dates it. */
+  deploymentDurationMs: number | null;
   unresolvedThreads: PullRequestFeedbackThread[];
   canAct: (blocker: ReadinessBlocker) => boolean;
   acting: ReadinessAction | null;
@@ -265,7 +261,7 @@ function buildStatusCards(
       id: "deployment",
       tone: "success",
       title: t("cardDeploymentPassed"),
-      durationMs: null,
+      durationMs: props.deploymentDurationMs,
       startedAt: null,
       donutParts: null,
       avatars: null,
@@ -490,53 +486,51 @@ function PrStatusCardView({
   const body = (
     <>
       {/* Illustration: donut for a mixed checks story, avatars for the
-          reviewers waiting, plain icon otherwise. */}
-      <div className="flex items-start justify-between">
-        <span
-          className={cn(
-            "flex size-8 items-center justify-center rounded-md [&_svg]:size-4",
-            TONE_ICON[card.tone],
-          )}
-        >
-          {card.donutParts ? (
-            <ChecksDonut parts={card.donutParts} />
-          ) : card.avatars ? (
-            <AvatarCascade users={card.avatars} />
-          ) : card.id === "checks-passed" ? (
-            <Check />
-          ) : card.id === "deployment" ? (
-            <ArrowUpRight />
-          ) : (
-            blockerIcon(card.iconKind)
-          )}
-        </span>
-        <span className="text-[11px] tabular-nums text-muted-foreground">
-          {card.startedAt
-            ? formatRunDuration(
-                t,
-                Math.max(now.getTime() - Date.parse(card.startedAt), 0),
-              )
-            : formatRunDuration(t, card.durationMs)}
-        </span>
-      </div>
-      <p
+          reviewers waiting, bare icon otherwise — no container behind it. */}
+      <span
         className={cn(
-          "mt-auto line-clamp-2 text-[13px] font-medium leading-4",
+          "flex items-center [&_svg]:size-5",
           TONE_TITLE[card.tone],
         )}
       >
-        {card.title}
+        {card.donutParts ? (
+          <ChecksDonut parts={card.donutParts} />
+        ) : card.avatars ? (
+          <AvatarCascade users={card.avatars} />
+        ) : card.id === "checks-passed" ? (
+          <Check />
+        ) : card.id === "deployment" ? (
+          <ArrowUpRight />
+        ) : (
+          blockerIcon(card.iconKind)
+        )}
+      </span>
+      {/* Title and timer read together, in the same voice: the time is part
+          of what the card says, not metadata. */}
+      <p
+        className={cn(
+          "mt-auto flex items-baseline gap-1.5 text-[13px] font-medium leading-4",
+          TONE_TITLE[card.tone],
+        )}
+      >
+        <span className="line-clamp-2 min-w-0 flex-1">{card.title}</span>
+        {card.startedAt
+          ? formatRunDuration(
+              t,
+              Math.max(now.getTime() - Date.parse(card.startedAt), 0),
+            )
+          : formatRunDuration(t, card.durationMs)}
       </p>
     </>
   );
 
   const inner = (
-    <div className="flex h-20 min-w-0 flex-col gap-2 p-2.5">
+    <div className="flex h-24 min-w-0 flex-col gap-2.5 p-3">
       {card.action ? (
         // Hover reveals the quick fix: the card content blurs away and one
         // button takes the center.
         <div className="group relative flex h-full min-w-0 flex-col">
-          <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px]">
+          <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px]">
             {body}
           </div>
           <div className="absolute inset-0 grid place-items-center opacity-0 transition duration-150 group-hover:opacity-100">
@@ -545,7 +539,7 @@ function PrStatusCardView({
               size="sm"
               variant="outline"
               disabled={card.action.disabled}
-              className="max-w-full truncate bg-background/90"
+              className={cn("max-w-full truncate", TONE_BUTTON[card.tone])}
               onClick={card.action.onClick}
             >
               {card.action.label}
@@ -590,7 +584,7 @@ function PrStatusCardView({
       }
       data-testid={`pr-status-card-${card.id}`}
       className={cn(
-        "rounded-lg border text-left",
+        "rounded-xl border text-left",
         TONE_CARD[card.tone],
         card.onSelect &&
           "cursor-pointer outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
@@ -623,7 +617,7 @@ function ChecksPopoverCard({
           role="button"
           tabIndex={0}
           className={cn(
-            "cursor-pointer rounded-lg border outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
+            "cursor-pointer rounded-xl border outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
             TONE_CARD[tone],
           )}
         >
@@ -635,9 +629,6 @@ function ChecksPopoverCard({
         align="start"
         className="w-[min(24rem,calc(100vw-2rem))] p-2"
       >
-        <p className="px-1.5 pb-1.5 text-sm font-medium">
-          {t("checksPopoverTitle", { count: checks.total })}
-        </p>
         <ul className="flex max-h-72 flex-col gap-1 overflow-y-auto">
           {checks.checks.map((check) => (
             <li
@@ -662,14 +653,6 @@ function ChecksPopoverCard({
                   </p>
                 ) : null}
               </div>
-              <span
-                className={cn(
-                  "shrink-0 text-xs font-medium",
-                  CHECK_DOT[check.state],
-                )}
-              >
-                {t(CHECK_STATE_KEYS[check.state])}
-              </span>
               {check.durationMs != null ? (
                 <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                   {formatRunDuration(t, check.durationMs)}
@@ -696,13 +679,6 @@ function ChecksPopoverCard({
     </Popover>
   );
 }
-
-const CHECK_STATE_KEYS: Record<CheckState, MessageKey<"PullRequests">> = {
-  success: "checkStateSuccess",
-  failure: "checkStateFailure",
-  pending: "checkStatePending",
-  neutral: "checkStateNeutral",
-};
 
 const CHECK_SLICE_STROKE: Record<CheckState, string> = {
   success: "stroke-emerald-500",

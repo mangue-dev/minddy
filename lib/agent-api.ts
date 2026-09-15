@@ -610,6 +610,8 @@ export interface AgentRunPrResponse {
   checks?: ChecksSummary | null;
   checksError?: "forbidden" | "unknown" | null;
   deploymentUrl?: string | null;
+  /** Time the environment took to settle, when the forge dates it. */
+  deploymentDurationMs?: number | null;
   reviews?: PullRequestReviewSummary | null;
   viewer?: PrViewer;
   mergeMethods?: MergeMethod[];

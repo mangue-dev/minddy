@@ -587,6 +587,7 @@ export function PrDetail({
     files,
     checks,
     deploymentUrl,
+    deploymentDurationMs,
     viewer,
     mergePolicy,
     readiness,
@@ -1820,6 +1821,7 @@ export function PrDetail({
             checks={checks}
             provider={item.provider}
             deploymentUrl={deploymentUrl}
+            deploymentDurationMs={deploymentDurationMs}
             unresolvedThreads={unresolvedThreads}
             canAct={canActOnBlocker}
             acting={maintenanceAction}

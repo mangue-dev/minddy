@@ -114,37 +114,14 @@ export function PrTimelineRow({ event }: { event: PrTimelineEvent }) {
         />
       ) : null}
       <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-        {authors.length > 0 ? (
-          <AuthorNames authors={authors} className="text-sm" />
-        ) : event.actor ? (
-          <GitLogin login={event.actor.login} className="font-medium text-foreground" />
-        ) : null}
-        <span className={cn("min-w-0", verdict?.className)}>
-          {timelineText(event, t)}
-        </span>
-        {event.kind === "committed" && event.body ? (
-          <span className="min-w-0 truncate font-medium text-foreground">
-            {event.body}
-          </span>
-        ) : null}
-        {/* The SHA stays, as a compact chip: it is the only handle a commit
-            row offers once the diff lives behind the click on the row. */}
-        {event.kind === "committed" && event.sha ? (
-          event.url ? (
-            <a
-              href={event.url}
-              target="_blank"
-              rel="noreferrer"
-              className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground hover:text-brand"
-            >
-              {event.sha.slice(0, 7)}
-            </a>
-          ) : (
-            <code className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
-              {event.sha.slice(0, 7)}
-            </code>
-          )
-        ) : null}
+      {authors.length > 0 ? (
+        <AuthorNames authors={authors} className="text-sm" />
+      ) : event.actor ? (
+        <GitLogin login={event.actor.login} className="font-medium text-foreground" />
+      ) : null}
+      <span className={cn("min-w-0", verdict?.className)}>
+        {timelineText(event, t)}
+      </span>
       </span>
       {when ? (
         <span className="ml-auto shrink-0 pl-2 text-xs text-muted-foreground/70">

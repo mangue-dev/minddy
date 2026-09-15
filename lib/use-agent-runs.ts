@@ -179,6 +179,7 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     checks: data?.checks ?? null,
     checksError: data?.checksError ?? null,
     deploymentUrl: data?.deploymentUrl ?? null,
+    deploymentDurationMs: data?.deploymentDurationMs ?? null,
     reviews: data?.reviews ?? null,
     // Who I am for this PR (MIN-144). `null` as long as the GET has not
     // answered: the UI then does not offer any writing gesture, rather than

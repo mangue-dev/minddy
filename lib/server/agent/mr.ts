@@ -37,6 +37,7 @@ import type {
   ReviewSubmission,
   ReviewThreadState,
   ReviewVerdict,
+  DeploymentOutcome,
 } from "./pr";
 
 /**
@@ -1311,6 +1312,8 @@ export async function listMergeRequestTimeline(opts: {
 interface RawGitlabDeployment {
   ref?: string | null;
   sha?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
   environment?: { external_url?: string | null } | null;
 }
 
@@ -1321,7 +1324,7 @@ export async function getLatestSuccessfulDeploymentUrl(opts: {
   number: number;
   branch?: string;
   sha: string;
-}): Promise<string | null> {
+}): Promise<DeploymentOutcome | null> {
   const deployments = await glJson<RawGitlabDeployment[]>(
     `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/deployments` +
       "?order_by=updated_at&sort=desc&status=success&per_page=100",
@@ -1339,7 +1342,17 @@ export async function getLatestSuccessfulDeploymentUrl(opts: {
       if (!value) continue;
       try {
         const url = new URL(value);
-        if (url.protocol === "https:" || url.protocol === "http:") return url.toString();
+        if (url.protocol === "https:" || url.protocol === "http:") {
+          // GitLab dates the deployment (created) and its success (updated):
+          // the gap is the time the environment took to settle.
+          const from = Date.parse(deployment.created_at ?? "");
+          const to = Date.parse(deployment.updated_at ?? "");
+          const durationMs =
+            Number.isFinite(from) && Number.isFinite(to) && to >= from
+              ? to - from
+              : null;
+          return { url: url.toString(), durationMs };
+        }
       } catch {
         // Keep looking: an older deployment for this ref can still be usable.
       }

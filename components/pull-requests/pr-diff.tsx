@@ -1073,11 +1073,9 @@ export function PrDiff({
         data-color-scheme={resolvedTheme}
         className={cn("pr-diff-view diff-selectable flex flex-col gap-2", className)}
       >
-        <div className="flex flex-col rounded-lg border border-border bg-muted/20">
-          {/* One line (MIN-548): the file count opens the tree, the review
-              mode follows, and the display switches sit at the far right.
-              Wrapping is allowed on very narrow screens, nothing more. */}
-          <div className="flex min-h-10 flex-wrap items-center gap-2 px-3 py-1.5">
+        {/* MIN-548: no container behind the toolbar — the controls read
+            directly in the page, like any other toolbar. */}
+        <div className="flex min-h-10 flex-wrap items-center gap-2">
             <PrFileTreeButton
               files={files}
               totalAdditions={totalAdd}
@@ -1112,7 +1110,6 @@ export function PrDiff({
                 ]}
               />
             </div>
-          </div>
         </div>
 
         <div className="flex flex-col gap-3">
