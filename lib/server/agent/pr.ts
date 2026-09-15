@@ -1677,6 +1677,28 @@ interface RawGithubDeploymentStatus {
   created_at?: string | null;
 }
 
+/** Commit status payload of a deployment provider (checks-core keeps the
+    shared one without dates; the card needs them to tick). */
+interface RawDeploymentSignal {
+  context?: string | null;
+  state?: string | null;
+  target_url?: string | null;
+  created_at?: string | null;
+}
+
+/** A commit status that BUILDS an environment rather than testing code:
+    Vercel, Netlify, Render, Amplify… providers publish their build as a
+    commit status instead of a GitHub Deployment (which they only stamp once
+    the environment is served). */
+function isDeploymentSignal(status: RawDeploymentSignal): boolean {
+  if (/^(vercel|netlify|deploy\b|deployment\b)/i.test(status.context ?? "")) {
+    return true;
+  }
+  return /(^|\.)(vercel\.app|vercel\.com|netlify\.app|netlify\.com|onrender\.com|amplifyapp\.com)/i.test(
+    status.target_url ?? "",
+  );
+}
+
 /** Only browser-safe deployment destinations cross the API boundary. */
 function httpDeploymentUrl(value: string | null | undefined): string | null {
   if (!value) return null;
@@ -1836,6 +1858,76 @@ export async function getPullRequestDeployment(opts: {
         durationMs: firstSuccess.durationMs ?? null,
       };
     }
+  }
+
+  // GitHub stamps its Deployment object only when the environment is DONE:
+  // the whole build of a Vercel-style provider happens WITHOUT any
+  // deployment to look at. Their commit STATUS is the live signal — a
+  // "Vercel · pending" exists from the first second — and it is what keeps
+  // the card from vanishing exactly while the environment is being built
+  // (MIN-548).
+  try {
+    const commitStatus = await ghJson<{ statuses?: RawDeploymentSignal[] }>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/status/${encodeURIComponent(opts.sha)}`,
+      opts.token,
+    );
+    const building = (commitStatus.statuses ?? []).find(
+      (status) => status.state === "pending" && isDeploymentSignal(status),
+    );
+    if (building) {
+      // The button, when an older deployment already serves, needs its
+      // destination: the walk over the LAST COMMITS of the PR finds the
+      // newest sha whose environment settled.
+      let servingUrl: string | null = null;
+      try {
+        // The endpoint is oldest-first and NOT sortable: page it wide and
+        // keep the tail — the recent shas are the end of the list.
+        const commits = await ghJson<{ sha?: string }[]>(
+          `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/commits?per_page=100`,
+          opts.token,
+        );
+        // The list is oldest-first: the RECENT shas sit at the end, the
+        // head itself is the build in flight.
+        for (const commit of commits.slice(-3).reverse().slice(1)) {
+          if (!commit.sha) continue;
+          const deployments = await ghJson<RawGithubDeployment[]>(
+            `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments` +
+              `?sha=${encodeURIComponent(commit.sha)}&per_page=10`,
+            opts.token,
+          );
+          const settled = deployments
+            .sort(
+              (a, b) =>
+                Date.parse(b.created_at ?? "") - Date.parse(a.created_at ?? ""),
+            )
+            .filter((deployment): deployment is RawGithubDeployment & { id: number } =>
+              Number.isInteger(deployment.id),
+            );
+          if (settled.length === 0) continue;
+          const [latest] = await ghJson<RawGithubDeploymentStatus[]>(
+            `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments/${settled[0].id}/statuses?per_page=1`,
+            opts.token,
+          );
+          const url =
+            httpDeploymentUrl(latest?.environment_url) ??
+            httpDeploymentUrl(latest?.target_url);
+          if (latest?.state === "success" && url) {
+            servingUrl = url;
+            break;
+          }
+        }
+      } catch {
+        // The button is an extra: without it, the card still says "running".
+      }
+      return {
+        status: "in_progress",
+        url: servingUrl,
+        startedAt: building.created_at ?? null,
+        durationMs: null,
+      };
+    }
+  } catch {
+    // The commit status read is an extra: deployments remain the main story.
   }
   return { status: "none", url: null, startedAt: null, durationMs: null };
 }

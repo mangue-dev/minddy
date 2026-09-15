@@ -243,4 +243,63 @@ describe("pull request deployment URLs", () => {
       }),
     ).resolves.toEqual({ status: "none", url: null, startedAt: null, durationMs: null });
   });
+
+  it("reads a building Vercel commit status when no GitHub deployment exists yet", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/issues/42/comments")) return json([]);
+      if (url.includes("sha=prev")) {
+        return json([{ id: 77, created_at: "2026-09-03T09:50:00Z" }]);
+      }
+      if (url.includes("sha=old")) {
+        return json([{ id: 79, created_at: "2026-09-03T09:40:00Z" }]);
+      }
+      if (url.includes("/deployments?")) return json([]);
+      if (url.includes("/pulls/42/commits")) {
+        return json([{ sha: "old" }, { sha: "prev" }, { sha: "head" }]);
+      }
+      if (url.includes("/deployments/77/statuses")) {
+        return json([
+          { state: "success", environment_url: "https://serving.example.com" },
+        ]);
+      }
+      if (url.includes("/deployments/78/statuses")) {
+        return json([{ state: "success", environment_url: null }]);
+      }
+      if (url.includes("/deployments/79/statuses")) {
+        return json([{ state: "success", environment_url: "https://older.example.com" }]);
+      }
+      if (url.includes("/status/head")) {
+        return json({
+          state: "pending",
+          statuses: [
+            { context: "ci/unit", state: "pending" },
+            {
+              context: "Vercel",
+              state: "pending",
+              target_url: "https://vercel.com/acme/app/build",
+              created_at: "2026-09-03T10:00:00Z",
+            },
+          ],
+        });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      getGithubDeploymentUrl({
+        token: "token",
+        repoFullName: "acme/app",
+        number: 42,
+        branch: "feature/preview",
+        sha: "head",
+      }),
+    ).resolves.toEqual({
+      status: "in_progress",
+      url: "https://serving.example.com/",
+      startedAt: "2026-09-03T10:00:00Z",
+      durationMs: null,
+    });
+  });
 });
