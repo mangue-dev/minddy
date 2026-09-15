@@ -1677,6 +1677,17 @@ interface RawGithubDeploymentStatus {
   created_at?: string | null;
 }
 
+/** The head commit, read only for its dates: the build clock starts at the
+    PUSH, not at the deployment object — several providers (Vercel first)
+    stamp that object only once the environment is already served, which
+    would date a build in 0 or 1 second. */
+interface RawGithubCommit {
+  commit?: {
+    committer?: { date?: string | null } | null;
+    author?: { date?: string | null } | null;
+  } | null;
+}
+
 /** Commit status payload of a deployment provider (checks-core keeps the
     shared one without dates; the card needs them to tick). */
 interface RawDeploymentSignal {
@@ -1766,7 +1777,12 @@ export async function getPullRequestDeployment(opts: {
   const vercelBranchOutcome = opts.branch
     ? await getVercelBranchPreviewUrl(opts)
     : null;
-  const walked = await walkGithubDeployments(opts, owner, repo);
+  // The push that produced the head is fetched ON DEMAND and at most once:
+  // only a story worth dating (running or settled) ever pays for it.
+  let pushAt: Promise<string | null> | null = null;
+  const resolvePushAt = () =>
+    (pushAt ??= headPushStartedAt(opts, owner, repo));
+  const walked = await walkGithubDeployments(opts, owner, repo, resolvePushAt);
 
   // The stable Vercel branch URL stays the destination — but the walk, not
   // the ready comment, tells the lifecycle and dates the settle: without it
@@ -1868,11 +1884,17 @@ export async function getPullRequestDeployment(opts: {
  * redeploy running on top of a live environment keeps its button pointing
  * at what serves now (MIN-548). Nothing found = "none"; the caller falls
  * back to the commit-status signal.
+ *
+ * The duration is measured from the PUSH, not from the deployment object:
+ * some providers stamp that object only when the environment is already
+ * served, which would date a real build in 0 or 1 second. `resolvePushAt`
+ * answers lazily — only a story worth dating ever reads the commit.
  */
 async function walkGithubDeployments(
   opts: { token: string; branch?: string; sha: string },
   owner: string,
   repo: string,
+  resolvePushAt: () => Promise<string | null>,
 ): Promise<DeploymentOutcome> {
   const references = [
     ...(opts.branch ? [{ parameter: "ref", value: opts.branch }] : []),
@@ -1907,15 +1929,23 @@ async function walkGithubDeployments(
             httpDeploymentUrl(latest.environment_url) ??
             httpDeploymentUrl(latest.target_url);
           // The time the environment took to settle: the status that declared
-          // success, dated from the deployment it concludes.
-          const from = Date.parse(deployment.created_at ?? "");
+          // success, dated from the PUSH that asked for it — the deployment
+          // object itself can be stamped late (Vercel), long after the build
+          // began. A deployment older than the push keeps its own date: it
+          // belongs to a previous build, not this push.
           const to = Date.parse(latest.created_at ?? "");
+          const pushed = Date.parse((await resolvePushAt()) ?? "");
+          const from = Date.parse(deployment.created_at ?? "");
+          const start =
+            Number.isFinite(pushed) && (!Number.isFinite(from) || pushed <= from)
+              ? pushed
+              : from;
           return {
             state: latest.state ?? null,
             url,
             durationMs:
-              Number.isFinite(from) && Number.isFinite(to) && to >= from
-                ? to - from
+              Number.isFinite(start) && Number.isFinite(to) && to >= start
+                ? to - start
                 : null,
           };
         } catch {
@@ -1942,7 +1972,9 @@ async function walkGithubDeployments(
         // The button points at the deployment that already SERVES — the
         // newest success — not at the one still building.
         url: firstSuccess?.url ?? null,
-        startedAt: newest[0]?.created_at ?? null,
+        // The clock starts at the push, not at a possibly-late stamp: the
+        // running timer must measure the build, not the paperwork.
+        startedAt: (await resolvePushAt()) ?? newest[0]?.created_at ?? null,
         durationMs: null,
       };
     }
@@ -1967,6 +1999,28 @@ async function walkGithubDeployments(
   }
 
   return { status: "none", url: null, startedAt: null, durationMs: null };
+}
+
+/** When the head was pushed: the committer date (the push), falling back to
+    the author date. `null` = unreadable, the card keeps the deployment
+    object's own dates. */
+async function headPushStartedAt(
+  opts: { token: string; sha: string },
+  owner: string,
+  repo: string,
+): Promise<string | null> {
+  try {
+    const commit = await ghJson<RawGithubCommit>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits/${encodeURIComponent(opts.sha)}`,
+      opts.token,
+    );
+    return (
+      commit.commit?.committer?.date ?? commit.commit?.author?.date ?? null
+    );
+  } catch {
+    // The push date is an extra: the deployment object remains the fallback.
+    return null;
+  }
 }
 
 /** The deployment story of a PR head, as the card tells it. */

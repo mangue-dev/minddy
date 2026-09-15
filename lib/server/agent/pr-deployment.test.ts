@@ -318,4 +318,82 @@ describe("pull request deployment URLs", () => {
       durationMs: null,
     });
   });
+
+  it("dates the settle from the push, not from a late deployment stamp", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/issues/42/comments")) return json([]);
+      // A provider that stamps the deployment object when the environment
+      // is ALREADY served: created_at ~ the settle, useless as a start.
+      if (url.includes("/deployments?ref=")) {
+        return json([{ id: 9, created_at: "2026-09-03T10:04:59Z" }]);
+      }
+      if (url.includes("/deployments/9/statuses")) {
+        return json([
+          {
+            state: "success",
+            environment_url: "https://ready.example.com",
+            created_at: "2026-09-03T10:05:00Z",
+          },
+        ]);
+      }
+      if (url.includes("/commits/head")) {
+        return json({
+          commit: { committer: { date: "2026-09-03T10:00:00Z" } },
+        });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      getGithubDeploymentUrl({
+        token: "token",
+        repoFullName: "acme/app",
+        number: 42,
+        branch: "feature/preview",
+        sha: "head",
+      }),
+    ).resolves.toEqual({
+      status: "success",
+      url: "https://ready.example.com/",
+      startedAt: null,
+      durationMs: 300_000,
+    });
+  });
+
+  it("ticks the running card from the push while the build runs", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/issues/42/comments")) return json([]);
+      if (url.includes("/deployments?ref=")) {
+        return json([{ id: 9, created_at: "2026-09-03T10:04:59Z" }]);
+      }
+      if (url.includes("/deployments/9/statuses")) {
+        return json([{ state: "in_progress" }]);
+      }
+      if (url.includes("/commits/head")) {
+        return json({
+          commit: { committer: { date: "2026-09-03T10:00:00Z" } },
+        });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      getGithubDeploymentUrl({
+        token: "token",
+        repoFullName: "acme/app",
+        number: 42,
+        branch: "feature/preview",
+        sha: "head",
+      }),
+    ).resolves.toEqual({
+      status: "in_progress",
+      url: null,
+      startedAt: "2026-09-03T10:00:00Z",
+      durationMs: null,
+    });
+  });
 });
