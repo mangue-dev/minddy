@@ -162,6 +162,7 @@ import {
 import { issueIdentifier } from "@/lib/issue-constants";
 import { isStatus, type IssueStatusValue } from "@/lib/issue-validation";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
+import { relaunchNumoWorkerRun } from "@/lib/server/numo/worker-mediation";
 import {
   AGENT_DELEGATION_AUTHORIZATIONS,
   AGENT_DELEGATION_SOURCE_KINDS,
@@ -1972,6 +1973,42 @@ export async function executeTool(
 
         // A fresh delegation opens a code conversation and branch. Explicit
         // follow-up lineage reuses the selected conversation and branch/PR.
+        // HOT RESTART: when the continuation targets one of THIS
+        // conversation's own delegated workers at rest, we resume that run in
+        // place instead of cold-launching a superseding one — same code
+        // conversation, same branch, same sandbox snapshot. Refusals fall
+        // through to the cold launch below, whose guards know how to answer
+        // merged PRs and non-lineage targets.
+        const continuationRunId =
+          typeof args.continuation_run_id === "string"
+            ? args.continuation_run_id.trim()
+            : "";
+        if (durableDelegation && continuationRunId && objective) {
+          const relaunch = await relaunchNumoWorkerRun({
+            conversationId: ctx.conversationId!,
+            userId: ctx.userId,
+            runId: continuationRunId,
+            message: objective,
+            parentTurnId: ctx.turnId!,
+            parentToolCallId: ctx.toolCallId!,
+          });
+          if (relaunch.ok) {
+            return {
+              result: {
+                launched: true,
+                resumed: true,
+                run_id: relaunch.run.id,
+                conversation_id: relaunch.run.conversation_id,
+                status: relaunch.run.status,
+                model: relaunch.run.model,
+                reasoning_level: relaunch.run.reasoning_level,
+                parent_turn_id: ctx.turnId,
+                contract_version: 1,
+              },
+              success: true,
+            };
+          }
+        }
         const result = await launchAgentRun({
           ...(pullRequestMode === "review"
             ? { pullRequestId }

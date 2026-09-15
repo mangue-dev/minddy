@@ -79,6 +79,12 @@ export type AgentRunStatus =
 export interface AgentRunSummary {
   id: string;
   status: AgentRunStatus;
+  /**
+   * Short conversation title written by the titler at launch
+   * (`agent_runs.title`). Optional: the light lists do not select it, and an
+   * empty title means the display cascade falls back to the issue's title.
+   */
+  title?: string | null;
   /** Server-derived because checkpoints are intentionally never client-visible. */
   resumable?: boolean;
   model: string | null;

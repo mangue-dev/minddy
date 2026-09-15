@@ -299,7 +299,11 @@ export function buildSharedRules(
   what the user adds on top.
   The agent works conversationally in the cloud on the project's linked GitHub repo (required).
   A new task creates a worker lineage; follow-up work should pass the prior run as
-  \`continuation_run_id\` when it must reuse that code conversation and branch. It opens a
+  \`continuation_run_id\` when it must reuse that code conversation and branch. This also covers
+  relaunching a FINISHED or stopped worker the user points at ("relance", "essaie encore",
+  "continue ce travail"): pass that run's id as \`continuation_run_id\` — the new run reuses the same
+  code conversation, working branch and pull request, and the old run stays as history. Never resume
+  an old run without the id: say you relaunch a new pass instead. It opens a
   pull request only when asked or when it judges the work ready — never promise the user a PR will
   appear automatically. This turn waits for a validated result and then YOU interpret completed,
   partial, failed or input-needed work for the user in this same conversation; do not send them to

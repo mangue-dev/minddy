@@ -16,7 +16,6 @@ import {
   GitPullRequest,
   Loader2,
   Package,
-  Sparkles,
 } from "lucide-react";
 import {
   Button,
@@ -29,9 +28,13 @@ import {
   cn,
 } from "mangue-ui";
 import { AgentDiffSheet } from "@/components/agent/agent-diff-sheet";
+import { ModelLogo } from "@/components/model-logo";
+import { NumoIcon } from "@/components/numo-icon";
 import {
   isAgentRunWorking,
 } from "@/lib/agent-api";
+import type { ReasoningLevel } from "@/lib/agent-reasoning";
+import { formatModelName } from "@/lib/model-display";
 import { settledAgentLocalDiff } from "@/lib/agent-local-diff";
 import {
   delegatedWorkHiddenQuestion,
@@ -99,6 +102,44 @@ const STATE_ICONS = {
   canceled: Ban,
 } satisfies Record<DelegatedWorkState, React.ComponentType<{ className?: string }>>;
 
+const REASONING_LABEL_KEYS = {
+  off: "reasoningOff",
+  minimal: "reasoningMinimal",
+  low: "reasoningLow",
+  medium: "reasoningMedium",
+  high: "reasoningHigh",
+  xhigh: "reasoningXhigh",
+  max: "reasoningMax",
+} as const satisfies Record<ReasoningLevel, string>;
+
+/**
+ * Same muted model line as the Numo composer trigger: provider logo, readable
+ * model name, reasoning level in muted — a plain label, NOT the select it
+ * sits inside above (no chevron).
+ */
+function NumoModelLine({
+  model,
+  reasoningLevel,
+  label,
+}: {
+  model: string | null | undefined;
+  reasoningLevel: ReasoningLevel | null | undefined;
+  label: string;
+}) {
+  if (!model) return null;
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1.5">
+      <ModelLogo model={model} size={13} />
+      <span className="truncate text-foreground/80">{formatModelName(model)}</span>
+      {reasoningLevel ? (
+        <span className="shrink-0 text-muted-foreground">
+          {label}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
   const t = useTranslations("Agent");
   const searchParams = useSearchParams();
@@ -111,8 +152,11 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
   const [diffFocus, setDiffFocus] = useState<string | null>(null);
   const state = delegatedWorkState(call, run);
   const StateIcon = STATE_ICONS[state];
-  const title = titleOf(call, t("delegatedWorkFallbackTitle"));
-  const { activityCount: progressCount, changedFileCount } = useMemo(
+  // The titler stamps a short `agent_runs.title` on the run at launch: prefer
+  // it over the raw launch prompt, which can run for paragraphs. Until it lands
+  // (or for old runs without one) the delegation arguments remain the fallback.
+  const title = (run?.title ?? "").trim() || titleOf(call, t("delegatedWorkFallbackTitle"));
+  const { changedFileCount } = useMemo(
     () => delegatedWorkProgress(events),
     [events],
   );
@@ -151,10 +195,7 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
         )}
         data-delegated-work-id={runId ?? call.id}
       >
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-            <Sparkles className="size-4" aria-hidden />
-          </span>
+        <div className="flex min-w-0 items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="line-clamp-2 text-sm font-medium leading-5">{title}</p>
             <div
@@ -178,9 +219,11 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
                 />
                 {t(`delegatedWorkState_${state}`)}
               </span>
-              {progressCount > 0 ? (
-                <span>{t("delegatedWorkActivityCount", { count: progressCount })}</span>
-              ) : null}
+              <NumoModelLine
+                model={run?.model}
+                reasoningLevel={run?.reasoning_level}
+                label={run?.reasoning_level ? t(REASONING_LABEL_KEYS[run.reasoning_level]) : ""}
+              />
               {changedFileCount > 0 ? (
                 <span>{t("filesChanged", { count: changedFileCount })}</span>
               ) : null}
@@ -194,6 +237,7 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
             disabled={!runId}
             onClick={() => setDetailsOpen(true)}
           >
+            <NumoIcon animated={false} className="size-4" />
             {t("delegatedWorkView")}
           </Button>
         </div>
@@ -261,16 +305,45 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
         <SidePanel open={detailsOpen} onOpenChange={setDetailsOpen}>
           <SidePanelContent
             side="right"
-            className="flex h-full w-[min(760px,calc(100vw-1rem))] flex-col"
+            // No `h-full`: on desktop the content is a floating panel docked
+            // with `inset-y-4`, and forcing a viewport-height height here made
+            // it extend past the bottom of the screen. The drawer mode (mobile)
+            // already caps its own height (max-h-[92dvh]).
+            className="flex w-[min(760px,calc(100vw-1rem))] flex-col"
           >
-            <SidePanelHeader>
-              <SidePanelTitle className="pr-8">{title}</SidePanelTitle>
-              <SidePanelDescription>
-                {t(`delegatedWorkState_${state}`)}
-                {progressCount > 0
-                  ? ` · ${t("delegatedWorkActivityCount", { count: progressCount })}`
-                  : ""}
-              </SidePanelDescription>
+            <SidePanelHeader className="border-b-0">
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <SidePanelTitle className="line-clamp-2 text-sm font-medium leading-5">
+                  {title}
+                </SidePanelTitle>
+                <SidePanelDescription className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1",
+                      state === "waiting_input" && "text-amber-700 dark:text-amber-400",
+                      state === "failed" && "text-destructive",
+                    )}
+                  >
+                    <StateIcon
+                      className={cn(
+                        "size-3.5",
+                        (state === "starting" || state === "queued" || state === "running") &&
+                          "animate-spin",
+                      )}
+                      aria-hidden
+                    />
+                    {t(`delegatedWorkState_${state}`)}
+                  </span>
+                  <NumoModelLine
+                    model={run?.model}
+                    reasoningLevel={run?.reasoning_level}
+                    label={run?.reasoning_level ? t(REASONING_LABEL_KEYS[run.reasoning_level]) : ""}
+                  />
+                  {changedFileCount > 0 ? (
+                    <span>{t("filesChanged", { count: changedFileCount })}</span>
+                  ) : null}
+                </SidePanelDescription>
+              </div>
             </SidePanelHeader>
             <SidePanelBody className="min-h-0 flex-1 p-0">
               <AgentEventFeed
