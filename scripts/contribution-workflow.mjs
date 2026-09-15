@@ -210,6 +210,7 @@ function startWork(args) {
 export function parsePullRequestArguments(args) {
   const titleParts = [];
   const bodyParts = [];
+  let replace = false;
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "-m" || arg === "--message") {
@@ -219,6 +220,14 @@ export function parsePullRequestArguments(args) {
       }
       bodyParts.push(value);
       index += 1;
+      continue;
+    }
+    if (arg === "--replace") {
+      // Deliberate overwrite of the title/description of an EXISTING pull
+      // request. Without it, later work:pr runs never rewrite what the
+      // creation wrote — a refreshed description once erased the full
+      // original text of a review (and that must not happen again).
+      replace = true;
       continue;
     }
     if (arg === "--") {
@@ -231,11 +240,11 @@ export function parsePullRequestArguments(args) {
   }
   const title = titleParts.join(" ").trim();
   const body = bodyParts.join("\n\n").trim();
-  return { title, body };
+  return { title, body, replace };
 }
 
 function publishPullRequest(args) {
-  const { title, body } = parsePullRequestArguments(args);
+  const { title, body, replace } = parsePullRequestArguments(args);
   ensureCleanWorkingTree();
   ensureGitHubCli();
   const branch = currentBranch();
@@ -279,11 +288,20 @@ function publishPullRequest(args) {
   );
   if (existingUrl) {
     if (title || body) {
+      // The title and description of a pull request belong to its creation:
+      // a later run only pushes the new commits, it never rewrites what the
+      // creation wrote. Overwriting must be a deliberate --replace.
+      if (!replace) {
+        throw new Error(
+          `A pull request already exists (${existingUrl}); its title and description are kept. ` +
+          "Pass --replace to overwrite them deliberately.",
+        );
+      }
       const editArgs = ["pr", "edit", branch];
       if (title) editArgs.push("--title", title);
       if (body) editArgs.push("--body", body);
       gh(editArgs);
-      console.log("Pull request description updated.");
+      console.log("Pull request title and description replaced (--replace).");
     }
     console.log(`\nPull request updated: ${existingUrl}`);
     return;
@@ -379,7 +397,9 @@ function printHelp() {
 
 Give the pull request a real title and a complete description with -m. Repeat
 -m for several paragraphs. Running work:pr without arguments falls back to
-filling the pull request from the commit messages.
+filling the pull request from the commit messages. On a pull request that
+already exists, the title and description are kept — pass --replace to
+overwrite them deliberately.
 
 Commit from the VS Code Source Control view. Workspace settings add the DCO
 sign-off automatically.`);

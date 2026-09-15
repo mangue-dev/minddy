@@ -296,9 +296,12 @@ apply them to another project.
 
 ### When the work is ready
 
-- Run `npm run work:pr -- "Short title" -m "Complete description"` to create or
-  refresh the pull request. The `-m` flag may be repeated for several
-  paragraphs.
+- Run `npm run work:pr -- "Short title" -m "Complete description"` to create
+  the pull request. The `-m` flag may be repeated for several paragraphs.
+- If the pull request already exists, the command pushes the new commits but
+  keeps its title and description: never retitle or rewrite the description
+  of an existing pull request. A deliberate rewrite needs the explicit
+  `--replace` flag of `work:pr` (or a manual `gh pr edit`).
 - After confirming the pull request is merged, run `npm run work:done`.
 - Run `npm run deploy` only when the user explicitly asks for a production
   deployment.

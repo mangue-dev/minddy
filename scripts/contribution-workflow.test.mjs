@@ -51,14 +51,22 @@ test("mainBackupName is stable and safe for a Git branch", () => {
 });
 
 test("parsePullRequestArguments collects the title and the -m paragraphs", () => {
-  assert.deepEqual(parsePullRequestArguments([]), { title: "", body: "" });
+  assert.deepEqual(parsePullRequestArguments([]), { title: "", body: "", replace: false });
   assert.deepEqual(
     parsePullRequestArguments(["Add change.txt", "-m", "What and why.", "-m", "How to review."]),
-    { title: "Add change.txt", body: "What and why.\n\nHow to review." },
+    {
+      title: "Add change.txt",
+      body: "What and why.\n\nHow to review.",
+      replace: false,
+    },
   );
   assert.deepEqual(
     parsePullRequestArguments(["-m", "Only a description."]),
-    { title: "", body: "Only a description." },
+    { title: "", body: "Only a description.", replace: false },
+  );
+  assert.deepEqual(
+    parsePullRequestArguments(["New title", "--replace"]),
+    { title: "New title", body: "", replace: true },
   );
   assert.throws(() => parsePullRequestArguments(["-m"]), /needs a description/u);
   assert.throws(() => parsePullRequestArguments(["--fill"]), /Unknown option: --fill/u);
@@ -213,6 +221,33 @@ process.exit(2);
         .trim()
         .length > 0,
       true,
+    );
+
+    // A later run never rewrites the title or description of the EXISTING
+    // pull request: without --replace the command refuses, with it the edit
+    // goes out deliberately.
+    const rewriteAttempt = spawnSync(
+      process.execPath,
+      [workflow, "pr", "New title", "-m", "New body."],
+      { cwd: repository, encoding: "utf8", env: { ...env, FAKE_GH_LOG: ghLog } },
+    );
+    assert.notEqual(rewriteAttempt.status, 0);
+    assert.match(rewriteAttempt.stderr, /already exists.*--replace/su);
+    assert.equal(readFileSync(ghLog, "utf8").slice(ghLogOffset), "");
+    run(
+      process.execPath,
+      [workflow, "pr", "New title", "-m", "New body.", "--replace"],
+      repository,
+      { ...env, FAKE_GH_LOG: ghLog },
+    );
+    const ghCallsAfterReplace = readFileSync(ghLog, "utf8")
+      .slice(ghLogOffset)
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    assert.deepEqual(
+      ghCallsAfterReplace.find((call) => call[1] === "edit"),
+      ["pr", "edit", "work/helpful-fix", "--title", "New title", "--body", "New body."],
     );
 
     const historicalDone = spawnSync(process.execPath, [workflow, "done"], {
