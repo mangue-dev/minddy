@@ -448,7 +448,7 @@ a.markdown-link::before {
    what's-new, skill preview, Numo/agent shells in expanded mode) read it, so
    they all follow the same curve. */
 :root {
-  --app-pane-radius: 14px;
+  --app-pane-radius: 16px;
 }
 
 @media (min-width: 768px) {
