@@ -3789,6 +3789,7 @@
     "review": "Revisar",
     "moreActions": "Ações de pull request",
     "viewDeployment": "Ver deploy",
+    "viewChecks": "Ver checks",
     "reviewApprove": "Aprovar",
     "reviewRequestChanges": "Solicitar alterações",
     "reviewComment": "Comentário",

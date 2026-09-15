@@ -129,6 +129,9 @@ interface PrStatusCard {
   iconKind: ReadinessBlocker["kind"];
   /** Whole-card click (checks popover, comments panel). */
   onSelect?: () => void;
+  /** Hover word of a card whose gesture is the card itself (the checks
+      popover): the content blurs and one word says what hovering opens. */
+  hoverLabel?: string;
   /** Hover overlay: blur the content, reveal one action button. */
   action?: {
     label: string;
@@ -297,6 +300,7 @@ function buildStatusCards(
         durationMs: null,
         avatars: null,
         iconKind: "checks",
+        hoverLabel: t("viewChecks"),
       });
     } else if (failed > 0) {
       pushCheck(cards, {
@@ -310,6 +314,7 @@ function buildStatusCards(
         durationMs,
         avatars: null,
         iconKind: "checks",
+        hoverLabel: t("viewChecks"),
       });
     } else {
       pushCheck(cards, {
@@ -321,6 +326,7 @@ function buildStatusCards(
         durationMs,
         avatars: null,
         iconKind: "checks",
+        hoverLabel: t("viewChecks"),
       });
     }
   }
@@ -585,8 +591,39 @@ function buildStatusCards(
   return cards;
 }
 
-function blockerIcon(kind: ReadinessBlocker["kind"]) {
-  switch (kind) {
+/** Hover over a one-gesture card: the content blurs away and one word takes
+    the center. The card itself is the button — there is no separate control
+    inside it to hunt for. */
+function HoverWordOverlay({
+  card,
+  word,
+  children,
+}: {
+  card: PrStatusCard;
+  word: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="group relative flex h-full min-w-0 flex-col">
+      <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px]">
+        {children}
+      </div>
+      <div className="absolute inset-0 grid place-items-center px-3 text-center opacity-0 transition duration-150 group-hover:opacity-100">
+        <span
+          className={cn(
+            "text-sm font-medium",
+            TONE_TITLE[card.tone],
+            card.action?.disabled && "opacity-50",
+          )}
+        >
+          {word}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function blockerIcon(kind: ReadinessBlocker["kind"]) {  switch (kind) {
     case "draft":
       return <GitPullRequestDraft />;
     case "review_requested":
@@ -714,22 +751,15 @@ function PrStatusCardView({
         // Hover reveals the quick fix: the card content blurs away and the
         // action's WORD takes the center. The card itself is the button —
         // there is no separate control inside it to hunt for.
-        <div className="group relative flex h-full min-w-0 flex-col">
-          <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px]">
-            {body}
-          </div>
-          <div className="absolute inset-0 grid place-items-center px-3 text-center opacity-0 transition duration-150 group-hover:opacity-100">
-            <span
-              className={cn(
-                "text-sm font-medium",
-                TONE_TITLE[card.tone],
-                card.action.disabled && "opacity-50",
-              )}
-            >
-              {card.action.label}
-            </span>
-          </div>
-        </div>
+        <HoverWordOverlay card={card} word={card.action.label}>
+          {body}
+        </HoverWordOverlay>
+      ) : card.hoverLabel ? (
+        // The checks card opens its popover from the whole surface, so the
+        // word here is pure decoration — clicking it still opens the list.
+        <HoverWordOverlay card={card} word={card.hoverLabel}>
+          {body}
+        </HoverWordOverlay>
       ) : (
         body
       )}
