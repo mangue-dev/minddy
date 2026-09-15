@@ -240,6 +240,36 @@ function buildStatusCards(
   };
   const busy = props.acting !== null;
 
+  // ── Fix ─────────────────────────────────────────────────────────────────
+  // A failing PR gets ONE dedicated gesture, and it comes FIRST (MIN-548
+  // review): the way out leads the list. On hover the card splits in two —
+  // copy the fix prompt on top, hand the PR to Numo below.
+  if (props.fix) {
+    push({
+      id: "fix",
+      tone: "danger",
+      title: t("cardFix"),
+      durationMs: null,
+      startedAt: null,
+      donutParts: null,
+      avatars: null,
+      iconKind: "checks",
+      actions: {
+        top: {
+          label: t("cardFixCopyPrompt"),
+          onClick: props.fix.onCopy,
+          testId: "pr-card-fix-copy",
+        },
+        bottom: {
+          label: t("cardFixLaunchNumo"),
+          onClick: props.fix.onLaunch,
+          disabled: !props.fix.canLaunch,
+          testId: "pr-card-fix-launch",
+        },
+      },
+    });
+  }
+
   // ── Checks ──────────────────────────────────────────────────────────────
   // The checks tell one story in three readings: still running (orange),
   // failed (red), all passed (green). The donut shows every check as one
@@ -331,37 +361,6 @@ function buildStatusCards(
         label: t("viewDeployment"),
         onClick: () => window.open(deployment.url as string, "_blank", "noreferrer"),
         testId: "pr-card-view-deployment",
-      },
-    });
-  }
-
-  // ── Fix ─────────────────────────────────────────────────────────────────
-  // A failing PR gets one dedicated gesture (MIN-548 review): on hover the
-  // card splits in two — copy the fix prompt on top, hand the PR to Numo
-  // below. The card is a GESTURE, not a verdict: the red cards next to it
-  // already say what is wrong.
-  if (props.fix) {
-    push({
-      id: "fix",
-      tone: "neutral",
-      title: t("cardFix"),
-      durationMs: null,
-      startedAt: null,
-      donutParts: null,
-      avatars: null,
-      iconKind: "checks",
-      actions: {
-        top: {
-          label: t("cardFixCopyPrompt"),
-          onClick: props.fix.onCopy,
-          testId: "pr-card-fix-copy",
-        },
-        bottom: {
-          label: t("cardFixLaunchNumo"),
-          onClick: props.fix.onLaunch,
-          disabled: !props.fix.canLaunch,
-          testId: "pr-card-fix-launch",
-        },
       },
     });
   }
@@ -669,47 +668,47 @@ function PrStatusCardView({
     </>
   );
 
-  const inner = (
+  // The split card carries NO padding: the whole top half is the copy
+  // gesture, the whole bottom half is Numo, edge to edge — only the
+  // separating hairline between them (MIN-548 review).
+  const inner = card.actions ? (
+    <div className="group relative flex h-24 min-w-0 flex-col">
+      <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 p-3 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px]">
+        {body}
+      </div>
+      <div className="pointer-events-none absolute inset-0 flex flex-col opacity-0 transition duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+        <button
+          type="button"
+          data-testid={card.actions.top.testId}
+          onClick={card.actions.top.onClick}
+          className={cn(
+            "flex min-h-0 flex-1 items-center justify-center rounded-t-xl text-sm font-medium outline-none",
+            TONE_TITLE[card.tone],
+            "hover:bg-muted/50 focus-visible:bg-muted/50",
+          )}
+        >
+          {card.actions.top.label}
+        </button>
+        <div className="h-px shrink-0 bg-border" />
+        <button
+          type="button"
+          data-testid={card.actions.bottom.testId}
+          onClick={card.actions.bottom.onClick}
+          disabled={card.actions.bottom.disabled}
+          className={cn(
+            "flex min-h-0 flex-1 items-center justify-center rounded-b-xl text-sm font-medium outline-none",
+            TONE_TITLE[card.tone],
+            card.actions.bottom.disabled && "opacity-50",
+            "hover:bg-muted/50 focus-visible:bg-muted/50",
+          )}
+        >
+          {card.actions.bottom.label}
+        </button>
+      </div>
+    </div>
+  ) : (
     <div className="flex h-24 min-w-0 flex-col gap-2.5 p-3">
-      {card.actions ? (
-        // Hover splits the card in two: the content blurs away and the two
-        // halves of the fix gesture take over — one option on top, one
-        // below, separated by the card's own edge (MIN-548 review).
-        <div className="group relative flex h-full min-w-0 flex-col">
-          <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px]">
-            {body}
-          </div>
-          <div className="pointer-events-none absolute inset-0 flex flex-col opacity-0 transition duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
-            <button
-              type="button"
-              data-testid={card.actions.top.testId}
-              onClick={card.actions.top.onClick}
-              className={cn(
-                "flex min-h-0 flex-1 items-center justify-center rounded-t-xl text-sm font-medium outline-none",
-                TONE_TITLE[card.tone],
-                "hover:bg-muted/50 focus-visible:bg-muted/50",
-              )}
-            >
-              {card.actions.top.label}
-            </button>
-            <div className="h-px shrink-0 bg-border" />
-            <button
-              type="button"
-              data-testid={card.actions.bottom.testId}
-              onClick={card.actions.bottom.onClick}
-              disabled={card.actions.bottom.disabled}
-              className={cn(
-                "flex min-h-0 flex-1 items-center justify-center rounded-b-xl text-sm font-medium outline-none",
-                TONE_TITLE[card.tone],
-                card.actions.bottom.disabled && "opacity-50",
-                "hover:bg-muted/50 focus-visible:bg-muted/50",
-              )}
-            >
-              {card.actions.bottom.label}
-            </button>
-          </div>
-        </div>
-      ) : card.action ? (
+      {card.action ? (
         // Hover reveals the quick fix: the card content blurs away and the
         // action's WORD takes the center. The card itself is the button —
         // there is no separate control inside it to hunt for.
