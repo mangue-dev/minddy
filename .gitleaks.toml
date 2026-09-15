@@ -67,6 +67,7 @@ paths = [
   '''(?:^|/)scripts/(?:agent-runner-git-relay|release-security-policy)\.test\.mjs$''',
   '''(?:^|/)lib/(?:commit-authors|display-name|export/issues-csv|import/import|mention-scan(?:-forge)?|pr-numo-mention|signup-wizard)\.test\.ts$''',
   '''(?:^|/)lib/(?:display-name|mention-scan|server/import-mapping-ai)\.ts$''',
+  '''(?:^|/)lib/server/assistant/pull-request-writes\.test\.ts$''',
   '''(?:^|/)lib/desktop/(?:git-config\.git|local-repo|local-turn|wns)\.test\.ts$''',
   '''(?:^|/)lib/server/(?:admin|feedback/public-surface|git/forge-provider)\.test\.ts$''',
   '''(?:^|/)lib/server/agent/(?:local-turn-route|pr-clone|pr-landing-authority|repo-clone-history|sandbox-push)\.test\.ts$''',
