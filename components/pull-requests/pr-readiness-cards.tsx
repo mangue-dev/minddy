@@ -30,13 +30,11 @@ import {
   GitBranch,
   GitMerge,
   GitPullRequestDraft,
-  RotateCcw,
   ShieldAlert,
   UserRoundCheck,
   Wrench,
 } from "lucide-react";
 import {
-  Button,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -46,11 +44,9 @@ import {
 import { CheckLogo } from "@/components/pull-requests/pr-check-logo";
 import { NumoIcon } from "@/components/numo-icon";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
-import { AppTooltip } from "@/components/ui/app-tooltip";
 import type {
   CheckState,
   ChecksSummary,
-  PullRequestCheck,
 } from "@/lib/agent-api";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { PullRequestFeedbackThread } from "@/lib/pr-unresolved-conversations";
@@ -92,6 +88,16 @@ const CHECK_ROW_BG: Record<CheckState, string> = {
   pending: "bg-amber-500/10",
   failure: "bg-red-500/10",
   neutral: "bg-muted/50",
+};
+
+/** Name and timer of a check row, a shade more saturated than its row
+    background — the same grammar as the merge-state popover rows. The
+    description below stays muted. */
+const CHECK_ROW_TEXT: Record<CheckState, string> = {
+  success: "text-emerald-700 dark:text-emerald-400",
+  pending: "text-amber-700 dark:text-amber-400",
+  failure: "text-destructive",
+  neutral: "text-foreground",
 };
 
 /** “42 s”, “3 min 7 s”. `null` when the forge does not date the run. */
@@ -165,7 +171,6 @@ interface PrStatusCardsProps {
   onOpenConversations: () => void;
   onOpenReviewApprove: () => void;
   onStartFileReview: () => void;
-  onRerunCheck: (check: PullRequestCheck) => void;
   numoReview: PrNumoReviewCardSpec | null;
   onRequestReview: () => void;
   /** The fix gesture of a failing PR (MIN-548 review): copy the prompt, or
@@ -212,7 +217,6 @@ export function PrStatusCards(props: PrStatusCardsProps) {
           now={now}
           checks={checksCard ? props.checks : null}
           provider={props.provider}
-          onRerunCheck={props.onRerunCheck}
         />
       ))}
     </div>
@@ -608,13 +612,11 @@ function PrStatusCardView({
   now,
   checks,
   provider,
-  onRerunCheck,
 }: {
   card: PrStatusCard;
   now: Date;
   checks: ChecksSummary | null;
   provider: RepoProviderId;
-  onRerunCheck: (check: PullRequestCheck) => void;
 }) {
   const t = useTranslations("PullRequests");
   const body = (
@@ -739,12 +741,7 @@ function PrStatusCardView({
   // activates, the cursor points, the hover word is decoration.
   if (checks) {
     return (
-      <ChecksPopoverCard
-        checks={checks}
-        provider={provider}
-        onRerunCheck={onRerunCheck}
-        tone={card.tone}
-      >
+      <ChecksPopoverCard checks={checks} provider={provider} tone={card.tone}>
         {inner}
       </ChecksPopoverCard>
     );
@@ -787,13 +784,11 @@ function PrStatusCardView({
 function ChecksPopoverCard({
   checks,
   provider,
-  onRerunCheck,
   tone,
   children,
 }: {
   checks: ChecksSummary;
   provider: RepoProviderId;
-  onRerunCheck: (check: PullRequestCheck) => void;
   tone: PrStatusCardTone;
   children: ReactNode;
 }) {
@@ -836,7 +831,12 @@ function ChecksPopoverCard({
                 provider={provider}
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-medium leading-4">
+                <p
+                  className={cn(
+                    "truncate text-[13px] font-medium leading-4",
+                    CHECK_ROW_TEXT[check.state],
+                  )}
+                >
                   {check.name}
                 </p>
                 {check.description ? (
@@ -846,30 +846,26 @@ function ChecksPopoverCard({
                 ) : null}
               </div>
               {check.state === "pending" && check.startedAt ? (
-                <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+                <span
+                  className={cn(
+                    "shrink-0 font-mono text-xs tabular-nums",
+                    CHECK_ROW_TEXT[check.state],
+                  )}
+                >
                   {formatRunDuration(
                     t,
                     Math.max(now.getTime() - Date.parse(check.startedAt), 0),
                   )}
                 </span>
               ) : check.durationMs != null ? (
-                <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+                <span
+                  className={cn(
+                    "shrink-0 font-mono text-xs tabular-nums",
+                    CHECK_ROW_TEXT[check.state],
+                  )}
+                >
                   {formatRunDuration(t, check.durationMs)}
                 </span>
-              ) : null}
-              {check.state === "failure" && check.rerunRef ? (
-                <AppTooltip label={t("blockerActionRerun")}>
-                  <Button
-                    data-testid="pr-check-rerun"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="size-6 shrink-0"
-                    aria-label={t("blockerActionRerun")}
-                    onClick={() => onRerunCheck(check)}
-                  >
-                    <RotateCcw className="size-3.5" />
-                  </Button>
-                </AppTooltip>
               ) : null}
             </li>
           ))}

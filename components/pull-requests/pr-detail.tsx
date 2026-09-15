@@ -94,7 +94,6 @@ import {
   prEndpoint,
   submitPullRequestReviewApi,
   updatePullRequestCommentApi,
-  type PullRequestCheck,
   type MergeMethod,
   type PullRequestComment,
   type PullRequestCommentEdit,
@@ -1105,22 +1104,6 @@ export function PrDetail({
     }
   };
 
-  const handleRerunCheck = async (check: PullRequestCheck) => {
-    if (!check.rerunRef || maintenanceAction) return;
-    setMaintenanceAction("rerun_checks");
-    try {
-      await maintainPullRequestApi(item.prId, "rerun_check", {
-        rerunRef: check.rerunRef,
-      });
-      toast.success(t("checksRerunToast"));
-      await refetchPr();
-    } catch (error) {
-      toast.error((error as Error).message);
-    } finally {
-      setMaintenanceAction(null);
-    }
-  };
-
   const saveTitle = async () => {
     const title = titleDraft.trim();
     if (!title || maintenanceAction) return;
@@ -1979,7 +1962,6 @@ export function PrDetail({
             onOpenConversations={() => setUnresolvedSidebarOpen(true)}
             onOpenReviewApprove={() => openReview("approve")}
             onStartFileReview={startFileReview}
-            onRerunCheck={(check) => void handleRerunCheck(check)}
             numoReview={numoReviewCard}
             onRequestReview={openAiReviewDialog}
             fix={fixCard}
