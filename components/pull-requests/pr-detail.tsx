@@ -4,10 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
-  Badge,
   Button,
-  Checkbox,
-  Dialog,
+  Checkbox,  Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -28,10 +26,11 @@ import {
   toast,
 } from "mangue-ui";
 import {
+  ArrowLeft,
   Check,
   ChevronDown,
   ChevronLeft,
-  ChevronRight,
+  Copy,
   Eye,
   ExternalLink,
   GitPullRequest,
@@ -44,7 +43,6 @@ import {
   RotateCcw,
   X,
 } from "lucide-react";
-import { Github, Gitlab } from "@/components/git/provider-icons";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import Link from "next/link";
 import { AppContentHeader } from "@/components/app-content-header";
@@ -68,13 +66,11 @@ import {
   useCommentReactions,
   type CommentReactions,
 } from "@/components/pull-requests/pr-review-comments";
-import {
-  PrReviewRequestedCallout,
-  PrReviewCard,
-} from "@/components/pull-requests/pr-review-thread";
+import { PrReviewCard } from "@/components/pull-requests/pr-review-thread";
 import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-timeline";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { PrReadinessBadge, PrReadinessControl } from "@/components/pull-requests/pr-readiness";
+import { PrStatusCards } from "@/components/pull-requests/pr-readiness-cards";
 import { PrUnresolvedConversations } from "@/components/pull-requests/pr-unresolved-conversations";
 import { PrViewerCallout } from "@/components/pull-requests/pr-viewer-callout";
 import { FormDialog } from "@/components/form-dialog";
@@ -98,8 +94,7 @@ import {
   postPullRequestCommentApi,
   prEndpoint,
   submitPullRequestReviewApi,
-  type ChecksSummary,
-  type CheckState,
+  type PullRequestCheck,
   type MergeMethod,
   type PullRequestComment,
   type PullRequestCommit,
@@ -109,7 +104,6 @@ import {
 } from "@/lib/agent-api";
 import {
   blockReadinessForRequestedReview,
-  blockerFallbackUrl,
   type ReadinessAction,
   type ReadinessBlocker,
 } from "@/lib/pr-readiness";
@@ -143,10 +137,9 @@ import {
   buildPullRequestFeedbackPrompt,
   unresolvedReviewThreads,
 } from "@/lib/pr-unresolved-conversations";
-import type { MessageKey } from "@/lib/i18n-keys";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import type { AssistantPageContext } from "@/lib/assistant-types";
-import { parseForgeLogin, prIdentifier, type RepoProviderId } from "@/lib/repo-providers";
+import { parseForgeLogin, prIdentifier } from "@/lib/repo-providers";
 import {
   Tooltip,
   TooltipContent,
@@ -165,203 +158,50 @@ import {
  * “Fix feedback” may start from the current PR head even when Numo did not create it.
  */
 
-/** Status badge of a check. `pending` pulse: this is the only state that moves. */
-function CheckDot({ state, className }: { state: CheckState; className?: string }) {
-  return (
-    <span
-      className={cn(
-        "size-2 shrink-0 rounded-full",
-        state === "success" && "bg-emerald-500",
-        state === "failure" && "bg-destructive",
-        state === "pending" && "animate-pulse bg-amber-500",
-        state === "neutral" && "bg-muted-foreground/50",
-        className,
-      )}
-    />
-  );
-}
-
 /**
- * Logo of the integration that produced the check — GitHub serves the REAL logo of
- * each App (Vercel, Socket Security, GitHub Actions, etc.), this is what we display
- * rather than a generic icon. Fallback is the icon of the forge: at GitLab
- * the CI is GitLab, and there is no other logo to show.
- *
- * Neutral background behind the image: many of these logos are transparent and
- * monochrome — without it, a black logo disappears in a dark theme.
+ * Copy pill for the head branch, next to the branch code: the branch name
+ * is the fastest way to check out the PR locally, and it is never typed
+ * twice by hand. Same feedback loop as the SHA button of the commits tab —
+ * copy, then the icon flips to a check.
  */
-function CheckLogo({ url, provider }: { url: string | null; provider: RepoProviderId }) {
-  if (url) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={url}
-        alt=""
-        className="size-5 shrink-0 rounded-[4px] bg-muted object-cover"
-      />
-    );
-  }
-  const Icon = provider === "gitlab" ? Gitlab : Github;
-  return (
-    <Icon className="size-5 shrink-0 rounded-[4px] bg-muted p-0.5 text-muted-foreground" />
-  );
-}
-
-/** “42 s”, “3 min 7 s”. `null` when the forge does not date the check. */
-function checkDuration(
-  t: ReturnType<typeof useTranslations<"PullRequests">>,
-  durationMs: number | null,
-): string | null {
-  if (durationMs == null || !Number.isFinite(durationMs) || durationMs < 0) return null;
-  const seconds = Math.round(durationMs / 1000);
-  return seconds < 60
-    ? t("checkDurationSeconds", { seconds })
-    : t("checkDurationMinutes", {
-        minutes: Math.floor(seconds / 60),
-        seconds: seconds % 60,
-      });
-}
-
-/** The word of the state, for the checks of which the forge says nothing more. */
-const CHECK_STATE_KEY: Record<CheckState, MessageKey<"PullRequests">> = {
-  success: "checkStateSuccess",
-  failure: "checkStateFailure",
-  pending: "checkStatePending",
-  neutral: "checkStateNeutral",
-};
-
-/**
- * CI check strip. Folded it fits in one line (“3/4 successful”); unfolded
- * it lists each check as GitHub does: the integration logo, the name
- * of the check, what the forge says about the result, its duration, and the link to the forge.
- *
- * Three different “no checks”, and they don’t say the same:
- * `error` = we could not read (permission of the GitHub App not accepted by
- * installation), `total === 0` = this repository has no CI, and the normal case.
- */
-function ChecksBanner({
-  checks,
-  error,
-  provider,
-  loading,
-}: {
-  checks: ChecksSummary | null;
-  error: "forbidden" | "unknown" | null;
-  provider: RepoProviderId;
-  loading: boolean;
-}) {
+function CopyBranchButton({ value }: { value: string }) {
   const t = useTranslations("PullRequests");
-  const [open, setOpen] = useState(false);
-  const now = useNow({ updateInterval: 1_000 });
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  if (loading) return <p className="text-xs text-muted-foreground">{t("checksLoading")}</p>;
-  if (error) {
-    return (
-      <p className="text-xs text-muted-foreground">
-        {t(error === "forbidden" ? "checksForbidden" : "checksUnknown")}
-      </p>
-    );
-  }
-  if (!checks) return <p className="text-xs text-muted-foreground">{t("checksUnknown")}</p>;
-  if (checks.total === 0) {
-    return <p className="text-xs text-muted-foreground">{t("checksNone")}</p>;
-  }
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
 
-  const label =
-    checks.state === "failure"
-      ? t("checksFailing", { passing: checks.passing, total: checks.total })
-      : checks.state === "pending"
-        ? t("checksPending", { passing: checks.passing, total: checks.total })
-        : t("checksPassing", { total: checks.total });
-  const totalDuration = checks.startedAt
-    ? checkDuration(
-        t,
-        Math.max(
-          0,
-          (checks.completedAt ? Date.parse(checks.completedAt) : now.getTime()) -
-            Date.parse(checks.startedAt),
-        ),
-      )
-    : null;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopied(false), 2_000);
+    } catch {
+      toast.error(t("copyFailed"));
+    }
+  };
 
   return (
-    <div data-testid="pr-checks" className="rounded-lg border border-border bg-card">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left outline-none"
-      >
-        <CheckDot state={checks.state ?? "neutral"} />
-        <span className="text-sm font-medium">{label}</span>
-        {totalDuration ? (
-          <span className="ml-auto text-xs tabular-nums text-muted-foreground">{totalDuration}</span>
-        ) : null}
-        {open ? <ChevronDown className="size-4 text-muted-foreground" /> : <ChevronRight className="size-4 text-muted-foreground" />}
-      </button>
-      {open ? (
-        <ul className="flex flex-col divide-y divide-border border-t border-border">
-          {checks.checks.map((c) => {
-            const duration = checkDuration(
-              t,
-              c.state === "pending" && c.startedAt
-                ? Math.max(0, now.getTime() - Date.parse(c.startedAt))
-                : c.durationMs,
-            );
-            // What the forge says about the result, otherwise the status word: “Failed”
-            // only a second empty line under the name remains more useful.
-            const detail = [c.appName, c.description ?? t(CHECK_STATE_KEY[c.state])]
-              .filter(Boolean)
-              .join(" · ");
-            return (
-              <li
-                key={c.name}
-                data-testid="pr-check"
-                data-required={c.required == null ? "unknown" : String(c.required)}
-                className="flex items-center gap-2.5 px-3.5 py-2.5"
-              >
-                <CheckDot state={c.state} />
-                <CheckLogo url={c.appAvatarUrl} provider={provider} />
-                <div className="min-w-0 flex-1">
-                  <p className="flex min-w-0 items-center gap-1.5 text-sm">
-                    <span className="truncate">{c.name}</span>
-                    {c.required !== false ? (
-                      <Badge
-                        data-testid="pr-check-requirement"
-                        variant="secondary"
-                        className="h-4 shrink-0 px-1.5 text-[9px]"
-                      >
-                        {t(
-                          c.required === true
-                            ? "checkRequired"
-                            : "checkRequirednessUnknown",
-                        )}
-                      </Badge>
-                    ) : null}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">{detail}</p>
-                </div>
-                {duration ? (
-                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                    {duration}
-                  </span>
-                ) : null}
-                {c.url ? (
-                  <a
-                    href={c.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex shrink-0 items-center gap-1 text-xs text-brand hover:underline"
-                  >
-                    {t("checkDetails")}
-                    <ExternalLink className="size-3" />
-                  </a>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-    </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          data-testid="pr-copy-head-branch"
+          variant="ghost"
+          size="icon-sm"
+          className="size-6 text-muted-foreground"
+          aria-label={t("copyBranch")}
+          onClick={() => void copy()}
+        >
+          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top">{t("copyBranch")}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -575,7 +415,6 @@ export function PrDetail({
     pr,
     files,
     checks,
-    checksError,
     deploymentUrl,
     viewer,
     mergePolicy,
@@ -925,6 +764,22 @@ export function PrDetail({
     }
   };
 
+  const handleRerunCheck = async (check: PullRequestCheck) => {
+    if (!check.rerunRef || maintenanceAction) return;
+    setMaintenanceAction("rerun_checks");
+    try {
+      await maintainPullRequestApi(item.prId, "rerun_check", {
+        rerunRef: check.rerunRef,
+      });
+      toast.success(t("checksRerunToast"));
+      await refetchPr();
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setMaintenanceAction(null);
+    }
+  };
+
   const saveTitle = async () => {
     const title = titleDraft.trim();
     if (!title || maintenanceAction) return;
@@ -1202,43 +1057,13 @@ export function PrDetail({
   const author = pr?.user ?? item.author;
 
   /**
-   * “X wants to merge 3 commits into main from routine/audit” — the line that
-   * GitHub poses under the title, and the only one that says BOTH branches: so far
-   * minddy didn't display them anywhere, even though that's what answers "it's leaving
-   * where, where does it come from? » before merging.
-   *
-   * The commit count comes from the forge when it serves it (GitHub puts it in
-   * the GET of a PR); otherwise — GitLab — from the commit list already loaded for
-   * its tab, and only if it is ENTIRE: a truncated list would announce
-   * a false figure, and it is better to keep silent about the sentence than to lie about its figure.
-   *
-   * The subject is the name of the agent on a Numo PR: the forge account there
-   * is the GitHub App bot, which minddy never shows (identity rule).
+   * The merge line reads left to right: the base branch the PR lands in,
+   * the diff it carries, the head branch it comes from. GitHub poses the
+   * same reading under the title; the branches render in code pills so a
+   * `work/min-542-something` never reads like prose.
    */
-  const commitCount =
-    pr?.commitCount ?? (commitsTruncated || commits.length === 0 ? null : commits.length);
-  const mergeSummary: React.ReactNode =
-    pr?.base && pr?.head && commitCount !== null && (item.runId || author)
-      ? t.rich(item.pr_state === "merged" ? "mergedCommits" : "wantsToMerge", {
-          login: item.runId ? t("numoAuthor") : parseForgeLogin(author?.login ?? "").name,
-          count: commitCount,
-          base: pr.base,
-          head: pr.head,
-          author: (chunks) => (
-            <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
-              {chunks}
-              {/* The forge account is a bot, and it's not Numo: the
-                  pellet lands on the NAME, like everywhere else. */}
-              {!item.runId && author && parseForgeLogin(author.login).isBot ? <BotBadge /> : null}
-            </span>
-          ),
-          branch: (chunks) => (
-            <span className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
-              {chunks}
-            </span>
-          ),
-        })
-      : null;
+  const baseBranch = pr?.base ?? null;
+  const headBranch = pr?.head ?? item.head_branch ?? null;
 
   // GitHub body of the PR, without the auto suffix “🤖 Generated by agent numo…”
   // (redundant with the “Generated by Numo” badge).
@@ -1394,12 +1219,6 @@ export function PrDetail({
             </span>
           )}
         </span>
-        {/* As long as the PR is ALIVE, its status is read on the left, against
-            the identifier: the right belongs to the actions, which are what we
-            look for. Completed (merged, closed), it's the opposite — the state BECOMES
-            the news, and it will take the place of the actions, at the end of the
-            line (see the right cluster below). */}
-        {!isTerminal ? <PrStateBadge state={badgeState} icon /> : null}
         {isWorking ? (
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <Spinner />
@@ -1414,33 +1233,43 @@ export function PrDetail({
           // merged (nothing before it) as closed (the button before it): it is
           // always in the same place that we read what became of her.
           <div className="ml-auto flex items-center gap-1.5">
-            {deploymentUrl ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    data-testid="pr-more-actions"
-                    variant="outline"
-                    size="icon-sm"
-                    aria-label={t("moreActions")}
-                  >
-                    <MoreHorizontal />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  data-testid="pr-more-actions"
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label={t("moreActions")}
+                >
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {forgeUrl ? (
                   <DropdownMenuItem asChild>
                     <a
-                      data-testid="pr-action-view-deployment"
-                      href={deploymentUrl}
+                      href={forgeUrl}
                       target="_blank"
                       rel="noreferrer"
                     >
                       <ExternalLink />
-                      {t("viewDeployment")}
+                      {t(item.provider === "gitlab" ? "openOnGitlab" : "openOnGithub")}
                     </a>
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : null}
+                ) : null}
+                {canWrite ? (
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setTitleDraft(pr?.title ?? item.title ?? "");
+                      setEditingTitle(true);
+                    }}
+                  >
+                    <Pencil />
+                    {t("renamePr")}
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
             {canReopen ? (
               <Button
                 variant="outline"
@@ -1559,33 +1388,36 @@ export function PrDetail({
                   data-testid="pr-more-actions"
                   variant="outline"
                   size="icon-sm"
-                  className={
-                    !deploymentUrl && (isDraft || !canWrite) ? "2xl:hidden" : undefined
-                  }
                   aria-label={t("moreActions")}
                 >
                   {aiReviewActive ? <Spinner /> : <MoreHorizontal />}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {deploymentUrl ? (
+                {forgeUrl ? (
                   <DropdownMenuItem asChild>
                     <a
-                      data-testid="pr-action-view-deployment"
-                      href={deploymentUrl}
+                      href={forgeUrl}
                       target="_blank"
                       rel="noreferrer"
                     >
                       <ExternalLink />
-                      {t("viewDeployment")}
+                      {t(item.provider === "gitlab" ? "openOnGitlab" : "openOnGithub")}
                     </a>
                   </DropdownMenuItem>
                 ) : null}
-                {deploymentUrl ? (
-                  <DropdownMenuSeparator
-                    className={canWrite && !isDraft ? undefined : "2xl:hidden"}
-                  />
+                {canWrite ? (
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setTitleDraft(pr?.title ?? item.title ?? "");
+                      setEditingTitle(true);
+                    }}
+                  >
+                    <Pencil />
+                    {t("renamePr")}
+                  </DropdownMenuItem>
                 ) : null}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   data-testid="pr-action-numo-request"
                   className="2xl:hidden"
@@ -1657,6 +1489,10 @@ export function PrDetail({
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Open state and merge state read side by side, AFTER the more
+                menu: first what we can do, then what the PR is, then what
+                still stands between it and the merge. */}
+            <PrStateBadge state={badgeState} icon />
             {isDraft && canWrite ? (
               <Button
                 data-testid="pr-ready-for-review"
@@ -1672,9 +1508,6 @@ export function PrDetail({
               <PrReadinessControl
                 readiness={effectiveReadiness}
                 providerName={REPO_PROVIDERS[item.provider].displayName}
-                fallbackUrl={(blocker) =>
-                  pr?.url ? blockerFallbackUrl(item.provider, pr.url, blocker) : null
-                }
                 canAct={canActOnBlocker}
                 acting={maintenanceAction}
                 onAction={(blocker) => void handleReadinessAction(blocker)}
@@ -1716,114 +1549,59 @@ export function PrDetail({
               human may have none. (Numo names his
               “MIN-42: <titre du ticket>” — the display does not change for them.) */}
           <div className="flex flex-col gap-2">
-            <div className="flex min-w-0 items-start gap-2">
-              <h1 className="min-w-0 flex-1 font-display text-2xl leading-tight font-semibold break-words">
-                {pr?.title ?? item.title ?? item.issue?.title ?? identifier}
-              </h1>
-              {canWrite ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      data-testid="pr-edit-title"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="shrink-0"
-                      aria-label={t("editPrTitle")}
-                      onClick={() => {
-                        setTitleDraft(pr?.title ?? item.title ?? "");
-                        setEditingTitle(true);
-                      }}
-                    >
-                      <Pencil className="size-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">{t("editPrTitle")}</TooltipContent>
-                </Tooltip>
-              ) : pr?.url ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      data-testid="pr-edit-title"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="shrink-0"
-                      asChild
-                    >
-                      <a href={pr.url} target="_blank" rel="noreferrer" aria-label={t("editPrTitle")}>
-                        <ExternalLink className="size-4" />
-                      </a>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">{t("editPrTitle")}</TooltipContent>
-                </Tooltip>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
-              {/* Badge “generated by Numo”: only if a run REALLY carries
-                  this PR. The session is that of the linked ticket (/agents is indexed
-                  by outcome, all successive runs live there) → the badge leads there.
-                  On a human PR, it is the author who takes this place. */}
-              {item.runId ? (
-                item.issue ? (
-                  <Link href={`/agents?issue=${item.issue.id}`}>
-                    <Badge
-                      variant="secondary"
-                      icon={<NumoIcon animated={false} />}
-                      className="h-6 transition-colors hover:bg-muted"
-                    >
-                      {t("generatedByNumo")}
-                    </Badge>
-                  </Link>
-                ) : (
-                  <Badge variant="secondary" icon={<NumoIcon animated={false} />} className="h-6">
-                    {t("generatedByNumo")}
-                  </Badge>
-                )
-              ) : author ? (
+            <h1 className="min-w-0 flex-1 font-display text-2xl leading-tight font-semibold break-words">
+              {pr?.title ?? item.title ?? item.issue?.title ?? identifier}
+            </h1>
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-muted-foreground">
+              {/* Author first — avatar and name, like a comment header. A Numo
+                  PR never shows the forge App bot: Numo takes the author seat. */}
+              {author ? (
                 <span className="inline-flex items-center gap-1.5">
-                  <ForgeUserAvatar
-                    user={author}
-                    className="size-4"
-                  />
-                  {/* The merger phrase already NAMES the author (“X wants to merge
-                      3 commits in main…”): repeat “Opened by
-                      side would be duplicate. The fallback keeps the name alone, as long as
-                      branches or commit count are missing — the phrase
-                      then ends with the login in both languages, and the
-                      bot pellet lands after it, not in the middle. */}
-                  {mergeSummary ?? (
-                    <>
-                      {t("openedBy", { login: parseForgeLogin(author.login).name })}
-                      {parseForgeLogin(author.login).isBot ? <BotBadge /> : null}
-                    </>
+                  {item.runId ? (
+                    <NumoIcon animated={false} className="size-4" />
+                  ) : (
+                    <ForgeUserAvatar user={author} className="size-4" />
                   )}
+                  <span className="font-medium text-foreground">
+                    {item.runId
+                      ? t("numoAuthor")
+                      : parseForgeLogin(author.login).name}
+                  </span>
+                  {!item.runId && parseForgeLogin(author.login).isBot ? (
+                    <BotBadge />
+                  ) : null}
                 </span>
               ) : null}
-              {/* PR from Numo: the badge took the place of the author, the sentence
-                  so poses next to it - it is she who carries the branches. */}
-              {item.runId && mergeSummary ? <span>{mergeSummary}</span> : null}
-              {item.project ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <ProjectOrb
-                    seed={projectOrbSeed(item.project)}
-                    iconUrl={item.project.icon_url}
-                    className="size-3.5"
-                  />
-                  {item.project.name}
-                </span>
+              {/* The two branches, in code pills: base — head, the merge
+                  direction carried by the arrow between them. */}
+              {baseBranch ? (
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
+                  {baseBranch}
+                </code>
               ) : null}
-              {/* The diff in one number, in the place occupied by “PR #30 ↗” —
-                  the identifier is mounted in the header, where it is
-                  clickable towards the forge. Mute until files have
-                  answered: “+0 −0” would read as an empty PR. */}
+              {/* The diff in one number, between the two branches — the merge
+                  line reads left to right: from base, +adds −dels, toward head.
+                  Mute until files have answered: “+0 −0” would read as an
+                  empty PR. */}
               {files.length > 0 ? (
-                <span className="inline-flex items-center gap-1.5 font-medium tabular-nums">
+                <span className="inline-flex items-center gap-1 font-medium tabular-nums">
                   <span className="text-green-700 dark:text-green-500">
                     +{format.number(additions)}
                   </span>
                   <span className="text-red-700 dark:text-red-500">
                     −{format.number(deletions)}
                   </span>
+                </span>
+              ) : null}
+              {baseBranch && headBranch ? (
+                <ArrowLeft className="size-3.5" aria-hidden />
+              ) : null}
+              {headBranch ? (
+                <span className="inline-flex items-center gap-0.5">
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
+                    {headBranch}
+                  </code>
+                  <CopyBranchButton value={headBranch} />
                 </span>
               ) : null}
             </div>
@@ -1833,10 +1611,10 @@ export function PrDetail({
               It stays silent when everything is configured correctly. */}
           {!loading ? <PrViewerCallout viewer={viewer} repoUrl={pr?.url} /> : null}
 
-          {reviewRequested ? (
-            <PrReviewRequestedCallout onReview={startFileReview} />
-          ) : null}
-
+          {/* Quick-glance cards: every condition that stands between this PR
+              and the merge, each in its own color, each with its own quick
+              fix. The conversations card opens the same side panel that the
+              old workspace bar did. */}
           <PrUnresolvedConversations
             endpoint={prEndpoint(item.prId)}
             context={feedbackContext}
@@ -1849,13 +1627,22 @@ export function PrDetail({
             onLaunch={openFeedbackAgent}
             onThreadChanged={refreshReviewState}
             onResolutionChanged={refetchPr}
+            showBar={false}
           />
 
-          <ChecksBanner
+          <PrStatusCards
+            readiness={effectiveReadiness}
             checks={checks}
-            error={checksError}
             provider={item.provider}
-            loading={loading}
+            deploymentUrl={deploymentUrl}
+            unresolvedThreads={unresolvedThreads}
+            canAct={canActOnBlocker}
+            acting={maintenanceAction}
+            onAction={(blocker) => void handleReadinessAction(blocker)}
+            onOpenConversations={() => setUnresolvedSidebarOpen(true)}
+            onOpenReviewApprove={() => openReview("approve")}
+            onStartFileReview={startFileReview}
+            onRerunCheck={(check) => void handleRerunCheck(check)}
           />
 
           {/* GitHub style tabs: the thread on one side, the code on the other. */}

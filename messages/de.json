@@ -3880,7 +3880,21 @@
     "fileTreeHint": "Geänderte Dateien durchsuchen",
     "fileTreeTitle": "Geänderte Dateien",
     "linesAdded": "{count, plural, one {# Zeile hinzugefügt} other {# Zeilen hinzugefügt}}",
-    "linesRemoved": "{count, plural, one {# Zeile entfernt} other {# Zeilen entfernt}}"
+    "linesRemoved": "{count, plural, one {# Zeile entfernt} other {# Zeilen entfernt}}",
+    "renamePr": "Umbenennen",
+    "openOnGithub": "Auf GitHub öffnen",
+    "openOnGitlab": "Auf GitLab öffnen",
+    "copyBranch": "Branchennamen kopieren",
+    "copyFailed": "Kopieren in die Zwischenablage fehlgeschlagen",
+    "cardChecksRunning": "{count, plural, one {# Check läuft} other {# Checks laufen}}",
+    "cardChecksFailed": "{count, plural, one {# Check fehlgeschlagen} other {# Checks fehlgeschlagen}}",
+    "cardChecksPassed": "{count, plural, one {# Check bestanden} other {# Checks bestanden}}",
+    "cardDeploymentPassed": "Deployment erfolgreich",
+    "cardUnresolvedComments": "{count, plural, one {# Kommentar zu klären} other {# Kommentare zu klären}}",
+    "cardReviewRequested": "Review angefragt",
+    "cardChangesRequested": "{count, plural, =0 {Änderungen angefragt} one {Änderungen angefragt} other {# Reviewer wünschen Änderungen}}",
+    "cardApprovalsMissing": "{count, plural, one {# Genehmigung fehlt} other {# Genehmigungen fehlen}}",
+    "checksPopoverTitle": "{count, plural, one {# Check} other {# Checks}}"
   },
   "Triage": {
     "projectNotFound": "Projekt nicht gefunden",

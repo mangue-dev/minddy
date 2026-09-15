@@ -55,6 +55,7 @@ export function PrUnresolvedConversations({
   onLaunch,
   onThreadChanged,
   onResolutionChanged,
+  showBar = true,
 }: {
   endpoint: PrEndpoint;
   context: PullRequestFeedbackContext;
@@ -67,6 +68,8 @@ export function PrUnresolvedConversations({
   onLaunch: (prompt: string) => void;
   onThreadChanged: () => unknown;
   onResolutionChanged: () => unknown;
+  /** Inline workspace bar — hidden when the status cards carry the count. */
+  showBar?: boolean;
 }) {
   const t = useTranslations("PullRequests");
   const [confirmOutdated, setConfirmOutdated] = useState(false);
@@ -120,26 +123,28 @@ export function PrUnresolvedConversations({
 
   return (
     <>
-      <div
-        data-testid="pr-unresolved-workspace"
-        className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-2"
-      >
-        <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-          <ListFilter className="size-3" />
-        </span>
-        <span className="min-w-0 flex-1 text-sm font-medium">
-          {t("unresolvedWorkspaceTitle", { count: threads.length })}
-        </span>
-        <Button
-          data-testid="pr-unresolved-list-trigger"
-          variant="ghost"
-          size="sm"
-          className="shrink-0"
-          onClick={() => onOpenChange(true)}
+      {showBar ? (
+        <div
+          data-testid="pr-unresolved-workspace"
+          className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-2"
         >
-          {t("unresolvedViewList", { count: threads.length })}
-        </Button>
-      </div>
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+            <ListFilter className="size-3" />
+          </span>
+          <span className="min-w-0 flex-1 text-sm font-medium">
+            {t("unresolvedWorkspaceTitle", { count: threads.length })}
+          </span>
+          <Button
+            data-testid="pr-unresolved-list-trigger"
+            variant="ghost"
+            size="sm"
+            className="shrink-0"
+            onClick={() => onOpenChange(true)}
+          >
+            {t("unresolvedViewList", { count: threads.length })}
+          </Button>
+        </div>
+      ) : null}
 
       <SidePanel open={open} onOpenChange={onOpenChange}>
         <SidePanelContent

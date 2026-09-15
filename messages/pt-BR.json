@@ -3880,7 +3880,21 @@
     "fileTreeHint": "Navegar pelos arquivos alterados",
     "fileTreeTitle": "Arquivos alterados",
     "linesAdded": "{count, plural, one {# linha adicionada} other {# linhas adicionadas}}",
-    "linesRemoved": "{count, plural, one {# linha removida} other {# linhas removidas}}"
+    "linesRemoved": "{count, plural, one {# linha removida} other {# linhas removidas}}",
+    "renamePr": "Renomear",
+    "openOnGithub": "Abrir no GitHub",
+    "openOnGitlab": "Abrir no GitLab",
+    "copyBranch": "Copiar o nome da branch",
+    "copyFailed": "Não foi possível copiar para a área de transferência",
+    "cardChecksRunning": "{count, plural, one {# check em andamento} other {# checks em andamento}}",
+    "cardChecksFailed": "{count, plural, one {# check com falha} other {# checks com falha}}",
+    "cardChecksPassed": "{count, plural, one {# check aprovado} other {# checks aprovados}}",
+    "cardDeploymentPassed": "Deploy concluído",
+    "cardUnresolvedComments": "{count, plural, one {# comentário a resolver} other {# comentários a resolver}}",
+    "cardReviewRequested": "Revisão solicitada",
+    "cardChangesRequested": "{count, plural, =0 {Alterações solicitadas} one {Alterações solicitadas} other {# revisores pediram alterações}}",
+    "cardApprovalsMissing": "{count, plural, one {# aprovação pendente} other {# aprovações pendentes}}",
+    "checksPopoverTitle": "{count, plural, one {# check} other {# checks}}"
   },
   "Triage": {
     "projectNotFound": "Projeto não encontrado",

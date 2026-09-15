@@ -7,7 +7,6 @@ import {
   Check,
   ChevronDown,
   Clock,
-  ExternalLink,
 } from "lucide-react";
 import {
   Badge,
@@ -218,7 +217,6 @@ export function PrReadinessIcon({
 export function PrReadinessControl({
   readiness,
   providerName,
-  fallbackUrl,
   canAct,
   acting,
   onAction,
@@ -228,7 +226,6 @@ export function PrReadinessControl({
 }: {
   readiness: PullRequestReadiness;
   providerName: string;
-  fallbackUrl: (blocker: ReadinessBlocker) => string | null;
   canAct: (blocker: ReadinessBlocker) => boolean;
   acting: ReadinessAction | null;
   onAction: (blocker: ReadinessBlocker) => void;
@@ -324,7 +321,6 @@ export function PrReadinessControl({
           ))}
           {readiness.blockers.map((blocker) => {
             const available = canAct(blocker);
-            const providerUrl = fallbackUrl(blocker);
             const blockerKey = blockerMessageKey(blocker);
             return (
               <li
@@ -371,20 +367,7 @@ export function PrReadinessControl({
                   >
                     {t(ACTION_KEYS[blocker.action], { provider: providerName })}
                   </Button>
-                ) : providerUrl ? (
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={providerUrl} target="_blank" rel="noreferrer">
-                      {t(ACTION_KEYS[blocker.action], {
-                        provider: providerName,
-                      })}
-                      <ExternalLink className="size-3.5" />
-                    </a>
-                  </Button>
-                ) : (
-                  <span className="text-xs text-muted-foreground">
-                    {t("blockerActionUnavailable")}
-                  </span>
-                )}
+                ) : null}
               </li>
             );
           })}
