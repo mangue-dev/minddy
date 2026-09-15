@@ -139,6 +139,12 @@ import {
   buildPullRequestFeedbackPrompt,
   unresolvedReviewThreads,
 } from "@/lib/pr-unresolved-conversations";
+import { buildPullRequestFixPrompt } from "@/lib/pr-fix-prompt";
+import {
+  mergeDeploymentStory,
+  type PrDeploymentReport,
+  type PrDeploymentStory,
+} from "@/lib/pr-deployment-story";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import type { AssistantPageContext } from "@/lib/assistant-types";
 import { parseForgeLogin, prIdentifier } from "@/lib/repo-providers";
@@ -804,6 +810,47 @@ export function PrDetail({
       ? `/agents?run=${encodeURIComponent(reviewSession.run.runId)}`
       : null;
 
+  // The deployment story is STICKY (MIN-548 review): one fetch that comes
+  // back empty — a provider that stamps nothing while the environment
+  // builds, a transient API hiccup — must not tear the card down and put it
+  // back a poll later. The story resets on a new head: the previous
+  // environment belongs to the previous code.
+  const [deploymentStory, setDeploymentStory] = useState<PrDeploymentStory | null>(
+    null,
+  );
+  const prevDeploymentHead = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevDeploymentHead.current === currentHeadSha) return;
+    prevDeploymentHead.current = currentHeadSha;
+    setDeploymentStory(null);
+  }, [currentHeadSha]);
+  const deploymentReport = useMemo<PrDeploymentReport | null>(
+    () =>
+      deploymentStatus
+        ? {
+            status: deploymentStatus,
+            url: deploymentUrl,
+            startedAt: deploymentStartedAt,
+            durationMs: deploymentDurationMs,
+          }
+        : // The forge stayed silent on the lifecycle, but a URL SERVES:
+          // the card tells it as settled.
+          deploymentUrl
+          ? {
+              status: "success",
+              url: deploymentUrl,
+              startedAt: null,
+              durationMs: null,
+            }
+          : null,
+    [deploymentStatus, deploymentUrl, deploymentStartedAt, deploymentDurationMs],
+  );
+  useEffect(() => {
+    setDeploymentStory((prev) =>
+      mergeDeploymentStory(prev, deploymentReport, Date.now()),
+    );
+  }, [deploymentReport]);
+
   const prPageContext = useMemo<AssistantPageContext | null>(
     () =>
       item.project
@@ -1415,6 +1462,53 @@ export function PrDetail({
     ],
   );
 
+  // The FIX gesture of a failing PR (MIN-548 review): one prompt — identify
+  // what is wrong, fix it — that either lands in the clipboard or wakes
+  // Numo directly. A red card is only half the story; this card is the way
+  // out.
+  const fixPrompt = useMemo(
+    () => buildPullRequestFixPrompt(feedbackContext, checks),
+    [feedbackContext, checks],
+  );
+  const prFailing =
+    checks?.state === "failure" ||
+    !!effectiveReadiness?.blockers.some(
+      (blocker) => blocker.kind === "conflicts",
+    );
+  const fixCard = useMemo(() => {
+    if (!prFailing) return null;
+    return {
+      canLaunch: canRelaunch && !item.busyRunId && !!prPageContext,
+      onLaunch: () => {
+        if (!prPageContext) return;
+        openIntent({
+          source: "pull_request",
+          action: "fix",
+          projectId: item.project?.id ?? null,
+          prompt: fixPrompt,
+          pageContext: prPageContext,
+        });
+      },
+      onCopy: async () => {
+        try {
+          await navigator.clipboard.writeText(fixPrompt);
+          toast.success(t("unresolvedPromptCopied"));
+        } catch {
+          toast.error(t("unresolvedPromptCopyFailed"));
+        }
+      },
+    };
+  }, [
+    prFailing,
+    canRelaunch,
+    item.busyRunId,
+    item.project?.id,
+    prPageContext,
+    fixPrompt,
+    openIntent,
+    t,
+  ]);
+
   return (
     // The envelope tells the WHOLE panel — body, thread, activity, comments of
     // line, composers — which PR he is talking about: which proxy to go through to
@@ -1877,10 +1971,7 @@ export function PrDetail({
             readiness={effectiveReadiness}
             checks={checks}
             provider={item.provider}
-            deploymentUrl={deploymentUrl}
-            deploymentStatus={deploymentStatus}
-            deploymentStartedAt={deploymentStartedAt}
-            deploymentDurationMs={deploymentDurationMs}
+            deployment={deploymentStory}
             unresolvedThreads={unresolvedThreads}
             canAct={canActOnBlocker}
             acting={maintenanceAction}
@@ -1891,6 +1982,7 @@ export function PrDetail({
             onRerunCheck={(check) => void handleRerunCheck(check)}
             numoReview={numoReviewCard}
             onRequestReview={openAiReviewDialog}
+            fix={fixCard}
           />
 
           {/* GitHub style tabs: the thread on one side, the code on the other. */}

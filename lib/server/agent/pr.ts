@@ -1766,8 +1766,114 @@ export async function getPullRequestDeployment(opts: {
   const vercelBranchOutcome = opts.branch
     ? await getVercelBranchPreviewUrl(opts)
     : null;
-  if (vercelBranchOutcome) return vercelBranchOutcome;
+  const walked = await walkGithubDeployments(opts, owner, repo);
 
+  // The stable Vercel branch URL stays the destination — but the walk, not
+  // the ready comment, tells the lifecycle and dates the settle: without it
+  // the successful card would never carry the time the environment took.
+  if (vercelBranchOutcome?.status === "success") {
+    if (walked.status === "success" && walked.durationMs != null) {
+      return { ...vercelBranchOutcome, durationMs: walked.durationMs };
+    }
+    if (walked.status === "in_progress") {
+      // A rebuild is in flight over the branch: the stable URL still
+      // serves while the clock restarts from the new deployment.
+      return {
+        status: "in_progress",
+        url: vercelBranchOutcome.url ?? walked.url,
+        startedAt: walked.startedAt,
+        durationMs: null,
+      };
+    }
+    return vercelBranchOutcome;
+  }
+  if (walked.status !== "none") return walked;
+
+  // GitHub stamps its Deployment object only when the environment is DONE:
+  // the whole build of a Vercel-style provider happens WITHOUT any
+  // deployment to look at. Their commit STATUS is the live signal — a
+  // "Vercel · pending" exists from the first second — and it is what keeps
+  // the card from vanishing exactly while the environment is being built
+  // (MIN-548).
+  try {
+    const commitStatus = await ghJson<{ statuses?: RawDeploymentSignal[] }>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/status/${encodeURIComponent(opts.sha)}`,
+      opts.token,
+    );
+    const building = (commitStatus.statuses ?? []).find(
+      (status) => status.state === "pending" && isDeploymentSignal(status),
+    );
+    if (building) {
+      // The button, when an older deployment already serves, needs its
+      // destination: the walk over the LAST COMMITS of the PR finds the
+      // newest sha whose environment settled.
+      let servingUrl: string | null = null;
+      try {
+        // The endpoint is oldest-first and NOT sortable: page it wide and
+        // keep the tail — the recent shas are the end of the list.
+        const commits = await ghJson<{ sha?: string }[]>(
+          `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/commits?per_page=100`,
+          opts.token,
+        );
+        // The list is oldest-first: the RECENT shas sit at the end, the
+        // head itself is the build in flight.
+        for (const commit of commits.slice(-3).reverse().slice(1)) {
+          if (!commit.sha) continue;
+          const deployments = await ghJson<RawGithubDeployment[]>(
+            `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments` +
+              `?sha=${encodeURIComponent(commit.sha)}&per_page=10`,
+            opts.token,
+          );
+          const settled = deployments
+            .sort(
+              (a, b) =>
+                Date.parse(b.created_at ?? "") - Date.parse(a.created_at ?? ""),
+            )
+            .filter((deployment): deployment is RawGithubDeployment & { id: number } =>
+              Number.isInteger(deployment.id),
+            );
+          if (settled.length === 0) continue;
+          const [latest] = await ghJson<RawGithubDeploymentStatus[]>(
+            `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments/${settled[0].id}/statuses?per_page=1`,
+            opts.token,
+          );
+          const url =
+            httpDeploymentUrl(latest?.environment_url) ??
+            httpDeploymentUrl(latest?.target_url);
+          if (latest?.state === "success" && url) {
+            servingUrl = url;
+            break;
+          }
+        }
+      } catch {
+        // The button is an extra: without it, the card still says "running".
+      }
+      return {
+        status: "in_progress",
+        url: servingUrl,
+        startedAt: building.created_at ?? null,
+        durationMs: null,
+      };
+    }
+  } catch {
+    // The commit status read is an extra: deployments remain the main story.
+  }
+  return { status: "none", url: null, startedAt: null, durationMs: null };
+}
+
+/**
+ * The deployment walk over branch ref then immutable head: the newest
+ * deployment tells WHERE the environment stands (settled or still running)
+ * and the walk finds the newest SETTLED deployment for the action — a
+ * redeploy running on top of a live environment keeps its button pointing
+ * at what serves now (MIN-548). Nothing found = "none"; the caller falls
+ * back to the commit-status signal.
+ */
+async function walkGithubDeployments(
+  opts: { token: string; branch?: string; sha: string },
+  owner: string,
+  repo: string,
+): Promise<DeploymentOutcome> {
   const references = [
     ...(opts.branch ? [{ parameter: "ref", value: opts.branch }] : []),
     { parameter: "sha", value: opts.sha },
@@ -1860,75 +1966,6 @@ export async function getPullRequestDeployment(opts: {
     }
   }
 
-  // GitHub stamps its Deployment object only when the environment is DONE:
-  // the whole build of a Vercel-style provider happens WITHOUT any
-  // deployment to look at. Their commit STATUS is the live signal — a
-  // "Vercel · pending" exists from the first second — and it is what keeps
-  // the card from vanishing exactly while the environment is being built
-  // (MIN-548).
-  try {
-    const commitStatus = await ghJson<{ statuses?: RawDeploymentSignal[] }>(
-      `${GITHUB_API_BASE}/repos/${owner}/${repo}/status/${encodeURIComponent(opts.sha)}`,
-      opts.token,
-    );
-    const building = (commitStatus.statuses ?? []).find(
-      (status) => status.state === "pending" && isDeploymentSignal(status),
-    );
-    if (building) {
-      // The button, when an older deployment already serves, needs its
-      // destination: the walk over the LAST COMMITS of the PR finds the
-      // newest sha whose environment settled.
-      let servingUrl: string | null = null;
-      try {
-        // The endpoint is oldest-first and NOT sortable: page it wide and
-        // keep the tail — the recent shas are the end of the list.
-        const commits = await ghJson<{ sha?: string }[]>(
-          `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/commits?per_page=100`,
-          opts.token,
-        );
-        // The list is oldest-first: the RECENT shas sit at the end, the
-        // head itself is the build in flight.
-        for (const commit of commits.slice(-3).reverse().slice(1)) {
-          if (!commit.sha) continue;
-          const deployments = await ghJson<RawGithubDeployment[]>(
-            `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments` +
-              `?sha=${encodeURIComponent(commit.sha)}&per_page=10`,
-            opts.token,
-          );
-          const settled = deployments
-            .sort(
-              (a, b) =>
-                Date.parse(b.created_at ?? "") - Date.parse(a.created_at ?? ""),
-            )
-            .filter((deployment): deployment is RawGithubDeployment & { id: number } =>
-              Number.isInteger(deployment.id),
-            );
-          if (settled.length === 0) continue;
-          const [latest] = await ghJson<RawGithubDeploymentStatus[]>(
-            `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments/${settled[0].id}/statuses?per_page=1`,
-            opts.token,
-          );
-          const url =
-            httpDeploymentUrl(latest?.environment_url) ??
-            httpDeploymentUrl(latest?.target_url);
-          if (latest?.state === "success" && url) {
-            servingUrl = url;
-            break;
-          }
-        }
-      } catch {
-        // The button is an extra: without it, the card still says "running".
-      }
-      return {
-        status: "in_progress",
-        url: servingUrl,
-        startedAt: building.created_at ?? null,
-        durationMs: null,
-      };
-    }
-  } catch {
-    // The commit status read is an extra: deployments remain the main story.
-  }
   return { status: "none", url: null, startedAt: null, durationMs: null };
 }
 

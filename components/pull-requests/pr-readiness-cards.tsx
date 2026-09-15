@@ -33,6 +33,7 @@ import {
   RotateCcw,
   ShieldAlert,
   UserRoundCheck,
+  Wrench,
 } from "lucide-react";
 import {
   Button,
@@ -58,6 +59,7 @@ import type {
   ReadinessAction,
   ReadinessBlocker,
 } from "@/lib/pr-readiness";
+import type { PrDeploymentStory } from "@/lib/pr-deployment-story";
 
 export type PrStatusCardTone =
   | "danger"
@@ -128,6 +130,12 @@ interface PrStatusCard {
     testId?: string;
     disabled?: boolean;
   };
+  /** Hover overlay SPLIT in two: the card halves vertically, one option
+      on top, one below (MIN-548 review). */
+  actions?: {
+    top: { label: string; onClick: () => void; testId?: string };
+    bottom: { label: string; onClick: () => void; testId?: string; disabled?: boolean };
+  };
 }
 
 /** The Numo review gesture, as its own card (MIN-548): running, already
@@ -147,14 +155,9 @@ interface PrStatusCardsProps {
   readiness: PullRequestReadiness | null;
   checks: ChecksSummary | null;
   provider: RepoProviderId;
-  deploymentUrl: string | null;
-  /** Lifecycle of the head environment as the forge reports it. `null` = the
-      forge did not answer — the URL alone then decides the card. */
-  deploymentStatus: "success" | "in_progress" | null;
-  /** Created date of the deployment in flight — the card ticks from it. */
-  deploymentStartedAt: string | null;
-  /** Time the successful deployment took to settle, when the forge dates it. */
-  deploymentDurationMs: number | null;
+  /** The deployment story as the forge reported it, made sticky by the
+      caller — the card never tears down mid-build. */
+  deployment: PrDeploymentStory | null;
   unresolvedThreads: PullRequestFeedbackThread[];
   canAct: (blocker: ReadinessBlocker) => boolean;
   acting: ReadinessAction | null;
@@ -165,6 +168,13 @@ interface PrStatusCardsProps {
   onRerunCheck: (check: PullRequestCheck) => void;
   numoReview: PrNumoReviewCardSpec | null;
   onRequestReview: () => void;
+  /** The fix gesture of a failing PR (MIN-548 review): copy the prompt, or
+      hand the PR to Numo. `null` = nothing is failing. */
+  fix: {
+    canLaunch: boolean;
+    onLaunch: () => void;
+    onCopy: () => void;
+  } | null;
 }
 
 export function PrStatusCards(props: PrStatusCardsProps) {
@@ -177,11 +187,11 @@ export function PrStatusCards(props: PrStatusCardsProps) {
     [
       props.readiness,
       props.checks,
-      props.deploymentUrl,
-      props.deploymentStatus,
+      props.deployment,
       props.unresolvedThreads,
       props.acting,
       props.numoReview,
+      props.fix,
     ],
   );
   if (cards.length === 0) return null;
@@ -221,7 +231,7 @@ function buildStatusCards(
   props: PrStatusCardsProps,
 ): { card: PrStatusCard; checksCard: boolean }[] {
   const cards: { card: PrStatusCard; checksCard: boolean }[] = [];
-  const { readiness, checks, deploymentUrl, unresolvedThreads } = props;
+  const { readiness, checks, unresolvedThreads } = props;
   const blockers = readiness?.blockers ?? [];
   const push = (card: PrStatusCard, checksCard = false) =>
     cards.push({ card, checksCard });
@@ -260,7 +270,9 @@ function buildStatusCards(
         tone: "danger",
         title: t("cardChecksFailed", { count: failed }),
         donutParts: states,
-        startedAt: checks.startedAt,
+        // Nothing runs anymore: the timer FREEZES on the time the suite
+        // took, it must not keep ticking over a finished failure.
+        startedAt: null,
         durationMs,
         avatars: null,
         iconKind: "checks",
@@ -280,45 +292,76 @@ function buildStatusCards(
   }
 
   // ── Deployment ──────────────────────────────────────────────────────────
-  // The environment tells one of three stories: still building (orange,
+  // The environment tells one of two stories: still building (orange,
   // ticking — the button, when a previous deployment already serves, points
-  // at THAT one), settled (green with its duration and the open gesture), or
-  // nothing the forge could see. The card never hides behind the checks:
-  // an environment can exist whether or not the CI has spoken.
-  const deploymentStatus =
-    props.deploymentStatus ?? (deploymentUrl ? "success" : null);
-  if (deploymentStatus === "in_progress") {
+  // at THAT one), settled (green with its duration and the open gesture).
+  // The story is sticky: a poll that comes back empty must not tear the
+  // card down while the build goes on. The card never hides behind the
+  // checks: an environment can exist whether or not the CI has spoken.
+  const deployment = props.deployment;
+  if (deployment?.status === "in_progress") {
     push({
       id: "deployment",
       tone: "progress",
       title: t("cardDeploymentRunning"),
       durationMs: null,
-      startedAt: props.deploymentStartedAt,
+      startedAt: deployment.startedAt,
       donutParts: null,
       avatars: null,
       iconKind: "mergeability",
-      action: deploymentUrl
+      action: deployment.url
         ? {
             label: t("viewDeployment"),
-            onClick: () => window.open(deploymentUrl, "_blank", "noreferrer"),
+            onClick: () => window.open(deployment.url as string, "_blank", "noreferrer"),
             testId: "pr-card-view-deployment",
           }
         : undefined,
     });
-  } else if (deploymentStatus === "success" && deploymentUrl) {
+  } else if (deployment?.status === "success" && deployment.url) {
     push({
       id: "deployment",
       tone: "success",
       title: t("cardDeploymentPassed"),
-      durationMs: props.deploymentDurationMs,
+      durationMs: deployment.durationMs,
       startedAt: null,
       donutParts: null,
       avatars: null,
       iconKind: "mergeability",
       action: {
         label: t("viewDeployment"),
-        onClick: () => window.open(deploymentUrl, "_blank", "noreferrer"),
+        onClick: () => window.open(deployment.url as string, "_blank", "noreferrer"),
         testId: "pr-card-view-deployment",
+      },
+    });
+  }
+
+  // ── Fix ─────────────────────────────────────────────────────────────────
+  // A failing PR gets one dedicated gesture (MIN-548 review): on hover the
+  // card splits in two — copy the fix prompt on top, hand the PR to Numo
+  // below. The card is a GESTURE, not a verdict: the red cards next to it
+  // already say what is wrong.
+  if (props.fix) {
+    push({
+      id: "fix",
+      tone: "neutral",
+      title: t("cardFix"),
+      durationMs: null,
+      startedAt: null,
+      donutParts: null,
+      avatars: null,
+      iconKind: "checks",
+      actions: {
+        top: {
+          label: t("cardFixCopyPrompt"),
+          onClick: props.fix.onCopy,
+          testId: "pr-card-fix-copy",
+        },
+        bottom: {
+          label: t("cardFixLaunchNumo"),
+          onClick: props.fix.onLaunch,
+          disabled: !props.fix.canLaunch,
+          testId: "pr-card-fix-launch",
+        },
       },
     });
   }
@@ -595,6 +638,8 @@ function PrStatusCardView({
           <ArrowUpRight />
         ) : card.id === "numo-review" ? (
           <NumoIcon animated={false} />
+        ) : card.id === "fix" ? (
+          <Wrench />
         ) : (
           blockerIcon(card.iconKind)
         )}
@@ -626,7 +671,45 @@ function PrStatusCardView({
 
   const inner = (
     <div className="flex h-24 min-w-0 flex-col gap-2.5 p-3">
-      {card.action ? (
+      {card.actions ? (
+        // Hover splits the card in two: the content blurs away and the two
+        // halves of the fix gesture take over — one option on top, one
+        // below, separated by the card's own edge (MIN-548 review).
+        <div className="group relative flex h-full min-w-0 flex-col">
+          <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px]">
+            {body}
+          </div>
+          <div className="pointer-events-none absolute inset-0 flex flex-col opacity-0 transition duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+            <button
+              type="button"
+              data-testid={card.actions.top.testId}
+              onClick={card.actions.top.onClick}
+              className={cn(
+                "flex min-h-0 flex-1 items-center justify-center rounded-t-xl text-sm font-medium outline-none",
+                TONE_TITLE[card.tone],
+                "hover:bg-muted/50 focus-visible:bg-muted/50",
+              )}
+            >
+              {card.actions.top.label}
+            </button>
+            <div className="h-px shrink-0 bg-border" />
+            <button
+              type="button"
+              data-testid={card.actions.bottom.testId}
+              onClick={card.actions.bottom.onClick}
+              disabled={card.actions.bottom.disabled}
+              className={cn(
+                "flex min-h-0 flex-1 items-center justify-center rounded-b-xl text-sm font-medium outline-none",
+                TONE_TITLE[card.tone],
+                card.actions.bottom.disabled && "opacity-50",
+                "hover:bg-muted/50 focus-visible:bg-muted/50",
+              )}
+            >
+              {card.actions.bottom.label}
+            </button>
+          </div>
+        </div>
+      ) : card.action ? (
         // Hover reveals the quick fix: the card content blurs away and the
         // action's WORD takes the center. The card itself is the button —
         // there is no separate control inside it to hunt for.

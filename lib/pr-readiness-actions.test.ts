@@ -118,6 +118,24 @@ describe("pull request readiness interactions", () => {
     ).toBe(PULL_REQUEST_POLL_MS);
   });
 
+  it("keeps polling while the deployment is in progress", () => {
+    expect(
+      pullRequestRefetchInterval({
+        pr: null,
+        files: [],
+        readiness: {
+          state: "ready",
+          blockers: [],
+          passed: [],
+          mergeAllowed: true,
+          methods: ["squash"],
+          preferredMethod: "squash",
+        },
+        deploymentStatus: "in_progress",
+      }),
+    ).toBe(PULL_REQUEST_POLL_MS);
+  });
+
   it("stops polling after checks and mergeability settle", () => {
     expect(
       pullRequestRefetchInterval({

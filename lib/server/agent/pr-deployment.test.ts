@@ -15,7 +15,7 @@ function json(value: unknown, status = 200) {
 }
 
 describe("pull request deployment URLs", () => {
-  it("returns the stable Vercel branch URL from the official ready PR comment", async () => {
+  it("returns the stable Vercel branch URL, dated by the deployment walk", async () => {
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
       if (url.includes("/issues/42/comments")) {
@@ -27,6 +27,18 @@ describe("pull request deployment URLs", () => {
             user: { login: "vercel[bot]", type: "Bot" },
             created_at: "2026-09-03T10:00:00Z",
             html_url: "https://github.com/acme/app/pull/42#issuecomment-1",
+          },
+        ]);
+      }
+      if (url.includes("/deployments?ref=feature%2Fpreview")) {
+        return json([{ id: 5, created_at: "2026-09-03T09:58:00Z" }]);
+      }
+      if (url.includes("/deployments/5/statuses")) {
+        return json([
+          {
+            state: "success",
+            environment_url: "https://commit.example.com",
+            created_at: "2026-09-03T10:00:00Z",
           },
         ]);
       }
@@ -42,8 +54,12 @@ describe("pull request deployment URLs", () => {
         branch: "feature/preview",
         sha: "abc",
       }),
-    ).resolves.toEqual({ status: "success", url: "https://app-git-feature-preview-acme.vercel.app/", startedAt: null, durationMs: null });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    ).resolves.toEqual({
+      status: "success",
+      url: "https://app-git-feature-preview-acme.vercel.app/",
+      startedAt: null,
+      durationMs: 120_000,
+    });
   });
 
   it("ignores branch URLs outside an official ready Vercel bot row", async () => {

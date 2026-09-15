@@ -21,6 +21,11 @@ export function pullRequestRefetchInterval(
   ) {
     return PULL_REQUEST_POLL_MS;
   }
+  // The environment is being built: the card must settle within a poll, not
+  // freeze on "running" until something else reopens the feed (MIN-548).
+  if (response?.deploymentStatus === "in_progress") {
+    return PULL_REQUEST_POLL_MS;
+  }
   return false;
 }
 
