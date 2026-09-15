@@ -117,7 +117,10 @@ export function createMinddyEntityActionsProvider(
     },
   });
 
-  const linkActions = (item: PaletteItem): ContextualAction[] => {
+  // Basic only when the menu already has real counterparts (entities): pure
+  // navigation rows must still earn the ⌘; actions menu — the sole guest there
+  // is exactly these two link gestures (see ActionRegistry.hasActionsForItem).
+  const linkActions = (item: PaletteItem, basic = true): ContextualAction[] => {
     if (!item.href) return [];
     return [
       {
@@ -126,7 +129,7 @@ export function createMinddyEntityActionsProvider(
         icon: ExternalLink,
         category: "navigation",
         priority: -90,
-        basic: true,
+        basic,
         execute: async () => {
           dependencies.openInNewTab(item.href as string);
           return { success: true };
@@ -138,7 +141,7 @@ export function createMinddyEntityActionsProvider(
         icon: Link2,
         category: "secondary",
         priority: -90,
-        basic: true,
+        basic,
         execute: async () => {
           await dependencies.copyText(item.href as string, labels.linkCopied, true);
           return { success: true, closeMenu: false };
@@ -152,7 +155,10 @@ export function createMinddyEntityActionsProvider(
     handles: ["navigation", "project", "objective", "page", "issue", "saved-view"],
     priority: 40,
     getActions: (item): ContextualAction[] => {
-      const actions = linkActions(item);
+      const actions = linkActions(
+        item,
+        item.entityType !== "navigation" && item.entityType !== "saved-view"
+      );
 
       if (item.entityType === "navigation" || item.entityType === "saved-view") {
         return actions;

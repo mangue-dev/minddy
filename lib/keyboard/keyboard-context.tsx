@@ -212,6 +212,16 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
         disarm();
         return;
       }
+      // ⌘, opens the account settings — the standard macOS “preferences” gesture.
+      // Same policy as ⌘B: allowed while typing, refused under a dialog.
+      if (matchesModCombo(e, ",")) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (isDialogOpen()) return;
+        routerRef.current.push("/settings");
+        disarm();
+        return;
+      }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
 
       // Second key of an armed chord: always consume it so it never reaches the

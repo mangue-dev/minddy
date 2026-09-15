@@ -3,6 +3,7 @@
 import {
   useEffect,
   useLayoutEffect,
+  useMemo,
   useState,
   type MouseEvent,
   type ReactNode,
@@ -12,7 +13,7 @@ import { cn, useMediaQuery } from "mangue-ui";
 import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { SidebarFilterField } from "@/components/sidebar-filter-field";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";
-import { IssueContextMenu } from "@/components/issue-context-menu";
+import { IssueContextMenu, type ContextMenuAction } from "@/components/issue-context-menu";
 import { useNavigationContextActions } from "@/components/navigation-context-actions";
 
 /**
@@ -49,6 +50,7 @@ export function SecondarySidebar({
   filter,
   actions,
   hiddenOnMobile,
+  itemContextActions,
   children,
 }: {
   /**
@@ -82,6 +84,12 @@ export function SecondarySidebar({
    * the “detail is open” state of the page. No effect above `md`.
    */
   hiddenOnMobile?: boolean;
+  /**
+   * Row-level actions for the right-click menu, built from the row the
+   * pointer landed on. Merged ABOVE the shared “open in a new tab / copy
+   * link” entries, which always close the menu.
+   */
+  itemContextActions?: (target: Element) => ContextMenuAction[];
   children: ReactNode;
 }) {
   const { headerSlot, slot, register } = useSecondarySidebar();
@@ -94,8 +102,13 @@ export function SecondarySidebar({
     x: number;
     y: number;
     href: string;
+    target: Element | null;
   } | null>(null);
   const navigationActions = useNavigationContextActions(navigationMenu?.href);
+  const itemActions = useMemo(
+    () => (navigationMenu?.target ? itemContextActions?.(navigationMenu.target) ?? [] : []),
+    [navigationMenu, itemContextActions],
+  );
 
   useIsoLayoutEffect(() => {
     setMounted(true);
@@ -141,7 +154,7 @@ export function SecondarySidebar({
         const destination = normalizeAppTabLocation(href);
         if (!destination) return;
         event.preventDefault();
-        setNavigationMenu({ x: event.clientX, y: event.clientY, href: destination });
+        setNavigationMenu({ x: event.clientX, y: event.clientY, href: destination, target });
       }}
     >
       <div className="scrollbar-quiet flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -160,7 +173,7 @@ export function SecondarySidebar({
             <IssueContextMenu
               position={navigationMenu}
               onClose={() => setNavigationMenu(null)}
-              actions={navigationActions}
+              actions={[...itemActions, ...navigationActions]}
               searchable={false}
             />
           </>,
@@ -188,7 +201,7 @@ export function SecondarySidebar({
         const destination = normalizeAppTabLocation(href);
         if (!destination) return;
         event.preventDefault();
-        setNavigationMenu({ x: event.clientX, y: event.clientY, href: destination });
+        setNavigationMenu({ x: event.clientX, y: event.clientY, href: destination, target });
       }}
     >
       {header}
@@ -198,7 +211,7 @@ export function SecondarySidebar({
       <IssueContextMenu
         position={navigationMenu}
         onClose={() => setNavigationMenu(null)}
-        actions={navigationActions}
+        actions={[...itemActions, ...navigationActions]}
         searchable={false}
       />
     </aside>

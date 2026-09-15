@@ -15,6 +15,7 @@
 // Close escape.
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import {
   DropdownMenu,
@@ -221,6 +222,7 @@ function ActionMenuBody({
   );
 }
 
+/** Pointer-anchored actions menu (right click on a card, tab, sidebar row…). */
 export function IssueContextMenu({
   position,
   onClose,
@@ -235,7 +237,14 @@ export function IssueContextMenu({
  entries (view pills), where it would only make noise. */
   searchable?: boolean;
 }) {
-  return (
+  if (typeof document === "undefined") return null;
+  // The whole menu — trigger included — is portaled to <body>. The invisible
+  // trigger carries the anchor coordinates; inside any transformed or
+  // clipped ancestor (drag-and-drop items, overflow-hidden strips) a `fixed`
+  // element stops behaving like one and the anchor drifts away: the menu
+  // then lands beside the tab or card instead of under it. Mounted at <body>,
+  // the viewport coordinates hold in every container.
+  return createPortal(
     <DropdownMenu open={!!position} onOpenChange={(open) => !open && onClose()}>
       <DropdownMenuTrigger asChild>
         <span
@@ -254,10 +263,6 @@ export function IssueContextMenu({
         // The trigger is invisible and out of flow: do not return the focus to it
         // closing (avoids a scroll jump to the point of the click).
         onCloseAutoFocus={(e) => e.preventDefault()}
-        // The menu is portalized but rendered, in the React tree, inside
-        // the clickable card (onClick = open the ticket). React events
-        // go up the component tree despite the portal: we therefore stop the
-        // spread here so that clicking on an option does not open the map.
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.stopPropagation()}
       >
@@ -275,7 +280,8 @@ export function IssueContextMenu({
           }}
         />
       </DropdownMenuContent>
-    </DropdownMenu>
+    </DropdownMenu>,
+    document.body,
   );
 }
 

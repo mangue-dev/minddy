@@ -38,6 +38,8 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
+  // The choice persists in localStorage now; tests start from the docked state.
+  window.localStorage.clear();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   window.matchMedia = vi.fn().mockReturnValue({
     matches: false, addListener: vi.fn(), removeListener: vi.fn(),
@@ -79,6 +81,17 @@ function panel() {
 }
 
 describe("sidebar visibility", () => {
+  it("persists the toggle in localStorage across remounts", () => {
+    render();
+    expect(isHidden()).toBe(false);
+    act(() => button().click());
+    expect(isHidden()).toBe(true);
+    expect(window.localStorage.getItem("minddy.sidebar-hidden")).toBe("true");
+    act(() => button().click());
+    expect(window.localStorage.getItem("minddy.sidebar-hidden")).toBe("false");
+    expect(isHidden()).toBe(false);
+  });
+
   it("hides navigation, recalls it from the edge, and restores it with one click", () => {
     render();
     expect(button().textContent).toBe("Hide sidebar");

@@ -162,7 +162,12 @@ export function SidebarNavOverlay({
       )}
       <motion.div
         ref={panel}
-        className="absolute inset-y-0 left-0 z-40 flex h-full overflow-hidden bg-sidebar transition-shadow duration-200 data-[floating=true]:shadow-[8px_0_32px_-8px_rgba(0,0,0,0.45)]"
+        // z-30, UNDER the app top bar (z-40): a floating panel sitting above it
+        // painted its own shadow over the strip's left end, reading as the panel
+        // being a few pixels taller than the content pane. The closed state's
+        // hotzone stays at z-[41], above the bar, so the top-left corner still
+        // recalls navigation.
+        className="absolute inset-y-0 left-0 z-30 flex h-full overflow-hidden rounded-r-[var(--app-pane-radius)] bg-sidebar transition-shadow duration-200 data-[floating=false]:rounded-r-none data-[floating=true]:shadow-[16px_0_48px_-24px_rgba(0,0,0,0.35)]"
         data-open={shown}
         data-floating={hidden && shown}
         initial={{ width: panelWidth, x: shown ? 0 : -width }}
