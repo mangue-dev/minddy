@@ -40,19 +40,30 @@ export function HomeTip() {
     // `mt-auto` glue it to the bottom of the row, which is the bottom of the page: the
     // row is worth `1fr` whatever she wears, so putting the trick here doesn't move
     // not compose it remained in the exact center of the window.
-    <p className="mt-auto flex min-h-5 flex-wrap items-center justify-center gap-x-2 gap-y-1 pt-8 text-xs text-muted-foreground">
+    <p className="mt-auto flex min-h-5 justify-center pt-8 text-xs text-muted-foreground">
       {tip && (
-        <>
-          <Lightbulb className="size-3.5 shrink-0" aria-hidden />
-          <span className="text-balance">{t(tip.key)}</span>
-          {shortcut && (
-            <KbdSequence
-              keys={shortcut.keys.map((step) => step.map(resolveKeyToken))}
-              size="sm"
-              separator={tk("then")}
-            />
-          )}
-        </>
+        /* Roomy wrap: wide max width, balanced long text. The bulb sits LEFT
+           of the text, vertically centered on the FIRST line (items-start
+           + a small offset), so a wrap reads as one hint, not two elements. */
+        <span className="flex max-w-[36rem] items-start justify-center gap-x-2">
+          <Lightbulb
+            className="mt-[2.5px] size-3.5 shrink-0"
+            aria-hidden
+          />
+          <span className="text-balance">
+            {t(tip.key)}
+            {shortcut && (
+              <>
+                {" "}
+                <KbdSequence
+                  keys={shortcut.keys.map((step) => step.map(resolveKeyToken))}
+                  size="sm"
+                  separator={tk("then")}
+                />
+              </>
+            )}
+          </span>
+        </span>
       )}
     </p>
   );

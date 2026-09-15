@@ -1,30 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  Badge,
-  Button,
-  Checkbox,
-  Spinner,
-  toast,
-} from "mangue-ui";
-import { Check, Copy, Download, Lock } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
-import { SettingsGroup, SettingsEmpty } from "@/components/settings/settings-ui";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import { mfaStatusQueryKey, useMfaStatusQuery } from "@/lib/use-mfa-status";
-import { mfaVerifyErrorKey } from "@/lib/mfa";
-import { OtpInput } from "@/components/otp-input";
+import {useState} from "react";
+import {useTranslations} from "next-intl";
+import {useQueryClient} from "@tanstack/react-query";
+import {AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Badge, Button, Checkbox, Spinner, toast} from "mangue-ui";
+import {Check, Copy, Download} from "lucide-react";
+import {useAuth} from "@/lib/auth-context";
+import {SettingsGroup, SettingsEmpty} from "@/components/settings/settings-ui";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
+import {mfaStatusQueryKey, useMfaStatusQuery} from "@/lib/use-mfa-status";
+import {mfaVerifyErrorKey} from "@/lib/mfa";
+import {OtpInput} from "@/components/otp-input";
 
 /**
  * Account settings → “Second factor” (MIN-132).
@@ -239,9 +225,7 @@ export function AccountSecuritySection() {
  was part of the noise. */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountSecurity}
-        icon={Lock}
         title={t("title")}
-        description={t("description")}
         variant="block"
       >
         {status === null ? (

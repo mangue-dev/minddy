@@ -206,9 +206,7 @@ export function ProjectFeedbackSettings({
       {/* ── Canal 1 : board public ─────────────────────────────────────── */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.projectFeedbackBoard}
-        icon={MessagesSquare}
         title={t("feedbackChannelBoardTitle")}
-        description={t("feedbackChannelBoardDesc")}
         help={t("feedbackChannelBoardHelp")}
         action={
           <>
@@ -306,9 +304,7 @@ export function ProjectFeedbackSettings({
       {/* ── Channel 2: the keys your backend carries ──────────────────── */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.projectFeedbackApi}
-        icon={Code2}
         title={t("feedbackChannelApiTitle")}
-        description={t("feedbackChannelApiDesc")}
         help={t("feedbackChannelApiHelp")}
         /* The gesture lives at the end of the title; without an active key it goes down into the
            scene and is not shown twice — like the Integrations tab. */

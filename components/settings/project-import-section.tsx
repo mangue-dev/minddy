@@ -1,10 +1,9 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { Import as ImportIcon } from "lucide-react";
-import { SettingsEmpty, SettingsGroup } from "@/components/settings/settings-ui";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import { ImportPanel } from "@/components/settings/import-panel";
+import {useTranslations} from "next-intl";
+import {SettingsEmpty, SettingsGroup} from "@/components/settings/settings-ui";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
+import {ImportPanel} from "@/components/settings/import-panel";
 
 /** Project settings → Import (MIN-45). The envelope only: the title of
  section, the owner's guard - a bad file creates hundreds of
@@ -22,9 +21,7 @@ export function ProjectImportSection({
   return (
     <SettingsGroup
       anchor={SETTINGS_SECTIONS.projectImport}
-      icon={ImportIcon}
       title={t("importTab")}
-      description={t("importSectionDesc")}
       variant="block"
     >
       {isOwner ? (

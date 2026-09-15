@@ -1,47 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  SegmentedControl,
-  Switch,
-  toast,
-  type SegmentedControlOption,
-} from "mangue-ui";
-import { Keyboard, Palette, Ticket } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
-import { setLocaleCookie } from "@/lib/set-locale";
-import { locales, type Locale } from "@/i18n/config";
-import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import { StatusIndicator } from "@/components/issue-indicators";
-import {
-  NUMO_DEFAULT_STATUS_OPTIONS,
-  resolveNumoDefaultStatus,
-  type NumoDefaultStatus,
-} from "@/lib/numo-default-status";
-import {
-  PROMPT_COPY_AUTO_START_META_KEY,
-  resolvePromptCopyAutoStart,
-} from "@/lib/prompt-copy-auto-start";
-import {
-  AUTO_ASSIGN_ON_START_META_KEY,
-  resolveAutoAssignOnStart,
-} from "@/lib/auto-assign-on-start";
-import { resolveSmartFill, SMART_FILL_META_KEY } from "@/lib/smart-fill";
-import {
-  SEND_MODE_META_KEY,
-  resolveSendMode,
-  type SendMode,
-} from "@/lib/keyboard/send-shortcut";
-import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
-import { useAccountTheme } from "@/lib/use-account-theme";
+import {useEffect, useState} from "react";
+import {useLocale, useTranslations} from "next-intl";
+import {useRouter} from "next/navigation";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SegmentedControl, Switch, toast} from "mangue-ui";
+import type {SegmentedControlOption} from "mangue-ui";
+
+import {useAuth} from "@/lib/auth-context";
+import {setLocaleCookie} from "@/lib/set-locale";
+import {locales} from "@/i18n/config";
+import type {Locale} from "@/i18n/config";
+import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
+import {StatusIndicator} from "@/components/issue-indicators";
+import {NUMO_DEFAULT_STATUS_OPTIONS, resolveNumoDefaultStatus} from "@/lib/numo-default-status";
+import type {NumoDefaultStatus} from "@/lib/numo-default-status";
+import {PROMPT_COPY_AUTO_START_META_KEY, resolvePromptCopyAutoStart} from "@/lib/prompt-copy-auto-start";
+import {AUTO_ASSIGN_ON_START_META_KEY, resolveAutoAssignOnStart} from "@/lib/auto-assign-on-start";
+import {resolveSmartFill, SMART_FILL_META_KEY} from "@/lib/smart-fill";
+import {SEND_MODE_META_KEY, resolveSendMode} from "@/lib/keyboard/send-shortcut";
+import type {SendMode} from "@/lib/keyboard/send-shortcut";
+import {useModKey} from "@/lib/keyboard/use-mod-shortcut";
+import {useAccountTheme} from "@/lib/use-account-theme";
 
 const LANGUAGE_LABELS: Record<Locale, string> = {
   fr: "Français",
@@ -233,9 +213,7 @@ export function AccountPreferencesSection() {
     <>
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountAppearance}
-        icon={Palette}
         title={tNav("appearance")}
-        description={ta("appearanceSectionDesc")}
       >
         <SettingsRow
           htmlFor="account-language"
@@ -279,9 +257,7 @@ export function AccountPreferencesSection() {
           send gesture is neither an appearance nor a ticket property. */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountKeyboard}
-        icon={Keyboard}
         title={ta("keyboardSectionTitle")}
-        description={ta("keyboardSectionDesc")}
       >
         <SettingsRow
           label={ta("sendShortcutTitle")}
@@ -300,9 +276,7 @@ export function AccountPreferencesSection() {
 
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountIssues}
-        icon={Ticket}
         title={tNav("tickets")}
-        description={ta("ticketsSectionDesc")}
       >
         <SettingsRow
           htmlFor="account-auto-assign"

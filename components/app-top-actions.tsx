@@ -30,9 +30,11 @@ function SidebarTopAction({
   shortcut?: ReactNode;
   inboxTrigger?: boolean;
 }) {
+  // Same shape as the sidebar toggle: h-9 square with the same radius, sitting
+  // as its sibling in the top bar.
   const className = cn(
     SIDEBAR_COMPACT_CONTROL_CLASS,
-    "text-sidebar-foreground/65 hover:text-sidebar-foreground",
+    "h-9 w-9 min-w-9 px-0 text-sidebar-foreground/65 hover:text-sidebar-foreground",
   );
   const content = (
     <span className="relative flex size-[18px] shrink-0">

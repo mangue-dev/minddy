@@ -69,6 +69,8 @@ import {
   type ContextMenuAction,
 } from "@/components/issue-context-menu";
 import { NumoIcon } from "@/components/numo-icon";
+import { UserAvatar } from "@/components/user-avatar";
+import { useMyAvatarSource } from "@/lib/use-my-avatar";
 import { AppContentHeader } from "@/components/app-content-header";
 import { ProjectOrb } from "@/components/project-orb";
 import { ProgressRing } from "@/components/progress-ring";
@@ -710,6 +712,8 @@ export function BoardToolbar({
   const tf = useTranslations("Field");
   const tSort = useTranslations("Sort");
   const tApi = useTranslations("ApiErrors");
+  // The "Mes tickets" pill wears MY avatar, not a generic person glyph.
+  const myAvatarSource = useMyAvatarSource();
 
   const activeView = views.find((v) => v.id === activeViewId) ?? null;
   // The system view is neither renamable, nor deletable, nor unlockable.
@@ -844,6 +848,7 @@ export function BoardToolbar({
                     view={v}
                     active={v.id === activeViewId}
                     generating={generatingViewIds.has(v.id)}
+                    avatarSeed={myAvatarSource}
                     onSelect={() => onSelectView(v.id)}
                     onContextMenu={(e) => openViewMenu(v, e)}
                   />
@@ -880,9 +885,18 @@ export function BoardToolbar({
                   {generatingViewIds.has(activeDragView.id) && (
                     <Loader2 className="size-3 shrink-0 animate-spin" />
                   )}
-                  {activeDragView.kind === "my" && (
-                    <CircleUser className="size-3 shrink-0" aria-hidden />
-                  )}
+                  {activeDragView.kind === "my" &&
+                    (myAvatarSource ? (
+                      <UserAvatar
+                        seed={myAvatarSource}
+                        className="size-3 rounded-full"
+                        aria-hidden
+                      />
+                    ) : (
+                      <span
+                        aria-hidden className="block size-3 shrink-0 rounded-full bg-current opacity-30"
+                      />
+                    ))}
                   {activeDragView.kind === "my"
                     ? t("myView")
                     : activeDragView.name}
@@ -1128,12 +1142,15 @@ function ViewChip({
   view,
   active,
   generating,
+  avatarSeed,
   onSelect,
   onContextMenu,
 }: {
   view: View;
   active: boolean;
   generating: boolean;
+  /** My avatar source: the system view wears the real face, not a person glyph. */
+  avatarSeed: string | null;
   onSelect: () => void;
   /** Right click on the pill: opens the actions menu of THIS view (MIN-135).
  The dnd-kit MouseSensor ignores the right button, so reordering by sliding is not affected. */
@@ -1163,7 +1180,12 @@ function ViewChip({
           aria-label={t("viewGenerating")}
         />
       )}
-      {isSystem && <CircleUser className="size-3 shrink-0" aria-hidden />}
+      {isSystem &&
+        (avatarSeed ? (
+          <UserAvatar seed={avatarSeed} className="size-3 rounded-full" aria-hidden />
+        ) : (
+          <span aria-hidden className="block size-3 shrink-0 rounded-full bg-current opacity-30" />
+        ))}
       {isSystem ? t("myView") : view.name}
     </button>
   );

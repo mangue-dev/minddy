@@ -222,9 +222,7 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
   const group = (variant: "rows" | "block", children: ReactNode) => (
     <SettingsGroup
       anchor={SETTINGS_SECTIONS.projectGit}
-      icon={GitBranch}
       title={t("gitTab")}
-      description={t("gitSectionDesc")}
       variant={variant}
     >
       {children}

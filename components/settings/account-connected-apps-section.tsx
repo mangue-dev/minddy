@@ -54,9 +54,7 @@ export function AccountConnectedAppsSection() {
     <>
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountConnectedApps}
-        icon={AppWindow}
         title={t("connectedAppsTitle")}
-        description={t("connectedAppsDesc")}
       >
         {loading ? (
           <SettingsEmpty>{tc("loading")}</SettingsEmpty>

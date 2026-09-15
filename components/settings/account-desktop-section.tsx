@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
-import { AppWindow } from "lucide-react";
-import { Button, Switch } from "mangue-ui";
+import {useEffect, useState} from "react";
+import {useTranslations} from "next-intl";
 
-import { getDesktopBridge, type DesktopBridge } from "@/lib/desktop/bridge";
-import { desktopChannelForOrigin, type DesktopChannel } from "@/lib/desktop/channel";
-import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
+import {Button, Switch} from "mangue-ui";
+
+import {getDesktopBridge} from "@/lib/desktop/bridge";
+import type {DesktopBridge} from "@/lib/desktop/bridge";
+import {desktopChannelForOrigin} from "@/lib/desktop/channel";
+import type {DesktopChannel} from "@/lib/desktop/channel";
+import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
 
 /**
  * Account → Preferences: the CHANNEL of the desktop app (MIN-352).
@@ -82,9 +84,7 @@ export function AccountDesktopSection() {
 
   return (
     <SettingsGroup
-      icon={AppWindow}
       title={ta("desktopSectionTitle")}
-      description={ta("desktopSectionDesc")}
     >
       <SettingsRow
         label={ta("desktopServerLabel")}

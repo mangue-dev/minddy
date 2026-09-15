@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { IssueContextMenu } from "@/components/issue-context-menu";
 import type { AppTab } from "@/lib/app-tabs";
 
-export function AppTabItem({ tab, label, icon, active, focusable, busy, last, compositeIcon, width, onActivate, onClose, onPin, onRename, onFocus }: {
+export function AppTabItem({ tab, label, icon, active, focusable, busy, last, compositeIcon, width, badge, onActivate, onClose, onPin, onRename, onFocus }: {
   tab: AppTab; label: string; icon: ReactNode; active: boolean; focusable: boolean; busy: boolean; last: boolean;
   /** Two icons in the slot (project orb + screen icon): a pinned tab keeps
    *  the same side padding as the square one. EXPERIMENT (to revert). */
@@ -15,6 +15,9 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
   /** Explicit width in px — the strip sizes regular tabs itself so they all
    *  fit without scrolling (the last ones hide behind the "more tabs" menu). */
   width?: number;
+  /** Same rule as the sidebar: a counter only when content is waiting on
+   *  the tab's page (open PRs, unread agent sessions…). Zero renders nothing. */
+  badge?: ReactNode;
   onActivate: () => void; onClose: () => void; onPin: () => void; onRename: () => void; onFocus: () => void;
 }) {
   const t = useTranslations("AppTabs");
@@ -39,7 +42,13 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
       : "bg-[var(--app-tab-background)] text-muted-foreground hover:brightness-95 dark:hover:brightness-110",
   )}
     style={width != null ? { width } : undefined}
-    onContextMenu={(event) => { event.preventDefault(); setMenu({ x: event.clientX, y: event.clientY }); }}>
+    // Anchor the menu to the tab itself (left edge, bottom): a cursor-positioned
+    // menu drifted away from the tab it belongs to.
+    onContextMenu={(event) => {
+      event.preventDefault();
+      const box = (ref.current ?? event.currentTarget).getBoundingClientRect();
+      setMenu({ x: box.left, y: box.bottom });
+    }}>
     <Tooltip disableHoverableContent>
       <TooltipTrigger asChild>
         <button ref={ref} type="button" role="tab" id={`app-tab-${tab.id}`} data-app-tab-id={tab.id}
@@ -53,7 +62,26 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
             }
           }}
           className={cn("flex h-full min-w-0 flex-1 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring", tab.pinned ? "justify-center" : "pl-2.5 pr-6")}>
-          {icon}{!tab.pinned && <span ref={labelRef} className="truncate">{label}</span>}
+          {/* The badge sits ON the icon's top-right corner (half over the
+              icon glyphs), so it works on the square pinned tabs too. Its
+              backing is exactly the tab's own background, muted so only the
+              number/dot reads. */}
+          <span className="relative flex shrink-0 items-center">
+            {icon}
+            {badge != null && (
+              <span
+                className={cn(
+                  "pointer-events-none absolute -top-1.5 right-0 flex translate-x-1/2 items-center justify-center rounded-full",
+                  active
+                    ? "bg-[var(--app-tab-active-background)]"
+                    : "bg-[var(--app-tab-background)]",
+                )}
+              >
+                {badge}
+              </span>
+            )}
+          </span>
+          {!tab.pinned && <span ref={labelRef} className="truncate">{label}</span>}
         </button>
       </TooltipTrigger>
       {(tab.pinned || truncated) && <TooltipContent side="bottom">{label}</TooltipContent>}

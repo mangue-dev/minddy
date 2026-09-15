@@ -1,18 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
-import { Switch, toast } from "mangue-ui";
-import { Inbox } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
-import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import {
-  NOTIFICATION_CATEGORY_META_KEYS,
-  resolveNotificationPrefs,
-  type NotificationCategory,
-  type NotificationPrefs,
-} from "@/lib/notification-prefs";
+import {useEffect, useState} from "react";
+import {useTranslations} from "next-intl";
+import {Switch, toast} from "mangue-ui";
+
+import {useAuth} from "@/lib/auth-context";
+import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
+import {NOTIFICATION_CATEGORY_META_KEYS, resolveNotificationPrefs} from "@/lib/notification-prefs";
+import type {NotificationCategory, NotificationPrefs} from "@/lib/notification-prefs";
 
 const CATEGORIES: readonly NotificationCategory[] = [
   "assigned",
@@ -60,9 +56,7 @@ export function AccountNotificationsSection() {
   return (
     <SettingsGroup
       anchor={SETTINGS_SECTIONS.accountNotifications}
-      icon={Inbox}
       title={t("title")}
-      description={t("description")}
     >
       {/* The switch is TO THE RIGHT of the label, like everywhere else in the
  product: that was the only place that put it in front. */}

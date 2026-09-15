@@ -1,33 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Checkbox,
-  ColorInput,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Switch,
-  cn,
-  toast,
-} from "mangue-ui";
-import { ChevronDown, Languages, Sparkles, TriangleAlert } from "lucide-react";
-import { defaultLocale } from "@/i18n/config";
-import { DEFAULT_BOARD_ACCENT } from "@/lib/feedback/accent";
-import {
-  FEEDBACK_LANGUAGES,
-  languageLabel,
-  normalizeLanguage,
-  type FeedbackLanguage,
-} from "@/lib/feedback/languages";
-import { useProjects } from "@/lib/projects-context";
-import { PICKER_FIELD_TRIGGER, SearchMultiSelect } from "@/components/search-select";
-import { FieldGroup } from "@/components/ui/field";
-import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
+import {useEffect, useRef, useState} from "react";
+import type {ReactNode} from "react";
+import {useLocale, useTranslations} from "next-intl";
+import {useQuery, useQueryClient} from "@tanstack/react-query";
+import {Checkbox, ColorInput, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch, cn, toast} from "mangue-ui";
+import {ChevronDown, TriangleAlert} from "lucide-react";
+import {defaultLocale} from "@/i18n/config";
+import {DEFAULT_BOARD_ACCENT} from "@/lib/feedback/accent";
+import {FEEDBACK_LANGUAGES, languageLabel, normalizeLanguage} from "@/lib/feedback/languages";
+import type {FeedbackLanguage} from "@/lib/feedback/languages";
+import {useProjects} from "@/lib/projects-context";
+import {PICKER_FIELD_TRIGGER, SearchMultiSelect} from "@/components/search-select";
+import {FieldGroup} from "@/components/ui/field";
+import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
 import type { SettingsSectionId } from "@/lib/settings-sections";
 
 /**
@@ -529,9 +515,7 @@ export function NumoReviewGroup({
   return (
     <SettingsGroup
       anchor={anchor}
-      icon={Sparkles}
       title={t("feedbackReviewTitle")}
-      description={t("feedbackReviewDesc")}
       help={t("feedbackReviewHelp")}
       action={
         <>
@@ -649,9 +633,7 @@ export function FeedbackTranslationGroup({
   return (
     <SettingsGroup
       anchor={anchor}
-      icon={Languages}
       title={t("feedbackTranslationTitle")}
-      description={t("feedbackTranslationDesc")}
       help={t("feedbackTranslationHelp")}
       action={
         <>

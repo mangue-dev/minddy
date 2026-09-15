@@ -426,8 +426,10 @@ a.markdown-link::before {
   --sidebar-accent: oklch(0.236 0.005 264);
   --secondary: oklch(0.249 0.005 264);
   --accent: oklch(0.257 0.005 264);
-  --app-tab-background: color-mix(in oklab, var(--sidebar-accent) 55%, transparent);
-  --app-tab-active-background: color-mix(in oklab, var(--sidebar-accent) 92%, white);
+  /* Unfocused tabs sink toward the chrome surface so the active one stands
+     out clearly in dark mode (55% left them almost tied with the selection). */
+  --app-tab-background: color-mix(in oklab, var(--sidebar-accent) 30%, transparent);
+  --app-tab-active-background: color-mix(in oklab, var(--sidebar-accent) 94%, white);
 
   /* Fields and neutral badges stay above the surface; hover adds another step. */
   --control: oklch(0.240 0.005 264);

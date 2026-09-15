@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, ConfirmDeleteDialog, Input, Spinner } from "mangue-ui";
-import { ShieldOff } from "lucide-react";
-import { SettingsGroup, SettingsEmpty } from "@/components/settings/settings-ui";
-import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
+import {useEffect, useState} from "react";
+import {useTranslations} from "next-intl";
+import {useQuery, useQueryClient} from "@tanstack/react-query";
+import {Button, ConfirmDeleteDialog, Input, Spinner} from "mangue-ui";
+
+import {SettingsGroup, SettingsEmpty} from "@/components/settings/settings-ui";
+import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import type { TeamFeedbackUserOption } from "@/app/api/projects/[id]/feedback/users/route";
 
 /**
@@ -99,9 +99,7 @@ export function FeedbackParticipantsGroup({ projectId }: { projectId: string }) 
   return (
     <SettingsGroup
       anchor={SETTINGS_SECTIONS.projectFeedbackParticipants}
-      icon={ShieldOff}
       title={t("feedbackParticipantsTitle")}
-      description={t("feedbackParticipantsDesc")}
       help={t("feedbackParticipantsHelp")}
     >
       <div className="flex flex-col gap-3 py-3.5">

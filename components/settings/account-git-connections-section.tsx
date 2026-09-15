@@ -240,9 +240,7 @@ export function AccountGitConnectionsSection() {
 
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountGitConnections}
-        icon={GitBranch}
         title={t("gitConnectionsTitle")}
-        description={t("gitConnectionsDesc")}
         help={t("gitConnectionsHelp")}
         variant="block"
         /* The gesture lives at the end of the title; without counting he goes down in the scene
@@ -347,9 +345,7 @@ function AccountGitBranchPrefix() {
   return (
     <SettingsGroup
       anchor={SETTINGS_SECTIONS.accountGitBranchPrefix}
-      icon={GitBranch}
       title={t("gitAgentBranchesTitle")}
-      description={t("gitAgentBranchesDesc")}
     >
       {loading ? (
         <SettingsEmpty>{tc("loading")}</SettingsEmpty>

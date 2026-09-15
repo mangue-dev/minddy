@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -20,6 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Ellipsis, Loader2, AlertCircle, Home, Plus } from "lucide-react";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -38,10 +39,25 @@ import {
 } from "mangue-ui";
 import { useAppTabs } from "@/lib/app-tabs-context";
 import { useProjects } from "@/lib/projects-context";
-import { useQueries } from "@tanstack/react-query";
 import { appTabRoute } from "@/lib/app-tab-location";
 import { objectivesQueryFn } from "@/lib/objectives-api";
 import { APP_TAB_MAX_NAME, type AppTab } from "@/lib/app-tabs";
+import {
+  useAgentSessionsQuery,
+  useOpenPullRequestCountQuery,
+} from "@/lib/use-agent-runs";
+import {
+  fetchPullRequestApi,
+  isAgentSessionUnread,
+  type PullRequestRef,
+} from "@/lib/agent-api";
+import { useAgentReads } from "@/lib/use-agent-reads";
+import { usePlanGates } from "@/lib/use-billing-query";
+import { fetchPagesApi } from "@/lib/pages-api";
+import { pagesKey } from "@/lib/use-pages-query";
+import type { PageSummary } from "@/lib/pages-api";
+import { routinesQueryKey } from "@/lib/use-routines-query";
+import { fetchRoutinesApi, type Routine } from "@/lib/routines-api";
 import { AppTabIcon } from "./app-tab-icon";
 import { AppTabItem } from "./app-tab-item";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -90,6 +106,107 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [objectiveQueriesKey]);
+  // Tab titles follow the CONTENT (a pinned page, a selected PR or routine):
+  // the same caches the target screens already keep — pages per project, the
+  // PR detail, the global routine list — so renaming a page or a PR updates
+  // every tab through the shared cache without new requests.
+  const tabRoutes = useMemo(
+    () => [...new Set(tabs.map((tab) => appTabRoute(tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href)))],
+    [tabs, activeId, session]
+  );
+  const pageProjectIds = useMemo(
+    () => [...new Set(tabRoutes.filter((route) => route.pageId).map((route) => route.projectId!).filter((id) => !!id))],
+    [tabRoutes]
+  );
+  const pageQueries = useQueries({
+    queries: pageProjectIds.map((projectId) => ({
+      queryKey: pagesKey(projectId),
+      queryFn: () => fetchPagesApi(projectId),
+      enabled: !!projectId,
+    })),
+  });
+  const pageQueriesKey = pageProjectIds.join(" ") + ":" + pageQueries.map((result) => result.dataUpdatedAt).join(",");
+  const pageById = useMemo(() => {
+    const map = new Map<string, PageSummary>();
+    for (const result of pageQueries) {
+      for (const page of (result.data ?? []) as PageSummary[]) map.set(page.id, page);
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageQueriesKey]);
+  const selectedPrIds = useMemo(
+    () => [...new Set(tabRoutes.map((route) => route.prId).filter((id) => !!id))] as string[],
+    [tabRoutes]
+  );
+  // Same query key as the review screen, so the tab reuses whatever is cached
+  // (and its title follows live retitling); no polling here — a title that
+  // arrives one turn late is harmless.
+  const prQueries = useQueries({
+    queries: selectedPrIds.map((prId) => ({
+      queryKey: ["pull-request", prId] as const,
+      queryFn: () => fetchPullRequestApi(prId),
+      enabled: !!prId,
+    })),
+  });
+  const prQueriesKey = selectedPrIds.join(" ") + ":" + prQueries.map((result) => result.dataUpdatedAt).join(",");
+  const prById = useMemo(() => {
+    const map = new Map<string, PullRequestRef>();
+    for (let i = 0; i < selectedPrIds.length; i++) {
+      const ref = (prQueries[i]?.data as { pr?: PullRequestRef | null } | undefined)?.pr;
+      if (ref) map.set(selectedPrIds[i], ref);
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prQueriesKey]);
+  const routineIds = useMemo(
+    () => [...new Set(tabRoutes.map((route) => route.routineId).filter((id) => !!id))] as string[],
+    [tabRoutes]
+  );
+  const { data: routinesData } = useQuery({
+    queryKey: routinesQueryKey(),
+    queryFn: fetchRoutinesApi,
+    enabled: routineIds.length > 0,
+  });
+  const routineById = useMemo(() => {
+    const map = new Map<string, Routine>();
+    for (const routine of routinesData?.routines ?? []) map.set(routine.id, routine);
+    return map;
+  }, [routinesData]);
+
+  // Notification badges on the tabs follow the same rules as the sidebar (same
+  // counters, same caching): open PRs on the PR tab, working/unread marks on
+  // the Agents/Numo tab. They sit ON the tab icon's top-right corner, drawn
+  // plain — no pill, no ring — as if laid directly over the icon.
+  const openPrCount = useOpenPullRequestCountQuery();
+  const { agentsAllowed } = usePlanGates();
+  const { sessions: agentSessions } = useAgentSessionsQuery();
+  const { reads: agentReads } = useAgentReads();
+  const anyAgentWorking = agentSessions.some((sessionItem) => sessionItem.working);
+  const anyAgentAwaiting = agentSessions.some(
+    (sessionItem) => sessionItem.awaitingInput && isAgentSessionUnread(sessionItem, agentReads),
+  );
+  const anyAgentUnread = agentSessions.some((sessionItem) => isAgentSessionUnread(sessionItem, agentReads));
+  const sectionBadges = (section: string): ReactNode => {
+    if (section === "pull-requests") {
+      if (!agentsAllowed || openPrCount <= 0) return null;
+      // Smaller than the sidebar sticker: the tab icon badge reads as a dot
+      // of digits; the tab paints its own background around it.
+      return (
+        <span
+          aria-label={nav("pullRequestsBadge", { count: openPrCount })}
+          className="px-1 text-[9px] font-medium leading-3 tabular-nums text-muted-foreground"
+        >
+          {openPrCount > 99 ? "99+" : openPrCount}
+        </span>
+      );
+    }
+    if (!agentsAllowed || (section !== "numo" && section !== "agents")) return null;
+    if (anyAgentWorking) return <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />;
+    if (anyAgentAwaiting) return <span className="size-2 shrink-0 rounded-full bg-yellow-500" aria-label={nav("agentsAwaiting")} />;
+    if (anyAgentUnread) return <span className="size-2 shrink-0 rounded-full bg-blue-500" aria-label={nav("agentsUnread")} />;
+    return null;
+  };
+
   const strip = useRef<HTMLDivElement>(null);
   const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: 6 } }));
   const [dragged, setDragged] = useState<string | null>(null);
@@ -144,14 +261,23 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   };
   const draggedTab = dragged ? tabs.find((tab) => tab.id === dragged) : undefined;
   const describe = (tab: AppTab) => {
-    const { section, projectId, objectiveId } = appTabRoute(tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href);
+    const route = appTabRoute(tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href);
+    const { section, projectId, objectiveId, prId, routineId } = route;
+    const pageId = route.pageId;
     const project = projectId ? projectById.get(projectId) : undefined;
     const objective = objectiveId ? objectiveById.get(objectiveId) : undefined;
+    const page = pageId ? pageById.get(pageId) : undefined;
+    const prRef = prId ? prById.get(prId) : undefined;
+    const routine = routineId ? routineById.get(routineId) : undefined;
     const sectionLabel = nav(routeLabels[section] ?? "home");
-    const label = tab.custom_name ?? (objective?.name ?? (projectId ? `${sectionLabel} - ${project?.name ?? t("unavailableProject")}` : sectionLabel));
+    // The tab names its CONTENT first: a pinned page, a selected PR or
+    // routine reads by itself; without one, the section-project pair stands.
+    const contentLabel = page?.title || (prRef ? `#${prRef.number}${prRef.title ? ` ${prRef.title}` : ""}` : null) || routine?.title || null;
+    const label = tab.custom_name ?? (objective?.name ?? (contentLabel ?? (projectId ? `${sectionLabel} - ${project?.name ?? t("unavailableProject")}` : sectionLabel)));
     // EXPERIMENT (to revert): composite = project orb + screen icon.
     const composite = Boolean(projectId && project);
-    return { section, projectId, project, objectiveId, objective, composite, label };
+    const pageIcon = page?.icon;
+    return { section, projectId, project, objectiveId, objective, pageIcon, composite, label };
   };
   // Which tabs stay on the rail and how wide the regular ones get: they all
   // shrink to a shared width while that fits, then the tail collapses to its
@@ -224,7 +350,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           onDragCancel={() => setDragged(null)} onDragEnd={finishDrag}>
         <SortableContext items={visible.map(({ tab }) => tab.id)} strategy={horizontalListSortingStrategy}>
         {visible.map(({ tab, view }) => {
-          const { section, projectId, project, objectiveId, objective, composite, label } = view;
+          const { section, projectId, project, objectiveId, objective, pageIcon, composite, label } = view;
           return <SortableAppTab key={tab.id} id={tab.id} disabled={busy}
             onKeyDown={(event) => {
               if (!event.altKey || !event.shiftKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
@@ -235,8 +361,11 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
               if (event.key === "ArrowRight" && index < group.length - 1) void session.move(tab.id, group[index + 2]?.id ?? null);
             }}>
           <AppTabItem tab={tab} active={tab.id === activeId} focusable={tab.id === focusId} label={label}
-            icon={<AppTabIcon section={section} project={project} projectId={projectId}
-              objectiveColor={objectiveId ? objective?.color ?? null : undefined} />} busy={busy} last={tabs.length <= 1}
+            icon={pageIcon
+              ? <span className="text-sm leading-none" aria-hidden>{pageIcon}</span>
+              : <AppTabIcon section={section} project={project} projectId={projectId}
+                  objectiveColor={objectiveId ? objective?.color ?? null : undefined} />}
+            badge={sectionBadges(section)} busy={busy} last={tabs.length <= 1}
             compositeIcon={composite} width={tab.pinned ? undefined : regularWidth}
             onActivate={() => { if (!busy) void session.activate(tab.id); }} onClose={() => close(tab.id)}
             onPin={() => { void session.update(tab.id, { pinned: !tab.pinned }); }}

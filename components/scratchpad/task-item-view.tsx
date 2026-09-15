@@ -42,7 +42,6 @@ import {
 } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
 import {
-  Bot,
   Check,
   Circle,
   CircleSlash,
@@ -404,7 +403,7 @@ export function TaskItemView({
                   ]}
                   onSelect={() => pick(launchAgent)}
                 >
-                  <Bot />
+                  <NumoIcon animated={false} className="size-4" />
                   {t("launchAgent")}
                   {/* Same keys as on a ticket, displayed in the same place. */}
                   <CommandShortcut>
