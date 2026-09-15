@@ -391,6 +391,9 @@ function ThreadComment({
         await updatePullRequestCommentApi(endpoint, { commentId, body: next });
       }
       setEditing(false);
+      // The history just grew (this save snapshotted the previous body):
+      // forget the list read before the edit, the next menu open refetches.
+      setEdits(null);
       onEdited?.();
     } catch (err) {
       toast.error((err as Error).message);

@@ -5,13 +5,20 @@ import type { RepoProviderId } from "@/lib/repo-providers";
 
 /**
  * Previous versions of PR thread comments (MIN-548): one row per edit, the
- * body the comment carried BEFORE the rewrite. Captured on two paths:
+ * body the comment carried BEFORE the rewrite. `comment_id` 0 is the body of
+ * the pull request itself — the thread's opening message. Captured on two
+ * paths per subject:
  * - edits made FROM minddy — the API snapshots the current body before the
- *   forge write (`updatePrCommentResponse`);
- * - edits made on github.com — the `issue_comment` webhook `edited` payload
- *   carries the previous body in `changes.body.from` and the receiver
- *   records it (GitLab has no note-edit webhook: only the first path exists
- *   there).
+ *   forge write (`updatePrCommentResponse`, `prMaintenanceActionResponse`);
+ * - edits made on github.com — the webhooks deliver the previous body
+ *   (`issue_comment` `changes.body.from` for comments, `pull_request`
+ *   `changes.body.from` for the body; GitLab has no note-edit webhook: only
+ *   the first path exists there).
+ *
+ * An edit from minddy echoes back through the webhook a few seconds later
+ * carrying the SAME previous body; the echo is not a second version. The
+ * recorder therefore skips a row whose body equals the newest snapshot of
+ * the same comment — which also collapses replayed deliveries.
  *
  * WRITES go through the service client only: the table has no insert policy,
  * like other forge-fed tables. READS go through RLS on the
@@ -38,6 +45,21 @@ export async function recordPrCommentEditQuiet(input: {
   body: string;
   editedBy: string | null;
 }): Promise<void> {
+  // An edit from minddy echoes through the webhook carrying the SAME
+  // previous body, and replayed deliveries repeat themselves: a row whose
+  // body equals the newest snapshot of this comment is not a version, skip
+  // it. The read is also best effort — on failure, record anyway (a
+  // duplicate read as a gap is better than a lost version).
+  const { data: newest } = await getServiceClient()
+    .from("pr_comment_edits")
+    .select("body")
+    .eq("provider", input.provider)
+    .eq("repo_full_name", input.repoFullName)
+    .eq("pr_number", input.prNumber)
+    .eq("comment_id", input.commentId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (newest?.length === 1 && newest[0].body === input.body) return;
   const { error } = await getServiceClient()
     .from("pr_comment_edits")
     .insert({

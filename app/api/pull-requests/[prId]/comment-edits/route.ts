@@ -6,8 +6,10 @@ import { listPrCommentEdits } from "@/lib/server/agent/pr-comment-edits";
 /**
  * Previous versions of one thread comment (MIN-548), OLDEST-first: the body
  * each edit replaced, who edited it, and when. The snapshots live in
- * `pr_comment_edits`, fed by the edit API and by the GitHub webhook.
- * `?commentId=N` is required: without it the route has no subject.
+ * `pr_comment_edits`, fed by the edit APIs and by the GitHub webhooks.
+ * `?commentId=N` is required: without it the route has no subject, and 0
+ * designates the body of the pull request itself — the thread's opening
+ * message.
  */
 
 type RouteContext = { params: Promise<{ prId: string }> };
@@ -22,7 +24,7 @@ export async function GET(
 
   const raw = new URL(request.url).searchParams.get("commentId");
   const commentId = raw == null ? Number.NaN : Number(raw);
-  if (!Number.isSafeInteger(commentId) || commentId < 1) {
+  if (!Number.isSafeInteger(commentId) || commentId < 0) {
     return NextResponse.json({ error: "commentId required" }, { status: 400 });
   }
 

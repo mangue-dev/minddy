@@ -44,6 +44,7 @@ import {
   type PullRequestUpsertOutcome,
 } from "@/lib/server/agent/pull-requests";
 import { recordPrCommentEditQuiet } from "@/lib/server/agent/pr-comment-edits";
+import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
 import { handleForgeNumoMention } from "@/lib/server/agent/pr-mention";
 import {
   broadcastPrChanged,
@@ -165,6 +166,10 @@ interface PullRequestEvent {
   pull_request?: PullRequestPayload;
   repository?: { full_name?: string };
   sender?: GithubActor;
+  /** On `edited`, the previous values — `changes.body.from` is the body
+      BEFORE the rewrite: the snapshot the edit history records for the
+      thread's opening message (MIN-548). */
+  changes?: { body?: { from?: string | null } } | null;
 }
 
 /**
@@ -274,6 +279,25 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   // An older or replayed delivery must not drive runs, issue status,
   // notifications, or activity after the PR row refused its stale snapshot.
   if (ingestion && !ingestion.applied) return;
+
+  // Edit history (MIN-548): GitHub delivers the PREVIOUS body on `edited`
+  // (`changes.body.from`), so the snapshot of the thread's opening message is
+  // possible without a second read. Best effort — a lost snapshot is a gap in
+  // the history, never a broken webhook; the recorder skips the echo of an
+  // edit made from minddy (same body as the snapshot the API just wrote).
+  if (
+    action === "edited" &&
+    typeof payload.changes?.body?.from === "string"
+  ) {
+    await recordPrCommentEditQuiet({
+      provider: "github",
+      repoFullName,
+      prNumber: number,
+      commentId: PR_BODY_COMMENT_ID,
+      body: payload.changes.body.from,
+      editedBy: payload.sender?.login ?? null,
+    });
+  }
 
   // Inbox: The project learns that a pull request is waiting for eyes. Here, right
   // after ingestion, and not lower with the other notifications: these

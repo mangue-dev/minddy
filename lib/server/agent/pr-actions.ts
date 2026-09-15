@@ -2531,6 +2531,25 @@ export async function prMaintenanceActionResponse(
           { status: 400 },
         );
       }
+      // Snapshot FIRST (MIN-548), like a comment edit: the body opens the
+      // conversation thread (`PR_BODY_COMMENT_ID`), so its previous versions
+      // read like any message's. Read from the forge's own state — if the
+      // read fails, we still edit, the history simply starts here.
+      try {
+        const current = await scope.forge.getPullRequest(scope.call);
+        if (current.body != null) {
+          await recordPrCommentEditQuiet({
+            provider: scope.target.provider,
+            repoFullName: scope.target.repoFullName,
+            prNumber: scope.pr.number,
+            commentId: PR_BODY_COMMENT_ID,
+            body: current.body,
+            editedBy: actor.actor.login,
+          });
+        }
+      } catch (err) {
+        console.error("[pr-actions] body edit snapshot read failed:", (err as Error).message);
+      }
       await withPrOperation(`${scope.pr.id}:update-body`, () =>
         scope.forge.updatePullRequestBody({ ...call, body: nextBody }),
       );
