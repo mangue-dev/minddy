@@ -27,7 +27,7 @@
 // which allows the row field to be THE SAME in the PR panel and in
 // the diff view of an agent session (the `agent-runs/[runId]/pr/*` facades).
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, cn, Spinner } from "mangue-ui";
 import {
@@ -37,8 +37,12 @@ import {
   useFileDrop,
 } from "@/components/resources";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
-import { Markdown } from "@/components/markdown";
-import { MentionTextarea } from "@/components/mention-textarea";
+import {
+  MarkdownEditor,
+  type MarkdownEditorApi,
+} from "@/components/markdown-editor";
+import { forgeMentionScanner } from "@/lib/mention-scan";
+import { NUMO_MENTION_ID } from "@/lib/mention-attributes";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { usePrMembersQuery } from "@/lib/use-pr-members-query";
 import { useForgeUploads } from "@/lib/use-forge-uploads";
@@ -87,6 +91,41 @@ export function PrCommentComposer({
   // stays cached for the entire time of the panel.
   const [wantsMentions, setWantsMentions] = useState(false);
   const { members } = usePrMembersQuery(endpoint, wantsMentions);
+  // The WYSIWYG surface owns the text; the draft stays with the CALLER
+  // (quote, dictate and uploads write through it). What the editor pushed
+  // last: the mirror compares to it to know when a value came from
+  // OUTSIDE (quote) and must be poured back in.
+  const editorApiRef = useRef<MarkdownEditorApi | null>(null);
+  const lastEmittedRef = useRef(value);
+  useEffect(() => {
+    if (value === lastEmittedRef.current) return;
+    lastEmittedRef.current = value;
+    const api = editorApiRef.current;
+    if (api) api.setMarkdown(value);
+  }, [value]);
+  // “Quote” wrote into the draft: the caret must land after it.
+  useEffect(() => {
+    if (!focusSignal) return;
+    editorApiRef.current?.focus();
+  }, [focusSignal]);
+  const editorMentions = useMemo(() => {
+    // The LOGIN, never a displayed name: it is what the text carries and
+    // what the forge resolves in notification. Numo leads the list — she is
+    // the only mention minddy processes herself.
+    return {
+      options: [
+        { type: "numo" as const, id: NUMO_MENTION_ID, label: "Numo" },
+        ...members.map((m) => ({
+          type: "forge" as const,
+          id: m.login,
+          label: m.login,
+          iconUrl: m.avatar_url,
+        })),
+      ],
+      scan: forgeMentionScanner(members),
+      onQuery: () => setWantsMentions(true),
+    };
+  }, [members]);
   const uploads = useForgeUploads(endpoint, onChange);
   const drop = useFileDrop(uploads.addFiles);
 
@@ -116,47 +155,35 @@ export function PrCommentComposer({
       >
         <DropOverlay show={drop.dragging} />
 
-        {/* No write/preview switch (MIN-548): the field stays, and the
-            rendered markdown lives UNDER it, live — like the scratchpad,
-            writing and seeing what will be sent are one gesture, not two
-            modes. The preview uses the app's real renderer, so code blocks,
-            images and lists look exactly as they will at the forge. */}
-        <MentionTextarea
+        {/* WYSIWYG (MIN-548): the surface IS the preview — like the
+            scratchpad, what is typed reads rendered, and there is no mode to
+            switch. Markdown still flows in (quote, dictation, pasted upload
+            links) and the forge accounts carry their own portrait in the
+            pills. */}
+        <MarkdownEditor
           value={value}
-          onChange={(next) => onChange(() => next)}
-          forgeMembers={members}
-          onMentionQuery={() => setWantsMentions(true)}
-          focusSignal={focusSignal}
+          onCommit={(markdown) => {
+            lastEmittedRef.current = markdown;
+            onChange(() => markdown);
+          }}
+          apiRef={(api) => {
+            editorApiRef.current = api;
+          }}
+          onChange={(markdown) => {
+            lastEmittedRef.current = markdown;
+            onChange(() => markdown);
+          }}
+          onSubmit={() => {
+            if (canPost) onSubmit();
+          }}
+          mentions={editorMentions}
           autoFocus={autoFocus}
-          onSubmit={onSubmit}
-          onEscape={onCancel}
           placeholder={placeholder}
-          // Anchored in the diff, the field is HIGH in a scrollable area:
-          // a list that opened upwards would fold out of view.
-          dropUp={!line}
-          includeNumo
           className={cn(
-            "rounded-none border-0 bg-transparent focus-visible:border-0 focus-visible:ring-0",
-            line ? "max-h-40 px-3 py-2" : "px-3.5 py-2.5",
+            "min-w-0 max-w-full",
+            line ? "max-h-40 overflow-y-auto px-3 py-2" : "px-3.5 py-2.5",
           )}
         />
-        {body ? (
-          <div
-            data-testid="pr-composer-preview"
-            className={cn(
-              "min-w-0 max-w-full border-t border-border/60 text-muted-foreground",
-              line ? "px-3 py-2" : "px-3.5 py-2.5",
-            )}
-          >
-            <Markdown
-              allowRawHtml
-              linkVariant="plain"
-              className="max-w-full text-foreground [&_code]:bg-primary/10 [&_code]:text-primary"
-            >
-              {value}
-            </Markdown>
-          </div>
-        ) : null}
 
         <div
           className={cn(

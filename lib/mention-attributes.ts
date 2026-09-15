@@ -46,6 +46,17 @@ export function mentionAttrsFromScanned(mention: ScannedMention) {
         color: null,
         icon: mention.page.icon,
       };
+    case "forge":
+      // The login IS the mention; the portrait travels with the segment so
+      // the pill shows the forge account, not a generated face.
+      return {
+        mentionType: "forge",
+        mentionId: mention.login,
+        mentionLabel: mention.login,
+        seed: null,
+        color: null,
+        icon: mention.avatarUrl,
+      };
     case "project":
       return {
         mentionType: "project",

@@ -82,6 +82,9 @@ function MentionNodeView({ node }: NodeViewProps) {
         onNavigate={href ? () => links?.navigate(type, id) : undefined}
         label={node.attrs.mentionLabel ?? ""}
         avatarSeed={node.attrs.seed}
+        // The portrait of a forge account travels in the `icon` attribute —
+        // a URL, like the favicon of a project.
+        avatarUrl={type === "forge" ? ((node.attrs.icon as string | null) ?? undefined) : undefined}
         color={node.attrs.color}
         // The `icon` attribute carries two things depending on the type, and only one on
         // times: the favicon of a project (a URL) or the emoji of a page. THE
