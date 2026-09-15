@@ -204,13 +204,38 @@ function startWork(args) {
   }
   git(["switch", "--create", branch, "origin/main"]);
   console.log(`\nReady on ${branch}.`);
-  console.log("Make changes and commit them in VS Code, then run: npm run work:pr");
+  console.log("Make changes and commit them in VS Code, then run: npm run work:pr -- \"Title\" -m \"Description\"");
+}
+
+export function parsePullRequestArguments(args) {
+  const titleParts = [];
+  const bodyParts = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "-m" || arg === "--message") {
+      const value = args[index + 1];
+      if (value === undefined) {
+        throw new Error(`The ${arg} flag needs a description string after it.`);
+      }
+      bodyParts.push(value);
+      index += 1;
+      continue;
+    }
+    if (arg === "--") {
+      continue;
+    }
+    if (arg.startsWith("-")) {
+      throw new Error(`Unknown option: ${arg}. Only -m/--message is supported.`);
+    }
+    titleParts.push(arg);
+  }
+  const title = titleParts.join(" ").trim();
+  const body = bodyParts.join("\n\n").trim();
+  return { title, body };
 }
 
 function publishPullRequest(args) {
-  if (args.length !== 0) {
-    throw new Error("work:pr does not accept arguments.");
-  }
+  const { title, body } = parsePullRequestArguments(args);
   ensureCleanWorkingTree();
   ensureGitHubCli();
   const branch = currentBranch();
@@ -253,11 +278,29 @@ function publishPullRequest(args) {
     { capture: true },
   );
   if (existingUrl) {
+    if (title || body) {
+      const editArgs = ["pr", "edit", branch];
+      if (title) editArgs.push("--title", title);
+      if (body) editArgs.push("--body", body);
+      gh(editArgs);
+      console.log("Pull request description updated.");
+    }
     console.log(`\nPull request updated: ${existingUrl}`);
     return;
   }
 
-  gh(["pr", "create", "--base", "main", "--head", branch, "--fill"]);
+  if (title || body) {
+    const createArgs = ["pr", "create", "--base", "main", "--head", branch];
+    if (title) createArgs.push("--title", title);
+    if (body) createArgs.push("--body", body);
+    gh(createArgs);
+  } else {
+    console.log(
+      'Tip: pass a title and a description for a complete pull request, for example:\n' +
+      '  npm run work:pr -- "Short summary" -m "What was done, why, and what to review."',
+    );
+    gh(["pr", "create", "--base", "main", "--head", branch, "--fill"]);
+  }
   const createdUrl = gh(
     ["pr", "view", branch, "--json", "url", "--jq", ".url"],
     { capture: true },
@@ -331,8 +374,12 @@ function printHelp() {
   console.log(`Minddy contribution workflow
 
   npm run work:start -- "short work name"  Start from the latest origin/main
-  npm run work:pr                         Push and open or update the pull request
+  npm run work:pr "Title" -m "Description"  Push and open or update the pull request
   npm run work:done                       Return to a clean main after the merge
+
+Give the pull request a real title and a complete description with -m. Repeat
+-m for several paragraphs. Running work:pr without arguments falls back to
+filling the pull request from the commit messages.
 
 Commit from the VS Code Source Control view. Workspace settings add the DCO
 sign-off automatically.`);

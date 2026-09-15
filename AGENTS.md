@@ -27,6 +27,47 @@ make the exception obvious from its surrounding code or fixture path.
   changes.
 - Review `git diff --check` and confirm that excluded paths are untouched.
 
+## Git workflow (this repository only)
+
+Apply these rules only when the `origin` remote is `mangue-dev/minddy`. Never
+apply them to another project.
+
+### Before changing code
+
+1. Check the Git state and refresh the remote references
+   (`git fetch origin --prune`).
+2. Pick one dedicated branch for the goal.
+3. Check whether that branch already exists locally or on `origin`:
+   - If it exists locally, switch to it and continue the work there.
+   - If it exists only on `origin`, create its local tracking branch.
+   - If it does not exist, create it with
+     `npm run work:start -- "short work name"`.
+4. Never create a second branch for the same work.
+5. Never commit or push directly to `main` or `production`.
+6. Always preserve pre-existing uncommitted changes.
+
+### When the work is ready
+
+- Run `npm run work:pr -- "Short title" -m "Complete description"` to create or
+  refresh the pull request. The `-m` flag may be repeated for several
+  paragraphs.
+- After confirming the pull request is merged, run `npm run work:done`.
+- Run `npm run deploy` only when the user explicitly asks for a production
+  deployment.
+
+## Commits and pull requests
+
+- Always write commit messages and pull request titles and descriptions in
+  idiomatic English.
+- Commit messages follow the Conventional Commits style used in this
+  repository (`feat:`, `fix:`, `refactor:`, …).
+- Every pull request carries a complete, real description: what was done, why,
+  how it was verified, and anything a reviewer needs to know. Never reduce a
+  pull request description to a bare `Signed-off-by` trailer or a copy of the
+  commit message. The DCO trailer belongs in the commits, not as the body of
+  the pull request.
+- Every commit must carry the DCO sign-off (see below).
+
 ## DCO sign-offs
 
 - Every commit Codex creates or amends must include a `Signed-off-by` trailer
