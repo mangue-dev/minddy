@@ -32,6 +32,9 @@ function sanitizeRun(run: AgentRun) {
     // Which tells the conversation that she is watching a REVIEW (MIN-168): not
     // branch to push, so no “create a pull request” to propose.
     pull_request_id: run.pull_request_id,
+    // Short title written by the titler at launch (`agent_runs.title`, see the
+    // PATCH below): the client cards prefer it over the raw launch prompt.
+    title: run.title,
     status: run.status,
     resumable: agentRunCanResume(run),
     model: run.model,
@@ -77,15 +80,16 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
 
-  try {
-    const identity = await resolveNumoConversation(auth.supabase, "run", run.id);
-    return NextResponse.json({ run: { ...sanitizeRun(run),
-      conversation_id: run.conversation_id,
-      numo_conversation_id: identity?.conversationId ?? null,
-    } });
-  } catch {
-    return NextResponse.json({ error: "Unable to resolve conversation" }, { status: 500 });
-  }
+  // The run itself is readable: never let the Numo identity sidecar block it.
+  // resolveNumoConversation can throw on a transient Supabase error; failing the
+  // whole GET wedged status polling (the client showed “starting” forever and
+  // only recovered on remount). Without an identity the run is returned as-is.
+  const identity = await resolveNumoConversation(auth.supabase, "run", run.id)
+    .catch(() => null);
+  return NextResponse.json({ run: { ...sanitizeRun(run),
+    conversation_id: run.conversation_id,
+    numo_conversation_id: identity?.conversationId ?? null,
+  } });
 }
 
 /** A conversation title fits on one line — beyond that, the column truncates it

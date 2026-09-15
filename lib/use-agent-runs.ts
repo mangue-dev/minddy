@@ -120,7 +120,12 @@ export function useAgentRunQuery(runId: string | null) {
     refetchInterval: (query) => {
       const run = query.state.data?.run;
       if (run && isAgentRunWorking(run.status)) return 3000;
-      return run ? 12000 : false;
+      if (run) return 12000;
+      // No data yet (first fetch pending, failed, or errored): keep polling.
+      // Returning `false` here wedged the UI on a single failed fetch — the
+      // card showed “starting” forever until a remount, because `run` stayed
+      // null and no interval ever restarted the query.
+      return 5000;
     },
   });
   return { run: data?.run ?? null, loading: enabled && isPending };

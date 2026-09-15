@@ -2525,7 +2525,6 @@
     "noActivity": "Aucune activité pour l'instant.",
     "delegatedWorkFallbackTitle": "Tâche de code déléguée",
     "delegatedWorkView": "Voir le travail",
-    "delegatedWorkActivityCount": "{count, plural, one {# activité enregistrée} other {# activités enregistrées}}",
     "delegatedWorkState_starting": "Démarrage",
     "delegatedWorkState_queued": "En attente",
     "delegatedWorkState_running": "En cours",
