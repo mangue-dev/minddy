@@ -180,6 +180,10 @@ interface PrStatusCardsProps {
   /** A correction run works on this pull request right now (a Numo fix,
       not a reread): its own card, the whole surface opens the Numo panel. */
   fixRun: { startedAt: string | null; onOpen: () => void } | null;
+  /** Shared open state of the checks popover: the merge-state popover's
+      "View checks" button opens the SAME list from further away. */
+  checksOpen: boolean;
+  onChecksOpenChange: (open: boolean) => void;
   onRequestReview: () => void;
   /** The fix gesture of a failing PR (MIN-548 review): copy the prompt, or
       hand the PR to Numo. `null` = nothing is failing. */
@@ -226,6 +230,8 @@ export function PrStatusCards(props: PrStatusCardsProps) {
           now={now}
           checks={checksCard ? props.checks : null}
           provider={props.provider}
+          checksOpen={props.checksOpen}
+          onChecksOpenChange={props.onChecksOpenChange}
         />
       ))}
     </div>
@@ -547,6 +553,7 @@ function buildStatusCards(
           donutParts: null,
           avatars: unique.slice(0, 4),
           iconKind: blocker.kind,
+          hoverLabel: t("blockerActionResolve"),
           onSelect: props.onOpenConversations,
         });
         break;
@@ -680,11 +687,15 @@ function PrStatusCardView({
   now,
   checks,
   provider,
+  checksOpen,
+  onChecksOpenChange,
 }: {
   card: PrStatusCard;
   now: Date;
   checks: ChecksSummary | null;
   provider: RepoProviderId;
+  checksOpen: boolean;
+  onChecksOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("PullRequests");
   const body = (
@@ -802,7 +813,13 @@ function PrStatusCardView({
   // activates, the cursor points, the hover word is decoration.
   if (checks) {
     return (
-      <ChecksPopoverCard checks={checks} provider={provider} tone={card.tone}>
+      <ChecksPopoverCard
+        checks={checks}
+        provider={provider}
+        tone={card.tone}
+        open={checksOpen}
+        onOpenChange={onChecksOpenChange}
+      >
         {inner}
       </ChecksPopoverCard>
     );
@@ -846,11 +863,15 @@ function ChecksPopoverCard({
   checks,
   provider,
   tone,
+  open,
+  onOpenChange,
   children,
 }: {
   checks: ChecksSummary;
   provider: RepoProviderId;
   tone: PrStatusCardTone;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   children: ReactNode;
 }) {
   const t = useTranslations("PullRequests");
@@ -858,7 +879,7 @@ function ChecksPopoverCard({
   // stays on screen, like the card that opened this list.
   const now = useNow({ updateInterval: 1_000 });
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <div
           data-testid="pr-status-card-checks"

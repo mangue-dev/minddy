@@ -231,6 +231,7 @@ export function PrReadinessControl({
   autoMerging,
   onToggleAutoMerge,
   checks,
+  onOpenChecks,
 }: {
   readiness: PullRequestReadiness;
   providerName: string;
@@ -249,6 +250,9 @@ export function PrReadinessControl({
   /** The CI story, when the forge served it: the checks rows reuse the
       cards' donut instead of an anonymous clock. */
   checks?: ChecksSummary | null;
+  /** Opens the checks popover of the status cards: the way to SEE the
+      failing checks, which replaced the rerun gesture here. */
+  onOpenChecks?: () => void;
 }) {
   const t = useTranslations("PullRequests");
   const [open, setOpen] = useState(false);
@@ -382,7 +386,21 @@ export function PrReadinessControl({
                     {t(SOURCE_KEYS[blocker.source])}
                   </p>
                 </div>
-                {available ? (
+                {blocker.kind === "checks" && onOpenChecks ? (
+                  // Seeing beats rerunning: the failing checks live in the
+                  // cards' popover, one gesture away — this button opens it.
+                  <Button
+                    data-testid="pr-readiness-view-checks"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setOpen(false);
+                      onOpenChecks();
+                    }}
+                  >
+                    {t("viewChecks")}
+                  </Button>
+                ) : available ? (
                   <Button
                     data-testid={`pr-readiness-action-${blocker.action}`}
                     variant="outline"
@@ -436,7 +454,7 @@ export function PrReadinessControl({
             </span>
           </label>
         ) : null}
-        <div className="flex items-center justify-between gap-3 border-t border-border bg-muted/30 px-3.5 py-3">
+        <div className="flex items-center justify-between gap-3 px-3.5 py-3">
           <p className="min-w-0 text-xs text-muted-foreground">
             {readiness.mergeAllowed && canMerge
               ? t("readinessMergeAvailable")

@@ -110,10 +110,7 @@ import {
   type ReadinessBlocker,
 } from "@/lib/pr-readiness";
 import { viewerReviewIsRequested } from "@/lib/pr-review-request";
-import {
-  findRerunnableChecks,
-  type PullRequestDetailTab,
-} from "@/lib/pr-readiness-actions";
+import { type PullRequestDetailTab } from "@/lib/pr-readiness-actions";
 import { normalizeForgeInstant } from "@/lib/forge-time";
 import { REPO_PROVIDERS } from "@/lib/repo-providers";
 import { PrEndpointProvider } from "@/lib/pr-endpoint-context";
@@ -709,6 +706,9 @@ export function PrDetail({
   const [scrolledDown, setScrolledDown] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [unresolvedSidebarOpen, setUnresolvedSidebarOpen] = useState(false);
+  // The checks popover is ONE surface, shared: the checks card opens it,
+  // and the merge-state popover's "View checks" opens the same list.
+  const [checksPopoverOpen, setChecksPopoverOpen] = useState(false);
   // Soft fade up and down the feed — the same as the agent conversation and
   // than the columns of the board: it only lights up on the side where there REMAINS some
   // something to see, what a fixed border cannot say.
@@ -1079,17 +1079,6 @@ export function PrDetail({
       if (blocker.action === "update_branch") {
         await maintainPullRequestApi(item.prId, "update_branch");
         toast.success(t("branchUpdatedToast"));
-      } else if (blocker.action === "rerun_checks") {
-        const rerunnable = findRerunnableChecks(checks?.checks, blocker);
-        if (rerunnable.length === 0) return;
-        await Promise.all(
-          rerunnable.map((check) =>
-            maintainPullRequestApi(item.prId, "rerun_check", {
-              rerunRef: check.rerunRef,
-            }),
-          ),
-        );
-        toast.success(t("checksRerunToast"));
       } else if (blocker.action === "enable_auto_merge") {
         await maintainPullRequestApi(item.prId, "enable_auto_merge");
       }
@@ -1163,9 +1152,6 @@ export function PrDetail({
     if (blocker.action === "mark_ready" || blocker.action === "update_branch") return canWrite;
     if (blocker.action === "approve") return canComment;
     if (blocker.action === "resolve_conversations") return unresolvedThreads.length > 0;
-    if (blocker.action === "rerun_checks") {
-      return !!canWrite && findRerunnableChecks(checks?.checks, blocker).length > 0;
-    }
     if (blocker.action === "enable_auto_merge") return !!canWrite;
     return false;
   };
@@ -1862,6 +1848,7 @@ export function PrDetail({
                 autoMerging={maintenanceAction === "enable_auto_merge"}
                 onToggleAutoMerge={(enable) => void toggleAutoMerge(enable)}
                 checks={checks}
+                onOpenChecks={() => setChecksPopoverOpen(true)}
               />
             ) : (
               <PrReadinessBadge readiness={null} />
@@ -2002,6 +1989,8 @@ export function PrDetail({
             onStartFileReview={startFileReview}
             numoReview={numoReviewCard}
             fixRun={fixRunCard}
+            checksOpen={checksPopoverOpen}
+            onChecksOpenChange={setChecksPopoverOpen}
             onRequestReview={openAiReviewDialog}
             fix={fixCard}
           />
