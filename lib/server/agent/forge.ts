@@ -256,6 +256,14 @@ export interface Forge {
     queue: boolean;
     headSha?: string;
   }): Promise<void>;
+  /** Withdraw the auto-merge (or the merge queue entry) of the PR. */
+  disablePullRequestMergeFlow(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    nodeId?: string;
+    queue: boolean;
+  }): Promise<void>;
   /**
  * Submits a formal review. `published: "comment"` in return = the forge has
  * refused to publish the verdict (self-review) and it left in comment:
@@ -552,6 +560,7 @@ const githubForge: Forge = {
   rerunPullRequestCheck: github.rerunPullRequestCheck,
   updatePullRequestBody: github.updatePullRequestBody,
   updatePullRequestTitle: github.updatePullRequestTitle,
+  disablePullRequestMergeFlow: github.disablePullRequestMergeFlow,
   enablePullRequestMergeFlow: github.enablePullRequestMergeFlow,
   submitReview: github.submitPullRequestReview,
   listReviews: github.listPullRequestReviews,
@@ -646,6 +655,7 @@ const gitlabForge: Forge = {
   rerunPullRequestCheck: gitlab.rerunMergeRequestCheck,
   updatePullRequestBody: gitlab.updateMergeRequestBody,
   updatePullRequestTitle: gitlab.updateMergeRequestTitle,
+  disablePullRequestMergeFlow: gitlab.disableMergeRequestAutoMerge,
   enablePullRequestMergeFlow: gitlab.enableMergeRequestAutoMerge,
   submitReview: gitlab.submitMergeRequestReview,
   listReviews: gitlab.listMergeRequestApprovals,

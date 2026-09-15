@@ -1006,6 +1006,24 @@ export async function enableMergeRequestAutoMerge(opts: {
   );
 }
 
+export async function disableMergeRequestAutoMerge(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  nodeId?: string;
+  queue: boolean;
+}): Promise<void> {
+  await glJson<unknown>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/merge`,
+    opts.token,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ auto_merge: false }),
+    },
+  );
+}
+
 /** Title prefixes by which GitLab marks a draft MR (`WIP:` is legacy). */
 const DRAFT_TITLE_PREFIX =
   /^\s*(?:(?:\[draft\]|\[wip\])|(?:draft|wip)(?=\s|:))\s*:?\s*/i;

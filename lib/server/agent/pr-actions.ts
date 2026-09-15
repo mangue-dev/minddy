@@ -2277,7 +2277,8 @@ export async function prMaintenanceActionResponse(
     | "rerun_check"
     | "update_title"
     | "update_body"
-    | "enable_auto_merge",
+    | "enable_auto_merge"
+    | "disable_auto_merge",
   body: PrActionBody,
 ): Promise<NextResponse> {
   const actor = await requireActor(scope, "write");
@@ -2331,6 +2332,26 @@ export async function prMaintenanceActionResponse(
           nodeId: pr.nodeId,
           headSha: pr.headSha,
           method: policy.preferredMethod ?? undefined,
+          queue: policy.mergeQueueRequired === true,
+        }),
+      );
+      broadcastPrChanged(scope.pr.id, ["pr"]);
+      return NextResponse.json({ ok: true });
+    }
+    if (action === "disable_auto_merge") {
+      const pr = await scope.forge.getPullRequest(scope.call);
+      if (!pr.mergeFlowActive) {
+        // Nothing registered at the forge: a no-op, not an error — the
+        // checkbox may lag one poll behind the reality of the forge.
+        return NextResponse.json({ ok: true });
+      }
+      const policy = pr.base
+        ? await scope.forge.getRepositoryMergePolicy({ ...scope.call, base: pr.base })
+        : unavailableMergePolicy(scope.target.provider, "unknown");
+      await withPrOperation(`${scope.pr.id}:merge-flow-off`, () =>
+        scope.forge.disablePullRequestMergeFlow({
+          ...call,
+          nodeId: pr.nodeId,
           queue: policy.mergeQueueRequired === true,
         }),
       );

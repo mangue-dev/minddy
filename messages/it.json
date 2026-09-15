@@ -3905,7 +3905,14 @@
     "previousVersionsTitle": "Versioni precedenti",
     "previousVersionsLast": "versione più recente",
     "previousVersionsEmpty": "Nessuna versione precedente salvata.",
-    "previousVersionsLoading": "Caricamento versioni precedenti…"
+    "previousVersionsLoading": "Caricamento versioni precedenti…",
+    "autoMergeWhenReady": "Unisci quando pronta",
+    "autoMergeWhenReadyHint": "Minddy registra l'unione ora; la forge la eseguirà quando tutte le condizioni saranno soddisfatte.",
+    "autoMergeOn": "Sarà unita appena pronta",
+    "autoMergeOnHint": "La forge unirà questo pull request da sola quando sarà pronto. Deseleziona per annullare.",
+    "autoMergeUpdating": "Aggiornamento della registrazione…",
+    "autoMergeEnabledToast": "Il pull request verrà unito appena pronto.",
+    "autoMergeDisabledToast": "Unione automatica annullata."
   },
   "Triage": {
     "projectNotFound": "Progetto non trovato",

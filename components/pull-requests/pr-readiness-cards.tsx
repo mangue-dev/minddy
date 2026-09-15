@@ -59,7 +59,11 @@ import type {
   ReadinessBlocker,
 } from "@/lib/pr-readiness";
 
-export type PrStatusCardTone = "danger" | "progress" | "success";
+export type PrStatusCardTone =
+  | "danger"
+  | "progress"
+  | "success"
+  | "neutral";
 
 /** The tone grammar, shared by the merge-state control and the state badges. */
 const TONE_CARD: Record<PrStatusCardTone, string> = {
@@ -67,12 +71,17 @@ const TONE_CARD: Record<PrStatusCardTone, string> = {
     "border-emerald-600/30 bg-emerald-600/10 dark:border-emerald-400/30",
   progress: "border-amber-600/30 bg-amber-600/10 dark:border-amber-400/30",
   danger: "border-destructive/30 bg-destructive/10",
+  // A card that carries a GESTURE, not a verdict: it says nothing about the
+  // merge state, so it reads in the plain card palette instead of borrowing
+  // a meaning (red = blocked) it does not have.
+  neutral: "border-border bg-card",
 };
 
 const TONE_TITLE: Record<PrStatusCardTone, string> = {
   success: "text-emerald-700 dark:text-emerald-400",
   progress: "text-amber-700 dark:text-amber-400",
   danger: "text-destructive",
+  neutral: "text-foreground",
 };
 
 /** The hover action button borrows the card's own color codes. */
@@ -83,6 +92,7 @@ const TONE_BUTTON: Record<PrStatusCardTone, string> = {
     "border-amber-600/40 bg-amber-600/10 text-amber-700 hover:bg-amber-600/15 hover:border-amber-600/50 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-400 dark:hover:bg-amber-400/15",
   danger:
     "border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/15 hover:border-destructive/50 dark:border-destructive/40 dark:bg-destructive/10 dark:hover:bg-destructive/15",
+  neutral: "",
 };
 
 /** Alpha background of a check row, tinted by its own state. */
@@ -305,7 +315,9 @@ function buildStatusCards(
     if (numoReview.kind === "requested") {
       push({
         id: "numo-review",
-        tone: "progress",
+        // The ask is a gesture, not a verdict: the card carries no state
+        // color, the action alone speaks (MIN-548).
+        tone: "neutral",
         title: numoReview.label,
         durationMs: null,
         startedAt: null,
@@ -675,6 +687,9 @@ function ChecksPopoverCard({
   children: ReactNode;
 }) {
   const t = useTranslations("PullRequests");
+  // A running check must be seen moving: its duration ticks while the row
+  // stays on screen, like the card that opened this list.
+  const now = useNow({ updateInterval: 1_000 });
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -719,8 +734,15 @@ function ChecksPopoverCard({
                   </p>
                 ) : null}
               </div>
-              {check.durationMs != null ? (
-                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+              {check.state === "pending" && check.startedAt ? (
+                <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+                  {formatRunDuration(
+                    t,
+                    Math.max(now.getTime() - Date.parse(check.startedAt), 0),
+                  )}
+                </span>
+              ) : check.durationMs != null ? (
+                <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
                   {formatRunDuration(t, check.durationMs)}
                 </span>
               ) : null}

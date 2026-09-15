@@ -759,7 +759,8 @@ export async function maintainPullRequestApi(
     | "rerun_check"
     | "update_title"
     | "update_body"
-    | "enable_auto_merge",
+    | "enable_auto_merge"
+    | "disable_auto_merge",
   payload: {
     title?: string;
     body?: string;

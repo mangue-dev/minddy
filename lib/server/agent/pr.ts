@@ -1223,6 +1223,25 @@ export async function enablePullRequestMergeFlow(opts: {
   );
 }
 
+export async function disablePullRequestMergeFlow(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  nodeId?: string;
+  queue: boolean;
+}): Promise<void> {
+  if (!opts.nodeId) throw new GithubApiError("Pull request has no GraphQL id", 409);
+  // The merge queue and the auto-merge are two different registrations:
+  // leaving one must not silently leave the other.
+  await ghGraphql<unknown>(
+    opts.token,
+    opts.queue
+      ? "mutation($id:ID!){dequeuePullRequest(input:{pullRequestId:$id}){pullRequest{id}}}"
+      : "mutation($id:ID!){disablePullRequestAutoMerge(input:{pullRequestId:$id}){pullRequest{id}}}",
+    { id: opts.nodeId },
+  );
+}
+
 export async function closePullRequest(opts: {
   token: string;
   repoFullName: string;

@@ -992,6 +992,25 @@ export function PrDetail({
     }
   };
 
+  const toggleAutoMerge = async (enable: boolean) => {
+    if (maintenanceAction) return;
+    setMaintenanceAction("enable_auto_merge");
+    try {
+      await maintainPullRequestApi(
+        item.prId,
+        enable ? "enable_auto_merge" : "disable_auto_merge",
+      );
+      toast.success(
+        enable ? t("autoMergeEnabledToast") : t("autoMergeDisabledToast"),
+      );
+      await refetchPr();
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setMaintenanceAction(null);
+    }
+  };
+
   const handleRerunCheck = async (check: PullRequestCheck) => {
     if (!check.rerunRef || maintenanceAction) return;
     setMaintenanceAction("rerun_checks");
@@ -1676,6 +1695,10 @@ export function PrDetail({
                 canMerge={!!canWrite}
                 merging={acting === "merge" || isWorking}
                 onMerge={openMergeConfirmation}
+                mergeFlowActive={!!pr?.mergeFlowActive}
+                autoMergeAllowed={mergePolicy?.autoMergeAllowed ?? null}
+                autoMerging={maintenanceAction === "enable_auto_merge"}
+                onToggleAutoMerge={(enable) => void toggleAutoMerge(enable)}
               />
             ) : (
               <PrReadinessBadge readiness={null} />
@@ -2173,7 +2196,7 @@ export function PrDetail({
                       current ? { ...current, message: event.target.value } : current,
                     );
                   }}
-                  className="min-h-28 resize-y font-mono text-xs font-normal"
+                  className="max-h-44 min-h-28 resize-y overflow-y-auto font-mono text-xs font-normal"
                 />
               </label>
               <p className="text-xs text-muted-foreground">

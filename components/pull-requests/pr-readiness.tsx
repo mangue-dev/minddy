@@ -11,6 +11,7 @@ import {
 import {
   Badge,
   Button,
+  Checkbox,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -223,6 +224,10 @@ export function PrReadinessControl({
   canMerge,
   merging,
   onMerge,
+  mergeFlowActive,
+  autoMergeAllowed,
+  autoMerging,
+  onToggleAutoMerge,
 }: {
   readiness: PullRequestReadiness;
   providerName: string;
@@ -232,6 +237,12 @@ export function PrReadinessControl({
   canMerge: boolean;
   merging: boolean;
   onMerge: (method: MergeMethod) => void;
+  /** Auto-merge (or merge queue entry) already registered at the forge. */
+  mergeFlowActive: boolean;
+  /** `false` = the forge refuses auto-merge; the checkbox then does not show. */
+  autoMergeAllowed: boolean | null;
+  autoMerging: boolean;
+  onToggleAutoMerge: (enable: boolean) => void;
 }) {
   const t = useTranslations("PullRequests");
   const [open, setOpen] = useState(false);
@@ -372,6 +383,42 @@ export function PrReadinessControl({
             );
           })}
         </ul>
+        {canMerge && autoMergeAllowed !== false && !readiness.mergeAllowed ? (
+          // Waiting is optional (MIN-548): while any condition is still
+          // running, the viewer can register the merge NOW and let the forge
+          // fire it the moment everything clears. One-way is not an option —
+          // the checkbox reads the forge state and unregisters too.
+          <label
+            data-testid="pr-auto-merge-toggle"
+            className="flex cursor-pointer items-start gap-2.5 border-t border-border px-3.5 py-3"
+          >
+            <Checkbox
+              checked={mergeFlowActive}
+              disabled={autoMerging}
+              onCheckedChange={(checked) => onToggleAutoMerge(checked === true)}
+              className="mt-0.5"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm">
+                {mergeFlowActive
+                  ? t("autoMergeOn")
+                  : t("autoMergeWhenReady")}
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                {autoMerging ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Spinner className="size-3 shrink-0" />
+                    {t("autoMergeUpdating")}
+                  </span>
+                ) : mergeFlowActive ? (
+                  t("autoMergeOnHint")
+                ) : (
+                  t("autoMergeWhenReadyHint")
+                )}
+              </span>
+            </span>
+          </label>
+        ) : null}
         <div className="flex items-center justify-between gap-3 border-t border-border bg-muted/30 px-3.5 py-3">
           <p className="min-w-0 text-xs text-muted-foreground">
             {readiness.mergeAllowed && canMerge
