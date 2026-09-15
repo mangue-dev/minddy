@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Badge,
-  Button,
   Skeleton,
 } from "mangue-ui";
 import { ShieldCheck } from "lucide-react";
