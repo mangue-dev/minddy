@@ -228,11 +228,22 @@ async function capture({ locale, theme }) {
     await page.getByTestId("pr-fix-all").click();
     const fixAllMenu = page.getByRole("menu");
     const fixAllCount = await fixAllMenu.getByRole("menuitem").count();
-    if (fixAllCount !== 2) {
+    if (fixAllCount !== 3) {
       throw new Error(
-        `${locale}/${theme} — the global fix menu exposes ${fixAllCount} actions instead of prompt and Numo.`,
+        `${locale}/${theme} — the global fix menu exposes ${fixAllCount} actions instead of prompt, Numo and resolve all.`,
       );
     }
+    await fixAllMenu.getByTestId("pr-fix-all-resolve").click();
+    const resolveAllConfirm = page.getByTestId("pr-resolve-all-confirm");
+    try {
+      await resolveAllConfirm.waitFor({ state: "visible", timeout: 2_000 });
+    } catch {
+      throw new Error(
+        `${locale}/${theme} — the resolve-all confirmation did not open (dialogs: ${await page.locator('[role="dialog"]').count()}).`,
+      );
+    }
+    await page.keyboard.press("Escape");
+    await resolveAllConfirm.waitFor({ state: "hidden" });
     await page.keyboard.press("Escape");
     await page.getByTestId("pr-resolve-outdated").click();
     const outdatedConfirm = page.getByTestId("pr-resolve-outdated-confirm");

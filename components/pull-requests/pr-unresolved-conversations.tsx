@@ -69,6 +69,8 @@ export function PrUnresolvedConversations({
   const t = useTranslations("PullRequests");
   const [confirmOutdated, setConfirmOutdated] = useState(false);
   const [resolvingOutdated, setResolvingOutdated] = useState(false);
+  const [confirmResolveAll, setConfirmResolveAll] = useState(false);
+  const [resolvingAll, setResolvingAll] = useState(false);
   const replies = useReviewReplies(endpoint, onThreadChanged);
   const resolution = useThreadResolution(endpoint, onResolutionChanged);
   const outdated = useMemo(
@@ -113,6 +115,26 @@ export function PrUnresolvedConversations({
     t,
     threads.length,
   ]);
+
+  // Resolve EVERY open conversation at once — the gesture of a review
+  // someone chose to settle by hand rather than fix in code. It asks for
+  // confirmation first: resolving silences the threads without touching
+  // the code, and doing it by accident would hide real feedback.
+  const resolveAll = useCallback(async () => {
+    if (resolvingAll) return;
+    setResolvingAll(true);
+    const results = await Promise.all(
+      threads.map((thread) => resolution.setResolved(thread, true, false)),
+    );
+    const resolved = results.filter(Boolean).length;
+    setConfirmResolveAll(false);
+    setResolvingAll(false);
+    if (resolved > 0) {
+      if (resolved === threads.length) onOpenChange(false);
+      toast.success(t("allResolvedToast", { count: resolved }));
+      await onResolutionChanged();
+    }
+  }, [onOpenChange, onResolutionChanged, resolution, resolvingAll, t, threads]);
 
   if (threads.length === 0) return null;
 
@@ -188,6 +210,15 @@ export function PrUnresolvedConversations({
                       {t("launchNumoUnresolved")}
                     </DropdownMenuItem>
                   ) : null}
+                  {canResolve ? (
+                    <DropdownMenuItem
+                      data-testid="pr-fix-all-resolve"
+                      onSelect={() => setConfirmResolveAll(true)}
+                    >
+                      <CheckCheck />
+                      {t("resolveAll")}
+                    </DropdownMenuItem>
+                  ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -234,6 +265,36 @@ export function PrUnresolvedConversations({
             >
               {resolvingOutdated ? <Spinner /> : <CheckCheck />}
               {t("resolveOutdatedConfirm", { count: outdated.length })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={confirmResolveAll}
+        onOpenChange={(next) => !resolvingAll && setConfirmResolveAll(next)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("resolveAllDialogTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("resolveAllDialogDescription", { count: threads.length })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={resolvingAll}
+              onClick={() => setConfirmResolveAll(false)}
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              data-testid="pr-resolve-all-confirm"
+              disabled={resolvingAll}
+              onClick={() => void resolveAll()}
+            >
+              {resolvingAll ? <Spinner /> : <CheckCheck />}
+              {t("resolveAllConfirm")}
             </Button>
           </DialogFooter>
         </DialogContent>
