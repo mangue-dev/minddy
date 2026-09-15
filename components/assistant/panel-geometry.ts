@@ -24,18 +24,13 @@ const COMPACT_DESKTOP =
   "md:!h-[min(600px,calc(100dvh-96px))] " +
   "md:rounded-[32px] md:border md:border-l md:origin-bottom-right";
 
-// Expanded: centered, LARGE format — exactly the geometry of the modals of
-// reading the app (task book, project creation), which are sized
-// all on the `--spacing-dialog-w/h` tokens of mango-ui. Same bias as
-// the AutoKap Numo panel: one “large surface” size for everything
-// the product, instead of a half-size specific to the assistant.
+// Expanded: centered, LARGE format — a pane-mirror modal (`dialog-pane-mirror`,
+// see globals.css): the exact box, radius and border of the app content pane.
+// All the !-utilities used to carry this geometry by hand; the mirror class
+// owns it now, and the morph interpolates radius only (geometry swaps at the
+// mirror's fixed inset).
 const EXPANDED_DESKTOP =
-  "md:!inset-auto md:!top-auto md:!left-auto " +
-  "md:!right-[calc((100vw-var(--spacing-dialog-w))/2)] " +
-  "md:!bottom-[calc((100dvh-var(--spacing-dialog-h))/2)] " +
-  "md:!w-[var(--spacing-dialog-w)] md:!max-w-none " +
-  "md:!h-[var(--spacing-dialog-h)] " +
-  "md:rounded-2xl md:border md:origin-center";
+  "dialog-pane-mirror md:origin-center";
 
 /** Classes of the panel's SheetContent, depending on the display mode. */
 export function panelSheetClassName(displayMode: PanelDisplayMode): string {

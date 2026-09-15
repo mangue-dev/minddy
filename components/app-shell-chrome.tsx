@@ -1629,7 +1629,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             modeKey={modeKey}
             currentProject={currentProject}
             projects={projects}
-            onScratchpadWarm={() => preloadSurface(loadScratchpadModal)}
             onLayerOpenChange={setSidebarLayerOpen}
           />
         </SidebarNavOverlay>

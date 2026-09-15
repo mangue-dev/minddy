@@ -942,7 +942,7 @@ export function ResourcePills({
         ))}
 
       <Dialog open={preview !== null} onOpenChange={(open) => !open && setPreview(null)}>
-        <DialogContent className="flex h-[var(--spacing-dialog-h)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 !rounded-2xl sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]">
+        <DialogContent className="dialog-pane-mirror flex h-[var(--spacing-dialog-h)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 -translate-x-0 -translate-y-0 rounded-(--app-pane-radius) sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]">
           <div className="flex h-16 shrink-0 items-center gap-3 border-b border-border px-5 pr-14">
             <div className="min-w-0 flex-1">
               <DialogTitle className="truncate text-sm font-medium">

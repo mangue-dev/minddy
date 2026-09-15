@@ -165,7 +165,7 @@ export function WizardDialog<Id extends string>({
     <Dialog open={open} onOpenChange={handleModalOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="flex h-[var(--spacing-dialog-h)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col overflow-hidden p-0 !rounded-2xl sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]"
+        className="dialog-pane-mirror flex h-[var(--spacing-dialog-h)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col overflow-hidden p-0 -translate-x-0 -translate-y-0 rounded-(--app-pane-radius) sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]"
       >
         {/* The name of the modal is that of the wizard: it does not change from one moment to another.
             step to another. The title of the stage is a title IN the

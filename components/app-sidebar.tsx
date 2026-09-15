@@ -71,7 +71,6 @@ import { usePrefetchProject } from "@/lib/use-prefetch-project";
 import { usePrefetchPages } from "@/lib/use-pages-query";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { NewMenu } from "@/components/new-menu";
-import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
 import { UsageIndicator } from "@/components/usage-indicator";
 import {
   SIDEBAR_COMPACT_CONTROL_CLASS,
@@ -154,15 +153,10 @@ const ProductFeedbackDialog = dynamic(
 
 /* ─── Brand ────────────────────────────────────────────────────────── */
 
-function SidebarQuickActions({
-  onScratchpadWarm,
-}: {
-  onScratchpadWarm?: () => void;
-}) {
+function SidebarQuickActions() {
   return (
     <div className={cn("flex w-full min-w-0 shrink-0 gap-1")}>
       <NewMenu variant="sidebar" collapsed={false} />
-      <ScratchpadTrigger variant="sidebar" onWarm={onScratchpadWarm} />
     </div>
   );
 }
@@ -900,14 +894,12 @@ export function AppSidebar({
   modeKey,
   currentProject,
   projects,
-  onScratchpadWarm,
   onLayerOpenChange,
 }: {
   sections: AppNavSection[];
   modeKey: string;
   currentProject: Project | null;
   projects: Project[];
-  onScratchpadWarm?: () => void;
   onLayerOpenChange?: (open: boolean) => void;
 }) {
   const reduce = useReducedMotion();
@@ -1018,7 +1010,7 @@ export function AppSidebar({
         )}
       >
         <div className={cn("flex h-full w-full min-w-0 items-center", back && "hidden")}>
-          <SidebarQuickActions onScratchpadWarm={onScratchpadWarm} />
+          <SidebarQuickActions />
         </div>
         <div
           ref={setHeaderSlot}
