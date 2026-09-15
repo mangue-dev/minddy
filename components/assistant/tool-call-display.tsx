@@ -778,6 +778,39 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("pullRequestLinked") : t("linkPullRequestFailed");
     },
   },
+  // ── PR management without touching the code (MIN-550) ─────────────────
+  merge_pull_request: {
+    icon: GitMerge,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("mergingPullRequest");
+      if (!success) return t("mergePullRequestFailed");
+      // A PR already merged (the pre-check caught it) is a nothing-to-do,
+      // not a merge: say it.
+      if (result?.note) return t("pullRequestAlreadyMerged");
+      return t("pullRequestMerged");
+    },
+  },
+  update_pull_request: {
+    icon: FilePen,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("updatingPullRequest");
+      return success ? t("pullRequestUpdated") : t("updatePullRequestFailed");
+    },
+  },
+  post_pull_request_comment: {
+    icon: MessageSquare,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("postingPrComment");
+      return success ? t("prCommentPosted") : t("prCommentFailed");
+    },
+  },
+  edit_own_pull_request_comment: {
+    icon: MessagesSquare,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("editingPrComment");
+      return success ? t("prCommentEdited") : t("editPrCommentFailed");
+    },
+  },
   // ── Corbeille (MIN-133) ──────────────────────────────────────────────
   list_trash: {
     icon: Trash2,

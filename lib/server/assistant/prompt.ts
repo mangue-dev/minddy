@@ -330,7 +330,7 @@ export function buildSharedRules(
   tab, and its spend appears under "Routines" in the usage bar — not under agents. Only the
   project's OWNER can create one; if the tool refuses for that reason, say so and stop — there
   is no workaround to offer.
-- **Pull requests (read_pull_request, link_pull_request)** — read_pull_request explains what an
+- **Pull requests (read_pull_request, link_pull_request, merge_pull_request, update_pull_request, post_pull_request_comment, edit_own_pull_request_comment)** — read_pull_request explains what an
   issue's PR changes. A PR of the linked repo normally finds its issue by CONVENTION (its
   identifier in the branch, the title, or a "Fixes KEY-42" line); one that followed none of them
   stays unattached, and link_pull_request attaches it after the fact — by number ("#42", "!42" on
@@ -338,6 +338,13 @@ export function buildSharedRules(
   in_review, draft → in_progress, merged → done, closed → todo): say which. The link is
   DEFINITIVE, there is no unlink, so confirm with the user whenever you had to guess either the PR
   or the issue.
+  PR MANAGEMENT is direct — merge_pull_request, update_pull_request, post_pull_request_comment
+  and edit_own_pull_request_comment act on the PR WITHOUT the code agent. "Merge this PR" goes
+  through merge_pull_request (never delegate a merge to the code agent), and comments on the
+  thread go through post_pull_request_comment. What still NEEDS the code agent: anything that
+  changes the branch itself — writing files, pushing, rebasing, resolving conflicts, revising the
+  diff — and line-anchored review remarks. merge_pull_request is irreversible: confirm with the
+  user first, and report a refusal (red checks, conflicts, protection rules) instead of retrying.
 - **Web search (web_search)** — you can look things up OUTSIDE minddy: current events, a
   product's or library's up-to-date documentation, a version number, a price, a page the user
   asks you to check. Never use it for this workspace: issues, members, categories, views,

@@ -143,6 +143,41 @@ describe("Numo tool contracts", () => {
     );
   });
 
+  it("advertises direct PR management tools that never touch the code (MIN-550)", () => {
+    for (const name of [
+      "merge_pull_request",
+      "update_pull_request",
+      "post_pull_request_comment",
+      "edit_own_pull_request_comment",
+    ]) {
+      const pr = tool(name);
+      expect(pr, name).toBeDefined();
+      // One target, exactly: the same resolution as read_pull_request.
+      expect(pr?.function.parameters.properties).toHaveProperty("issue_id");
+      expect(pr?.function.parameters.properties).toHaveProperty(
+        "pull_request_id",
+      );
+      // Delegation stays the path for anything that changes the branch.
+      expect(pr?.function.description).toMatch(/launch_code_agent/);
+    }
+  });
+
+  it("keeps the merge guardrail explicit: irreversible, confirmed, never against a red CI", () => {
+    const merge = tool("merge_pull_request");
+
+    expect(merge?.function.description).toMatch(/IRREVERSIBLE/i);
+    expect(merge?.function.description).toMatch(/confirm the intent with the user/i);
+    expect(merge?.function.description).toMatch(/red or running CI/i);
+    expect(merge?.function.description).toMatch(/merged → done/i);
+  });
+
+  it("scopes the comment edit to comments Numo posted itself", () => {
+    const edit = tool("edit_own_pull_request_comment");
+
+    expect(edit?.function.description).toMatch(/never a comment written by a human/i);
+    expect(edit?.function.parameters.required).toEqual(["comment_id", "body"]);
+  });
+
   it("keeps feedback comment guidance aligned with the comment service", () => {
     const comment = tool("add_feedback_comment");
 

@@ -178,15 +178,18 @@ import {
 } from "@/lib/server/agent/launch-message";
 import { getAgentModelsForUser } from "@/lib/server/agent/models-catalog";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
-import { forgeFor } from "@/lib/server/agent/forge";
 import {
   linkPullRequestToIssue,
   resolveProjectPullRequest,
   type PrLinkRefusal,
 } from "@/lib/server/agent/pr-link";
 import {
+  executePullRequestWriteTool,
+  resolvePullRequest,
+  type PullRequestWriteToolName,
+} from "@/lib/server/assistant/pull-request-writes";
+import {
   findPullRequest,
-  findPullRequestForIssue,
   rowProvider,
 } from "@/lib/server/agent/pull-requests";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
@@ -219,6 +222,8 @@ export interface ToolContext {
   /** Conversation tools must name their own target, independent of page navigation. */
   requireExplicitProjectTarget?: boolean;
   userId: string;
+  /** Model of the current generation — Numo's PR comments carry it in their signature. */
+  model?: string;
   /** The feedback post a @Numo feedback comment is on — the feedback tools
       default to it when the model omits feedback_post_id. Null otherwise. */
   feedbackPostId?: string | null;
@@ -2163,101 +2168,61 @@ export async function executeTool(
       }
 
       case "read_pull_request": {
-        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const pullRequestId =
-          typeof args.pull_request_id === "string" ? args.pull_request_id : "";
-        if ((!issueId && !pullRequestId) || (issueId && pullRequestId)) {
-          return toolError(
-            "Pass exactly one of issue_id or pull_request_id.",
-          );
-        }
-        if (issueId) {
-          const scoped = await assertIssueInProject(
-            ctx.supabase,
-            issueId,
+        // Resolution shared with the PR write tools (MIN-550): the row from
+        // `pull_requests` (source of truth since MIN-143) with the
+        // `agent_runs` fallback for the rows older than the table, then the
+        // project's repo target.
+        const resolved = await resolvePullRequest(
+          {
             projectId,
-          );
-          if (!scoped.ok) return toolError(scoped.error);
-        }
+            userId: ctx.userId,
+            model: ctx.model ?? "",
+            locale: ctx.locale,
+            supabase: ctx.supabase,
+          },
+          args,
+        );
+        if ("error" in resolved) return toolError(resolved.error);
+        const { forge, target, number: prNumber } = resolved;
 
-        // The PR of the ticket comes from `pull_requests`, source of truth since
-        // MIN-143: a human PR, or attached by convention (identifier
-        // in the branch, “Fixes KEY-42”), or attached afterwards by
-        // link_pull_request, has NO run — look for it in `agent_runs`
-        // caused the tool to fail on a PR that the user had under
-        // eyes. The fallback on the run covers the rows before the table.
-        const linkedPr = pullRequestId
-          ? await findPullRequest(pullRequestId)
-          : await findPullRequestForIssue(issueId);
-        const target = await resolveRepoCloneTarget(projectId);
-        if (!target) return toolError("This project has no linked repository.");
-        if (
-          linkedPr &&
-          (target.provider !== rowProvider(linkedPr) ||
-            target.repoFullName !== linkedPr.repo_full_name)
-        ) {
-          return toolError(
-            "The selected pull request is not available in this project.",
-          );
-        }
-        let prNumber = linkedPr?.number ?? null;
-        if (prNumber == null && issueId) {
-          // Fallback aligned with findPullRequestForIssue: LIVE PR first,
-          // otherwise the most recent. A pre-table ticket may carry
-          // several runs at PR (successive repeats) — take the most
-          // old would read a PR closed for weeks for
-          // that another is open.
-          const { data: runs } = await ctx.supabase
-            .from("agent_runs")
-            .select("pr_number, pr_state")
-            .eq("issue_id", issueId)
-            .not("pr_number", "is", null)
-            .order("created_at", { ascending: false });
-          const rows = (runs ?? []) as {
-            pr_number: number;
-            pr_state: string | null;
-          }[];
-          const live = rows.find(
-            (r) => r.pr_state === "draft" || r.pr_state === "open",
-          );
-          prNumber = (live ?? rows[0])?.pr_number ?? null;
-        }
-        if (prNumber == null) {
-          return toolError(
-            pullRequestId
-              ? "The selected pull request is unavailable."
-              : "This issue has no pull request attached yet.",
-          );
-        }
-        const forge = forgeFor(target.provider);
-
-        const [pr, diff, reviewComments, reviewThreads] = await Promise.all([
-          forge.getPullRequest({
-            token: target.token,
-            repoFullName: target.repoFullName,
-            number: prNumber,
-          }),
-          forge.listPullRequestFiles({
-            token: target.token,
-            repoFullName: target.repoFullName,
-            number: prNumber,
-          }),
-          forge
-            .listPullRequestReviewComments({
+        const [pr, diff, reviewComments, reviewThreads, conversationComments] =
+          await Promise.all([
+            forge.getPullRequest({
               token: target.token,
               repoFullName: target.repoFullName,
               number: prNumber,
-            })
-            .catch(() => []),
-          // Thread resolution (MIN-139), best-effort as above.
-          forge
-            .listReviewThreads({
+            }),
+            forge.listPullRequestFiles({
               token: target.token,
               repoFullName: target.repoFullName,
               number: prNumber,
-            })
-            .catch(() => []),
-        ]);
+            }),
+            forge
+              .listPullRequestReviewComments({
+                token: target.token,
+                repoFullName: target.repoFullName,
+                number: prNumber,
+              })
+              .catch(() => []),
+            // Thread resolution (MIN-139), best-effort as above.
+            forge
+              .listReviewThreads({
+                token: target.token,
+                repoFullName: target.repoFullName,
+                number: prNumber,
+              })
+              .catch(() => []),
+            // Conversation comments (MIN-550): the thread Numo's own comments
+            // live in — their ids are what edit_own_pull_request_comment
+            // targets. Best-effort like the two lists above.
+            forge
+              .listPullRequestComments({
+                token: target.token,
+                repoFullName: target.repoFullName,
+                number: prNumber,
+              })
+              .catch(() => []),
+          ]);
 
         // Checks CI (MIN-138): request changes to a red CI that has not
         // of interest only if the agent sees WHAT breaks. `null` = unreadable
@@ -2276,6 +2241,10 @@ export async function executeTool(
 
         // Cap patch size so a huge diff doesn't blow the context window.
         const PATCH_CAP = 4000;
+        // Conversation comments: the same ceilings as the code agent's read
+        // (30 posts, 2,000 characters each).
+        const MAX_CONVERSATION_COMMENTS = 30;
+        const MAX_COMMENT_BODY_CHARS = 2_000;
         return {
           result: {
             number: pr.number,
@@ -2334,6 +2303,21 @@ export async function executeTool(
                 created_at: c.created_at,
               })),
             })),
+            // The conversation thread, most recent last — the same slice the
+            // PR page renders. `id` is what edit_own_pull_request_comment
+            // targets; `body` is capped so a long thread stays readable.
+            conversation_comments: conversationComments
+              .slice(-MAX_CONVERSATION_COMMENTS)
+              .map((c) => ({
+                id: c.id,
+                author: c.user?.login ?? null,
+                body:
+                  c.body && c.body.length > MAX_COMMENT_BODY_CHARS
+                    ? c.body.slice(0, MAX_COMMENT_BODY_CHARS) +
+                      "\n… (comment truncated)"
+                    : c.body,
+                created_at: c.created_at,
+              })),
           },
           success: true,
         };
@@ -2390,6 +2374,30 @@ export async function executeTool(
           },
           success: true,
         };
+      }
+
+      /**
+       * PR management without touching the code (MIN-550): merge, rename /
+       * re-describe, comment, edit a comment Numo posted itself. The rules
+       * and the forge plumbing live in `pull-request-writes.ts`, shared with
+       * `read_pull_request` above; here we only gatekeep the identity of the
+       * call and relay.
+       */
+      case "merge_pull_request":
+      case "update_pull_request":
+      case "post_pull_request_comment":
+      case "edit_own_pull_request_comment": {
+        return await executePullRequestWriteTool(
+          {
+            projectId,
+            userId: ctx.userId,
+            model: ctx.model ?? "Numo",
+            locale: ctx.locale,
+            supabase: ctx.supabase,
+          },
+          toolName as PullRequestWriteToolName,
+          args,
+        );
       }
 
       case "create_objective": {
