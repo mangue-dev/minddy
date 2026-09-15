@@ -179,9 +179,13 @@ export function PrCommentComposer({
           mentions={editorMentions}
           autoFocus={autoFocus}
           placeholder={placeholder}
-          className={cn(
-            "min-w-0 max-w-full",
-            line ? "max-h-40 overflow-y-auto px-3 py-2" : "px-3.5 py-2.5",
+          // Paddings live on the CONTENT, not on the editor envelope: the
+          // placeholder is pinned at its top-left corner and must sit on the
+          // first line, not on the box corner.
+          className={cn("min-w-0 max-w-full", line && "max-h-40 overflow-y-auto")}
+          contentClassName={cn(
+            "[&_p]:my-0",
+            line ? "px-3 py-2" : "px-3.5 py-2.5",
           )}
         />
 

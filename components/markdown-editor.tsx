@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
-import type { Editor } from "@tiptap/core";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Extension, type Editor } from "@tiptap/core";
 import type { EditorProps } from "@tiptap/pm/view";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "tiptap-markdown";
@@ -92,6 +94,38 @@ const EDITOR_PROPS: EditorProps = {
  * Remount per issue with `key={issue.id}` so state resets cleanly; commits the
  * current markdown on blur.
  */
+/**
+ * The placeholder as a ProseMirror widget INSIDE the first paragraph (the
+ * same trick as @tiptap/extension-placeholder, without the package): an
+ * inline widget at the caret position follows every padding, every
+ * indentation, every scroll — a React overlay pinned to a box corner can
+ * never promise that (MIN-548).
+ */
+function placeholderExtension(text: string) {
+  return Extension.create({
+    name: "editor-placeholder",
+    addProseMirrorPlugins: () => [
+      new Plugin({
+        key: new PluginKey("editor-placeholder"),
+        props: {
+          decorations: (state) => {
+            if (state.doc.textContent.trim().length > 0)
+              return DecorationSet.empty;
+            const widget = document.createElement("span");
+            widget.dataset.placeholder = "";
+            widget.className =
+              "pointer-events-none select-none text-sm text-muted-foreground/70";
+            widget.textContent = text;
+            return DecorationSet.create(state.doc, [
+              Decoration.widget(0, widget, { side: 1 }),
+            ]);
+          },
+        },
+      }),
+    ],
+  });
+}
+
 /** What a COMPOSER drives from outside the editor: quote, dictate and
     uploads write INTO the surface, and the send shortcut goes through it. */
 export interface MarkdownEditorApi {
@@ -112,6 +146,7 @@ export function MarkdownEditor({
   onSubmit,
   autoFocus,
   apiRef,
+  contentClassName,
   mentions,
   placeholder = "Ajoute une description…",
   className,
@@ -136,12 +171,15 @@ export function MarkdownEditor({
   /** One call, as soon as the surface exists: the caller keeps the handles
       and writes into the editor without owning its state. */
   apiRef?: (api: MarkdownEditorApi) => void;
+  /** Styling of the content box ONLY — the placeholder is a ProseMirror
+      widget and follows whatever paddings land here. */
+  contentClassName?: string;
   mentions?: MarkdownEditorMentions;
   placeholder?: string;
   className?: string;
 }) {
   const tCommon = useTranslations("Common");
-  const [empty, setEmpty] = useState(value.trim() === "");
+  const [, setEmpty] = useState(value.trim() === "");
   const syncEmpty = (next: boolean) => {
     setEmpty(next);
     onEmptyChange?.(next);
@@ -169,8 +207,10 @@ export function MarkdownEditor({
   // would ask to rebuild the schema, which no caller does.
   const [hasMentions] = useState(!!mentions);
 
+  const [placeholderText] = useState(placeholder);
   const extensions = useMemo(
     () => [
+      placeholderExtension(placeholderText),
       // The stock code block is swapped for the lowlight one (same node, same
       // attributes — only rendering changes): a fenced block in a description
       // highlights as it does once committed (components/code-block-lowlight).
@@ -338,16 +378,11 @@ export function MarkdownEditor({
         if (e.target === e.currentTarget) editor?.commands.focus("end");
       }}
     >
-      {empty && (
-        <p className="pointer-events-none absolute top-0 left-0 text-sm text-muted-foreground/70">
-          {placeholder}
-        </p>
-      )}
       {/* The pills are rendered by node views, mounted as portals
  UNDER `EditorContent`: the context set here therefore reaches them, and
  is what gives them their destination without crossing anything manually. Same layout as the lookup of the subpages of a page. */}
       <MentionLinksProvider value={mentions?.links ?? null}>
-        <EditorContent editor={editor} />
+        <EditorContent editor={editor} className={contentClassName} />
         <MarkdownLinkMenu editor={editor} />
       </MentionLinksProvider>
     </div>
