@@ -1435,7 +1435,7 @@ export function PrDetail({
                   onClick={() => {
                     if (item.issue && item.project) onOpenIssue(item.issue.id, item.project.id);
                   }}
-                  className="flex min-w-0 items-center gap-1 text-muted-foreground outline-none hover:text-foreground hover:underline"
+                  className="flex min-w-0 items-center gap-1 text-muted-foreground outline-none hover:text-foreground"
                 >
                   <Link2
                     data-testid="pr-issue-link-icon"
@@ -1533,7 +1533,7 @@ export function PrDetail({
                 {t("reopen")}
               </Button>
             ) : null}
-            <PrStateBadge state={badgeState} icon />
+            <PrStateBadge state={badgeState} icon className="h-8" />
           </div>
         ) : (
           // Under `lg`, secondary actions move into the overflow menu. The
@@ -1678,7 +1678,7 @@ export function PrDetail({
             {/* Open state and merge state read side by side, AFTER the more
                 menu: first what we can do, then what the PR is, then what
                 still stands between it and the merge. */}
-            <PrStateBadge state={badgeState} icon />
+            <PrStateBadge state={badgeState} icon className="h-8" />
             {isDraft && canWrite ? (
               <Button
                 data-testid="pr-ready-for-review"

@@ -29,7 +29,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, cn, Spinner, Tabs, TabsList, TabsTrigger } from "mangue-ui";
+import { Button, cn, Spinner } from "mangue-ui";
 import {
   AttachButton,
   DropOverlay,
@@ -37,8 +37,7 @@ import {
   useFileDrop,
 } from "@/components/resources";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
-import { plainMarkdown } from "@/lib/plain-markdown";
-import { TAB_TRIGGER_DENSE } from "@/components/tab-bar";
+import { Markdown } from "@/components/markdown";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { usePrMembersQuery } from "@/lib/use-pr-members-query";
@@ -82,7 +81,6 @@ export function PrCommentComposer({
   variant?: "thread" | "line";
 }) {
   const t = useTranslations("PullRequests");
-  const [tab, setTab] = useState<"write" | "preview">("write");
   // The forge accounts are only loaded at the first “@” typed: open a
   // PR should not cost any extra query, and most of them can be read without having to
   // write there. The flag never comes down — once the list is requested, it
@@ -118,57 +116,45 @@ export function PrCommentComposer({
       >
         <DropOverlay show={drop.dragging} />
 
-        {/* “Write” / “Preview”, as at GitHub: the body of a PR comment
- is markdown, often with an image or a code snippet,
- and today we have no way of seeing it before sending it. */}
-        <Tabs
-          value={tab}
-          onValueChange={(next) => setTab(next as "write" | "preview")}
-          className="gap-0"
-        >
-          <TabsList className={cn("mb-0 h-auto", line ? "m-2 mb-0" : "m-2.5 mb-0")}>
-            <TabsTrigger value="write" className={cn(TAB_TRIGGER_DENSE, "text-xs")}>
-              {t("composerWrite")}
-            </TabsTrigger>
-            <TabsTrigger
-              value="preview"
-              className={cn(TAB_TRIGGER_DENSE, "text-xs")}
-              disabled={!body}
-            >
-              {t("composerPreview")}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        {/* The field remains MOUNTED under the preview (`hidden`): unmounting it would take away
- the caret, the undo stack and the mention envelopes —
- returning to “Write” would render a field amnesiac. */}
-        <div className={cn(tab === "preview" && "hidden")}>
-          <MentionTextarea
-            value={value}
-            onChange={(next) => onChange(() => next)}
-            forgeMembers={members}
-            onMentionQuery={() => setWantsMentions(true)}
-            focusSignal={focusSignal}
-            autoFocus={autoFocus}
-            onSubmit={onSubmit}
-            onEscape={onCancel}
-            placeholder={placeholder}
-            // Anchored in the diff, the field is HIGH in a scrollable area:
-            // a list that opened upwards would fold out of view.
-            dropUp={!line}
-            includeNumo
+        {/* No write/preview switch (MIN-548): the field stays, and the
+            rendered markdown lives UNDER it, live — like the scratchpad,
+            writing and seeing what will be sent are one gesture, not two
+            modes. The preview uses the app's real renderer, so code blocks,
+            images and lists look exactly as they will at the forge. */}
+        <MentionTextarea
+          value={value}
+          onChange={(next) => onChange(() => next)}
+          forgeMembers={members}
+          onMentionQuery={() => setWantsMentions(true)}
+          focusSignal={focusSignal}
+          autoFocus={autoFocus}
+          onSubmit={onSubmit}
+          onEscape={onCancel}
+          placeholder={placeholder}
+          // Anchored in the diff, the field is HIGH in a scrollable area:
+          // a list that opened upwards would fold out of view.
+          dropUp={!line}
+          includeNumo
+          className={cn(
+            "rounded-none border-0 bg-transparent focus-visible:border-0 focus-visible:ring-0",
+            line ? "max-h-40 px-3 py-2" : "px-3.5 py-2.5",
+          )}
+        />
+        {body ? (
+          <div
+            data-testid="pr-composer-preview"
             className={cn(
-              "rounded-none border-0 bg-transparent focus-visible:border-0 focus-visible:ring-0",
-              line ? "max-h-40 px-3 py-2" : "px-3.5 py-2.5",
+              "min-w-0 max-w-full border-t border-border/60 text-muted-foreground",
+              line ? "px-3 py-2" : "px-3.5 py-2.5",
             )}
-          />
-        </div>
-        {tab === "preview" ? (
-          <div className={cn("min-w-0 max-w-full", line ? "px-3 py-2" : "px-3.5 py-2.5")}>
-            <p className="max-w-full whitespace-pre-wrap [overflow-wrap:anywhere] text-foreground">
-              {plainMarkdown(value)}
-            </p>
+          >
+            <Markdown
+              allowRawHtml
+              linkVariant="plain"
+              className="max-w-full text-foreground [&_code]:bg-primary/10 [&_code]:text-primary"
+            >
+              {value}
+            </Markdown>
           </div>
         ) : null}
 
