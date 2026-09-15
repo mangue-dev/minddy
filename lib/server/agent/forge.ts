@@ -240,6 +240,13 @@ export interface Forge {
     number: number;
     title: string;
   }): Promise<PullRequestRef>;
+  /** Rewrite the PR description (the body of the thread card). */
+  updatePullRequestBody(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    body: string;
+  }): Promise<PullRequestRef>;
   enablePullRequestMergeFlow(opts: {
     token: string;
     repoFullName: string;
@@ -543,6 +550,7 @@ const githubForge: Forge = {
   mergePullRequest: github.mergePullRequest,
   updatePullRequestBranch: github.updatePullRequestBranch,
   rerunPullRequestCheck: github.rerunPullRequestCheck,
+  updatePullRequestBody: github.updatePullRequestBody,
   updatePullRequestTitle: github.updatePullRequestTitle,
   enablePullRequestMergeFlow: github.enablePullRequestMergeFlow,
   submitReview: github.submitPullRequestReview,
@@ -636,6 +644,7 @@ const gitlabForge: Forge = {
   mergePullRequest: gitlab.mergeMergeRequest,
   updatePullRequestBranch: gitlab.rebaseMergeRequest,
   rerunPullRequestCheck: gitlab.rerunMergeRequestCheck,
+  updatePullRequestBody: gitlab.updateMergeRequestBody,
   updatePullRequestTitle: gitlab.updateMergeRequestTitle,
   enablePullRequestMergeFlow: gitlab.enableMergeRequestAutoMerge,
   submitReview: gitlab.submitMergeRequestReview,

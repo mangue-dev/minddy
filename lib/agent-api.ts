@@ -754,9 +754,15 @@ export async function actOnPullRequestApi(
 
 export async function maintainPullRequestApi(
   prId: string,
-  action: "update_branch" | "rerun_check" | "update_title" | "enable_auto_merge",
+  action:
+    | "update_branch"
+    | "rerun_check"
+    | "update_title"
+    | "update_body"
+    | "enable_auto_merge",
   payload: {
     title?: string;
+    body?: string;
     rerunRef?: PullRequestCheck["rerunRef"];
   } = {},
 ): Promise<{ ok: true; title?: string }> {

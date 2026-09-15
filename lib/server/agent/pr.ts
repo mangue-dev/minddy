@@ -1177,6 +1177,25 @@ export async function updatePullRequestTitle(opts: {
   return toRef(pr, opts.repoFullName);
 }
 
+export async function updatePullRequestBody(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  body: string;
+}): Promise<PullRequestRef> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const pr = await ghJson<RawPull>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}`,
+    opts.token,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: opts.body }),
+    },
+  );
+  return toRef(pr, opts.repoFullName);
+}
+
 export async function enablePullRequestMergeFlow(opts: {
   token: string;
   repoFullName: string;

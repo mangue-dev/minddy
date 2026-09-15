@@ -964,6 +964,24 @@ export async function updateMergeRequestTitle(opts: {
   return toRef(mr);
 }
 
+export async function updateMergeRequestBody(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  body: string;
+}): Promise<PullRequestRef> {
+  const mr = await glJson<RawMr>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}`,
+    opts.token,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: opts.body }),
+    },
+  );
+  return toRef(mr);
+}
+
 export async function enableMergeRequestAutoMerge(opts: {
   token: string;
   repoFullName: string;

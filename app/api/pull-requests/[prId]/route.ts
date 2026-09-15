@@ -69,6 +69,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     action !== "update_branch" &&
     action !== "rerun_check" &&
     action !== "update_title" &&
+    action !== "update_body" &&
     action !== "enable_auto_merge"
   ) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
@@ -105,6 +106,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     action === "update_branch" ||
     action === "rerun_check" ||
     action === "update_title" ||
+    action === "update_body" ||
     action === "enable_auto_merge"
   ) {
     return prMaintenanceActionResponse(auth.scope, action, body);

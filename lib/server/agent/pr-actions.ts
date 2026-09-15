@@ -1952,6 +1952,7 @@ export interface PrActionBody {
   commitTitle?: string;
   commitMessage?: string;
   title?: string;
+  body?: string;
   rerunRef?: { kind?: string; id?: number };
   /** `link_issue`: the ticket to attach to this PR (MIN-163). */
   issueId?: string;
@@ -2271,7 +2272,12 @@ export async function prStateActionResponse(
 
 export async function prMaintenanceActionResponse(
   scope: PrScope,
-  action: "update_branch" | "rerun_check" | "update_title" | "enable_auto_merge",
+  action:
+    | "update_branch"
+    | "rerun_check"
+    | "update_title"
+    | "update_body"
+    | "enable_auto_merge",
   body: PrActionBody,
 ): Promise<NextResponse> {
   const actor = await requireActor(scope, "write");
@@ -2329,6 +2335,21 @@ export async function prMaintenanceActionResponse(
         }),
       );
       broadcastPrChanged(scope.pr.id, ["pr"]);
+      return NextResponse.json({ ok: true });
+    }
+    if (action === "update_body") {
+      const nextBody =
+        typeof body.body === "string" ? body.body.slice(0, MAX_COMMENT_BODY_LENGTH) : "";
+      if (!nextBody.trim()) {
+        return NextResponse.json(
+          { error: "Pull request body is required", code: "bodyRequired" },
+          { status: 400 },
+        );
+      }
+      await withPrOperation(`${scope.pr.id}:update-body`, () =>
+        scope.forge.updatePullRequestBody({ ...call, body: nextBody }),
+      );
+      broadcastPrChanged(scope.pr.id, ["pr", "conversation"]);
       return NextResponse.json({ ok: true });
     }
     const title = typeof body.title === "string" ? body.title.trim().slice(0, 256) : "";

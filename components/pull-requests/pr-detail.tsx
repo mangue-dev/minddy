@@ -304,6 +304,7 @@ function ThreadComment({
   body,
   canEdit,
   onEdited,
+  onSave,
   onQuoteReply,
   quotingNumo,
   forceBot,
@@ -324,6 +325,9 @@ function ThreadComment({
   /** Refetch the thread after a saved edit: the card alone does not own the
       comments query, and the cache must not show the old body. */
   onEdited?: () => void;
+  /** Where a saved edit goes, when the card is NOT a forge comment — the PR
+      body rewrites itself through the PR, not through a comment id. */
+  onSave?: (body: string) => Promise<void>;
   /** Absent when there is no composition where to cite: to cite without power
       answering leads nowhere (MIN-144). */
   onQuoteReply?: () => void;
@@ -377,7 +381,11 @@ function ThreadComment({
     if (!next || saving) return;
     setSaving(true);
     try {
-      await updatePullRequestCommentApi(endpoint, { commentId, body: next });
+      if (onSave) {
+        await onSave(next);
+      } else {
+        await updatePullRequestCommentApi(endpoint, { commentId, body: next });
+      }
       setEditing(false);
       onEdited?.();
     } catch (err) {
@@ -1897,6 +1905,22 @@ export function PrDetail({
                       createdAt={pr?.createdAt ?? null}
                       updatedAt={pr?.updatedAt ?? null}
                       body={prDescription}
+                      // Like on the forge: the AUTHOR rewrites the
+                      // description — Numo's PRs stay read-only, the agent
+                      // retells them himself.
+                      canEdit={
+                        canComment &&
+                        !!viewer?.login &&
+                        !!pr?.user?.login &&
+                        pr.user.login.toLowerCase() === viewer.login.toLowerCase() &&
+                        !item.runId
+                      }
+                      onSave={async (next) => {
+                        await maintainPullRequestApi(item.prId, "update_body", {
+                          body: next,
+                        });
+                      }}
+                      onEdited={() => void refetchPr()}
                       // Quote feeds the bottom composer: without a git account it
                       // there is none, and the gesture would lead nowhere.
                       onQuoteReply={
@@ -1931,10 +1955,14 @@ export function PrDetail({
                     // Editing stays on the person's OWN message (MIN-548):
                     // same login at the forge, a connected account, and never
                     // a bot's — Numo's messages are read-only.
+                    // Forge logins are CASE-INSENSITIVE (GitHub normalizes
+                    // nothing in its payloads): compare lowercased, or an
+                    // author whose login capitalizes differently would lose
+                    // the edit gesture on their own words.
                     const canEdit =
                       canComment &&
                       !!viewer?.login &&
-                      c.user?.login === viewer.login &&
+                      c.user?.login?.toLowerCase() === viewer.login.toLowerCase() &&
                       !isNumoComment(c.user?.login);
                     return (
                       <ThreadComment
