@@ -2,41 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
-import {
-  Check,
-  CircleDot,
-  CircleSlash,
-  Eye,
-  GitBranch,
-  GitCommitHorizontal,
-  GitMerge,
-  GitPullRequestArrow,
-  GitPullRequestClosed,
-  GitPullRequestDraft,
-  History,
-  Link2,
-  Lock,
-  LockOpen,
-  Milestone,
-  Rocket,
-  SquarePen,
-  Tag,
-  Trash2,
-  Upload,
-  UserMinus,
-  UserPlus,
-  X,
-  Zap,
-} from "lucide-react";
+import { Check, CircleSlash, X } from "lucide-react";
 import { cn } from "mangue-ui";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { GitLogin } from "@/components/git/git-login";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { Markdown } from "@/components/markdown";
-import {
-  PrActivityBubblePointer,
-  PrActivityItem,
-} from "@/components/pull-requests/pr-activity-timeline";
 import { PrHunk } from "@/components/pull-requests/pr-hunk";
 import {
   ReviewThreadCard,
@@ -55,7 +26,7 @@ import type { PrEndpoint, PullRequestReviewComment } from "@/lib/agent-api";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * PR ACTIVITY in the conversation thread (MIN-159) — what happened
+ * PR ACTIVITY in the conversation thread (MIN-159, MIN-548) — what happened
  * between two messages, and which minddy was entirely missing: a reasoned approval
  * was nowhere visible, nor was a push, a renaming or a
  * switch to draft.
@@ -63,45 +34,14 @@ import type { MessageKey } from "@/lib/i18n-keys";
  * Two forms, like at GitHub, and the gap between them is what makes the thread
  * readable:
  * - a **review** is a MESSAGE (verdict + body + the points placed on the
- * code): it takes a card, at the same template as the comments ;
- * - everything else is a **line**: a sticker, a noun, a verb, a time.
- * Stacking them into cards would drown out the three messages that matter.
+ *   code): it takes a self-contained card, at the same template as the comments;
+ * - everything else is a **line**: an avatar, a noun, a verb, a time.
+ *   Stacking them into cards would drown out the three messages that matter.
  */
 
-/** Tag of every fact — the same visual grammar as GitHub. */
-const KIND_ICON: Record<PrTimelineEvent["kind"], typeof Check> = {
-  reviewed: Eye,
-  review_dismissed: CircleSlash,
-  review_requested: Eye,
-  review_request_removed: Eye,
-  committed: GitCommitHorizontal,
-  deployed: Rocket,
-  deployment_environment_changed: Rocket,
-  force_pushed: Upload,
-  branch_deleted: Trash2,
-  branch_restored: GitBranch,
-  labeled: Tag,
-  unlabeled: Tag,
-  assigned: UserPlus,
-  unassigned: UserMinus,
-  renamed: SquarePen,
-  milestoned: Milestone,
-  demilestoned: Milestone,
-  ready_for_review: GitPullRequestArrow,
-  converted_to_draft: GitPullRequestDraft,
-  merged: GitMerge,
-  closed: GitPullRequestClosed,
-  reopened: CircleDot,
-  referenced: Link2,
-  cross_referenced: Link2,
-  locked: Lock,
-  unlocked: LockOpen,
-  auto_merge_enabled: Zap,
-  auto_merge_disabled: Zap,
-  system: History,
-};
-
-/** The verb of each fact. Placeholder keys are called with their values. */
+/**
+ * The verb of each fact. Placeholder keys are called with their values.
+ */
 const KIND_MESSAGE: Record<
   Exclude<PrTimelineEvent["kind"], "reviewed" | "system">,
   MessageKey<"PullRequests">
@@ -136,8 +76,9 @@ const KIND_MESSAGE: Record<
 };
 
 /**
- * One fact, in one line. The name of the author opens the sentence, as on GitHub —
- * it is him who we scan going down the thread.
+ * One fact, in one line: the avatar of the actor, the sentence, and the time
+ * at the far right. No leading icon — the avatar already says WHO, and the
+ * sentence says WHAT; a sticker in front of both only repeated them.
  *
  * The case `system` is the GitLab fallback: a sentence that minddy did not know how to translate
  * in his vocabulary, rendered as GitLab wrote it. A fact said in
@@ -148,85 +89,69 @@ export function PrTimelineRow({ event }: { event: PrTimelineEvent }) {
   const format = useFormatter();
   const now = useNow();
   // A NUE review — approved without a word — arrives here rather than on the map: it
-  // then keeps the icon and the color of its verdict, the only carriers of meaning.
+  // then keeps the color of its verdict, the only carrier of meaning.
   const verdict =
     event.kind === "reviewed"
       ? REVIEW_STATE[event.reviewState ?? "commented"]
       : null;
-  const Icon = verdict?.icon ?? KIND_ICON[event.kind] ?? History;
   // `actors` is only filled on commits: everywhere else a fact has a
   // sole author, and the stack falls back to the original rendering.
   const authors = event.actors ?? [];
+  const when = normalizeForgeInstant(event.createdAt, now);
 
   return (
-    <PrActivityItem
-      marker={
-        <span
-          className={cn(
-            "mt-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground/80 ring-4 ring-background",
-            verdict?.className,
-          )}
-          aria-hidden
-        >
-          <Icon className="size-3.5" />
-        </span>
-      }
-      contentClassName="py-1"
+    <div
+      data-testid="pr-timeline-event"
+      data-kind={event.kind}
+      className="flex min-w-0 items-start gap-2 text-sm leading-5 text-muted-foreground"
     >
-      <div
-        data-testid="pr-timeline-event"
-        data-kind={event.kind}
-        className="flex min-w-0 items-start gap-2 text-sm leading-5 text-muted-foreground"
-      >
+      {authors.length > 0 ? (
+        <AuthorStack authors={authors} size="size-4" className="mt-0.5" />
+      ) : event.actor ? (
+        <ForgeUserAvatar
+          user={event.actor}
+          className="mt-0.5 size-4 shrink-0"
+        />
+      ) : null}
+      <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
         {authors.length > 0 ? (
-          <AuthorStack authors={authors} size="size-4" className="mt-0.5" />
+          <AuthorNames authors={authors} className="text-sm" />
         ) : event.actor ? (
-          <ForgeUserAvatar
-            user={event.actor}
-            className="mt-0.5 size-4 shrink-0"
-          />
+          <GitLogin login={event.actor.login} className="font-medium text-foreground" />
         ) : null}
-        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-          {authors.length > 0 ? (
-            <AuthorNames authors={authors} className="text-sm" />
-          ) : event.actor ? (
-            <GitLogin login={event.actor.login} className="font-medium text-foreground" />
-          ) : null}
-          <span className={cn("min-w-0", verdict?.className)}>
-            {timelineText(event, t)}
-          </span>
-          {event.kind === "committed" && event.body ? (
-            <span className="min-w-0 truncate font-medium text-foreground">
-              {event.body}
-            </span>
-          ) : null}
-          {event.kind === "committed" && event.sha ? (
-            event.url ? (
-              <a
-                href={event.url}
-                target="_blank"
-                rel="noreferrer"
-                className="shrink-0 font-mono text-xs text-foreground hover:underline"
-              >
-                {event.sha.slice(0, 7)}
-              </a>
-            ) : (
-              <span className="shrink-0 font-mono text-xs text-foreground">
-                {event.sha.slice(0, 7)}
-              </span>
-            )
-          ) : null}
-          {normalizeForgeInstant(event.createdAt, now) ? (
-            <span className="shrink-0 text-xs text-muted-foreground/70">
-              {format.relativeTime(
-                normalizeForgeInstant(event.createdAt, now) as Date,
-                now,
-              )}
-            </span>
-          ) : null}
+        <span className={cn("min-w-0", verdict?.className)}>
+          {timelineText(event, t)}
         </span>
-      </div>
-    </PrActivityItem>
+        {event.kind === "committed" && event.body ? (
+          <span className="min-w-0 truncate font-medium text-foreground">
+            {event.body}
+          </span>
+        ) : null}
+        {/* The SHA stays, as a compact chip: it is the only handle a commit
+            row offers once the diff lives behind the click on the row. */}
+        {event.kind === "committed" && event.sha ? (
+          event.url ? (
+            <a
+              href={event.url}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground hover:text-brand"
+            >
+              {event.sha.slice(0, 7)}
+            </a>
+          ) : (
+            <code className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
+              {event.sha.slice(0, 7)}
+            </code>
+          )
+        ) : null}
+      </span>
+      {when ? (
+        <span className="ml-auto shrink-0 pl-2 text-xs text-muted-foreground/70">
+          {format.relativeTime(when, now)}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -342,53 +267,48 @@ export function PrTimelineReview({
   const resolution = useThreadResolution(endpoint, onResolutionChanged);
   // Absent on “read again”: the map is already made of what the icon announces.
   const Icon = state.icon;
+  const when = normalizeForgeInstant(event.createdAt, now);
 
   return (
-    <PrActivityItem
-      marker={
-        <ForgeUserAvatar
-          user={event.actor}
-          className="mt-2 size-8 ring-4 ring-background"
-        />
-      }
-      contentClassName="flex flex-col gap-3"
-    >
+    <div className="flex flex-col gap-3">
       <article
         data-testid="pr-activity-review"
-        className="relative rounded-lg border border-border bg-card shadow-xs [--activity-header:color-mix(in_oklab,var(--muted)_35%,var(--card))]"
+        className="overflow-clip rounded-lg border border-border bg-card shadow-xs"
       >
-        <PrActivityBubblePointer />
-        <header className="relative flex min-h-10 flex-wrap items-center gap-x-2 gap-y-1 rounded-t-lg border-b border-border bg-[var(--activity-header)] px-3 py-2">
-          <GitLogin login={event.actor?.login} className="text-sm font-medium text-foreground" />
-          <span className={cn("flex shrink-0 items-center gap-1 text-xs", state.className)}>
-            {Icon ? <Icon className="size-3.5" /> : null}
-            {t(state.label)}
-          </span>
-          {normalizeForgeInstant(event.createdAt, now) ? (
-            <span className="shrink-0 text-xs text-muted-foreground/80">
-              {format.relativeTime(
-                normalizeForgeInstant(event.createdAt, now) as Date,
-                now,
-              )}
+        <div className="px-3.5 py-3">
+          <header className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <ForgeUserAvatar user={event.actor} className="size-5 shrink-0" />
+            <GitLogin
+              login={event.actor?.login}
+              className="text-sm font-medium text-foreground"
+            />
+            <span className={cn("flex shrink-0 items-center gap-1 text-xs", state.className)}>
+              {Icon ? <Icon className="size-3.5" /> : null}
+              {t(state.label)}
             </span>
+            {when ? (
+              <span className="ml-auto shrink-0 text-xs text-muted-foreground/80">
+                {format.relativeTime(when, now)}
+              </span>
+            ) : null}
+          </header>
+          {event.body ? (
+            <div className="mt-2.5">
+              <Markdown
+                allowRawHtml
+                linkVariant="plain"
+                className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit"
+              >
+                {event.body}
+              </Markdown>
+            </div>
           ) : null}
-        </header>
-        {event.body ? (
-          <div className="px-3.5 py-3">
-            <Markdown
-              allowRawHtml
-              linkVariant="plain"
-              className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit"
-            >
-              {event.body}
-            </Markdown>
-          </div>
-        ) : null}
+        </div>
       </article>
       {comments.length > 0 ? (
         <ul
           data-testid="pr-activity-review-threads"
-          className="relative ml-3 flex flex-col gap-3 border-l border-border pl-4"
+          className="ml-3 flex flex-col gap-3 border-l border-border pl-4"
         >
           {threads.map((thread) => (
             <ReviewCommentBlock
@@ -401,7 +321,7 @@ export function PrTimelineReview({
           ))}
         </ul>
       ) : null}
-    </PrActivityItem>
+    </div>
   );
 }
 

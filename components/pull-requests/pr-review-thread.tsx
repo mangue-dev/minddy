@@ -6,7 +6,6 @@ import { ChevronRight, Eye } from "lucide-react";
 import { Button, cn, Spinner } from "mangue-ui";
 import { ModelLogo } from "@/components/model-logo";
 import { NumoIcon } from "@/components/numo-icon";
-import { PrActivityItem } from "@/components/pull-requests/pr-activity-timeline";
 import { formatModelName } from "@/lib/model-display";
 import type { PrReviewRunSummary } from "@/lib/pr-review-session";
 
@@ -60,44 +59,38 @@ export function PrReviewCard({ run }: { run: PrReviewRunSummary }) {
   const failed = run.status === "failed" || run.status === "canceled";
 
   return (
-    <PrActivityItem
-      marker={
-        <span className="flex size-8 items-center justify-center rounded-[6px] bg-card ring-4 ring-background">
-          <NumoIcon animated={working} className="size-5" />
-        </span>
-      }
+    <button
+      type="button"
+      data-testid="pr-review-card"
+      onClick={() => router.push(`/agents?run=${run.runId}`)}
+      className="group flex w-full items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-3 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:bg-muted/50"
     >
-      <button
-        type="button"
-        onClick={() => router.push(`/agents?run=${run.runId}`)}
-        className="flex w-full items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-3 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:bg-muted/50"
+      <NumoIcon animated={working} className="size-5 shrink-0" />
+      <span className="text-sm font-medium text-foreground">Numo</span>
+      <span
+        className={cn(
+          "min-w-0 truncate text-xs text-muted-foreground",
+          working && "text-shimmer",
+        )}
       >
-        <span className="text-sm font-medium text-foreground">Numo</span>
-        <span
-          className={cn(
-            "min-w-0 truncate text-xs text-muted-foreground",
-            working && "text-shimmer",
-          )}
-        >
-          {failed
-            ? t("numoReviewFailed")
-            : working
-              ? t("numoReviewWorking")
-              : t("numoReviewFinished")}
+        {failed
+          ? t("numoReviewFailed")
+          : working
+            ? t("numoReviewWorking")
+            : t("numoReviewFinished")}
+      </span>
+      {working ? <Spinner className="shrink-0" /> : null}
+      <span className="min-w-0 flex-1" />
+      {run.model ? (
+        <span className="hidden shrink-0 items-center gap-1.5 text-xs text-muted-foreground/80 sm:flex">
+          <ModelLogo model={run.model} size={12} />
+          {formatModelName(run.model)}
         </span>
-        {working ? <Spinner className="shrink-0" /> : null}
-        <span className="min-w-0 flex-1" />
-        {run.model ? (
-          <span className="hidden shrink-0 items-center gap-1.5 text-xs text-muted-foreground/80 sm:flex">
-            <ModelLogo model={run.model} size={12} />
-            {formatModelName(run.model)}
-          </span>
-        ) : null}
-        <span className="flex shrink-0 items-center gap-0.5 text-xs text-muted-foreground">
-          {t("numoReviewOpenSession")}
-          <ChevronRight className="size-3.5" />
-        </span>
-      </button>
-    </PrActivityItem>
+      ) : null}
+      <span className="flex shrink-0 items-center gap-0.5 text-xs text-muted-foreground">
+        {t("numoReviewOpenSession")}
+        <ChevronRight className="size-3.5" />
+      </span>
+    </button>
   );
 }

@@ -27,6 +27,7 @@ import {
 } from "mangue-ui";
 import {
   ArrowLeft,
+  ArrowUp,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -55,11 +56,6 @@ import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { PrCommits } from "@/components/pull-requests/pr-commits";
 import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
-import {
-  PrActivityBubblePointer,
-  PrActivityItem,
-  PrActivityTimeline,
-} from "@/components/pull-requests/pr-activity-timeline";
 import { PrLinkIssue } from "@/components/pull-requests/pr-link-issue";
 import {
   CommentReactionChips,
@@ -283,7 +279,8 @@ function buildFeed(
   return sortTimelineOlderFirst(entries);
 }
 
-/** A conversation message placed on the shared activity rail. */
+/** A conversation message, as a self-contained card (MIN-548): no rail, no
+    bubble pointer — the ticket timeline comment template. */
 function ThreadComment({
   commentId,
   user,
@@ -318,30 +315,27 @@ function ThreadComment({
   const format = useFormatter();
   const now = useNow();
   const list = reactions?.byComment.get(commentId) ?? [];
+  const when = normalizeForgeInstant(createdAt, now);
 
   return (
-    <PrActivityItem
-      marker={
-        <ForgeUserAvatar
-          user={user}
-          forceBot={forceBot}
-          className="mt-2 size-8 ring-4 ring-background"
-        />
-      }
+    <article
+      data-testid="pr-activity-message"
+      className="group overflow-clip rounded-lg border border-border bg-card shadow-xs"
     >
-      <article
-        data-testid="pr-activity-message"
-        className="group/comment relative overflow-visible rounded-lg border border-border bg-card shadow-xs [--activity-header:color-mix(in_oklab,var(--muted)_35%,var(--card))]"
-      >
-        <PrActivityBubblePointer />
-        <header className="relative flex min-h-10 items-center gap-2 rounded-t-lg border-b border-border bg-[var(--activity-header)] px-3 py-2">
+      <div className="flex flex-col gap-2 px-3.5 py-3">
+        <header className="flex min-h-5 items-center gap-2">
+          <ForgeUserAvatar
+            user={user}
+            forceBot={forceBot}
+            className="size-5 shrink-0"
+          />
           <GitLogin
             login={user?.login}
             className="text-sm font-medium text-foreground"
           />
-          {normalizeForgeInstant(createdAt, now) ? (
+          {when ? (
             <span className="shrink-0 text-xs text-muted-foreground/80">
-              {format.relativeTime(normalizeForgeInstant(createdAt, now) as Date, now)}
+              {format.relativeTime(when, now)}
             </span>
           ) : null}
           <span className="min-w-0 flex-1" />
@@ -352,7 +346,7 @@ function ThreadComment({
                   variant="ghost"
                   size="icon-sm"
                   aria-label={t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
-                  className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100"
+                  className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                   onClick={onQuoteReply}
                 >
                   <Reply className="size-4" />
@@ -364,21 +358,21 @@ function ThreadComment({
             </Tooltip>
           ) : null}
         </header>
-        <div className="flex flex-col gap-2 px-3.5 py-3">
-          {activity ? <div>{activity}</div> : null}
-          <Markdown
-            allowRawHtml
-            linkVariant="plain"
-            className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit"
-          >
-            {body}
-          </Markdown>
-          {reactions && (list.length > 0 || reactions.canReact) ? (
+        {activity ? <div>{activity}</div> : null}
+        <Markdown
+          allowRawHtml
+          linkVariant="plain"
+          className="text-foreground [&_code]:bg-primary/10 [&_code]:text-primary [&_pre_code]:text-inherit"
+        >
+          {body}
+        </Markdown>
+        {reactions && (list.length > 0 || reactions.canReact) ? (
+          <div>
             <CommentReactionChips commentId={commentId} reactions={reactions} list={list} />
-          ) : null}
-        </div>
-      </article>
-    </PrActivityItem>
+          </div>
+        ) : null}
+      </div>
+    </article>
   );
 }
 
@@ -497,6 +491,10 @@ export function PrDetail({
   const reviewSession = usePrReviewSession(item.prId);
   const [aiReviewDialog, setAiReviewDialog] = useState(false);
   const [tab, setTab] = useState<PullRequestDetailTab>("activity");
+  /** The Files diff is long: past ~600px scrolled, a floating button offers
+      the way back to the toolbar and the file tree. */
+  const [scrolledDown, setScrolledDown] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [unresolvedSidebarOpen, setUnresolvedSidebarOpen] = useState(false);
   // Soft fade up and down the feed — the same as the agent conversation and
   // than the columns of the board: it only lights up on the side where there REMAINS some
@@ -1071,9 +1069,9 @@ export function PrDetail({
 
   // The full thread: messages AND activity, in the order everything happened.
   const feed = buildFeed(comments, timeline, reviewComments, commits);
-  // The tab counter counts what is READ — messages and reviews that
-  // say something — not the lines of activity, which are context.
-  const conversationCount = feed.filter((e) => e.kind !== "event").length;
+  // The tab counter counts EVERYTHING that happened (MIN-548): messages,
+  // reviews, and the activity lines that also carry information.
+  const conversationCount = feed.length;
   const feedbackContext = useMemo(
     () => ({
       number: item.pr_number,
@@ -1532,17 +1530,27 @@ export function PrDetail({
 
           `onScroll` continues to run: the measure costs nothing and the fade
           just returns, without missed transitions, as soon as you change tabs. */}
-      <div
-        ref={feedFade.ref}
-        onScroll={feedFade.scrollProps.onScroll}
-        style={tab === "files" ? undefined : feedFade.scrollProps.style}
-        // The VERTICAL padding has gone down a notch, on the envelope (MIN-182).
-        // Measured: `position: sticky` fits on the CONTENT of the container
-        // scrolling, not on its edge — a `py-6` here stopped the header from
-        // 24 px file too low, and `scroll-padding-top: 0` changes nothing.
-        // When lowered, it scrolls with the content and the header sticks to the banner.
-        className="min-h-0 flex-1 overflow-y-auto px-4 md:px-6"
-      >
+      {/* The scroll host is wrapped in a relative box so the floating
+          back-to-top of the Files tab can anchor to the viewport of the
+          scroll container instead of the page. */}
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={(el) => {
+            feedFade.ref(el);
+            scrollContainerRef.current = el;
+          }}
+          onScroll={(e) => {
+            feedFade.scrollProps.onScroll();
+            setScrolledDown(e.currentTarget.scrollTop > 600);
+          }}
+          style={tab === "files" ? undefined : feedFade.scrollProps.style}
+          // The VERTICAL padding has gone down a notch, on the envelope (MIN-182).
+          // Measured: `position: sticky` fits on the CONTENT of the container
+          // scrolling, not on its edge — a `py-6` here stopped the header from
+          // 24 px file too low, and `scroll-padding-top: 0` changes nothing.
+          // When lowered, it scrolls with the content and the header sticks to the banner.
+          className="h-full overflow-y-auto px-4 md:px-6"
+        >
         <div className="mx-auto flex max-w-3xl flex-col gap-6 py-6">
           {/* PR title + meta. The TITLE of the pull request, not that of the
               ticket: since MIN-143 they no longer come in pairs, and a PR
@@ -1648,7 +1656,12 @@ export function PrDetail({
           {/* GitHub style tabs: the thread on one side, the code on the other. */}
           <Tabs
             value={tab}
-            onValueChange={(v) => setTab(v as PullRequestDetailTab)}
+            onValueChange={(v) => {
+              setTab(v as PullRequestDetailTab);
+              // The floating back-to-top follows the scroll position of the
+              // Files tab only; a fresh tab must not inherit a stale flag.
+              setScrolledDown(false);
+            }}
           >
             <TabsList variant="line" className={TAB_LIST_DENSE}>
               <TabsTrigger value="activity" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
@@ -1681,7 +1694,11 @@ export function PrDetail({
               ) : !prDescription && feed.length === 0 && !reviewCard ? (
                 <p className="text-sm text-muted-foreground">{t("noComments")}</p>
               ) : (
-                <PrActivityTimeline>
+                // MIN-548: the activity is a plain stack of cards and lines —
+                // no vertical rail, no markers. The one line of an event reads
+                // from left to right, and a card is a card, like the ticket
+                // timeline.
+                <div data-testid="pr-activity-timeline" className="flex flex-col gap-3">
                   {prDescription ? (
                     <ThreadComment
                       // The body of the PR is not a commentary, but it
@@ -1744,7 +1761,7 @@ export function PrDetail({
                       and clickable: this is how we will see what the agent has
                       read, and answered. */}
                   {reviewCard ? <PrReviewCard run={reviewCard} /> : null}
-                </PrActivityTimeline>
+                </div>
               )}
 
               {canComment ? (
@@ -1782,38 +1799,9 @@ export function PrDetail({
                 </div>
               ) : pr ? (
                 <div className="flex flex-col gap-3">
-                  {canComment ? (
-                    <div
-                      data-testid="pr-file-review-toolbar"
-                      className="flex min-h-14 flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-2.5"
-                    >
-                      <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand/10 text-brand">
-                        <Eye className="size-4" />
-                      </span>
-                      <div className="min-w-48 flex-1">
-                        <p className="text-sm font-medium">
-                          {t(fileReviewActive ? "reviewInProgress" : "reviewFilesTitle")}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {fileReviewActive
-                            ? t("reviewFileProgress", {
-                                reviewed: reviewedCount,
-                                total: files.length,
-                              })
-                            : t("reviewFilesHint")}
-                        </p>
-                      </div>
-                      <Button
-                        data-testid={fileReviewActive ? "pr-finish-review" : "pr-start-review"}
-                        variant={fileReviewActive ? "default" : "outline"}
-                        size="sm"
-                        onClick={fileReviewActive ? finishFileReview : startFileReview}
-                      >
-                        {fileReviewActive ? <Check /> : <Eye />}
-                        {t(fileReviewActive ? "reviewFinish" : "reviewStart")}
-                      </Button>
-                    </div>
-                  ) : null}
+                  {/* MIN-548: the review mode lives INSIDE the diff toolbar —
+                      one single line under the tab, with the file count, the
+                      display switches and the review toggle. */}
                   <PrDiff
                     files={files}
                     endpoint={prEndpoint(item.prId)}
@@ -1834,6 +1822,29 @@ export function PrDetail({
                     reviewReactions={reviewReactions}
                     onCommentPosted={refreshReviewState}
                     onThreadResolved={refetchPr}
+                    reviewControls={
+                      canComment ? (
+                        <div data-testid="pr-file-review-toolbar" className="flex items-center gap-2">
+                          {fileReviewActive ? (
+                            <span className="text-xs text-muted-foreground">
+                              {t("reviewFileProgress", {
+                                reviewed: reviewedCount,
+                                total: files.length,
+                              })}
+                            </span>
+                          ) : null}
+                          <Button
+                            data-testid={fileReviewActive ? "pr-finish-review" : "pr-start-review"}
+                            variant={fileReviewActive ? "default" : "outline"}
+                            size="sm"
+                            onClick={fileReviewActive ? finishFileReview : startFileReview}
+                          >
+                            {fileReviewActive ? <Check /> : <Eye />}
+                            {t(fileReviewActive ? "reviewFinish" : "reviewStart")}
+                          </Button>
+                        </div>
+                      ) : undefined
+                    }
                   />
                   {fileReviewActive && canComment ? (
                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card px-3.5 py-2.5">
@@ -1860,6 +1871,23 @@ export function PrDetail({
             </TabsContent>
           </Tabs>
         </div>
+        </div>
+
+        {/* The diff of a big PR scrolls far: one floating gesture brings back
+            the toolbar and the file tree, without hunting for the wheel. */}
+        {tab === "files" && scrolledDown ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("scrollToTop")}
+            className="absolute bottom-4 right-4 z-20 rounded-full border border-border bg-card text-muted-foreground shadow-md hover:text-foreground md:right-6"
+            onClick={() =>
+              scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" })
+            }
+          >
+            <ArrowUp className="size-4" />
+          </Button>
+        ) : null}
       </div>
 
       <Dialog open={editingTitle} onOpenChange={(open) => !maintenanceAction && setEditingTitle(open)}>

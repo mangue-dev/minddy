@@ -6,9 +6,8 @@ import {
   Badge,
   Button,
   Skeleton,
-  cn,
 } from "mangue-ui";
-import { Check, Copy, ExternalLink, ShieldCheck } from "lucide-react";
+import { Check, Copy, FileDiff, ShieldCheck } from "lucide-react";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { normalizeForgeInstant } from "@/lib/forge-time";
 import { PrCommitDiffSheet } from "@/components/pull-requests/pr-commit-diff-sheet";
@@ -28,20 +27,17 @@ import {
  * had arrived there.
  *
  * Rendering modeled on GitHub, because it is a standard and not a place to
- * customize: groups by day, commit title, author + relative date,
- * SHA runs in a minivan (copiable), and the link to the forge. The body of
- * message — when there is one — unfolds behind the “…” of GitHub instead
- * than stretching each line to the height of its longest commit.
+ * customize: groups by day, commit title, author + relative date, SHA runs
+ * in a minivan (copiable). The whole row is the way in (MIN-548): it opens
+ * the diff of the commit in the side panel, and the +/− counters and the
+ * copy-SHA stay as secondary gestures on the right.
  */
 
-/** Title (1st line) and body (the rest) of a commit message. */
-function splitMessage(message: string): { title: string; body: string } {
+/** The title of a commit message — its first line. The body never renders
+    here anymore (MIN-548): the diff sheet shows the full message. */
+function commitTitle(message: string): string {
   const newline = message.indexOf("\n");
-  if (newline === -1) return { title: message.trim(), body: "" };
-  return {
-    title: message.slice(0, newline).trim(),
-    body: message.slice(newline + 1).trim(),
-  };
+  return (newline === -1 ? message : message.slice(0, newline)).trim();
 }
 
 /** The first 7 characters, like everywhere else in git. */
@@ -87,7 +83,8 @@ function groupByDay(commits: PullRequestCommit[]): CommitDay[] {
   return days;
 }
 
-/** The short SHA, clickable to copy it — the gesture we are looking for here. */
+/** The short SHA, clickable to copy it — a gesture ON the row, so it must not
+    open the diff the row opens. */
 function ShaButton({ sha }: { sha: string }) {
   const t = useTranslations("PullRequests");
   const [copied, setCopied] = useState(false);
@@ -98,7 +95,8 @@ function ShaButton({ sha }: { sha: string }) {
           variant="ghost"
           size="sm"
           className="h-7 gap-1.5 px-2 font-mono text-xs text-muted-foreground hover:text-foreground"
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             void navigator.clipboard.writeText(sha);
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);
@@ -118,38 +116,30 @@ function ShaButton({ sha }: { sha: string }) {
 }
 
 /**
- * The weight of the commit, and the entry point for its diff: what this commit is
- * changes, by itself, in the side panel. This is the number we look at
- * before deciding whether the commit is worth opening — it might as well be
- * button that opens it.
+ * The weight of the commit, in numbers only: since MIN-548 the row itself is
+ * the entry point of the diff, so the chips stay visual — the click passes
+ * through to the row.
  */
 function CommitStats({
   additions,
   deletions,
-  onOpen,
 }: {
   additions: number;
   deletions: number;
-  onOpen: () => void;
 }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1.5 px-2 font-medium tabular-nums"
-          onClick={onOpen}
-        >
+        <span className="flex h-7 items-center gap-1.5 px-2 text-sm font-medium tabular-nums">
           <span className="text-green-700 dark:text-green-500">
             +{format.number(additions)}
           </span>
           <span className="text-red-700 dark:text-red-500">
             −{format.number(deletions)}
           </span>
-        </Button>
+        </span>
       </TooltipTrigger>
       <TooltipContent side="top">{t("viewCommitDiff")}</TooltipContent>
     </Tooltip>
@@ -169,8 +159,7 @@ function CommitRow({
   const t = useTranslations("PullRequests");
   const format = useFormatter();
   const now = useNow();
-  const [showBody, setShowBody] = useState(false);
-  const { title, body } = useMemo(() => splitMessage(commit.message), [commit.message]);
+  const title = useMemo(() => commitTitle(commit.message), [commit.message]);
 
   // ALL authors, principal first (MIN-159): a co-signed commit has
   // several, and this is the common case as soon as an agent has held the keyboard. THE
@@ -190,44 +179,29 @@ function CommitRow({
           ]
         : [];
 
+  const openDiff = () => onOpenDiff(commit.sha);
+
   return (
-    <li className="flex items-start gap-3 px-3.5 py-3">
+    <li
+      role="button"
+      tabIndex={0}
+      onClick={openDiff}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openDiff();
+        }
+      }}
+      className="flex cursor-pointer items-start gap-3 px-3.5 py-3 outline-none transition-colors hover:bg-muted/50 focus-visible:bg-muted/50"
+    >
       <AuthorStack authors={authors} className="mt-0.5" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex min-w-0 items-start gap-1.5">
-          {/* The title opens the diff, as it opens the commit on GitHub: it is
-              the gesture we attempt first, and the +/− indicator on the right makes the
-              same thing for those aiming for the figure. */}
-          <button
-            type="button"
-            onClick={() => onOpenDiff(commit.sha)}
-            className="min-w-0 flex-1 cursor-pointer text-left text-sm leading-snug font-medium break-words outline-none hover:text-brand hover:underline focus-visible:text-brand focus-visible:underline"
-          >
-            {title || t("commitNoMessage")}
-          </button>
-          {/* The “…” of GitHub: the body of the message is often long and
-              rarely read — it unfolds, it does not occupy the list. */}
-          {body ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-expanded={showBody}
-              className={cn(
-                "h-5 shrink-0 px-1.5 font-mono text-xs leading-none text-muted-foreground",
-                showBody && "bg-muted text-foreground",
-              )}
-              onClick={() => setShowBody((v) => !v)}
-            >
-              …
-              <span className="sr-only">{t("commitMessageToggle")}</span>
-            </Button>
-          ) : null}
-        </div>
-        {showBody && body ? (
-          <pre className="overflow-x-auto rounded-md bg-muted/50 px-2.5 py-2 font-mono text-xs whitespace-pre-wrap text-muted-foreground">
-            {body}
-          </pre>
-        ) : null}
+        {/* The title no longer opens the diff BY ITSELF: the whole row is the
+            gesture, and it stays plain — no underline, no hover tint of its
+            own, the row already reacts as one surface. */}
+        <p className="min-w-0 text-sm leading-snug font-medium break-words">
+          {title || t("commitNoMessage")}
+        </p>
         <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
           <AuthorNames authors={authors} />
           {normalizeForgeInstant(commit.authoredAt, now) ? (
@@ -271,37 +245,35 @@ function CommitRow({
           </TooltipContent>
         </Tooltip>
       ) : null}
-      <div className="flex shrink-0 items-center">
+      <div className="flex shrink-0 items-start gap-1">
         {/* Silent when the forge was unable to give the numbers: “+0 −0” is
             would read as an empty commit, and that's not what we know. */}
         {commit.additions != null && commit.deletions != null ? (
           <CommitStats
             additions={commit.additions}
             deletions={commit.deletions}
-            onOpen={() => onOpenDiff(commit.sha)}
           />
         ) : null}
-        <ShaButton sha={commit.sha} />
-        {commit.url ? (
+        <div className="flex flex-col items-end gap-0.5">
+          <ShaButton sha={commit.sha} />
           <Tooltip>
             <TooltipTrigger asChild>
-              <a
-                href={commit.url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("viewCommitDiff")}
+                className="text-muted-foreground hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openDiff();
+                }}
               >
-                <ExternalLink className="size-3.5" />
-                <span className="sr-only">
-                  {t(provider === "gitlab" ? "viewOnGitlab" : "viewOnGithub")}
-                </span>
-              </a>
+                <FileDiff className="size-4" />
+              </Button>
             </TooltipTrigger>
-            <TooltipContent side="top">
-              {t(provider === "gitlab" ? "viewOnGitlab" : "viewOnGithub")}
-            </TooltipContent>
+            <TooltipContent side="top">{t("viewCommitDiff")}</TooltipContent>
           </Tooltip>
-        ) : null}
+        </div>
       </div>
     </li>
   );

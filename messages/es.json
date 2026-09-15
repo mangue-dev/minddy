@@ -3894,7 +3894,8 @@
     "cardReviewRequested": "Revisión solicitada",
     "cardChangesRequested": "{count, plural, =0 {Cambios solicitados} one {Cambios solicitados} other {# revisores pidieron cambios}}",
     "cardApprovalsMissing": "{count, plural, one {# aprobación pendiente} other {# aprobaciones pendientes}}",
-    "checksPopoverTitle": "{count, plural, one {# check} other {# checks}}"
+    "checksPopoverTitle": "{count, plural, one {# check} other {# checks}}",
+    "scrollToTop": "Volver arriba"
   },
   "Triage": {
     "projectNotFound": "No se ha encontrado el proyecto",
