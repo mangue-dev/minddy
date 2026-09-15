@@ -454,7 +454,10 @@ function ThreadComment({
                     {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
                   </DropdownMenuItem>
                 ) : null}
-                {edited && edits && edits.length > 0 ? (
+                {/* The history is always offered on an edited message: the
+                    lazy read may fail or return nothing — the dialog says so,
+                    and the menu must never open empty. */}
+                {edited ? (
                   <DropdownMenuItem onSelect={() => setHistoryOpen(true)}>
                     <History />
                     {t("viewPreviousVersions")}
@@ -505,7 +508,12 @@ function ThreadComment({
               <DialogTitle>{t("previousVersionsTitle")}</DialogTitle>
             </DialogHeader>
             <div className="flex max-h-96 min-w-0 flex-col gap-4 overflow-y-auto">
-              {edits && edits.length > 0 ? (
+              {!edits ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Spinner className="size-3.5 shrink-0" />
+                  {t("previousVersionsLoading")}
+                </div>
+              ) : edits.length > 0 ? (
                 edits.map((edit, index) => {
                   const editedWhen = normalizeForgeInstant(edit.created_at, now);
                   return (
@@ -1887,6 +1895,7 @@ export function PrDetail({
                       commentId={PR_BODY_COMMENT_ID}
                       user={pr?.user ?? null}
                       createdAt={pr?.createdAt ?? null}
+                      updatedAt={pr?.updatedAt ?? null}
                       body={prDescription}
                       // Quote feeds the bottom composer: without a git account it
                       // there is none, and the gesture would lead nowhere.

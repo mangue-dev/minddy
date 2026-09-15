@@ -511,6 +511,8 @@ export interface PullRequestRef {
   /** Author and opening date: `body` opens the conversation thread as a comment. */
   user?: { login: string; avatar_url: string | null } | null;
   createdAt?: string;
+  /** Last forge edit of the body — the "(edited)" marker reads it. */
+  updatedAt?: string;
   /** `null`/absent = UNKNOWN fusionability (forges calculate it using
       asynchronous), never display as “blocked” — MIN-138. */
   mergeable?: boolean | null;

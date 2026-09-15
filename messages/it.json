@@ -3904,7 +3904,8 @@
     "viewPreviousVersions": "Vedi le versioni precedenti",
     "previousVersionsTitle": "Versioni precedenti",
     "previousVersionsLast": "versione più recente",
-    "previousVersionsEmpty": "Nessuna versione precedente salvata."
+    "previousVersionsEmpty": "Nessuna versione precedente salvata.",
+    "previousVersionsLoading": "Caricamento versioni precedenti…"
   },
   "Triage": {
     "projectNotFound": "Progetto non trovato",
