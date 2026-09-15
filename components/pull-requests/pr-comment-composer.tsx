@@ -89,6 +89,26 @@ export function PrCommentComposer({
   // PR should not cost any extra query, and most of them can be read without having to
   // write there. The flag never comes down — once the list is requested, it
   // stays cached for the entire time of the panel.
+  // An editor keeps its caret only while focused; some outside clicks
+  // (user-select:none surfaces, certain panels) do not take the focus away.
+  // One listener guarantees the rule: a press OUTSIDE the composer unwinds
+  // the focus, whatever the surface (MIN-548).
+  const composerRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const onDocumentMouseDown = (event: MouseEvent) => {
+      const root = composerRef.current;
+      if (!root) return;
+      if (event.target instanceof Node && root.contains(event.target)) return;
+      const active = document.activeElement;
+      // Only unwinds a contenteditable focus (ours): the press outside
+      // never lands while the caret blinks again.
+      if (active instanceof HTMLElement && active.isContentEditable) {
+        active.blur();
+      }
+    };
+    document.addEventListener("mousedown", onDocumentMouseDown);
+    return () => document.removeEventListener("mousedown", onDocumentMouseDown);
+  }, []);
   const [wantsMentions, setWantsMentions] = useState(false);
   const { members } = usePrMembersQuery(endpoint, wantsMentions);
   // The WYSIWYG surface owns the text; the draft stays with the CALLER
@@ -137,7 +157,7 @@ export function PrCommentComposer({
   const canPost = !!body && !posting && !uploads.uploading;
 
   return (
-    <div className="flex min-w-0 max-w-full flex-col gap-2 font-sans">
+    <div ref={composerRef} className="flex min-w-0 max-w-full flex-col gap-2 font-sans">
       <div
         className={cn(
           "relative min-w-0 w-full max-w-full border border-border transition-colors focus-within:border-ring",

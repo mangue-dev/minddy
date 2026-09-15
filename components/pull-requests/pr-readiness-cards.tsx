@@ -804,7 +804,7 @@ const CHECK_SLICE_STROKE: Record<CheckState, string> = {
   neutral: "stroke-muted-foreground",
 };
 
-function ChecksDonut({ parts }: { parts: CheckState[] }) {
+export function ChecksDonut({ parts }: { parts: CheckState[] }) {
   const size = 16;
   const radius = 6.5;
   const stroke = 3;

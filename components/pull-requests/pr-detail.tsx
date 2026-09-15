@@ -1704,6 +1704,7 @@ export function PrDetail({
                 autoMergeAllowed={mergePolicy?.autoMergeAllowed ?? null}
                 autoMerging={maintenanceAction === "enable_auto_merge"}
                 onToggleAutoMerge={(enable) => void toggleAutoMerge(enable)}
+                checks={checks}
               />
             ) : (
               <PrReadinessBadge readiness={null} />
