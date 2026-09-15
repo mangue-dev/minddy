@@ -109,15 +109,22 @@ function placeholderExtension(text: string) {
         key: new PluginKey("editor-placeholder"),
         props: {
           decorations: (state) => {
-            if (state.doc.textContent.trim().length > 0)
+            // Empty means ONE empty paragraph: anything else (an image
+            // alone, an attachment card) has real content to read.
+            const first = state.doc.firstChild;
+            if (state.doc.textContent.trim().length > 0) return DecorationSet.empty;
+            if (!first || !first.isTextblock || first.content.size !== 0)
               return DecorationSet.empty;
             const widget = document.createElement("span");
             widget.dataset.placeholder = "";
             widget.className =
               "pointer-events-none select-none text-sm text-muted-foreground/70";
             widget.textContent = text;
+            // Position 1 = INSIDE the empty first paragraph, before its
+            // close — the exact line the caret and the typed text land on.
+            // Pos 0 would sit BEFORE the block and float one line above.
             return DecorationSet.create(state.doc, [
-              Decoration.widget(0, widget, { side: 1 }),
+              Decoration.widget(1, widget, { side: 1 }),
             ]);
           },
         },
