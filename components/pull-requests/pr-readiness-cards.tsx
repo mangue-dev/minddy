@@ -517,7 +517,9 @@ function PrStatusCardView({
           TONE_TITLE[card.tone],
         )}
       >
-        <span className="min-w-0 truncate">{card.title}</span>
+        {/* The title always breathes: a mandatory gap follows it, before the
+            timer or the card edge — the card never hugs the text. */}
+        <span className="min-w-0 truncate pr-6">{card.title}</span>
         {card.startedAt
           ? formatRunDuration(
               t,
@@ -543,7 +545,7 @@ function PrStatusCardView({
               size="sm"
               variant="outline"
               disabled={card.action.disabled}
-              className={cn("max-w-full truncate", TONE_BUTTON[card.tone])}
+              className={cn("max-w-full truncate px-3", TONE_BUTTON[card.tone])}
               onClick={card.action.onClick}
             >
               {card.action.label}
