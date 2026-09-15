@@ -3913,7 +3913,13 @@
     "autoMergeUpdating": "Atualizando o registro…",
     "autoMergeEnabledToast": "O pull request será mesclado assim que estiver pronto.",
     "autoMergeDisabledToast": "Mesclagem automática cancelada.",
-    "cardDeploymentRunning": "Deploy em andamento"
+    "cardDeploymentRunning": "Deploy em andamento",
+    "mergeTabNumo": "Mesclar com Numo",
+    "mergeTabManual": "Escrever o commit",
+    "mergeAutoHint": "Numo escreve o título e a descrição do commit de mesclagem a partir do pull request; a mesclagem acontece assim que estiverem prontos.",
+    "mergeGenerateThenMerge": "Gerar e mesclar",
+    "numoMerging": "Numo está escrevendo o commit de mesclagem…",
+    "numoMergeFailed": "Numo não concluiu a mesclagem. Tente novamente."
   },
   "Triage": {
     "projectNotFound": "Projeto não encontrado",
@@ -4149,6 +4155,9 @@
       "brief_model": {
         "label": "Modelo de divisão de resumo",
         "desc": "Lê o brief e retorna o lote inteiro de uma vez: 3 a 6 objetivos, 10 a 40 problemas com sua prioridade e esforço. O usuário analisa a proposta na tela antes de qualquer coisa ser escrita."
+      },
+      "merge_message_model": {
+        "label": "Modelo para commits de mesclagem gerados"
       }
     },
     "finance": {

@@ -3913,7 +3913,13 @@
     "autoMergeUpdating": "Updating the registration…",
     "autoMergeEnabledToast": "The pull request will merge as soon as it is ready.",
     "autoMergeDisabledToast": "Automatic merge cancelled.",
-    "cardDeploymentRunning": "Deployment in progress"
+    "cardDeploymentRunning": "Deployment in progress",
+    "mergeTabNumo": "Merge with Numo",
+    "mergeTabManual": "Write the commit",
+    "mergeAutoHint": "Numo writes the title and description of the merge commit from the pull request; the merge happens as soon as they are ready.",
+    "mergeGenerateThenMerge": "Generate then merge",
+    "numoMerging": "Numo is writing the merge commit…",
+    "numoMergeFailed": "Numo did not complete the merge. Try again."
   },
   "Triage": {
     "projectNotFound": "Project not found",
@@ -4149,6 +4155,9 @@
       "brief_model": {
         "label": "Brief breakdown model",
         "desc": "Reads the brief and returns the whole batch at once: 3 to 6 objectives, 10 to 40 issues with their priority and effort. The user reviews the proposal on screen before anything is written."
+      },
+      "merge_message_model": {
+        "label": "Model for generated merge commits"
       }
     },
     "finance": {

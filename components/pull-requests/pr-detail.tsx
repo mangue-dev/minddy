@@ -89,6 +89,7 @@ import {
   actOnPullRequestApi,
   fetchPullRequestCommentEditsApi,
   maintainPullRequestApi,
+  mergeWithNumoApi,
   postPullRequestCommentApi,
   prEndpoint,
   submitPullRequestReviewApi,
@@ -659,6 +660,12 @@ export function PrDetail({
   >(null);
   const [mergeCommitDraft, setMergeCommitDraft] = useState<MergeCommitMessageDraft | null>(null);
   const [mergeCommitDraftEdited, setMergeCommitDraftEdited] = useState(false);
+  // "Generate then merge" (MIN-548): the generation runs in the
+  // background and the merge fires the moment it lands; the panel marks the
+  // wait until the broadcast settles it one way or the other.
+  const [numoMerging, setNumoMerging] = useState(false);
+  const numoMergeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [mergeTab, setMergeTab] = useState<"numo" | "manual">("numo");
   const [reviewVerdict, setReviewVerdict] = useState<ReviewVerdict | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [reviewFromFiles, setReviewFromFiles] = useState(false);
@@ -740,6 +747,18 @@ export function PrDetail({
   // comments. Line comments are one of them: Numo can have
   // answered, and a new push changes the rows they anchor to. THE
   // commits too: this is the only time when the list changes before your eyes.
+  useEffect(() => {
+    if (!numoMerging) return;
+    if (pr?.state === "merged" || item.pr_state === "merged") {
+      setNumoMerging(false);
+    }
+  }, [numoMerging, pr?.state, item.pr_state]);
+  useEffect(() => {
+    return () => {
+      if (numoMergeTimer.current) clearTimeout(numoMergeTimer.current);
+    };
+  }, []);
+
   const prevWorking = useRef(isWorking);
   useEffect(() => {
     if (prevWorking.current && !isWorking) {
@@ -927,6 +946,7 @@ export function PrDetail({
   const openMergeConfirmation = useCallback(
     (method: MergeMethod) => {
       setConfirmAction({ kind: "merge", method });
+    setMergeTab("numo");
       setMergeCommitDraftEdited(false);
       setMergeCommitDraft(
         pr
@@ -994,6 +1014,28 @@ export function PrDetail({
       toast.error((error as Error).message);
     } finally {
       setMaintenanceAction(null);
+    }
+  };
+
+  const startNumoMerge = async (method?: MergeMethod) => {
+    if (numoMerging || !prPageContext) return;
+    setNumoMerging(true);
+    setConfirmAction(null);
+    setMergeCommitDraft(null);
+    setMergeCommitDraftEdited(false);
+    if (numoMergeTimer.current) clearTimeout(numoMergeTimer.current);
+    try {
+      await mergeWithNumoApi(item.prId, method ?? null);
+      // The answer only says the job started: the wait ends when the
+      // broadcast shows the PR merged — or after a generous timeout, since
+      // a lost background job must not pin the panel forever.
+      numoMergeTimer.current = setTimeout(() => {
+        setNumoMerging(false);
+        toast.error(t("numoMergeFailed"));
+      }, 5 * 60_000);
+    } catch (err) {
+      setNumoMerging(false);
+      toast.error((err as Error).message);
     }
   };
 
@@ -1471,10 +1513,10 @@ export function PrDetail({
             </span>
           )}
         </span>
-        {isWorking ? (
+        {isWorking || numoMerging ? (
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <Spinner />
-            {t("numoWorking")}
+            {t(isWorking ? "numoWorking" : "numoMerging")}
           </span>
         ) : null}
 
@@ -2160,6 +2202,7 @@ export function PrDetail({
             setConfirmAction(null);
             setMergeCommitDraft(null);
             setMergeCommitDraftEdited(false);
+            setNumoMerging(false);
           }
         }}
       >
@@ -2169,12 +2212,39 @@ export function PrDetail({
               {confirmAction?.kind === "merge" ? t("confirmMergeTitle") : t("confirmCloseTitle")}
             </DialogTitle>
           </DialogHeader>
+          {confirmAction?.kind === "merge" ? (
+            // Two choices, like "request changes" for Numo (MIN-548): the
+            // generated route leads, and writing the commit stays at hand.
+            <Tabs
+              value={mergeTab}
+              onValueChange={(v) => setMergeTab(v as "numo" | "manual")}
+            >
+              <TabsList variant="line" className={TAB_LIST_DENSE}>
+                <TabsTrigger value="numo" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
+                  <NumoIcon animated={false} />
+                  {t("mergeTabNumo")}
+                </TabsTrigger>
+                <TabsTrigger value="manual" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
+                  <Pencil />
+                  {t("mergeTabManual")}
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="numo" className="mt-4 flex flex-col gap-3">
+                <p className="text-sm text-muted-foreground">{t("mergeAutoHint")}</p>
+                <Button
+                  data-testid="pr-merge-with-numo"
+                  disabled={!!acting || numoMerging || !prPageContext}
+                  onClick={() => void startNumoMerge(confirmAction.method)}
+                >
+                  {numoMerging ? <Spinner /> : <NumoIcon animated={false} />}
+                  {t("mergeGenerateThenMerge")}
+                </Button>
+              </TabsContent>
+              <TabsContent value="manual" className="mt-4 flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">
-            {confirmAction?.kind === "merge"
-              ? t("confirmMergeDescription")
-              : t("confirmCloseDescription")}
+            {t("confirmMergeDescription")}
           </p>
-          {confirmAction?.kind === "merge" && mergeCommitDraft ? (
+          {mergeCommitDraft ? (
             <div className="grid gap-3">
               <label className="grid gap-1.5 text-sm font-medium">
                 {t("mergeCommitTitle")}
@@ -2214,46 +2284,58 @@ export function PrDetail({
               </p>
             </div>
           ) : null}
+                <DialogFooter>
+                  <Button variant="outline" disabled={!!acting} onClick={() => setConfirmAction(null)}>
+                    {t("cancel")}
+                  </Button>
+                  <Button
+                    disabled={!!acting || !mergeCommitDraft || !mergeCommitDraft.title.trim()}
+                    onClick={() => {
+                      const customMergeMessage =
+                        mergeCommitDraft &&
+                        shouldSubmitCustomMergeMessage(
+                          item.provider,
+                          mergeCommitDraftEdited,
+                        )
+                          ? mergeCommitDraft
+                          : null;
+                      void act("merge", {
+                        method: confirmAction.method,
+                        ...(customMergeMessage
+                          ? {
+                              commitTitle: customMergeMessage.title.trim(),
+                              commitMessage: customMergeMessage.message.trim(),
+                            }
+                          : {}),
+                      });
+                    }}
+                  >
+                    {acting ? <Spinner /> : null}
+                    {t("merge")}
+                  </Button>
+                </DialogFooter>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <>
+          <p className="text-sm text-muted-foreground">
+            {t("confirmCloseDescription")}
+          </p>
           <DialogFooter>
             <Button variant="outline" disabled={!!acting} onClick={() => setConfirmAction(null)}>
               {t("cancel")}
             </Button>
             <Button
-              variant={confirmAction?.kind === "close" ? "destructive" : "default"}
-              disabled={
-                !!acting ||
-                (confirmAction?.kind === "merge" &&
-                  !!mergeCommitDraft &&
-                  !mergeCommitDraft.title.trim())
-              }
-              onClick={() => {
-                if (!confirmAction) return;
-                if (confirmAction.kind === "merge") {
-                  const customMergeMessage =
-                    mergeCommitDraft &&
-                    shouldSubmitCustomMergeMessage(
-                      item.provider,
-                      mergeCommitDraftEdited,
-                    )
-                      ? mergeCommitDraft
-                      : null;
-                  void act("merge", {
-                    method: confirmAction.method,
-                    ...(customMergeMessage
-                      ? {
-                          commitTitle: customMergeMessage.title.trim(),
-                          commitMessage: customMergeMessage.message.trim(),
-                        }
-                      : {}),
-                  });
-                }
-                else void act("close");
-              }}
+              variant="destructive"
+              disabled={!!acting}
+              onClick={() => void act("close")}
             >
               {acting ? <Spinner /> : null}
-              {confirmAction?.kind === "merge" ? t("merge") : t("close")}
+              {t("close")}
             </Button>
           </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

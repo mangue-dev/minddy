@@ -3913,7 +3913,13 @@
     "autoMergeUpdating": "Aggiornamento della registrazione…",
     "autoMergeEnabledToast": "Il pull request verrà unito appena pronto.",
     "autoMergeDisabledToast": "Unione automatica annullata.",
-    "cardDeploymentRunning": "Deployment in corso"
+    "cardDeploymentRunning": "Deployment in corso",
+    "mergeTabNumo": "Unisci con Numo",
+    "mergeTabManual": "Scrivi il commit",
+    "mergeAutoHint": "Numo scrive titolo e descrizione del commit di unione dalla pull request; l'unione avviene appena sono pronti.",
+    "mergeGenerateThenMerge": "Genera e unisci",
+    "numoMerging": "Numo sta scrivendo il commit di unione…",
+    "numoMergeFailed": "Numo non ha completato l'unione. Riprova."
   },
   "Triage": {
     "projectNotFound": "Progetto non trovato",
@@ -4149,6 +4155,9 @@
       "brief_model": {
         "label": "Modello di ripartizione breve",
         "desc": "Legge il breve e restituisce l'intero lotto in una volta: da 3 a 6 obiettivi, da 10 a 40 ticket con la loro priorità e sforzo. L'utente esamina la proposta sullo schermo prima che tutto sia scritto."
+      },
+      "merge_message_model": {
+        "label": "Modello per i commit di unione generati"
       }
     },
     "finance": {

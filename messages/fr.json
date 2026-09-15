@@ -3913,7 +3913,13 @@
     "autoMergeUpdating": "Mise à jour de l'enregistrement…",
     "autoMergeEnabledToast": "La pull request fusionnera dès qu'elle sera prête.",
     "autoMergeDisabledToast": "Fusion automatique annulée.",
-    "cardDeploymentRunning": "Déploiement en cours"
+    "cardDeploymentRunning": "Déploiement en cours",
+    "mergeTabNumo": "Fusionner avec Numo",
+    "mergeTabManual": "Écrire le commit",
+    "mergeAutoHint": "Numo rédige le titre et la description du commit de fusion à partir de la pull request ; la fusion se fait dès qu'ils sont prêts.",
+    "mergeGenerateThenMerge": "Générer puis fusionner",
+    "numoMerging": "Numo rédige le commit de fusion…",
+    "numoMergeFailed": "Numo n'a pas terminé la fusion. Réessaie."
   },
   "Triage": {
     "projectNotFound": "Projet introuvable",
@@ -4149,6 +4155,9 @@
       "brief_model": {
         "label": "Modèle de découpe d'un brief",
         "desc": "Lit le brief et rend le lot entier d'un coup : 3 à 6 objectifs, 10 à 40 tickets avec leur priorité et leur effort. L'utilisateur relit la proposition à l'écran avant que rien ne soit écrit."
+      },
+      "merge_message_model": {
+        "label": "Modèle des commits de fusion générés"
       }
     },
     "finance": {

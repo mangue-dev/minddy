@@ -756,6 +756,24 @@ export async function actOnPullRequestApi(
   );
 }
 
+/**
+ * "Generate then merge" (MIN-548): the generation runs in the background
+ * and the merge fires the moment it lands. Optimistic by design — the
+ * answer only says the job started; the broadcast carries the outcome.
+ */
+export async function mergeWithNumoApi(
+  prId: string,
+  method: MergeMethod | null,
+): Promise<{ ok: true; started: true }> {
+  return parseJson(
+    await fetch(prEndpoint(prId), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "merge_with_numo", method }),
+    }),
+  );
+}
+
 export async function maintainPullRequestApi(
   prId: string,
   action:

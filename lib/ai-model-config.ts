@@ -142,6 +142,12 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
     group: "agent",
     noSuffix: true,
   },
+  // Commit message of a merge generated with "Numo" (MIN-548): ONE call per
+  // merge prepared, on the diff of the PR + its commits, and which returns
+  // the title and the message in a single forced call. The admin model is
+  // the only lever — the gesture merges AS SOON AS the generation lands, so
+  // a clever model is not needed; a fast, cheap one is.
+  { key: "merge_message_model", kind: "model", fallback: "z-ai/glm-5.3", group: "agent" },
   // Favorites served at parent prompt for `spawn_agent` (MIN-112).
   {
     key: "agent_subagent_favorites",

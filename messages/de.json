@@ -3913,7 +3913,13 @@
     "autoMergeUpdating": "Registrierung wird aktualisiert…",
     "autoMergeEnabledToast": "Der Pull Request wird zusammengeführt, sobald er bereit ist.",
     "autoMergeDisabledToast": "Automatische Zusammenführung abgebrochen.",
-    "cardDeploymentRunning": "Deployment läuft"
+    "cardDeploymentRunning": "Deployment läuft",
+    "mergeTabNumo": "Mit Numo zusammenführen",
+    "mergeTabManual": "Commit schreiben",
+    "mergeAutoHint": "Numo schreibt Titel und Beschreibung des Merge-Commits aus dem Pull Request; die Zusammenführung erfolgt, sobald sie bereit sind.",
+    "mergeGenerateThenMerge": "Generieren und zusammenführen",
+    "numoMerging": "Numo schreibt den Merge-Commit…",
+    "numoMergeFailed": "Numo hat die Zusammenführung nicht abgeschlossen. Versuche es erneut."
   },
   "Triage": {
     "projectNotFound": "Projekt nicht gefunden",
@@ -4149,6 +4155,9 @@
       "brief_model": {
         "label": "Brief-Aufschlüsselungsmodell",
         "desc": "Liest das Briefing und gibt den gesamten Stapel auf einmal zurück: 3 bis 6 Ziele, 10 bis 40 Probleme mit ihrer Priorität und ihrem Aufwand. Der Benutzer überprüft den Vorschlag auf dem Bildschirm, bevor etwas geschrieben wird."
+      },
+      "merge_message_model": {
+        "label": "Modell für generierte Merge-Commits"
       }
     },
     "finance": {

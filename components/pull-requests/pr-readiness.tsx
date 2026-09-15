@@ -298,12 +298,6 @@ export function PrReadinessControl({
         align="end"
         className="w-[min(30rem,calc(100vw-2rem))] overflow-hidden p-0"
       >
-        <div className="border-b border-border px-3.5 py-3">
-          <p className="text-sm font-medium">{t("readinessChecklist")}</p>
-          <p className="text-xs text-muted-foreground">
-            {t("readinessChecklistHint")}
-          </p>
-        </div>
         <ul className="flex max-h-[min(26rem,60vh)] flex-col gap-1 overflow-y-auto p-2">
           {readiness.passed.map((condition) => (
             <li

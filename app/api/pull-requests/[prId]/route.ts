@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import {
   authorizePrRequest,
+  prAiMergeResponse,
   prAiReviewResponse,
   prDetailResponse,
   prLinkIssueResponse,
@@ -71,7 +72,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     action !== "update_title" &&
     action !== "update_body" &&
     action !== "enable_auto_merge" &&
-    action !== "disable_auto_merge"
+    action !== "disable_auto_merge" &&
+    action !== "merge_with_numo"
   ) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
@@ -79,6 +81,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const auth = await authorizePrRequest(request, prId);
   if (!auth.ok) return auth.response;
 
+  if (action === "merge_with_numo") {
+    return prAiMergeResponse(auth.scope, body, auth.userId);
+  }
   if (action === "review") {
     return prReviewResponse(auth.scope, body, auth.userId, auth.supabase);
   }
