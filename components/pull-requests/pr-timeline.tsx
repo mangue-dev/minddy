@@ -250,7 +250,9 @@ export function PrTimelineReview({
     <div className="flex flex-col gap-3">
       <article
         data-testid="pr-activity-review"
-        className="overflow-clip rounded-lg border border-border bg-card shadow-xs"
+        // Same selectable surface as the thread messages: a review says
+        // something a human may want to copy.
+        className="chat-selectable overflow-clip rounded-lg border border-border bg-card shadow-xs"
       >
         <div className="px-3.5 py-3">
           <header className="flex flex-wrap items-center gap-x-2 gap-y-1">

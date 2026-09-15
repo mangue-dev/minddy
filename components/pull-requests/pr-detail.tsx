@@ -397,7 +397,10 @@ function ThreadComment({
   return (
     <article
       data-testid="pr-activity-message"
-      className="group overflow-clip rounded-lg border border-border bg-card shadow-xs"
+      // chat-selectable: the global reset of mangue-ui kills text selection;
+      // the message card must read like a text surface, copyable like on the
+      // forge.
+      className="chat-selectable group overflow-clip rounded-lg border border-border bg-card shadow-xs"
     >
       <div className="flex flex-col gap-2 px-3.5 py-3">
         <header className="flex min-h-5 items-center gap-2">

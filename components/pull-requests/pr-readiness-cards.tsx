@@ -84,17 +84,6 @@ const TONE_TITLE: Record<PrStatusCardTone, string> = {
   neutral: "text-foreground",
 };
 
-/** The hover action button borrows the card's own color codes. */
-const TONE_BUTTON: Record<PrStatusCardTone, string> = {
-  success:
-    "border-emerald-600/40 bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/15 hover:border-emerald-600/50 dark:border-emerald-400/40 dark:bg-emerald-400/10 dark:text-emerald-400 dark:hover:bg-emerald-400/15",
-  progress:
-    "border-amber-600/40 bg-amber-600/10 text-amber-700 hover:bg-amber-600/15 hover:border-amber-600/50 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-400 dark:hover:bg-amber-400/15",
-  danger:
-    "border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/15 hover:border-destructive/50 dark:border-destructive/40 dark:bg-destructive/10 dark:hover:bg-destructive/15",
-  neutral: "",
-};
-
 /** Alpha background of a check row, tinted by its own state. */
 const CHECK_ROW_BG: Record<CheckState, string> = {
   success: "bg-emerald-500/10",
@@ -638,23 +627,23 @@ function PrStatusCardView({
   const inner = (
     <div className="flex h-24 min-w-0 flex-col gap-2.5 p-3">
       {card.action ? (
-        // Hover reveals the quick fix: the card content blurs away and one
-        // button takes the center.
+        // Hover reveals the quick fix: the card content blurs away and the
+        // action's WORD takes the center. The card itself is the button —
+        // there is no separate control inside it to hunt for.
         <div className="group relative flex h-full min-w-0 flex-col">
           <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px]">
             {body}
           </div>
-          <div className="absolute inset-0 grid place-items-center opacity-0 transition duration-150 group-hover:opacity-100">
-            <Button
-              data-testid={card.action.testId}
-              size="sm"
-              variant="outline"
-              disabled={card.action.disabled}
-              className={cn("max-w-full truncate px-3", TONE_BUTTON[card.tone])}
-              onClick={card.action.onClick}
+          <div className="absolute inset-0 grid place-items-center px-3 text-center opacity-0 transition duration-150 group-hover:opacity-100">
+            <span
+              className={cn(
+                "text-sm font-medium",
+                TONE_TITLE[card.tone],
+                card.action.disabled && "opacity-50",
+              )}
             >
               {card.action.label}
-            </Button>
+            </span>
           </div>
         </div>
       ) : (
@@ -663,8 +652,9 @@ function PrStatusCardView({
     </div>
   );
 
-  // The checks card is a popover trigger; the other click-through cards are
-  // plain buttons. Action cards stop at their hover button.
+  // The checks card is a popover trigger; every other card with a gesture —
+  // hover action or click-through — is itself the button: the whole surface
+  // activates, the cursor points, the hover word is decoration.
   if (checks) {
     return (
       <ChecksPopoverCard
@@ -678,26 +668,32 @@ function PrStatusCardView({
     );
   }
 
+  const activate = card.onSelect ?? (card.action?.disabled ? undefined : card.action?.onClick);
   return (
     <div
-      role={card.onSelect ? "button" : undefined}
-      tabIndex={card.onSelect ? 0 : undefined}
-      onClick={card.onSelect}
+      role={activate ? "button" : undefined}
+      tabIndex={activate ? 0 : undefined}
+      aria-label={activate ? card.action?.label : undefined}
+      aria-disabled={activate && card.action?.disabled ? true : undefined}
+      onClick={activate}
       onKeyDown={
-        card.onSelect
+        activate
           ? (event) => {
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
-                card.onSelect?.();
+                activate();
               }
             }
           : undefined
       }
-      data-testid={`pr-status-card-${card.id}`}
+      // The card IS the action, so the action test id lands on the surface
+      // that activates; the card keeps its own stable hook alongside.
+      data-card-id={card.id}
+      data-testid={card.action?.testId ?? `pr-status-card-${card.id}`}
       className={cn(
         "max-w-full rounded-xl border text-left",
         TONE_CARD[card.tone],
-        card.onSelect &&
+        activate &&
           "cursor-pointer outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
       )}
     >
