@@ -1348,22 +1348,24 @@ export async function listMergeRequestTimeline(opts: {
 interface RawGitlabDeployment {
   ref?: string | null;
   sha?: string | null;
+  /** created · running · success · failed · canceled (GitLab vocabulary). */
+  status?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
   environment?: { external_url?: string | null } | null;
 }
 
 /** Latest successful GitLab branch deployment, with the immutable head as a fallback. */
-export async function getLatestSuccessfulDeploymentUrl(opts: {
+export async function getPullRequestDeployment(opts: {
   token: string;
   repoFullName: string;
   number: number;
   branch?: string;
   sha: string;
-}): Promise<DeploymentOutcome | null> {
+}): Promise<DeploymentOutcome> {
   const deployments = await glJson<RawGitlabDeployment[]>(
     `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/deployments` +
-      "?order_by=updated_at&sort=desc&status=success&per_page=100",
+      "?order_by=updated_at&sort=desc&per_page=100",
     opts.token,
   );
   const matches = [
@@ -1374,6 +1376,28 @@ export async function getLatestSuccessfulDeploymentUrl(opts: {
   ];
   for (const candidates of matches) {
     for (const deployment of candidates) {
+      const status = deployment.status ?? "success";
+      if (status === "created" || status === "running") {
+        // The newest deployment is in flight: the card goes "in progress"
+        // and keeps the button of the deployment that already serves.
+        const serving = candidates.find(
+          (candidate) =>
+            candidate !== deployment &&
+            candidate.status === "success" &&
+            candidate.environment?.external_url,
+        );
+        return {
+          status: "in_progress",
+          url: serving?.environment?.external_url ?? null,
+          startedAt: deployment.created_at ?? null,
+          durationMs: null,
+        };
+      }
+      if (status !== "success") {
+        // A failed or canceled newest deployment says nothing useful to the
+        // card: no destination, no verdict worth a color.
+        return { status: "none", url: null, startedAt: null, durationMs: null };
+      }
       const value = deployment.environment?.external_url;
       if (!value) continue;
       try {
@@ -1387,14 +1411,19 @@ export async function getLatestSuccessfulDeploymentUrl(opts: {
             Number.isFinite(from) && Number.isFinite(to) && to >= from
               ? to - from
               : null;
-          return { url: url.toString(), durationMs };
+          return {
+            status: "success",
+            url: url.toString(),
+            startedAt: null,
+            durationMs,
+          };
         }
       } catch {
         // Keep looking: an older deployment for this ref can still be usable.
       }
     }
   }
-  return null;
+  return { status: "none", url: null, startedAt: null, durationMs: null };
 }
 
 /** Adds a note to the MR's conversation (author = the connected account). */

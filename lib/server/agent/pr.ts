@@ -1711,7 +1711,9 @@ async function getVercelBranchPreviewUrl(opts: {
         if (!/!\[Ready\]\([^)]+\)\s+\[Ready\]\([^)]+\)/u.test(line)) continue;
         const preview = line.match(/\[Preview\]\((https?:\/\/[^)\s]+)\)/u)?.[1];
         const url = httpDeploymentUrl(preview);
-        if (url) return { url, durationMs: null };
+        if (url) {
+          return { status: "success", url, startedAt: null, durationMs: null };
+        }
       }
     }
   } catch {
@@ -1721,22 +1723,23 @@ async function getVercelBranchPreviewUrl(opts: {
 }
 
 /**
- * Latest successful GitHub deployment of a PR branch, with its immutable head
- * as a fallback.
+ * Deployment lifecycle of a PR branch, from branch to immutable head:
+ * the newest deployment tells WHERE the environment stands (settled or
+ * still running) and the walk finds the newest SETTLED deployment for the
+ * action — a redeploy running on top of a live environment keeps its
+ * button pointing at what serves now (MIN-548).
  *
  * A deployment object does not carry the public environment URL. GitHub puts
- * that URL on its latest status, so resolving the header action takes one list
- * request and one bounded batch of status requests. The newest deployment with
- * a usable URL wins; older environments remain a fallback when the latest
- * deployment has not published a destination.
+ * that URL on its latest status, so resolving the card takes one list
+ * request and one bounded batch of status requests.
  */
-export async function getLatestSuccessfulDeploymentUrl(opts: {
+export async function getPullRequestDeployment(opts: {
   token: string;
   repoFullName: string;
   number: number;
   branch?: string;
   sha: string;
-}): Promise<DeploymentOutcome | null> {
+}): Promise<DeploymentOutcome> {
   const { owner, repo } = splitRepo(opts.repoFullName);
   const vercelBranchOutcome = opts.branch
     ? await getVercelBranchPreviewUrl(opts)
@@ -1762,6 +1765,7 @@ export async function getLatestSuccessfulDeploymentUrl(opts: {
         const byDate = Date.parse(b.created_at ?? "") - Date.parse(a.created_at ?? "");
         return Number.isFinite(byDate) && byDate !== 0 ? byDate : b.id - a.id;
       });
+    if (newest.length === 0) continue;
 
     const statuses = await Promise.all(
       newest.map(async (deployment) => {
@@ -1770,38 +1774,84 @@ export async function getLatestSuccessfulDeploymentUrl(opts: {
             `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments/${deployment.id}/statuses?per_page=1`,
             opts.token,
           );
-          if (latest?.state !== "success") return null;
+          if (!latest) return null;
           const url =
             httpDeploymentUrl(latest.environment_url) ??
             httpDeploymentUrl(latest.target_url);
-          if (!url) return null;
           // The time the environment took to settle: the status that declared
           // success, dated from the deployment it concludes.
           const from = Date.parse(deployment.created_at ?? "");
           const to = Date.parse(latest.created_at ?? "");
-          const durationMs =
-            Number.isFinite(from) && Number.isFinite(to) && to >= from ? to - from : null;
-          return { url, durationMs };
+          return {
+            state: latest.state ?? null,
+            url,
+            durationMs:
+              Number.isFinite(from) && Number.isFinite(to) && to >= from
+                ? to - from
+                : null,
+          };
         } catch {
           // A stale deployment can disappear while its siblings remain readable.
           return null;
         }
       }),
     );
-    const outcome = statuses.find(
-      (candidate): candidate is NonNullable<typeof candidate> => candidate !== null,
+
+    const firstSuccess = statuses.find(
+      (status) => status?.state === "success" && status.url,
     );
-    if (outcome) {
-      return { url: outcome.url, durationMs: outcome.durationMs ?? null };
+    const head = statuses[0];
+    // No status at all means the environment was JUST registered: nothing
+    // has settled yet, it is running like everything else.
+    const headRunning =
+      !head ||
+      head.state === "pending" ||
+      head.state === "in_progress" ||
+      head.state === "queued";
+    if (headRunning) {
+      return {
+        status: "in_progress",
+        // The button points at the deployment that already SERVES — the
+        // newest success — not at the one still building.
+        url: firstSuccess?.url ?? null,
+        startedAt: newest[0]?.created_at ?? null,
+        durationMs: null,
+      };
+    }
+    if (head?.state === "success" && head.url) {
+      return {
+        status: "success",
+        url: head.url,
+        startedAt: null,
+        durationMs: head.durationMs ?? null,
+      };
+    }
+    if (firstSuccess) {
+      // The newest deployment failed or went silent; the last settled one
+      // still serves, and the card stays truthful about it.
+      return {
+        status: "success",
+        url: firstSuccess.url,
+        startedAt: null,
+        durationMs: firstSuccess.durationMs ?? null,
+      };
     }
   }
-  return null;
+  return { status: "none", url: null, startedAt: null, durationMs: null };
 }
 
-/** A usable deployment destination, with the time its environment took to settle. */
+/** The deployment story of a PR head, as the card tells it. */
 export interface DeploymentOutcome {
-  url: string;
-  durationMs?: number | null;
+  /** success = the newest deployment settled; in_progress = a newer one is
+      running; none = nothing usable to show. */
+  status: "success" | "in_progress" | "none";
+  /** Where the environment serves — while a new one runs, that is the last
+      successful deployment, never a promise. */
+  url: string | null;
+  /** Created date of the deployment in flight — the card ticks from it. */
+  startedAt: string | null;
+  /** Time the settled environment took, when the forge dates both ends. */
+  durationMs: number | null;
 }
 
 interface RawReviewComment extends RawComment {

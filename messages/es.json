@@ -3912,7 +3912,8 @@
     "autoMergeOnHint": "La forge fusionará este pull request por sí sola cuando esté lista. Desmarca para cancelar.",
     "autoMergeUpdating": "Actualizando el registro…",
     "autoMergeEnabledToast": "El pull request se fusionará cuando esté listo.",
-    "autoMergeDisabledToast": "Fusión automática cancelada."
+    "autoMergeDisabledToast": "Fusión automática cancelada.",
+    "cardDeploymentRunning": "Despliegue en curso"
   },
   "Triage": {
     "projectNotFound": "No se ha encontrado el proyecto",

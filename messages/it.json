@@ -3912,7 +3912,8 @@
     "autoMergeOnHint": "La forge unirà questo pull request da sola quando sarà pronto. Deseleziona per annullare.",
     "autoMergeUpdating": "Aggiornamento della registrazione…",
     "autoMergeEnabledToast": "Il pull request verrà unito appena pronto.",
-    "autoMergeDisabledToast": "Unione automatica annullata."
+    "autoMergeDisabledToast": "Unione automatica annullata.",
+    "cardDeploymentRunning": "Deployment in corso"
   },
   "Triage": {
     "projectNotFound": "Progetto non trovato",

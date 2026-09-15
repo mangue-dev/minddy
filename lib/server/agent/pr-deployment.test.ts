@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getLatestSuccessfulDeploymentUrl as getGithubDeploymentUrl } from "./pr";
-import { getLatestSuccessfulDeploymentUrl as getGitlabDeploymentUrl } from "./mr";
+import { getPullRequestDeployment as getGithubDeploymentUrl } from "./pr";
+import { getPullRequestDeployment as getGitlabDeploymentUrl } from "./mr";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -42,7 +42,7 @@ describe("pull request deployment URLs", () => {
         branch: "feature/preview",
         sha: "abc",
       }),
-    ).resolves.toEqual({ url: "https://app-git-feature-preview-acme.vercel.app/", durationMs: null });
+    ).resolves.toEqual({ status: "success", url: "https://app-git-feature-preview-acme.vercel.app/", startedAt: null, durationMs: null });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -77,7 +77,7 @@ describe("pull request deployment URLs", () => {
         branch: "feature/preview",
         sha: "abc",
       }),
-    ).resolves.toEqual({ url: "https://commit.example.com/", durationMs: null });
+    ).resolves.toEqual({ status: "success", url: "https://commit.example.com/", startedAt: null, durationMs: null });
   });
 
   it("returns the newest successful GitHub branch environment URL", async () => {
@@ -109,7 +109,7 @@ describe("pull request deployment URLs", () => {
         branch: "feature/preview",
         sha: "abc 123",
       }),
-    ).resolves.toEqual({ url: "https://preview.example.com/pr-42", durationMs: null });
+    ).resolves.toEqual({ status: "success", url: "https://preview.example.com/pr-42", startedAt: null, durationMs: null });
 
     const deploymentCall = fetchMock.mock.calls
       .map(([input]) => String(input))
@@ -136,7 +136,7 @@ describe("pull request deployment URLs", () => {
         branch: "feature/preview",
         sha: "abc",
       }),
-    ).resolves.toEqual({ url: "https://commit.example.com/", durationMs: null });
+    ).resolves.toEqual({ status: "success", url: "https://commit.example.com/", startedAt: null, durationMs: null });
 
     const listCalls = fetchMock.mock.calls
       .map(([input]) => String(input))
@@ -164,7 +164,7 @@ describe("pull request deployment URLs", () => {
         number: 42,
         sha: "abc",
       }),
-    ).resolves.toEqual({ url: "https://deploy.example.com/output", durationMs: null });
+    ).resolves.toEqual({ status: "success", url: "https://deploy.example.com/output", startedAt: null, durationMs: null });
   });
 
   it("matches the GitLab deployment to the pull request head", async () => {
@@ -189,10 +189,10 @@ describe("pull request deployment URLs", () => {
         number: 42,
         sha: "abc",
       }),
-    ).resolves.toEqual({ url: "https://preview.example.com/mr-42", durationMs: null });
+    ).resolves.toEqual({ status: "success", url: "https://preview.example.com/mr-42", startedAt: null, durationMs: null });
 
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
-      "/projects/acme%2Fapp/deployments?order_by=updated_at&sort=desc&status=success",
+      "/projects/acme%2Fapp/deployments?order_by=updated_at&sort=desc&per_page=100",
     );
   });
 
@@ -223,7 +223,7 @@ describe("pull request deployment URLs", () => {
         branch: "feature/preview",
         sha: "abc",
       }),
-    ).resolves.toEqual({ url: "https://branch.example.com/", durationMs: null });
+    ).resolves.toEqual({ status: "success", url: "https://branch.example.com/", startedAt: null, durationMs: null });
   });
 
   it("returns no GitLab action without a safe matching environment URL", async () => {
@@ -241,6 +241,6 @@ describe("pull request deployment URLs", () => {
         number: 42,
         sha: "abc",
       }),
-    ).resolves.toBeNull();
+    ).resolves.toEqual({ status: "none", url: null, startedAt: null, durationMs: null });
   });
 });

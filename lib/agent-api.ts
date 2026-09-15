@@ -614,6 +614,10 @@ export interface AgentRunPrResponse {
   deploymentUrl?: string | null;
   /** Time the environment took to settle, when the forge dates it. */
   deploymentDurationMs?: number | null;
+  /** Lifecycle of the head environment as the forge reports it. */
+  deploymentStatus?: "success" | "in_progress" | null;
+  /** Created date of the deployment in flight — the card ticks from it. */
+  deploymentStartedAt?: string | null;
   reviews?: PullRequestReviewSummary | null;
   viewer?: PrViewer;
   mergeMethods?: MergeMethod[];

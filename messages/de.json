@@ -3912,7 +3912,8 @@
     "autoMergeOnHint": "Der Forge führt diesen Pull Request von selbst zusammen, sobald er bereit ist. Abwählen zum Abbrechen.",
     "autoMergeUpdating": "Registrierung wird aktualisiert…",
     "autoMergeEnabledToast": "Der Pull Request wird zusammengeführt, sobald er bereit ist.",
-    "autoMergeDisabledToast": "Automatische Zusammenführung abgebrochen."
+    "autoMergeDisabledToast": "Automatische Zusammenführung abgebrochen.",
+    "cardDeploymentRunning": "Deployment läuft"
   },
   "Triage": {
     "projectNotFound": "Projekt nicht gefunden",

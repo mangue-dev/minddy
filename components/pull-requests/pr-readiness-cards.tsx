@@ -159,6 +159,11 @@ interface PrStatusCardsProps {
   checks: ChecksSummary | null;
   provider: RepoProviderId;
   deploymentUrl: string | null;
+  /** Lifecycle of the head environment as the forge reports it. `null` = the
+      forge did not answer — the URL alone then decides the card. */
+  deploymentStatus: "success" | "in_progress" | null;
+  /** Created date of the deployment in flight — the card ticks from it. */
+  deploymentStartedAt: string | null;
   /** Time the successful deployment took to settle, when the forge dates it. */
   deploymentDurationMs: number | null;
   unresolvedThreads: PullRequestFeedbackThread[];
@@ -184,6 +189,7 @@ export function PrStatusCards(props: PrStatusCardsProps) {
       props.readiness,
       props.checks,
       props.deploymentUrl,
+      props.deploymentStatus,
       props.unresolvedThreads,
       props.acting,
       props.numoReview,
@@ -285,9 +291,32 @@ function buildStatusCards(
   }
 
   // ── Deployment ──────────────────────────────────────────────────────────
-  // The forge only reports the latest successful deployment URL: a green
-  // card with the open gesture, never a fake "in progress" it cannot back.
-  if (deploymentUrl) {
+  // The environment tells one of three stories: still building (orange,
+  // ticking — the button, when a previous deployment already serves, points
+  // at THAT one), settled (green with its duration and the open gesture), or
+  // nothing the forge could see. The card never hides behind the checks:
+  // an environment can exist whether or not the CI has spoken.
+  const deploymentStatus =
+    props.deploymentStatus ?? (deploymentUrl ? "success" : null);
+  if (deploymentStatus === "in_progress") {
+    push({
+      id: "deployment",
+      tone: "progress",
+      title: t("cardDeploymentRunning"),
+      durationMs: null,
+      startedAt: props.deploymentStartedAt,
+      donutParts: null,
+      avatars: null,
+      iconKind: "mergeability",
+      action: deploymentUrl
+        ? {
+            label: t("viewDeployment"),
+            onClick: () => window.open(deploymentUrl, "_blank", "noreferrer"),
+            testId: "pr-card-view-deployment",
+          }
+        : undefined,
+    });
+  } else if (deploymentStatus === "success" && deploymentUrl) {
     push({
       id: "deployment",
       tone: "success",
@@ -590,14 +619,18 @@ function PrStatusCardView({
         )}
       >
         {/* The title always breathes: a mandatory gap follows it, before the
-            timer or the card edge — the card never hugs the text. */}
+            timer or the card edge — the card never hugs the text. The timer
+            runs in a monospace font: ticking seconds must not breathe the
+            card width either. */}
         <span className="min-w-0 truncate pr-6">{card.title}</span>
-        {card.startedAt
-          ? formatRunDuration(
-              t,
-              Math.max(now.getTime() - Date.parse(card.startedAt), 0),
-            )
-          : formatRunDuration(t, card.durationMs)}
+        <span className="shrink-0 font-mono tabular-nums">
+          {card.startedAt
+            ? formatRunDuration(
+                t,
+                Math.max(now.getTime() - Date.parse(card.startedAt), 0),
+              )
+            : formatRunDuration(t, card.durationMs)}
+        </span>
       </p>
     </>
   );

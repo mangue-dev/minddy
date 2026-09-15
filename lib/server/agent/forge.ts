@@ -361,15 +361,15 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<PrTimelineEvent[]>;
-  /** Public URL of the latest successful deployment of the PR branch, then
-      its head, with the time the environment took to settle. */
-  getLatestSuccessfulDeploymentUrl(opts: {
+  /** Deployment lifecycle of the PR head: settled (with its URL and
+      duration), still running, or nothing usable to show. */
+  getPullRequestDeployment(opts: {
     token: string;
     repoFullName: string;
     number: number;
     branch?: string;
     sha: string;
-  }): Promise<DeploymentOutcome | null>;
+  }): Promise<DeploymentOutcome>;
   createPullRequestComment(opts: {
     token: string;
     repoFullName: string;
@@ -585,7 +585,7 @@ const githubForge: Forge = {
   reopenPullRequest: github.reopenPullRequest,
   listPullRequestComments: github.listPullRequestComments,
   listTimeline: github.listPullRequestTimeline,
-  getLatestSuccessfulDeploymentUrl: github.getLatestSuccessfulDeploymentUrl,
+  getPullRequestDeployment: github.getPullRequestDeployment,
   createPullRequestComment: github.createPullRequestComment,
   updatePullRequestComment: github.updatePullRequestComment,
   listImageAssets: github.listPullRequestImageAssets,
@@ -667,7 +667,7 @@ const gitlabForge: Forge = {
   reopenPullRequest: gitlab.reopenMergeRequest,
   listPullRequestComments: gitlab.listMergeRequestNotes,
   listTimeline: gitlab.listMergeRequestTimeline,
-  getLatestSuccessfulDeploymentUrl: gitlab.getLatestSuccessfulDeploymentUrl,
+  getPullRequestDeployment: gitlab.getPullRequestDeployment,
   createPullRequestComment: gitlab.createMergeRequestNote,
   updatePullRequestComment: gitlab.updateMergeRequestNote,
   // See the `listImageAssets` doc: the GitLab image mechanism is a
