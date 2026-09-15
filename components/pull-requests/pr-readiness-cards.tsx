@@ -165,9 +165,13 @@ export function PrStatusCards(props: PrStatusCardsProps) {
   if (cards.length === 0) return null;
 
   return (
+    /* Bento of cards: each one hugs its title so the title always fits on
+       one line, wrapping to the next row when the row is full. No carousel,
+       no horizontal scroll; the available width is the only cap a card can
+       hit (the title then clips instead of overflowing). */
     <div
       data-testid="pr-status-cards"
-      className="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] items-stretch gap-2"
+      className="flex max-w-full flex-wrap items-stretch gap-2"
     >
       {cards.map(({ card, checksCard }) => (
         <PrStatusCardView
@@ -513,7 +517,7 @@ function PrStatusCardView({
           TONE_TITLE[card.tone],
         )}
       >
-        <span className="line-clamp-2 min-w-0 flex-1">{card.title}</span>
+        <span className="min-w-0 truncate">{card.title}</span>
         {card.startedAt
           ? formatRunDuration(
               t,
@@ -584,7 +588,7 @@ function PrStatusCardView({
       }
       data-testid={`pr-status-card-${card.id}`}
       className={cn(
-        "rounded-xl border text-left",
+        "max-w-full rounded-xl border text-left",
         TONE_CARD[card.tone],
         card.onSelect &&
           "cursor-pointer outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
@@ -617,7 +621,7 @@ function ChecksPopoverCard({
           role="button"
           tabIndex={0}
           className={cn(
-            "cursor-pointer rounded-xl border outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
+            "max-w-full cursor-pointer rounded-xl border outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
             TONE_CARD[tone],
           )}
         >
