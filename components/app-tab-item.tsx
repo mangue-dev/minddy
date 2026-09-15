@@ -62,16 +62,19 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
             }
           }}
           className={cn("flex h-full min-w-0 flex-1 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring", tab.pinned ? "justify-center" : "pl-2.5 pr-6")}>
-          {icon}{!tab.pinned && <span ref={labelRef} className="truncate">{label}</span>}
+          {/* The badge rides the ICON (top-right corner), so it works on the
+              square pinned tabs too — not inside the tab's right padding. */}
+          <span className="relative flex shrink-0 items-center">
+            {icon}
+            {badge != null && (
+              <span className="pointer-events-none absolute -right-1.5 -top-1 flex items-center">{badge}</span>
+            )}
+          </span>
+          {!tab.pinned && <span ref={labelRef} className="truncate">{label}</span>}
         </button>
       </TooltipTrigger>
       {(tab.pinned || truncated) && <TooltipContent side="bottom">{label}</TooltipContent>}
     </Tooltip>
-    {badge != null && !tab.pinned && (
-      // The close button overlaps this corner on hover; it draws over on
-      // purpose: the badge is a resting-state hint, not a hover-state one.
-      <span className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 items-center">{badge}</span>
-    )}
     {!tab.pinned && <Tooltip delayDuration={500} disableHoverableContent><TooltipTrigger asChild><button type="button" aria-label={t("closeNamed", { name: label })} disabled={last || busy}
       tabIndex={-1} onPointerDown={(event) => event.stopPropagation()} onClick={onClose} className="absolute right-1 flex size-5 items-center justify-center rounded-full opacity-0 hover:bg-background/60 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-0">
       <X className="size-3" aria-hidden />
