@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { IssueContextMenu } from "@/components/issue-context-menu";
 import type { AppTab } from "@/lib/app-tabs";
 
-export function AppTabItem({ tab, label, icon, active, focusable, busy, last, compositeIcon, width, onActivate, onClose, onPin, onRename, onFocus }: {
+export function AppTabItem({ tab, label, icon, active, focusable, busy, last, compositeIcon, width, badge, onActivate, onClose, onPin, onRename, onFocus }: {
   tab: AppTab; label: string; icon: ReactNode; active: boolean; focusable: boolean; busy: boolean; last: boolean;
   /** Two icons in the slot (project orb + screen icon): a pinned tab keeps
    *  the same side padding as the square one. EXPERIMENT (to revert). */
@@ -15,6 +15,9 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
   /** Explicit width in px — the strip sizes regular tabs itself so they all
    *  fit without scrolling (the last ones hide behind the "more tabs" menu). */
   width?: number;
+  /** Same rule as the sidebar: a counter only when content is waiting on
+   *  the tab's page (open PRs, unread agent sessions…). Zero renders nothing. */
+  badge?: ReactNode;
   onActivate: () => void; onClose: () => void; onPin: () => void; onRename: () => void; onFocus: () => void;
 }) {
   const t = useTranslations("AppTabs");
@@ -39,7 +42,13 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
       : "bg-[var(--app-tab-background)] text-muted-foreground hover:brightness-95 dark:hover:brightness-110",
   )}
     style={width != null ? { width } : undefined}
-    onContextMenu={(event) => { event.preventDefault(); setMenu({ x: event.clientX, y: event.clientY }); }}>
+    // Anchor the menu to the tab itself (left edge, bottom): a cursor-positioned
+    // menu drifted away from the tab it belongs to.
+    onContextMenu={(event) => {
+      event.preventDefault();
+      const box = (ref.current ?? event.currentTarget).getBoundingClientRect();
+      setMenu({ x: box.left, y: box.bottom });
+    }}>
     <Tooltip disableHoverableContent>
       <TooltipTrigger asChild>
         <button ref={ref} type="button" role="tab" id={`app-tab-${tab.id}`} data-app-tab-id={tab.id}
@@ -58,6 +67,11 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
       </TooltipTrigger>
       {(tab.pinned || truncated) && <TooltipContent side="bottom">{label}</TooltipContent>}
     </Tooltip>
+    {badge != null && !tab.pinned && (
+      // The close button overlaps this corner on hover; it draws over on
+      // purpose: the badge is a resting-state hint, not a hover-state one.
+      <span className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 items-center">{badge}</span>
+    )}
     {!tab.pinned && <Tooltip delayDuration={500} disableHoverableContent><TooltipTrigger asChild><button type="button" aria-label={t("closeNamed", { name: label })} disabled={last || busy}
       tabIndex={-1} onPointerDown={(event) => event.stopPropagation()} onClick={onClose} className="absolute right-1 flex size-5 items-center justify-center rounded-full opacity-0 hover:bg-background/60 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-0">
       <X className="size-3" aria-hidden />

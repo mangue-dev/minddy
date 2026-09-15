@@ -370,7 +370,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       null,
     );
     const [isEmpty, setIsEmpty] = useState(true);
-    const [isFocused, setIsFocused] = useState(false);
     const { user } = useAuth();
     const userId = user?.id;
     const localUploads = useAttachmentUploads(() => `chat/${userId}`, { max: 5 });
@@ -1382,12 +1381,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         <AgentBeam active={!!beam} keepMounted className="relative z-10 rounded-2xl">
         <div
           className={cn(
-            "chat-input-surface relative flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all",
+            // No blue focus ring, no drop shadow: the surface stays quiet on
+            // focus (the editor caret is the signal), brand colors are kept
+            // for drag feedback only.
+            "chat-input-surface relative flex flex-col overflow-hidden rounded-2xl border bg-card transition-all",
             drop.dragging
               ? "border-brand ring-2 ring-brand/20"
-              : isFocused
-                ? "border-brand/40 ring-2 ring-brand/10"
-                : "border-border"
+              : "border-border"
           )}
           {...(canAttach ? drop.handlers : {})}
         >
@@ -1423,9 +1423,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               }}
               onClick={refreshMention}
               onPaste={handlePaste}
-              onFocus={() => setIsFocused(true)}
               onBlur={() => {
-                setIsFocused(false);
                 // Slight delay: clicking on a suggestion occurs before.
                 setTimeout(() => {
                   setMentionQuery(null);

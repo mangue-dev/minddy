@@ -448,7 +448,14 @@ function reducer(
       };
 
     case "RESET":
-      return initialState;
+      // A new conversation keeps the conversation-level config the user chose:
+      // the DEFAULT model is what follows the assistant default (null here),
+      // the CHOSEN model (a picked id) travels across conversations.
+      return {
+        ...initialState,
+        conversationModel: state.conversationModel,
+        conversationReasoningLevel: state.conversationReasoningLevel,
+      };
 
     default:
       return state;
@@ -1020,7 +1027,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     loadGenerationRef.current += 1;
     liveConvRef.current = { id: null, projectId: null };
     configRevisionRef.current += 1;
-    configRef.current = { model: null, reasoningLevel: null };
+    // Keep the chosen config — null means "follow the default", a picked id
+    // carries over to the new conversation on purpose.
     confirmedConfigsRef.current.clear();
     trackEvent("assistant_conversation_new", {});
     dispatch({ type: "RESET" });

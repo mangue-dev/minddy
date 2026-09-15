@@ -1,6 +1,6 @@
 "use client";
 
-import { Children, createElement, type ReactNode } from "react";
+import { Children, type ReactNode } from "react";
 import { cn } from "mangue-ui";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -30,7 +30,9 @@ import { HelpHint } from "@/components/settings/help-hint";
  * and each one is MARKED — that's what was missing, everything was in `text-sm` :
  *
  * Page title text-2xl font-display “Settings”
- * └─ Group (card) text-sm font-medium + icon, on map background
+ * └─ Group: section name text-sm font-medium ABOVE the card, with the ⓘ
+ *   hint and the master action on the same line (Linear-style); the card
+ *   carries only the options, no in-card header anymore
  * └─ Row labeled on the left · control on the right, net between two
  *
  * The row is in DEFAULT key/value, not in key/value always: a
@@ -39,14 +41,11 @@ import { HelpHint } from "@/components/settings/help-hint";
  * when it clearly does not fit at the end of the line.
  */
 
-/** Group card: header (icon, title, index, master control), body, footer. */
+/** Group: title line ABOVE the card (Linear-style), body card, footer. */
 export function SettingsGroup({
   id,
-  icon,
-  avatar,
   anchor,
   title,
-  description,
   help,
   action,
   footer,
@@ -57,6 +56,9 @@ export function SettingsGroup({
 }: {
   /** Optional DOM destination for non-settings catalogs, such as Admin search. */
   id?: string;
+  /** Dormant legacy header props: the in-card header is gone for good — the
+   *  component renders no icon/avatar/description. Call sites keep passing
+   *  them and will shed them progressively. */
   icon?: LucideIcon;
   /** Full-width visual in place of the icon pad (e.g. a provider logo). */
   avatar?: ReactNode;
@@ -69,7 +71,8 @@ export function SettingsGroup({
   description?: string;
   /** Long prose, taken off the page behind a ⓘ. */
   help?: ReactNode;
-  /** Control to the right of the title — the master switch of the group. */
+  /** Control to the right of the title — the master switch of the group. It
+   *  sits ABOVE the card, on the title line. */
   action?: ReactNode;
   /** Footer: the “Save” button of a submitting group. */
   footer?: ReactNode;
@@ -84,7 +87,25 @@ export function SettingsGroup({
   // rows all conditional (`{enabled && <Row/>}`) remains “truthy” and
   // the card draws an empty border under its header.
   const hasBody = Children.toArray(children).length > 0;
-  return (
+  // Linear-style layout: the section name lives ABOVE the card, together with
+  // the ⓘ hint and the master action; the card carries only the options.
+  return <div className={cn("flex min-w-0 flex-col", className)}>
+    <header className="mb-2 flex items-center justify-between gap-4 px-0.5">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <h2
+          className={cn(
+            "text-sm font-medium",
+            destructive && "text-destructive",
+          )}
+        >
+          {title}
+        </h2>
+        {help && <HelpHint>{help}</HelpHint>}
+      </div>
+      {action && (
+        <div className="flex shrink-0 items-center gap-2.5">{action}</div>
+      )}
+    </header>
     <section
       id={anchor ? settingsSectionAnchor(anchor) : id}
       className={cn(
@@ -94,72 +115,11 @@ export function SettingsGroup({
  without this margin. */
         (anchor || id) && "scroll-mt-20",
         destructive ? "border-destructive/30" : "border-border",
-        className,
       )}
     >
-      {/* Without an index, the title is alone: ​​aligning it at the top would shift it by
- in relation to its icon pad, for nothing. Every group SHOULD carry a hint — this fallback is only there for the rare headers that don't have one (some admin screen families). */}
-      <header
-        className={cn(
-          "flex justify-between gap-4 p-4",
-          description ? "items-start" : "items-center",
-        )}
-      >
-        <div className={cn("flex min-w-0 gap-3", description ? "items-start" : "items-center")}>
-          {avatar ? (
-            <span
-              className={cn(
-                "flex size-8 shrink-0 items-center justify-center rounded-lg",
-                description && "mt-0.5",
-                destructive ? "bg-destructive/10" : "bg-muted",
-              )}
-            >
-              {avatar}
-            </span>
-          ) : (
-            icon && (
-              <span
-                className={cn(
-                  "flex size-8 shrink-0 items-center justify-center rounded-lg",
-                  description && "mt-0.5",
-                  destructive
-                    ? "bg-destructive/10 text-destructive"
-                    : "bg-muted text-muted-foreground",
-                )}
-              >
-                {createElement(icon, { className: "size-4" })}
-              </span>
-            )
-          )}
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <div className="flex items-center gap-1.5">
-              <h2
-                className={cn(
-                  "text-sm font-medium",
-                  destructive && "text-destructive",
-                )}
-              >
-                {title}
-              </h2>
-              {help && <HelpHint>{help}</HelpHint>}
-            </div>
-            {description && (
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                {description}
-              </p>
-            )}
-          </div>
-        </div>
-        {action && (
-          <div className="flex shrink-0 items-center gap-2.5">{action}</div>
-        )}
-      </header>
-
       {hasBody && (
         <FieldGroup
           className={cn(
-            "border-t",
-            destructive ? "border-destructive/30" : "border-border",
             variant === "rows" ? "divide-y divide-border px-4" : "p-4",
           )}
         >
@@ -178,7 +138,7 @@ export function SettingsGroup({
         </div>
       )}
     </section>
-  );
+  </div>;
 }
 
 /**

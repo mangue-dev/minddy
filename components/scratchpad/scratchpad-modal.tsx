@@ -11,7 +11,8 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { Bot, Check, Copy, ListX, X } from "lucide-react";
+import { Check, Copy, ListX, X } from "lucide-react";
+import { NumoIcon } from "@/components/numo-icon";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { resolvePromptCopyAutoStart } from "@/lib/prompt-copy-auto-start";
 import { useAuth } from "@/lib/auth-context";
@@ -209,7 +210,7 @@ function ScratchpadBody() {
               <TooltipContent>{t("removeSettled")}</TooltipContent>
             </Tooltip>
             {/* Run + copy side by side, in this order: parity with the
- section buttons (robot to the left of the copy). */}
+ section buttons (Numo to the left of the copy). */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -219,7 +220,7 @@ function ScratchpadBody() {
                   onClick={launchAll}
                   className="rounded-full text-muted-foreground hover:text-foreground"
                 >
-                  <Bot className="size-4" />
+                  <NumoIcon animated={false} className="size-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t("launchAgentAll")}</TooltipContent>

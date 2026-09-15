@@ -41,14 +41,26 @@ export function appTabRoute(href: string): {
   /** The `objective` selection param — an objective's tickets load in the
    *  board URL, not on a dedicated page, so the tab names it. */
   objectiveId: string | null;
+  /** A specific wiki page (…/pages/{pageId}) the tab is pinned on. */
+  pageId: string | null;
+  /** `pull-requests?pr=` — a selected pull request. */
+  prId: string | null;
+  /** `routines?routine=` — a selected routine. */
+  routineId: string | null;
 } {
   const normalized = normalizeAppTabLocation(href) ?? "/home";
   const [path, query] = normalized.split(/[?#]/);
   const parts = path.slice(1).split("/");
-  if (parts[0] !== "projects") return { section: parts[0], projectId: null, objectiveId: null };
+  const params = new URLSearchParams(query);
+  if (parts[0] !== "projects") {
+    return { section: parts[0], projectId: null, objectiveId: null, pageId: null, prId: params.get("pr"), routineId: params.get("routine") };
+  }
   return {
     section: parts[2] ?? "tickets",
     projectId: parts[1],
-    objectiveId: new URLSearchParams(query).get("objective"),
+    objectiveId: params.get("objective"),
+    pageId: parts[2] === "pages" && parts[3] ? parts[3] : null,
+    prId: params.get("pr"),
+    routineId: params.get("routine"),
   };
 }
