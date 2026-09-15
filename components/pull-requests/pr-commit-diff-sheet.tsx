@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import {
   SidePanel,
   SidePanelBody,
@@ -11,6 +11,7 @@ import {
   Spinner,
 } from "mangue-ui";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
+import { ShaButton } from "@/components/pull-requests/pr-sha-button";
 import { prCommitEndpoint } from "@/lib/agent-api";
 import { usePrCommitDiffQuery } from "@/lib/use-agent-runs";
 import type { RepoProviderId } from "@/lib/repo-providers";
@@ -47,7 +48,6 @@ export function PrCommitDiffSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("PullRequests");
-  const format = useFormatter();
   // `enabled` on `open`: close should not restart the request, but
   // reopening on the same commit serves it from the cache (a commit is immutable).
   const { diff, loading } = usePrCommitDiffQuery(prId, open ? sha : null);
@@ -65,17 +65,7 @@ export function PrCommitDiffSheet({
             {title || t("commitDiffTitle")}
           </SidePanelTitle>
           <SidePanelDescription className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="font-mono text-xs">{sha?.slice(0, 7)}</span>
-            {diff ? (
-              <span className="inline-flex items-center gap-1.5 font-medium tabular-nums">
-                <span className="text-green-700 dark:text-green-500">
-                  +{format.number(diff.additions)}
-                </span>
-                <span className="text-red-700 dark:text-red-500">
-                  −{format.number(diff.deletions)}
-                </span>
-              </span>
-            ) : null}
+            {sha ? <ShaButton sha={sha} /> : null}
           </SidePanelDescription>
         </SidePanelHeader>
         {/* No padding at the TOP of the scrolling container: `position: sticky` is

@@ -7,10 +7,11 @@ import {
   Button,
   Skeleton,
 } from "mangue-ui";
-import { Check, Copy, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { normalizeForgeInstant } from "@/lib/forge-time";
 import { PrCommitDiffSheet } from "@/components/pull-requests/pr-commit-diff-sheet";
+import { ShaButton } from "@/components/pull-requests/pr-sha-button";
 import type { PullRequestCommit } from "@/lib/agent-api";
 import { newestFirstPullRequestCommits } from "@/lib/pull-request-commits";
 import { REPO_PROVIDERS, type RepoProviderId } from "@/lib/repo-providers";
@@ -38,11 +39,6 @@ import {
 function commitTitle(message: string): string {
   const newline = message.indexOf("\n");
   return (newline === -1 ? message : message.slice(0, newline)).trim();
-}
-
-/** The first 7 characters, like everywhere else in git. */
-function shortSha(sha: string): string {
-  return sha.slice(0, 7);
 }
 
 /**
@@ -81,38 +77,6 @@ function groupByDay(commits: PullRequestCommit[]): CommitDay[] {
     });
   }
   return days;
-}
-
-/** The short SHA, clickable to copy it — a gesture ON the row, so it must not
-    open the diff the row opens. */
-function ShaButton({ sha }: { sha: string }) {
-  const t = useTranslations("PullRequests");
-  const [copied, setCopied] = useState(false);
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1.5 px-2 font-mono text-xs text-muted-foreground hover:text-foreground"
-          onClick={(e) => {
-            e.stopPropagation();
-            void navigator.clipboard.writeText(sha);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1500);
-          }}
-        >
-          {shortSha(sha)}
-          {copied ? (
-            <Check className="size-3.5 text-emerald-500" />
-          ) : (
-            <Copy className="size-3.5 opacity-60" />
-          )}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="top">{copied ? t("shaCopied") : t("copySha")}</TooltipContent>
-    </Tooltip>
-  );
 }
 
 /**
