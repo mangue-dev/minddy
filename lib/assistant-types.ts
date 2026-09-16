@@ -171,6 +171,7 @@ export type AssistantSSEEvent =
   | { type: "content_delta"; data: { delta: string } }
   | { type: "reasoning_start"; data: { started_at: string } }
   | { type: "reasoning_tick"; data: { duration_ms: number } }
+  | { type: "reasoning_delta"; data: { text: string } }
   | { type: "reasoning_end"; data: { duration_ms: number; text: string } }
   | { type: "tool_call_start"; data: { id: string; name: string } }
   | {

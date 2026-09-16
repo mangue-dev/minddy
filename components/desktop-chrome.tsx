@@ -6,7 +6,6 @@ import {
   desktopBridgePlatform,
   getDesktopBridge,
 } from "@/lib/desktop/bridge";
-import { useAffirmWindowButtons } from "@/lib/use-window-buttons";
 import { startDesktopTrace } from "@/lib/desktop/trace";
 
 /**
@@ -23,16 +22,8 @@ import { startDesktopTrace } from "@/lib/desktop/trace";
  * The attribute is set to `<html>` by an effect, never when rendered: the bridge
  * does not exist on the server side, and assuming it does would cause hydration to diverge. THE
  * Rules that read it live in app/globals.css, "desktop app" section.
- *
- * He carries a second thing, for the same reason that he carries the first: he
- * is mounted in the ROOT layout, therefore on all screens — the connection, `/f/`,
- * `/p/`, including page 404. This is what allows him to reaffirm by hand
- * process what the document wants macOS fires (MIN-304); the component which
- * draws them, he only lives under the authenticated app.
  */
 export function DesktopChrome() {
-  useAffirmWindowButtons();
-
   useEffect(() => {
     const bridge = getDesktopBridge();
     if (!bridge) return;

@@ -147,6 +147,7 @@ type Action =
   | { type: "CONTENT_DELTA"; delta: string }
   | { type: "REASONING_START" }
   | { type: "REASONING_TICK"; durationMs: number }
+  | { type: "REASONING_DELTA"; text: string }
   | { type: "REASONING_END"; durationMs: number; text: string }
   | { type: "TOOL_CALL_START"; id: string; name: string }
   | { type: "TOOL_CALL_ARGS_DELTA"; id: string; delta: string }
@@ -246,6 +247,16 @@ function reducer(
             action.durationMs,
           ),
         },
+      };
+
+    case "REASONING_DELTA":
+      // A snapshot of the trace so far, not an increment: replace, never
+      // append. Guarded on the active reflection so a delta replayed from the
+      // journal cannot overwrite a finished trace.
+      if (!state.streamingReasoning?.active) return state;
+      return {
+        ...state,
+        streamingReasoning: { ...state.streamingReasoning, text: action.text },
       };
 
     case "REASONING_END":
@@ -1158,6 +1169,9 @@ function handleSSEEvent(
         type: "REASONING_TICK",
         durationMs: data.duration_ms as number,
       });
+      break;
+    case "reasoning_delta":
+      dispatch({ type: "REASONING_DELTA", text: data.text as string });
       break;
     case "reasoning_end":
       dispatch({

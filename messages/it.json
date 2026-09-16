@@ -3429,6 +3429,7 @@
     "filterOptionsLoaded": "Opzioni di filtro caricate",
     "processing": "Processamento...",
     "done": "Fatto",
+    "thinking": "Sta ragionando…",
     "toolCallSummary": "{count} azioni",
     "summaryRead": "{count, plural, one {# file letto} other {# file letto}}",
     "summarySearch": "{count, plural, one {# ricerca} other {# ricerche}}",

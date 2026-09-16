@@ -104,7 +104,7 @@ describe("one-time credentials in work accordions", () => {
     expect(actionToggle().querySelector(".text-shimmer")).toBeNull();
   });
 
-  it("does not let a thinking event keep a completed action group active", async () => {
+  it("shows a running thinking as the current action, and the summary excludes it", async () => {
     const calls = [integration()];
     const events: WorkEvent<ReactNode>[] = [
       { key: "reasoning", kind: "action", active: true, content: "Reasoning" },
@@ -129,8 +129,55 @@ describe("one-time credentials in work accordions", () => {
       }),
     })));
 
+    expect(actionToggle().textContent).toContain("Thinking…");
+    expect(actionToggle().querySelector(".text-shimmer")).not.toBeNull();
+
+    // Once the thinking ends, the group folds back onto what the tools did:
+    // the trace itself is not an action and never joins the summary.
+    const settled: WorkEvent<ReactNode>[] = [
+      { key: "reasoning", kind: "action", content: "Reasoning" },
+      {
+        key: "tools",
+        kind: "action",
+        count: calls.length,
+        toolCalls: calls,
+        content: createElement(ToolCallList, { items: calls }),
+      },
+    ];
+    await act(async () => root.render(createElement(NextIntlClientProvider, {
+      locale: "en",
+      messages,
+      timeZone: "UTC",
+      now: new Date("2026-09-05T12:00:10Z"),
+      children: createElement(WorkAccordion, {
+        active: true,
+        startedAt: "2026-09-05T12:00:00Z",
+        endedAt: null,
+        children: createElement(WorkEvents, { events: settled }),
+      }),
+    })));
     expect(actionToggle().textContent).toContain("1 update");
     expect(actionToggle().querySelector(".text-shimmer")).toBeNull();
+  });
+
+  it("wraps a running thinking that stands alone in the actions accordion", async () => {
+    const events: WorkEvent<ReactNode>[] = [
+      { key: "reasoning", kind: "action", active: true, content: "Reasoning" },
+    ];
+    await act(async () => root.render(createElement(NextIntlClientProvider, {
+      locale: "en",
+      messages,
+      timeZone: "UTC",
+      now: new Date("2026-09-05T12:00:10Z"),
+      children: createElement(WorkAccordion, {
+        active: true,
+        startedAt: "2026-09-05T12:00:00Z",
+        endedAt: null,
+        children: createElement(WorkEvents, { events }),
+      }),
+    })));
+    expect(actionToggle().textContent).toContain("Thinking…");
+    expect(actionToggle().querySelector(".text-shimmer")).not.toBeNull();
   });
 
   it("opens an existing group when a running integration call returns its credential", async () => {

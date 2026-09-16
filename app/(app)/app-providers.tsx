@@ -29,7 +29,6 @@ import { AnalyticsProjectGroup } from "@/components/analytics-project-group";
 import { PushServiceWorker } from "@/components/push-service-worker";
 import { DesktopNotifications } from "@/components/desktop-notifications";
 import { DesktopAnalyticsPrompt } from "@/components/desktop-analytics-prompt";
-import { DesktopWindowButtons } from "@/components/desktop-window-buttons";
 import { PushNotificationDismiss } from "@/components/push-notification-dismiss";
 import { ProjectDraftResume } from "@/components/project-draft-resume";
 import { ThemeAccountSync } from "@/components/theme-account-sync";
@@ -124,9 +123,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
  times in the desktop app — the site banner
  does not go there (MIN-291). */}
                             <DesktopAnalyticsPrompt />
-                            {/* Stable renderer-owned macOS controls are used in
- the authenticated shell and yield to native controls in full screen. */}
-                            <DesktopWindowButtons />
                             {/* Obligatory suspense: it reads `useSearchParams`,
  because the target of a notification lives in the
  query (`?issue=…`). */}

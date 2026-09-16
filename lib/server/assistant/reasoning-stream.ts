@@ -10,9 +10,10 @@ const REASONING_TICK_MS = 250;
 
 /**
  * Turn model reasoning deltas into the same compact live signal used by the
- * code agent. The trace itself is accumulated for the completed, collapsible
- * row; while reasoning is active, the browser only renders the label and the
- * server-measured counter.
+ * code agent. Each delta is forwarded as a `reasoning_delta` snapshot of the
+ * trace accumulated so far — the browser streams the thinking live under the
+ * reflective row while it runs, and the full trace is re-broadcast once by
+ * `reasoning_end` for the durable replay.
  */
 export class AssistantReasoningStream {
   private startedAt: number | null = null;
@@ -40,6 +41,10 @@ export class AssistantReasoningStream {
     }
 
     this.text = appendAssistantReasoning(this.text, delta);
+    // A snapshot, not an increment: a subscriber joining mid-stream replaces
+    // its text instead of replaying missed chunks, and `reasoning_end` stays
+    // the single authority over the final trace.
+    this.emitter.emit("reasoning_delta", { text: this.text });
   }
 
   finish(): AssistantReasoning | null {

@@ -834,6 +834,29 @@ describe("durable Numo execution", () => {
     expect(live.emit).toHaveBeenCalledTimes(4);
   });
 
+  it("batches streamed reasoning snapshots and always re-states the final trace", async () => {
+    const live = { emit: vi.fn(), close: vi.fn(), isClosed: false };
+    const emitter = createDurableNumoEmitter(service, h.turn!.id as string, live);
+    emitter.emit("reasoning_start", { started_at: "2026-09-05T12:00:00.000Z" });
+    emitter.emit("reasoning_delta", { text: "First" });
+    emitter.emit("reasoning_delta", { text: "First, second" });
+    emitter.emit("reasoning_end", { duration_ms: 900, text: "First, second, third" });
+    await emitter.flush();
+
+    // Only the LATEST snapshot is journaled, before the end event that
+    // re-states the whole trace — a replay ends on the authoritative text.
+    expect(h.events.map((event) => event.p_type)).toEqual([
+      "reasoning_start",
+      "reasoning_delta",
+      "reasoning_end",
+    ]);
+    const delta = h.events.find((event) => event.p_type === "reasoning_delta");
+    expect(delta?.p_payload).toEqual({ text: "First, second" });
+    // The live feed forwards every snapshot untouched.
+    expect(live.emit).toHaveBeenCalledWith("reasoning_delta", { text: "First" });
+    expect(live.emit).toHaveBeenCalledWith("reasoning_delta", { text: "First, second" });
+  });
+
   it("does not strand turn execution when the activity projection is unavailable", async () => {
     h.failActivity = true;
     const log = vi.spyOn(console, "error").mockImplementation(() => {});

@@ -11,11 +11,11 @@ import { Markdown } from "@/components/markdown";
  * (components/assistant/tool-call-display.tsx): same size, same density —
  * a work step among others, not a message.
  *
- * What we DON’T do: stream the reasoning. It was formerly written in
- * directly in the thread, which drowned the real unfolding under pages of monologue.
- * During reflection, there is only one wording that breathes and a counter of
- * seconds right; the trace arrives with the end of round event and
- * unfolds on demand.
+ * While the reflection runs, the row is expanded and the trace STREAMS in
+ * live, one snapshot at a time (`reasoning_delta`): the reader follows the
+ * thinking instead of staring at a breathing label for half a minute. When
+ * the reflection ends, the block folds back onto its one-line row and the
+ * trace stays unfoldable on demand.
  *
  * The counter does NOT have its own clock (neither `setInterval`, nor the `useNow` of
  * `WorkAccordion`): `durationMs` is measured server-side and re-broadcast ~4 times
@@ -47,6 +47,11 @@ export function ReasoningBlock({
 
   const trace = (text ?? "").trim();
   const expandable = !active && trace.length > 0;
+  // While the reflection runs with something already said, the trace is
+  // expanded REGARDLESS of the user toggle: that is where the live thinking
+  // shows. When the reflection ends, the expansion collapses back to the row
+  // (the user can still unfold the persisted trace).
+  const live = active && trace.length > 0;
 
   const row = (
     <div className="flex items-center gap-2 py-0.5 text-xs text-muted-foreground">
@@ -54,24 +59,24 @@ export function ReasoningBlock({
       <span className={cn("flex-1 truncate text-left", active && "text-shimmer")}>
         {t("reasoning")}
       </span>
-      {/* Counter to the RIGHT of the line — tabular, so it doesn't dance in
-          changeant de chiffre. */}
+      {/* Counter to the RIGHT of the line — tabular, so it doesn't dance
+          around when the digit changes. */}
       <span className="shrink-0 tabular-nums">{counter}</span>
     </div>
   );
 
-  if (!expandable) return row;
+  if (!expandable && !live) return row;
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
+    <Collapsible open={live ? true : open} onOpenChange={setOpen}>
       <CollapsibleTrigger className="w-full outline-hidden transition-colors hover:text-foreground">
         {row}
       </CollapsibleTrigger>
       <CollapsibleContent>
         {/* The trace is MARKDOWN, like the report of a sub-agent: a model
- which reasons writes titles, lists and paths in `code`.
- Rendered in plain text, we read "**Step 1**" and "---" at
- on the screen. */}
+  which reasons writes titles, lists and paths in `code`.
+  Rendered in plain text, we read "**Step 1**" and "---" at
+  on the screen. */}
         <div className="ml-5 py-1 text-muted-foreground">
           <Markdown className="text-xs">{trace}</Markdown>
         </div>

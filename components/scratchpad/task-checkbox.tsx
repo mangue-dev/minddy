@@ -53,7 +53,8 @@ export function TaskCheckbox({
         "flex size-4 items-center justify-center rounded-[4px] border transition-colors",
         state === "pending" && "border-input hover:border-muted-foreground/60",
         state === "in_progress" && "border-primary",
-        state === "completed" && "border-primary bg-primary text-primary-foreground",
+        state === "completed" &&
+        "border-primary bg-primary text-primary-foreground!",
         state === "cancelled" && "border-input bg-muted text-muted-foreground",
         className
       )}

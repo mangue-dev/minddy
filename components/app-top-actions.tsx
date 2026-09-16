@@ -37,8 +37,8 @@ function SidebarTopAction({
     "h-9 w-9 min-w-9 px-0 text-sidebar-foreground/65 hover:text-sidebar-foreground",
   );
   const content = (
-    <span className="relative flex size-[18px] shrink-0">
-      <Icon className="size-[18px]" />
+    <span className="relative flex size-4 shrink-0">
+      <Icon className="size-4" />
       {badge != null ? (
         <span className="absolute -right-2 -top-1.5 flex items-center justify-center rounded-full bg-sidebar">
           {badge}
