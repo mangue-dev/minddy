@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
   checkpoints: [] as Array<Record<string, unknown>>,
   messages: [] as Array<Record<string, unknown>>,
   queuedTurns: [] as Array<Record<string, unknown>>,
+  claims: [] as Array<Record<string, unknown>>,
   terminalWorkers: [] as Array<Record<string, unknown>>,
   interruptions: [] as string[],
   failActivity: false,
@@ -81,6 +82,7 @@ const service = {
   from: (table: string) => queryFor(table),
   rpc: async (name: string, args: Record<string, unknown> = {}) => {
     if (name === "claim_numo_turn") {
+      h.claims.push(args);
       h.turn = {
         ...h.turn,
         status: "running",
@@ -234,6 +236,7 @@ beforeEach(() => {
   h.checkpoints.length = 0;
   h.messages.length = 0;
   h.queuedTurns.length = 0;
+  h.claims.length = 0;
   h.terminalWorkers.length = 0;
   h.interruptions.length = 0;
   h.failActivity = false;
@@ -591,6 +594,15 @@ describe("durable Numo execution", () => {
 
     await expect(drainNumoTurns({ limit: 1 })).resolves.toEqual({ claimed: 1 });
     expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "retryable" });
+  });
+
+  it("resumes a retryable turn stranded by a dead background dispatch", async () => {
+    // A server-started turn (PR review, routine) whose process died leaves
+    // nobody around to press "Retry": the drain must pick it up itself.
+    h.queuedTurns.push({ id: h.turn!.id, checkpoint: {}, status: "retryable" });
+
+    await expect(drainNumoTurns({ limit: 1 })).resolves.toEqual({ claimed: 1 });
+    expect(h.claims.at(-1)).toMatchObject({ p_allow_retryable: true });
   });
 
   it("finalizes terminal worker handoffs before recovering stale parent turns", async () => {

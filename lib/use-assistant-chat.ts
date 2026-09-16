@@ -488,6 +488,7 @@ async function fetchConversationStatus(
   error_message: string | null;
   turn_id?: string | null;
   last_event_seq?: number;
+  active_run_id?: string | null;
   pending_input?: {
     run_id: string;
     parent_numo_turn_id: string;
@@ -580,6 +581,21 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       stopPolling();
       dispatch({ type: "GENERATING_SERVER" });
       let after = -1;
+      // Suspension already reflected in the thread: `<turn>:<run>` last reloaded.
+      let reloadedSuspension: string | null = null;
+
+      const reloadMessages = async () => {
+        const messages = await fetchConversationMessages(conversationId);
+        dispatch({
+          type: "LOAD_HISTORY",
+          messages,
+          conversationId,
+          projectId,
+        });
+        // Keep the suspended presentation: the turn is not over, the delegated
+        // work card owns the live state from here.
+        dispatch({ type: "GENERATING_SERVER" });
+      };
 
       const poll = async () => {
         try {
@@ -599,6 +615,23 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
               onToolResult: onToolResultRef.current,
             });
             after = Math.max(after, event.seq);
+          }
+
+          if (status === "waiting_work") {
+            // The turn is suspended while its delegated worker runs in the
+            // sandbox. The card's live state comes from polling the run, and
+            // it needs the run id carried by the persisted launch tool
+            // result — which a replayed journal never re-emits (`tool_result`
+            // is not persisted). Reload the history once per suspension so
+            // the card picks the real state instead of staying on
+            // "Starting" until the worker ends.
+            const key = `${response.turn_id}:${response.active_run_id ?? ""}`;
+            if (key !== reloadedSuspension) {
+              reloadedSuspension = key;
+              await reloadMessages();
+            }
+            pollRef.current = setTimeout(poll, POLL_INTERVAL_MS);
+            return;
           }
 
           if (status === "idle" || status === "completed" || status === "waiting_input" || status === "stopped") {

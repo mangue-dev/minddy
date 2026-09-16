@@ -1264,8 +1264,8 @@ export async function drainNumoTurns(options?: { limit?: number }) {
   const { error: recoveryError } = await service.rpc("recover_stale_numo_turns");
   if (recoveryError) throw new Error(recoveryError.message);
   const { data, error } = await service.from("numo_assistant_turns")
-    .select("id, checkpoint")
-    .eq("status", "queued")
+    .select("id, status")
+    .in("status", ["queued", "retryable"])
     .lte("not_before", new Date().toISOString())
     .order("not_before", { ascending: true })
     .order("created_at", { ascending: true })
@@ -1273,7 +1273,14 @@ export async function drainNumoTurns(options?: { limit?: number }) {
   if (error) throw new Error(error.message);
   let claimed = 0;
   for (const row of data ?? []) {
-    const result = await executeNumoTurn({ turnId: row.id as string });
+    // A `retryable` turn carries a checkpoint and waits on nobody: for a turn
+    // started server-side (PR review, routine, automation) there is no
+    // interactive client to press "Retry", so the drain is the only thing
+    // that can resume it. The attempt ceiling still bounds a poisoned turn.
+    const result = await executeNumoTurn({
+      turnId: row.id as string,
+      ...(row.status === "retryable" ? { allowRetryable: true } : {}),
+    });
     if (result.status !== "not_claimed") claimed++;
   }
   return { claimed };

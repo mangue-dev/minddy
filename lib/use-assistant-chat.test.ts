@@ -224,4 +224,51 @@ describe("Numo conversation settings", () => {
       conversationConfigError: "Unable to save",
     });
   });
+
+  it("reloads the launch tool result while a delegated worker runs", async () => {
+    // A replayed journal never re-emits `tool_result`, so while the turn is
+    // suspended on its worker the card can only learn the run id from the
+    // persisted history. The poll must reload it once per suspension.
+    let statusCalls = 0;
+    h.webFetch.mockImplementation(async (url: string) => {
+      if (String(url).includes("/status")) {
+        statusCalls += 1;
+        return Response.json({
+          status: statusCalls === 1 ? "waiting_work" : "idle",
+          error_message: null,
+          turn_id: "turn-1",
+          active_run_id: "run-1",
+          activity: [],
+        });
+      }
+      if (String(url).includes("/messages")) {
+        return Response.json([
+          message("assistant-call", "assistant", "2026-09-12T10:00:01.000Z", {
+            tool_calls: [{
+              id: "call-launch",
+              type: "function",
+              function: { name: "launch_code_agent", arguments: "{}" },
+            }],
+          }),
+          message("tool-result-launch", "tool", "2026-09-12T10:00:02.000Z", {
+            content: JSON.stringify({ run_id: "run-1" }),
+            tool_call_id: "call-launch",
+            tool_name: "launch_code_agent",
+            metadata: { success: true },
+          }),
+        ]);
+      }
+      return Response.json({ status: "idle", error_message: null });
+    });
+
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.loadConversation(conversationId, null));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+
+    expect(value.state.toolCallResults.get("call-launch")).toMatchObject({
+      status: "complete",
+      result: { run_id: "run-1" },
+      success: true,
+    });
+  });
 });
