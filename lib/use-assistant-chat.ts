@@ -583,6 +583,9 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       let after = -1;
       // Suspension already reflected in the thread: `<turn>:<run>` last reloaded.
       let reloadedSuspension: string | null = null;
+      // The turn is suspended on its delegated worker — the assistant itself
+      // is paused until the worker wakes it.
+      let suspended = false;
 
       const reloadMessages = async () => {
         const messages = await fetchConversationMessages(conversationId);
@@ -592,9 +595,6 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           conversationId,
           projectId,
         });
-        // Keep the suspended presentation: the turn is not over, the delegated
-        // work card owns the live state from here.
-        dispatch({ type: "GENERATING_SERVER" });
       };
 
       const poll = async () => {
@@ -631,9 +631,25 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
               // Set only after success: a failed reload must be retried by
               // the next poll instead of being skipped forever.
               reloadedSuspension = key;
+              // The assistant handed the work to its agent: it is not
+              // "Traitement en cours…" for minutes. The composer goes back
+              // to idle; the delegated card carries the live state, and the
+              // wake-up re-arms the generating presentation below.
+              dispatch({ type: "DONE" });
             }
+            suspended = true;
             pollRef.current = setTimeout(poll, POLL_INTERVAL_MS);
             return;
+          }
+
+          if (
+            suspended
+            && (status === "queued" || status === "running" || status === "stopping")
+          ) {
+            // The worker finished and the parent turn woke up: back to the
+            // generating presentation so the resumed replay is visible.
+            suspended = false;
+            dispatch({ type: "GENERATING_SERVER" });
           }
 
           if (status === "idle" || status === "completed" || status === "waiting_input" || status === "stopped") {

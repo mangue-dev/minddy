@@ -270,5 +270,8 @@ describe("Numo conversation settings", () => {
       result: { run_id: "run-1" },
       success: true,
     });
+    // The assistant handed the work to its agent: it reads as idle while the
+    // delegated card carries the live state, not as "Traitement en cours…".
+    expect(value.state.status).toBe("idle");
   });
 });

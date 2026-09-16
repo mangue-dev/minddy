@@ -27,6 +27,11 @@ export function useBillingSummary() {
     queryKey: billingUsageQueryKey,
     queryFn: fetchBillingUsageApi,
     staleTime: 60_000,
+    // The ledger is written per generation while a Numo turn or a code worker
+    // runs (one row per LLM round), so a client that never refetches shows a
+    // frozen meter for the whole run. One light read per minute keeps the
+    // header honest without hammering the endpoint.
+    refetchInterval: 60_000,
   });
 
   const includedUsd = usage.data?.includedUsd ?? 0;
