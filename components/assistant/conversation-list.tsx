@@ -294,7 +294,7 @@ export function ConversationList({
             {conversation.title || t("newConversation")}
           </span>
           {conversation.status === "generating" && (
-            <Loader2 className="size-3 shrink-0 animate-spin text-primary group-hover:hidden group-focus-within:hidden" />
+            <Loader2 className="size-3 shrink-0 animate-spin text-primary" />
           )}
           {unread && (
             <span

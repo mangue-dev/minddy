@@ -28,7 +28,7 @@ export function SidebarVisibilityButton({ collapsed }: { collapsed: boolean }) {
         collapsed ? "w-9" : "w-full pr-2",
       )}
     >
-      <Icon className="size-[18px] shrink-0" aria-hidden />
+      <Icon className="size-4 shrink-0" aria-hidden />
       {!collapsed && <span className="truncate">{label}</span>}
     </button>
   );

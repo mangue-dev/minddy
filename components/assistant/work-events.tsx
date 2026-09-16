@@ -21,24 +21,31 @@ function ActionGroup({
 }) {
   const t = useTranslations("ToolCall");
   const revealKey = workEventsRevealKey(group.events);
-  const [open, setOpen] = useState(Boolean(revealKey));
   const toolCalls = group.events.flatMap((event) => event.toolCalls ?? []);
   const runningTool = [...toolCalls]
     .reverse()
     .find((call) => call.status === "running");
-  // A reasoning event can accompany tool calls in one continuous burst. Its
-  // activity must not replace the real action in the group heading.
-  const active = toolCalls.length > 0 ? Boolean(runningTool) : group.active;
+  // A thinking event IS an action while it runs: it takes the group heading,
+  // shimmering, exactly like a running tool call would. Once it ends, it
+  // leaves: the summary counts only what the tools did. And while it runs,
+  // the group STAYS OPEN — the whole point of streaming the thinking live is
+  // to read it, not to guess it behind a folded accordion.
+  const thinking = !runningTool && group.active;
+  const [open, setOpen] = useState(Boolean(revealKey) || thinking);
+  const active = Boolean(runningTool) || group.active;
   const label = runningTool
     ? toolCallLabel(runningTool as ToolCallItem, t)
-    : toolCalls.length > 0
-      ? summarizeToolCalls(toolCalls as ToolCallItem[], t)
-      : t("toolCallSummary", { count: group.count });
+    : group.active
+      ? t("thinking")
+      : toolCalls.length > 0
+        ? summarizeToolCalls(toolCalls as ToolCallItem[], t)
+        : t("toolCallSummary", { count: group.count });
   useEffect(() => {
     // Results can arrive after a group mounts. Reopen for each new credential,
-    // while allowing the user to close an already acknowledged callout.
-    if (revealKey) setOpen(true);
-  }, [revealKey]);
+    // while allowing the user to close an already acknowledged callout. A
+    // running thinking keeps its group open the same way.
+    if (revealKey || thinking) setOpen(true);
+  }, [revealKey, thinking]);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -57,13 +64,18 @@ function ActionGroup({
   );
 }
 
-/** Action groups live inside the turn accordion, separated only by narration. */
+/** Action groups live inside the turn accordion, separated only by narration.
+ *  A group that is active on thinking alone is wrapped too — the shimmering
+ *  heading is what shows the thinking as the current action (a group of one
+ *  completed action stays plain). */
 export function WorkEvents({ events }: { events: WorkEvent<ReactNode>[] }) {
   return groupWorkEvents(events).map((group) => {
     const content = group.events.map((event) => (
       <Fragment key={event.key}>{event.content}</Fragment>
     ));
-    return group.count > 1 ? (
+    const thinkingOnly =
+      group.active && !group.events.some((event) => event.toolCalls?.length);
+    return group.count > 1 || thinkingOnly ? (
       <ActionGroup key={group.key} group={group}>{content}</ActionGroup>
     ) : (
       <Fragment key={group.key}>{content}</Fragment>

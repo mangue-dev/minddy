@@ -463,11 +463,12 @@ function applyAboutPanel(): void {
 /**
  * The macOS buttons: what the PAGE asks for, and what they REALLY do.
  *
- * Two entries, only one of which is known to the page. The sidebar asks for
- * (it hosts them, and rail mode doesn't have room to hold them); the full
- * screen removes them without warning anyone — it's macOS that decides. The
- * layout therefore cannot follow the request: it follows the result, and
- * it is this file which tells it so. Without that, going full screen left a 78 px hole in place of the buttons.
+ * The page no longer asks to hide them — dialogs, palettes and drawers leave
+ * the buttons in place, so `wantsWindowButtons` stays true for the whole
+ * session. What remains is FULL SCREEN, which removes them without warning
+ * anyone — it's macOS that decides. The layout cannot follow the request: it
+ * follows the result, and it is this file which tells it so. Without that,
+ * going full screen left a 78 px hole in place of the buttons.
  */
 let wantsWindowButtons = true;
 let windowButtonsVisible = true;
@@ -478,10 +479,7 @@ let windowButtonsVisible = true;
  * `setWindowButtonVisibility` and `setWindowButtonPosition` are not
  * status writes: Electron responds to each with one `RedrawTrafficLights()` —
  * the three `NSButton` placed back in their view and the title bar re-put in
- * page, of the synchronous AppKit on the UI thread of the browser process. However, the page
- * often calls: `useHoldWindowButtons("rail", …)` switches each time you hover over
- * the sidebar, and `"modal"` each time you open and close a dialog,
- * palette or drawer.
+ * page, of the synchronous AppKit on the UI thread of the browser process.
  *
  * ⚠ Deduplication CANNOT live on the page side: the renderer refuses
  * voluntarily to deduplicate because `useWindowButtonsSlot` needs the
