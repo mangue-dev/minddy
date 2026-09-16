@@ -10,6 +10,22 @@ type RerunnableCheck = PullRequestCheck & {
 export const PULL_REQUEST_POLL_MS = 15_000;
 export const PULL_REQUEST_READINESS_SETTLED_POLL_MS = 60_000;
 
+/**
+ * The merge-flow checkbox is optimistic: the forge's read-back can lag the
+ * registration the server just confirmed, and a settled PR is not re-polled,
+ * so only the override guarantees the checkbox reflects the confirmed state.
+ * It stands until the data agrees with it; only an error clears it — a
+ * lagging read must never undo a registration the POST reported as done.
+ */
+export function settleMergeFlowOverride(
+  override: boolean | null,
+  active: boolean | null | undefined,
+): boolean | null {
+  if (override === null) return null;
+  if (active == null) return override;
+  return active === override ? null : override;
+}
+
 export function pullRequestRefetchInterval(
   response: AgentRunPrResponse | undefined,
 ): number | false {
