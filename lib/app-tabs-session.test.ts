@@ -211,6 +211,57 @@ describe("application tab sessions", () => {
     expect(rows().find((row) => row.id === first.id)?.href).toBe("/home");
     session.dispose();
   });
+  it("restores a reload of a page whose selection lives outside the address", async () => {
+    // /pull-requests keeps the open PR out of the URL and publishes
+    // `/pull-requests?pr=` instead, so a reload lands on the bare path. That
+    // load restores the remembered tab — it must not be treated as a deep
+    // link that claims the first row and grinds its location under it.
+    const admin = { ...createHomeTab("owner"), href: "/admin" };
+    const pr = { ...createHomeTab("owner", undefined, 1), href: "/pull-requests?pr=x" };
+    const { session, transport, navigate, rows } = setup([admin, pr]);
+    await session.initialize("/pull-requests", { id: pr.id, href: "/pull-requests?pr=x" });
+    expect(session.getSnapshot().activeId).toBe(pr.id);
+    expect(navigate).toHaveBeenCalledWith("/pull-requests?pr=x");
+    expect(rows().find((row) => row.id === admin.id)?.href).toBe("/admin");
+    expect(transport.patch).not.toHaveBeenCalled();
+    session.dispose();
+  });
+  it("keeps a URL that brings its own selection from being swallowed by restoration", async () => {
+    const admin = { ...createHomeTab("owner"), href: "/admin" };
+    const pr = { ...createHomeTab("owner", undefined, 1), href: "/pull-requests?pr=x" };
+    const { session, rows } = setup([admin, pr]);
+    await session.initialize("/pull-requests?pr=y", { id: pr.id, href: "/pull-requests?pr=x" });
+    expect(session.getSnapshot().activeId).toBe(admin.id);
+    expect(rows().find((row) => row.id === admin.id)?.href).toBe("/pull-requests?pr=y");
+    session.dispose();
+  });
+  it("restores every surface whose selection is kept out of the address", async () => {
+    // The same prefix rule must hold wherever a page publishes the href that
+    // reconstructs it while cleaning its address: agents drop ?run=, the
+    // boards consume ?view=, the objectives page drops ?open=, feedback
+    // drops ?post=, wiki pages carry ?entry= and an anchor.
+    const cases: [address: string, remembered: string][] = [
+      ["/agents", "/agents?run=c1"],
+      ["/numo", "/numo?conversation=c2"],
+      ["/all", "/all?view=v1"],
+      ["/all", "/all?view=cycle"],
+      ["/projects/p1", "/projects/p1?view=v2"],
+      ["/projects/p1/objectives", "/projects/p1/objectives?open=o1"],
+      ["/projects/p1/feedback", "/projects/p1/feedback?post=p1"],
+      ["/projects/p1/pages/pg1", "/projects/p1/pages/pg1?entry=e1#a"],
+    ];
+    for (const [address, remembered] of cases) {
+      const admin = { ...createHomeTab("owner"), href: "/admin" };
+      const surface = { ...createHomeTab("owner", undefined, 1), href: remembered };
+      const { session, transport, navigate, rows } = setup([admin, surface]);
+      await session.initialize(address, { id: surface.id, href: remembered });
+      expect(session.getSnapshot().activeId, address).toBe(surface.id);
+      expect(navigate, address).toHaveBeenCalledWith(remembered);
+      expect(rows().find((row) => row.id === admin.id)?.href, address).toBe("/admin");
+      expect(transport.patch, address).not.toHaveBeenCalled();
+      session.dispose();
+    }
+  });
   it("restores local activation without changing a different window", async () => {
     const { session, rows, navigate } = setup();
     await session.initialize("/home", { id: rows()[1].id, href: "/all?view=a" });

@@ -2,6 +2,25 @@ import { createHomeTab, moveAppTabBefore, reconcileAppTabs, selectTabAfterClose,
 import { normalizeAppTabLocation } from "./app-tab-location";
 import { AppTabRequestError } from "./app-tabs-api";
 
+/** Whether `url` reopens the remembered destination's page while carrying no
+ *  selection of its own: same path, and every URL param or anchor already
+ *  present in the remembered href. */
+function reopensRemembered(url: string, remembered: string): boolean {
+  const parts = (href: string) => {
+    const [body = "", ...hash] = href.split("#");
+    const [path = "", query = ""] = body.split("?");
+    return { path, params: new URLSearchParams(query), hash: hash.join("#") };
+  };
+  const from = parts(url);
+  const to = parts(remembered);
+  if (from.path !== to.path) return false;
+  if (from.hash && from.hash !== to.hash) return false;
+  for (const [key, value] of from.params) {
+    if (to.params.get(key) !== value) return false;
+  }
+  return true;
+}
+
 export interface AppTabsTransport {
   create: (ensure: boolean, id: string) => Promise<AppTab>;
   patch: (tab: AppTab, patch: AppTabPatch) => Promise<AppTab>;
@@ -148,8 +167,16 @@ export class AppTabsSession {
       // the load URL — the home tab turned into a replica of the current page.
       const restoredHref = restored ? normalizeAppTabLocation(restored.href) : null;
       const restoredTab = restored ? this.snapshot.tabs.find((tab) => tab.id === restored.id) : null;
+      // Several surfaces keep their selection out of the address and publish
+      // the href that reconstructs them instead (/pull-requests hides `?pr=`,
+      // /agents removes `?run=`). A reload of such a page lands on a URL that
+      // is a prefix of the remembered destination: when the remembered tab
+      // opens the same page and the URL brings no selection of its own, the
+      // load restores that tab — it is not a deep link free to claim another
+      // row and grind its location under the load URL.
+      const reloaded = Boolean(restoredTab && restoredHref && reopensRemembered(normalized, restoredHref));
       const chosen =
-        (restoredTab && (!explicit || restoredHref === normalized)
+        (restoredTab && (!explicit || restoredHref === normalized || reloaded)
           ? restoredTab
           : explicit
             ? this.snapshot.tabs.find((tab) => tab.href === normalized) ?? this.snapshot.tabs[0]
@@ -157,7 +184,9 @@ export class AppTabsSession {
         ?? this.snapshot.tabs[0];
       if (!chosen || this.disposed) return;
       const destination = explicit
-        ? normalized
+        ? reloaded
+          ? restoredHref ?? normalized
+          : normalized
         : restoredTab && restoredTab.id === chosen.id
           ? restoredHref ?? chosen.href
           : chosen.href;
@@ -165,7 +194,7 @@ export class AppTabsSession {
       this.activeHref = destination;
       this.observedHref = destination;
       this.remember(chosen.id, destination);
-      if (!explicit && destination !== href) { this.setTarget(destination); this.navigate(destination); }
+      if (destination !== href && (!explicit || reloaded)) { this.setTarget(destination); this.navigate(destination); }
       else if (destination !== chosen.href) { this.locations.set(chosen.id, destination); await this.flushLocation(); }
     });
   }
