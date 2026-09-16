@@ -43,6 +43,8 @@ import {
   upsertPullRequestWithOutcome,
   type PullRequestUpsertOutcome,
 } from "@/lib/server/agent/pull-requests";
+import { recordPrCommentEditQuiet } from "@/lib/server/agent/pr-comment-edits";
+import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
 import { handleForgeNumoMention } from "@/lib/server/agent/pr-mention";
 import {
   broadcastPrChanged,
@@ -71,9 +73,10 @@ import type { PrActionEventType } from "@/lib/pr-events";
  * resolution of a thread lives at the forge (MIN-139), not at minddy. The event
  * is only there for live — without it, resolving a thread on github.com would not work.
  * was seen in the open panel only when reloading.
- * - `check_suite` (completed) / `status` → same: nothing to write, the CI is not
- * in base. They push the direct so that the CI banner updates without
- * wait for the next poll round.
+ * - `check_run` (requested/completed), `check_suite`
+ * (requested/rerequested/completed), `status`, `deployment_status` → same:
+ * nothing to write, the CI is not in base. They push the direct so that the CI
+ * banner updates without wait for the next poll round.
  * - `issue_comment` (on a PR) → traces “commented the PR”, and triggers the
  * rereading of Numo if the message MENTIONS it (MIN-162). Write `@numo`
  * from github.com therefore does the same thing as writing it from minddy — except
@@ -99,7 +102,7 @@ import type { PrActionEventType } from "@/lib/pr-events";
  * `issue_comment`, `pull_request_review_comment` — comments, otherwise
  * the corresponding activity lines do not appear;
  * `pull_request_review_thread` — the resolution of a live thread;
- * `check_suite`, `status` — the live CI.
+ * `check_run`, `check_suite`, `status`, `deployment_status` — the live CI.
  *
  * Anti-duplicate: minddy in-app actions (merge/close/request changes)
  * are already drawn on the road side with the precise HUMAN actor. Their webhook echo is
@@ -163,6 +166,10 @@ interface PullRequestEvent {
   pull_request?: PullRequestPayload;
   repository?: { full_name?: string };
   sender?: GithubActor;
+  /** On `edited`, the previous values — `changes.body.from` is the body
+      BEFORE the rewrite: the snapshot the edit history records for the
+      thread's opening message (MIN-548). */
+  changes?: { body?: { from?: string | null } } | null;
 }
 
 /**
@@ -236,6 +243,9 @@ interface IssueCommentEvent {
   /** `body` serves the mention `@numo` (MIN-162): this is the only signal we have
       from a call to Numo written from github.com. */
   comment?: { id?: number; body?: string | null; user?: GithubActor } | null;
+  /** On `edited`, the previous values — `changes.body.from` is the body BEFORE
+      the rewrite: the snapshot the edit history records (MIN-548). */
+  changes?: { body?: { from?: string | null } } | null;
   repository?: { full_name?: string };
   sender?: GithubActor;
 }
@@ -269,6 +279,25 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   // An older or replayed delivery must not drive runs, issue status,
   // notifications, or activity after the PR row refused its stale snapshot.
   if (ingestion && !ingestion.applied) return;
+
+  // Edit history (MIN-548): GitHub delivers the PREVIOUS body on `edited`
+  // (`changes.body.from`), so the snapshot of the thread's opening message is
+  // possible without a second read. Best effort — a lost snapshot is a gap in
+  // the history, never a broken webhook; the recorder skips the echo of an
+  // edit made from minddy (same body as the snapshot the API just wrote).
+  if (
+    action === "edited" &&
+    typeof payload.changes?.body?.from === "string"
+  ) {
+    await recordPrCommentEditQuiet({
+      provider: "github",
+      repoFullName,
+      prNumber: number,
+      commentId: PR_BODY_COMMENT_ID,
+      body: payload.changes.body.from,
+      editedBy: payload.sender?.login ?? null,
+    });
+  }
 
   // Inbox: The project learns that a pull request is waiting for eyes. Here, right
   // after ingestion, and not lower with the other notifications: these
@@ -502,6 +531,28 @@ async function handleIssueComment(payload: IssueCommentEvent): Promise<void> {
 
   // Direct: posted, edited or deleted, thread has changed.
   await broadcastGithubPr(repoFullName, number, ["conversation"]);
+
+  // Edit history (MIN-548): GitHub delivers the PREVIOUS body on `edited`
+  // (`changes.body.from`), so the snapshot is possible without a second read.
+  // Best effort — the delivery already 200s on a handler failure; a lost
+  // snapshot is a gap in the history, never a broken webhook.
+  if (
+    payload.action === "edited" &&
+    repoFullName &&
+    number != null &&
+    payload.comment?.id != null &&
+    typeof payload.changes?.body?.from === "string"
+  ) {
+    await recordPrCommentEditQuiet({
+      provider: "github",
+      repoFullName,
+      prNumber: number,
+      commentId: payload.comment.id,
+      body: payload.changes.body.from,
+      editedBy: actor?.login ?? null,
+    });
+  }
+
   await recordGithubGesture({
     type: "pr_commented",
     number,
@@ -598,17 +649,18 @@ async function handlePullRequestReviewThread(
 }
 
 /**
- * CI completed — `check_suite` (GitHub Actions and company) or `status` (the API
- * history, which many integrations still use).
+ * CI moves — `check_suite` (GitHub Actions and company), `check_run` (one job
+ * of a suite) or `status` (the API history, which many integrations still
+ * use), plus `deployment_status` for environment changes.
  *
  * Direct ONLY, like the comments threads: the state of the CI is not in base,
  * it is read at the forge at each GET of the detail (`prDetailResponse`). THE
  * `CHECKS_POLL_MS` of 15 s remains in place — these events are not guaranteed, and
  * he is the net.
  *
- * The anchor is the SHA and not the PR number: `status` carries none, and
- * `check_suite.pull_requests` omits PRs resulting from a fork. The fallback covers the
- * deux.
+ * The anchor is the SHA and not the PR number: `status` carries none,
+ * `check_suite.pull_requests` omits PRs resulting from a fork, and a
+ * `deployment_status` carries none either. The fallback covers them all.
  */
 interface CheckSuiteEvent {
   action?: string;
@@ -619,9 +671,23 @@ interface CheckSuiteEvent {
   repository?: { full_name?: string };
 }
 
+interface CheckRunEvent {
+  action?: string;
+  check_run?: {
+    head_sha?: string;
+    check_suite?: { pull_requests?: Array<{ number?: number }> } | null;
+  };
+  repository?: { full_name?: string };
+}
+
 interface StatusEvent {
   sha?: string;
   state?: string;
+  repository?: { full_name?: string };
+}
+
+interface DeploymentStatusEvent {
+  deployment?: { sha?: string } | null;
   repository?: { full_name?: string };
 }
 
@@ -647,9 +713,16 @@ async function broadcastChecksChanged(
 }
 
 async function handleCheckSuite(payload: CheckSuiteEvent): Promise<void> {
-  // Only the end of a sequence changes what the banner displays: `requested` and
-  // `rerequested` only announces a job whose state is already “in progress”.
-  if (payload.action !== "completed") return;
+  // `requested`/`rerequested` flips the banner to "in progress" — the reader
+  // sees it too. `completed` changes the verdict itself. The other actions
+  // (`created`, `stale`) announce nothing new.
+  if (
+    payload.action !== "completed" &&
+    payload.action !== "requested" &&
+    payload.action !== "rerequested"
+  ) {
+    return;
+  }
   await broadcastChecksChanged(
     payload.repository?.full_name,
     payload.check_suite?.head_sha,
@@ -659,10 +732,36 @@ async function handleCheckSuite(payload: CheckSuiteEvent): Promise<void> {
   );
 }
 
+async function handleCheckRun(payload: CheckRunEvent): Promise<void> {
+  // A run STARTING (`requested`) or ENDING (`completed`) moves the checks
+  // summary. A suite announces its runs (`requested` at the suite level), but
+  // the per-run event carries the granular states GitHub's summary is read
+  // from — both are worth pushing.
+  if (payload.action !== "completed" && payload.action !== "requested") return;
+  await broadcastChecksChanged(
+    payload.repository?.full_name,
+    payload.check_run?.head_sha,
+    (payload.check_run?.check_suite?.pull_requests ?? [])
+      .map((p) => p.number)
+      .filter((n): n is number => n != null),
+  );
+}
+
 async function handleStatus(payload: StatusEvent): Promise<void> {
   // `pending` is the start of a check, not its result — but it passes the
   // banner to “in progress”, which the reader should also see.
   await broadcastChecksChanged(payload.repository?.full_name, payload.sha, []);
+}
+
+async function handleDeploymentStatus(payload: DeploymentStatusEvent): Promise<void> {
+  // A deployment moved (Vercel publishing its URL, an environment flipping to
+  // "in progress" then "success"): the deployment card is read at the forge.
+  // The SHA is the only anchor the payload carries.
+  await broadcastChecksChanged(
+    payload.repository?.full_name,
+    payload.deployment?.sha,
+    [],
+  );
 }
 
 /**
@@ -874,8 +973,12 @@ export async function POST(request: NextRequest) {
       await handleIssueDependency(JSON.parse(rawBody));
     } else if (event === "check_suite") {
       await handleCheckSuite(JSON.parse(rawBody) as CheckSuiteEvent);
+    } else if (event === "check_run") {
+      await handleCheckRun(JSON.parse(rawBody) as CheckRunEvent);
     } else if (event === "status") {
       await handleStatus(JSON.parse(rawBody) as StatusEvent);
+    } else if (event === "deployment_status") {
+      await handleDeploymentStatus(JSON.parse(rawBody) as DeploymentStatusEvent);
     } else if (event === "issues") {
       await handleIssues(JSON.parse(rawBody));
     }

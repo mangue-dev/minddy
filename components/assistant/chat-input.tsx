@@ -696,6 +696,17 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     const addContextOption = useCallback(
       (option: MentionOption) => {
+        // A forge account or Numo quotes a WRITER, not an entity to
+        // attach: they never land in the context of a conversation.
+        if (
+          option.type !== "member" &&
+          option.type !== "project" &&
+          option.type !== "issue" &&
+          option.type !== "objective" &&
+          option.type !== "page"
+        ) {
+          return;
+        }
         if (onAddContext) {
           onAddContext({
             kind: option.type,
@@ -816,6 +827,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       for (const node of el.querySelectorAll<HTMLElement>("[data-mention-id]")) {
         const option = mentionFromNode(node);
         if (!option) continue;
+        // A forge account or Numo quotes a WRITER, not an entity the
+        // conversation carries: they never serialize as context.
+        if (option.type === "forge" || option.type === "numo") continue;
         const key = `${option.type}:${option.id}`;
         if (seen.has(key)) continue;
         seen.add(key);

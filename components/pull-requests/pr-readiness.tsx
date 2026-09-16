@@ -7,11 +7,11 @@ import {
   Check,
   ChevronDown,
   Clock,
-  ExternalLink,
 } from "lucide-react";
 import {
   Badge,
   Button,
+  Checkbox,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -23,6 +23,8 @@ import {
   cn,
 } from "mangue-ui";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { ChecksDonut } from "@/components/pull-requests/pr-readiness-cards";
+import type { ChecksSummary } from "@/lib/agent-api";
 
 import type {
   MergeMethod,
@@ -218,23 +220,39 @@ export function PrReadinessIcon({
 export function PrReadinessControl({
   readiness,
   providerName,
-  fallbackUrl,
   canAct,
   acting,
   onAction,
   canMerge,
   merging,
   onMerge,
+  mergeFlowActive,
+  autoMergeAllowed,
+  autoMerging,
+  onToggleAutoMerge,
+  checks,
+  onOpenChecks,
 }: {
   readiness: PullRequestReadiness;
   providerName: string;
-  fallbackUrl: (blocker: ReadinessBlocker) => string | null;
   canAct: (blocker: ReadinessBlocker) => boolean;
   acting: ReadinessAction | null;
   onAction: (blocker: ReadinessBlocker) => void;
   canMerge: boolean;
   merging: boolean;
   onMerge: (method: MergeMethod) => void;
+  /** Auto-merge (or merge queue entry) already registered at the forge. */
+  mergeFlowActive: boolean;
+  /** `false` = the forge refuses auto-merge; the checkbox then does not show. */
+  autoMergeAllowed: boolean | null;
+  autoMerging: boolean;
+  onToggleAutoMerge: (enable: boolean) => void;
+  /** The CI story, when the forge served it: the checks rows reuse the
+      cards' donut instead of an anonymous clock. */
+  checks?: ChecksSummary | null;
+  /** Opens the checks popover of the status cards: the way to SEE the
+      failing checks, which replaced the rerun gesture here. */
+  onOpenChecks?: () => void;
 }) {
   const t = useTranslations("PullRequests");
   const [open, setOpen] = useState(false);
@@ -284,22 +302,16 @@ export function PrReadinessControl({
         align="end"
         className="w-[min(30rem,calc(100vw-2rem))] overflow-hidden p-0"
       >
-        <div className="border-b border-border px-3.5 py-3">
-          <p className="text-sm font-medium">{t("readinessChecklist")}</p>
-          <p className="text-xs text-muted-foreground">
-            {t("readinessChecklistHint")}
-          </p>
-        </div>
-        <ul className="max-h-[min(26rem,60vh)] divide-y divide-border overflow-y-auto">
+        <ul className="flex max-h-[min(26rem,60vh)] flex-col gap-1 overflow-y-auto p-2">
           {readiness.passed.map((condition) => (
             <li
               key={condition.id}
               data-testid="pr-readiness-condition-passed"
-              className="flex items-start gap-2.5 px-3.5 py-2.5"
+              className="flex items-start gap-2.5 rounded-md bg-emerald-500/10 px-2.5 py-2"
             >
               <Check className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm">
+                <p className="text-sm text-emerald-700 dark:text-emerald-400">
                   {t(PASSED_KEYS[condition.kind], {
                     provider: providerName,
                     count: condition.count ?? 0,
@@ -324,20 +336,36 @@ export function PrReadinessControl({
           ))}
           {readiness.blockers.map((blocker) => {
             const available = canAct(blocker);
-            const providerUrl = fallbackUrl(blocker);
             const blockerKey = blockerMessageKey(blocker);
+            // The cards' grammar (MIN-548): an alpha-tinted row per state,
+            // and the checks story keeps its donut — each check one slice,
+            // colored by its own state — instead of an anonymous clock.
             return (
               <li
                 key={blocker.id}
-                className="flex flex-wrap items-center gap-2 px-3.5 py-2.5"
+                className={cn(
+                  "flex flex-wrap items-center gap-2 rounded-md px-2.5 py-2",
+                  blocker.status === "pending"
+                    ? "bg-amber-500/10"
+                    : "bg-destructive/10",
+                )}
               >
-                {blocker.status === "pending" ? (
-                  <Clock className="size-4 shrink-0 text-amber-500" />
+                {blocker.kind === "checks" && checks && checks.total > 0 ? (
+                  <ChecksDonut parts={checks.checks.map((check) => check.state)} />
+                ) : blocker.status === "pending" ? (
+                  <Clock className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
                 ) : (
                   <AlertCircle className="size-4 shrink-0 text-destructive" />
                 )}
                 <div className="min-w-40 flex-1">
-                  <p className="text-sm">
+                  <p
+                    className={cn(
+                      "text-sm",
+                      blocker.status === "pending"
+                        ? "text-amber-700 dark:text-amber-400"
+                        : "text-destructive",
+                    )}
+                  >
                     {t(blockerKey, {
                       provider: providerName,
                       count: blocker.count ?? 0,
@@ -358,7 +386,21 @@ export function PrReadinessControl({
                     {t(SOURCE_KEYS[blocker.source])}
                   </p>
                 </div>
-                {available ? (
+                {blocker.kind === "checks" && onOpenChecks ? (
+                  // Seeing beats rerunning: the failing checks live in the
+                  // cards' popover, one gesture away — this button opens it.
+                  <Button
+                    data-testid="pr-readiness-view-checks"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setOpen(false);
+                      onOpenChecks();
+                    }}
+                  >
+                    {t("viewChecks")}
+                  </Button>
+                ) : available ? (
                   <Button
                     data-testid={`pr-readiness-action-${blocker.action}`}
                     variant="outline"
@@ -371,25 +413,48 @@ export function PrReadinessControl({
                   >
                     {t(ACTION_KEYS[blocker.action], { provider: providerName })}
                   </Button>
-                ) : providerUrl ? (
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={providerUrl} target="_blank" rel="noreferrer">
-                      {t(ACTION_KEYS[blocker.action], {
-                        provider: providerName,
-                      })}
-                      <ExternalLink className="size-3.5" />
-                    </a>
-                  </Button>
-                ) : (
-                  <span className="text-xs text-muted-foreground">
-                    {t("blockerActionUnavailable")}
-                  </span>
-                )}
+                ) : null}
               </li>
             );
           })}
         </ul>
-        <div className="flex items-center justify-between gap-3 border-t border-border bg-muted/30 px-3.5 py-3">
+        {canMerge && autoMergeAllowed !== false && !readiness.mergeAllowed ? (
+          // Waiting is optional (MIN-548): while any condition is still
+          // running, the viewer can register the merge NOW and let the forge
+          // fire it the moment everything clears. One-way is not an option —
+          // the checkbox reads the forge state and unregisters too.
+          <label
+            data-testid="pr-auto-merge-toggle"
+            className="flex cursor-pointer items-start gap-2.5 border-t border-border px-3.5 py-3"
+          >
+            <Checkbox
+              checked={mergeFlowActive}
+              disabled={autoMerging}
+              onCheckedChange={(checked) => onToggleAutoMerge(checked === true)}
+              className="mt-0.5"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm">
+                {mergeFlowActive
+                  ? t("autoMergeOn")
+                  : t("autoMergeWhenReady")}
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                {autoMerging ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Spinner className="size-3 shrink-0" />
+                    {t("autoMergeUpdating")}
+                  </span>
+                ) : mergeFlowActive ? (
+                  t("autoMergeOnHint")
+                ) : (
+                  t("autoMergeWhenReadyHint")
+                )}
+              </span>
+            </span>
+          </label>
+        ) : null}
+        <div className="flex items-center justify-between gap-3 px-3.5 py-3">
           <p className="min-w-0 text-xs text-muted-foreground">
             {readiness.mergeAllowed && canMerge
               ? t("readinessMergeAvailable")

@@ -37,6 +37,7 @@ import type {
   ReviewSubmission,
   ReviewThreadState,
   ReviewVerdict,
+  DeploymentOutcome,
 } from "./pr";
 
 /**
@@ -963,6 +964,24 @@ export async function updateMergeRequestTitle(opts: {
   return toRef(mr);
 }
 
+export async function updateMergeRequestBody(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  body: string;
+}): Promise<PullRequestRef> {
+  const mr = await glJson<RawMr>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}`,
+    opts.token,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: opts.body }),
+    },
+  );
+  return toRef(mr);
+}
+
 export async function enableMergeRequestAutoMerge(opts: {
   token: string;
   repoFullName: string;
@@ -983,6 +1002,24 @@ export async function enableMergeRequestAutoMerge(opts: {
         squash: opts.method === "squash",
         ...(opts.headSha ? { sha: opts.headSha } : {}),
       }),
+    },
+  );
+}
+
+export async function disableMergeRequestAutoMerge(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  nodeId?: string;
+  queue: boolean;
+}): Promise<void> {
+  await glJson<unknown>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/merge`,
+    opts.token,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ auto_merge: false }),
     },
   );
 }
@@ -1215,6 +1252,7 @@ interface RawNote {
   type?: string | null; // "DiffNote" for notes anchored to diff
   author?: { username?: string; avatar_url?: string | null } | null;
   created_at: string;
+  updated_at?: string | null;
   position?: RawPosition | null;
   original_position?: RawPosition | null;
   /** Thread resolution, carried by each resolvable note (MIN-139). */
@@ -1247,6 +1285,9 @@ function toComment(
       ? { login: n.author.username ?? "", avatar_url: n.author.avatar_url ?? null }
       : null,
     created_at: n.created_at,
+    // GitLab carries it like GitHub: last edit of the note — the marker
+    // "(edited)" compares it against `created_at`.
+    updated_at: n.updated_at ?? null,
     html_url: noteUrl(repoFullName, iid, n.id),
   };
 }
@@ -1307,20 +1348,24 @@ export async function listMergeRequestTimeline(opts: {
 interface RawGitlabDeployment {
   ref?: string | null;
   sha?: string | null;
+  /** created · running · success · failed · canceled (GitLab vocabulary). */
+  status?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
   environment?: { external_url?: string | null } | null;
 }
 
 /** Latest successful GitLab branch deployment, with the immutable head as a fallback. */
-export async function getLatestSuccessfulDeploymentUrl(opts: {
+export async function getPullRequestDeployment(opts: {
   token: string;
   repoFullName: string;
   number: number;
   branch?: string;
   sha: string;
-}): Promise<string | null> {
+}): Promise<DeploymentOutcome> {
   const deployments = await glJson<RawGitlabDeployment[]>(
     `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/deployments` +
-      "?order_by=updated_at&sort=desc&status=success&per_page=100",
+      "?order_by=updated_at&sort=desc&per_page=100",
     opts.token,
   );
   const matches = [
@@ -1331,17 +1376,54 @@ export async function getLatestSuccessfulDeploymentUrl(opts: {
   ];
   for (const candidates of matches) {
     for (const deployment of candidates) {
+      const status = deployment.status ?? "success";
+      if (status === "created" || status === "running") {
+        // The newest deployment is in flight: the card goes "in progress"
+        // and keeps the button of the deployment that already serves.
+        const serving = candidates.find(
+          (candidate) =>
+            candidate !== deployment &&
+            candidate.status === "success" &&
+            candidate.environment?.external_url,
+        );
+        return {
+          status: "in_progress",
+          url: serving?.environment?.external_url ?? null,
+          startedAt: deployment.created_at ?? null,
+          durationMs: null,
+        };
+      }
+      if (status !== "success") {
+        // A failed or canceled newest deployment says nothing useful to the
+        // card: no destination, no verdict worth a color.
+        return { status: "none", url: null, startedAt: null, durationMs: null };
+      }
       const value = deployment.environment?.external_url;
       if (!value) continue;
       try {
         const url = new URL(value);
-        if (url.protocol === "https:" || url.protocol === "http:") return url.toString();
+        if (url.protocol === "https:" || url.protocol === "http:") {
+          // GitLab dates the deployment (created) and its success (updated):
+          // the gap is the time the environment took to settle.
+          const from = Date.parse(deployment.created_at ?? "");
+          const to = Date.parse(deployment.updated_at ?? "");
+          const durationMs =
+            Number.isFinite(from) && Number.isFinite(to) && to >= from
+              ? to - from
+              : null;
+          return {
+            status: "success",
+            url: url.toString(),
+            startedAt: null,
+            durationMs,
+          };
+        }
       } catch {
         // Keep looking: an older deployment for this ref can still be usable.
       }
     }
   }
-  return null;
+  return { status: "none", url: null, startedAt: null, durationMs: null };
 }
 
 /** Adds a note to the MR's conversation (author = the connected account). */
@@ -1361,6 +1443,32 @@ export async function createMergeRequestNote(opts: {
     },
   );
   return toComment(opts.repoFullName, opts.number, created);
+}
+
+/**
+ * Rewrites the body of a conversation note. A note is addressed by the MR
+ * iid AND its own id (`PUT …/merge_requests/{iid}/notes/{note_id}`) — the
+ * three fields of the call are all used, unlike GitHub which ignores
+ * `number`. Returns the updated note, whose `updated_at` now differs
+ * from `created_at`.
+ */
+export async function updateMergeRequestNote(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  commentId: number;
+  body: string;
+}): Promise<PullRequestComment> {
+  const updated = await glJson<RawNote>(
+    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/notes/${opts.commentId}`,
+    opts.token,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: opts.body }),
+    },
+  );
+  return toComment(opts.repoFullName, opts.number, updated);
 }
 
 interface RawDiscussion {

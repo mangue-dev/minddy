@@ -844,7 +844,7 @@ export function StaleThreads({
         ) : (
           <ChevronRight className="size-3.5 shrink-0" />
         )}
-        {label ? label(threads.length) : t("staleComments", { count: threads.length })}
+        {label ? label(threads.length) : t("staleConversations", { count: threads.length })}
       </button>
       {open ? (
         <div className="flex flex-col gap-3 px-3 pb-3">

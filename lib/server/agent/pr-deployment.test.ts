@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getLatestSuccessfulDeploymentUrl as getGithubDeploymentUrl } from "./pr";
-import { getLatestSuccessfulDeploymentUrl as getGitlabDeploymentUrl } from "./mr";
+import { getPullRequestDeployment as getGithubDeploymentUrl } from "./pr";
+import { getPullRequestDeployment as getGitlabDeploymentUrl } from "./mr";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -15,7 +15,7 @@ function json(value: unknown, status = 200) {
 }
 
 describe("pull request deployment URLs", () => {
-  it("returns the stable Vercel branch URL from the official ready PR comment", async () => {
+  it("returns the stable Vercel branch URL, dated by the deployment walk", async () => {
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
       if (url.includes("/issues/42/comments")) {
@@ -27,6 +27,18 @@ describe("pull request deployment URLs", () => {
             user: { login: "vercel[bot]", type: "Bot" },
             created_at: "2026-09-03T10:00:00Z",
             html_url: "https://github.com/acme/app/pull/42#issuecomment-1",
+          },
+        ]);
+      }
+      if (url.includes("/deployments?ref=feature%2Fpreview")) {
+        return json([{ id: 5, created_at: "2026-09-03T09:58:00Z" }]);
+      }
+      if (url.includes("/deployments/5/statuses")) {
+        return json([
+          {
+            state: "success",
+            environment_url: "https://commit.example.com",
+            created_at: "2026-09-03T10:00:00Z",
           },
         ]);
       }
@@ -42,8 +54,12 @@ describe("pull request deployment URLs", () => {
         branch: "feature/preview",
         sha: "abc",
       }),
-    ).resolves.toBe("https://app-git-feature-preview-acme.vercel.app/");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    ).resolves.toEqual({
+      status: "success",
+      url: "https://app-git-feature-preview-acme.vercel.app/",
+      startedAt: null,
+      durationMs: 120_000,
+    });
   });
 
   it("ignores branch URLs outside an official ready Vercel bot row", async () => {
@@ -77,7 +93,7 @@ describe("pull request deployment URLs", () => {
         branch: "feature/preview",
         sha: "abc",
       }),
-    ).resolves.toBe("https://commit.example.com/");
+    ).resolves.toEqual({ status: "success", url: "https://commit.example.com/", startedAt: null, durationMs: null });
   });
 
   it("returns the newest successful GitHub branch environment URL", async () => {
@@ -109,7 +125,7 @@ describe("pull request deployment URLs", () => {
         branch: "feature/preview",
         sha: "abc 123",
       }),
-    ).resolves.toBe("https://preview.example.com/pr-42");
+    ).resolves.toEqual({ status: "success", url: "https://preview.example.com/pr-42", startedAt: null, durationMs: null });
 
     const deploymentCall = fetchMock.mock.calls
       .map(([input]) => String(input))
@@ -136,7 +152,7 @@ describe("pull request deployment URLs", () => {
         branch: "feature/preview",
         sha: "abc",
       }),
-    ).resolves.toBe("https://commit.example.com/");
+    ).resolves.toEqual({ status: "success", url: "https://commit.example.com/", startedAt: null, durationMs: null });
 
     const listCalls = fetchMock.mock.calls
       .map(([input]) => String(input))
@@ -164,7 +180,7 @@ describe("pull request deployment URLs", () => {
         number: 42,
         sha: "abc",
       }),
-    ).resolves.toBe("https://deploy.example.com/output");
+    ).resolves.toEqual({ status: "success", url: "https://deploy.example.com/output", startedAt: null, durationMs: null });
   });
 
   it("matches the GitLab deployment to the pull request head", async () => {
@@ -189,10 +205,10 @@ describe("pull request deployment URLs", () => {
         number: 42,
         sha: "abc",
       }),
-    ).resolves.toBe("https://preview.example.com/mr-42");
+    ).resolves.toEqual({ status: "success", url: "https://preview.example.com/mr-42", startedAt: null, durationMs: null });
 
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
-      "/projects/acme%2Fapp/deployments?order_by=updated_at&sort=desc&status=success",
+      "/projects/acme%2Fapp/deployments?order_by=updated_at&sort=desc&per_page=100",
     );
   });
 
@@ -223,7 +239,7 @@ describe("pull request deployment URLs", () => {
         branch: "feature/preview",
         sha: "abc",
       }),
-    ).resolves.toBe("https://branch.example.com/");
+    ).resolves.toEqual({ status: "success", url: "https://branch.example.com/", startedAt: null, durationMs: null });
   });
 
   it("returns no GitLab action without a safe matching environment URL", async () => {
@@ -241,6 +257,143 @@ describe("pull request deployment URLs", () => {
         number: 42,
         sha: "abc",
       }),
-    ).resolves.toBeNull();
+    ).resolves.toEqual({ status: "none", url: null, startedAt: null, durationMs: null });
+  });
+
+  it("reads a building Vercel commit status when no GitHub deployment exists yet", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/issues/42/comments")) return json([]);
+      if (url.includes("sha=prev")) {
+        return json([{ id: 77, created_at: "2026-09-03T09:50:00Z" }]);
+      }
+      if (url.includes("sha=old")) {
+        return json([{ id: 79, created_at: "2026-09-03T09:40:00Z" }]);
+      }
+      if (url.includes("/deployments?")) return json([]);
+      if (url.includes("/pulls/42/commits")) {
+        return json([{ sha: "old" }, { sha: "prev" }, { sha: "head" }]);
+      }
+      if (url.includes("/deployments/77/statuses")) {
+        return json([
+          { state: "success", environment_url: "https://serving.example.com" },
+        ]);
+      }
+      if (url.includes("/deployments/78/statuses")) {
+        return json([{ state: "success", environment_url: null }]);
+      }
+      if (url.includes("/deployments/79/statuses")) {
+        return json([{ state: "success", environment_url: "https://older.example.com" }]);
+      }
+      if (url.includes("/status/head")) {
+        return json({
+          state: "pending",
+          statuses: [
+            { context: "ci/unit", state: "pending" },
+            {
+              context: "Vercel",
+              state: "pending",
+              target_url: "https://vercel.com/acme/app/build",
+              created_at: "2026-09-03T10:00:00Z",
+            },
+          ],
+        });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      getGithubDeploymentUrl({
+        token: "token",
+        repoFullName: "acme/app",
+        number: 42,
+        branch: "feature/preview",
+        sha: "head",
+      }),
+    ).resolves.toEqual({
+      status: "in_progress",
+      url: "https://serving.example.com/",
+      startedAt: "2026-09-03T10:00:00Z",
+      durationMs: null,
+    });
+  });
+
+  it("dates the settle from the push, not from a late deployment stamp", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/issues/42/comments")) return json([]);
+      // A provider that stamps the deployment object when the environment
+      // is ALREADY served: created_at ~ the settle, useless as a start.
+      if (url.includes("/deployments?ref=")) {
+        return json([{ id: 9, created_at: "2026-09-03T10:04:59Z" }]);
+      }
+      if (url.includes("/deployments/9/statuses")) {
+        return json([
+          {
+            state: "success",
+            environment_url: "https://ready.example.com",
+            created_at: "2026-09-03T10:05:00Z",
+          },
+        ]);
+      }
+      if (url.includes("/commits/head")) {
+        return json({
+          commit: { committer: { date: "2026-09-03T10:00:00Z" } },
+        });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      getGithubDeploymentUrl({
+        token: "token",
+        repoFullName: "acme/app",
+        number: 42,
+        branch: "feature/preview",
+        sha: "head",
+      }),
+    ).resolves.toEqual({
+      status: "success",
+      url: "https://ready.example.com/",
+      startedAt: null,
+      durationMs: 300_000,
+    });
+  });
+
+  it("ticks the running card from the push while the build runs", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/issues/42/comments")) return json([]);
+      if (url.includes("/deployments?ref=")) {
+        return json([{ id: 9, created_at: "2026-09-03T10:04:59Z" }]);
+      }
+      if (url.includes("/deployments/9/statuses")) {
+        return json([{ state: "in_progress" }]);
+      }
+      if (url.includes("/commits/head")) {
+        return json({
+          commit: { committer: { date: "2026-09-03T10:00:00Z" } },
+        });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      getGithubDeploymentUrl({
+        token: "token",
+        repoFullName: "acme/app",
+        number: 42,
+        branch: "feature/preview",
+        sha: "head",
+      }),
+    ).resolves.toEqual({
+      status: "in_progress",
+      url: null,
+      startedAt: "2026-09-03T10:00:00Z",
+      durationMs: null,
+    });
   });
 });

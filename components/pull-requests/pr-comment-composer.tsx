@@ -27,9 +27,9 @@
 // which allows the row field to be THE SAME in the PR panel and in
 // the diff view of an agent session (the `agent-runs/[runId]/pr/*` facades).
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, cn, Spinner, Tabs, TabsList, TabsTrigger } from "mangue-ui";
+import { Button, cn, Spinner } from "mangue-ui";
 import {
   AttachButton,
   DropOverlay,
@@ -37,9 +37,12 @@ import {
   useFileDrop,
 } from "@/components/resources";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
-import { plainMarkdown } from "@/lib/plain-markdown";
-import { TAB_TRIGGER_DENSE } from "@/components/tab-bar";
-import { MentionTextarea } from "@/components/mention-textarea";
+import {
+  MarkdownEditor,
+  type MarkdownEditorApi,
+} from "@/components/markdown-editor";
+import { forgeMentionScanner } from "@/lib/mention-scan";
+import { NUMO_MENTION_ID } from "@/lib/mention-attributes";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { usePrMembersQuery } from "@/lib/use-pr-members-query";
 import { useForgeUploads } from "@/lib/use-forge-uploads";
@@ -82,13 +85,67 @@ export function PrCommentComposer({
   variant?: "thread" | "line";
 }) {
   const t = useTranslations("PullRequests");
-  const [tab, setTab] = useState<"write" | "preview">("write");
   // The forge accounts are only loaded at the first “@” typed: open a
   // PR should not cost any extra query, and most of them can be read without having to
   // write there. The flag never comes down — once the list is requested, it
   // stays cached for the entire time of the panel.
+  // An editor keeps its caret only while focused; some outside clicks
+  // (user-select:none surfaces, certain panels) do not take the focus away.
+  // One listener guarantees the rule: a press OUTSIDE the composer unwinds
+  // the focus, whatever the surface (MIN-548).
+  const composerRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const onDocumentMouseDown = (event: MouseEvent) => {
+      const root = composerRef.current;
+      if (!root) return;
+      if (event.target instanceof Node && root.contains(event.target)) return;
+      const active = document.activeElement;
+      // Only unwinds a contenteditable focus (ours): the press outside
+      // never lands while the caret blinks again.
+      if (active instanceof HTMLElement && active.isContentEditable) {
+        active.blur();
+      }
+    };
+    document.addEventListener("mousedown", onDocumentMouseDown);
+    return () => document.removeEventListener("mousedown", onDocumentMouseDown);
+  }, []);
   const [wantsMentions, setWantsMentions] = useState(false);
   const { members } = usePrMembersQuery(endpoint, wantsMentions);
+  // The WYSIWYG surface owns the text; the draft stays with the CALLER
+  // (quote, dictate and uploads write through it). What the editor pushed
+  // last: the mirror compares to it to know when a value came from
+  // OUTSIDE (quote) and must be poured back in.
+  const editorApiRef = useRef<MarkdownEditorApi | null>(null);
+  const lastEmittedRef = useRef(value);
+  useEffect(() => {
+    if (value === lastEmittedRef.current) return;
+    lastEmittedRef.current = value;
+    const api = editorApiRef.current;
+    if (api) api.setMarkdown(value);
+  }, [value]);
+  // “Quote” wrote into the draft: the caret must land after it.
+  useEffect(() => {
+    if (!focusSignal) return;
+    editorApiRef.current?.focus();
+  }, [focusSignal]);
+  const editorMentions = useMemo(() => {
+    // The LOGIN, never a displayed name: it is what the text carries and
+    // what the forge resolves in notification. Numo leads the list — she is
+    // the only mention minddy processes herself.
+    return {
+      options: [
+        { type: "numo" as const, id: NUMO_MENTION_ID, label: "Numo" },
+        ...members.map((m) => ({
+          type: "forge" as const,
+          id: m.login,
+          label: m.login,
+          iconUrl: m.avatar_url,
+        })),
+      ],
+      scan: forgeMentionScanner(members),
+      onQuery: () => setWantsMentions(true),
+    };
+  }, [members]);
   const uploads = useForgeUploads(endpoint, onChange);
   const drop = useFileDrop(uploads.addFiles);
 
@@ -100,7 +157,7 @@ export function PrCommentComposer({
   const canPost = !!body && !posting && !uploads.uploading;
 
   return (
-    <div className="flex min-w-0 max-w-full flex-col gap-2 font-sans">
+    <div ref={composerRef} className="flex min-w-0 max-w-full flex-col gap-2 font-sans">
       <div
         className={cn(
           "relative min-w-0 w-full max-w-full border border-border transition-colors focus-within:border-ring",
@@ -118,59 +175,39 @@ export function PrCommentComposer({
       >
         <DropOverlay show={drop.dragging} />
 
-        {/* “Write” / “Preview”, as at GitHub: the body of a PR comment
- is markdown, often with an image or a code snippet,
- and today we have no way of seeing it before sending it. */}
-        <Tabs
-          value={tab}
-          onValueChange={(next) => setTab(next as "write" | "preview")}
-          className="gap-0"
-        >
-          <TabsList className={cn("mb-0 h-auto", line ? "m-2 mb-0" : "m-2.5 mb-0")}>
-            <TabsTrigger value="write" className={cn(TAB_TRIGGER_DENSE, "text-xs")}>
-              {t("composerWrite")}
-            </TabsTrigger>
-            <TabsTrigger
-              value="preview"
-              className={cn(TAB_TRIGGER_DENSE, "text-xs")}
-              disabled={!body}
-            >
-              {t("composerPreview")}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        {/* The field remains MOUNTED under the preview (`hidden`): unmounting it would take away
- the caret, the undo stack and the mention envelopes —
- returning to “Write” would render a field amnesiac. */}
-        <div className={cn(tab === "preview" && "hidden")}>
-          <MentionTextarea
-            value={value}
-            onChange={(next) => onChange(() => next)}
-            forgeMembers={members}
-            onMentionQuery={() => setWantsMentions(true)}
-            focusSignal={focusSignal}
-            autoFocus={autoFocus}
-            onSubmit={onSubmit}
-            onEscape={onCancel}
-            placeholder={placeholder}
-            // Anchored in the diff, the field is HIGH in a scrollable area:
-            // a list that opened upwards would fold out of view.
-            dropUp={!line}
-            includeNumo
-            className={cn(
-              "rounded-none border-0 bg-transparent focus-visible:border-0 focus-visible:ring-0",
-              line ? "max-h-40 px-3 py-2" : "px-3.5 py-2.5",
-            )}
-          />
-        </div>
-        {tab === "preview" ? (
-          <div className={cn("min-w-0 max-w-full", line ? "px-3 py-2" : "px-3.5 py-2.5")}>
-            <p className="max-w-full whitespace-pre-wrap [overflow-wrap:anywhere] text-foreground">
-              {plainMarkdown(value)}
-            </p>
-          </div>
-        ) : null}
+        {/* WYSIWYG (MIN-548): the surface IS the preview — like the
+            scratchpad, what is typed reads rendered, and there is no mode to
+            switch. Markdown still flows in (quote, dictation, pasted upload
+            links) and the forge accounts carry their own portrait in the
+            pills. */}
+        <MarkdownEditor
+          value={value}
+          onCommit={(markdown) => {
+            lastEmittedRef.current = markdown;
+            onChange(() => markdown);
+          }}
+          apiRef={(api) => {
+            editorApiRef.current = api;
+          }}
+          onChange={(markdown) => {
+            lastEmittedRef.current = markdown;
+            onChange(() => markdown);
+          }}
+          onSubmit={() => {
+            if (canPost) onSubmit();
+          }}
+          mentions={editorMentions}
+          autoFocus={autoFocus}
+          placeholder={placeholder}
+          // Paddings live on the CONTENT, not on the editor envelope: the
+          // placeholder is pinned at its top-left corner and must sit on the
+          // first line, not on the box corner.
+          className={cn("min-w-0 max-w-full", line && "max-h-40 overflow-y-auto")}
+          contentClassName={cn(
+            "[&_p]:my-0",
+            line ? "px-3 py-2" : "px-3.5 py-2.5",
+          )}
+        />
 
         <div
           className={cn(

@@ -2020,7 +2020,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "launch_code_agent",
       description:
-        "Delegate a complete repository task to the code worker owned by this Numo turn, using the model and reasoning configured by the user in Account settings. First gather the issue, plan, relevant wiki pages and pull request when they exist; resolve important ambiguity; and decide that repository work is actually needed. A ticket is optional context, not the delegation identity. The worker returns here and Numo gives the final answer in this conversation. Reuse `continuation_run_id` for follow-up on the appropriate worker lineage. A pull request is not automatic. Model and reasoning overrides are never accepted.",
+        "Delegate a complete repository task to the code worker owned by this Numo turn, using the model and reasoning configured by the user in Account settings. First gather the issue, plan, relevant wiki pages and pull request when they exist; resolve important ambiguity; and decide that repository work is actually needed — CODE work: writing files, pushing, rebasing, revising a branch, or a line-anchored review. Merging, renaming or commenting on a pull request is NOT repository work: those gestures go through merge_pull_request, update_pull_request and post_pull_request_comment directly. A ticket is optional context, not the delegation identity. The worker returns here and Numo gives the final answer in this conversation. Reuse `continuation_run_id` for follow-up on the appropriate worker lineage. A pull request is not automatic. Model and reasoning overrides are never accepted.",
       parameters: {
         type: "object",
         properties: {
@@ -2187,6 +2187,135 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
         // BOTH are required: on a small model, an optional field is not
         // not filled, and a half-designated attachment makes no sense.
         required: ["issue_id", "pull_request"],
+      },
+    },
+  },
+  /**
+   * PR management without touching the code (MIN-550): merge, rename /
+   * re-describe, comment, edit a comment Numo posted itself. Everything
+   * CODE (branch changes, pushes, rebases) stays delegated to the code
+   * agent — these tools never modify the content of the code, only the PR
+   * metadata and its thread. The merge carries the same guardrail prose as
+   * the code agent's `set_pull_request_state`: irreversible, confirmed by
+   * the user, never against a red CI or a conflict — the executor
+   * (`pull-request-writes.ts`) re-checks all three before calling the forge.
+   */
+  {
+    type: "function",
+    function: {
+      name: "merge_pull_request",
+      description:
+        "Merge a pull request of the project's linked repository. MERGING IS IRREVERSIBLE: never merge on your own initiative — confirm the intent with the user first (ask_user), and never merge with red or running CI checks, with merge conflicts, or a pull request still in draft. The tool re-checks all three and refuses, but a refusal is information, not a challenge: report it instead of retrying. Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request). Pass merge_method only when the user named one (merge, squash, rebase — only the methods the forge offers). On success the linked issue's status follows the pull request: merged → done. If the merge is refused for reasons you cannot fix yourself (protection rules, missing approvals), say so — merging is never a reason to delegate to launch_code_agent.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_id: {
+            type: "string",
+            description:
+              "id of the issue whose pull request to merge (resolve via list_issues/search_issues, or use the issue in context).",
+          },
+          pull_request_id: {
+            type: "string",
+            description:
+              "Minddy id of the pull request to merge, as supplied by the pull request context.",
+          },
+          merge_method: {
+            type: "string",
+            description:
+              "Only when the user asked for one: the merge method of the forge.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_pull_request",
+      description:
+        "Rename a pull request and/or rewrite its description — the PR metadata only, NEVER the code (for changes to the branch itself, use launch_code_agent). Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request). Pass at least one of title and body. Use it on an explicit user request ('rename this PR…') or when you opened the PR through the agent and its title no longer describes what the branch carries.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_id: {
+            type: "string",
+            description:
+              "id of the issue whose pull request to edit (resolve via list_issues/search_issues, or use the issue in context).",
+          },
+          pull_request_id: {
+            type: "string",
+            description:
+              "Minddy id of the pull request to edit, as supplied by the pull request context.",
+          },
+          title: {
+            type: "string",
+            description: "New title of the pull request.",
+          },
+          body: {
+            type: "string",
+            description: "New description (the body of the PR thread card).",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "post_pull_request_comment",
+      description:
+        "Post a comment in the conversation thread of a pull request (NOT anchored to code — line remarks stay with launch_code_agent). The comment is signed at the forge as Numo (minddy). Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request); body is the markdown comment. Use it to report a review verdict, answer a question in the thread, or keep the author posted — in the user's language.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_id: {
+            type: "string",
+            description:
+              "id of the issue whose pull request to comment on (resolve via list_issues/search_issues, or use the issue in context).",
+          },
+          pull_request_id: {
+            type: "string",
+            description:
+              "Minddy id of the pull request to comment on, as supplied by the pull request context.",
+          },
+          body: {
+            type: "string",
+            description: "The markdown comment to post.",
+          },
+        },
+        required: ["body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "edit_own_pull_request_comment",
+      description:
+        "Edit the body of a conversation comment YOU posted on a pull request — never a comment written by a human. The executor checks the author (your bot identity, or your Numo signature on the body) and refuses anything else. Get the comment id from the result of post_pull_request_comment or from read_pull_request's conversation_comments; body is the FULL new markdown body (it replaces the old one, it does not append). Like every PR tool here, it never touches the code — branch changes stay with launch_code_agent.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_id: {
+            type: "string",
+            description:
+              "id of the issue whose pull request carries the comment (resolve via list_issues/search_issues, or use the issue in context).",
+          },
+          pull_request_id: {
+            type: "string",
+            description:
+              "Minddy id of the pull request carrying the comment, as supplied by the pull request context.",
+          },
+          comment_id: {
+            type: "number",
+            description: "Numeric id of YOUR comment to rewrite.",
+          },
+          body: {
+            type: "string",
+            description: "The full new markdown body of the comment.",
+          },
+        },
+        required: ["comment_id", "body"],
       },
     },
   },

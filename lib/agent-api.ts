@@ -511,6 +511,8 @@ export interface PullRequestRef {
   /** Author and opening date: `body` opens the conversation thread as a comment. */
   user?: { login: string; avatar_url: string | null } | null;
   createdAt?: string;
+  /** Last forge edit of the body — the "(edited)" marker reads it. */
+  updatedAt?: string;
   /** `null`/absent = UNKNOWN fusionability (forges calculate it using
       asynchronous), never display as “blocked” — MIN-138. */
   mergeable?: boolean | null;
@@ -610,6 +612,12 @@ export interface AgentRunPrResponse {
   checks?: ChecksSummary | null;
   checksError?: "forbidden" | "unknown" | null;
   deploymentUrl?: string | null;
+  /** Time the environment took to settle, when the forge dates it. */
+  deploymentDurationMs?: number | null;
+  /** Lifecycle of the head environment as the forge reports it. */
+  deploymentStatus?: "success" | "in_progress" | null;
+  /** Created date of the deployment in flight — the card ticks from it. */
+  deploymentStartedAt?: string | null;
   reviews?: PullRequestReviewSummary | null;
   viewer?: PrViewer;
   mergeMethods?: MergeMethod[];
@@ -748,11 +756,36 @@ export async function actOnPullRequestApi(
   );
 }
 
+/**
+ * "Generate then merge" (MIN-548): the generation runs in the background
+ * and the merge fires the moment it lands. Optimistic by design — the
+ * answer only says the job started; the broadcast carries the outcome.
+ */
+export async function mergeWithNumoApi(
+  prId: string,
+  method: MergeMethod | null,
+): Promise<{ ok: true; started: true }> {
+  return parseJson(
+    await fetch(prEndpoint(prId), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "merge_with_numo", method }),
+    }),
+  );
+}
+
 export async function maintainPullRequestApi(
   prId: string,
-  action: "update_branch" | "rerun_check" | "update_title" | "enable_auto_merge",
+  action:
+    | "update_branch"
+    | "rerun_check"
+    | "update_title"
+    | "update_body"
+    | "enable_auto_merge"
+    | "disable_auto_merge",
   payload: {
     title?: string;
+    body?: string;
     rerunRef?: PullRequestCheck["rerunRef"];
   } = {},
 ): Promise<{ ok: true; title?: string }> {
@@ -916,6 +949,9 @@ export interface PullRequestComment {
   body: string;
   user: { login: string; avatar_url: string | null } | null;
   created_at: string;
+  /** Last edit AT THE FORGE — the "(edited)" marker reads `updated_at` vs
+      `created_at`. `null` when the forge never carried it. */
+  updated_at?: string | null;
   html_url: string;
 }
 
@@ -1392,5 +1428,44 @@ export async function postPullRequestCommentApi(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ body }),
     }),
+  );
+}
+
+/**
+ * A PREVIOUS version of a thread comment — the snapshot taken when the
+ * message was edited (by minddy, or by its webhook echo when the forge sends
+ * the old body). Served oldest-first.
+ */
+export interface PullRequestCommentEdit {
+  body: string;
+  edited_by: string | null;
+  created_at: string;
+}
+
+/**
+ * Rewrites a thread comment on the forge, under the connected account.
+ * The server snapshots the PREVIOUS body first, so "previous versions" can
+ * list it afterwards.
+ */
+export async function updatePullRequestCommentApi(
+  prId: string,
+  input: { commentId: number; body: string },
+): Promise<{ comment: PullRequestComment }> {
+  return parseJson(
+    await fetch(`${prEndpoint(prId)}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ commentId: input.commentId, body: input.body }),
+    }),
+  );
+}
+
+/** Previous versions of one comment, oldest-first. */
+export async function fetchPullRequestCommentEditsApi(
+  prId: string,
+  commentId: number,
+): Promise<{ edits: PullRequestCommentEdit[] }> {
+  return parseJson(
+    await fetch(`${prEndpoint(prId)}/comment-edits?commentId=${commentId}`),
   );
 }

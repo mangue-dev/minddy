@@ -884,6 +884,7 @@ export function PrDiff({
   reviewMode = false,
   reviewedFiles,
   onFileReviewedChange,
+  reviewControls,
   expandableContext = true,
   canResolve = !readOnly,
   reviewComments = NO_COMMENTS,
@@ -906,6 +907,10 @@ export function PrDiff({
   reviewMode?: boolean;
   reviewedFiles?: ReadonlySet<string>;
   onFileReviewedChange?: (path: string, reviewed: boolean) => void;
+  /** Optional controls rendered INSIDE the toolbar row, next to the file
+      count — the PR page puts its review toggle there so the whole Files
+      tab stays one compact line instead of stacking a second bar. */
+  reviewControls?: ReactNode;
   /** Allow lazy loading of context out of hunk. */
   expandableContext?: boolean;
   /** Solve a thread, governed APART (MIN-144): comment request `read` on
@@ -1068,23 +1073,17 @@ export function PrDiff({
         data-color-scheme={resolvedTheme}
         className={cn("pr-diff-view diff-selectable flex flex-col gap-2", className)}
       >
-        <div className="flex flex-col rounded-lg border border-border bg-muted/20">
-          {/* Navigation and presentation answer different questions. Keeping
-              them on separate rows makes the file tree the clear entry point
-              instead of one control among several unrelated switches. */}
-          <div className="flex min-h-10 items-center px-3">
+        {/* MIN-548: no container behind the toolbar — the controls read
+            directly in the page, like any other toolbar. */}
+        <div className="flex min-h-10 flex-wrap items-center gap-2">
             <PrFileTreeButton
               files={files}
               totalAdditions={totalAdd}
               totalDeletions={totalDel}
               onSelect={jumpToFile}
             />
-          </div>
-          <div className="flex min-h-11 items-center justify-between gap-3 border-t border-border px-3 py-1.5">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t("displayOptions")}
-            </span>
-            <div className="flex shrink-0 items-center gap-2">
+            {reviewControls}
+            <div className="ml-auto flex shrink-0 items-center gap-2">
               <AppTooltip label={t("wrapLines")}>
                 <button
                   type="button"
@@ -1111,7 +1110,6 @@ export function PrDiff({
                 ]}
               />
             </div>
-          </div>
         </div>
 
         <div className="flex flex-col gap-3">
@@ -1152,7 +1150,7 @@ export function PrDiff({
                 resolution={canResolve ? orphanResolution : undefined}
                 reactions={orphanReactions}
                 readOnly={readOnly}
-                label={(count) => t("orphanComments", { count })}
+                label={(count) => t("orphanConversations", { count })}
               />
             </div>
           ) : null}

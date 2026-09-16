@@ -16,12 +16,23 @@ import { cn } from "mangue-ui";
 import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
+import { NumoFace } from "@/components/numo-face";
 import { filterMentionItems } from "@/lib/mention-menu";
 
 export interface MentionOption {
   /** Source project for contextual mentions retained across navigation. */
   projectId?: string;
-  type: "member" | "project" | "issue" | "objective" | "page";
+  type:
+    | "member"
+    /** A FORGE account (MIN-162): the login is what is written, the portrait
+        comes from the forge itself. */
+    | "forge"
+    /** The assistant, offerable only where minddy processes the mention. */
+    | "numo"
+    | "project"
+    | "issue"
+    | "objective"
+    | "page";
   id: string;
   /** What is written after the “@”. */
   label: string;
@@ -58,6 +69,20 @@ export function MentionFigure({
 }) {
   if (option.type === "member") {
     return <UserAvatar seed={option.avatarSeed} className={cn("shrink-0", className)} />;
+  }
+  if (option.type === "forge") {
+    // The forge account bears HIS portrait — github.com serves it, minddy
+    // only displays it. The seed stays the fallback when the URL is absent.
+    return (
+      <UserAvatar
+        url={option.iconUrl}
+        seed={option.label}
+        className={cn("shrink-0", className)}
+      />
+    );
+  }
+  if (option.type === "numo") {
+    return <NumoFace className={cn("shrink-0", className)} />;
   }
   if (option.type === "project") {
     return (

@@ -4,9 +4,14 @@ import { prDetailResponse, type PrScope } from "./pr-actions";
 
 describe("pull request detail deployment", () => {
   it("resolves the deployment from the live forge head", async () => {
-    const getLatestSuccessfulDeploymentUrl = vi
+    const getPullRequestDeployment = vi
       .fn()
-      .mockResolvedValue("https://preview.example.com/live");
+      .mockResolvedValue({
+        status: "success",
+        url: "https://preview.example.com/live",
+        startedAt: null,
+        durationMs: 124_000,
+      });
     const listChecks = vi.fn().mockResolvedValue({
       checks: [],
       deploymentUrl: null,
@@ -34,7 +39,7 @@ describe("pull request detail deployment", () => {
         listReviews: async () => null,
         listReviewThreads: async () => null,
         listChecks,
-        getLatestSuccessfulDeploymentUrl,
+        getPullRequestDeployment,
       },
     } as unknown as PrScope;
 
@@ -43,7 +48,7 @@ describe("pull request detail deployment", () => {
 
     expect(response.status).toBe(200);
     expect(body.deploymentUrl).toBe("https://preview.example.com/live");
-    expect(getLatestSuccessfulDeploymentUrl).toHaveBeenCalledWith({
+    expect(getPullRequestDeployment).toHaveBeenCalledWith({
       token: "token",
       repoFullName: "acme/app",
       number: 42,
@@ -82,8 +87,12 @@ describe("pull request detail deployment", () => {
           startedAt: null,
           completedAt: null,
         }),
-        getLatestSuccessfulDeploymentUrl: async () =>
-          "https://immutable-commit.example.com/",
+        getPullRequestDeployment: async () => ({
+              status: "success",
+              url: "https://immutable-commit.example.com/",
+              startedAt: null,
+              durationMs: null,
+            }),
       },
     } as unknown as PrScope;
 
@@ -94,9 +103,14 @@ describe("pull request detail deployment", () => {
   });
 
   it("does not look up an unqualified branch name for a fork pull request", async () => {
-    const getLatestSuccessfulDeploymentUrl = vi
+    const getPullRequestDeployment = vi
       .fn()
-      .mockResolvedValue("https://immutable-head.example.com/");
+      .mockResolvedValue({
+        status: "success",
+        url: "https://immutable-head.example.com/",
+        startedAt: null,
+        durationMs: 84_000,
+      });
     const scope = {
       pr: { head_sha: "stored-head" },
       target: { provider: "github" },
@@ -123,7 +137,7 @@ describe("pull request detail deployment", () => {
           startedAt: null,
           completedAt: null,
         }),
-        getLatestSuccessfulDeploymentUrl,
+        getPullRequestDeployment,
       },
     } as unknown as PrScope;
 
@@ -131,7 +145,7 @@ describe("pull request detail deployment", () => {
     const body = await response.json();
 
     expect(body.deploymentUrl).toBe("https://immutable-head.example.com/");
-    expect(getLatestSuccessfulDeploymentUrl).toHaveBeenCalledWith(
+    expect(getPullRequestDeployment).toHaveBeenCalledWith(
       expect.objectContaining({ branch: undefined, sha: "fork-head" }),
     );
   });

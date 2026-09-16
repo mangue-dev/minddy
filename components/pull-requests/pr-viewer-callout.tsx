@@ -80,9 +80,6 @@ export function PrViewerCallout({
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-3">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
-        <Icon className="size-4" />
-      </span>
       <div className="min-w-0 flex-1">
         {title ? <p className="text-sm font-medium">{title}</p> : null}
         <p className="text-xs text-muted-foreground">{body}</p>
@@ -90,8 +87,13 @@ export function PrViewerCallout({
       {/* The button only exists if it leads somewhere: without server-side env
  (self-host), the authorization would respond 400 — the message alone is enough. */}
       {!viewer.connected && viewer.configured ? (
-        <Button size="sm" variant="outline" onClick={() => void connect()} disabled={connecting}>
-          {connecting ? <Spinner /> : null}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => void connect()}
+          disabled={connecting}
+        >
+          {connecting ? <Spinner /> : <Icon className="size-3.5" />}
           {t(viewer.expired ? "viewerReauthorizeAccount" : "viewerConnectAccount", {
             provider: providerName,
           })}
@@ -102,8 +104,9 @@ export function PrViewerCallout({
           href={repoUrl}
           target="_blank"
           rel="noreferrer"
-          className="shrink-0 text-xs text-brand hover:underline"
+          className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline"
         >
+          <Icon className="size-3.5" />
           {t(viewer.provider === "gitlab" ? "viewOnGitlab" : "viewOnGithub")}
         </a>
       ) : null}
