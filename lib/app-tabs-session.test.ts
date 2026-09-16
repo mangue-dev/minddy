@@ -211,6 +211,30 @@ describe("application tab sessions", () => {
     expect(rows().find((row) => row.id === first.id)?.href).toBe("/home");
     session.dispose();
   });
+  it("restores a reload of a page whose selection lives outside the address", async () => {
+    // /pull-requests keeps the open PR out of the URL and publishes
+    // `/pull-requests?pr=` instead, so a reload lands on the bare path. That
+    // load restores the remembered tab — it must not be treated as a deep
+    // link that claims the first row and grinds its location under it.
+    const admin = { ...createHomeTab("owner"), href: "/admin" };
+    const pr = { ...createHomeTab("owner", undefined, 1), href: "/pull-requests?pr=x" };
+    const { session, transport, navigate, rows } = setup([admin, pr]);
+    await session.initialize("/pull-requests", { id: pr.id, href: "/pull-requests?pr=x" });
+    expect(session.getSnapshot().activeId).toBe(pr.id);
+    expect(navigate).toHaveBeenCalledWith("/pull-requests?pr=x");
+    expect(rows().find((row) => row.id === admin.id)?.href).toBe("/admin");
+    expect(transport.patch).not.toHaveBeenCalled();
+    session.dispose();
+  });
+  it("keeps a URL that brings its own selection from being swallowed by restoration", async () => {
+    const admin = { ...createHomeTab("owner"), href: "/admin" };
+    const pr = { ...createHomeTab("owner", undefined, 1), href: "/pull-requests?pr=x" };
+    const { session, rows } = setup([admin, pr]);
+    await session.initialize("/pull-requests?pr=y", { id: pr.id, href: "/pull-requests?pr=x" });
+    expect(session.getSnapshot().activeId).toBe(admin.id);
+    expect(rows().find((row) => row.id === admin.id)?.href).toBe("/pull-requests?pr=y");
+    session.dispose();
+  });
   it("restores local activation without changing a different window", async () => {
     const { session, rows, navigate } = setup();
     await session.initialize("/home", { id: rows()[1].id, href: "/all?view=a" });
