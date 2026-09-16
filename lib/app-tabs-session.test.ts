@@ -235,6 +235,33 @@ describe("application tab sessions", () => {
     expect(rows().find((row) => row.id === admin.id)?.href).toBe("/pull-requests?pr=y");
     session.dispose();
   });
+  it("restores every surface whose selection is kept out of the address", async () => {
+    // The same prefix rule must hold wherever a page publishes the href that
+    // reconstructs it while cleaning its address: agents drop ?run=, the
+    // boards consume ?view=, the objectives page drops ?open=, feedback
+    // drops ?post=, wiki pages carry ?entry= and an anchor.
+    const cases: [address: string, remembered: string][] = [
+      ["/agents", "/agents?run=c1"],
+      ["/numo", "/numo?conversation=c2"],
+      ["/all", "/all?view=v1"],
+      ["/all", "/all?view=cycle"],
+      ["/projects/p1", "/projects/p1?view=v2"],
+      ["/projects/p1/objectives", "/projects/p1/objectives?open=o1"],
+      ["/projects/p1/feedback", "/projects/p1/feedback?post=p1"],
+      ["/projects/p1/pages/pg1", "/projects/p1/pages/pg1?entry=e1#a"],
+    ];
+    for (const [address, remembered] of cases) {
+      const admin = { ...createHomeTab("owner"), href: "/admin" };
+      const surface = { ...createHomeTab("owner", undefined, 1), href: remembered };
+      const { session, transport, navigate, rows } = setup([admin, surface]);
+      await session.initialize(address, { id: surface.id, href: remembered });
+      expect(session.getSnapshot().activeId, address).toBe(surface.id);
+      expect(navigate, address).toHaveBeenCalledWith(remembered);
+      expect(rows().find((row) => row.id === admin.id)?.href, address).toBe("/admin");
+      expect(transport.patch, address).not.toHaveBeenCalled();
+      session.dispose();
+    }
+  });
   it("restores local activation without changing a different window", async () => {
     const { session, rows, navigate } = setup();
     await session.initialize("/home", { id: rows()[1].id, href: "/all?view=a" });

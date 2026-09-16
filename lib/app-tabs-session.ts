@@ -13,7 +13,8 @@ function reopensRemembered(url: string, remembered: string): boolean {
   };
   const from = parts(url);
   const to = parts(remembered);
-  if (from.path !== to.path || from.hash !== to.hash) return false;
+  if (from.path !== to.path) return false;
+  if (from.hash && from.hash !== to.hash) return false;
   for (const [key, value] of from.params) {
     if (to.params.get(key) !== value) return false;
   }
