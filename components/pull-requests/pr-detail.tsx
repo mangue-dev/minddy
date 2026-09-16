@@ -110,7 +110,7 @@ import {
   type ReadinessBlocker,
 } from "@/lib/pr-readiness";
 import { viewerReviewIsRequested } from "@/lib/pr-review-request";
-import { type PullRequestDetailTab } from "@/lib/pr-readiness-actions";
+import { settleMergeFlowOverride, type PullRequestDetailTab } from "@/lib/pr-readiness-actions";
 import { normalizeForgeInstant } from "@/lib/forge-time";
 import { REPO_PROVIDERS } from "@/lib/repo-providers";
 import { PrEndpointProvider } from "@/lib/pr-endpoint-context";
@@ -659,6 +659,15 @@ export function PrDetail({
     null | "merge" | "close" | "reopen" | "ready_for_review" | "convert_to_draft"
   >(null);
   const [maintenanceAction, setMaintenanceAction] = useState<ReadinessAction | null>(null);
+  // The merge-flow checkbox is optimistic: the forge's read-back can lag the
+  // registration the POST just confirmed, and a settled PR is not re-polled,
+  // so the override stands until the data agrees with it.
+  const [mergeFlowOverride, setMergeFlowOverride] = useState<boolean | null>(null);
+  useEffect(() => {
+    setMergeFlowOverride((current) =>
+      settleMergeFlowOverride(current, pr?.mergeFlowActive),
+    );
+  }, [pr]);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   // The merge is confirmed WITH its method: bring it to the confirmation state
@@ -1086,10 +1095,12 @@ export function PrDetail({
         await maintainPullRequestApi(item.prId, "update_branch");
         toast.success(t("branchUpdatedToast"));
       } else if (blocker.action === "enable_auto_merge") {
+        setMergeFlowOverride(true);
         await maintainPullRequestApi(item.prId, "enable_auto_merge");
       }
       await refetchPr();
     } catch (error) {
+      setMergeFlowOverride(null);
       toast.error((error as Error).message);
     } finally {
       setMaintenanceAction(null);
@@ -1121,6 +1132,7 @@ export function PrDetail({
   const toggleAutoMerge = async (enable: boolean) => {
     if (maintenanceAction) return;
     setMaintenanceAction("enable_auto_merge");
+    setMergeFlowOverride(enable);
     try {
       await maintainPullRequestApi(
         item.prId,
@@ -1131,6 +1143,7 @@ export function PrDetail({
       );
       await refetchPr();
     } catch (error) {
+      setMergeFlowOverride(null);
       toast.error((error as Error).message);
     } finally {
       setMaintenanceAction(null);
@@ -1853,7 +1866,7 @@ export function PrDetail({
                 canMerge={!!canWrite}
                 merging={acting === "merge" || isWorking}
                 onMerge={openMergeConfirmation}
-                mergeFlowActive={!!pr?.mergeFlowActive}
+                mergeFlowActive={mergeFlowOverride ?? !!pr?.mergeFlowActive}
                 autoMergeAllowed={mergePolicy?.autoMergeAllowed ?? null}
                 autoMerging={maintenanceAction === "enable_auto_merge"}
                 onToggleAutoMerge={(enable) => void toggleAutoMerge(enable)}
