@@ -427,6 +427,8 @@ export function useGlobalBoardQuery() {
               source_id: removed.source_id,
               target_id: removed.target_id,
               type: removed.type,
+              source_type: removed.source_type,
+              target_type: removed.target_type,
             },
           });
         }

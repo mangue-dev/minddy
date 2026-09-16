@@ -1,11 +1,13 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { runInNewContext } from "node:vm";
 
 // `typescript-api` is an alias to `typescript@5` (see package.json and CLAUDE.md):
 // since MIN-180 the repository checks with `typescript@7`, which no longer ships
 // the compiler API. Structural tests therefore have their own TypeScript, in JS.
 import ts from "typescript-api";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { IssueRelation } from "./types";
 
 /**
  * MIN-513 — a relation may now end on an objective (`source_type` /
@@ -113,6 +115,7 @@ describe("relation endpoint kinds travel (MIN-513)", () => {
   it("useGlobalBoardQuery.addRelation accepts and transports the kinds", () => {
     const arrow = findArrow(
       collectArrowFunctions(globalQuery),
+      "projectId",
       "sourceId",
       "type",
       "targetId",
@@ -122,6 +125,63 @@ describe("relation endpoint kinds travel (MIN-513)", () => {
     const body = arrow!.body.getText();
     expect(body).toContain("kinds?.sourceType");
     expect(body).toContain("kinds?.targetType");
+  });
+
+  it.each([
+    ["issue", "objective"],
+    ["objective", "issue"],
+    ["objective", "objective"],
+    ["issue", "issue"],
+  ] as const)("removal preserves %s-to-%s endpoints for undo", async (sourceType, targetType) => {
+    const arrow = findArrow(collectArrowFunctions(globalQuery), "projectId", "relationId");
+    expect(arrow).toBeDefined();
+    const removed: IssueRelation = {
+      id: "relation",
+      source_id: "source",
+      target_id: "target",
+      type: "blocks",
+      source_type: sourceType,
+      target_type: targetType,
+    };
+    let cache = { relations: [removed] };
+    const record = vi.fn();
+    const removeIssueRelationApi = vi.fn().mockResolvedValue(undefined);
+    const invalidateQueries = vi.fn();
+    const callback = runInNewContext(
+      ts.transpileModule(`(${arrow!.getText()})`, {
+        compilerOptions: { target: ts.ScriptTarget.ESNext },
+      }).outputText,
+      {
+        GLOBAL_BOARD_KEY: ["global-board"],
+        record,
+        removeIssueRelationApi,
+        queryClient: {
+          getQueryData: () => cache,
+          setQueryData: (_key: unknown, update: (old: typeof cache) => typeof cache) => {
+            cache = update(cache);
+          },
+          invalidateQueries,
+        },
+      }
+    ) as (projectId: string, relationId: string) => Promise<void>;
+
+    await callback("project", removed.id);
+
+    expect(removeIssueRelationApi).toHaveBeenCalledWith(removed.id);
+    expect(cache.relations).toEqual([]);
+    expect(record).toHaveBeenCalledWith({
+      kind: "relation-remove",
+      projectId: "project",
+      relationId: removed.id,
+      relation: {
+        source_id: removed.source_id,
+        target_id: removed.target_id,
+        type: removed.type,
+        source_type: sourceType,
+        target_type: targetType,
+      },
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["issue-relations", "project"] });
   });
 
   it("the /api/me/board SELECT reads the endpoint kind columns", () => {
