@@ -21,7 +21,13 @@ export interface ChipRelation {
   id: string;
   relation: IssueRelationType;
   otherId: string;
-  otherNumber: number;
+  /** The other end's ticket number — undefined for an OBJECTIVE end (MIN-513);
+      those rows are dropped from the compact chips and live in the section. */
+  otherNumber?: number;
+  /** What the other end is — `issue` when unknown (pre-MIN-513 producers). */
+  otherType?: "issue" | "objective";
+  /** The other end's name, for an objective end. */
+  otherName?: string;
   /** A blocking relation whose blocker is closed: dropped from the compact chip
       row so the card reads as normal (it stays, marked resolved, in the panel). */
   resolved: boolean;
@@ -48,7 +54,11 @@ export function RelationChips({
   // A resolved blocking relation (its blocker is done/canceled/duplicate) no
   // longer constrains, so the compact card must read as normal — drop resolved
   // relations here. They stay visible, marked resolved, in RelationsSection.
-  const active = relations.filter((r) => !r.resolved);
+  // Objective ends (MIN-513) are dropped too: the chip is an identifier chip
+  // and an objective has no ticket number — they live in the section only.
+  const active = relations.filter(
+    (r) => !r.resolved && r.otherType !== "objective"
+  );
   if (active.length === 0) return null;
   const shown = active.slice(0, max);
   const overflow = active.length - shown.length;
@@ -56,7 +66,7 @@ export function RelationChips({
   return (
     <span className={cn("flex items-center gap-1", className)}>
       {shown.map((r) => {
-        const id = issueIdentifier(projectKey, r.otherNumber);
+        const id = issueIdentifier(projectKey, r.otherNumber ?? 0);
         const label = `${t(r.relation)} ${id}`;
         const inner = (
           <>

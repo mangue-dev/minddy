@@ -12,6 +12,7 @@ import {
   cycleCompletionPercent,
   cycleFilledPoints,
   cycleCompletedPoints,
+  cycleBlockingRelations,
   cycleWindows,
   diffDays,
   effortToPoints,
@@ -23,7 +24,12 @@ import {
   type FillWeights,
   type RecoIssue,
 } from "@/lib/cycle";
-import type { CycleInfo, CycleIntensity, IssueRelation } from "@/lib/types";
+import type {
+  CycleInfo,
+  CycleIntensity,
+  IssueRelation,
+} from "@/lib/types";
+import type { ObjectiveStatus } from "@/lib/objective-constants";
 import { issueIdentifier, type IssueStatus } from "@/lib/issue-constants";
 
 /**
@@ -300,7 +306,7 @@ export async function fillCycleForUser({
     service
       .from("issues")
       .select(
-        "id, project_id, title, status, priority, effort, issue_categories(category_id), projects!inner(deleted_at)"
+        "id, project_id, title, status, priority, effort, objective_id, issue_categories(category_id), projects!inner(deleted_at)"
       )
       .eq("assignee_id", userId)
       .is("cycle_id", null)
@@ -324,23 +330,77 @@ export async function fillCycleForUser({
     category_ids: ((row.issue_categories ?? []) as { category_id: string }[]).map(
       (c) => c.category_id
     ),
+    objective_id: (row.objective_id as string | null) ?? null,
   }));
   if (candidates.length === 0) return { pickedIds: [], points: 0 };
 
-  // Precedence: the blocks edges targeting the candidates, plus the status of
-  // every blocker (a candidate blocked by an open issue is skipped unless the
+  // Precedence: the blocks edges targeting the candidates (directly, or via
+  // their objective — MIN-513), plus the status of every blocker (a candidate
+  // blocked by an open issue or a still-open objective is skipped unless the
   // blocker gets picked too).
   const candidateIds = candidates.map((c) => c.id);
+  const objectiveIds = [
+    ...new Set(
+      candidates
+        .map((c) => c.objective_id)
+        .filter((id): id is string => !!id)
+    ),
+  ];
   const { data: relationRows } = await service
     .from("issue_relations")
-    .select("id, source_id, target_id, type")
+    .select("id, source_id, source_type, target_id, target_type, type")
     .eq("type", "blocks")
-    .in("target_id", candidateIds);
-  const relations = (relationRows ?? []) as IssueRelation[];
+    .in("target_id", [...candidateIds, ...objectiveIds]);
+  const storedRelations = (relationRows ?? []) as IssueRelation[];
+
+  // Fold the objective-ended edges down onto the issues (MIN-513): an edge
+  // whose target is an objective blocks every issue attached to it, and an
+  // objective blocker's open/closed state rides its mapped issue status.
+  const issuesByObjective = new Map<string, string[]>();
+  for (const c of candidates) {
+    if (!c.objective_id) continue;
+    const list = issuesByObjective.get(c.objective_id);
+    if (list) list.push(c.id);
+    else issuesByObjective.set(c.objective_id, [c.id]);
+  }
+  const objectiveStatusIds = [
+    ...new Set(
+      storedRelations
+        .flatMap((r) => {
+          const ends: Array<[string, string | undefined]> = [
+            [r.source_id, r.source_type],
+            [r.target_id, r.target_type],
+          ];
+          return ends
+            .filter(([, kind]) => kind === "objective")
+            .map(([id]) => id);
+        })
+    ),
+  ];
+  const objectiveStatusById = new Map<string, ObjectiveStatus>();
+  if (objectiveStatusIds.length > 0) {
+    const { data: objectiveRows } = await service
+      .from("objectives")
+      .select("id, status")
+      .in("id", objectiveStatusIds)
+      .is("deleted_at", null);
+    for (const row of objectiveRows ?? []) {
+      objectiveStatusById.set(
+        row.id as string,
+        row.status as ObjectiveStatus
+      );
+    }
+  }
+  const { relations, objectiveStatuses } = cycleBlockingRelations(
+    storedRelations,
+    issuesByObjective,
+    objectiveStatusById
+  );
 
   const statusById = new Map<string, IssueStatus>(
     candidates.map((c) => [c.id, c.status])
   );
+  for (const [id, status] of objectiveStatuses) statusById.set(id, status);
   const blockerIds = [...new Set(relations.map((r) => r.source_id))].filter(
     (id) => !statusById.has(id)
   );
@@ -497,7 +557,7 @@ export async function getCycleOverview({
   const { data: poolRows } = await service
     .from("issues")
     .select(
-      "id, project_id, number, title, status, priority, effort, issue_categories(category_id), projects!inner(key, deleted_at)"
+      "id, project_id, number, title, status, priority, effort, objective_id, issue_categories(category_id), projects!inner(key, deleted_at)"
     )
     .eq("assignee_id", userId)
     .is("cycle_id", null)
@@ -516,21 +576,67 @@ export async function getCycleOverview({
     ),
     number: row.number as number,
     key: ((row.projects as { key?: string } | null)?.key ?? "").toString(),
+    objective_id: (row.objective_id as string | null) ?? null,
   }));
+  const poolIds = pool.map((c) => c.id);
+  const poolObjectiveIds = [
+    ...new Set(
+      pool
+        .map((c) => c.objective_id)
+        .filter((id): id is string => !!id)
+    ),
+  ];
   const { data: relationRows } = pool.length
     ? await service
         .from("issue_relations")
-        .select("id, source_id, target_id, type")
+        .select("id, source_id, source_type, target_id, target_type, type")
         .eq("type", "blocks")
-        .in(
-          "target_id",
-          pool.map((c) => c.id)
-        )
+        .in("target_id", [...poolIds, ...poolObjectiveIds])
     : { data: [] };
+  const storedRelations = (relationRows ?? []) as IssueRelation[];
+
+  // Same objective cascade as the fill (MIN-513): an edge aimed at an
+  // objective blocks every issue attached to it.
+  const issuesByObjective = new Map<string, string[]>();
+  for (const c of pool) {
+    if (!c.objective_id) continue;
+    const list = issuesByObjective.get(c.objective_id);
+    if (list) list.push(c.id);
+    else issuesByObjective.set(c.objective_id, [c.id]);
+  }
+  const objectiveStatusIds = [
+    ...new Set(
+      storedRelations.flatMap((r) =>
+        [
+          [r.source_id, r.source_type] as const,
+          [r.target_id, r.target_type] as const,
+        ]
+          .filter(([, kind]) => kind === "objective")
+          .map(([id]) => id)
+      )
+    ),
+  ];
+  const objectiveStatusById = new Map<string, ObjectiveStatus>();
+  if (objectiveStatusIds.length > 0) {
+    const { data: objectiveRows } = await service
+      .from("objectives")
+      .select("id, status")
+      .in("id", objectiveStatusIds)
+      .is("deleted_at", null);
+    for (const row of objectiveRows ?? []) {
+      objectiveStatusById.set(row.id as string, row.status as ObjectiveStatus);
+    }
+  }
+  const { relations, objectiveStatuses } = cycleBlockingRelations(
+    storedRelations,
+    issuesByObjective,
+    objectiveStatusById
+  );
   const statusById = new Map<string, IssueStatus>(pool.map((c) => [c.id, c.status]));
+  for (const [id, status] of objectiveStatuses) statusById.set(id, status);
   const blocked = blockedSet(
-    pool.map((c) => c.id),
-    (relationRows ?? []) as IssueRelation[],
+    poolIds,
+    relations,
     statusById
   );
   const candidates = pool

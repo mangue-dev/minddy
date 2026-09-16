@@ -8,9 +8,19 @@ import {
   removeIssueRelationApi,
 } from "./issue-relations-api";
 import { useUndoHistory } from "./undo/undo-context";
-import type { IssueRelation, IssueRelationType } from "./types";
+import type {
+  IssueRelation,
+  IssueRelationType,
+  RelationEndpointType,
+} from "./types";
 
 const relationsKey = (projectId: string) => ["issue-relations", projectId] as const;
+
+/** Endpoint kinds of a relation being added (MIN-513) — default `issue` both. */
+export interface RelationKinds {
+  sourceType?: RelationEndpointType;
+  targetType?: RelationEndpointType;
+}
 
 /**
  * Project-wide issue relations (MIN-25). One list per project, kept fresh by the
@@ -36,12 +46,19 @@ export function useIssueRelationsQuery(projectId: string | null) {
   }, [queryClient, projectId]);
 
   const addRelation = useCallback(
-    async (sourceId: string, type: IssueRelationType, targetId: string) => {
+    async (
+      sourceId: string,
+      type: IssueRelationType,
+      targetId: string,
+      kinds?: RelationKinds
+    ) => {
       if (!projectId) return;
       const created = await addIssueRelationApi(projectId, {
         source_id: sourceId,
         target_id: targetId,
         type,
+        source_type: kinds?.sourceType,
+        target_type: kinds?.targetType,
       });
       // Record the server-normalized row (blocked_by → inverted blocks).
       record({
@@ -52,6 +69,8 @@ export function useIssueRelationsQuery(projectId: string | null) {
           source_id: created.source_id,
           target_id: created.target_id,
           type: created.type,
+          source_type: created.source_type,
+          target_type: created.target_type,
         },
       });
       // Merge the created (or already-existing) row in immediately; realtime +
@@ -85,6 +104,8 @@ export function useIssueRelationsQuery(projectId: string | null) {
               source_id: removed.source_id,
               target_id: removed.target_id,
               type: removed.type,
+              source_type: removed.source_type,
+              target_type: removed.target_type,
             },
           });
         }

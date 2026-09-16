@@ -127,6 +127,7 @@ import type {
   IssueUpdateInput,
   Member,
   Objective,
+  RelationEndpointType,
 } from "@/lib/types";
 import {
   Tooltip,
@@ -171,7 +172,11 @@ export function IssueSidePanel({
   onAddRelation: (
     sourceId: string,
     type: IssueRelationType,
-    targetId: string
+    targetId: string,
+    kinds?: {
+      sourceType?: RelationEndpointType;
+      targetType?: RelationEndpointType;
+    }
   ) => void;
   onRemoveRelation: (relationId: string) => void;
   /** Tab to show when the panel (re)opens on a new issue. */
@@ -345,18 +350,26 @@ export function IssueSidePanel({
 
   // This issue's relations, resolved to the display shape (with the other
   // issue's number) and priority-sorted. Numbers come from allIssues so a
-  // filtered-out target still resolves.
+  // filtered-out target still resolves; OBJECTIVE ends (MIN-513) carry their
+  // name instead — they have no ticket number.
   const resolvedRelations = useMemo<ChipRelation[]>(() => {
     if (!issue) return [];
     const byId = new Map(allIssues.map((i) => [i.id, i]));
+    const objectiveById = new Map(objectives.map((o) => [o.id, o]));
     const statusById = new Map(allIssues.map((i) => [i.id, i.status]));
     return resolveRelations(issue.id, relations, statusById)
-      .map((r) => {
+      .map((r): ChipRelation | null => {
+        if (r.otherType === "objective") {
+          const objective = objectiveById.get(r.otherId);
+          return objective
+            ? { ...r, otherType: "objective" as const, otherName: objective.name }
+            : null;
+        }
         const other = byId.get(r.otherId);
         return other ? { ...r, otherNumber: other.number } : null;
       })
       .filter((r): r is ChipRelation => r !== null);
-  }, [issue?.id, relations, allIssues]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [issue?.id, relations, allIssues, objectives]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // New work enters the common Numo conversation. Historical worker sessions
   // remain available only as navigation to existing execution details.
@@ -430,11 +443,21 @@ export function IssueSidePanel({
     if (!issue) return null;
     const titleById = new Map(allIssues.map((i) => [i.id, i.title]));
     return {
-      relations: resolvedRelations.map((r) => ({
-        type: r.relation,
-        identifier: issueIdentifier(projectKey, r.otherNumber),
-        title: titleById.get(r.otherId) ?? "",
-      })),
+      relations: resolvedRelations.map((r) =>
+        r.otherType === "objective"
+          ? {
+              type: r.relation,
+              objective: true,
+              identifier: "",
+              title: r.otherName ?? "",
+            }
+          : {
+              type: r.relation,
+              objective: false,
+              identifier: issueIdentifier(projectKey, r.otherNumber ?? 0),
+              title: titleById.get(r.otherId) ?? "",
+            }
+      ),
       // Category names (IDs live on the issue, names in `categories`).
       categories: issue.category_ids
         .map((cid) => categories.find((c) => c.id === cid)?.name)
@@ -1075,6 +1098,7 @@ export function IssueSidePanel({
                     issue={issue}
                     relations={resolvedRelations}
                     allIssues={allIssues}
+                    objectives={objectives}
                     projectKey={projectKey}
                     onOpenIssue={onOpenIssue}
                     onAddRelation={onAddRelation}

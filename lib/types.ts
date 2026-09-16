@@ -1041,13 +1041,22 @@ export type { CycleIntensity };
     `blocked_by` is the inverse read of a stored `blocks` edge. */
 export type IssueRelationType = "blocks" | "blocked_by" | "related";
 
+/** What a relation endpoint points at (MIN-513). Relations may now also pair
+    an issue with an objective, or two objectives; `issue` is the default for
+    every row written before objectives could carry relations. */
+export type RelationEndpointType = "issue" | "objective";
+
 /** A stored relation row as returned by the API (only `blocks`/`related` are
-    persisted; `blocked_by` is derived per-issue on the client). */
+    persisted; `blocked_by` is derived per-issue on the client). The kind
+    columns are optional in the type so pre-migration producers stay assignable;
+    readers default them to `issue` (see endpointType). */
 export interface IssueRelation {
   id: string;
   source_id: string;
   target_id: string;
   type: "blocks" | "related";
+  source_type?: RelationEndpointType;
+  target_type?: RelationEndpointType;
 }
 
 /** A relation resolved from one issue's perspective, ready for the UI. */
@@ -1057,6 +1066,9 @@ export interface ResolvedRelation {
   relation: IssueRelationType;
   /** The other issue in the pair. */
   otherId: string;
+  /** What the other end is (MIN-513) — `issue` when unknown (pre-migration
+      producers don't send the kind columns). */
+  otherType?: RelationEndpointType;
   /** A blocking relation whose blocker is closed (done/canceled/duplicate) no
       longer constrains: it's kept in the DB but surfaced as resolved rather than
       as an active blockage. Always false for `related`, and false whenever the
@@ -1069,6 +1081,9 @@ export interface CreateIssueRelationInput {
   target_id: string;
   /** Relation type from `source_id`'s perspective. */
   type: IssueRelationType;
+  /** Endpoint kinds (MIN-513) — default `issue` for both. */
+  source_type?: RelationEndpointType;
+  target_type?: RelationEndpointType;
 }
 
 export type IntegrationWebhookEvent =

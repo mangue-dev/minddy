@@ -12,7 +12,10 @@ import {
   type IssueLinkedFeedback,
 } from "@/lib/server/feedback/team-queries";
 import { resourceSummary } from "@/lib/server/resource-select";
-import type { IssueRelation } from "@/lib/types";
+import type {
+  IssueRelation,
+  IssueRelationType,
+} from "@/lib/types";
 
 // ── Numo / MCP shared readings ───────────────────────────────────────
 // Extracted from execute-tool.ts to be served to both consumers:
@@ -89,6 +92,25 @@ export async function assertIssueInProject(
     .eq("project_id", projectId)
     .maybeSingle();
   if (!data) return { ok: false, error: "Issue not found in this project." };
+  return { ok: true };
+}
+
+/** Same project pin as assertIssueInProject, for an objective endpoint
+ *  (MIN-513 — relations can now touch objectives). */
+export async function assertObjectiveInProject(
+  db: SupabaseClient,
+  objectiveId: string,
+  projectId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!objectiveId) return { ok: false, error: "objective_id is required." };
+  const { data } = await db
+    .from("objectives")
+    .select("id")
+    .is("deleted_at", null)
+    .eq("id", objectiveId)
+    .eq("project_id", projectId)
+    .maybeSingle();
+  if (!data) return { ok: false, error: "Objective not found in this project." };
   return { ok: true };
 }
 
@@ -172,6 +194,197 @@ export async function resolveIssueRef(
       identifier: issueIdentifier(scope.projectKey, data.number as number),
     },
   };
+}
+
+export async function resolveObjectiveRef(
+  db: SupabaseClient,
+  scope: { projectId: string },
+  ref: unknown
+): Promise<
+  | {
+      objective: {
+        id: string;
+        name: string;
+        status: string;
+        lead_user_id: string | null;
+      };
+    }
+  | { error: string; code: IssueRefErrorCode }
+> {
+  const raw = typeof ref === "string" ? ref.trim().replace(/^obj:/i, "") : "";
+  if (!raw) {
+    return {
+      code: "invalid_params",
+      error: "objective is required — pass its UUID, or 'obj:<name>'.",
+    };
+  }
+
+  // "obj:" forces the name path; otherwise the UUID wins, then the exact name.
+  const byName = async (): Promise<Record<string, unknown> | null> => {
+    const { data } = await db
+      .from("objectives")
+      .select("id, name, status, lead_user_id")
+      .is("deleted_at", null)
+      .eq("project_id", scope.projectId)
+      .ilike("name", ilikePattern(raw))
+      .limit(2);
+    const rows = (data ?? []) as Array<Record<string, unknown>>;
+    return (
+      rows.find((r) => (r.name as string).toLowerCase() === raw.toLowerCase()) ??
+      null
+    );
+  };
+
+  let row: Record<string, unknown> | null = null;
+  if (!raw.startsWith("obj:") && UUID_RE.test(raw)) {
+    const { data } = await db
+      .from("objectives")
+      .select("id, name, status, lead_user_id")
+      .is("deleted_at", null)
+      .eq("id", raw)
+      .eq("project_id", scope.projectId)
+      .maybeSingle();
+    row = data as Record<string, unknown> | null;
+  }
+  if (!row) row = await byName();
+  if (!row) {
+    return {
+      code: "issue_not_found",
+      error: `Objective '${raw}' not found in this project.`,
+    };
+  }
+  return {
+    objective: {
+      id: row.id as string,
+      name: row.name as string,
+      status: row.status as string,
+      lead_user_id: (row.lead_user_id as string | null) ?? null,
+    },
+  };
+}
+
+/** One relation of a ticket or an objective, resolved to that entity's
+    perspective and hydrated with the other end (MIN-513). */
+export interface ResolvedIssueEndRelation {
+  relation: IssueRelationType;
+  /** The entity the relation was resolved FROM. */
+  entityId: string;
+  kind: "issue";
+  other: {
+    id: string;
+    identifier: string;
+    title: string;
+    status: string;
+  };
+}
+
+export interface ResolvedObjectiveEndRelation {
+  relation: IssueRelationType;
+  entityId: string;
+  kind: "objective";
+  other: {
+    id: string;
+    name: string;
+    status: string;
+    lead_user_id: string | null;
+  };
+}
+
+export type ResolvedEntityRelation =
+  | ResolvedIssueEndRelation
+  | ResolvedObjectiveEndRelation;
+
+/**
+ * Every relation touching `entityId` — an issue OR an objective (MIN-513) —
+ * resolved to that entity's perspective and hydrated with the other end: an
+ * issue end carries identifier/title/status, an objective end carries
+ * name/status/lead. Trashed ends are dropped (they no longer constrain) and
+ * blocking edges are marked resolved once their blocker is closed.
+ */
+export async function resolveEntityRelations(
+  db: SupabaseClient,
+  scope: { projectId: string; projectKey: string },
+  entityId: string
+): Promise<ResolvedEntityRelation[]> {
+  const { data: relationRows } = await db
+    .from("issue_relations")
+    .select("id, source_id, source_type, target_id, target_type, type")
+    .eq("project_id", scope.projectId)
+    .or(`source_id.eq.${entityId},target_id.eq.${entityId}`);
+  const resolved = resolveRelations(
+    entityId,
+    (relationRows ?? []) as unknown as IssueRelation[]
+  );
+
+  const issueIds = resolved
+    .filter((r) => r.otherType !== "objective")
+    .map((r) => r.otherId);
+  const objectiveIds = resolved
+    .filter((r) => r.otherType === "objective")
+    .map((r) => r.otherId);
+  const [relatedIssues, relatedObjectives] = await Promise.all([
+    issueIds.length
+      ? db
+          .from("issues")
+          .select("id, number, title, status")
+          .is("deleted_at", null)
+          .eq("project_id", scope.projectId)
+          .in("id", [...new Set(issueIds)])
+      : Promise.resolve({ data: [] }),
+    objectiveIds.length
+      ? db
+          .from("objectives")
+          .select("id, name, status, lead_user_id")
+          .is("deleted_at", null)
+          .eq("project_id", scope.projectId)
+          .in("id", [...new Set(objectiveIds)])
+      : Promise.resolve({ data: [] }),
+  ]);
+  const issueMap = new Map(
+    ((relatedIssues.data ?? []) as Array<Record<string, unknown>>).map((o) => [
+      o.id as string,
+      o,
+    ])
+  );
+  const objectiveMap = new Map(
+    ((relatedObjectives.data ?? []) as Array<Record<string, unknown>>).map(
+      (o) => [o.id as string, o]
+    )
+  );
+
+  const out: ResolvedEntityRelation[] = [];
+  for (const r of resolved) {
+    if (r.otherType === "objective") {
+      const other = objectiveMap.get(r.otherId);
+      if (!other) continue;
+      out.push({
+        relation: r.relation,
+        entityId,
+        kind: "objective",
+        other: {
+          id: other.id as string,
+          name: other.name as string,
+          status: other.status as string,
+          lead_user_id: (other.lead_user_id as string | null) ?? null,
+        },
+      });
+    } else {
+      const other = issueMap.get(r.otherId);
+      if (!other) continue;
+      out.push({
+        relation: r.relation,
+        entityId,
+        kind: "issue",
+        other: {
+          id: other.id as string,
+          identifier: issueIdentifier(scope.projectKey, other.number as number),
+          title: other.title as string,
+          status: other.status as string,
+        },
+      });
+    }
+  }
+  return out;
 }
 
 export async function listIssues(
@@ -463,41 +676,36 @@ export async function getIssue(
     }
   }
 
-  // Relations (MIN-25): rows touching this issue, resolved to its perspective
-  // and hydrated with the other issue's identifier/title/status.
-  const { data: relationRows } = await ctx.db
-    .from("issue_relations")
-    .select("id, source_id, target_id, type")
-    .eq("project_id", ctx.projectId)
-    .or(`source_id.eq.${issue.id},target_id.eq.${issue.id}`);
-  const resolved = resolveRelations(
-    issue.id as string,
-    (relationRows ?? []) as unknown as IssueRelation[]
+  // Relations (MIN-25, extended to objectives in MIN-513): rows touching this
+  // issue, resolved to its perspective and hydrated with the other end.
+  const relations = await resolveEntityRelations(
+    ctx.service,
+    { projectId: ctx.projectId, projectKey: ctx.projectKey },
+    issue.id as string
   );
-  const otherIds = [...new Set(resolved.map((r) => r.otherId))];
-  const { data: relatedIssues } = otherIds.length
-    ? await ctx.db
-        .from("issues")
-        .select("id, number, title, status")
-        .is("deleted_at", null)
-        .eq("project_id", ctx.projectId)
-        .in("id", otherIds)
-    : { data: [] as Array<Record<string, unknown>> };
-  const relatedMap = new Map(
-    (relatedIssues ?? []).map((o) => [o.id as string, o])
+  // The MCP shape keeps its historical keys for issue ends; objective ends
+  // carry `objective_id` / `name` / `lead_user_id` instead.
+  const relationList = relations.map((r) =>
+    r.kind === "objective"
+      ? {
+          relation: r.relation,
+          issue_id: null,
+          objective_id: r.other.id,
+          identifier: null,
+          title: null,
+          name: r.other.name,
+          status: r.other.status,
+          lead_user_id: r.other.lead_user_id,
+        }
+      : {
+          relation: r.relation,
+          issue_id: r.other.id,
+          objective_id: null,
+          identifier: r.other.identifier,
+          title: r.other.title,
+          status: r.other.status,
+        }
   );
-  const relations = resolved.map((r) => {
-    const other = relatedMap.get(r.otherId);
-    return {
-      relation: r.relation,
-      issue_id: r.otherId,
-      identifier: other
-        ? issueIdentifier(ctx.projectKey, other.number as number)
-        : null,
-      title: other?.title ?? null,
-      status: other?.status ?? null,
-    };
-  });
 
   // The returns that this ticket implements (MIN-196). Read by `ctx.service` and
   // not by `ctx.db`: `feedback_posts` is RLS deny-all, and the client of
@@ -529,7 +737,7 @@ export async function getIssue(
       ...s,
       identifier: issueIdentifier(ctx.projectKey, s.number as number),
     })),
-    relations,
+    relations: relationList,
     ...(duplicateOf ? { duplicate_of: duplicateOf } : {}),
     ...(linkedFeedback.length > 0 ? { linked_feedback: linkedFeedback } : {}),
     ...(githubMetadata ? { github_metadata: githubMetadata } : {}),

@@ -6,9 +6,12 @@
 //
 // Adding is two steps in ONE popover: the link button opens the list of relation
 // types, and picking one advances the SAME popover to the searchable list of
-// candidate issues. (The board's right-click menu and the MCP tool are the other
-// entry points; the menu chains two overlays instead, which it can afford —
-// there's no Dialog around a card.)
+// candidate ends. Since MIN-513 the candidates mix tickets and objectives — a
+// relation can block through an objective, or link one.
+//
+// (The board's right-click menu and the MCP tool are the other entry points;
+// the menu chains two overlays instead, which it can afford — there's no Dialog
+// around a card.)
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -22,16 +25,26 @@ import {
   FEEDBACK_TO_ISSUE_STATUS,
   type IssueLinkedFeedback,
 } from "@/lib/feedback/types";
-import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
+import {
+  ObjectiveStatusIndicator,
+  RelationIcon,
+  StatusIndicator,
+} from "@/components/issue-indicators";
 import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { SearchMenu } from "@/components/search-menu";
 import type { ChipRelation } from "@/components/relation-chips";
-import type { Issue, IssueRelationType } from "@/lib/types";
+import type {
+  Issue,
+  IssueRelationType,
+  Objective,
+  RelationEndpointType,
+} from "@/lib/types";
 
 export function RelationsSection({
   issue,
   relations,
   allIssues,
+  objectives,
   projectKey,
   onOpenIssue,
   onAddRelation,
@@ -41,12 +54,15 @@ export function RelationsSection({
   /** This issue's relations, resolved (with otherNumber) and priority-sorted. */
   relations: ChipRelation[];
   allIssues: Issue[];
+  /** The project's objectives — relation targets too, since MIN-513. */
+  objectives: Objective[];
   projectKey: string;
   onOpenIssue: (issueId: string) => void;
   onAddRelation: (
     sourceId: string,
     type: IssueRelationType,
-    targetId: string
+    targetId: string,
+    kinds?: { sourceType?: RelationEndpointType; targetType?: RelationEndpointType }
   ) => void;
   onRemoveRelation: (relationId: string) => void;
 }) {
@@ -80,15 +96,21 @@ export function RelationsSection({
     [allIssues]
   );
 
-  // Candidates: other OPEN issues not already linked here — relating to
+  // Candidates: other OPEN ends not already linked here — relating to
   // done/canceled work is pointless (a closed blocker doesn't block, and the
-  // resolver would mark it spent immediately).
+  // resolver would mark it spent immediately). Issues first, objectives after.
   const candidates = useMemo<Issue[]>(() => {
     const linked = new Set(relations.map((r) => r.otherId));
     return allIssues.filter(
       (i) => i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status)
     );
   }, [allIssues, relations, issue.id]);
+  const objectiveCandidates = useMemo<Objective[]>(() => {
+    const linked = new Set(relations.map((r) => r.otherId));
+    return objectives.filter(
+      (o) => !linked.has(o.id) && o.status !== "done" && o.status !== "canceled"
+    );
+  }, [objectives, relations]);
 
   const grouped = useMemo(
     () =>
@@ -121,7 +143,7 @@ export function RelationsSection({
           tooltip={t("addRelationAria")}
           searchValue={query}
           onSearchValueChange={setQuery}
-          searchPlaceholder={step ? t("searchIssue") : undefined}
+          searchPlaceholder={step ? t("searchTarget") : undefined}
           // Wider than the default w-60: in step 2 we choose a ticket
           // by its title, and 240px cut it by a third. Stay in the panel.
           contentClassName="w-80"
@@ -159,28 +181,53 @@ export function RelationsSection({
               ))}
             </CommandGroup>
           ) : (
-            <CommandGroup heading={t(`pick_${step}`)}>
-              {candidates.map((candidate) => {
-                const id = issueIdentifier(projectKey, candidate.number);
-                return (
-                  <CommandItem
-                    key={candidate.id}
-                    value={candidate.id}
-                    keywords={[id, candidate.title]}
-                    onSelect={() => {
-                      onAddRelation(issue.id, step, candidate.id);
-                      close();
-                    }}
-                  >
-                    <StatusIndicator status={candidate.status} className="size-4" />
-                    <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                      {id}
-                    </span>
-                    <span className="truncate">{candidate.title}</span>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
+            <>
+              <CommandGroup heading={t(`pick_${step}`)}>
+                {candidates.map((candidate) => {
+                  const id = issueIdentifier(projectKey, candidate.number);
+                  return (
+                    <CommandItem
+                      key={candidate.id}
+                      value={candidate.id}
+                      keywords={[id, candidate.title]}
+                      onSelect={() => {
+                        onAddRelation(issue.id, step, candidate.id);
+                        close();
+                      }}
+                    >
+                      <StatusIndicator status={candidate.status} className="size-4" />
+                      <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                        {id}
+                      </span>
+                      <span className="truncate">{candidate.title}</span>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+              {objectiveCandidates.length > 0 && (
+                <CommandGroup heading={t("objectives")}>
+                  {objectiveCandidates.map((objective) => (
+                    <CommandItem
+                      key={objective.id}
+                      value={objective.id}
+                      keywords={[objective.name]}
+                      onSelect={() => {
+                        onAddRelation(issue.id, step, objective.id, {
+                          targetType: "objective",
+                        });
+                        close();
+                      }}
+                    >
+                      <ObjectiveStatusIndicator
+                        status={objective.status}
+                        className="size-4"
+                      />
+                      <span className="truncate">{objective.name}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+            </>
           )}
         </SearchMenu>
       </PropertyRow>
@@ -195,8 +242,14 @@ export function RelationsSection({
               </div>
               <div className="flex flex-col">
                 {group.items.map((r) => {
+                  const isObjective = r.otherType === "objective";
+                  const objective = isObjective
+                    ? objectives.find((o) => o.id === r.otherId)
+                    : undefined;
                   const other = issueById.get(r.otherId);
-                  const id = issueIdentifier(projectKey, r.otherNumber);
+                  const id = isObjective
+                    ? null
+                    : issueIdentifier(projectKey, r.otherNumber ?? 0);
                   return (
                     <div
                       key={r.id}
@@ -204,26 +257,44 @@ export function RelationsSection({
                     >
                       <button
                         type="button"
-                        onClick={() => onOpenIssue(r.otherId)}
+                        onClick={() =>
+                          isObjective
+                            ? router.push(
+                                `/projects/${issue.project_id}/objectives?open=${r.otherId}`
+                              )
+                            : onOpenIssue(r.otherId)
+                        }
                         className="flex min-w-0 flex-1 items-center gap-2 text-left"
                       >
-                        {other && (
-                          <StatusIndicator
-                            status={other.status}
-                            className="size-4 shrink-0"
-                          />
+                        {isObjective ? (
+                          objective && (
+                            <ObjectiveStatusIndicator
+                              status={objective.status}
+                              className="size-4 shrink-0"
+                            />
+                          )
+                        ) : (
+                          other && (
+                            <StatusIndicator
+                              status={other.status}
+                              className="size-4 shrink-0"
+                            />
+                          )
                         )}
                         <span className="w-14 shrink-0 font-mono text-xs text-muted-foreground">
-                          {id}
+                          {id ?? ""}
                         </span>
                         <span
                           className={cn(
                             "min-w-0 flex-1 truncate text-sm",
-                            other?.status === "done" &&
+                            !isObjective &&
+                              other?.status === "done" &&
                               "text-muted-foreground line-through"
                           )}
                         >
-                          {other?.title ?? id}
+                          {isObjective
+                            ? (objective?.name ?? r.otherName ?? "")
+                            : (other?.title ?? id)}
                         </span>
                         {r.resolved && (
                           <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">

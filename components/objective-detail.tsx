@@ -44,6 +44,7 @@ import { SearchSelect, type PickerOption } from "@/components/search-select";
 import { ObjectiveProgressStat } from "@/components/objective-progress";
 import { ObjectiveMomentum } from "@/components/objective-momentum";
 import { ObjectiveResourcesSection } from "@/components/objective-resources-section";
+import { ObjectiveRelationsSection } from "@/components/objective-relations-section";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import {
   DictateButton,
@@ -191,6 +192,7 @@ function ObjectiveColorValue({
 export function ObjectiveDetail({
   objective,
   projectId,
+  projectKey,
   members,
   issues,
   onUpdate,
@@ -200,6 +202,8 @@ export function ObjectiveDetail({
 }: {
   objective: Objective;
   projectId: string;
+  /** The project key, for the relation rows' ticket identifiers (MIN-513). */
+  projectKey: string;
   members: Member[];
   /** All project issues — powers the done/total progress. */
   issues: Issue[];
@@ -558,6 +562,12 @@ export function ObjectiveDetail({
                 onChange={(color) => void patch({ color })}
               />
             </PropertyRow>
+            <ObjectiveRelationsSection
+              objective={objective}
+              projectId={projectId}
+              projectKey={projectKey}
+              issues={issues}
+            />
             <ObjectiveResourcesSection
               objectiveId={objective.id}
               projectId={projectId}

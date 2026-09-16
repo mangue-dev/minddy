@@ -2211,7 +2211,9 @@
     "pick_blocked_by": "Bloqueado por qual problema?",
     "pick_related": "Relacionado a qual problema?",
     "addRelationAria": "Link para um problema",
-    "searchIssue": "Pesquisar um problema…"
+    "searchIssue": "Pesquisar um problema…",
+    "searchTarget": "Pesquisar um problema…",
+    "objectives": "Objetivos"
   },
   "Profile": {
     "avatarLabel": "Avatar",

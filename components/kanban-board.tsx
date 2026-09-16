@@ -168,7 +168,7 @@ export const KanbanBoard = memo(function KanbanBoard({
     const resolvedByIssue = resolveRelationsByIssue(relations, statusById);
     for (const issue of issues) {
       const resolved = (resolvedByIssue.get(issue.id) ?? [])
-        .map((r) => {
+        .map((r): ChipRelation | null => {
           const other = allIssueMap.get(r.otherId);
           return other ? { ...r, otherNumber: other.number } : null;
         })

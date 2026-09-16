@@ -6,7 +6,7 @@ import {
   addIssueRelation,
   listIssueRelations,
 } from "@/lib/server/issue-relations";
-import { isRelationType } from "@/lib/relation-constants";
+import { isRelationType, endpointType } from "@/lib/relation-constants";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -26,7 +26,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 }
 
 /** POST /api/projects/[id]/issue-relations — add a relation (access enforced
-    in the core). Body: { source_id, target_id, type }. */
+    in the core). Body: { source_id, target_id, type, source_type?, target_type? }
+    — the endpoint kinds are optional (MIN-513), default `issue` for both. */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
@@ -45,7 +46,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
 
-  const { source_id, target_id, type } = (body ?? {}) as Record<string, unknown>;
+  const { source_id, target_id, type, source_type, target_type } = (body ??
+    {}) as Record<string, unknown>;
   if (typeof source_id !== "string" || typeof target_id !== "string") {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
@@ -59,6 +61,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     sourceId: source_id,
     targetId: target_id,
     type,
+    sourceType: endpointType(source_type),
+    targetType: endpointType(target_type),
   });
   if (!result.ok) {
     const message = result.rawMessage ?? t(result.errorKey ?? "databaseError");

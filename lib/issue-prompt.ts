@@ -2,11 +2,14 @@ import { hasPlanTasks, parsePlan } from "@/lib/plan";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { Issue, IssueRelationType } from "@/lib/types";
 
-/** One relation to another issue, resolved from this issue's perspective:
- *  the relation type (`blocks`/`blocked_by`/`related`), the linked issue's
- *  identifier (e.g. MIN-10) and its title. */
+/** One relation to another issue — or, since MIN-513, to an objective —
+ *  resolved from this issue's perspective: the relation type
+ *  (`blocks`/`blocked_by`/`related`), the linked end's identifier (e.g. MIN-10;
+ *  empty for an objective) and its title (the objective's name). */
 export interface PromptRelation {
   type: IssueRelationType;
+  /** True when the other end is an OBJECTIVE (its `title` is its name). */
+  objective?: boolean;
   identifier: string;
   title: string;
 }
@@ -56,7 +59,9 @@ function issueBlock({
           `  <relations>`,
           ...relations.map(
             (r) =>
-              `    <relation type="${r.type}">\n      <identifier>${r.identifier}</identifier>\n      <title>${r.title}</title>\n    </relation>`
+              `    <relation type="${r.type}"${
+                r.objective ? ' target="objective"' : ""
+              }>\n      <identifier>${r.identifier}</identifier>\n      <title>${r.title}</title>\n    </relation>`
           ),
           `  </relations>`,
         ]

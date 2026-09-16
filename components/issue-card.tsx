@@ -1149,11 +1149,13 @@ const IssueCardContent = memo(function IssueCardContent({
       (getCandidateIssues?.() ?? []).map((i) => [i.id, i.title]),
     );
     return {
-      relations: (relations ?? []).map((r) => ({
-        type: r.relation,
-        identifier: issueIdentifier(projectKey, r.otherNumber),
-        title: titleById.get(r.otherId) ?? "",
-      })),
+      relations: (relations ?? [])
+        .filter((r) => r.otherType !== "objective")
+        .map((r) => ({
+          type: r.relation,
+          identifier: issueIdentifier(projectKey, r.otherNumber ?? 0),
+          title: titleById.get(r.otherId) ?? "",
+        })),
       // Category names (IDs live on the issue, names in categoryMap).
       categories: issue.category_ids
         .map((cid) => categoryMap.get(cid)?.name)

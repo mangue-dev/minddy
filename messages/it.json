@@ -2211,7 +2211,9 @@
     "pick_blocked_by": "Bloccato da quale ticket?",
     "pick_related": "In relazione a quale ticket?",
     "addRelationAria": "Collega a un ticket",
-    "searchIssue": "Cerca un ticket..."
+    "searchIssue": "Cerca un ticket...",
+    "searchTarget": "Cerca un ticket...",
+    "objectives": "Obiettivi"
   },
   "Profile": {
     "avatarLabel": "Avatar",

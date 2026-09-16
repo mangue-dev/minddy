@@ -8,6 +8,7 @@ import {
   getIssue,
   listIssues,
   listMembers,
+  resolveEntityRelations,
   searchIssues,
   type ReadContext,
 } from "@/lib/server/issue-reads";
@@ -138,6 +139,7 @@ import {
   requireUser,
   resolveProject,
   resolveIssueRef,
+  resolveObjectiveRef,
   READ_ONLY,
   WRITE,
   WRITE_IDEMPOTENT,
@@ -1591,8 +1593,10 @@ export function registerMinddyTools(
         "whole description (the goal, not the truncated line " +
         "minddy_list_objectives shows), status, lead, target date, weighted " +
         "progress, the ISSUES it groups (identifier, title, status, priority, " +
-        "effort, assignee), its resources — files, links AND pages of the wiki " +
-        "(read one with minddy_get_resource, attach one with minddy_add_resource) —, its COMMENT " +
+        "effort, assignee), its RELATIONS (MIN-513 — issues or objectives it " +
+        "blocks / is blocked by / is linked to), its resources — files, links " +
+        "AND pages of the wiki (read one with minddy_get_resource, attach one " +
+        "with minddy_add_resource) —, its COMMENT " +
         "THREAD with author names, and the last activity events with resolved " +
         "actors. Read it before commenting on an objective or reporting on it: " +
         "the thread is where the team already said what it thinks, and the " +
@@ -1627,6 +1631,7 @@ export function registerMinddyTools(
         { data: issues },
         { data: comments },
         { data: attachmentRows },
+        relationRows,
         activity,
       ] = await Promise.all([
         service
@@ -1649,6 +1654,14 @@ export function registerMinddyTools(
           )
           .eq("objective_id", objective.id)
           .order("created_at", { ascending: true }),
+        resolveEntityRelations(
+          service,
+          {
+            projectId: scope.access.project.id,
+            projectKey: scope.access.project.key,
+          },
+          objective.id as string,
+        ),
         recentActivity({ objective_id: objective.id as string }),
       ]);
 
@@ -1728,6 +1741,23 @@ export function registerMinddyTools(
               ? displayName(toNamed(users.get(i.assignee_id)), "User")
               : null,
         })),
+        relations: relationRows.map((r) =>
+          r.kind === "objective"
+            ? {
+                relation: r.relation,
+                objective_id: r.other.id,
+                name: r.other.name,
+                status: r.other.status,
+                lead_user_id: r.other.lead_user_id,
+              }
+            : {
+                relation: r.relation,
+                issue_id: r.other.id,
+                identifier: r.other.identifier,
+                title: r.other.title,
+                status: r.other.status,
+              }
+        ),
         comments: (comments ?? []).map((c) => {
           const commentResources = resourcesByComment.get(c.id as string);
           return {
@@ -2895,22 +2925,41 @@ export function registerMinddyTools(
     {
       title: "Link issues",
       description:
-        "Create or remove a relation between two issues (MIN-25). From `issue`'s " +
-        "point of view: 'blocks' (issue blocks target), 'blocked_by' (issue is " +
-        "blocked by target), or 'related' (a soft link). Pass remove=true to delete " +
-        "that relation instead. Idempotent: adding an existing relation, or " +
-        "removing an absent one, is a no-op. " +
-        "Use it every time you notice a dependency between two issues — it is " +
-        "what makes a backlog orderable, and nothing else records it. On issues " +
-        "you are CREATING, don't call this after the fact: minddy_create_issue " +
+        "Create or remove a relation between two issues (MIN-25) or across " +
+        "issues and objectives (MIN-513). From `issue`'s (or `objective`'s) " +
+        "point of view: 'blocks' (source blocks target), 'blocked_by' (source " +
+        "is blocked by target), or 'related' (a soft link). Pass remove=true to " +
+        "delete that relation instead. Idempotent: adding an existing relation, " +
+        "or removing an absent one, is a no-op. " +
+        "Use it every time you notice a dependency — it is what makes a backlog " +
+        "orderable, and nothing else records it. Relations can pair two issues, " +
+        "an issue and an objective, or two objectives; blocking through an " +
+        "objective cascades to its issues in the cycle filler. On issues you " +
+        "are CREATING, don't call this after the fact: minddy_create_issue " +
         "takes `relations` in the same call, siblings included.",
       inputSchema: z.object({
         project_id: PROJECT_ID,
-        issue: ISSUE_REF,
+        issue: ISSUE_REF.optional().describe(
+          "The ISSUE the relation is stated FROM (its perspective). Pass " +
+            "either `issue` or `objective`, never both.",
+        ),
+        objective: z
+          .string()
+          .optional()
+          .describe(
+            "The OBJECTIVE the relation is stated FROM (objective → issue, or " +
+              "objective → objective). UUID, or 'obj:<name>'.",
+          ),
         relation: z
           .enum(["blocks", "blocked_by", "related"])
-          .describe("Relation type from `issue`'s perspective."),
-        target: ISSUE_REF.describe("The other issue in the relation."),
+          .describe("Relation type from the source's perspective."),
+        target: z
+          .string()
+          .describe(
+            "The other end of the relation: an issue (UUID, identifier like " +
+              "'MIND-42', or bare issue number) or an objective (UUID, or " +
+              "'obj:<name>').",
+          ),
         remove: z
           .boolean()
           .optional()
@@ -2921,26 +2970,85 @@ export function registerMinddyTools(
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
-      const src = await resolveIssueRef(scope.access, args.issue);
-      if ("error" in src) return src.error;
-      const tgt = await resolveIssueRef(scope.access, args.target);
-      if ("error" in tgt) return tgt.error;
-      if (src.issue.id === tgt.issue.id) {
-        return fail("invalid_params", "An issue can't be related to itself.");
+      if (Boolean(args.issue) === Boolean(args.objective)) {
+        return fail(
+          "invalid_params",
+          "Pass exactly one of `issue` or `objective` as the relation's source.",
+        );
       }
+
+      type Endpoint =
+        | { kind: "issue"; id: string; label: string }
+        | { kind: "objective"; id: string; label: string };
+
+      const resolveEnd = async (
+        ref: string,
+        forceObjective: boolean
+      ): Promise<{ endpoint: Endpoint } | { error: ToolResult }> => {
+        if (forceObjective || /^obj:/i.test(ref)) {
+          const obj = await resolveObjectiveRef(scope.access, ref);
+          if ("error" in obj) return { error: obj.error };
+          return {
+            endpoint: {
+              kind: "objective",
+              id: obj.objective.id,
+              label: obj.objective.name,
+            },
+          };
+        }
+        const asIssue = await resolveIssueRef(scope.access, ref);
+        if (!("error" in asIssue)) {
+          return {
+            endpoint: {
+              kind: "issue",
+              id: asIssue.issue.id,
+              label: asIssue.issue.identifier,
+            },
+          };
+        }
+        // Not an issue: fall back to an objective (agents pass the UUID
+        // minddy_get_objective returned, with no marker).
+        const asObjective = await resolveObjectiveRef(scope.access, ref);
+        if ("error" in asObjective) return { error: asIssue.error };
+        return {
+          endpoint: {
+            kind: "objective",
+            id: asObjective.objective.id,
+            label: asObjective.objective.name,
+          },
+        };
+      };
+
+      const srcResolved = args.issue
+        ? await resolveEnd(args.issue, false)
+        : await resolveEnd(args.objective as string, true);
+      if ("error" in srcResolved) return srcResolved.error;
+      const src = srcResolved.endpoint;
+      const tgtResolved = await resolveEnd(args.target, false);
+      if ("error" in tgtResolved) return tgtResolved.error;
+      const tgt = tgtResolved.endpoint;
+      if (src.kind === tgt.kind && src.id === tgt.id) {
+        return fail(
+          "invalid_params",
+          "An entity can't be related to itself.",
+        );
+      }
+
+      const sourceSpec = { id: src.id, type: src.kind };
+      const targetSpec = { id: tgt.id, type: tgt.kind };
 
       if (args.remove) {
         const existing = await findIssueRelation(
           scope.access.project.id,
-          src.issue.id,
+          sourceSpec,
           args.relation,
-          tgt.issue.id,
+          targetSpec,
         );
         if (!existing) {
           return ok({
             removed: false,
-            issue: src.issue.identifier,
-            target: tgt.issue.identifier,
+            source: src.label,
+            target: tgt.label,
           });
         }
         const result = await removeIssueRelation({
@@ -2951,26 +3059,32 @@ export function registerMinddyTools(
         if (!result.ok) return coreFail(result);
         return ok({
           removed: true,
-          issue: src.issue.identifier,
           relation: args.relation,
-          target: tgt.issue.identifier,
+          source: src.label,
+          source_kind: src.kind,
+          target: tgt.label,
+          target_kind: tgt.kind,
         });
       }
 
       const result = await addIssueRelation({
         projectId: scope.access.project.id,
         actorId: scope.userId,
-        sourceId: src.issue.id,
-        targetId: tgt.issue.id,
+        sourceId: src.id,
+        targetId: tgt.id,
         type: args.relation,
+        sourceType: src.kind,
+        targetType: tgt.kind,
         mcpKeyId: scope.keyId,
       });
       if (!result.ok) return coreFail(result);
       return ok({
         added: true,
-        issue: src.issue.identifier,
         relation: args.relation,
-        target: tgt.issue.identifier,
+        source: src.label,
+        source_kind: src.kind,
+        target: tgt.label,
+        target_kind: tgt.kind,
       });
     },
   );

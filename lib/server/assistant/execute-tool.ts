@@ -131,6 +131,7 @@ import {
 } from "@/lib/plan";
 import {
   assertIssueInProject,
+  assertObjectiveInProject,
   getIssue,
   listIssues,
   listMembers,
@@ -169,7 +170,7 @@ import {
   type AgentDelegationAuthorization,
   type AgentDelegationSourceReference,
 } from "@/lib/server/agent/agent-contract";
-import type { AttachmentInput } from "@/lib/types";
+import type { AttachmentInput, RelationEndpointType } from "@/lib/types";
 import {
   buildAgentLaunchMessage,
   intentForLaunchMode,
@@ -1634,38 +1635,86 @@ export async function executeTool(
         return { result: { category_ids: result.categoryIds }, success: true };
       }
 
-      // Relationships between tickets (MIN-25) — same core as HTTP routes and
-      // tool MCP. BOTH ends are checked in the draft
-      // conversation: the heart controls access to the project, not the fact that the
-      // target in itself (an inter-project relationship does not exist).
+      // Relationships between tickets — and now across tickets and objectives
+      // (MIN-513) — same core as HTTP routes and the MCP tool. BOTH ends are
+      // checked in the draft conversation: the heart controls access to the
+      // project, not the fact that the target in itself (an inter-project
+      // relationship does not exist).
       case "link_issues": {
-        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const targetId =
-          typeof args.target_issue_id === "string" ? args.target_issue_id : "";
         const relation = isRelationType(args.relation) ? args.relation : null;
         if (!relation) {
           return toolError(
             `relation must be one of: ${RELATION_TYPE_VALUES.join(", ")}.`,
           );
         }
-        if (issueId === targetId) {
-          return toolError("An issue cannot be related to itself.");
-        }
-        for (const id of [issueId, targetId]) {
-          const scoped = await assertIssueInProject(
-            ctx.supabase,
-            id,
-            projectId,
+        const sourceObjectiveId =
+          typeof args.source_objective_id === "string"
+            ? args.source_objective_id
+            : "";
+        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+        const targetObjectiveId =
+          typeof args.target_objective_id === "string"
+            ? args.target_objective_id
+            : "";
+        const targetIssueId =
+          typeof args.target_issue_id === "string" ? args.target_issue_id : "";
+
+        const sourceKind: RelationEndpointType = sourceObjectiveId
+          ? "objective"
+          : "issue";
+        const targetKind: RelationEndpointType = targetObjectiveId
+          ? "objective"
+          : "issue";
+        const sourceId = sourceObjectiveId || issueId;
+        const targetId = targetObjectiveId || targetIssueId;
+        if (!sourceId) {
+          return toolError(
+            "Pass issue_id (or source_objective_id) — the relation needs a source.",
           );
+        }
+        if (!targetId) {
+          return toolError(
+            "Pass target_issue_id or target_objective_id — the relation needs a target.",
+          );
+        }
+        if (Boolean(issueId) === Boolean(sourceObjectiveId)) {
+          return toolError(
+            "Pass exactly one of issue_id / source_objective_id.",
+          );
+        }
+        if (Boolean(targetIssueId) === Boolean(targetObjectiveId)) {
+          return toolError(
+            "Pass exactly one of target_issue_id / target_objective_id.",
+          );
+        }
+        if (sourceKind === targetKind && sourceId === targetId) {
+          return toolError("An entity cannot be related to itself.");
+        }
+        for (const [id, kind] of [
+          [sourceId, sourceKind],
+          [targetId, targetKind],
+        ] as const) {
+          const scoped =
+            kind === "objective"
+              ? await assertObjectiveInProject(
+                  ctx.supabase,
+                  id,
+                  projectId,
+                )
+              : await assertIssueInProject(
+                  ctx.supabase,
+                  id,
+                  projectId,
+                );
           if (!scoped.ok) return toolError(scoped.error);
         }
 
         if (args.remove === true) {
           const existing = await findIssueRelation(
             projectId,
-            issueId,
+            { id: sourceId, type: sourceKind },
             relation,
-            targetId,
+            { id: targetId, type: targetKind },
           );
           // Idempotent, like the MCP tool: removing what is not there is not
           // not an error, this is already the requested state.
@@ -1684,9 +1733,11 @@ export async function executeTool(
         const added = await addIssueRelation({
           projectId,
           actorId: ctx.userId,
-          sourceId: issueId,
+          sourceId,
           targetId,
           type: relation,
+          sourceType: sourceKind,
+          targetType: targetKind,
           viaAssistant: true,
         });
         if (!added.ok) return libError(added);

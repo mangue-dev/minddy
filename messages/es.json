@@ -2211,7 +2211,9 @@
     "pick_blocked_by": "¿Qué incidencia la bloquea?",
     "pick_related": "¿Con qué incidencia está relacionada?",
     "addRelationAria": "Vincular a una incidencia",
-    "searchIssue": "Buscar una incidencia…"
+    "searchIssue": "Buscar una incidencia…",
+    "searchTarget": "Buscar una incidencia…",
+    "objectives": "Objetivos"
   },
   "Profile": {
     "avatarLabel": "Avatar",
