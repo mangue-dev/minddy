@@ -570,7 +570,9 @@
     "addContextPageSearch": "Cerca una pagina...",
     "addContextLoading": "Caricamento...",
     "slashCreateIssueLabel": "creare ticket",
-    "slashCreateIssueDescription": "Numo raccoglie il contesto, quindi crea il ticket"
+    "slashCreateIssueDescription": "Numo raccoglie il contesto, quindi crea il ticket",
+    "stopConfirmTitle": "Fermare Numo?",
+    "stopConfirmDescription": "Il turno in corso verrà interrotto. Tutto ciò che è già stato scritto e salvato resta nella conversazione."
   },
   "Auth": {
     "callbackFailed": "Questo link di accesso non è più valido. Prova a effettuare nuovamente il login.",

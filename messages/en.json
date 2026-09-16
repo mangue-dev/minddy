@@ -570,7 +570,9 @@
     "addContextPageSearch": "Search a page…",
     "addContextLoading": "Loading…",
     "slashCreateIssueLabel": "create issue",
-    "slashCreateIssueDescription": "Numo gathers the context, then creates the issue"
+    "slashCreateIssueDescription": "Numo gathers the context, then creates the issue",
+    "stopConfirmTitle": "Stop Numo?",
+    "stopConfirmDescription": "The current turn will be interrupted. Everything already written and saved stays in the conversation."
   },
   "Auth": {
     "callbackFailed": "This sign-in link is no longer valid. Try signing in again.",
