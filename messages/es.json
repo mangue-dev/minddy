@@ -570,7 +570,9 @@
     "addContextPageSearch": "Buscar una página…",
     "addContextLoading": "Cargando…",
     "slashCreateIssueLabel": "crear incidencia",
-    "slashCreateIssueDescription": "Numo reúne el contexto y crea la incidencia"
+    "slashCreateIssueDescription": "Numo reúne el contexto y crea la incidencia",
+    "stopConfirmTitle": "¿Detener a Numo?",
+    "stopConfirmDescription": "El turno en curso se interrumpirá. Todo lo ya escrito y guardado permanece en la conversación."
   },
   "Auth": {
     "callbackFailed": "Este enlace de inicio de sesión ya no es válido. Intenta iniciar sesión de nuevo.",

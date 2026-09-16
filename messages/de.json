@@ -570,7 +570,9 @@
     "addContextPageSearch": "Eine Seite durchsuchen…",
     "addContextLoading": "Wird geladen…",
     "slashCreateIssueLabel": "Problem erstellen",
-    "slashCreateIssueDescription": "Numo sammelt den Kontext und erstellt dann das Problem"
+    "slashCreateIssueDescription": "Numo sammelt den Kontext und erstellt dann das Problem",
+    "stopConfirmTitle": "Numo stoppen?",
+    "stopConfirmDescription": "Der laufende Durchlauf wird unterbrochen. Bereits Geschriebenes und Gespeichertes bleibt im Gespräch."
   },
   "Auth": {
     "callbackFailed": "Dieser Anmeldelink ist nicht mehr gültig. Versuchen Sie erneut, sich anzumelden.",
