@@ -570,7 +570,9 @@
     "addContextPageSearch": "Chercher une page…",
     "addContextLoading": "Chargement…",
     "slashCreateIssueLabel": "créer ticket",
-    "slashCreateIssueDescription": "Numo réunit le contexte, puis crée le ticket"
+    "slashCreateIssueDescription": "Numo réunit le contexte, puis crée le ticket",
+    "stopConfirmTitle": "Arrêter Numo ?",
+    "stopConfirmDescription": "Le tour en cours va être interrompu. Ce qui a déjà été écrit et enregistré reste dans la conversation."
   },
   "Auth": {
     "callbackFailed": "Ce lien de connexion n'est plus valide. Réessayez de vous connecter.",

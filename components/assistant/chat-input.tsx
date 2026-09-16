@@ -9,6 +9,7 @@ import {
   useEffect,
   useImperativeHandle,
   forwardRef,
+  useId,
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
@@ -18,6 +19,12 @@ import {
   CommandItem,
   CommandSeparator,
   CommandShortcut,
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
   SendButtonWithCost,
   cn,
 } from "mangue-ui";
@@ -358,9 +365,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     ref
   ) {
     const t = useTranslations("Assistant");
+    const tCommon = useTranslations("Common");
     const isSend = useIsSendShortcut();
     const modKey = useModKey();
     const tAttach = useTranslations("Resources");
+    const stopConfirmationId = useId();
+    const stopConfirmationTitleId = `${stopConfirmationId}-title`;
+    const stopConfirmationDescriptionId = `${stopConfirmationId}-description`;
+    const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
     const effectivePlaceholder = placeholder ?? t("inputPlaceholder");
     const editorRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1621,20 +1633,73 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               {isStreaming && (isEmpty || !sendWhileStreaming) ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="icon-sm"
-                      variant="default"
-                      onClick={onAbort}
-                      aria-label={t("stop")}
-                      className="h-8 w-8 shrink-0 rounded-full bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
-                    >
-                      <Square className="h-3 w-3 fill-white text-white dark:fill-black dark:text-black" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">{t("stop")}</TooltipContent>
-                </Tooltip>
+                <Popover
+                  open={stopConfirmOpen}
+                  onOpenChange={setStopConfirmOpen}
+                >
+                  <PopoverAnchor asChild>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon-sm"
+                          variant="default"
+                          onClick={() => setStopConfirmOpen(true)}
+                          aria-label={t("stop")}
+                          aria-haspopup="dialog"
+                          aria-controls={stopConfirmationId}
+                          aria-expanded={stopConfirmOpen}
+                          className="h-8 w-8 shrink-0 rounded-full bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                        >
+                          <Square className="h-3 w-3 fill-white text-white dark:fill-black dark:text-black" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">{t("stop")}</TooltipContent>
+                    </Tooltip>
+                  </PopoverAnchor>
+                  {/* Same confirmation gesture as the update action: a
+                      destructive stop deserves one click to reconsider, not
+                      an immediate abort. */}
+                  <PopoverContent
+                    id={stopConfirmationId}
+                    role="dialog"
+                    aria-labelledby={stopConfirmationTitleId}
+                    aria-describedby={stopConfirmationDescriptionId}
+                    side="top"
+                    align="end"
+                    sideOffset={8}
+                    collisionPadding={10}
+                    className="w-72 gap-3 rounded-xl p-3"
+                  >
+                    <PopoverHeader>
+                      <PopoverTitle id={stopConfirmationTitleId}>
+                        {t("stopConfirmTitle")}
+                      </PopoverTitle>
+                      <PopoverDescription id={stopConfirmationDescriptionId}>
+                        {t("stopConfirmDescription")}
+                      </PopoverDescription>
+                    </PopoverHeader>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setStopConfirmOpen(false)}
+                      >
+                        {tCommon("cancel")}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          setStopConfirmOpen(false);
+                          onAbort?.();
+                        }}
+                      >
+                        {t("stop")}
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               ) : (
                 <>
                   {!isStreaming && (
