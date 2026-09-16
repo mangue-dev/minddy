@@ -53,8 +53,7 @@ export function TaskCheckbox({
         "flex size-4 items-center justify-center rounded-[4px] border transition-colors",
         state === "pending" && "border-input hover:border-muted-foreground/60",
         state === "in_progress" && "border-primary",
-        state === "completed" &&
-        "border-primary bg-primary text-primary-foreground!",
+        state === "completed" && "border-primary bg-primary text-primary-foreground",
         state === "cancelled" && "border-input bg-muted text-muted-foreground",
         className
       )}
@@ -62,7 +61,11 @@ export function TaskCheckbox({
       {state === "in_progress" && (
         <span className="size-2 rounded-[2px] bg-primary" />
       )}
-      {state === "completed" && <Check className="size-3" />}
+      {/* `text-primary-foreground!` — the check glyph carries its OWN color:
+          a struck ancestor task cascades `color` onto EVERY descendant
+          (task-item-view.tsx), including this svg, and inheritance from the
+          button cannot beat that direct declaration. */}
+      {state === "completed" && <Check className="size-3 text-primary-foreground!" />}
       {state === "cancelled" && <Minus className="size-3" />}
     </button>
   );
