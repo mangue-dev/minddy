@@ -634,6 +634,19 @@ export async function getCycleOverview({
   );
   const statusById = new Map<string, IssueStatus>(pool.map((c) => [c.id, c.status]));
   for (const [id, status] of objectiveStatuses) statusById.set(id, status);
+  const blockerIds = [...new Set(relations.map((r) => r.source_id))].filter(
+    (id) => !statusById.has(id)
+  );
+  if (blockerIds.length > 0) {
+    const { data: blockerRows } = await service
+      .from("issues")
+      .select("id, status")
+      .in("id", blockerIds)
+      .is("deleted_at", null);
+    for (const row of blockerRows ?? []) {
+      statusById.set(row.id as string, row.status as IssueStatus);
+    }
+  }
   const blocked = blockedSet(
     poolIds,
     relations,

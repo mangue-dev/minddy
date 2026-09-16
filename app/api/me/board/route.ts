@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       // the rows to my projects).
       auth.supabase
         .from("issue_relations")
-        .select("id, source_id, target_id, type"),
+        .select("id, source_id, target_id, type, source_type, target_type"),
     ]);
 
   const firstError =
