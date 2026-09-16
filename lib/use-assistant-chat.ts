@@ -627,8 +627,10 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             // "Starting" until the worker ends.
             const key = `${response.turn_id}:${response.active_run_id ?? ""}`;
             if (key !== reloadedSuspension) {
-              reloadedSuspension = key;
               await reloadMessages();
+              // Set only after success: a failed reload must be retried by
+              // the next poll instead of being skipped forever.
+              reloadedSuspension = key;
             }
             pollRef.current = setTimeout(poll, POLL_INTERVAL_MS);
             return;

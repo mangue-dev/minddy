@@ -418,12 +418,19 @@ export async function processChat(
       }
       const response = call.response;
       requestModel = call.model;
+      // These early exits leave before the stream try/finally disarms the
+      // watchdog: without an explicit cleanup every provider refusal would
+      // keep a 90 s timer armed on an already-abandoned controller.
       if (!response.ok) {
+        if (idleTimer) clearTimeout(idleTimer);
         const errorText = await response.text();
         throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
       }
       const reader = response.body?.getReader();
-      if (!reader) throw new Error("No response body from LLM");
+      if (!reader) {
+        if (idleTimer) clearTimeout(idleTimer);
+        throw new Error("No response body from LLM");
+      }
 
       const decoder = new TextDecoder();
       let buffer = "";

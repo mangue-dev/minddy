@@ -1276,9 +1276,15 @@ export async function drainNumoTurns(options?: { limit?: number }) {
     // A `retryable` turn carries a checkpoint and waits on nobody: for a turn
     // started server-side (PR review, routine, automation) there is no
     // interactive client to press "Retry", so the drain is the only thing
-    // that can resume it. The attempt ceiling still bounds a poisoned turn.
+    // that can resume it. The service client is passed as the read client on
+    // purpose: without it, `executeNumoTurnCore` treats any non-worker-result
+    // resume as an interrupted request and flips the turn straight back to
+    // `retryable` without ever running it, leaving the claim to churn every
+    // tick with `attempts` unbounded. The attempt ceiling still bounds a
+    // poisoned turn once the real execution path records its failures.
     const result = await executeNumoTurn({
       turnId: row.id as string,
+      readClient: service,
       ...(row.status === "retryable" ? { allowRetryable: true } : {}),
     });
     if (result.status !== "not_claimed") claimed++;
