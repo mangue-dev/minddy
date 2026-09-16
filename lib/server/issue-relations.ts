@@ -68,9 +68,6 @@ export type RemoveRelationResult =
   | { ok: true; relation: IssueRelationRow }
   | { ok: false; status: number; errorKey?: RelationErrorKey; rawMessage?: string };
 
-/** Perspective-correct activity events for the ISSUE endpoints of a stored
-    row. An objective end has no timeline of its own, so it contributes no
-    event — a relation between two objectives is recorded in neither. */
 function relationEvents(
   kind: "relation_added" | "relation_removed",
   row: {
@@ -82,47 +79,26 @@ function relationEvents(
   },
   actorId: string
 ): EventRow[] {
-  const events: EventRow[] = [];
-  if (row.type === "blocks") {
-    if (endpointType(row.source_type) === "issue") {
-      events.push({
-        issue_id: row.source_id,
-        actor_id: actorId,
-        type: kind,
-        field: "blocks",
-        to_value: row.target_id,
-      });
-    }
-    if (endpointType(row.target_type) === "issue") {
-      events.push({
-        issue_id: row.target_id,
-        actor_id: actorId,
-        type: kind,
-        field: "blocked_by",
-        to_value: row.source_id,
-      });
-    }
-  } else {
-    if (endpointType(row.source_type) === "issue") {
-      events.push({
-        issue_id: row.source_id,
-        actor_id: actorId,
-        type: kind,
-        field: "related",
-        to_value: row.target_id,
-      });
-    }
-    if (endpointType(row.target_type) === "issue") {
-      events.push({
-        issue_id: row.target_id,
-        actor_id: actorId,
-        type: kind,
-        field: "related",
-        to_value: row.source_id,
-      });
-    }
-  }
-  return events;
+  return [
+    {
+      ...(endpointType(row.source_type) === "objective"
+        ? { objective_id: row.source_id }
+        : { issue_id: row.source_id }),
+      actor_id: actorId,
+      type: kind,
+      field: row.type,
+      to_value: row.target_id,
+    },
+    {
+      ...(endpointType(row.target_type) === "objective"
+        ? { objective_id: row.target_id }
+        : { issue_id: row.target_id }),
+      actor_id: actorId,
+      type: kind,
+      field: row.type === "blocks" ? "blocked_by" : "related",
+      to_value: row.source_id,
+    },
+  ];
 }
 
 /** All relation rows of a project (raw stored form). Pass an RLS or service

@@ -25,6 +25,7 @@ import {
   recoComparator,
 } from "@/lib/cycle";
 import type { ObjectiveStatus } from "@/lib/objective-constants";
+import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import {
   useAssistantContext,
   useAssistantPanel,
@@ -453,8 +454,14 @@ function GlobalBoardInner() {
   // Relations (MIN-25) from any card of this board — the write goes through
   // the card's own project route (relations are same-project by construction).
   const handleAddRelation = useCallback(
-    (sourceId: string, type: IssueRelationType, targetId: string, projectId: string) =>
-      void addRelation(projectId, sourceId, type, targetId).catch((err) =>
+    (
+      sourceId: string,
+      type: IssueRelationType,
+      targetId: string,
+      projectId: string,
+      kinds?: RelationKinds
+    ) =>
+      void addRelation(projectId, sourceId, type, targetId, kinds).catch((err) =>
         toast.error((err as Error).message)
       ),
     [addRelation]
@@ -699,8 +706,8 @@ function GlobalBoardInner() {
           setOpenIssueId(id);
           setOpenIssueTab("description");
         }}
-        onAddRelation={(sourceId, type, targetId) =>
-          handleAddRelation(sourceId, type, targetId, openPid)
+        onAddRelation={(sourceId, type, targetId, kinds) =>
+          handleAddRelation(sourceId, type, targetId, openPid, kinds)
         }
         onRemoveRelation={(relationId) =>
           void removeRelation(openPid, relationId).catch((err) =>

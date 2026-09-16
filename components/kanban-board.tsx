@@ -33,6 +33,7 @@ import type {
   ViewSort,
 } from "@/lib/types";
 import { resolveRelationsByIssue } from "@/lib/relation-constants";
+import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import { issueComparator } from "@/lib/view-filter";
 import { createBoardColumnsBuilder } from "@/lib/board-columns";
 import {
@@ -118,6 +119,7 @@ export const KanbanBoard = memo(function KanbanBoard({
     sourceId: string,
     type: IssueRelationType,
     targetId: string,
+    kinds?: RelationKinds,
   ) => void;
   onMove: (
     issueId: string,
@@ -169,6 +171,7 @@ export const KanbanBoard = memo(function KanbanBoard({
     for (const issue of issues) {
       const resolved = (resolvedByIssue.get(issue.id) ?? [])
         .map((r): ChipRelation | null => {
+          if (r.otherType === "objective") return r;
           const other = allIssueMap.get(r.otherId);
           return other ? { ...r, otherNumber: other.number } : null;
         })

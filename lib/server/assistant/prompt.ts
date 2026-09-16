@@ -110,7 +110,8 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
 - Relations (link_issues): 'blocks', 'blocked_by', 'related' — a dependency, NOT a hierarchy
   (that is parent_id) and NOT a duplicate (that is status 'duplicate'). They pair two issues,
   or an issue and an objective, or two objectives (target_objective_id / source_objective_id).
-  get_issue returns them; get_objective returns an objective's. A blocked issue is left out of
+  get_issue returns them; get_objective (objective_id from list_objectives) returns an objective's.
+  A blocked issue is left out of
   cycle filling until its blocker closes, and blocking through an objective cascades to its
   issues — so read them before calling an issue ready to start.
 - Issues are referenced as "KEY-N" (project key + number), e.g. "MIND-42".

@@ -77,12 +77,14 @@ begin
     if not exists (
       select 1 from public.issues i
       where i.id = new.source_id and i.project_id = new.project_id
+        and i.deleted_at is null
     ) then
       raise exception 'The source of the relationship must be in the same project';
     end if;
   elsif not exists (
     select 1 from public.objectives o
     where o.id = new.source_id and o.project_id = new.project_id
+      and o.deleted_at is null
   ) then
     raise exception 'The source objective of the relationship must be in the same project';
   end if;
@@ -91,12 +93,14 @@ begin
     if not exists (
       select 1 from public.issues i
       where i.id = new.target_id and i.project_id = new.project_id
+        and i.deleted_at is null
     ) then
       raise exception 'The relationship target must be in the same project';
     end if;
   elsif not exists (
     select 1 from public.objectives o
     where o.id = new.target_id and o.project_id = new.project_id
+      and o.deleted_at is null
   ) then
     raise exception 'The relationship target objective must be in the same project';
   end if;

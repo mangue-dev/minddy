@@ -478,7 +478,7 @@ describe("objective blocking cascade (MIN-513)", () => {
     const { relations: expanded, objectiveStatuses } = cycleBlockingRelations(
       [objBlocks("objB", "objA")],
       new Map([["objA", ["i1"]]]),
-      new Map([["objB", "planned" as const]])
+      new Map([["objA", "planned"], ["objB", "planned"]])
     );
     const blocked = blockedSet(
       ["i1"],
@@ -494,7 +494,7 @@ describe("objective blocking cascade (MIN-513)", () => {
       cycleBlockingRelations(
         [objBlocks("objB", "objA")],
         new Map([["objA", ["i1"]]]),
-        new Map([["objB", "done" as const]])
+        new Map([["objA", "planned"], ["objB", "done"]])
       );
     const blocked2 = blockedSet(
       ["i1"],
@@ -511,8 +511,7 @@ describe("objective blocking cascade (MIN-513)", () => {
     const { relations: expanded, objectiveStatuses } = cycleBlockingRelations(
       [objBlocks("objB", "objA")],
       new Map([["objA", ["i1"]]]),
-      // objB absent: trashed (or gone) → no status → not blocking.
-      new Map([])
+      new Map([["objA", "planned"]])
     );
     const blocked = blockedSet(
       ["i1"],
@@ -537,7 +536,7 @@ describe("objective blocking cascade (MIN-513)", () => {
         },
       ],
       new Map([["objA", ["i1", "i2"]]]),
-      new Map([])
+      new Map([["objA", "planned"]])
     );
     const blocked = blockedSet(
       ["i1", "i2"],
@@ -549,6 +548,15 @@ describe("objective blocking cascade (MIN-513)", () => {
       ])
     );
     expect(blocked).toEqual(new Set(["i1", "i2"]));
+  });
+
+  it("does not fan out an edge aimed at a trashed target objective", () => {
+    const { relations: expanded } = cycleBlockingRelations(
+      [objBlocks("objB", "objA")],
+      new Map([["objA", ["i1"]]]),
+      new Map([["objB", "planned" as const]])
+    );
+    expect(expanded).toEqual([]);
   });
 
   it("keeps issue↔issue edges untouched and drops empty target objectives", () => {
@@ -565,7 +573,7 @@ describe("objective blocking cascade (MIN-513)", () => {
     const { relations: expanded, objectiveStatuses } = cycleBlockingRelations(
       [objBlocks("objB", "objA")],
       new Map([["objA", ["i2"]]]),
-      new Map([["objB", "planned" as const]])
+      new Map([["objA", "planned"], ["objB", "planned"]])
     );
     const statusById = new Map<IssueStatus | string, IssueStatus>([
       ["i1", "todo"],

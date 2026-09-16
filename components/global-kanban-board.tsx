@@ -33,6 +33,7 @@ import type {
 } from "@/lib/types";
 import { issueComparator } from "@/lib/view-filter";
 import { resolveRelationsByIssue } from "@/lib/relation-constants";
+import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import { createBoardColumnsBuilder } from "@/lib/board-columns";
 import {
   BOARD_MOUSE_ACTIVATION_DISTANCE,
@@ -141,6 +142,7 @@ export function GlobalKanbanBoard({
     type: IssueRelationType,
     targetId: string,
     projectId: string,
+    kinds?: RelationKinds,
   ) => void;
   /** Cycle mode (MIN-32): the reco order replaces `sort` — the ONLY order, so
       same-column reordering is disabled; cross-column drag still moves status. */
@@ -199,6 +201,7 @@ export function GlobalKanbanBoard({
     for (const issue of issues) {
       const resolved = (resolvedByIssue.get(issue.id) ?? [])
         .map((r): ChipRelation | null => {
+          if (r.otherType === "objective") return r;
           const other = allIssueMap.get(r.otherId);
           return other ? { ...r, otherNumber: other.number } : null;
         })

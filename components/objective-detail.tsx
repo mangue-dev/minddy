@@ -60,7 +60,7 @@ import { useObjectiveTimeline } from "@/lib/use-objective-timeline";
 import { useObjectiveDictation } from "@/lib/use-objective-dictation";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useScrollFade } from "@/lib/use-scroll-fade";
-import { objectiveProgress } from "@/lib/use-objectives-query";
+import { objectiveProgress, useObjectivesQuery } from "@/lib/use-objectives-query";
 import {
   OBJECTIVE_STATUSES,
   OBJECTIVE_STATUS_MAP,
@@ -358,11 +358,10 @@ export function ObjectiveDetail({
     [objective.id, issues]
   );
 
-  // describeObjectiveEvent only reads members + due-date formatting; the other
-  // context fields are unused for objectives.
+  const { objectives } = useObjectivesQuery(projectId);
   const eventCtx = useMemo(
-    () => ({ members, objectives: [], categories: [], issues: [], projectKey: "" }),
-    [members]
+    () => ({ members, objectives, categories: [], issues, projectKey }),
+    [members, objectives, issues, projectKey]
   );
 
   const mentions = useDescriptionMentions(projectId, members);

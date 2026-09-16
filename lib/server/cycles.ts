@@ -634,6 +634,19 @@ export async function getCycleOverview({
   );
   const statusById = new Map<string, IssueStatus>(pool.map((c) => [c.id, c.status]));
   for (const [id, status] of objectiveStatuses) statusById.set(id, status);
+  const externalBlockerIds = [
+    ...new Set(relations.filter((r) => r.source_type !== "objective").map((r) => r.source_id)),
+  ].filter((id) => !statusById.has(id));
+  if (externalBlockerIds.length > 0) {
+    const { data: blockerRows } = await service
+      .from("issues")
+      .select("id, status")
+      .in("id", externalBlockerIds)
+      .is("deleted_at", null);
+    for (const row of blockerRows ?? []) {
+      statusById.set(row.id as string, row.status as IssueStatus);
+    }
+  }
   const blocked = blockedSet(
     poolIds,
     relations,
@@ -856,7 +869,7 @@ export async function runCycleBlockerPull(params: CycleBlockerPullParams): Promi
   // unstarted issues (never the blocker/blocked pair, never started work).
   const { data: cycleIssueRows } = await service
     .from("issues")
-    .select("id, project_id, title, status, priority, effort, issue_categories(category_id)")
+    .select("id, project_id, title, status, priority, effort, objective_id, issue_categories(category_id)")
     .eq("cycle_id", cycle.id)
     .is("deleted_at", null);
   const cycleIssues: RecoIssue[] = (cycleIssueRows ?? []).map((row) => ({
@@ -869,6 +882,7 @@ export async function runCycleBlockerPull(params: CycleBlockerPullParams): Promi
     category_ids: ((row.issue_categories ?? []) as { category_id: string }[]).map(
       (c) => c.category_id
     ),
+    objective_id: (row.objective_id as string | null) ?? null,
   }));
   const filled = cycleFilledPoints(cycleIssues);
   const excess = filled - cycle.target_points;
@@ -879,22 +893,75 @@ export async function runCycleBlockerPull(params: CycleBlockerPullParams): Promi
         i.id !== params.blockerId &&
         i.id !== params.blockedId
     );
+    const issuesByObjective = new Map<string, string[]>();
+    for (const c of candidates) {
+      if (!c.objective_id) continue;
+      const list = issuesByObjective.get(c.objective_id);
+      if (list) list.push(c.id);
+      else issuesByObjective.set(c.objective_id, [c.id]);
+    }
     const { data: relationRows } = candidates.length
       ? await service
           .from("issue_relations")
-          .select("id, source_id, target_id, type")
+          .select("id, source_id, source_type, target_id, target_type, type")
           .eq("type", "blocks")
-          .in(
-            "target_id",
-            candidates.map((c) => c.id)
-          )
+          .in("target_id", [
+            ...candidates.map((c) => c.id),
+            ...issuesByObjective.keys(),
+          ])
       : { data: [] };
+    const storedRelations = (relationRows ?? []) as IssueRelation[];
+    const objectiveStatusIds = [
+      ...new Set(
+        storedRelations.flatMap((r) =>
+          [
+            [r.source_id, r.source_type] as const,
+            [r.target_id, r.target_type] as const,
+          ]
+            .filter(([, kind]) => kind === "objective")
+            .map(([id]) => id)
+        )
+      ),
+    ];
+    const objectiveStatusById = new Map<string, ObjectiveStatus>();
+    if (objectiveStatusIds.length > 0) {
+      const { data: objectiveRows } = await service
+        .from("objectives")
+        .select("id, status")
+        .in("id", objectiveStatusIds)
+        .is("deleted_at", null);
+      for (const row of objectiveRows ?? []) {
+        objectiveStatusById.set(
+          row.id as string,
+          row.status as ObjectiveStatus
+        );
+      }
+    }
+    const { relations, objectiveStatuses } = cycleBlockingRelations(
+      storedRelations,
+      issuesByObjective,
+      objectiveStatusById
+    );
     const statusById = new Map<string, IssueStatus>(
       cycleIssues.map((i) => [i.id, i.status])
     );
+    for (const [id, status] of objectiveStatuses) statusById.set(id, status);
+    const externalBlockerIds = [
+      ...new Set(relations.filter((r) => r.source_type !== "objective").map((r) => r.source_id)),
+    ].filter((id) => !statusById.has(id));
+    const { data: blockerRows } = externalBlockerIds.length
+      ? await service
+          .from("issues")
+          .select("id, status")
+          .in("id", externalBlockerIds)
+          .is("deleted_at", null)
+      : { data: [] };
+    for (const row of blockerRows ?? []) {
+      statusById.set(row.id as string, row.status as IssueStatus);
+    }
     const evicted = pickEvictions({
       candidates,
-      relations: (relationRows ?? []) as IssueRelation[],
+      relations,
       statusById,
       excessPoints: excess,
     });

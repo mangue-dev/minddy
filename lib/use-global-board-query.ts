@@ -27,6 +27,7 @@ import {
 } from "./issue-relations-api";
 import { buildOptimisticIssue } from "./optimistic-issue";
 import { leavesCycleOnStatus } from "./cycle";
+import type { RelationKinds } from "./use-issue-relations-query";
 import { useAuth } from "./auth-context";
 import { autoAssignOnStart } from "./auto-assign-on-start";
 import { useUndoHistory } from "./undo/undo-context";
@@ -286,10 +287,12 @@ export function useGlobalBoardQuery() {
                   .map((i) => i.id),
                 relations: board.relations
                   .filter((r) => r.source_id === issueId || r.target_id === issueId)
-                  .map(({ source_id, target_id, type }) => ({
+                  .map(({ source_id, target_id, type, source_type, target_type }) => ({
                     source_id,
                     target_id,
                     type,
+                    source_type,
+                    target_type,
                   })),
               },
               request.then(
@@ -365,12 +368,15 @@ export function useGlobalBoardQuery() {
       projectId: string,
       sourceId: string,
       type: IssueRelationType,
-      targetId: string
+      targetId: string,
+      kinds?: RelationKinds
     ) => {
       const created = await addIssueRelationApi(projectId, {
         source_id: sourceId,
         target_id: targetId,
         type,
+        source_type: kinds?.sourceType,
+        target_type: kinds?.targetType,
       });
       // Record the server-normalized row (blocked_by is stored as an inverted
       // blocks), so a redo replays exactly what was persisted.
@@ -382,6 +388,8 @@ export function useGlobalBoardQuery() {
           source_id: created.source_id,
           target_id: created.target_id,
           type: created.type,
+          source_type: created.source_type,
+          target_type: created.target_type,
         },
       });
       queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
@@ -421,6 +429,8 @@ export function useGlobalBoardQuery() {
               source_id: removed.source_id,
               target_id: removed.target_id,
               type: removed.type,
+              source_type: removed.source_type,
+              target_type: removed.target_type,
             },
           });
         }

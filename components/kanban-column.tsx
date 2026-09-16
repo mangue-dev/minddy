@@ -27,6 +27,7 @@ import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
 import { IssueCard } from "@/components/issue-card";
 import { StatusIndicator } from "@/components/issue-indicators";
 import type { ChipRelation } from "@/components/relation-chips";
+import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
 /**
@@ -83,6 +84,7 @@ export const KanbanColumn = memo(function KanbanColumn({
     sourceId: string,
     type: IssueRelationType,
     targetId: string,
+    kinds?: RelationKinds,
   ) => void;
   /** Trash from right-clicking a card (absent → entry disappears). */
   onDeleteIssue?: (issueId: string) => Promise<void>;

@@ -28,6 +28,7 @@ import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
 import { IssueCard } from "@/components/issue-card";
 import { StatusIndicator } from "@/components/issue-indicators";
 import type { ChipRelation } from "@/components/relation-chips";
+import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
 const EMPTY_MEMBERS: Map<string, Member> = new Map();
@@ -111,6 +112,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
     type: IssueRelationType,
     targetId: string,
     projectId: string,
+    kinds?: RelationKinds,
   ) => void;
   /** Trash from right-clicking a card (the ticket project follows). */
   onDeleteIssue?: (issueId: string, projectId: string) => Promise<void>;
@@ -153,6 +155,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
           sourceId: string,
           type: IssueRelationType,
           targetId: string,
+          kinds?: RelationKinds,
         ) => void;
         onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
         onSetCategories: (issueId: string, ids: string[]) => void;
@@ -165,8 +168,8 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
       if (!bound) {
         bound = {
           onAddRelation: onAddRelation
-            ? (sourceId, type, targetId) =>
-                onAddRelation(sourceId, type, targetId, pid)
+            ? (sourceId, type, targetId, kinds) =>
+                onAddRelation(sourceId, type, targetId, pid, kinds)
             : undefined,
           onUpdateIssue: (id, patch) => onUpdateIssue(id, patch, pid),
           onSetCategories: (id, ids) => onSetCategories(id, ids, pid),

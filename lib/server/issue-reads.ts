@@ -211,7 +211,9 @@ export async function resolveObjectiveRef(
     }
   | { error: string; code: IssueRefErrorCode }
 > {
-  const raw = typeof ref === "string" ? ref.trim().replace(/^obj:/i, "") : "";
+  const reference = typeof ref === "string" ? ref.trim() : "";
+  const byName = /^obj:/i.test(reference);
+  const raw = byName ? reference.slice(4) : reference;
   if (!raw) {
     return {
       code: "invalid_params",
@@ -219,34 +221,37 @@ export async function resolveObjectiveRef(
     };
   }
 
-  // "obj:" forces the name path; otherwise the UUID wins, then the exact name.
-  const byName = async (): Promise<Record<string, unknown> | null> => {
-    const { data } = await db
-      .from("objectives")
-      .select("id, name, status, lead_user_id")
-      .is("deleted_at", null)
-      .eq("project_id", scope.projectId)
-      .ilike("name", ilikePattern(raw))
-      .limit(2);
-    const rows = (data ?? []) as Array<Record<string, unknown>>;
-    return (
-      rows.find((r) => (r.name as string).toLowerCase() === raw.toLowerCase()) ??
-      null
-    );
-  };
-
+  const query = () => db
+    .from("objectives")
+    .select("id, name, status, lead_user_id")
+    .is("deleted_at", null)
+    .eq("project_id", scope.projectId);
   let row: Record<string, unknown> | null = null;
-  if (!raw.startsWith("obj:") && UUID_RE.test(raw)) {
-    const { data } = await db
-      .from("objectives")
-      .select("id, name, status, lead_user_id")
-      .is("deleted_at", null)
-      .eq("id", raw)
-      .eq("project_id", scope.projectId)
-      .maybeSingle();
-    row = data as Record<string, unknown> | null;
+  if (!byName && UUID_RE.test(raw)) {
+    const { data, error } = await query().eq("id", raw).maybeSingle();
+    if (error) return { code: "database_error", error: error.message };
+    row = data;
+  } else {
+    const matches: Array<Record<string, unknown>> = [];
+    const pageSize = 200;
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error } = await query()
+        .order("id", { ascending: true })
+        .range(offset, offset + pageSize - 1);
+      if (error) return { code: "database_error", error: error.message };
+      matches.push(...(data ?? []).filter(
+        (candidate) => candidate.name.toLowerCase() === raw.toLowerCase()
+      ));
+      if (matches.length > 1) {
+        return {
+          code: "invalid_params",
+          error: `Several objectives are named '${raw}' — pass an objective UUID instead.`,
+        };
+      }
+      if ((data ?? []).length < pageSize) break;
+    }
+    row = matches[0] ?? null;
   }
-  if (!row) row = await byName();
   if (!row) {
     return {
       code: "issue_not_found",

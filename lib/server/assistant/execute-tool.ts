@@ -135,6 +135,7 @@ import {
   getIssue,
   listIssues,
   listMembers,
+  resolveEntityRelations,
   searchIssues,
   type ReadContext,
 } from "@/lib/server/issue-reads";
@@ -1190,6 +1191,47 @@ export async function executeTool(
           : [];
         return {
           result: { ...r, pending_invitations },
+          success: true,
+        };
+      }
+      case "get_objective": {
+        const objectiveId = typeof args.objective_id === "string" ? args.objective_id.trim() : "";
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(objectiveId)) {
+          return toolError("objective_id must be an objective UUID from list_objectives.");
+        }
+        const { data: objective, error } = await ctx.supabase
+          .from("objectives")
+          .select("id, name, description, status, lead_user_id, target_date")
+          .is("deleted_at", null)
+          .eq("project_id", projectId)
+          .eq("id", objectiveId)
+          .maybeSingle();
+        if (error) return toolError(error.message);
+        if (!objective) return toolError("Objective not found in this project.");
+        const relations = await resolveEntityRelations(
+          ctx.supabase,
+          { projectId, projectKey: access.project.key },
+          objective.id,
+        );
+        return {
+          result: {
+            objective,
+            relations: relations.map((r) => r.kind === "objective"
+              ? {
+                  relation: r.relation,
+                  objective_id: r.other.id,
+                  name: r.other.name,
+                  status: r.other.status,
+                  lead_user_id: r.other.lead_user_id,
+                }
+              : {
+                  relation: r.relation,
+                  issue_id: r.other.id,
+                  identifier: r.other.identifier,
+                  title: r.other.title,
+                  status: r.other.status,
+                }),
+          },
           success: true,
         };
       }

@@ -357,7 +357,8 @@ export function IssueSidePanel({
     const byId = new Map(allIssues.map((i) => [i.id, i]));
     const objectiveById = new Map(objectives.map((o) => [o.id, o]));
     const statusById = new Map(allIssues.map((i) => [i.id, i.status]));
-    return resolveRelations(issue.id, relations, statusById)
+    const objectiveStatusById = new Map(objectives.map((o) => [o.id, o.status]));
+    return resolveRelations(issue.id, relations, statusById, objectiveStatusById)
       .map((r): ChipRelation | null => {
         if (r.otherType === "objective") {
           const objective = objectiveById.get(r.otherId);

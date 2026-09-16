@@ -54,6 +54,7 @@ import {
 } from "@/components/issue-indicators";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
+import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import {
   useAgentActive,
   useAgentHasSession,
@@ -963,6 +964,7 @@ const IssueCardContent = memo(function IssueCardContent({
     sourceId: string,
     type: IssueRelationType,
     targetId: string,
+    kinds?: RelationKinds,
   ) => void;
   onOpenPlan?: (issue: Issue) => void;
   /** Opens the ticket panel. **Takes the ticket as an argument**, as
@@ -1127,18 +1129,34 @@ const IssueCardContent = memo(function IssueCardContent({
     startNewAgentSession();
   };
 
-  // Picker candidates: the other OPEN issues of the project, excluding those
-  // already linked — linking to completed/canceled work makes no sense (a blocker
-  // clos ne bloque plus).
   const relationCandidates = useMemo(() => {
     const candidateIssues = relationType ? getCandidateIssues?.() : undefined;
     if (!candidateIssues) return [];
-    const linked = new Set((relations ?? []).map((r) => r.otherId));
+    const linked = new Set(
+      (relations ?? [])
+        .filter((r) => r.relation === relationType && r.otherType !== "objective")
+        .map((r) => r.otherId),
+    );
     return candidateIssues.filter(
       (i) =>
+        i.project_id === issue.project_id &&
         i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status),
     );
-  }, [getCandidateIssues, relationType, relations, issue.id]);
+  }, [getCandidateIssues, relationType, relations, issue.id, issue.project_id]);
+  const relationObjectiveCandidates = useMemo(() => {
+    if (!relationType || !objectiveMap) return [];
+    const linked = new Set(
+      (relations ?? [])
+        .filter((r) => r.relation === relationType && r.otherType === "objective")
+        .map((r) => r.otherId),
+    );
+    return [...objectiveMap.values()].filter(
+      (objective) =>
+        objective.project_id === issue.project_id &&
+        !linked.has(objective.id) &&
+        objective.status !== "done" && objective.status !== "canceled",
+    );
+  }, [objectiveMap, relationType, relations, issue.project_id]);
   // Context common to the two copyable prompts (implement the ticket, write
   // its plan): relations and categories, resolved into readable names.
   const promptContext = () => {
@@ -1149,13 +1167,18 @@ const IssueCardContent = memo(function IssueCardContent({
       (getCandidateIssues?.() ?? []).map((i) => [i.id, i.title]),
     );
     return {
-      relations: (relations ?? [])
-        .filter((r) => r.otherType !== "objective")
-        .map((r) => ({
-          type: r.relation,
-          identifier: issueIdentifier(projectKey, r.otherNumber ?? 0),
-          title: titleById.get(r.otherId) ?? "",
-        })),
+      relations: (relations ?? []).map((r) => ({
+        type: r.relation,
+        objective: r.otherType === "objective",
+        identifier:
+          r.otherType === "objective"
+            ? ""
+            : issueIdentifier(projectKey, r.otherNumber ?? 0),
+        title:
+          r.otherType === "objective"
+            ? (objectiveMap?.get(r.otherId)?.name ?? r.otherName ?? "")
+            : (titleById.get(r.otherId) ?? ""),
+      })),
       // Category names (IDs live on the issue, names in categoryMap).
       categories: issue.category_ids
         .map((cid) => categoryMap.get(cid)?.name)
@@ -1553,10 +1576,11 @@ const IssueCardContent = memo(function IssueCardContent({
         position={relationType ? pointerRef.current : null}
         relation={relationType}
         issues={relationCandidates}
+        objectives={relationObjectiveCandidates}
         projectKey={projectKey}
         onClose={() => setRelationType(null)}
-        onSelect={(targetId) => {
-          if (relationType) onAddRelation?.(issue.id, relationType, targetId);
+        onSelect={(targetId, targetType) => {
+          if (relationType) onAddRelation?.(issue.id, relationType, targetId, { targetType });
           setRelationType(null);
         }}
       />

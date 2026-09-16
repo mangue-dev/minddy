@@ -348,9 +348,27 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "get_objective",
+      description:
+        "Read an objective's id, name, description, status, lead_user_id and target_date, plus its relations to issues and objectives (blocks, blocked_by, related). Use list_objectives to find its UUID, then read its dependencies before linking or declaring it ready.",
+      parameters: {
+        type: "object",
+        properties: {
+          objective_id: {
+            type: "string",
+            description: "Objective UUID from list_objectives, in the selected project.",
+          },
+        },
+        required: ["objective_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "list_objectives",
       description:
-        "List the project's objectives (issue groups): id, name, status, lead_user_id, target_date, plus their resources when they carry any — files, links AND pages of the project's wiki (kind, then file name/type/size, url, or page_id + live title). Attach one with add_resource.",
+        "List the project's objectives (issue groups): id, name, status, lead_user_id, target_date, plus their resources when they carry any — files, links AND pages of the project's wiki (kind, then file name/type/size, url, or page_id + live title). Read dependencies with get_objective. Attach one with add_resource.",
       parameters: { type: "object", properties: {} },
     },
   },

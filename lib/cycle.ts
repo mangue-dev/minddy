@@ -335,7 +335,7 @@ export function cycleBlockingRelations(
       out.push(r);
       continue;
     }
-    // A stored `blocks` edge aimed at an objective: its issues inherit it.
+    if (!objectiveStatusById.has(r.target_id)) continue;
     for (const issueId of issuesByObjective.get(r.target_id) ?? []) {
       out.push({
         ...r,

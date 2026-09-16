@@ -3047,6 +3047,7 @@ export function registerMinddyTools(
         if (!existing) {
           return ok({
             removed: false,
+            ...(src.kind === "issue" ? { issue: src.label } : {}),
             source: src.label,
             target: tgt.label,
           });
@@ -3060,6 +3061,7 @@ export function registerMinddyTools(
         return ok({
           removed: true,
           relation: args.relation,
+          ...(src.kind === "issue" ? { issue: src.label } : {}),
           source: src.label,
           source_kind: src.kind,
           target: tgt.label,
@@ -3081,6 +3083,7 @@ export function registerMinddyTools(
       return ok({
         added: true,
         relation: args.relation,
+        ...(src.kind === "issue" ? { issue: src.label } : {}),
         source: src.label,
         source_kind: src.kind,
         target: tgt.label,
