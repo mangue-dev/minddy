@@ -37,7 +37,8 @@ export const MCP_FULL_USAGE_GUIDE =
       "lookup needed), the objective it belongs to, and an assignee when the " +
       "human named one, or the owner on a single-member project. " +
       "And its RELATIONS: an issue can block, be blocked_by, or be related to " +
-      "another — minddy_get_issue reads them, minddy_link_issues writes one, and " +
+      "another issue or an OBJECTIVE (objectives relate too) — minddy_get_issue " +
+      "and minddy_get_objective read them, minddy_link_issues writes one, and " +
       "minddy_create_issue takes them at creation, siblings of the same call " +
       "included ('sub:N'). A dependency you noticed and did not record is one " +
       "nobody else can see. minddy_list_members and minddy_list_categories " +

@@ -95,6 +95,7 @@ import type {
   CreateIssueInput,
   Issue,
   IssueRelationType,
+  RelationEndpointType,
   IssueUpdateInput,
 } from "@/lib/types";
 
@@ -334,8 +335,13 @@ function ProjectBoard() {
     setOpenIssueTab("plan");
   }, []);
   const handleAddRelation = useCallback(
-    (sourceId: string, type: IssueRelationType, targetId: string) => {
-      void addRelation(sourceId, type, targetId).catch((err) =>
+    (
+      sourceId: string,
+      type: IssueRelationType,
+      targetId: string,
+      kinds?: { sourceType?: RelationEndpointType; targetType?: RelationEndpointType }
+    ) => {
+      void addRelation(sourceId, type, targetId, kinds).catch((err) =>
         toast.error((err as Error).message)
       );
     },

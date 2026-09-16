@@ -107,10 +107,13 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
   next due date and carries the cadence over, so there is only ever ONE live issue per series.
   "toutes les semaines", "chaque lundi", "tous les mois" = a recurring issue, not N issues.
 - Sub-issues: parent_id, max ONE level deep (a sub-issue cannot have children).
-- Relations between issues (link_issues): 'blocks', 'blocked_by', 'related' — a dependency
-  between two issues, NOT a hierarchy (that is parent_id) and NOT a duplicate (that is status
-  'duplicate'). get_issue returns them; a blocked issue is left out of cycle filling until its
-  blocker closes, so read them before calling an issue ready to start.
+- Relations (link_issues): 'blocks', 'blocked_by', 'related' — a dependency, NOT a hierarchy
+  (that is parent_id) and NOT a duplicate (that is status 'duplicate'). They pair two issues,
+  or an issue and an objective, or two objectives (target_objective_id / source_objective_id).
+  get_issue returns them; get_objective (objective_id from list_objectives) returns an objective's.
+  A blocked issue is left out of
+  cycle filling until its blocker closes, and blocking through an objective cascades to its
+  issues — so read them before calling an issue ready to start.
 - Issues are referenced as "KEY-N" (project key + number), e.g. "MIND-42".
 - Implementation plan: issues can carry a markdown plan (field \`plan\`), separate from the
   description. Trackable task lines: "- [ ]" pending, "- [~]" in progress, "- [x]" done,

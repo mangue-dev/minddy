@@ -348,9 +348,27 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "get_objective",
+      description:
+        "Read an objective's id, name, description, status, lead_user_id and target_date, plus its relations to issues and objectives (blocks, blocked_by, related). Use list_objectives to find its UUID, then read its dependencies before linking or declaring it ready.",
+      parameters: {
+        type: "object",
+        properties: {
+          objective_id: {
+            type: "string",
+            description: "Objective UUID from list_objectives, in the selected project.",
+          },
+        },
+        required: ["objective_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "list_objectives",
       description:
-        "List the project's objectives (issue groups): id, name, status, lead_user_id, target_date, plus their resources when they carry any — files, links AND pages of the project's wiki (kind, then file name/type/size, url, or page_id + live title). Attach one with add_resource.",
+        "List the project's objectives (issue groups): id, name, status, lead_user_id, target_date, plus their resources when they carry any — files, links AND pages of the project's wiki (kind, then file name/type/size, url, or page_id + live title). Read dependencies with get_objective. Attach one with add_resource.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -787,23 +805,34 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "link_issues",
       description:
-        "Create or remove a relation between two issues (MIN-25) — the same links the user adds from an issue's Relations section. From `issue_id`'s point of view: 'blocks' (it blocks the target), 'blocked_by' (it is blocked by the target), 'related' (a soft link). These are NOT sub-issues (that is parent_id) and NOT duplicates (that is status 'duplicate' + duplicate_of_id). Blocking relations are read by the cycle filler, which leaves a blocked issue out until its blocker closes. Pass remove: true to delete the relation instead. Idempotent both ways. Read an issue's current relations with get_issue.",
+        "Create or remove a relation between two issues (MIN-25), or across issues and objectives (MIN-513) — the same links the user adds from a Relations section. From `issue_id`'s (or `source_objective_id`'s) point of view: 'blocks' (it blocks the target), 'blocked_by' (it is blocked by the target), 'related' (a soft link). The target is an issue (`target_issue_id`) or an objective (`target_objective_id`) — pass exactly one of each side. These are NOT sub-issues (that is parent_id) and NOT duplicates (that is status 'duplicate' + duplicate_of_id). Blocking relations are read by the cycle filler, which leaves a blocked issue out until its blocker closes; blocking through an objective cascades to its issues. Pass remove: true to delete the relation instead. Idempotent both ways. Read an issue's current relations with get_issue, an objective's with get_objective.",
       parameters: {
         type: "object",
         properties: {
           issue_id: {
             type: "string",
             description:
-              "The issue the relation is stated FROM (its perspective).",
+              "The issue the relation is stated FROM (its perspective). Required unless source_objective_id is passed.",
+          },
+          source_objective_id: {
+            type: "string",
+            description:
+              "The OBJECTIVE the relation is stated FROM (objective → issue or objective → objective). Required unless issue_id is passed.",
           },
           relation: {
             type: "string",
             enum: [...RELATION_TYPE_VALUES],
-            description: "The relation, from issue_id's perspective.",
+            description: "The relation, from the source's perspective.",
           },
           target_issue_id: {
             type: "string",
-            description: "The other issue. Must be in the same project.",
+            description:
+              "The other issue. Must be in the same project. Required unless target_objective_id is passed.",
+          },
+          target_objective_id: {
+            type: "string",
+            description:
+              "The other objective (a UUID). Must be in the same project. Required unless target_issue_id is passed.",
           },
           remove: {
             type: "boolean",
@@ -811,7 +840,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
               "Remove that relation instead of adding it (default false).",
           },
         },
-        required: ["issue_id", "relation", "target_issue_id"],
+        required: ["relation"],
       },
     },
   },

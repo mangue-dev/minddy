@@ -4,6 +4,7 @@ import {
   blockedSet,
   calibrationFactor,
   computeTargetPoints,
+  cycleBlockingRelations,
   cycleCompletionPercent,
   cycleFilledPoints,
   cyclePhase,
@@ -457,5 +458,137 @@ describe("fillCycle", () => {
       });
     expect(run()).toEqual(run());
     expect(run().picked.sort()).toEqual(["a", "b"]);
+  });
+});
+
+describe("objective blocking cascade (MIN-513)", () => {
+  const objBlocks = (
+    source: string,
+    target: string
+  ): IssueRelation => ({
+    id: `${source}->${target}`,
+    source_id: source,
+    source_type: "objective",
+    target_id: target,
+    target_type: "objective",
+    type: "blocks",
+  });
+
+  it("blocks a candidate through its objective, until the blocker closes", () => {
+    const { relations: expanded, objectiveStatuses } = cycleBlockingRelations(
+      [objBlocks("objB", "objA")],
+      new Map([["objA", ["i1"]]]),
+      new Map([["objA", "planned"], ["objB", "planned"]])
+    );
+    const blocked = blockedSet(
+      ["i1"],
+      expanded,
+      new Map([
+        ["i1", "todo"],
+        ...objectiveStatuses,
+      ])
+    );
+    expect(blocked.has("i1")).toBe(true);
+
+    const { relations: expanded2, objectiveStatuses: doneStatuses } =
+      cycleBlockingRelations(
+        [objBlocks("objB", "objA")],
+        new Map([["objA", ["i1"]]]),
+        new Map([["objA", "planned"], ["objB", "done"]])
+      );
+    const blocked2 = blockedSet(
+      ["i1"],
+      expanded2,
+      new Map([
+        ["i1", "todo"],
+        ...doneStatuses,
+      ])
+    );
+    expect(blocked2.has("i1")).toBe(false);
+  });
+
+  it("treats an unknown (trashed) blocker objective as non-blocking", () => {
+    const { relations: expanded, objectiveStatuses } = cycleBlockingRelations(
+      [objBlocks("objB", "objA")],
+      new Map([["objA", ["i1"]]]),
+      new Map([["objA", "planned"]])
+    );
+    const blocked = blockedSet(
+      ["i1"],
+      expanded,
+      new Map([
+        ["i1", "todo"],
+        ...objectiveStatuses,
+      ])
+    );
+    expect(blocked.has("i1")).toBe(false);
+  });
+
+  it("fans an issue blocker's edge out to the target objective's issues", () => {
+    const { relations: expanded } = cycleBlockingRelations(
+      [
+        {
+          id: "x->objA",
+          source_id: "x",
+          target_id: "objA",
+          target_type: "objective",
+          type: "blocks",
+        },
+      ],
+      new Map([["objA", ["i1", "i2"]]]),
+      new Map([["objA", "planned"]])
+    );
+    const blocked = blockedSet(
+      ["i1", "i2"],
+      expanded,
+      new Map([
+        ["x", "todo"],
+        ["i1", "todo"],
+        ["i2", "todo"],
+      ])
+    );
+    expect(blocked).toEqual(new Set(["i1", "i2"]));
+  });
+
+  it("does not fan out an edge aimed at a trashed target objective", () => {
+    const { relations: expanded } = cycleBlockingRelations(
+      [objBlocks("objB", "objA")],
+      new Map([["objA", ["i1"]]]),
+      new Map([["objB", "planned" as const]])
+    );
+    expect(expanded).toEqual([]);
+  });
+
+  it("keeps issue↔issue edges untouched and drops empty target objectives", () => {
+    const direct = blocks("a", "b");
+    const { relations: expanded } = cycleBlockingRelations(
+      [direct, objBlocks("objB", "objA")],
+      new Map([]),
+      new Map([["objB", "planned" as const]])
+    );
+    expect(expanded).toEqual([direct]);
+  });
+
+  it("fills around an objective-blocked issue", () => {
+    const { relations: expanded, objectiveStatuses } = cycleBlockingRelations(
+      [objBlocks("objB", "objA")],
+      new Map([["objA", ["i2"]]]),
+      new Map([["objA", "planned"], ["objB", "planned"]])
+    );
+    const statusById = new Map<IssueStatus | string, IssueStatus>([
+      ["i1", "todo"],
+      ["i2", "todo"],
+      ...objectiveStatuses,
+    ] as const);
+    const { picked } = fillCycle({
+      candidates: [
+        issue({ id: "i2", priority: "urgent", objective_id: "objA" }),
+        issue({ id: "i1", priority: "low" }),
+      ],
+      relations: expanded,
+      statusById,
+      targetPoints: 8,
+    });
+    expect(picked).toEqual(["i1"]);
   });
 });

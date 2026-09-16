@@ -616,6 +616,7 @@ function ObjectivesInner() {
             key={selected.id}
             objective={selected}
             projectId={projectId}
+            projectKey={project?.key ?? ""}
             members={members}
             issues={issues}
             onUpdate={updateObjective}

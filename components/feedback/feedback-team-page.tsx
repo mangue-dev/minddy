@@ -81,7 +81,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { Markdown } from "@/components/markdown";
 import { displayName } from "@/lib/display-name";
 import { useIssuesQuery } from "@/lib/use-issues-query";
-import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
+import { useIssueRelationsQuery, type RelationKinds } from "@/lib/use-issue-relations-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
@@ -969,8 +969,13 @@ export function FeedbackTeamPage() {
   useAppTabChange(() => setOpenIssueId(null));
   const openIssue: Issue | null = issues.find((i) => i.id === openIssueId) ?? null;
   const handleAddRelation = useCallback(
-    (sourceId: string, type: IssueRelationType, targetId: string) => {
-      void addRelation(sourceId, type, targetId).catch((err) =>
+    (
+      sourceId: string,
+      type: IssueRelationType,
+      targetId: string,
+      kinds?: RelationKinds
+    ) => {
+      void addRelation(sourceId, type, targetId, kinds).catch((err) =>
         toast.error((err as Error).message)
       );
     },

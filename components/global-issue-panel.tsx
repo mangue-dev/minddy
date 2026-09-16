@@ -9,7 +9,11 @@ import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
-import type { Issue, IssueRelationType } from "@/lib/types";
+import type {
+  Issue,
+  IssueRelationType,
+  RelationEndpointType,
+} from "@/lib/types";
 
 /** Loads the owning project's data and displays an issue above the current page. */
 export function GlobalIssuePanel({
@@ -34,8 +38,13 @@ export function GlobalIssuePanel({
   const issue: Issue | null = issues.find((candidate) => candidate.id === openId) ?? null;
 
   const handleAddRelation = useCallback(
-    (sourceId: string, type: IssueRelationType, targetId: string) => {
-      void addRelation(sourceId, type, targetId).catch((error) =>
+    (
+      sourceId: string,
+      type: IssueRelationType,
+      targetId: string,
+      kinds?: { sourceType?: RelationEndpointType; targetType?: RelationEndpointType },
+    ) => {
+      void addRelation(sourceId, type, targetId, kinds).catch((error) =>
         toast.error((error as Error).message),
       );
     },

@@ -44,6 +44,7 @@ import { SearchSelect, type PickerOption } from "@/components/search-select";
 import { ObjectiveProgressStat } from "@/components/objective-progress";
 import { ObjectiveMomentum } from "@/components/objective-momentum";
 import { ObjectiveResourcesSection } from "@/components/objective-resources-section";
+import { ObjectiveRelationsSection } from "@/components/objective-relations-section";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import {
   DictateButton,
@@ -59,7 +60,7 @@ import { useObjectiveTimeline } from "@/lib/use-objective-timeline";
 import { useObjectiveDictation } from "@/lib/use-objective-dictation";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useScrollFade } from "@/lib/use-scroll-fade";
-import { objectiveProgress } from "@/lib/use-objectives-query";
+import { objectiveProgress, useObjectivesQuery } from "@/lib/use-objectives-query";
 import {
   OBJECTIVE_STATUSES,
   OBJECTIVE_STATUS_MAP,
@@ -191,6 +192,7 @@ function ObjectiveColorValue({
 export function ObjectiveDetail({
   objective,
   projectId,
+  projectKey,
   members,
   issues,
   onUpdate,
@@ -200,6 +202,8 @@ export function ObjectiveDetail({
 }: {
   objective: Objective;
   projectId: string;
+  /** The project key, for the relation rows' ticket identifiers (MIN-513). */
+  projectKey: string;
   members: Member[];
   /** All project issues — powers the done/total progress. */
   issues: Issue[];
@@ -354,11 +358,10 @@ export function ObjectiveDetail({
     [objective.id, issues]
   );
 
-  // describeObjectiveEvent only reads members + due-date formatting; the other
-  // context fields are unused for objectives.
+  const { objectives } = useObjectivesQuery(projectId);
   const eventCtx = useMemo(
-    () => ({ members, objectives: [], categories: [], issues: [], projectKey: "" }),
-    [members]
+    () => ({ members, objectives, categories: [], issues, projectKey }),
+    [members, objectives, issues, projectKey]
   );
 
   const mentions = useDescriptionMentions(projectId, members);
@@ -558,6 +561,12 @@ export function ObjectiveDetail({
                 onChange={(color) => void patch({ color })}
               />
             </PropertyRow>
+            <ObjectiveRelationsSection
+              objective={objective}
+              projectId={projectId}
+              projectKey={projectKey}
+              issues={issues}
+            />
             <ObjectiveResourcesSection
               objectiveId={objective.id}
               projectId={projectId}

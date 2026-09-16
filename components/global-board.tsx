@@ -19,10 +19,13 @@ import { buildViewHref } from "@/lib/saved-view-href";
 import { filterIssues, visibleStatuses } from "@/lib/view-filter";
 import { STATUSES } from "@/lib/issue-constants";
 import {
+  cycleBlockingRelations,
   cycleCompletionPercent,
   cycleFilledPoints,
   recoComparator,
 } from "@/lib/cycle";
+import type { ObjectiveStatus } from "@/lib/objective-constants";
+import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import {
   useAssistantContext,
   useAssistantPanel,
@@ -374,11 +377,29 @@ function GlobalBoardInner() {
     );
   }, [cycles?.current?.id, issues]);
   // Reco ordering: blockers may live outside the cycle, so the status map
-  // covers the whole board.
+  // covers the whole board. Relations can also block through an OBJECTIVE
+  // (MIN-513): objective-ended edges are folded down onto their issues before
+  // scoring, and an objective blocker's open/closed state rides its mapped
+  // issue status.
   const cycleComparator = useMemo(() => {
     const statusById = new Map(scopedIssues.map((i) => [i.id, i.status]));
-    return recoComparator(relations, statusById);
-  }, [scopedIssues, relations]);
+    const issuesByObjective = new Map<string, string[]>();
+    for (const i of scopedIssues) {
+      if (!i.objective_id) continue;
+      const list = issuesByObjective.get(i.objective_id);
+      if (list) list.push(i.id);
+      else issuesByObjective.set(i.objective_id, [i.id]);
+    }
+    const objectiveStatusById = new Map<string, ObjectiveStatus>();
+    for (const o of allObjectives) objectiveStatusById.set(o.id, o.status);
+    const { relations: expanded, objectiveStatuses } = cycleBlockingRelations(
+      relations,
+      issuesByObjective,
+      objectiveStatusById
+    );
+    for (const [id, status] of objectiveStatuses) statusById.set(id, status);
+    return recoComparator(expanded, statusById);
+  }, [scopedIssues, relations, allObjectives]);
   const cycleLabel = selectedCycle ? formatCycleRange(format, selectedCycle) : null;
   // Every issue of the cycle closed → the "completed" banner offers a refill.
   const cycleFullyCompleted =
@@ -433,8 +454,14 @@ function GlobalBoardInner() {
   // Relations (MIN-25) from any card of this board — the write goes through
   // the card's own project route (relations are same-project by construction).
   const handleAddRelation = useCallback(
-    (sourceId: string, type: IssueRelationType, targetId: string, projectId: string) =>
-      void addRelation(projectId, sourceId, type, targetId).catch((err) =>
+    (
+      sourceId: string,
+      type: IssueRelationType,
+      targetId: string,
+      projectId: string,
+      kinds?: RelationKinds
+    ) =>
+      void addRelation(projectId, sourceId, type, targetId, kinds).catch((err) =>
         toast.error((err as Error).message)
       ),
     [addRelation]
@@ -679,8 +706,8 @@ function GlobalBoardInner() {
           setOpenIssueId(id);
           setOpenIssueTab("description");
         }}
-        onAddRelation={(sourceId, type, targetId) =>
-          handleAddRelation(sourceId, type, targetId, openPid)
+        onAddRelation={(sourceId, type, targetId, kinds) =>
+          handleAddRelation(sourceId, type, targetId, openPid, kinds)
         }
         onRemoveRelation={(relationId) =>
           void removeRelation(openPid, relationId).catch((err) =>

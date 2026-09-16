@@ -296,6 +296,13 @@ const TOOL_META: Record<string, ToolMeta> = {
       return t("foundMembers", { count: resultCount(result, "members") });
     },
   },
+  get_objective: {
+    icon: Target,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("loadingObjectives");
+      return t("foundObjectives", { count: success && result?.objective ? 1 : 0 });
+    },
+  },
   list_objectives: {
     icon: Target,
     getLabel: (_args, result, _success, status, t) => {

@@ -150,7 +150,7 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
   const cards: PublicCard[] = issues.map((issue) => {
     const parent = issue.parent_id ? allIssueMap.get(issue.parent_id) : undefined;
     const chips = resolveRelations(issue.id, relations, statusById)
-      .map((r) => {
+      .map((r): ChipRelation | null => {
         const other = allIssueMap.get(r.otherId);
         return other ? { ...r, otherNumber: other.number } : null;
       })
