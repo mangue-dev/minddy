@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveAiRuntime } from "@/lib/server/ai-runtime";
 
 vi.mock("server-only", () => ({}));
 
@@ -9,6 +10,7 @@ const h = vi.hoisted(() => ({
   checkpoints: [] as Array<Record<string, unknown>>,
   messages: [] as Array<Record<string, unknown>>,
   queuedTurns: [] as Array<Record<string, unknown>>,
+  claims: [] as Array<Record<string, unknown>>,
   terminalWorkers: [] as Array<Record<string, unknown>>,
   interruptions: [] as string[],
   failActivity: false,
@@ -81,6 +83,7 @@ const service = {
   from: (table: string) => queryFor(table),
   rpc: async (name: string, args: Record<string, unknown> = {}) => {
     if (name === "claim_numo_turn") {
+      h.claims.push(args);
       h.turn = {
         ...h.turn,
         status: "running",
@@ -181,8 +184,7 @@ vi.mock("@/lib/managed-services", () => ({
   isManagedAiEnabled: () => h.managedAi,
 }));
 vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: vi.fn() }));
-vi.mock("@/lib/server/ai-runtime", () => ({ resolveAiRuntime: vi.fn() }));
-vi.mock("@/lib/server/agent/delegation", () => ({
+vi.mock("@/lib/server/ai-runtime", () => ({ resolveAiRuntime: vi.fn() }));vi.mock("@/lib/server/agent/delegation", () => ({
   finalizeAgentDelegationResult: (...args: unknown[]) => h.finalizeAgentDelegationResult(...args),
 }));
 
@@ -234,6 +236,7 @@ beforeEach(() => {
   h.checkpoints.length = 0;
   h.messages.length = 0;
   h.queuedTurns.length = 0;
+  h.claims.length = 0;
   h.terminalWorkers.length = 0;
   h.interruptions.length = 0;
   h.failActivity = false;
@@ -258,6 +261,7 @@ beforeEach(() => {
   h.processChat.mockReset();
   h.recordAiUsage.mockReset();
   h.finalizeAgentDelegationResult.mockReset();
+  vi.mocked(resolveAiRuntime).mockResolvedValue(runtime as never);
   h.processChat.mockResolvedValue({
     fullContent: "Done without code.",
     finalReasoning: null,
@@ -586,11 +590,24 @@ describe("durable Numo execution", () => {
     expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "retryable" });
   });
 
-  it("recovers a queued turn whose request died before dispatch", async () => {
+  it("actually resumes a queued turn whose request died before dispatch", async () => {
     h.queuedTurns.push({ id: h.turn!.id, checkpoint: {} });
 
     await expect(drainNumoTurns({ limit: 1 })).resolves.toEqual({ claimed: 1 });
-    expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "retryable" });
+    // The drain executes the turn with the service read client: claiming it
+    // without one would flip it straight back to `retryable` without ever
+    // running it, and the cron would churn the lease every minute.
+    expect(h.processChat).toHaveBeenCalled();
+  });
+
+  it("resumes a retryable turn stranded by a dead background dispatch", async () => {
+    // A server-started turn (PR review, routine) whose process died leaves
+    // nobody around to press "Retry": the drain must pick it up itself.
+    h.queuedTurns.push({ id: h.turn!.id, checkpoint: {}, status: "retryable" });
+
+    await expect(drainNumoTurns({ limit: 1 })).resolves.toEqual({ claimed: 1 });
+    expect(h.claims.at(-1)).toMatchObject({ p_allow_retryable: true });
+    expect(h.processChat).toHaveBeenCalled();
   });
 
   it("finalizes terminal worker handoffs before recovering stale parent turns", async () => {

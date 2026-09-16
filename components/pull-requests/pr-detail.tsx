@@ -700,8 +700,11 @@ export function PrDetail({
   const reviewDrop = useFileDrop(reviewUploads.addFiles);
   // Numo rereads the PR (MIN-141): a SESSION, not a blocking call — it is
   // plays IN the thread, in place of its future verdict message, and survives a
-  // rechargement.
-  const reviewSession = usePrReviewSession(item.prId);
+  // rechargement. The launch timestamp feeds the poll grace window: right
+  // after the AI-review gesture there is no agent run row yet, only the
+  // Numo conversation.
+  const [reviewLaunchedAt, setReviewLaunchedAt] = useState<number | null>(null);
+  const reviewSession = usePrReviewSession(item.prId, true, reviewLaunchedAt);
   const [aiReviewDialog, setAiReviewDialog] = useState(false);
   const [tab, setTab] = useState<PullRequestDetailTab>("activity");
   /** The Files diff is long: past ~600px scrolled, a floating button offers
@@ -1313,6 +1316,10 @@ export function PrDetail({
   const startAiReview = () => {
     if (!prPageContext) return;
     setAiReviewDialog(false);
+    // Start the poll grace window NOW: the run row only appears once the
+    // Numo turn delegates, and the card must show "review in progress"
+    // in the meantime.
+    setReviewLaunchedAt(Date.now());
     openIntent({
       source: "pull_request",
       action: "review",

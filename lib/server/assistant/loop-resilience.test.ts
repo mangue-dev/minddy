@@ -416,4 +416,129 @@ describe("Numo chat loop resilience", () => {
     expect(toolReplayPolicy("answer_code_worker")).toBe("retry");
     expect(toolReplayPolicy("create_issue")).toBe("reconcile");
   });
+
+  it("aborts a provider stream that carries nothing for the idle ceiling", async () => {
+    vi.useFakeTimers();
+    try {
+      fetchOpenRouter.mockImplementation(async (_url, _model, buildRequest) => {
+        const signal = (buildRequest("model") as RequestInit).signal as AbortSignal;
+        const body = new ReadableStream<Uint8Array>({
+          start(controller) {
+            // Accepted, then silent forever — no chunk, no [DONE].
+            signal.addEventListener("abort", () => controller.error(new Error("aborted")));
+          },
+        });
+        return { model: "model", response: new Response(body, { status: 200 }) };
+      });
+      const assertion = expect(processChat(
+        [{ role: "user", content: "Think forever" }],
+        [],
+        { emit: vi.fn() } as never,
+        {
+          model: "model",
+          conversationId: "conversation",
+          projectId: "project",
+          userId: "user",
+          supabase: fakeService(),
+          service: fakeService(),
+          locale: "en",
+        },
+      )).rejects.toThrow("stayed idle");
+      await vi.advanceTimersByTimeAsync(90_000);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("aborts the provider request when a stop arrives mid-stream", async () => {
+    const observed: { signal: AbortSignal | null } = { signal: null };
+    let answered = false;
+    fetchOpenRouter.mockImplementation(async (_url, _model, buildRequest) => {
+      const signal = (buildRequest("model") as RequestInit).signal as AbortSignal;
+      observed.signal = signal;
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          const encoder = new TextEncoder();
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ id: "generation", model: "model", choices: [{ delta: { content: "partial" } }] })}\n\n`,
+            ),
+          );
+          signal.addEventListener("abort", () => controller.error(new Error("aborted")));
+          // No close: without the mid-stream stop the round would hang forever.
+        },
+      });
+      answered = true;
+      return { model: "model", response: new Response(body, { status: 200 }) };
+    });
+    // The stop is only recorded after the first chunk: without a mid-stream
+    // stop check the loop would sit on the pending read.
+    const shouldStop = vi.fn().mockImplementation(async () => answered);
+
+    const result = await processChat(
+      [{ role: "user", content: "Start answering, then get stopped" }],
+      [],
+      { emit: vi.fn() } as never,
+      {
+        model: "model",
+        conversationId: "conversation",
+        projectId: "project",
+        userId: "user",
+        supabase: fakeService(),
+        service: fakeService(),
+        locale: "en",
+        shouldStop,
+      },
+    );
+
+    expect(answered).toBe(true);
+    expect(observed.signal?.aborted).toBe(true);
+    // A partial round must not leak into history: the turn is handed back and
+    // `executeNumoTurnCore` checkpoints it as `stopped`.
+    expect(result.fullContent).toBe("");
+    expect(result.suspension).toBeNull();
+    expect(executeTool).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a mid-stream provider error instead of truncating the reply", async () => {
+    fetchOpenRouter.mockResolvedValue({
+      model: "model",
+      response: new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            const encoder = new TextEncoder();
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  id: "generation",
+                  model: "model",
+                  error: { code: 502, message: "Provider disconnected unexpectedly" },
+                  choices: [{ index: 0, delta: { content: "" }, finish_reason: "error" }],
+                })}\n\n`,
+              ),
+            );
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            controller.close();
+          },
+        }),
+        { status: 200 },
+      ),
+    });
+
+    await expect(processChat(
+      [{ role: "user", content: "Say something" }],
+      [],
+      { emit: vi.fn() } as never,
+      {
+        model: "model",
+        conversationId: "conversation",
+        projectId: "project",
+        userId: "user",
+        supabase: fakeService(),
+        service: fakeService(),
+        locale: "en",
+      },
+    )).rejects.toThrow("Provider disconnected unexpectedly");
+  });
 });

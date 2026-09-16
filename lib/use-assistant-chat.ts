@@ -488,6 +488,7 @@ async function fetchConversationStatus(
   error_message: string | null;
   turn_id?: string | null;
   last_event_seq?: number;
+  active_run_id?: string | null;
   pending_input?: {
     run_id: string;
     parent_numo_turn_id: string;
@@ -580,6 +581,21 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       stopPolling();
       dispatch({ type: "GENERATING_SERVER" });
       let after = -1;
+      // Suspension already reflected in the thread: `<turn>:<run>` last reloaded.
+      let reloadedSuspension: string | null = null;
+      // The turn is suspended on its delegated worker — the assistant itself
+      // is paused until the worker wakes it.
+      let suspended = false;
+
+      const reloadMessages = async () => {
+        const messages = await fetchConversationMessages(conversationId);
+        dispatch({
+          type: "LOAD_HISTORY",
+          messages,
+          conversationId,
+          projectId,
+        });
+      };
 
       const poll = async () => {
         try {
@@ -599,6 +615,41 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
               onToolResult: onToolResultRef.current,
             });
             after = Math.max(after, event.seq);
+          }
+
+          if (status === "waiting_work") {
+            // The turn is suspended while its delegated worker runs in the
+            // sandbox. The card's live state comes from polling the run, and
+            // it needs the run id carried by the persisted launch tool
+            // result — which a replayed journal never re-emits (`tool_result`
+            // is not persisted). Reload the history once per suspension so
+            // the card picks the real state instead of staying on
+            // "Starting" until the worker ends.
+            const key = `${response.turn_id}:${response.active_run_id ?? ""}`;
+            if (key !== reloadedSuspension) {
+              await reloadMessages();
+              // Set only after success: a failed reload must be retried by
+              // the next poll instead of being skipped forever.
+              reloadedSuspension = key;
+              // The assistant handed the work to its agent: it is not
+              // "Traitement en cours…" for minutes. The composer goes back
+              // to idle; the delegated card carries the live state, and the
+              // wake-up re-arms the generating presentation below.
+              dispatch({ type: "DONE" });
+            }
+            suspended = true;
+            pollRef.current = setTimeout(poll, POLL_INTERVAL_MS);
+            return;
+          }
+
+          if (
+            suspended
+            && (status === "queued" || status === "running" || status === "stopping")
+          ) {
+            // The worker finished and the parent turn woke up: back to the
+            // generating presentation so the resumed replay is visible.
+            suspended = false;
+            dispatch({ type: "GENERATING_SERVER" });
           }
 
           if (status === "idle" || status === "completed" || status === "waiting_input" || status === "stopped") {

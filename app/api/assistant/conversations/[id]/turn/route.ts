@@ -33,22 +33,37 @@ export async function POST(
 
   const body = await request.json().catch(() => null) as { action?: unknown } | null;
   if (body?.action === "stop") {
-    const turn = await requestNumoTurnStop(conversationId, user.id);
-    if (!turn) return Response.json({ error: "No active turn" }, { status: 409 });
-    return Response.json({ turn_id: turn.id, status: turn.status });
+    try {
+      const turn = await requestNumoTurnStop(conversationId, user.id);
+      if (!turn) return Response.json({ error: "No active turn" }, { status: 409 });
+      return Response.json({ turn_id: turn.id, status: turn.status });
+    } catch (error) {
+      // A failed stop must still answer with a parseable body: the client
+      // reconciles from polling, but an HTML crash page hides the reason.
+      console.error("[numo-turn] stop request failed:", error);
+      return Response.json(
+        { error: "Stop request failed", code: "numo_stop_failed" },
+        { status: 500 },
+      );
+    }
   }
   if (body?.action === "retry") {
-    const turn = await retryNumoTurn(conversationId, user.id);
-    if (!turn) return Response.json({ error: "Turn is not retryable" }, { status: 409 });
-    const result = await executeNumoTurn({
-      turnId: turn.id,
-      readClient: supabase,
-      allowRetryable: true,
-    });
-    return Response.json({
-      turn_id: turn.id,
-      status: result.status === "not_claimed" ? turn.status : result.status,
-    });
+    try {
+      const turn = await retryNumoTurn(conversationId, user.id);
+      if (!turn) return Response.json({ error: "Turn is not retryable" }, { status: 409 });
+      const result = await executeNumoTurn({
+        turnId: turn.id,
+        readClient: supabase,
+        allowRetryable: true,
+      });
+      return Response.json({
+        turn_id: turn.id,
+        status: result.status === "not_claimed" ? turn.status : result.status,
+      });
+    } catch (error) {
+      console.error("[numo-turn] retry request failed:", error);
+      return Response.json({ error: "Retry failed", code: "numo_retry_failed" }, { status: 500 });
+    }
   }
   return Response.json({ error: "action must be 'stop' or 'retry'" }, { status: 400 });
 }

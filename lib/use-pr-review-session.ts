@@ -20,13 +20,32 @@ const QUERY_KEY = "pr-review-session";
 
 /** Tracking cadence while a session is working. */
 const ACTIVE_POLL_MS = 5000;
+/**
+ * How long a just-launched review keeps the poll alive without a run. The
+ * launch is a Numo INTENT: the conversation turn starts first, and the agent
+ * run row only appears once Numo delegates the work — seconds later. Without
+ * this window the poll stops on the first `run: null` answer and the card
+ * never learns that a review is in progress.
+ */
+const LAUNCH_GRACE_MS = 120_000;
 
-export function usePrReviewSession(prId: string, enabled = true) {
+export function usePrReviewSession(
+  prId: string,
+  enabled = true,
+  launchedAt: number | null = null,
+) {
   const { data, isPending, refetch } = useQuery({
     queryKey: [QUERY_KEY, prId] as const,
     queryFn: () => fetchPullRequestAiReviewApi(prId),
     enabled,
-    refetchInterval: (query) => (query.state.data?.run?.working ? ACTIVE_POLL_MS : false),
+    refetchInterval: (query) => {
+      if (query.state.data?.run?.working) return ACTIVE_POLL_MS;
+      // Grace after a launch: no run yet does not mean "nothing will come".
+      if (launchedAt != null && Date.now() - launchedAt < LAUNCH_GRACE_MS) {
+        return ACTIVE_POLL_MS;
+      }
+      return false;
+    },
   });
 
   const run = data?.run ?? null;
