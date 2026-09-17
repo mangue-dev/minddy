@@ -32,6 +32,8 @@ export function BulkIssueActions({
   onDelete,
   onClear,
   onAskNumo,
+  onCopyPrompt,
+  onLaunchAgent,
   cycle,
   objectives,
   onLink,
@@ -43,6 +45,11 @@ export function BulkIssueActions({
   onDelete?: () => void;
   onClear: () => void;
   onAskNumo: () => void;
+  /** Combined prompt of the selection — copied (⇧P) and offered as a palette
+      row (MIN-539). */
+  onCopyPrompt?: () => void;
+  /** Numo launch on the whole selection, one combined instruction (⇧A). */
+  onLaunchAgent?: () => void;
   cycle?: BulkCycleActions;
   objectives?: Objective[];
   onLink?: () => void;
@@ -72,6 +79,8 @@ export function BulkIssueActions({
       onUpdate,
       onDelete,
       onAskNumo,
+      onCopyPrompt,
+      onLaunchAgent,
       cycle,
       objectives,
       onLink,

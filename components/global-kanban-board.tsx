@@ -33,6 +33,9 @@ import type {
 } from "@/lib/types";
 import { issueComparator } from "@/lib/view-filter";
 import { resolveRelationsByIssue } from "@/lib/relation-constants";
+import { issueIdentifier } from "@/lib/issue-constants";
+import { promptRelations } from "@/lib/issue-prompt";
+import { useBulkSelectionActions } from "@/lib/use-bulk-selection-actions";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import { createBoardColumnsBuilder } from "@/lib/board-columns";
 import {
@@ -296,6 +299,40 @@ export function GlobalKanbanBoard({
       clearSelection();
     };
   }, [selectedIssues, selectionProjectId, onAddRelation, clearSelection]);
+  // ⇧P/⇧A on the selection (MIN-539): ONE combined prompt for all the checked
+  // tickets. A mixed selection spans projects: the prompt resolves each
+  // issue's key in its own project, and the Numo intent stays projectless
+  // (the composer asks, like the existing bulk “Ask Numo”).
+  const bulkPromptActions = useBulkSelectionActions({
+    selectedIssues,
+    projectId: selectionProjectId,
+    identifierOf: (issue) => {
+      const key = projectMap.get(issue.project_id)?.key;
+      return key ? issueIdentifier(key, issue.number) : String(issue.number);
+    },
+    buildInput: (issue) => {
+      const objectives = objectiveMapByProject.get(issue.project_id);
+      return {
+        issue,
+        projectId: issue.project_id,
+        projectKey: projectMap.get(issue.project_id)?.key ?? "",
+        resourceCount: issue.resource_count,
+        categories: issue.category_ids
+          .map((cid) => categoryMapByProject.get(issue.project_id)?.get(cid)?.name)
+          .filter((name): name is string => !!name),
+        relations: promptRelations(relationsByIssue.get(issue.id), {
+          identifierOf: (otherId) => {
+            const other = allIssueMap.get(otherId);
+            const key = other ? projectMap.get(other.project_id)?.key : undefined;
+            return other && key ? issueIdentifier(key, other.number) : "";
+          },
+          titleOf: (otherId) =>
+            objectives?.get(otherId)?.name ?? allIssueMap.get(otherId)?.title ?? "",
+        }),
+      };
+    },
+    onUpdateIssue: (issue, patch) => onUpdateIssue(issue.id, patch, issue.project_id),
+  });
   // The dragged bundle, drop marker, and persisted move share the same
   // calculation as the project board (see lib/use-board-drop.ts).
   const drop = useBoardDrop({
@@ -516,6 +553,8 @@ export function GlobalKanbanBoard({
               }}
               onClear={clearSelection}
               onAskNumo={() => onAskNumo(selectedIssues)}
+              onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
+              onLaunchAgent={bulkPromptActions.launchAgent}
               cycle={bulkCycle}
               objectives={bulkObjectives}
               onLink={bulkLink}

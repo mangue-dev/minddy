@@ -686,6 +686,10 @@
     "selected": "{count, plural, one {# incidencia seleccionada} other {# incidencias seleccionadas}}",
     "actions": "Acciones",
     "askNumo": "Pregúntale a Numo",
+    "copyPrompt": "Copiar el prompt combinado",
+    "launchAgent": "Implementar con Numo",
+    "promptCopied": "Prompt combinado para {count, plural, one {# incidencia} other {# incidencias}} copiado. Pégalo en tu agente de programación.",
+    "promptCopiedMoved": "Prompt combinado para {count, plural, one {# incidencia} other {# incidencias}} copiado. Las incidencias pasaron a «En curso».",
     "link": "Vincular las dos incidencias",
     "linked": "Incidencias vinculadas",
     "clear": "Limpiar la selección",
@@ -1796,7 +1800,8 @@
       "project": "En un proyecto",
       "general": "General",
       "create": "Crear",
-      "card": "Incidencia (al pasar el cursor por una tarjeta o por el panel)"
+      "card": "Incidencia (al pasar el cursor por una tarjeta o por el panel)",
+      "selection": "Selección de incidencias"
     },
     "shortcuts": {
       "navHome": "Inicio",
@@ -1838,6 +1843,8 @@
       "askNumo": "Preguntar a Numo (tarjeta o selección)",
       "copyPrompt": "Copiar como prompt",
       "launchAgent": "Confiar a Numo",
+      "selectionCopyPrompt": "Copiar el prompt combinado de la selección",
+      "selectionLaunchAgent": "Lanzar el agente sobre la selección",
       "dictate": "Dictar (panel de incidencia o incidencia nueva)"
     }
   },
@@ -2596,7 +2603,9 @@
       "reviewPlan": "Esta incidencia ya tiene un plan de implementación: tu única tarea es REVISARLO, no escribir uno nuevo ni implementarlo. Léelo y contrasta cada tarea con el código real: ¿sigue siendo precisa (archivos y enfoque correctos), necesaria y está en el orden adecuado? ¿Falta algún paso? Corrige lo que haya quedado desactualizado, elimina lo que el código ya no requiera, añade lo que falte y no alteres las tareas completadas ni su progreso. Guarda el plan corregido en la incidencia, DETENTE y dime qué has cambiado.",
       "verifyImplementation": "El trabajo de esta incidencia ya se ha realizado, al menos en parte: tu única tarea es VERIFICAR esa implementación, no escribir una nueva. Empieza por lo que se pidió: la incidencia, su plan y sus comentarios, donde se justificó cualquier desviación del plan; después, compáralos con el código real: ¿está realmente terminada cada tarea marcada como completada y se ha hecho según lo especificado? Señala las carencias y dime cuál de las dos versiones es correcta (a veces el código es la mejor respuesta; el plan no es sagrado). A continuación, busca errores: casos límite rotos, estados incorrectos o ausentes, puntos de llamada que el cambio no actualizó o elementos solicitados por el plan que se omitieron sin indicarlo. Corrige aquellos que puedas demostrar leyendo el código y comprueba cada corrección (pruebas, comprobación de tipos y lint del repositorio); si solo lo sospechas, notifícalo en lugar de «corregirlo»: un cambio especulativo en código que funciona cuesta más que el error imaginado. No refactorices lo que funciona, mantente dentro del alcance de la incidencia y termina explicándome qué has verificado, qué has corregido y qué has dejado sin tocar.",
       "chainVerifyPlan": "Esta incidencia ya tiene un plan de implementación: tu única tarea es REVISARLO, no escribir uno nuevo ni implementarlo. Léelo y contrasta cada tarea con el código real: ¿sigue siendo precisa (archivos y enfoque correctos), necesaria y está en el orden adecuado? ¿Falta algún paso? Corrige lo que haya quedado desactualizado, elimina lo que el código ya no requiera, añade lo que falte y no alteres las tareas completadas ni su progreso. Guarda el plan corregido en la incidencia, DETENTE y dime qué has cambiado. Después, llama a report_verdict EXACTAMENTE UNA VEZ, como última acción: `ok` debe ser verdadero si el plan es sólido y puede implementarse tal como está, y falso si no lo es; en ese caso, incluye en `blockers` lo que deba cambiar primero. Una cadena automatizada lee ese veredicto para decidir qué ocurre después; sin él, nada avanza.",
-      "chainVerifyImplementation": "El trabajo de esta incidencia ya se ha realizado, al menos en parte: tu única tarea es VERIFICAR esa implementación, no escribir una nueva. Empieza por lo que se pidió: la incidencia, su plan y sus comentarios, donde se justificó cualquier desviación del plan; después, compáralos con el código real: ¿está realmente terminada cada tarea marcada como completada y se ha hecho según lo especificado? Señala las carencias y dime cuál de las dos versiones es correcta (a veces el código es la mejor respuesta; el plan no es sagrado). A continuación, busca errores: casos límite rotos, estados incorrectos o ausentes, puntos de llamada que el cambio no actualizó o elementos solicitados por el plan que se omitieron sin indicarlo. Corrige aquellos que puedas demostrar leyendo el código y comprueba cada corrección (pruebas, comprobación de tipos y lint del repositorio); si solo lo sospechas, notifícalo en lugar de «corregirlo»: un cambio especulativo en código que funciona cuesta más que el error imaginado. No refactorices lo que funciona, mantente dentro del alcance de la incidencia y termina explicándome qué has verificado, qué has corregido y qué has dejado sin tocar. A continuación, llama a report_verdict EXACTAMENTE UNA VEZ, como última acción: `ok` debe ser verdadero si el trabajo coincide con lo solicitado y no has encontrado nada que deba corregirse, y falso en caso contrario; en ese caso, incluye en `blockers` lo que deba cambiar. Una cadena automatizada lee ese veredicto: si es falso, devuelve el trabajo para una nueva revisión usando tu resumen como instrucción, así que sé preciso y sincero."
+      "chainVerifyImplementation": "El trabajo de esta incidencia ya se ha realizado, al menos en parte: tu única tarea es VERIFICAR esa implementación, no escribir una nueva. Empieza por lo que se pidió: la incidencia, su plan y sus comentarios, donde se justificó cualquier desviación del plan; después, compáralos con el código real: ¿está realmente terminada cada tarea marcada como completada y se ha hecho según lo especificado? Señala las carencias y dime cuál de las dos versiones es correcta (a veces el código es la mejor respuesta; el plan no es sagrado). A continuación, busca errores: casos límite rotos, estados incorrectos o ausentes, puntos de llamada que el cambio no actualizó o elementos solicitados por el plan que se omitieron sin indicarlo. Corrige aquellos que puedas demostrar leyendo el código y comprueba cada corrección (pruebas, comprobación de tipos y lint del repositorio); si solo lo sospechas, notifícalo en lugar de «corregirlo»: un cambio especulativo en código que funciona cuesta más que el error imaginado. No refactorices lo que funciona, mantente dentro del alcance de la incidencia y termina explicándome qué has verificado, qué has corregido y qué has dejado sin tocar. A continuación, llama a report_verdict EXACTAMENTE UNA VEZ, como última acción: `ok` debe ser verdadero si el trabajo coincide con lo solicitado y no has encontrado nada que deba corregirse, y falso en caso contrario; en ese caso, incluye en `blockers` lo que deba cambiar. Una cadena automatizada lee ese veredicto: si es falso, devuelve el trabajo para una nueva revisión usando tu resumen como instrucción, así que sé preciso y sincero.",
+      "bulkHead": "Trabaja en estas {count} incidencias: {identifiers}.",
+      "bulkBody": "Trátalas una por una, en el orden indicado. Para cada incidencia, sigue el enfoque que le corresponda: una incidencia que ya tiene un plan de implementación se sigue paso a paso, marcando cada tarea a medida que avances; un cambio pequeño y bien acotado (XS) se implementa directamente, sin plan; cualquier cosa mayor empieza con un plan claro escrito en la incidencia antes de implementar. Verifica cada cambio sobre la marcha e informa del resultado de cada incidencia cuando la termines."
     },
     "openAgent": "Abrir en Numo",
     "newSession": "Nueva conversación",

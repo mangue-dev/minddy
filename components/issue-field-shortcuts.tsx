@@ -20,6 +20,7 @@ import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem } from "mangue-ui";
 import { useChordPrefix } from "@/lib/keyboard/keyboard-context";
 import { useHoverKeys } from "@/lib/keyboard/hover-keys";
+import { selectionKeysActive } from "@/lib/keyboard/selection-keys";
 import { CommandAnchor } from "@/components/command-anchor";
 import { PickerCreateRow } from "@/components/search-select";
 import {
@@ -135,6 +136,11 @@ export function useIssueFieldShortcuts(
     const key = eventKey(e);
     const action = actionsRef.current?.[e.shiftKey ? `shift+${key}` : key];
     if (action) {
+      // A ticket selection owns ⇧P/⇧A while the pill is up (MIN-539): the
+      // selection acts on every checked ticket, hover must not narrow the
+      // action to one. Stand down WITHOUT consuming — the selection listener
+      // (lib/use-bulk-selection-actions.ts) takes it from here.
+      if (e.shiftKey && selectionKeysActive()) return;
       // Capture phase + stopImmediatePropagation: while hovering, this owns
       // the combo — e.g. Shift+P copies here without touching the P picker.
       e.preventDefault();

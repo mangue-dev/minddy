@@ -686,6 +686,10 @@
     "selected": "{count, plural, one {# issue selected} other {# issues selected}}",
     "actions": "Actions",
     "askNumo": "Ask Numo",
+    "copyPrompt": "Copy the combined prompt",
+    "launchAgent": "Implement with Numo",
+    "promptCopied": "Combined prompt for {count, plural, one {# issue} other {# issues}} copied. Paste it into your coding agent.",
+    "promptCopiedMoved": "Combined prompt for {count, plural, one {# issue} other {# issues}} copied. The issues moved to “In progress”.",
     "link": "Link the two issues",
     "linked": "Issues linked",
     "clear": "Clear selection",
@@ -1796,7 +1800,8 @@
       "project": "In a project",
       "general": "General",
       "create": "Create",
-      "card": "Issue (hovering a card or the panel)"
+      "card": "Issue (hovering a card or the panel)",
+      "selection": "Issue selection"
     },
     "shortcuts": {
       "navHome": "Home",
@@ -1838,6 +1843,8 @@
       "askNumo": "Ask Numo (card or selection)",
       "copyPrompt": "Copy as prompt",
       "launchAgent": "Hand to Numo",
+      "selectionCopyPrompt": "Copy the combined prompt of the selection",
+      "selectionLaunchAgent": "Launch the agent on the selection",
       "dictate": "Dictate (issue panel or new issue)"
     }
   },
@@ -2596,7 +2603,9 @@
       "reviewPlan": "This issue already has an implementation plan: your only job here is to REVIEW it; not to write a new one, and not to implement it. Read it, then go through it task by task against the real code; is each one still accurate (right files, right approach), still needed, and in the right order? Is a step missing? Correct what has drifted, drop what the code no longer calls for, add what's missing, and leave completed tasks and their progress alone. Save the corrected plan on the issue, then STOP and tell me what you changed.",
       "verifyImplementation": "The work on this issue has already been done, at least in part: your only job here is to VERIFY that implementation, not to write a new one. Start with what was asked; the issue, its plan and its comments, where any departure from the plan was argued; then compare them against the real code: is every task marked done really done, and done the way it was specified? Call out the gaps, and tell me which of the two is right (the code is sometimes the better answer, the plan isn't sacred). Then hunt for bugs: broken edge cases, wrong or missing states, call sites the change forgot to update, something the plan asked for that was silently skipped. Fix the ones you can prove by reading the code, and check every fix (the repo's tests, typecheck and lint); what you merely suspect, report it instead of “fixing” it; a speculative change to working code costs more than the bug you imagined. Don't refactor what works, stay inside the issue's scope, and finish by telling me what you verified, what you fixed and what you left alone.",
       "chainVerifyPlan": "This issue already has an implementation plan: your only job here is to REVIEW it; not to write a new one, and not to implement it. Read it, then go through it task by task against the real code; is each one still accurate (right files, right approach), still needed, and in the right order? Is a step missing? Correct what has drifted, drop what the code no longer calls for, add what's missing, and leave completed tasks and their progress alone. Save the corrected plan on the issue, then STOP and tell me what you changed. Then call report_verdict EXACTLY ONCE, as the last thing you do: `ok` true when the plan is sound and ready to be implemented as it stands, false when it is not; and in that case put in `blockers` what has to change first. An automated chain reads that verdict to decide what happens next; without it, nothing moves.",
-      "chainVerifyImplementation": "The work on this issue has already been done, at least in part: your only job here is to VERIFY that implementation, not to write a new one. Start with what was asked; the issue, its plan and its comments, where any departure from the plan was argued; then compare them against the real code: is every task marked done really done, and done the way it was specified? Call out the gaps, and tell me which of the two is right (the code is sometimes the better answer, the plan isn't sacred). Then hunt for bugs: broken edge cases, wrong or missing states, call sites the change forgot to update, something the plan asked for that was silently skipped. Fix the ones you can prove by reading the code, and check every fix (the repo's tests, typecheck and lint); what you merely suspect, report it instead of “fixing” it; a speculative change to working code costs more than the bug you imagined. Don't refactor what works, stay inside the issue's scope, and finish by telling me what you verified, what you fixed and what you left alone. Then call report_verdict EXACTLY ONCE, as the last thing you do: `ok` true when the work matches what was asked and you found nothing that must be fixed, false when it does not; and in that case put in `blockers` what has to change. An automated chain reads that verdict: false sends the work back for one more pass with your summary as its instruction, so be precise and be honest."
+      "chainVerifyImplementation": "The work on this issue has already been done, at least in part: your only job here is to VERIFY that implementation, not to write a new one. Start with what was asked; the issue, its plan and its comments, where any departure from the plan was argued; then compare them against the real code: is every task marked done really done, and done the way it was specified? Call out the gaps, and tell me which of the two is right (the code is sometimes the better answer, the plan isn't sacred). Then hunt for bugs: broken edge cases, wrong or missing states, call sites the change forgot to update, something the plan asked for that was silently skipped. Fix the ones you can prove by reading the code, and check every fix (the repo's tests, typecheck and lint); what you merely suspect, report it instead of “fixing” it; a speculative change to working code costs more than the bug you imagined. Don't refactor what works, stay inside the issue's scope, and finish by telling me what you verified, what you fixed and what you left alone. Then call report_verdict EXACTLY ONCE, as the last thing you do: `ok` true when the work matches what was asked and you found nothing that must be fixed, false when it does not; and in that case put in `blockers` what has to change. An automated chain reads that verdict: false sends the work back for one more pass with your summary as its instruction, so be precise and be honest.",
+      "bulkHead": "Work on these {count} issues: {identifiers}.",
+      "bulkBody": "Handle them one by one, in the order listed. For each issue, follow the approach that fits it: an issue that already has an implementation plan is followed step by step, updating each task's checkbox as you go; a small, well-scoped change (XS) is implemented directly, without a plan; anything larger starts with a clear plan written on the issue before implementing. Verify each change as you go, and report the outcome on each issue when you are done with it."
     },
     "openAgent": "Open in Numo",
     "newSession": "New conversation",

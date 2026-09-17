@@ -686,6 +686,10 @@
     "selected": "{count, plural, one {# problema selecionado} other {# problemas selecionados}}",
     "actions": "Ações",
     "askNumo": "Pergunte a Numo",
+    "copyPrompt": "Copiar o prompt combinado",
+    "launchAgent": "Implementar com Numo",
+    "promptCopied": "Prompt combinado para {count, plural, one {# problema} other {# problemas}} copiado. Cole-o em seu agente de codificação.",
+    "promptCopiedMoved": "Prompt combinado para {count, plural, one {# problema} other {# problemas}} copiado. Os problemas foram para “Em andamento”.",
     "link": "Vincule os dois problemas",
     "linked": "Problemas vinculados",
     "clear": "Limpar seleção",
@@ -1796,7 +1800,8 @@
       "project": "Em um projeto",
       "general": "Geral",
       "create": "Criar",
-      "card": "Problema (passar o mouse sobre um cartão ou painel)"
+      "card": "Problema (passar o mouse sobre um cartão ou painel)",
+      "selection": "Seleção de problemas"
     },
     "shortcuts": {
       "navHome": "Página inicial",
@@ -1838,6 +1843,8 @@
       "askNumo": "Perguntar a Numo (cartão ou seleção)",
       "copyPrompt": "Copiar como prompt",
       "launchAgent": "Confiar ao Numo",
+      "selectionCopyPrompt": "Copiar o prompt combinado da seleção",
+      "selectionLaunchAgent": "Lançar o agente na seleção",
       "dictate": "Ditar (painel de problemas ou novo problema)"
     }
   },
@@ -2596,7 +2603,9 @@
       "reviewPlan": "Este problema já tem um plano de implementação: sua única tarefa aqui é REVISÁ-LO, não escrever um novo nem implementá-lo. Leia-o e compare cada tarefa com o código real: ela ainda está correta (arquivos e abordagem certos), ainda é necessária e está na ordem adequada? Falta alguma etapa? Corrija o que ficou desatualizado, remova o que o código não exige mais, acrescente o que estiver faltando e preserve as tarefas concluídas e seu progresso. Salve o plano corrigido no problema, então PARE e diga o que você mudou.",
       "verifyImplementation": "O trabalho neste problema já foi feito, pelo menos em parte: seu único trabalho aqui é VERIFICAR essa implementação, não escrever uma nova. Comece com o que foi perguntado; o problema, seu plano e seus comentários, incluindo as justificativas para qualquer desvio do plano; em seguida, compare-os com o código real: todas as tarefas marcadas como concluídas foram realmente concluídas da maneira especificada? Identifique as lacunas e diga-me qual dos dois está certo (o código às vezes é a melhor resposta, o plano não é sagrado). Em seguida, procure por bugs: casos extremos quebrados, estados errados ou ausentes, pontos de chamada que a mudança esqueceu de atualizar, algo que o plano pedia e que foi ignorado silenciosamente. Corrija aqueles que você pode provar lendo o código e verifique cada correção (os testes do repositório, typecheck e lint); o que você apenas suspeita, denuncie em vez de “consertar”; uma mudança especulativa no código funcional custa mais do que o bug que você imaginou. Não refatore o que funciona, fique dentro do escopo do problema e termine me contando o que você verificou, o que corrigiu e o que deixou de lado.",
       "chainVerifyPlan": "Este problema já tem um plano de implementação: seu único trabalho aqui é REVER; não escrever um novo e não implementá-lo. Leia-o e analise-o tarefa por tarefa em relação ao código real; cada um deles ainda é preciso (arquivos corretos, abordagem correta), ainda é necessário e está na ordem correta? Está faltando uma etapa? Corrija o que foi desviado, descarte o que o código não exige mais, adicione o que está faltando e deixe as tarefas concluídas e seu progresso de lado. Salve o plano corrigido sobre o assunto, então PARE e me diga o que você mudou. Em seguida, chame report_verdict EXATAMENTE UMA VEZ, como a última coisa a fazer: `ok` true quando o plano estiver sólido e pronto para ser implementado como está, false quando não estiver; e nesse caso coloque `blockers` o que tem que mudar primeiro. Uma cadeia automatizada lê esse veredicto para decidir o que acontece a seguir; sem ele, nada se move.",
-      "chainVerifyImplementation": "O trabalho neste problema já foi feito, pelo menos em parte: seu único trabalho aqui é VERIFICAR essa implementação, não escrever uma nova. Comece com o que foi perguntado; o problema, seu plano e seus comentários, incluindo as justificativas para qualquer desvio do plano; em seguida, compare-os com o código real: todas as tarefas marcadas como concluídas foram realmente concluídas da maneira especificada? Identifique as lacunas e diga-me qual dos dois está certo (o código às vezes é a melhor resposta, o plano não é sagrado). Em seguida, procure por bugs: casos extremos quebrados, estados errados ou ausentes, pontos de chamada que a mudança esqueceu de atualizar, algo que o plano pedia e que foi ignorado silenciosamente. Corrija aqueles que você pode provar lendo o código e verifique cada correção (os testes do repositório, typecheck e lint); o que você apenas suspeita, denuncie em vez de “consertar”; uma mudança especulativa no código funcional custa mais do que o bug que você imaginou. Não refatore o que funciona, fique dentro do escopo do problema e termine me contando o que você verificou, o que corrigiu e o que deixou de lado. Em seguida, chame report_verdict EXATAMENTE UMA VEZ, como a última coisa a fazer: `ok` verdadeiro quando o trabalho corresponde ao que foi solicitado e você não encontrou nada que deva ser corrigido, falso quando não; e nesse caso coloque em `blockers` o que tem que mudar. Uma cadeia automatizada lê esse veredicto: false envia o trabalho de volta para mais uma passagem com seu resumo como instrução, então seja preciso e honesto."
+      "chainVerifyImplementation": "O trabalho neste problema já foi feito, pelo menos em parte: seu único trabalho aqui é VERIFICAR essa implementação, não escrever uma nova. Comece com o que foi perguntado; o problema, seu plano e seus comentários, incluindo as justificativas para qualquer desvio do plano; em seguida, compare-os com o código real: todas as tarefas marcadas como concluídas foram realmente concluídas da maneira especificada? Identifique as lacunas e diga-me qual dos dois está certo (o código às vezes é a melhor resposta, o plano não é sagrado). Em seguida, procure por bugs: casos extremos quebrados, estados errados ou ausentes, pontos de chamada que a mudança esqueceu de atualizar, algo que o plano pedia e que foi ignorado silenciosamente. Corrija aqueles que você pode provar lendo o código e verifique cada correção (os testes do repositório, typecheck e lint); o que você apenas suspeita, denuncie em vez de “consertar”; uma mudança especulativa no código funcional custa mais do que o bug que você imaginou. Não refatore o que funciona, fique dentro do escopo do problema e termine me contando o que você verificou, o que corrigiu e o que deixou de lado. Em seguida, chame report_verdict EXATAMENTE UMA VEZ, como a última coisa a fazer: `ok` verdadeiro quando o trabalho corresponde ao que foi solicitado e você não encontrou nada que deva ser corrigido, falso quando não; e nesse caso coloque em `blockers` o que tem que mudar. Uma cadeia automatizada lê esse veredicto: false envia o trabalho de volta para mais uma passagem com seu resumo como instrução, então seja preciso e honesto.",
+      "bulkHead": "Trabalhar nestes {count} problemas: {identifiers}.",
+      "bulkBody": "Trate-os um por um, na ordem listada. Para cada problema, siga a abordagem que lhe cabe: um problema que já tem um plano de implementação é seguido passo a passo, marcando cada tarefa conforme avança; uma mudança pequena e bem delimitada (XS) é implementada diretamente, sem plano; qualquer coisa maior começa com um plano claro escrito no problema antes de implementar. Verifique cada mudança no caminho e informe o resultado de cada problema ao concluí-lo."
     },
     "openAgent": "Abrir no Numo",
     "newSession": "Nova conversa",
