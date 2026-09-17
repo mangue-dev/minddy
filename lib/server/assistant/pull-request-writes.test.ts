@@ -536,6 +536,16 @@ describe("resolve_pull_request_threads", () => {
     expect(success).toBe(false);
   });
 
+  it("deduplicates the batch: a repeated root id fires a single forge call", async () => {
+    const { result, success } = await run(
+      [thread(11, "PRRT_1", false)],
+      { comment_ids: [11, 11, 11] },
+    );
+    expect(success).toBe(true);
+    expect(result).toMatchObject({ changed: [11] });
+    expect(forgeFor().setReviewThreadResolved).toHaveBeenCalledTimes(1);
+  });
+
   it("caps the batch at fifty conversations", async () => {
     const refused = await run([], {
       comment_ids: Array.from({ length: 51 }, (_, i) => i + 1),

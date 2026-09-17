@@ -3425,6 +3425,7 @@
     "editPrCommentFailed": "Não foi possível editar o comentário",
     "resolvingPrConversations": "Resolvendo as conversas…",
     "prConversationsResolved": "{count, plural, one {# conversa resolvida} other {# conversas resolvidas}}",
+    "prConversationsPartiallyResolved": "{changed, plural, one {# conversa resolvida} other {# conversas resolvidas}}, {failed} com falha",
     "prConversationsAlreadyResolved": "{count, plural, one {# conversa já estava resolvida} other {# conversas já estavam resolvidas}}",
     "resolvePrConversationsFailed": "Não foi possível resolver as conversas",
     "resolvingPrConversation": "Resolvendo a conversa…",

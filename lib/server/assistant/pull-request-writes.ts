@@ -511,9 +511,16 @@ async function resolvePullRequestThreads(
   }
   const { forge, target, number, row } = resolved;
   const targetState = args.resolved !== false;
-  const ids = (Array.isArray(args.comment_ids) ? args.comment_ids : [])
-    .map((v) => int(v))
-    .filter((v): v is number => v != null && v > 0);
+  // Deduplicated: passing the same root id twice must not fire two forge
+  // calls — the thread states are read once up front, so the duplicate
+  // would still look unresolved and resolve an already-resolved thread.
+  const ids = Array.from(
+    new Set(
+      (Array.isArray(args.comment_ids) ? args.comment_ids : [])
+        .map((v) => int(v))
+        .filter((v): v is number => v != null && v > 0),
+    ),
+  );
   if (ids.length === 0) {
     return {
       result: {

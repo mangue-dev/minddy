@@ -3425,6 +3425,7 @@
     "editPrCommentFailed": "Kommentar konnte nicht bearbeitet werden",
     "resolvingPrConversations": "Auflösen der Gespräche…",
     "prConversationsResolved": "{count, plural, one {# Gespräch aufgelöst} other {# Gespräche aufgelöst}}",
+    "prConversationsPartiallyResolved": "{changed, plural, one {# Gespräch aufgelöst} other {# Gespräche aufgelöst}}, {failed} fehlgeschlagen",
     "prConversationsAlreadyResolved": "{count, plural, one {# Gespräch war bereits aufgelöst} other {# Gespräche waren bereits aufgelöst}}",
     "resolvePrConversationsFailed": "Gespräche konnten nicht aufgelöst werden",
     "resolvingPrConversation": "Auflösen des Gesprächs…",

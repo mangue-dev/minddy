@@ -829,6 +829,13 @@ const TOOL_META: Record<string, ToolMeta> = {
       const unchanged = Array.isArray(result?.unchanged)
         ? result.unchanged.length
         : 0;
+      const failed = Array.isArray(result?.failed) ? result.failed.length : 0;
+      if (failed > 0) {
+        if (changed > 0) {
+          return t("prConversationsPartiallyResolved", { changed, failed });
+        }
+        return t("resolvePrConversationsFailed");
+      }
       if (changed > 0) return t("prConversationsResolved", { count: changed });
       if (unchanged > 0) {
         return t("prConversationsAlreadyResolved", { count: unchanged });
