@@ -934,6 +934,14 @@ export interface PullRequestListItem {
   } | null;
   /** PR canonical run, or null: a human PR has none. */
   runId: string | null;
+  /**
+   * A Numo run OPENED this PR at the forge — not merely worked on it. It is
+   * what displays “Numo” as the author and feeds the “opened by Numo”
+   * filter: the forge login depends on the installation (app account or
+   * linked account), and a fix session requested on a human PR bears the
+   * number without having opened it.
+   */
+  numoOpened: boolean;
   /** A run WORKS on this PR (queued/running) = “Numo is working again”. */
   activeRunId: string | null;
   /** Un run ACTIF occupe l'issue → « demander des changements » indisponible (MIN-68). */

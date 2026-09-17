@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { useQueryClient, type QueryKey } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   CommandGroup,
@@ -51,6 +51,11 @@ import type {
   PullRequestListResponse,
   PullRequestStateFilter,
 } from "@/lib/agent-api";
+import {
+  ALL_PULL_REQUESTS_QUERY_KEY,
+  matchesStateFilter,
+  updateCachedPullRequestState,
+} from "@/lib/pull-request-list-cache";
 import { deepLinkNeedsAllFilter } from "@/lib/sidebar-deep-link";
 
 const PrDetail = dynamic(
@@ -74,59 +79,10 @@ const PrIssuePanel = dynamic(
   { ssr: false },
 );
 
-const ALL_PULL_REQUESTS_QUERY_KEY = ["pull-requests", "all"] as const;
-
-/** `open` understands drafts, like the filter served by the API. */
-function matchesStateFilter(state: PullRequestListItem["pr_state"], filter: unknown): boolean {
-  return (
-    filter === "all" ||
-    (filter === "open" && (state === "open" || state === "draft")) ||
-    filter === state
-  );
-}
-
 function shouldShowPullRequestReadiness(
   state: PullRequestListItem["pr_state"],
 ): boolean {
   return state === "draft" || state === "open";
-}
-
-/**
- * Applies a state change to all cached variants in the list.
- * A line that leaves the current filter disappears immediately: the sidebar and
- * the detail therefore chooses their new state in the same rendering.
- */
-function updateCachedPullRequestState(
-  queryClient: ReturnType<typeof useQueryClient>,
-  prId: string,
-  state: PullRequestListItem["pr_state"],
-) {
-  for (const [key, data] of queryClient.getQueriesData<PullRequestListResponse>({
-    queryKey: ALL_PULL_REQUESTS_QUERY_KEY,
-  })) {
-    if (!data || !data.pullRequests.some((pr) => pr.prId === prId)) continue;
-    const filter = (key as QueryKey)[2];
-    const pullRequests = matchesStateFilter(state, filter)
-      ? data.pullRequests.map((pr) => (pr.prId === prId ? { ...pr, pr_state: state } : pr))
-      : data.pullRequests.filter((pr) => pr.prId !== prId);
-    queryClient.setQueryData(key, { ...data, pullRequests });
-  }
-
-  // The detail has its own cache, served by the forge. Let him wait
-  // refetch after having already changed the sidebar made two states of
-  // the same PR during a network round trip.
-  queryClient.setQueryData<AgentRunPrResponse>(["pull-request", prId], (data) => {
-    if (!data?.pr) return data;
-    return {
-      ...data,
-      pr: {
-        ...data.pr,
-        state,
-        draft: state === "draft",
-        merged: state === "merged",
-      },
-    };
-  });
 }
 
 /**
@@ -374,11 +330,13 @@ function PrRow({
         {pr.title ?? pr.issue?.title ?? identifier}
       </span>
       <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-        {/* THE AUTHOR distinguishes a Numo PR from a human PR, now that they
-            cohabit. The run decides: it does not lie, where the login of the forge
-            depends on the installation. */}
+        {/* THE AUTHOR: the forge's own, except for a PR Numo OPENED — there,
+            the forge login depends on the installation (app account or linked
+            account), and only the fact of the opening says Numo. A PR Numo
+            merely corrected (a fix session bears the number without having
+            opened it) keeps its human author. */}
         <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate">
-          {pr.runId ? (
+          {pr.numoOpened ? (
             <NumoIcon animated={false} className="size-3.5 shrink-0" />
           ) : pr.author ? (
             <ForgeUserAvatar
@@ -386,7 +344,7 @@ function PrRow({
               className="size-3.5 shrink-0"
             />
           ) : null}
-          {pr.runId ? (
+          {pr.numoOpened ? (
             <span className="truncate">{t("numoAuthor")}</span>
           ) : (
             <GitLogin login={pr.author?.login} className="text-xs" />
@@ -592,10 +550,11 @@ export function PullRequestsPage() {
 
   const filtered = useMemo(() => {
     if (author === AUTHOR_ALL) return pullRequests;
-    // “Opened by Numo” is read on the RUN, not on the login: according to the forge
-    // and installation, the author of a Numo PR is sometimes the app, sometimes the
-    // connected account. The run doesn't lie.
-    if (author === AUTHOR_NUMO) return pullRequests.filter((p) => !!p.runId);
+    // “Opened by Numo” is the FACT of the opening (`numoOpened`), not the
+    // login: according to the forge and installation, the author of a Numo
+    // PR is sometimes the app, sometimes the connected account. A fix
+    // session that bore a human PR without opening it must not pull it in.
+    if (author === AUTHOR_NUMO) return pullRequests.filter((p) => p.numoOpened);
     return pullRequests.filter((p) => p.author?.login === author);
   }, [pullRequests, author]);
 
@@ -638,6 +597,14 @@ export function PullRequestsPage() {
    * the user clicks first (while it is in the filter), then the
    * deep-link, then the first in the list — and nothing as long as a fetch is in effect.
    * flight, otherwise we would open a defect just before the good PR arrives.
+   *
+   * A line that LEAVES the lens releases its selection: merging the last
+   * open PR empties the default “open” list and the selection falls from
+   * one to zero. The filter stays where it is — widening it to keep the
+   * merged PR in view is the READER's gesture (the filter menu), never a
+   * side effect of the merge. Selecting it again is still one click: the
+   * click state survives, so switching the lens to “merged” reopens exactly
+   * the PR that was on screen.
    */
   const clicked =
     selectedPrId && filtered.some((p) => p.prId === selectedPrId) ? selectedPrId : null;
