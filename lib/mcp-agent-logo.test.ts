@@ -28,4 +28,8 @@ describe("MCP agent logo", () => {
     expect(source).toContain('VSCODE_LOGO = "/agents/vscode.svg"');
     expect(source).not.toContain("<Braces");
   });
+
+  it("renders the packaged OpenCode mark for opencode clients", () => {
+    expect(source).toContain("opencode: OpenCode");
+  });
 });

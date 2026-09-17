@@ -16,6 +16,7 @@ export type McpAgentId =
   | "codex"
   | "cursor"
   | "gemini"
+  | "opencode"
   | "vscode"
   | "windsurf";
 
@@ -100,6 +101,27 @@ export const MCP_AGENTS: McpAgent[] = [
       `gemini mcp add --scope user --transport http ${MCP_SERVER_NAME} ${endpoint}`,
   },
   {
+    id: "opencode",
+    label: "OpenCode",
+    kind: "config",
+    hint: "mcpHintOpencode",
+    // `opencode mcp add` is interactive only — the artifact is a minimal
+    // opencode.json: standalone-valid for a first install, mergeable via its
+    // single `mcp` key otherwise. OAuth runs automatically (DCR + PKCE) on
+    // the first 401, or through `opencode mcp auth minddy`.
+    build: (endpoint) =>
+      JSON.stringify(
+        {
+          $schema: "https://opencode.ai/config.json",
+          mcp: {
+            [MCP_SERVER_NAME]: { type: "remote", url: endpoint, enabled: true },
+          },
+        },
+        null,
+        2
+      ),
+  },
+  {
     id: "vscode",
     label: "VS Code",
     kind: "command",
@@ -158,6 +180,10 @@ export function mapClientNameToAgent(name: string): McpAgentId | null {
   const n = name.toLowerCase();
   if (n.includes("claude")) return "claude";
   if (n.includes("cursor")) return "cursor";
+  // "OpenCode" is the exact client_name opencode registers during DCR; check
+  // it before the openai family so a crafted "OpenCode (openai)" still maps
+  // to opencode.
+  if (n.includes("opencode")) return "opencode";
   if (n.includes("codex") || n.includes("chatgpt") || n.includes("openai"))
     return "codex";
   if (n.includes("gemini")) return "gemini";
