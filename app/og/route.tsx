@@ -7,7 +7,7 @@ import { locales, defaultLocale, type Locale } from "@/i18n/config";
 import { loadMessages } from "@/i18n/messages";
 import { PUBLIC_ROUTES, routeByKey, type PublicRouteKey } from "@/lib/public-routes";
 import { metaExcerpt } from "@/lib/seo";
-import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { SITE_NAME } from "@/lib/site";
 
 /**
  * Public site sharing thumbnail (MIN-88, redesign MIN-512) — what you see when a
@@ -70,6 +70,18 @@ function titleFontSize(length: number): number {
   return 80;
 }
 
+/**
+ * Some metaTitles open with the brand — "minddy: open-source project
+ * management…" — which the wordmark in the header already says. Drop that
+ * leading "<name>:" (French spacing included) so the headline starts on its
+ * substance; titles where the brand is part of the sentence ("minddy Cloud
+ * pricing…", "minddy pour macOS") keep it.
+ */
+function headlineOf(title: string): string {
+  const brand = SITE_NAME.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return title.replace(new RegExp(`^${brand}\\s*:\\s*`, "i"), "");
+}
+
 export async function GET(request: NextRequest) {
   const { key, locale } = parseParams(request);
   const route = routeByKey(key);
@@ -95,9 +107,8 @@ export async function GET(request: NextRequest) {
 
   const messages = await loadMessages(locale) as Record<string, Record<string, string>>;
   const namespace = messages[route.namespace] ?? {};
-  const title = namespace.metaTitle ?? SITE_NAME;
+  const headline = headlineOf(namespace.metaTitle ?? SITE_NAME);
   const description = metaExcerpt(namespace.metaDescription ?? "");
-  const siteHost = new URL(SITE_URL).host;
 
   return new ImageResponse(
     (
@@ -109,34 +120,47 @@ export async function GET(request: NextRequest) {
           overflow: "hidden",
           position: "relative",
           background:
-            "linear-gradient(120deg, #f8f6ef 0%, #ecf1e7 45%, #e7edf5 100%)",
+            "linear-gradient(120deg, #f7f3e8 0%, #e4edda 45%, #dde9f4 100%)",
           padding: 80,
         }}
       >
         {/* Pastel shapes cropped by the canvas, echoing the landing's cards
-            (components/marketing/card-tones.ts). First in DOM order: the
-            content below paints on top of them. */}
+            (components/marketing/card-tones.ts) in deliberately fuller tints
+            so the hues survive thumbnail size. First in DOM order: the content
+            below paints on top of them. */}
         <div
           style={{
             position: "absolute",
-            top: -180,
-            right: -140,
-            width: 460,
-            height: 460,
+            top: -210,
+            right: -170,
+            width: 560,
+            height: 560,
             borderRadius: 9999,
-            background: "#f0ecf6",
+            background: "#eae0f6",
             display: "flex",
           }}
         />
         <div
           style={{
             position: "absolute",
-            bottom: -200,
-            left: -130,
-            width: 420,
-            height: 420,
+            bottom: -210,
+            left: -160,
+            width: 520,
+            height: 520,
             borderRadius: 9999,
-            background: "#f7ecdf",
+            background: "#f5e2c6",
+            display: "flex",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: -170,
+            right: -130,
+            width: 400,
+            height: 400,
+            borderRadius: 9999,
+            background: "#f2d8e2",
             display: "flex",
           }}
         />
@@ -165,19 +189,19 @@ export async function GET(request: NextRequest) {
               flexDirection: "column",
               flexGrow: 1,
               justifyContent: "center",
-              gap: 24,
+              gap: 26,
             }}
           >
             <span
               style={{
-                fontSize: titleFontSize(title.length),
+                fontSize: titleFontSize(headline.length),
                 color: INK,
                 letterSpacing: -2.2,
                 lineHeight: 1.12,
                 maxWidth: 1010,
               }}
             >
-              {title}
+              {headline}
             </span>
             {description ? (
               <span
@@ -191,28 +215,6 @@ export async function GET(request: NextRequest) {
                 {description}
               </span>
             ) : null}
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                padding: "12px 26px",
-                background: "rgba(255, 255, 255, 0.72)",
-                borderWidth: 1,
-                borderStyle: "solid",
-                borderColor: "rgba(38, 51, 44, 0.12)",
-                borderRadius: 9999,
-              }}
-            >
-              <span style={{ fontSize: 26, color: INK }}>{siteHost}</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 16, height: 16, borderRadius: 9999, background: "#b9cfab", display: "flex" }} />
-              <div style={{ width: 16, height: 16, borderRadius: 9999, background: "#e8cfae", display: "flex" }} />
-              <div style={{ width: 16, height: 16, borderRadius: 9999, background: "#cfc2e2", display: "flex" }} />
-            </div>
           </div>
         </div>
       </div>
