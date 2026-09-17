@@ -1302,7 +1302,11 @@ const IssueCardContent = memo(function IssueCardContent({
   // `useStableCallback` freezes their identity without freezing what they do.
   const agentActions = useAgentMenuActions({
     agentsEnabled: true,
-    hasSession: agentHasSession,
+    // A session is only worth its menu entry when it can actually reopen:
+    // the card opens the conversation in the FAB, and runs that predate the
+    // shared identity name none — opening the live thread instead would be
+    // a lie about what the entry does.
+    hasSession: agentHasSession && issueConversation !== null,
     hasPlan: issueHasPlan,
     onCopyPrompt: useStableCallback(() => void copyPrompt()),
     onCopyPlanPrompt: useStableCallback(() => void copyPlanPrompt()),

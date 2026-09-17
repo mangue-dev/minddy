@@ -427,8 +427,9 @@ function buildStatusCards(
         iconKind: "mergeability",
         // The pass lives in Numo's panel: hovering says so, clicking opens
         // it there. A run too old to carry its conversation has no
-        // destination — the card stays informational.
-        hoverLabel: t("numoReviewOpenSession"),
+        // destination — the card stays informational, without a hover word
+        // promising a gesture that does nothing.
+        hoverLabel: numoReview.onOpen ? t("numoReviewOpenSession") : undefined,
         onSelect: numoReview.onOpen ?? undefined,
       });
     }

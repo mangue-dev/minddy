@@ -15,8 +15,8 @@ import {
  * delegate.
  *
  * It remains because the `?run=` deep-links already in circulation depend on it,
- * and because the agent conversation (`/agents`) speaks in `runId`: break it
- * would break this page.
+ * and because the agent conversation (read in the Numo panel) speaks in
+ * `runId`: breaking it would break that view.
  *
  * GET → metadata PR + files + checks + approvals + merge methods,
  * or `{ pr: null, files: [] }` if the run does not (yet) have a PR.

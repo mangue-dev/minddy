@@ -1274,8 +1274,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     ),
   };
   // Numo has no sidebar item any more: the conversation is only reachable from
-  // the FAB (and its mobile navbar button), which carry the same activity
-  // signals the item used to show. The palette entry and G J open the panel.
+  // the FAB, whose animated border carries the “working” signal. The finished /
+  // awaiting / unread dots of the former item live in the inbox rows and in the
+  // conversation history of the panel. The palette entry and G J open it.
   const routinesItem: AppNavItem = {
     key: "routines",
     label: t("routines"),

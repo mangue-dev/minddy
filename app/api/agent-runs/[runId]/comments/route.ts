@@ -9,7 +9,7 @@ import {
 /**
  * FACING (MIN-143) of the conversation thread of a PR: the route by PR is
  * `/api/pull-requests/[prId]/comments`. This resolves the run → its PR and
- * delegates — kept for deep-links `?run=` and page `/agents`.
+ * delegates — kept for the historical `?run=` deep-links.
  *
  * GET → comments from the PR (`{ comments: [] }` if the run does not have one).
  *  POST → { body } adds a comment.

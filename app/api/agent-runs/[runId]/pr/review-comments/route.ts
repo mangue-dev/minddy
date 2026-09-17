@@ -12,7 +12,7 @@ import {
 /**
  * FACING (MIN-143) of review comments — those anchored to a line in the diff.
  * The route by PR is `/api/pull-requests/[prId]/review-comments` ; this one
- * resolves the run → its PR and delegates, for the deep-links `?run=` and `/agents`.
+ * resolves the run → its PR and delegates, for the historical `?run=` deep-links.
  *
  * GET → { comments, threads } (empty lists if the run has no PR).
  *  POST  → { body, path, line, side } | { body, in_reply_to }
