@@ -143,6 +143,7 @@ describe("buildInheritedPrMessage", () => {
    */
   describe("commentaires de ligne", () => {
     const thread = {
+      rootCommentId: 777,
       path: "lib/search.ts",
       line: 42,
       startLine: null,
@@ -161,6 +162,18 @@ describe("buildInheritedPrMessage", () => {
       expect(msg).toContain("@alice: Et le cas nul ?");
       // A line comment is answered in code, not in prose.
       expect(msg).toMatch(/CHANGING THE CODE/i);
+    });
+
+    it("porte l'id de racine du fil, la clé de resolve_pull_request_thread", () => {
+      const msg = buildInheritedPrMessage({
+        repo,
+        pr: { number: 12, state: "open", comments: [], lineThreads: [thread] },
+      });
+      // The fix session closes the threads it addressed — it needs the id
+      // without a fresh read_pull_request round.
+      expect(msg).toContain("thread comment id: 777");
+      expect(msg).toMatch(/resolve_pull_request_thread/);
+      expect(msg).toMatch(/fully addressed on the branch/i);
     });
 
     it("empile les réponses d'un même fil sous une seule ancre", () => {
@@ -342,9 +355,9 @@ describe("buildInheritedPrMessage", () => {
         repo,
         pr: { number: 12, state: "open", comments: [], lineThreads: threads },
       });
-      expect(msg).toMatch(/lib\/search\.ts:42 — RESOLVED/);
+      expect(msg).toMatch(/lib\/search\.ts:42 \(thread comment id: 10\) — RESOLVED/);
       // The open thread does not carry any marker.
-      expect(msg).toContain("lib/other.ts:42\n");
+      expect(msg).toContain("lib/other.ts:42 (thread comment id: 20)\n");
       expect(msg).toMatch(/don't redo it/i);
     });
 

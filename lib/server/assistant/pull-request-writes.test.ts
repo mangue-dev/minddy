@@ -416,6 +416,145 @@ describe("edit_own_pull_request_comment", () => {
   });
 });
 
+// ── resolve_pull_request_threads ────────────────────────────────────────────
+
+describe("resolve_pull_request_threads", () => {
+  const thread = (rootCommentId: number, threadId: string, resolved: boolean) => ({
+    rootCommentId,
+    threadId,
+    resolved,
+    resolvedBy: null,
+  });
+  const run = (
+    threads: unknown[],
+    args: Record<string, unknown>,
+    overrides: Partial<Record<string, unknown>> = {},
+  ) => {
+    const listReviewThreads = vi.fn().mockResolvedValue(threads);
+    const setReviewThreadResolved = vi.fn().mockResolvedValue(undefined);
+    forgeFor.mockReturnValue(
+      forgeWith({ listReviewThreads, setReviewThreadResolved, ...overrides }),
+    );
+    return executePullRequestWriteTool(ctx, "resolve_pull_request_threads", {
+      issue_id: ISSUE_OK,
+      ...args,
+    });
+  };
+
+  it("resolves conversations by root comment id, under the installation token", async () => {
+    const { result, success } = await run(
+      [thread(11, "PRRT_1", false), thread(22, "PRRT_2", false)],
+      { comment_ids: [11, 22] },
+    );
+
+    expect(success).toBe(true);
+    expect(result).toMatchObject({
+      resolved: true,
+      changed: [11, 22],
+      unchanged: [],
+      unknown: [],
+    });
+    expect(forgeFor().setReviewThreadResolved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        token: "tok",
+        repoFullName: "acme/app",
+        number: 42,
+        threadId: "PRRT_1",
+        resolved: true,
+      }),
+    );
+    // The PR page follows the change like a human resolution.
+    expect(broadcastPrChanged).toHaveBeenCalledWith(PR_ROW_ID, ["reviewComments"]);
+  });
+
+  it("reopens with resolved: false", async () => {
+    const { result } = await run([thread(22, "PRRT_2", true)], {
+      comment_ids: [22],
+      resolved: false,
+    });
+    expect(result).toMatchObject({ resolved: false, changed: [22] });
+    expect(forgeFor().setReviewThreadResolved).toHaveBeenCalledWith(
+      expect.objectContaining({ threadId: "PRRT_2", resolved: false }),
+    );
+  });
+
+  it("reports conversations already in the target state without touching the forge", async () => {
+    const { result, success } = await run(
+      [thread(11, "PRRT_1", true)],
+      { comment_ids: [11] },
+    );
+    expect(success).toBe(true);
+    expect(result).toMatchObject({ changed: [], unchanged: [11] });
+    expect(forgeFor().setReviewThreadResolved).not.toHaveBeenCalled();
+    expect(broadcastPrChanged).not.toHaveBeenCalled();
+  });
+
+  it("reports unknown ids and fails only when nothing definite happened", async () => {
+    const onlyUnknown = await run([], { comment_ids: [99] });
+    expect(onlyUnknown.success).toBe(false);
+    expect(onlyUnknown.result).toMatchObject({ unknown: [99] });
+
+    const mixed = await run([thread(11, "PRRT_1", false)], {
+      comment_ids: [11, 99],
+    });
+    expect(mixed.success).toBe(true);
+    expect(mixed.result).toMatchObject({ changed: [11], unknown: [99] });
+  });
+
+  it("lands the rest of the batch when one conversation is refused by the forge", async () => {
+    const { GithubApiError } = await import("@/lib/server/agent/pr");
+    const setReviewThreadResolved = vi
+      .fn()
+      .mockRejectedValueOnce(new GithubApiError("thread moved", 422))
+      .mockResolvedValueOnce(undefined);
+    const { result, success } = await run(
+      [thread(11, "PRRT_1", false), thread(22, "PRRT_2", false)],
+      { comment_ids: [11, 22] },
+      { setReviewThreadResolved },
+    );
+    expect(success).toBe(true);
+    expect(result).toMatchObject({
+      changed: [22],
+      failed: [{ id: 11, error: expect.stringContaining("422") }],
+    });
+  });
+
+  it("refuses with a readable error when the conversations are unreadable", async () => {
+    const { GithubApiError } = await import("@/lib/server/agent/pr");
+    const { result, success } = await run([], { comment_ids: [11] }, {
+      listReviewThreads: vi
+        .fn()
+        .mockRejectedValue(new GithubApiError("forbidden", 403)),
+    });
+    expect(success).toBe(false);
+    expect((result as { error: string }).error).toContain("403");
+    expect(forgeFor().setReviewThreadResolved).not.toHaveBeenCalled();
+  });
+
+  it("refuses a call without root comment ids", async () => {
+    const { success } = await run([], {});
+    expect(success).toBe(false);
+  });
+
+  it("deduplicates the batch: a repeated root id fires a single forge call", async () => {
+    const { result, success } = await run(
+      [thread(11, "PRRT_1", false)],
+      { comment_ids: [11, 11, 11] },
+    );
+    expect(success).toBe(true);
+    expect(result).toMatchObject({ changed: [11] });
+    expect(forgeFor().setReviewThreadResolved).toHaveBeenCalledTimes(1);
+  });
+
+  it("caps the batch at fifty conversations", async () => {
+    const refused = await run([], {
+      comment_ids: Array.from({ length: 51 }, (_, i) => i + 1),
+    });
+    expect(refused.success).toBe(false);
+    expect((refused.result as { error: string }).error).toContain("At most");
+  });
+});
+
 // ── Resolution shared with read_pull_request ────────────────────────────────
 
 describe("resolution", () => {

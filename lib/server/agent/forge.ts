@@ -76,12 +76,19 @@ export type MergeMethod = "merge" | "squash" | "rebase";
  * | `mergePullRequest`, `closePullRequest`, `markReadyForReview` | human | `actorCall` |
  * | `submitReview` (the person's verdict) | human | `actorCall` |
  * | `createPullRequestComment`, `updatePullRequestComment`, `createPullRequestReviewComment`, `replyToPullRequestReviewComment` from UI PR | human | `actorCall` |
- * | `setReviewThreadResolved` | human | `actorCall` |
+ * | `setReviewThreadResolved` | human or agent | `actorCall` from the PR page; installation token from Numo and the code agent |
  * | `setReviewCommentReaction`, `setConversationReaction` | human | `actorCall` + `login` |
  *
  * The three comment methods serve BOTH identities: it is the gesture
  * that decides, not the method. Numo rereads under the bot; the same method, called
  * from the PR panel, starts from the person's account.
+ *
+ * `setReviewThreadResolved` is two-faced the same way: resolving from the
+ * PR page is the human's gesture and carries their name, while Numo and the
+ * code agent close a conversation they addressed themselves under minddy's
+ * account (`pull-request-writes.ts`, `project-pr-tools.ts`) — a reader must
+ * be able to tell a machine's closure from a person's, exactly as for
+ * comments. The forge does not care: it writes under the token it is given.
  *
  * READS all remain on the installation token: any member
  * of the minddy project must see the PR without a connected git account. The only exception

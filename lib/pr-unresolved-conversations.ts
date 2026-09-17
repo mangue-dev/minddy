@@ -66,7 +66,7 @@ export function buildPullRequestFeedbackPrompt(
       ? "the unresolved review conversation below"
       : `the ${threads.length} unresolved review conversations below`;
 
-  return `Address ${scope} on this pull request.\n\n${metadata}\n\nInspect the current code before changing it because the branch may have moved since the comments were posted. Preserve unrelated work, implement each requested change, and run the smallest relevant checks. Do not resolve a conversation until its request is fully addressed.\n\n${threads
+  return `Address ${scope} on this pull request.\n\n${metadata}\n\nInspect the current code before changing it because the branch may have moved since the comments were posted. Preserve unrelated work, implement each requested change, and run the smallest relevant checks. Once a conversation's request is fully addressed, say so in the thread and mark that conversation resolved; never resolve one whose request is still open.\n\n${threads
     .map(renderThread)
     .join("\n\n")}`;
 }

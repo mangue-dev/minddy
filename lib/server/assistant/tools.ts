@@ -2049,7 +2049,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "launch_code_agent",
       description:
-        "Delegate a complete repository task to the code worker owned by this Numo turn, using the model and reasoning configured by the user in Account settings. First gather the issue, plan, relevant wiki pages and pull request when they exist; resolve important ambiguity; and decide that repository work is actually needed — CODE work: writing files, pushing, rebasing, revising a branch, or a line-anchored review. Merging, renaming or commenting on a pull request is NOT repository work: those gestures go through merge_pull_request, update_pull_request and post_pull_request_comment directly. A ticket is optional context, not the delegation identity. The worker returns here and Numo gives the final answer in this conversation. Reuse `continuation_run_id` for follow-up on the appropriate worker lineage. A pull request is not automatic. Model and reasoning overrides are never accepted.",
+        "Delegate a complete repository task to the code worker owned by this Numo turn, using the model and reasoning configured by the user in Account settings. First gather the issue, plan, relevant wiki pages and pull request when they exist; resolve important ambiguity; and decide that repository work is actually needed — CODE work: writing files, pushing, rebasing, revising a branch, or a line-anchored review. Merging, renaming, commenting on or resolving the review conversations of a pull request is NOT repository work: those gestures go through merge_pull_request, update_pull_request, post_pull_request_comment and resolve_pull_request_threads directly. A ticket is optional context, not the delegation identity. The worker returns here and Numo gives the final answer in this conversation. Reuse `continuation_run_id` for follow-up on the appropriate worker lineage. A pull request is not automatic. Model and reasoning overrides are never accepted.",
       parameters: {
         type: "object",
         properties: {
@@ -2175,7 +2175,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "read_pull_request",
       description:
-        "Read a selected pull request, or the pull request attached to an issue: its title, description, state, branch, CI checks, per-file diffs (patches, capped), and review comments anchored to code. Use pull_request_id when the conversation carries a PR directly, including a human PR with no issue. Otherwise use issue_id to resolve the issue's live or most recently updated PR. To delegate repository work, use launch_code_agent with that exact pull_request_id and mode review or fix.",
+        "Read a selected pull request, or the pull request attached to an issue: its title, description, state, branch, CI checks, per-file diffs (patches, capped), and review comments anchored to code — grouped into conversations, each carrying the root comment `id` that resolve_pull_request_threads targets. Use pull_request_id when the conversation carries a PR directly, including a human PR with no issue. Otherwise use issue_id to resolve the issue's live or most recently updated PR. To delegate repository work, use launch_code_agent with that exact pull_request_id and mode review or fix.",
       parameters: {
         type: "object",
         properties: {
@@ -2221,13 +2221,14 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   },
   /**
    * PR management without touching the code (MIN-550): merge, rename /
-   * re-describe, comment, edit a comment Numo posted itself. Everything
-   * CODE (branch changes, pushes, rebases) stays delegated to the code
-   * agent — these tools never modify the content of the code, only the PR
-   * metadata and its thread. The merge carries the same guardrail prose as
-   * the code agent's `set_pull_request_state`: irreversible, confirmed by
-   * the user, never against a red CI or a conflict — the executor
-   * (`pull-request-writes.ts`) re-checks all three before calling the forge.
+   * re-describe, comment, edit a comment Numo posted itself, resolve (or
+   * reopen) review conversations. Everything CODE (branch changes, pushes,
+   * rebases) stays delegated to the code agent — these tools never modify
+   * the content of the code, only the PR metadata and its thread. The merge
+   * carries the same guardrail prose as the code agent's
+   * `set_pull_request_state`: irreversible, confirmed by the user, never
+   * against a red CI or a conflict — the executor (`pull-request-writes.ts`)
+   * re-checks all three before calling the forge.
    */
   {
     type: "function",
@@ -2345,6 +2346,41 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
         },
         required: ["comment_id", "body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "resolve_pull_request_threads",
+      description:
+        "Mark review conversations of a pull request as RESOLVED at the forge (or reopen already-resolved ones with resolved: false), without any delegation — this is PR metadata, not repository work. Each conversation is designated by the root comment id of its thread, the `id` read_pull_request puts on every review_comments entry. Only resolve a conversation whose request is FULLY addressed: the code change is on the branch (your launch_code_agent run came back), or the request needed no code and you answered it in the thread with post_pull_request_comment. Never resolve wholesale to tidy up — an unresolved conversation is how a reviewer tracks what is still open. The conversations are closed under minddy's account, like every PR gesture here.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_id: {
+            type: "string",
+            description:
+              "id of the issue whose pull request carries the conversations (resolve via list_issues/search_issues, or use the issue in context).",
+          },
+          pull_request_id: {
+            type: "string",
+            description:
+              "Minddy id of the pull request carrying the conversations, as supplied by the pull request context.",
+          },
+          comment_ids: {
+            type: "array",
+            items: { type: "number" },
+            description:
+              "Root comment ids of the conversations to move, exactly as read_pull_request lists them. Unknown or forge-deleted ids come back in `unknown` and change nothing.",
+          },
+          resolved: {
+            type: "boolean",
+            description:
+              "true (default) to resolve the conversations, false to reopen resolved ones.",
+          },
+        },
+        required: ["comment_ids"],
       },
     },
   },

@@ -103,6 +103,7 @@ const forge = {
   createPullRequestComment: vi.fn(),
   createPullRequestReviewComment: vi.fn(),
   replyToPullRequestReviewComment: vi.fn(),
+  setReviewThreadResolved: vi.fn(),
   submitReview: vi.fn(),
   mergePullRequest: vi.fn(),
   closePullRequest: vi.fn(),
@@ -450,6 +451,112 @@ describe("set_pull_request_state", () => {
   it("refuse un état inconnu", async () => {
     const res = await call("set_pull_request_state", { pull_request: 42, state: "rebased" });
     expect(res.success).toBe(false);
+  });
+});
+
+describe("resolve_pull_request_thread", () => {
+  const state = (rootCommentId: number, threadId: string, resolved: boolean) => ({
+    rootCommentId,
+    threadId,
+    resolved,
+    resolvedBy: null,
+  });
+
+  it("résout le fil retrouvé par son commentaire racine, sous le token d'installation", async () => {
+    forge.listReviewThreads.mockResolvedValue([
+      state(11, "PRRT_1", false),
+      state(22, "PRRT_2", false),
+    ]);
+    forge.setReviewThreadResolved.mockResolvedValue(undefined);
+
+    const res = await call("resolve_pull_request_thread", {
+      pull_request: 42,
+      comment_id: 11,
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.result).toEqual({ comment_id: 11, resolved: true });
+    expect(forge.setReviewThreadResolved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        token: "tok",
+        repoFullName: REPO,
+        number: 42,
+        threadId: "PRRT_1",
+        resolved: true,
+      }),
+    );
+  });
+
+  it("rouvre un fil déjà résolu avec resolved: false", async () => {
+    forge.listReviewThreads.mockResolvedValue([state(11, "PRRT_1", true)]);
+    forge.setReviewThreadResolved.mockResolvedValue(undefined);
+
+    const res = await call("resolve_pull_request_thread", {
+      pull_request: 42,
+      comment_id: 11,
+      resolved: false,
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.result).toEqual({ comment_id: 11, resolved: false });
+    expect(forge.setReviewThreadResolved).toHaveBeenCalledWith(
+      expect.objectContaining({ threadId: "PRRT_1", resolved: false }),
+    );
+  });
+
+  it("ne rappelle pas la forge pour un fil déjà dans l'état demandé", async () => {
+    forge.listReviewThreads.mockResolvedValue([state(11, "PRRT_1", true)]);
+
+    const res = await call("resolve_pull_request_thread", {
+      pull_request: 42,
+      comment_id: 11,
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.result).toMatchObject({ note: expect.any(String) });
+    expect(forge.setReviewThreadResolved).not.toHaveBeenCalled();
+  });
+
+  it("refuse un id qui ne désigne aucune racine de fil", async () => {
+    forge.listReviewThreads.mockResolvedValue([state(11, "PRRT_1", false)]);
+
+    const res = await call("resolve_pull_request_thread", {
+      pull_request: 42,
+      comment_id: 999,
+    });
+
+    expect(res.success).toBe(false);
+    expect(String((res.result as { error: string }).error)).toContain(
+      "re-read the pull request",
+    );
+    expect(forge.setReviewThreadResolved).not.toHaveBeenCalled();
+  });
+
+  it("refuse un appel sans identifiant de fil", async () => {
+    const res = await call("resolve_pull_request_thread", { pull_request: 42 });
+    expect(res.success).toBe(false);
+    expect(forge.listReviewThreads).not.toHaveBeenCalled();
+  });
+
+  it("un refus de forge revient en erreur de tool, pas en exception", async () => {
+    forge.listReviewThreads.mockResolvedValue([state(11, "PRRT_1", false)]);
+    forge.setReviewThreadResolved.mockRejectedValue(
+      new GithubApiError("thread moved", 422),
+    );
+
+    const res = await call("resolve_pull_request_thread", {
+      pull_request: 42,
+      comment_id: 11,
+    });
+
+    expect(res.success).toBe(false);
+    expect(String((res.result as { error: string }).error)).toContain("422");
+  });
+
+  it("exige un numéro de pull request", async () => {
+    const res = await call("resolve_pull_request_thread", { comment_id: 11 });
+    expect(res.success).toBe(false);
+    expect(forge.listReviewThreads).not.toHaveBeenCalled();
   });
 });
 

@@ -27,7 +27,7 @@ import {
  *   included only with `include_diff`, so a routine can scan fifteen headers
  *   without fetching fifteen diffs.
  * - write tools: conversation comment, inline comment, thread reply, review
- *   verdict, and state change including merge.
+ *   verdict, thread resolution, and state change including merge.
  *
  * ## How this changes the earlier policy
  *
@@ -534,6 +534,75 @@ async function replyPullRequestThread(
   }, "Check that comment_id is a review comment (anchored to a line) of THIS pull request.");
 }
 
+/**
+ * Resolves (or reopens) ONE review conversation (MIN-139's gesture, opened to
+ * the agent): a fix run closes the conversations it has addressed instead of
+ * leaving them open for a human to tidy. The thread is designated by its ROOT
+ * comment id — the same id `reply_pull_request_thread` takes and
+ * `read_pull_request` lists — and the executor matches it against the forge's
+ * thread states to recover the opaque id the forge actually resolves (GraphQL
+ * node id on GitHub, discussion id on GitLab). A thread already in the target
+ * state is reported without a forge call, so replaying the gesture stays
+ * silent. The write goes out under the installation token, like every write
+ * of this family.
+ */
+async function resolvePullRequestThread(
+  ctx: ProjectPrToolContext,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  const number = prNumber(args);
+  if (typeof number !== "number") return { result: number, success: false };
+  const commentId = int(args.comment_id);
+  if (commentId == null || commentId <= 0) {
+    return {
+      result: {
+        error:
+          "comment_id must be the ROOT comment id of the review thread — read_pull_request lists one per thread.",
+      },
+      success: false,
+    };
+  }
+  const resolved = args.resolved !== false;
+  const target = await ctx.repo();
+  if (!target) return noRepo();
+  const forge = forgeFor(target.provider);
+  const call = {
+    token: target.token,
+    repoFullName: target.repoFullName,
+    number,
+  };
+
+  const states = await forge.listReviewThreads(call);
+  const state = states.find((s) => s.rootCommentId === commentId);
+  if (!state) {
+    return {
+      result: {
+        error:
+          "No review thread of this pull request starts at that comment id — re-read the pull request: the thread may have been deleted, or the id is a reply's.",
+      },
+      success: false,
+    };
+  }
+  if (state.resolved === resolved) {
+    return {
+      result: {
+        comment_id: commentId,
+        resolved,
+        note: "This thread is already in that state — nothing to do.",
+      },
+      success: true,
+    };
+  }
+  return await forgeCall(async () => {
+    await forge.setReviewThreadResolved({
+      ...call,
+      threadId: state.threadId,
+      resolved,
+    });
+    return { result: { comment_id: commentId, resolved }, success: true };
+  }, "Re-read the pull request: the thread may have moved or been deleted since you read it.");
+}
+
 const VERDICTS = ["approve", "request_changes", "comment"] as const;
 type Verdict = (typeof VERDICTS)[number];
 
@@ -732,6 +801,8 @@ export async function executeProjectPrTool(
         return await commentPullRequestLine(ctx, args);
       case "reply_pull_request_thread":
         return await replyPullRequestThread(ctx, args);
+      case "resolve_pull_request_thread":
+        return await resolvePullRequestThread(ctx, args);
       case "review_pull_request":
         return await reviewPullRequest(ctx, args);
       case "set_pull_request_state":

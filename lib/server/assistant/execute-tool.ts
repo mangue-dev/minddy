@@ -2371,13 +2371,16 @@ export async function executeTool(
             // The pagination of the forge cut the list: say it rather than
             // let conclude on what has been seen.
             files_truncated: diff.truncated,
-            // Comments anchored to the code, grouped into threads. `line: null` = the
-            // target code has changed since: the anchor is no longer worth, only the hunk says
-            // what the discussion was about.
+            // Comments anchored to the code, grouped into threads. `id` is the
+            // ROOT comment of the thread — what resolve_pull_request_threads
+            // targets. `line: null` = the target code has changed since: the
+            // anchor is no longer worth, only the hunk says what the
+            // discussion was about.
             review_comments: groupReviewThreads(
               reviewComments,
               reviewThreads,
             ).map((thread) => ({
+              id: thread.id,
               path: thread.root.path,
               line: thread.root.line,
               original_line: thread.root.original_line,
@@ -2471,15 +2474,16 @@ export async function executeTool(
 
       /**
        * PR management without touching the code (MIN-550): merge, rename /
-       * re-describe, comment, edit a comment Numo posted itself. The rules
-       * and the forge plumbing live in `pull-request-writes.ts`, shared with
-       * `read_pull_request` above; here we only gatekeep the identity of the
-       * call and relay.
+       * re-describe, comment, edit a comment Numo posted itself, resolve
+       * review conversations. The rules and the forge plumbing live in
+       * `pull-request-writes.ts`, shared with `read_pull_request` above; here
+       * we only gatekeep the identity of the call and relay.
        */
       case "merge_pull_request":
       case "update_pull_request":
       case "post_pull_request_comment":
-      case "edit_own_pull_request_comment": {
+      case "edit_own_pull_request_comment":
+      case "resolve_pull_request_threads": {
         return await executePullRequestWriteTool(
           {
             projectId,
