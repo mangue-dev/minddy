@@ -167,7 +167,14 @@ export function gitOwnershipBlock(
   hasRepo = true,
 ): string {
   if (!currentRepo) {
-    return `- **Git is available through the shell.** Choose the workflow that fits the request: inspect history, edit, test, commit, push, or use \`create_pr\`. The harness can also commit and push remaining changes when publishing, so inspect the current state before acting and do not duplicate delivery work.
+    // MIN-414 (D6): in the microVM the guard refuses `git commit` and `git push`
+    // outright — the harness commits and pushes the working branch itself at the
+    // end of every turn. Saying "commit, push, or use `create_pr`" here made the
+    // model try both, read the refusals as a broken environment, and end its
+    // turn on "the fix is ready but cannot be published" while the work sat
+    // safely in its sandbox, about to be pushed. The anchor must say what the
+    // guard enforces, and must forbid the "unpublished" report explicitly.
+    return `- **Git is available through the shell for read-only work and staging.** Inspect history, read the diff, and stage with \`git add\` freely — read-only commands (\`status\`, \`diff\`, \`log\`, \`show\`, \`branch\`) are never refused. **Committing and pushing belong to the harness**: your edits are committed and pushed to this run's working branch at the end of every turn, so your work is never stranded in the environment — never end a turn reporting it as unpublished or at risk. To open or update the pull request yourself, use \`create_pr\`.
 - **Protect work outside the request.** Avoid destructive history or working-tree operations unless the user explicitly asked for them and the target is certain. Repository authentication and branch protection remain enforced by the environment and forge.
 - **You have history, for the last ${Math.round(HISTORY_WINDOW_DAYS / 30)} months.** The clone is cut at that boundary, not at one commit: \`git log --since=<date>\`, \`git log -- <path>\`, \`git show <sha>\` and \`git diff <sha> <sha>\` all work inside the window, on the base branch and on this one. Past the boundary the oldest commits are grafted and have no parents, so a walk simply stops there — that is the end of the clone, not the beginning of the repository. Never conclude from a short \`git log\` that nothing happened.`;
   }

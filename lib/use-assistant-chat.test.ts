@@ -274,4 +274,98 @@ describe("Numo conversation settings", () => {
     // delegated card carries the live state, not as "Traitement en cours…".
     expect(value.state.status).toBe("idle");
   });
+
+  it("reconciles from durable state when the stream closes without a terminal event", async () => {
+    // A proxy timeout or an evicted function closes the connection cleanly
+    // but early: no `done`, no `error`. The reducer must not stay on
+    // `streaming` forever — the authoritative status tells what actually
+    // happened server-side.
+    h.webFetch.mockImplementation(async (url: string) => {
+      if (String(url).includes("/api/assistant/chat")) {
+        return new Response(
+          'event: content_delta\ndata: {"delta":"partial"}\n\n',
+          { headers: { "X-Numo-Conversation-Id": conversationId } },
+        );
+      }
+      if (String(url).includes("/status")) {
+        return Response.json({ status: "completed", error_message: null, activity: [] });
+      }
+      if (String(url).includes("/messages")) {
+        return Response.json([message("final", "assistant", "2026-09-12T10:00:03.000Z")]);
+      }
+      return Response.json({ status: "idle", error_message: null });
+    });
+
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.sendMessage(null, "Hello"));
+
+    expect(value.state.status).toBe("idle");
+    expect(value.state.messages.at(-1)?.id).toBe("final");
+  });
+
+  it("keeps polling through a retryable turn instead of freezing on an error card", async () => {
+    // The drain re-queues a retryable turn from its checkpoint within about a
+    // minute, so polling must outlive it: the resumed round finishes and the
+    // thread lands on the final history, not on a dead error card.
+    let statusCalls = 0;
+    h.webFetch.mockImplementation(async (url: string) => {
+      if (String(url).includes("/status")) {
+        statusCalls += 1;
+        return Response.json({
+          status: statusCalls === 1 ? "retryable" : "completed",
+          error_message: "The Numo process stopped before the turn reached its next durable boundary.",
+          activity: [],
+        });
+      }
+      if (String(url).includes("/messages")) {
+        return Response.json([message("final", "assistant", "2026-09-12T10:00:03.000Z")]);
+      }
+      return Response.json({ status: "idle", error_message: null });
+    });
+
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.loadConversation(conversationId, null));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 2600)); });
+
+    expect(value.state.status).toBe("idle");
+    expect(value.state.error).toBeNull();
+    expect(value.state.messages.at(-1)?.id).toBe("final");
+  });
+
+  it("keeps polling through a retryable failure during the live request", async () => {
+    // The FIRST in-request failure is not terminal either: the server emits
+    // `error {status: "retryable"}` as the stream's terminal event and the
+    // drain re-queues the turn from its checkpoint. No error card — polling
+    // takes over until the resumed round answers.
+    let statusCalls = 0;
+    h.webFetch.mockImplementation(async (url: string) => {
+      if (String(url).includes("/api/assistant/chat")) {
+        return new Response(
+          'event: content_delta\ndata: {"delta":"partial"}\n\n'
+            + 'event: error\ndata: {"message":"The Numo process stopped before the turn reached its next durable boundary.","status":"retryable"}\n\n',
+          { headers: { "X-Numo-Conversation-Id": conversationId } },
+        );
+      }
+      if (String(url).includes("/status")) {
+        statusCalls += 1;
+        return Response.json({
+          status: statusCalls === 1 ? "retryable" : "completed",
+          error_message: "The Numo process stopped before the turn reached its next durable boundary.",
+          activity: [],
+        });
+      }
+      if (String(url).includes("/messages")) {
+        return Response.json([message("final", "assistant", "2026-09-12T10:00:03.000Z")]);
+      }
+      return Response.json({ status: "idle", error_message: null });
+    });
+
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.sendMessage(null, "Hello"));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 2600)); });
+
+    expect(value.state.status).toBe("idle");
+    expect(value.state.error).toBeNull();
+    expect(value.state.messages.at(-1)?.id).toBe("final");
+  });
 });

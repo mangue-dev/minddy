@@ -4,9 +4,10 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useNow, useTranslations } from "next-intl";
 import {
   Ban,
+  Bot,
   CheckCircle2,
   CircleAlert,
   CircleHelp,
@@ -25,6 +26,7 @@ import {
   SidePanelDescription,
   SidePanelHeader,
   SidePanelTitle,
+  Spinner,
   cn,
 } from "mangue-ui";
 import { AgentDiffSheet } from "@/components/agent/agent-diff-sheet";
@@ -32,10 +34,12 @@ import { ModelLogo } from "@/components/model-logo";
 import { NumoIcon } from "@/components/numo-icon";
 import {
   isAgentRunWorking,
+  type AgentRunSummary,
 } from "@/lib/agent-api";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import { formatModelName } from "@/lib/model-display";
 import { settledAgentLocalDiff } from "@/lib/agent-local-diff";
+import { sessionSubagents, type TurnSubagent } from "@/lib/agent-subagents";
 import {
   delegatedWorkHiddenQuestion,
   delegatedWorkProgress,
@@ -140,6 +144,137 @@ function NumoModelLine({
   );
 }
 
+function msOr(iso: string | null, fallback: number): number {
+  if (!iso) return fallback;
+  const ms = Date.parse(iso);
+  return Number.isNaN(ms) ? fallback : ms;
+}
+
+/** Compact ticking chrono, same format as the agent pill ("2 min 3s"). */
+function elapsedLabel(
+  t: ReturnType<typeof useTranslations<"Agent">>,
+  ms: number,
+): string {
+  const totalSec = Math.max(1, Math.round(Math.max(0, ms) / 1000));
+  const minutes = Math.floor(totalSec / 60);
+  return minutes > 0
+    ? t("subagentForMinutes", { minutes, seconds: totalSec % 60 })
+    : t("subagentForSeconds", { seconds: totalSec });
+}
+
+/**
+ * The meta line shared by the card and its side panel: state, ticking chrono,
+ * model and changed files. The chrono lives in a leaf component so its 1 s
+ * tick re-renders this line only — never the message that carries the card.
+ * `aria-live` stays on the STATE span alone: an announced state change is
+ * useful, an announced second is noise.
+ */
+function DelegatedWorkMeta({
+  state,
+  run,
+  changedFileCount,
+}: {
+  state: DelegatedWorkState;
+  run: AgentRunSummary | null | undefined;
+  changedFileCount: number;
+}) {
+  const t = useTranslations("Agent");
+  const working = state === "starting" || state === "queued" || state === "running";
+  const now = useNow({ updateInterval: working ? 1000 : undefined });
+  const StateIcon = STATE_ICONS[state];
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+      <span
+        className={cn(
+          "inline-flex items-center gap-1",
+          state === "waiting_input" && "text-amber-700 dark:text-amber-400",
+          state === "failed" && "text-destructive",
+        )}
+        aria-live="polite"
+      >
+        <StateIcon
+          className={cn(
+            "size-3.5",
+            (state === "starting" || state === "queued" || state === "running") &&
+              "animate-spin",
+          )}
+          aria-hidden
+        />
+        {t(`delegatedWorkState_${state}`)}
+      </span>
+      {working && run ? (
+        <span className="shrink-0 tabular-nums">
+          {elapsedLabel(t, now.getTime() - Date.parse(run.started_at ?? run.created_at))}
+        </span>
+      ) : null}
+      <NumoModelLine
+        model={run?.model}
+        reasoningLevel={run?.reasoning_level}
+        label={run?.reasoning_level ? t(REASONING_LABEL_KEYS[run.reasoning_level]) : ""}
+      />
+      {changedFileCount > 0 ? (
+        <span>{t("filesChanged", { count: changedFileCount })}</span>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The dedicated sub-agents encart of the delegated card: what this session
+ * spawned, still going or already reported back. It answers "is something
+ * still moving under the hood" without opening the side panel — while a girl
+ * works, the parent emits nothing and the thread above stands perfectly still.
+ */
+function DelegatedSubagents({ subagents }: { subagents: TurnSubagent[] }) {
+  const t = useTranslations("Agent");
+  const runningCount = subagents.filter((subagent) => !subagent.endedAt).length;
+  const now = useNow({ updateInterval: runningCount > 0 ? 1000 : undefined });
+
+  return (
+    <div className="rounded-lg border bg-muted/30 p-2">
+      <p className="flex items-center gap-1.5 font-medium text-muted-foreground">
+        {runningCount > 0 ? (
+          <Spinner className="size-3" aria-hidden />
+        ) : (
+          <Bot className="size-3.5 shrink-0" aria-hidden />
+        )}
+        {runningCount > 0
+          ? t("subagentsWorking", { count: runningCount })
+          : t("subagentsSession")}
+      </p>
+      <ul className="mt-1.5 grid gap-1">
+        {subagents.map((subagent) => {
+          const running = !subagent.endedAt;
+          const start = msOr(subagent.startedAt, now.getTime());
+          const end = running ? now.getTime() : msOr(subagent.endedAt, start);
+
+          return (
+            <li
+              key={subagent.id}
+              className="flex items-center gap-2 text-xs text-muted-foreground"
+            >
+              {running ? (
+                <Spinner className="size-3 shrink-0 text-blue-500" aria-hidden />
+              ) : (
+                <CheckCircle2 className="size-3.5 shrink-0 text-brand" aria-hidden />
+              )}
+              <span className="min-w-0 flex-1 truncate">
+                {t(
+                  subagent.mode === "implement"
+                    ? "subagentImplementName"
+                    : "subagentExploreName",
+                )}
+              </span>
+              <span className="shrink-0 tabular-nums">{elapsedLabel(t, end - start)}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
   const t = useTranslations("Agent");
   const searchParams = useSearchParams();
@@ -151,7 +286,6 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
   const [diffOpen, setDiffOpen] = useState(false);
   const [diffFocus, setDiffFocus] = useState<string | null>(null);
   const state = delegatedWorkState(call, run);
-  const StateIcon = STATE_ICONS[state];
   // The titler stamps a short `agent_runs.title` on the run at launch: prefer
   // it over the raw launch prompt, which can run for paragraphs. Until it lands
   // (or for old runs without one) the delegation arguments remain the fallback.
@@ -160,6 +294,7 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
     () => delegatedWorkProgress(events),
     [events],
   );
+  const subagents = useMemo(() => sessionSubagents(events), [events]);
   const localDiff = useMemo(() => settledAgentLocalDiff(events), [events]);
   const artifacts = useMemo(() => {
     const values = run?.delegation_result?.artifacts ?? [];
@@ -198,35 +333,12 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
         <div className="flex min-w-0 items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="line-clamp-2 text-sm font-medium leading-5">{title}</p>
-            <div
-              className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground"
-              aria-live="polite"
-            >
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1",
-                  state === "waiting_input" && "text-amber-700 dark:text-amber-400",
-                  state === "failed" && "text-destructive",
-                )}
-              >
-                <StateIcon
-                  className={cn(
-                    "size-3.5",
-                    (state === "starting" || state === "queued" || state === "running") &&
-                      "animate-spin",
-                  )}
-                  aria-hidden
-                />
-                {t(`delegatedWorkState_${state}`)}
-              </span>
-              <NumoModelLine
-                model={run?.model}
-                reasoningLevel={run?.reasoning_level}
-                label={run?.reasoning_level ? t(REASONING_LABEL_KEYS[run.reasoning_level]) : ""}
+            <div className="mt-1">
+              <DelegatedWorkMeta
+                state={state}
+                run={run}
+                changedFileCount={changedFileCount}
               />
-              {changedFileCount > 0 ? (
-                <span>{t("filesChanged", { count: changedFileCount })}</span>
-              ) : null}
             </div>
           </div>
           <Button
@@ -241,6 +353,9 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
             {t("delegatedWorkView")}
           </Button>
         </div>
+        {subagents.length > 0 ? (
+          <DelegatedSubagents subagents={subagents} />
+        ) : null}
         {run?.pr_url || run?.branch_name || artifacts.length > 0 ? (
           <div className="flex flex-wrap items-center gap-3 border-t pt-2 text-xs text-muted-foreground">
             {run?.branch_name ? (
@@ -316,36 +431,18 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
                 <SidePanelTitle className="line-clamp-2 text-sm font-medium leading-5">
                   {title}
                 </SidePanelTitle>
-                <SidePanelDescription className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1",
-                      state === "waiting_input" && "text-amber-700 dark:text-amber-400",
-                      state === "failed" && "text-destructive",
-                    )}
-                  >
-                    <StateIcon
-                      className={cn(
-                        "size-3.5",
-                        (state === "starting" || state === "queued" || state === "running") &&
-                          "animate-spin",
-                      )}
-                      aria-hidden
-                    />
-                    {t(`delegatedWorkState_${state}`)}
-                  </span>
-                  <NumoModelLine
-                    model={run?.model}
-                    reasoningLevel={run?.reasoning_level}
-                    label={run?.reasoning_level ? t(REASONING_LABEL_KEYS[run.reasoning_level]) : ""}
+                <SidePanelDescription>
+                  <DelegatedWorkMeta
+                    state={state}
+                    run={run}
+                    changedFileCount={changedFileCount}
                   />
-                  {changedFileCount > 0 ? (
-                    <span>{t("filesChanged", { count: changedFileCount })}</span>
-                  ) : null}
                 </SidePanelDescription>
               </div>
             </SidePanelHeader>
-            <SidePanelBody className="min-h-0 flex-1 p-0">
+            <SidePanelBody className="flex min-h-0 flex-1 flex-col p-0">
+              {/* The feed scrolls itself (`overflow-y-auto`); the muted note
+              stays pinned at the bottom of the panel, under the thread. */}
               <AgentEventFeed
                 runId={runId}
                 status={run?.status ?? "queued"}
@@ -355,8 +452,11 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
                 onOpenDiff={() => openDiff()}
                 hiddenQuestionEventId={hiddenQuestionEventId}
                 localExec={run?.local_exec === true}
-                className="h-full py-4"
+                className="min-h-0 flex-1 py-4"
               />
+              <p className="shrink-0 border-t bg-card px-4 py-3 text-center text-xs text-muted-foreground">
+                {t("delegatedWorkNoDirectMessages")}
+              </p>
             </SidePanelBody>
           </SidePanelContent>
         </SidePanel>

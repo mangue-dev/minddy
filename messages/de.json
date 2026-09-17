@@ -2529,6 +2529,7 @@
     "viewPullRequest": "Pull-Anfrage anzeigen",
     "noActivity": "Noch keine Aktivität.",
     "delegatedWorkFallbackTitle": "Delegierte Code-Aufgabe",
+    "subagentsSession": "Unteragenten",
     "delegatedWorkView": "Arbeit ansehen",
     "delegatedWorkState_starting": "Wird gestartet",
     "delegatedWorkState_queued": "In Warteschlange",
@@ -2664,7 +2665,8 @@
     "localRepoMissing": "Dieser Ordner ist nicht mehr vorhanden. Wählen Sie es erneut aus oder verschieben Sie es zurück in die Cloud.",
     "localRepoNotGit": "Dieser Ordner ist kein Git-Repository.",
     "localRepoNoRemote": "Dieses Repository hat kein Remote-Repository, daher kann nicht gesagt werden, um welches es sich handelt.",
-    "localRepoWrongRepo": "Das ist ein anderes Repository als das, mit dem dieses Projekt verknüpft ist."
+    "localRepoWrongRepo": "Das ist ein anderes Repository als das, mit dem dieses Projekt verknüpft ist.",
+    "delegatedWorkNoDirectMessages": "Du kannst einem Code-Agenten keine Nachrichten direkt senden."
   },
   "Projects": {
     "newProject": "Neues Projekt",

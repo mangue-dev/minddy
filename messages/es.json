@@ -2529,6 +2529,7 @@
     "viewPullRequest": "Ver pull request",
     "noActivity": "No hay actividad todavía.",
     "delegatedWorkFallbackTitle": "Tarea de código delegada",
+    "subagentsSession": "Subagentes",
     "delegatedWorkView": "Ver trabajo",
     "delegatedWorkState_starting": "Iniciando",
     "delegatedWorkState_queued": "En cola",
@@ -2664,7 +2665,8 @@
     "localRepoMissing": "Esa carpeta se ha ido. Eléjala de nuevo, o muévete de vuelta a la nube.",
     "localRepoNotGit": "Esa carpeta no es un repositorio git.",
     "localRepoNoRemote": "Ese repositorio no tiene control remoto, así que no hay quien diga cuál es.",
-    "localRepoWrongRepo": "Ese es otro repositorio que el que este proyecto está vinculado."
+    "localRepoWrongRepo": "Ese es otro repositorio que el que este proyecto está vinculado.",
+    "delegatedWorkNoDirectMessages": "No puedes enviar mensajes directamente a un agente de código."
   },
   "Projects": {
     "newProject": "Nuevo proyecto",

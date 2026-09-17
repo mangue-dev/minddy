@@ -14,6 +14,7 @@ import {
 } from "react";
 import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "mangue-ui/components/theme-provider";
 import { useAssistantChat } from "@/lib/use-assistant-chat";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
@@ -24,6 +25,7 @@ import {
   setActiveConversation,
   updateConversation,
 } from "@/lib/assistant-api";
+import { allAgentSessionsQueryKey } from "@/lib/use-agent-runs";
 import { useAuth } from "@/lib/auth-context";
 import { setLocaleCookie } from "@/lib/set-locale";
 import { isAccountTheme } from "@/lib/account-theme";
@@ -77,9 +79,18 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
   // account, and if it changed the language (a cookie, not user_metadata),
   // apply that change too.
   const { setTheme } = useTheme();
+  const queryClient = useQueryClient();
   const handleToolResult = useCallback(
     (name: string, success: boolean, result: unknown) => {
-      if (!success || name !== "update_account_settings") return;
+      if (!success) return;
+      // A delegation launched mid-turn must light the FAB border and the
+      // sidebar spinner at once: the sessions list rests (no poll) and only
+      // an invalidation sees a run that just started.
+      if (name === "launch_code_agent") {
+        queryClient.invalidateQueries({ queryKey: allAgentSessionsQueryKey });
+        return;
+      }
+      if (name !== "update_account_settings") return;
       void refreshUser();
       const nextLocale = (result as { settings?: { locale?: string } })
         ?.settings?.locale;
@@ -93,7 +104,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
         ?.settings?.theme;
       if (isAccountTheme(nextTheme)) setTheme(nextTheme);
     },
-    [refreshUser, currentLocale, router, setTheme],
+    [refreshUser, currentLocale, router, setTheme, queryClient],
   );
 
   const {

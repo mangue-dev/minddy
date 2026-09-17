@@ -9,6 +9,7 @@ import { AgentBeam } from "@/components/agent-beam";
 import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useAssistantBusy } from "@/lib/assistant-chat-context";
+import { useAgentSessionsQuery } from "@/lib/use-agent-runs";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
 import {
@@ -26,6 +27,12 @@ import {
  * as long as it works, and becomes inert again as soon as it is finished. It's his ONLY
  * signal — no context badge: what Numo is looking at can be read in the
  * panel, above the composer, not on the button that opens it.
+ *
+ * The border must survive navigation and delegation alike: a Numo answer OR a
+ * delegated code run keeps it on. The sessions list is the global, cached signal
+ * for runs — the same query the sidebar spinner reads — so navigation and a
+ * full reload (refetchOnMount: always) re-light the border from real state
+ * instead of losing it with the in-memory chat flag.
  */
 
 export function AssistantFab() {
@@ -33,7 +40,11 @@ export function AssistantFab() {
   // The boolean alone, not the entire conversation context (MIN-323): `state`
   // changes with each SSE token, and the button returns at this rate
   // to read a value that only moves twice per revolution.
-  const isBusy = useAssistantBusy();
+  const chatBusy = useAssistantBusy();
+  // Same cache as the sidebar: no extra request, and the 5 s poll of a
+  // working session keeps the border honest for the whole run.
+  const { sessions } = useAgentSessionsQuery();
+  const isBusy = chatBusy || sessions.some((session) => session.working);
   const chordArmed = useChordPrefix() === CHORD_PREFIX;
   const t = useTranslations("Assistant");
   const tk = useTranslations("Keyboard");

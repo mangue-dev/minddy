@@ -2529,6 +2529,7 @@
     "viewPullRequest": "Voir la pull request",
     "noActivity": "Aucune activité pour l'instant.",
     "delegatedWorkFallbackTitle": "Tâche de code déléguée",
+    "subagentsSession": "Sous-agents",
     "delegatedWorkView": "Voir le travail",
     "delegatedWorkState_starting": "Démarrage",
     "delegatedWorkState_queued": "En attente",
@@ -2664,7 +2665,8 @@
     "localRepoMissing": "Ce dossier n'est plus là. Choisissez-le à nouveau, ou repassez dans le cloud.",
     "localRepoNotGit": "Ce dossier n'est pas un dépôt git.",
     "localRepoNoRemote": "Ce dépôt n'a aucun remote : impossible de dire lequel c'est.",
-    "localRepoWrongRepo": "C'est un autre dépôt que celui lié à ce projet."
+    "localRepoWrongRepo": "C'est un autre dépôt que celui lié à ce projet.",
+    "delegatedWorkNoDirectMessages": "Vous ne pouvez pas envoyer de message directement à un agent de code."
   },
   "Projects": {
     "newProject": "Nouveau projet",
