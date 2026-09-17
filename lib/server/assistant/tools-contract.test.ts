@@ -149,6 +149,7 @@ describe("Numo tool contracts", () => {
       "update_pull_request",
       "post_pull_request_comment",
       "edit_own_pull_request_comment",
+      "resolve_pull_request_threads",
     ]) {
       const pr = tool(name);
       expect(pr, name).toBeDefined();
@@ -160,6 +161,24 @@ describe("Numo tool contracts", () => {
       // Delegation stays the path for anything that changes the branch.
       expect(pr?.function.description).toMatch(/launch_code_agent/);
     }
+  });
+
+  it("lets Numo close review conversations itself, keyed on the read threads", () => {
+    const resolve = tool("resolve_pull_request_threads");
+
+    // The thread identity is the one read_pull_request lists — the root
+    // comment id — never an opaque forge id the model would have to guess.
+    expect(resolve?.function.parameters.required).toEqual(["comment_ids"]);
+    const ids = resolve?.function.parameters.properties.comment_ids as {
+      description?: string;
+    };
+    expect(ids.description).toMatch(/root comment ids/i);
+    expect(ids.description).toMatch(/read_pull_request/);
+
+    // The discipline: only addressed conversations get closed, never a
+    // wholesale tidy-up.
+    expect(resolve?.function.description).toMatch(/FULLY addressed/);
+    expect(resolve?.function.description).toMatch(/without any delegation/);
   });
 
   it("keeps the merge guardrail explicit: irreversible, confirmed, never against a red CI", () => {

@@ -19,6 +19,7 @@ import {
   BookText,
   Bot,
   CalendarClock,
+  CheckCheck,
   ChevronRight,
   ClipboardCheck,
   FilePen,
@@ -816,6 +817,33 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("editingPrComment");
       return success ? t("prCommentEdited") : t("editPrCommentFailed");
+    },
+  },
+  resolve_pull_request_threads: {
+    icon: CheckCheck,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("resolvingPrConversations");
+      if (!success) return t("resolvePrConversationsFailed");
+      // The result sorts the conversations: moved, already in place, the rest.
+      const changed = Array.isArray(result?.changed) ? result.changed.length : 0;
+      const unchanged = Array.isArray(result?.unchanged)
+        ? result.unchanged.length
+        : 0;
+      if (changed > 0) return t("prConversationsResolved", { count: changed });
+      if (unchanged > 0) {
+        return t("prConversationsAlreadyResolved", { count: unchanged });
+      }
+      return t("resolvePrConversationsFailed");
+    },
+  },
+  resolve_pull_request_thread: {
+    icon: CheckCheck,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("resolvingPrConversation");
+      if (!success) return t("resolvePrConversationFailed");
+      return result?.resolved === false
+        ? t("prConversationReopened")
+        : t("prConversationResolved");
     },
   },
   // ── Corbeille (MIN-133) ──────────────────────────────────────────────

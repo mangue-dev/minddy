@@ -242,6 +242,7 @@ export function projectPrSection(routine: boolean): string {
 - **You can see and act on EVERY pull request of this project's repository**, not only the one this session may open. \`list_pull_requests\` is the entry point — it reads minddy's own list, so surveying thirty of them costs one call — then \`read_pull_request\` on the ones that matter (add \`include_diff\` only when you are going to read the code).
 - **Everything you write there is posted under minddy's account**, never under a person's — a reader must be able to tell a machine's remark from a colleague's. The signature naming you and your model is appended for you on comments and verdicts: never write one yourself.
 - **Anchored remarks are rationed** — a hard cap per RUN, across every pull request, and \`comment_pull_request_line\` tells you how many are left. Spend them on what you can point at precisely; everything else goes in a pull request comment, most serious first. Fifteen anchored remarks is not a review, it is noise.
+- **Close what you address.** When a review conversation's request is fully addressed on the branch — your fix, or the answer you posted — mark it resolved with \`resolve_pull_request_thread\` (the root comment id \`read_pull_request\` lists for that thread). Never resolve one whose request is still open: an unresolved conversation is how a reviewer tracks what remains.
 - **\`review_pull_request\` is not a comment.** An \`approve\` can satisfy a branch protection rule and a \`request_changes\` blocks the pull request until a human lifts it. Use it when you have actually read the change. On a pull request minddy itself opened, the forge refuses the formal verdict and publishes it as a comment — the result says so, and you report it as such rather than claiming an approval that never happened.
 - **Merging is irreversible and ships code.** ${
     routine
@@ -691,6 +692,13 @@ const PR_DIFF_HUNK_MAX_LINES = 8;
 
 /** A comments thread anchored to a line of code (GitHub review). */
 export interface InheritedPrLineThread {
+  /**
+   * ROOT comment id of the thread — what `reply_pull_request_thread` and
+   * `resolve_pull_request_thread` target. The forge designates a thread by
+   * its first comment, and the grouping promotes the first survivor when the
+   * root was deleted, so this id stays valid for both gestures.
+   */
+  rootCommentId: number;
   path: string;
   /** Target line, or null if GitHub no longer knows how to attach it (outdated thread). */
   line: number | null;
@@ -732,6 +740,7 @@ export function toPrLineThreads(
   states?: ReviewThreadState[],
 ): InheritedPrLineThread[] {
   return groupReviewThreads(comments, states).map((thread) => ({
+    rootCommentId: thread.id,
     path: thread.root.path,
     line: thread.root.line,
     // First line of a multi-line remark (`line` = last), for
@@ -814,11 +823,11 @@ function buildLineThreadsBlock(threads: InheritedPrLineThread[]): string {
           `@${c.author ?? "unknown"}: ${cap(c.body.trim(), PR_COMMENT_MAX_CHARS)}`,
       )
       .join("\n\n");
-    return `### ${anchor}${settled}${snippet}\n${body}`;
+    return `### ${anchor} (thread comment id: ${thread.rootCommentId})${settled}${snippet}\n${body}`;
   });
 
   return `\n\n## Line comments on the pull request (anchored to specific code, oldest first)
-Each block below is a review thread attached to a line of the diff. The snippet is the code as it stood when the comment was written — read the file to see it now. Answer them by CHANGING THE CODE, not by replying in prose.\n\n${rendered.join("\n\n")}`;
+Each block below is a review thread attached to a line of the diff, with its root comment id — the id \`resolve_pull_request_thread\` takes. The snippet is the code as it stood when the comment was written — read the file to see it now. Answer them by CHANGING THE CODE, not by replying in prose, and once a thread's request is fully addressed on the branch, mark that thread resolved; never resolve one whose request is still open.\n\n${rendered.join("\n\n")}`;
 }
 
 /**

@@ -26,8 +26,9 @@ import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 /**
  * Direct PR-management gestures for Numo (MIN-550): merge, rename /
  * re-describe, post a conversation comment, edit a comment Numo posted
- * itself. Everything CODE remains delegated to the code agent
- * (`launch_code_agent`) — these tools only touch PR metadata and thread.
+ * itself, resolve (or reopen) review conversations. Everything CODE remains
+ * delegated to the code agent (`launch_code_agent`) — these tools only touch
+ * PR metadata and thread.
  *
  * They reuse the provider-agnostic `Forge` surface and the `pull_requests`
  * table, exactly like the code agent's own PR family
@@ -68,13 +69,15 @@ export type PullRequestWriteToolName =
   | "merge_pull_request"
   | "update_pull_request"
   | "post_pull_request_comment"
-  | "edit_own_pull_request_comment";
+  | "edit_own_pull_request_comment"
+  | "resolve_pull_request_threads";
 
 export const PULL_REQUEST_WRITE_TOOL_NAMES: PullRequestWriteToolName[] = [
   "merge_pull_request",
   "update_pull_request",
   "post_pull_request_comment",
   "edit_own_pull_request_comment",
+  "resolve_pull_request_threads",
 ];
 
 // ── Resolution ──────────────────────────────────────────────────────────────
@@ -481,6 +484,125 @@ async function editOwnPullRequestComment(
   }, "");
 }
 
+// ── resolve_pull_request_threads ────────────────────────────────────────────
+
+/** Conversation roots moved per call — beyond that, the model is bulk-tidying. */
+const MAX_THREAD_OPS = 50;
+
+/**
+ * Resolves or reopens review conversations, the gesture the MIN-139 UI gives
+ * a human — Numo closes one itself once its request is addressed, no code
+ * agent in the loop. A conversation is designated by the ROOT COMMENT id of
+ * its thread, the same `id` `read_pull_request` lists; the executor matches
+ * it against the forge's thread states to recover the opaque thread id the
+ * forge actually resolves (GraphQL node id on GitHub, discussion id on
+ * GitLab) — the model never handles that id. Threads already in the target
+ * state are reported without a forge call, so replaying the gesture stays
+ * silent. The write goes out under the installation token, like every
+ * gesture of this family.
+ */
+async function resolvePullRequestThreads(
+  ctx: PullRequestWriteContext,
+  args: Record<string, unknown>,
+): Promise<PullRequestWriteOutcome> {
+  const resolved = await resolvePullRequest(ctx, args);
+  if ("error" in resolved) {
+    return { result: { error: resolved.error }, success: false };
+  }
+  const { forge, target, number, row } = resolved;
+  const targetState = args.resolved !== false;
+  const ids = (Array.isArray(args.comment_ids) ? args.comment_ids : [])
+    .map((v) => int(v))
+    .filter((v): v is number => v != null && v > 0);
+  if (ids.length === 0) {
+    return {
+      result: {
+        error:
+          "comment_ids must be the root comment ids of the conversations, exactly as read_pull_request lists them.",
+      },
+      success: false,
+    };
+  }
+  if (ids.length > MAX_THREAD_OPS) {
+    return {
+      result: {
+        error: `At most ${MAX_THREAD_OPS} conversations per call — resolve the rest in another call.`,
+      },
+      success: false,
+    };
+  }
+  const call = {
+    token: target.token,
+    repoFullName: target.repoFullName,
+    number,
+  };
+
+  // The thread states pair every conversation with its forge id by root
+  // comment. Without them there is nothing to resolve against — the states
+  // are unreadable, or the conversations died at the forge — and that is a
+  // readable refusal, not an exception.
+  let states;
+  try {
+    states = await forge.listReviewThreads(call);
+  } catch (err) {
+    if (isForgeApiError(err)) {
+      return {
+        result: {
+          error: `The review conversations could not be read (${err.status}): ${err.message}. Re-read the pull request first.`,
+        },
+        success: false,
+      };
+    }
+    throw err;
+  }
+  const byRoot = new Map(states.map((s) => [s.rootCommentId, s]));
+
+  const changed: number[] = [];
+  const unchanged: number[] = [];
+  const unknown: number[] = [];
+  const failed: Array<{ id: number; error: string }> = [];
+  for (const id of ids) {
+    const state = byRoot.get(id);
+    if (!state) {
+      unknown.push(id);
+      continue;
+    }
+    if (state.resolved === targetState) {
+      unchanged.push(id);
+      continue;
+    }
+    try {
+      await forge.setReviewThreadResolved({
+        ...call,
+        threadId: state.threadId,
+        resolved: targetState,
+      });
+      changed.push(id);
+    } catch (err) {
+      // One refused conversation must not sink the batch: the rest land, the
+      // model reads what the forge said and can retry the refused one.
+      if (isForgeApiError(err)) {
+        failed.push({ id, error: `${err.status}: ${err.message}` });
+      } else {
+        throw err;
+      }
+    }
+  }
+  if (changed.length > 0 && row) {
+    broadcastPrChanged(row.id, ["reviewComments"]);
+  }
+  return {
+    result: {
+      resolved: targetState,
+      changed,
+      unchanged,
+      unknown,
+      ...(failed.length > 0 ? { failed } : {}),
+    },
+    success: changed.length + unchanged.length > 0,
+  };
+}
+
 // ── Post-write state sync ───────────────────────────────────────────────────
 
 /**
@@ -546,5 +668,7 @@ export async function executePullRequestWriteTool(
       return await commentPullRequest(ctx, args);
     case "edit_own_pull_request_comment":
       return await editOwnPullRequestComment(ctx, args);
+    case "resolve_pull_request_threads":
+      return await resolvePullRequestThreads(ctx, args);
   }
 }

@@ -995,7 +995,7 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
   if (ctx.pullRequestId) {
     lines.push(
       `- Open pull request: #${ctx.prNumber ?? "?"}${ctx.prState ? ` (${ctx.prState})` : ""} (pull request id: ${ctx.pullRequestId})${ctx.prHeadRef ? `, head ref ${ctx.prHeadRef}` : ""}${ctx.prBaseRef ? `, base ref ${ctx.prBaseRef}` : ""}.`,
-      `When the user says "cette PR", "this pull request", "la PR", or "the diff", they mean this exact pull request. Read it with read_pull_request { pull_request_id: "${ctx.pullRequestId}" }. For a read-only code review, delegate with launch_code_agent mode "review" and this pull_request_id; to revise its existing branch, use mode "fix".`,
+      `When the user says "cette PR", "this pull request", "la PR", or "the diff", they mean this exact pull request. Read it with read_pull_request { pull_request_id: "${ctx.pullRequestId}" }. For a read-only code review, delegate with launch_code_agent mode "review" and this pull_request_id; to revise its existing branch, use mode "fix". You can also handle the review conversations yourself: answer one with post_pull_request_comment when it needs no code, and close addressed ones with resolve_pull_request_threads once the branch carries the fix (your own gesture or a finished launch_code_agent run).`,
     );
   }
   if (ctx.viewId) {
