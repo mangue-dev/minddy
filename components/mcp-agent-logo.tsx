@@ -7,6 +7,7 @@ import {
   Codex,
   Cursor,
   Gemini,
+  OpenCode,
   Windsurf,
 } from "@lobehub/icons";
 import { Bot } from "lucide-react";
@@ -25,6 +26,8 @@ const AGENT_LOGOS: Partial<Record<McpAgentId, AgentLogoComponent>> = {
   codex: Codex,
   cursor: Cursor,
   gemini: Gemini.Color,
+  // Monochrome mark (currentColor), like Windsurf.
+  opencode: OpenCode,
   windsurf: Windsurf,
 };
 

@@ -383,7 +383,7 @@ export function useSettingsSections(): SettingsSection[] {
         icon: Plug,
         title: tAccount("mcpSectionTitle"),
         keywords: [
-          "mcp", "agent", "claude", "cursor", "windsurf", "codex",
+          "mcp", "agent", "claude", "cursor", "windsurf", "codex", "opencode",
           "connecter", "connect", "serveur", "server", "oauth",
         ],
       }),
