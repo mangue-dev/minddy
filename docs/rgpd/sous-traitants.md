@@ -137,6 +137,13 @@ these calls do not bear the identity of the author.
 - **Minimization**: client and server go through a closed catalog and through
   `lib/analytics-sanitize.ts` ; no personal data in free text, no
   IP address retained, autocapture and session recording disabled.
+- **Error tracking (explicit opt-in, MIN-542)**: only when the operator sets
+  `MINDDY_PUBLIC_ERROR_TRACKING=1` (OFF by default, self-hosted included),
+  unhandled browser and server exceptions are sent to the same PostHog
+  project: stack traces, route templates, browser identity when the cookie
+  consent allows the measurement, without concrete URL, console output, DOM,
+  or free text. A cookie refusal silences browser exceptions like any other
+  event (`opt_out_capturing()`). See `docs/error-tracking.md`.
 
 ### Resend
 

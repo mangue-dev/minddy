@@ -7,7 +7,12 @@ export interface PublicRuntimeConfig {
   contactEmail: string;
   productFeedbackIntegrationEnabled: boolean;
   productFeedbackUrl: string | null;
-  posthog: { key: string | null; host: string | null; allowLocalhost: boolean };
+  posthog: {
+    key: string | null;
+    host: string | null;
+    allowLocalhost: boolean;
+    errorTracking: boolean;
+  };
   vapidPublicKey: string | null;
   capabilities: Record<string, { state: string; configured: boolean }>;
 }

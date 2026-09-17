@@ -1,3 +1,5 @@
+import type { InstrumentationOnRequestError } from "next/dist/server/instrumentation/types";
+
 /**
  * `register()` — called once per server instance, before the first
  * request (see node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/instrumentation.md).
@@ -35,3 +37,29 @@ export async function register() {
   );
   await ensureRelayWebhookRegistration();
 }
+
+/**
+ * Error reporting hook (MIN-542): every error Next.js handles in the Node
+ * runtime — route handlers, server actions, RSC rendering — is reported to
+ * PostHog error tracking. Opt-in only (`MINDDY_PUBLIC_ERROR_TRACKING=1`,
+ * default OFF): everything else inside is a no-op, and a reporting failure
+ * never compounds the error being reported. See `lib/server/error-tracking.ts`.
+ */
+export const onRequestError: InstrumentationOnRequestError = async (
+  error,
+  request,
+  context,
+) => {
+  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  try {
+    const { captureServerException } = await import("@/lib/server/error-tracking");
+    await captureServerException(error, request.headers.cookie, {
+      routePath: context.routePath,
+      routeType: context.routeType,
+      httpMethod: request.method,
+      revalidateReason: context.revalidateReason,
+    });
+  } catch {
+    // A tracking failure must never compound the error being reported.
+  }
+};

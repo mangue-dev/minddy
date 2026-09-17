@@ -84,6 +84,9 @@ export function resolveRuntimeConfig(env: RuntimeConfigEnvironment): RuntimeConf
         key: env.MINDDY_PUBLIC_POSTHOG_KEY?.trim() || null,
         host: env.MINDDY_PUBLIC_POSTHOG_HOST?.trim() || null,
         allowLocalhost: env.MINDDY_PUBLIC_POSTHOG_ALLOW_LOCALHOST === "1",
+        // Error tracking is an explicit opt-in (MIN-542): exceptions leave for
+        // PostHog only when the operator sets `1`, in addition to the key pair.
+        errorTracking: env.MINDDY_PUBLIC_ERROR_TRACKING === "1",
       },
       vapidPublicKey: env.MINDDY_PUBLIC_VAPID_PUBLIC_KEY?.trim() || null,
       capabilities: Object.fromEntries(
