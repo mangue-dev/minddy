@@ -2529,6 +2529,7 @@
     "viewPullRequest": "Visualizza pull request",
     "noActivity": "Ancora nessuna attività.",
     "delegatedWorkFallbackTitle": "Attività di codice delegata",
+    "subagentsSession": "Sottoagenti",
     "delegatedWorkView": "Visualizza lavoro",
     "delegatedWorkState_starting": "Avvio",
     "delegatedWorkState_queued": "In coda",
@@ -2664,7 +2665,8 @@
     "localRepoMissing": "Quella cartella non c'è più, risceglila o torna alla nube.",
     "localRepoNotGit": "Quella cartella non è un repository Git.",
     "localRepoNoRemote": "Quell'archivio non ha un telecomando, quindi non c'è modo di sapere quale sia.",
-    "localRepoWrongRepo": "Questo repository è diverso da quello collegato al progetto."
+    "localRepoWrongRepo": "Questo repository è diverso da quello collegato al progetto.",
+    "delegatedWorkNoDirectMessages": "Non puoi inviare messaggi direttamente a un agente di codice."
   },
   "Projects": {
     "newProject": "Nuovo progetto",

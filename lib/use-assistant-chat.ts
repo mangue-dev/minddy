@@ -574,9 +574,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       clearTimeout(pollRef.current);
       pollRef.current = null;
     }
-  }, []);
-
-  const startPolling = useCallback(
+  }, []);  const startPolling = useCallback(
     (conversationId: string, projectId: string | null) => {
       stopPolling();
       dispatch({ type: "GENERATING_SERVER" });
@@ -586,6 +584,9 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       // The turn is suspended on its delegated worker — the assistant itself
       // is paused until the worker wakes it.
       let suspended = false;
+      // The turn died (claim ceiling reached) and waits for the drain to re-run
+      // it from its checkpoint — history reloaded once on entering that wait.
+      let reloadedRetryable = false;
 
       const reloadMessages = async () => {
         const messages = await fetchConversationMessages(conversationId);
@@ -666,7 +667,23 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             return;
           }
 
-          if (status === "error" || status === "failed" || status === "retryable" || status === "reconciling") {
+          if (status === "retryable") {
+            // NOT a terminal state: the drain re-queues the turn from its
+            // checkpoint within about a minute (stale-claim recovery), so the
+            // thread must keep polling instead of freezing on an error card
+            // the user would have to dismiss. The resumed round continues on
+            // the same event journal.
+            if (!reloadedRetryable) {
+              await reloadMessages();
+              // Same rule as the suspension reload: a failed reload is
+              // retried by the next poll instead of being skipped forever.
+              reloadedRetryable = true;
+            }
+            pollRef.current = setTimeout(poll, POLL_INTERVAL_MS);
+            return;
+          }
+
+          if (status === "error" || status === "failed" || status === "reconciling") {
             // Reload messages to show any partial results
             const messages =
               await fetchConversationMessages(conversationId);
@@ -698,6 +715,63 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     },
     [stopPolling, tApi]
   );
+
+  /**
+   * The stream died without its terminal `done`/`error` (reload, network cut,
+   * serverless eviction) or the read failed: the durable turn lives on
+   * server-side — running, or waiting for the drain — and the authoritative
+   * status tells which. Shared by both connection-loss paths: without it, a
+   * stream that closed cleanly but early froze the conversation with no poll
+   * and no error until a manual reload.
+   */
+  const reconcileAfterConnectionLost = useCallback(async (): Promise<boolean> => {
+    const convId = liveConvRef.current.id ?? state.conversationId;
+    const convProjectId = liveConvRef.current.id
+      ? liveConvRef.current.projectId
+      : state.conversationProjectId;
+    if (!convId) return false;
+    try {
+      const { status, error_message } = await fetchConversationStatus(
+        convId,
+        tApi("statusFetchFailed")
+      );
+      if (status === "generating" || status === "queued" || status === "running" || status === "waiting_work" || status === "stopping" || status === "retryable") {
+        startPolling(convId, convProjectId);
+        return true;
+      }
+      if (status === "idle" || status === "completed" || status === "waiting_input" || status === "stopped") {
+        // Server already finished - reload messages
+        const messages = await fetchConversationMessages(convId);
+        dispatch({
+          type: "LOAD_HISTORY",
+          messages,
+          conversationId: convId,
+          projectId: convProjectId,
+        });
+        dispatch({ type: "DONE" });
+        return true;
+      }
+      if (status === "error" || status === "failed" || status === "reconciling") {
+        // Reload messages to show any partial results
+        const messages = await fetchConversationMessages(convId);
+        dispatch({
+          type: "LOAD_HISTORY",
+          messages,
+          conversationId: convId,
+          projectId: convProjectId,
+        });
+        dispatch({
+          type: "ERROR",
+          message: error_message || "Generation failed",
+          ...(status === "error" ? {} : { turnStatus: status }),
+        });
+        return true;
+      }
+    } catch {
+      // Can't reach server - the caller shows the connection error
+    }
+    return false;
+  }, [state.conversationId, state.conversationProjectId, startPolling, tApi]);
 
   const sendMessage = useCallback(
     async (
@@ -863,6 +937,18 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           }
         }
 
+        // A stream that closed WITHOUT its terminal `done`/`error` (clean close
+        // on a proxy timeout, function eviction) previously left the reducer on
+        // `streaming` forever — the frozen conversation this hook exists to
+        // avoid. Reconcile from the authoritative status instead.
+        if (finalServerStatus === null) {
+          const reconciled = await reconcileAfterConnectionLost();
+          if (!reconciled) {
+            dispatch({ type: "ERROR", message: "Connection failed" });
+          }
+          return;
+        }
+
         if (finalServerStatus === "waiting_work" || finalServerStatus === "queued"
           || finalServerStatus === "running" || finalServerStatus === "stopping") {
           const conversationId = liveConvRef.current.id ?? state.conversationId;
@@ -884,51 +970,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         // Connection lost - check if server is still processing. The ref, not
         // `state`: a conversation born during THIS sending does not yet exist
         // in the closure, and this is precisely the one we would lose.
-        const convId = liveConvRef.current.id ?? state.conversationId;
-        const convProjectId = liveConvRef.current.id
-          ? liveConvRef.current.projectId
-          : state.conversationProjectId;
-        if (convId) {
-          try {
-            const { status, error_message } = await fetchConversationStatus(
-              convId,
-              tApi("statusFetchFailed")
-            );
-            if (status === "generating" || status === "queued" || status === "running" || status === "waiting_work" || status === "stopping") {
-              startPolling(convId, convProjectId);
-              return;
-            }
-            if (status === "idle" || status === "completed" || status === "waiting_input" || status === "stopped") {
-              // Server already finished - reload messages
-              const messages = await fetchConversationMessages(convId);
-              dispatch({
-                type: "LOAD_HISTORY",
-                messages,
-                conversationId: convId,
-                projectId: convProjectId,
-              });
-              dispatch({ type: "DONE" });
-              return;
-            }
-            if (status === "error" || status === "failed" || status === "retryable" || status === "reconciling") {
-              const messages = await fetchConversationMessages(convId);
-              dispatch({
-                type: "LOAD_HISTORY",
-                messages,
-                conversationId: convId,
-                projectId: convProjectId,
-              });
-              dispatch({
-                type: "ERROR",
-                message: error_message || "Generation failed",
-                ...(status === "error" ? {} : { turnStatus: status }),
-              });
-              return;
-            }
-          } catch {
-            // Can't reach server - show error
-          }
-        }
+        const reconciled = await reconcileAfterConnectionLost();
+        if (reconciled) return;
 
         trackEvent("assistant_response_failed", { reason: errorReason(err) });
         dispatch({
@@ -999,9 +1042,9 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           type: "SET_PENDING_WORKER_INPUT",
           workerInput: pendingWorkerInput(response.pending_input),
         });
-        if (status === "generating" || status === "queued" || status === "running" || status === "waiting_work" || status === "stopping") {
+        if (status === "generating" || status === "queued" || status === "running" || status === "waiting_work" || status === "stopping" || status === "retryable") {
           startPolling(conversationId, conversationProjectId);
-        } else if (status === "error" || status === "failed" || status === "retryable" || status === "reconciling") {
+        } else if (status === "error" || status === "failed" || status === "reconciling") {
           dispatch({
             type: "ERROR",
             message: error_message || "Generation failed",

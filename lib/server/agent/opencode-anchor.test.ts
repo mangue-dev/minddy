@@ -96,7 +96,7 @@ describe("buildOpencodeAnchor — la doctrine du produit, entière", () => {
       "**A plan that already exists is never rewritten whole.**",
       "**A plan is only as good as what it does NOT forget.**",
       "**Anchored remarks are rationed**",
-      "**Git is available through the shell.**",
+      "**Git is available through the shell for read-only work and staging.**",
       "**a check you did not run is a check nobody ran**",
       "**Behaviour you add or change comes WITH ITS TEST, in the same turn.**",
       "**If `glob` cannot find a file or directory the user explicitly named, do not conclude it is absent:**",
@@ -254,7 +254,21 @@ describe("buildOpencodeAnchor — le mode dépôt courant", () => {
     expect(current).toContain("Nothing is committed for you here");
     expect(current).not.toContain("delivers YOUR work by committing");
     expect(clone).toContain("Git is available through the shell");
-    expect(clone).toContain("commit, push, or use `create_pr`");
+  });
+
+  /**
+   * MIN-414 (D6) made the guard refuse `git commit` / `git push` inside the
+   * microVM while this anchor still advertised "commit, push". The model tried
+   * both, read the refusals as a broken environment, and ended its turn on
+   * "the fix is ready but cannot be published" — the exact report the user
+   * then read as work lost in the sandbox. The anchor must say what the guard
+   * enforces, and forbid the "unpublished" report by name.
+   */
+  it("hands commits and pushes to the harness in the cloud, like the guard does", () => {
+    expect(clone).not.toContain("commit, push, or use `create_pr`");
+    expect(clone).toContain("Committing and pushing belong to the harness");
+    expect(clone).toContain("never end a turn reporting it as unpublished");
+    expect(clone).toContain("use `create_pr`");
   });
 
   it("keeps current-checkout commit guidance without enforcing it as an ACL", () => {

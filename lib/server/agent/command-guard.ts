@@ -558,9 +558,11 @@ function pushRefusal(scope: CommandScope): CommandVerdict {
       ? `Refused \`git push\` — \`create_pr\` owns the remote here: it mints the credentials, runs ` +
         `the delivery checks and links the pull request to the ticket, and a bare push goes ` +
         `around all three. Commit locally when you were asked to, then \`create_pr\` to publish.`
-      : `Refused \`git push\` — the harness owns the remote: it pushes your work at the end of ` +
-        `every turn, and reopens the pull request if needed. Read-only git (status/diff/log/show) ` +
-        `is fine, and \`git add\` is free.`,
+      : `Refused \`git push\` — the harness owns the remote: it commits and pushes your work ` +
+        `to the working branch at the end of every turn, and reopens the pull request if ` +
+        `needed. Your edits are never stranded — never end a turn reporting your work as ` +
+        `unpublished or lost; to open or update the pull request, call \`create_pr\`. ` +
+        `Read-only git (status/diff/log/show) is fine, and \`git add\` is free.`,
   };
 }
 
@@ -574,7 +576,9 @@ function harnessCommitRefusal(): CommandVerdict {
     allowed: false,
     reason:
       `Refused \`git commit\` — the harness owns git here: it commits and pushes your work at the ` +
-      `end of every turn, and reopens the pull request if needed. Read-only git ` +
+      `end of every turn, and reopens the pull request if needed. Your work is never stranded ` +
+      `in the environment — never end a turn reporting it as unpublished or lost; to publish a ` +
+      `pull request, call \`create_pr\`. Read-only git ` +
       `(status/diff/log/show) is fine, and \`git add\` is free.`,
   };
 }

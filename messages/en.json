@@ -2529,6 +2529,7 @@
     "viewPullRequest": "View pull request",
     "noActivity": "No activity yet.",
     "delegatedWorkFallbackTitle": "Delegated code task",
+    "subagentsSession": "Sub-agents",
     "delegatedWorkView": "View work",
     "delegatedWorkState_starting": "Starting",
     "delegatedWorkState_queued": "Queued",
@@ -2664,7 +2665,8 @@
     "localRepoMissing": "That folder is gone. Pick it again, or move back to the cloud.",
     "localRepoNotGit": "That folder isn't a git repository.",
     "localRepoNoRemote": "That repository has no remote, so there's no telling which one it is.",
-    "localRepoWrongRepo": "That's another repository than the one this project is linked to."
+    "localRepoWrongRepo": "That's another repository than the one this project is linked to.",
+    "delegatedWorkNoDirectMessages": "You can't send messages directly to a code agent."
   },
   "Projects": {
     "newProject": "New project",

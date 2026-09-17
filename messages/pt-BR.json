@@ -2529,6 +2529,7 @@
     "viewPullRequest": "Ver pull request",
     "noActivity": "Nenhuma atividade ainda.",
     "delegatedWorkFallbackTitle": "Tarefa de código delegada",
+    "subagentsSession": "Subagentes",
     "delegatedWorkView": "Ver trabalho",
     "delegatedWorkState_starting": "Iniciando",
     "delegatedWorkState_queued": "Na fila",
@@ -2664,7 +2665,8 @@
     "localRepoMissing": "Essa pasta desapareceu. Escolha-o novamente ou volte para a nuvem.",
     "localRepoNotGit": "Essa pasta não é um repositório git.",
     "localRepoNoRemote": "Esse repositório não tem controle remoto, então não há como dizer qual é.",
-    "localRepoWrongRepo": "Esse é outro repositório diferente daquele ao qual este projeto está vinculado."
+    "localRepoWrongRepo": "Esse é outro repositório diferente daquele ao qual este projeto está vinculado.",
+    "delegatedWorkNoDirectMessages": "Não é possível enviar mensagens diretamente para um agente de código."
   },
   "Projects": {
     "newProject": "Novo projeto",

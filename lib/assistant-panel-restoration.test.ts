@@ -24,6 +24,8 @@ vi.mock("./assistant-api", () => ({
   fetchActiveConversation: h.active, setActiveConversation: h.pointer,
   updateConversation: async () => true,
 }));
+vi.mock("./use-agent-runs", () => ({ allAgentSessionsQueryKey: ["agent-sessions", "all"] as const }));
+vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }));
 vi.mock("./auth-context", () => ({ useAuth: () => h.auth }));
 vi.mock("./projects-context", () => ({ useProjects: () => ({ projects: h.projects }) }));
 vi.mock("next-intl", () => ({ useLocale: () => "en", useTranslations: () => (key: string) => key }));
