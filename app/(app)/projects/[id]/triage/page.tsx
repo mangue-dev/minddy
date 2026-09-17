@@ -56,6 +56,9 @@ import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useIssueTimeline } from "@/lib/use-issue-timeline";
 import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
+import { resolveRelations } from "@/lib/relation-constants";
+import { promptRelations } from "@/lib/issue-prompt";
+import { useBulkSelectionActions } from "@/lib/use-bulk-selection-actions";
 import { issueIdentifier } from "@/lib/issue-constants";
 import {
   useAssistantContext,
@@ -91,7 +94,7 @@ export default function TriagePage() {
   const { members } = useMembersQuery(projectId, !!project);
   const { categories } = useCategoriesQuery(projectId);
   const { objectives } = useObjectivesQuery(projectId);
-  const { addRelation } = useIssueRelationsQuery(projectId);
+  const { relations, addRelation } = useIssueRelationsQuery(projectId);
   const mentions = useDescriptionMentions(projectId, members);
   const { openIntent } = useAssistantPanel();
 
@@ -177,6 +180,53 @@ export default function TriagePage() {
       clearBulk();
     };
   }, [bulkIssues, addRelation, clearBulk]);
+
+  // Resolution maps for the selection's combined prompt (⇧P, MIN-539):
+  // relation ends, category names — all read from the whole project.
+  const issuesById = useMemo(
+    () => new Map(issues.map((i) => [i.id, i])),
+    [issues]
+  );
+  const statusById = useMemo(
+    () => new Map(issues.map((i) => [i.id, i.status] as const)),
+    [issues]
+  );
+  const categoryNameById = useMemo(
+    () => new Map(categories.map((c) => [c.id, c.name])),
+    [categories]
+  );
+  // ⇧P/⇧A on the selection: ONE combined prompt for the tickets taken
+  // together — copied to the clipboard or handed to Numo.
+  const bulkPromptActions = useBulkSelectionActions({
+    selectedIssues: bulkIssues,
+    projectId,
+    identifierOf: (issue) =>
+      project ? issueIdentifier(project.key, issue.number) : String(issue.number),
+    buildInput: (issue) => ({
+      issue,
+      projectId,
+      projectKey: project?.key ?? "",
+      resourceCount: issue.resource_count,
+      categories: issue.category_ids
+        .map((cid) => categoryNameById.get(cid))
+        .filter((name): name is string => !!name),
+      relations: promptRelations(resolveRelations(issue.id, relations, statusById), {
+        identifierOf: (otherId) => {
+          const other = issuesById.get(otherId);
+          return other && project ? issueIdentifier(project.key, other.number) : "";
+        },
+        titleOf: (otherId) =>
+          objectives.find((o) => o.id === otherId)?.name ??
+          issuesById.get(otherId)?.title ??
+          "",
+      }),
+    }),
+    onUpdateIssue: (issue, patch) => {
+      void updateIssue(issue.id, patch).catch((err) =>
+        toast.error((err as Error).message)
+      );
+    },
+  });
 
   /**
    * “@” (MIN-105): the ticket under the pointer — or the selection when there is one
@@ -694,6 +744,8 @@ export default function TriagePage() {
           }}
           onClear={clearBulk}
           onAskNumo={() => handleAskNumo(bulkIssues)}
+          onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
+          onLaunchAgent={bulkPromptActions.launchAgent}
           // Single-project screening: all of its objectives are possible. No
           // cycle line on the other hand — a triage ticket is not there
           // eligible (see CYCLE_INELIGIBLE_STATUSES).

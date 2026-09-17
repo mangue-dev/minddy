@@ -1012,8 +1012,16 @@ export function CommandPalette({
   // `bulkFieldProvider`.
   const bulkItems = useMemo<CpPaletteItem[]>(() => {
     if (!bulkRequest) return [];
-    const { count, onDelete, onAskNumo, cycle, objectives, onLink } =
-      bulkRequest;
+    const {
+      count,
+      onDelete,
+      onAskNumo,
+      onCopyPrompt,
+      onLaunchAgent,
+      cycle,
+      objectives,
+      onLink,
+    } = bulkRequest;
     const field = (f: string): Partial<CpPaletteItem> => ({
       filterCategory: "bulk",
       entityType: "bulk-field",
@@ -1033,6 +1041,41 @@ export function CommandPalette({
           onAskNumo();
         },
       },
+      // ⇧P on the selection (MIN-539): one combined prompt, copied as a whole.
+      ...(onCopyPrompt
+        ? [
+            {
+              id: "bulk-copy-prompt",
+              title: tBulk("copyPrompt"),
+              icon: <ClipboardCopy className="size-4" />,
+              keywords: ["prompt", "copy", "copier", "agent", "code"],
+              shortcut: ["⇧", "P"],
+              filterCategory: "bulk",
+              favoritable: false,
+              execute: () => {
+                onCopyPrompt();
+              },
+            } as CpPaletteItem,
+          ]
+        : []),
+      // ⇧A on the selection (MIN-539): Numo takes the whole selection in one
+      // combined request.
+      ...(onLaunchAgent
+        ? [
+            {
+              id: "bulk-launch-agent",
+              title: tBulk("launchAgent"),
+              icon: <NumoActionIcon className="size-4" />,
+              keywords: ["numo", "agent", "implement", "launch", "lancer"],
+              shortcut: ["⇧", "A"],
+              filterCategory: "bulk",
+              favoritable: false,
+              execute: () => {
+                onLaunchAgent();
+              },
+            } as CpPaletteItem,
+          ]
+        : []),
       {
         id: "bulk-status",
         title: tIssueUI("changeStatusAria"),

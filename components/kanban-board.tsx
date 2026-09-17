@@ -33,6 +33,9 @@ import type {
   ViewSort,
 } from "@/lib/types";
 import { resolveRelationsByIssue } from "@/lib/relation-constants";
+import { issueIdentifier } from "@/lib/issue-constants";
+import { promptRelations } from "@/lib/issue-prompt";
+import { useBulkSelectionActions } from "@/lib/use-bulk-selection-actions";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import { issueComparator } from "@/lib/view-filter";
 import { createBoardColumnsBuilder } from "@/lib/board-columns";
@@ -252,6 +255,30 @@ export const KanbanBoard = memo(function KanbanBoard({
       clearSelection();
     };
   }, [selectedIssues, onAddRelation, clearSelection]);
+  // ⇧P/⇧A on the selection (MIN-539): ONE combined prompt for all the checked
+  // tickets, copied to the clipboard or handed to Numo. The selection
+  // outranks the hovered card — the same precedence “@” follows.
+  const bulkPromptActions = useBulkSelectionActions({
+    selectedIssues,
+    projectId,
+    identifierOf: (issue) => issueIdentifier(projectKey, issue.number),
+    buildInput: (issue) => ({
+      issue,
+      projectId,
+      projectKey,
+      resourceCount: issue.resource_count,
+      categories: issue.category_ids
+        .map((cid) => categoryMap.get(cid)?.name)
+        .filter((name): name is string => !!name),
+      relations: promptRelations(relationsByIssue.get(issue.id), {
+        identifierOf: (otherId) =>
+          issueIdentifier(projectKey, allIssueMap.get(otherId)?.number ?? 0),
+        titleOf: (otherId) =>
+          objectiveMap.get(otherId)?.name ?? allIssueMap.get(otherId)?.title ?? "",
+      }),
+    }),
+    onUpdateIssue: (issue, patch) => onUpdateIssue(issue.id, patch),
+  });
   // The dragged bundle, drop marker, and persisted move all come from the same
   // calculation (see lib/use-board-drop.ts).
   const drop = useBoardDrop({
@@ -502,6 +529,8 @@ export const KanbanBoard = memo(function KanbanBoard({
                 }
                 onClear={clearSelection}
                 onAskNumo={() => onAskNumo(selectedIssues)}
+                onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
+                onLaunchAgent={bulkPromptActions.launchAgent}
                 cycle={bulkCycle}
                 // A project-board selection always belongs to one project, so
                 // all of that project's objectives are available.

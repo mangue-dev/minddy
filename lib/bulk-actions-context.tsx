@@ -50,6 +50,12 @@ export interface BulkActionsRequest {
   onDelete?: () => void;
   /** Hands the selection to Numo (opens the agent composer). */
   onAskNumo: () => void;
+  /** Copies ONE combined prompt of the whole selection to the clipboard
+   *  (⇧P, MIN-539). */
+  onCopyPrompt?: () => void;
+  /** Hands the whole selection to Numo with one combined instruction
+   *  (⇧A, MIN-539). */
+  onLaunchAgent?: () => void;
   /** Cycle moves — absent when the user has no current cycle, or when nothing
    *  in the selection can move either way. */
   cycle?: BulkCycleActions;

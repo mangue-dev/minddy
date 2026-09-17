@@ -686,6 +686,10 @@
     "selected": "{count, plural, one {# ticket sélectionné} other {# tickets sélectionnés}}",
     "actions": "Actions",
     "askNumo": "Demander à Numo",
+    "copyPrompt": "Copier le prompt combiné",
+    "launchAgent": "Implémenter avec Numo",
+    "promptCopied": "Prompt combiné pour {count, plural, one {# ticket} other {# tickets}} copié. Collez-le dans votre agent de code.",
+    "promptCopiedMoved": "Prompt combiné pour {count, plural, one {# ticket} other {# tickets}} copié. Les tickets sont passés « En cours ».",
     "link": "Lier les deux tickets",
     "linked": "Tickets liés",
     "clear": "Désélectionner",
@@ -1796,7 +1800,8 @@
       "project": "Dans un projet",
       "general": "Général",
       "create": "Création",
-      "card": "Ticket (au survol d'une carte ou du panneau)"
+      "card": "Ticket (au survol d'une carte ou du panneau)",
+      "selection": "Sélection de tickets"
     },
     "shortcuts": {
       "navHome": "Accueil",
@@ -1838,6 +1843,8 @@
       "askNumo": "Demander à Numo (carte ou sélection)",
       "copyPrompt": "Copier le prompt",
       "launchAgent": "Confier à Numo",
+      "selectionCopyPrompt": "Copier le prompt combiné de la sélection",
+      "selectionLaunchAgent": "Lancer l'agent sur la sélection",
       "dictate": "Dicter (panneau ou nouveau ticket)"
     }
   },
@@ -2596,7 +2603,9 @@
       "reviewPlan": "Ce ticket a déjà un plan d'implémentation : ton seul travail ici est de le VÉRIFIER, pas d'en écrire un nouveau ni de l'implémenter. Lis-le, puis reprends-le tâche par tâche face au code réel; chacune est-elle toujours juste (bons fichiers, bonne approche), toujours nécessaire, et dans le bon ordre ? Manque-t-il une étape ? Corrige ce qui a dérivé, retire ce que le code ne justifie plus, ajoute ce qui manque, et laisse les tâches déjà terminées et leur avancée intactes. Enregistre le plan corrigé sur le ticket, puis ARRÊTE-TOI en me disant ce que tu as changé.",
       "verifyImplementation": "Le travail sur ce ticket a déjà été fait, au moins en partie : ton seul travail ici est de VÉRIFIER cette implémentation, pas d'en écrire une nouvelle. Commence par ce qui avait été demandé; le ticket, son plan et ses commentaires, où les écarts au plan se sont discutés; puis confronte-les au code réel : chaque tâche cochée est-elle vraiment faite, et faite comme prévu ? Signale les écarts, en me disant lequel des deux a raison (le code est parfois la meilleure réponse, le plan n'est pas sacré). Cherche ensuite les bugs : cas limites cassés, états faux ou oubliés, appels que le changement n'a pas mis à jour, ce que le plan demandait et que le code a silencieusement sauté. Corrige ceux que tu peux prouver en lisant le code, et vérifie chaque correction (tests, typecheck, lint du dépôt) ; ce que tu soupçonnes sans pouvoir le prouver, signale-le au lieu de le « corriger »; une correction spéculative sur du code qui marche coûte plus cher que le bug imaginé. Ne refactore rien qui fonctionne, reste dans le périmètre du ticket, et termine en me disant ce que tu as vérifié, corrigé et laissé tel quel.",
       "chainVerifyPlan": "Ce ticket a déjà un plan d'implémentation : ton seul travail ici est de le VÉRIFIER, pas d'en écrire un nouveau ni de l'implémenter. Lis-le, puis reprends-le tâche par tâche face au code réel; chacune est-elle toujours juste (bons fichiers, bonne approche), toujours nécessaire, et dans le bon ordre ? Manque-t-il une étape ? Corrige ce qui a dérivé, retire ce que le code ne justifie plus, ajoute ce qui manque, et laisse les tâches déjà terminées et leur avancée intactes. Enregistre le plan corrigé sur le ticket, puis ARRÊTE-TOI en me disant ce que tu as changé. Appelle ensuite report_verdict UNE SEULE FOIS, en toute dernière action : `ok` à vrai si le plan est solide et implémentable tel quel, à faux sinon; et dans ce cas, mets dans `blockers` ce qui doit changer d'abord. Une chaîne automatisée lit ce verdict pour décider de la suite ; sans lui, rien n'avance.",
-      "chainVerifyImplementation": "Le travail sur ce ticket a déjà été fait, au moins en partie : ton seul travail ici est de VÉRIFIER cette implémentation, pas d'en écrire une nouvelle. Commence par ce qui avait été demandé; le ticket, son plan et ses commentaires, où les écarts au plan se sont discutés; puis confronte-les au code réel : chaque tâche cochée est-elle vraiment faite, et faite comme prévu ? Signale les écarts, en me disant lequel des deux a raison (le code est parfois la meilleure réponse, le plan n'est pas sacré). Cherche ensuite les bugs : cas limites cassés, états faux ou oubliés, appels que le changement n'a pas mis à jour, ce que le plan demandait et que le code a silencieusement sauté. Corrige ceux que tu peux prouver en lisant le code, et vérifie chaque correction (tests, typecheck, lint du dépôt) ; ce que tu soupçonnes sans pouvoir le prouver, signale-le au lieu de le « corriger »; une correction spéculative sur du code qui marche coûte plus cher que le bug imaginé. Ne refactore rien qui fonctionne, reste dans le périmètre du ticket, et termine en me disant ce que tu as vérifié, corrigé et laissé tel quel. Appelle ensuite report_verdict UNE SEULE FOIS, en toute dernière action : `ok` à vrai si le travail correspond à ce qui était demandé et que tu n'as rien trouvé à corriger, à faux sinon; et dans ce cas, mets dans `blockers` ce qui doit changer. Une chaîne automatisée lit ce verdict : à faux, le travail repart pour une passe de plus avec ton résumé comme consigne. Sois donc précis, et honnête."
+      "chainVerifyImplementation": "Le travail sur ce ticket a déjà été fait, au moins en partie : ton seul travail ici est de VÉRIFIER cette implémentation, pas d'en écrire une nouvelle. Commence par ce qui avait été demandé; le ticket, son plan et ses commentaires, où les écarts au plan se sont discutés; puis confronte-les au code réel : chaque tâche cochée est-elle vraiment faite, et faite comme prévu ? Signale les écarts, en me disant lequel des deux a raison (le code est parfois la meilleure réponse, le plan n'est pas sacré). Cherche ensuite les bugs : cas limites cassés, états faux ou oubliés, appels que le changement n'a pas mis à jour, ce que le plan demandait et que le code a silencieusement sauté. Corrige ceux que tu peux prouver en lisant le code, et vérifie chaque correction (tests, typecheck, lint du dépôt) ; ce que tu soupçonnes sans pouvoir le prouver, signale-le au lieu de le « corriger »; une correction spéculative sur du code qui marche coûte plus cher que le bug imaginé. Ne refactore rien qui fonctionne, reste dans le périmètre du ticket, et termine en me disant ce que tu as vérifié, corrigé et laissé tel quel. Appelle ensuite report_verdict UNE SEULE FOIS, en toute dernière action : `ok` à vrai si le travail correspond à ce qui était demandé et que tu n'as rien trouvé à corriger, à faux sinon; et dans ce cas, mets dans `blockers` ce qui doit changer. Une chaîne automatisée lit ce verdict : à faux, le travail repart pour une passe de plus avec ton résumé comme consigne. Sois donc précis, et honnête.",
+      "bulkHead": "Travaille sur ces {count} tickets : {identifiers}.",
+      "bulkBody": "Traite-les un par un, dans l'ordre où ils sont listés. Pour chaque ticket, suis l'approche qui lui convient : un ticket qui a déjà un plan d'implémentation se suit étape par étape, en cochant chaque tâche au fur et à mesure ; un changement petit et bien délimité (XS) s'implémente directement, sans plan ; tout le reste commence par un plan clair écrit sur le ticket avant d'implémenter. Vérifie chaque changement en avançant, et rends compte de chaque ticket quand tu as terminé avec lui."
     },
     "openAgent": "Ouvrir dans Numo",
     "newSession": "Nouvelle conversation",

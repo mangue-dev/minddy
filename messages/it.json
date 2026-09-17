@@ -686,6 +686,10 @@
     "selected": "{count, plural, one {# ticket selezionato} other {# ticket selezionati}}",
     "actions": "Azioni",
     "askNumo": "Chieda a Numo",
+    "copyPrompt": "Copia il prompt combinato",
+    "launchAgent": "Implementa con Numo",
+    "promptCopied": "Prompt combinato per {count, plural, one {# ticket} other {# ticket}} copiato. Incollalo nel tuo agente di codifica.",
+    "promptCopiedMoved": "Prompt combinato per {count, plural, one {# ticket} other {# ticket}} copiato. I ticket sono passati a «In corso».",
     "link": "Collegare i due ticket",
     "linked": "Ticket connessi",
     "clear": "Cancella selezione",
@@ -1796,7 +1800,8 @@
       "project": "In un progetto",
       "general": "Generalità",
       "create": "Crea",
-      "card": "Emissione (affermazione di una carta o del pannello)"
+      "card": "Emissione (affermazione di una carta o del pannello)",
+      "selection": "Selezione di ticket"
     },
     "shortcuts": {
       "navHome": "Home",
@@ -1838,6 +1843,8 @@
       "askNumo": "Chieda a Numo (carta o selezione)",
       "copyPrompt": "Copia come prompt",
       "launchAgent": "Affida a Numo",
+      "selectionCopyPrompt": "Copia il prompt combinato della selezione",
+      "selectionLaunchAgent": "Lancia l'agente sulla selezione",
       "dictate": "Dettatura (pannello del ticket o nuovo ticket)"
     }
   },
@@ -2596,7 +2603,9 @@
       "reviewPlan": "Questo ticket ha già un piano di implementazione: il tuo unico compito è ESAMINARLO, non scriverne uno nuovo né implementarlo. Leggilo, quindi confrontalo attività per attività con il codice reale: ogni attività è ancora corretta (file giusti e approccio giusto), necessaria e nell'ordine appropriato? Manca un passaggio? Correggi ciò che non è più aggiornato, rimuovi ciò che il codice non richiede più, aggiungi ciò che manca e lascia invariate le attività completate e il relativo avanzamento. Salva il piano corretto nel ticket, quindi FERMATI e dimmi cosa hai modificato.",
       "verifyImplementation": "Il lavoro su questo ticket è già stato svolto, almeno in parte: il tuo unico compito è VERIFICARE l'implementazione, non scriverne una nuova. Parti da quanto richiesto nel ticket, nel piano e nei commenti, dove sono state motivate eventuali deviazioni dal piano; poi confronta tutto con il codice reale: ogni attività contrassegnata come completata lo è davvero ed è stata svolta come specificato? Evidenzia le lacune e dimmi quale delle due versioni è corretta (a volte il codice è la risposta migliore: il piano non è intoccabile). Cerca poi i bug: casi limite non gestiti, stati errati o mancanti, punti di chiamata che la modifica ha dimenticato di aggiornare o elementi del piano ignorati senza spiegazione. Correggi ciò che puoi dimostrare leggendo il codice e verifica ogni correzione con i test, il controllo dei tipi e il lint del repository; segnala ciò che sospetti soltanto invece di «correggerlo», perché una modifica speculativa a codice funzionante costa più del bug immaginato. Non rifattorizzare ciò che funziona, resta nell'ambito del ticket e concludi indicando cosa hai verificato, cosa hai corretto e cosa hai lasciato invariato.",
       "chainVerifyPlan": "Questo ticket ha già un piano di implementazione: il tuo unico compito è ESAMINARLO, non scriverne uno nuovo né implementarlo. Leggilo, quindi confrontalo attività per attività con il codice reale: ogni attività è ancora corretta (file giusti e approccio giusto), necessaria e nell'ordine appropriato? Manca un passaggio? Correggi ciò che non è più aggiornato, rimuovi ciò che il codice non richiede più, aggiungi ciò che manca e lascia invariate le attività completate e il relativo avanzamento. Salva il piano corretto nel ticket, quindi FERMATI e dimmi cosa hai modificato. Infine chiama report_verdict EXACTLY ONCE: imposta `ok` su true se il piano è solido e pronto per essere implementato così com'è, altrimenti su false e inserisci in `blockers` ciò che deve cambiare prima. Una catena automatizzata legge il verdetto per decidere il passaggio successivo; senza di esso non accade nulla.",
-      "chainVerifyImplementation": "Il lavoro su questo ticket è già stato svolto, almeno in parte: il tuo unico compito è VERIFICARE l'implementazione, non scriverne una nuova. Parti da quanto richiesto nel ticket, nel piano e nei commenti, dove sono state motivate eventuali deviazioni dal piano; poi confronta tutto con il codice reale: ogni attività contrassegnata come completata lo è davvero ed è stata svolta come specificato? Evidenzia le lacune e dimmi quale delle due versioni è corretta (a volte il codice è la risposta migliore: il piano non è intoccabile). Cerca poi i bug: casi limite non gestiti, stati errati o mancanti, punti di chiamata che la modifica ha dimenticato di aggiornare o elementi del piano ignorati senza spiegazione. Correggi ciò che puoi dimostrare leggendo il codice e verifica ogni correzione con i test, il controllo dei tipi e il lint del repository; segnala ciò che sospetti soltanto invece di «correggerlo», perché una modifica speculativa a codice funzionante costa più del bug immaginato. Non rifattorizzare ciò che funziona, resta nell'ambito del ticket e concludi indicando cosa hai verificato, cosa hai corretto e cosa hai lasciato invariato. Infine chiama report_verdict EXACTLY ONCE: imposta `ok` su true se il lavoro corrisponde a quanto richiesto e non hai trovato nulla da correggere, altrimenti su false e inserisci in `blockers` ciò che deve cambiare. Una catena automatizzata legge il verdetto: false rimanda il lavoro indietro per un altro passaggio usando il tuo riepilogo come istruzione, quindi sii preciso e sincero."
+      "chainVerifyImplementation": "Il lavoro su questo ticket è già stato svolto, almeno in parte: il tuo unico compito è VERIFICARE l'implementazione, non scriverne una nuova. Parti da quanto richiesto nel ticket, nel piano e nei commenti, dove sono state motivate eventuali deviazioni dal piano; poi confronta tutto con il codice reale: ogni attività contrassegnata come completata lo è davvero ed è stata svolta come specificato? Evidenzia le lacune e dimmi quale delle due versioni è corretta (a volte il codice è la risposta migliore: il piano non è intoccabile). Cerca poi i bug: casi limite non gestiti, stati errati o mancanti, punti di chiamata che la modifica ha dimenticato di aggiornare o elementi del piano ignorati senza spiegazione. Correggi ciò che puoi dimostrare leggendo il codice e verifica ogni correzione con i test, il controllo dei tipi e il lint del repository; segnala ciò che sospetti soltanto invece di «correggerlo», perché una modifica speculativa a codice funzionante costa più del bug immaginato. Non rifattorizzare ciò che funziona, resta nell'ambito del ticket e concludi indicando cosa hai verificato, cosa hai corretto e cosa hai lasciato invariato. Infine chiama report_verdict EXACTLY ONCE: imposta `ok` su true se il lavoro corrisponde a quanto richiesto e non hai trovato nulla da correggere, altrimenti su false e inserisci in `blockers` ciò che deve cambiare. Una catena automatizzata legge il verdetto: false rimanda il lavoro indietro per un altro passaggio usando il tuo riepilogo come istruzione, quindi sii preciso e sincero.",
+      "bulkHead": "Lavori su questi {count} ticket: {identifiers}.",
+      "bulkBody": "Trattali uno per uno, nell'ordine elencato. Per ogni ticket, segui l'approccio che gli si addice: un ticket che ha già un piano di implementazione va seguito passo dopo passo, spuntando ogni attività man mano; una modifica piccola e ben delimitata (XS) va implementata direttamente, senza piano; tutto il resto inizia con un piano chiaro scritto sul ticket prima di implementare. Verifica ogni modifica mentre procedi e riferisci l'esito di ogni ticket quando l'hai completato."
     },
     "openAgent": "Apri in Numo",
     "newSession": "Nuova conversazione",
