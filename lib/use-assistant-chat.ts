@@ -574,7 +574,9 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       clearTimeout(pollRef.current);
       pollRef.current = null;
     }
-  }, []);  const startPolling = useCallback(
+  }, []);
+
+  const startPolling = useCallback(
     (conversationId: string, projectId: string | null) => {
       stopPolling();
       dispatch({ type: "GENERATING_SERVER" });
@@ -949,8 +951,12 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           return;
         }
 
+        // A retryable terminal event (first in-request failure) is NOT an
+        // end either: the drain re-queues the turn from its checkpoint and
+        // the poll rides it out, as the poll loop's own retryable branch does.
         if (finalServerStatus === "waiting_work" || finalServerStatus === "queued"
-          || finalServerStatus === "running" || finalServerStatus === "stopping") {
+          || finalServerStatus === "running" || finalServerStatus === "stopping"
+          || finalServerStatus === "retryable") {
           const conversationId = liveConvRef.current.id ?? state.conversationId;
           if (conversationId) {
             startPolling(conversationId, liveConvRef.current.projectId);
@@ -1324,13 +1330,20 @@ function handleSSEEvent(
       }
       break;
     case "error":
-      dispatch({
-        type: "ERROR",
-        message: data.message as string,
-        ...(typeof data.status === "string"
-          ? { turnStatus: data.status as NumoTurnStatus }
-          : {}),
-      });
+      // A transient in-request failure is NOT terminal: the server
+      // checkpoints the turn as retryable and the drain re-queues it within
+      // about a minute. The post-stream branch keeps polling from there —
+      // an error card here would freeze the thread exactly where the
+      // poll-loop comment forbids it.
+      if (data.status !== "retryable") {
+        dispatch({
+          type: "ERROR",
+          message: data.message as string,
+          ...(typeof data.status === "string"
+            ? { turnStatus: data.status as NumoTurnStatus }
+            : {}),
+        });
+      }
       break;
   }
 }

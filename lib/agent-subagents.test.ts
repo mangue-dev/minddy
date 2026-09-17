@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { turnSubagents } from "./agent-subagents";
+import { sessionSubagents, turnSubagents } from "./agent-subagents";
 import type { AgentRunEvent } from "./agent-api";
 
 /**
@@ -86,6 +86,83 @@ describe("turnSubagents", () => {
   it("returns children from oldest to newest", () => {
     expect(
       turnSubagents([
+        ev("thinking", { subagent_id: "sub-2", text: "…" }, "2026-08-08T10:00:10.000Z"),
+        ev("thinking", { subagent_id: "sub-1", text: "…" }, "2026-08-08T10:00:00.000Z"),
+      ]).map((s) => s.id),
+    ).toEqual(["sub-1", "sub-2"]);
+  });
+});
+
+describe("sessionSubagents", () => {
+  it("renders a launched child without an end time while it is running", () => {
+    expect(
+      sessionSubagents([
+        ev("tool_call", { name: "spawn_agent", id: "t1" }),
+        ev("thinking", { subagent_id: "sub-1", subagent_mode: "explore", text: "je regarde" }),
+        ev("tool_call", { subagent_id: "sub-1", name: "grep", id: "t2" }),
+      ]),
+    ).toEqual([
+      expect.objectContaining({ id: "sub-1", mode: "explore", endedAt: null }),
+    ]);
+  });
+
+  it("keeps children from PAST rounds — the card watches the whole session", () => {
+    // The mirror of turnSubagents' "forgets children from the PREVIOUS
+    // turn": the delegated card is the one place a reader watches a run
+    // they did not open, so past rounds must stay visible, running ones
+    // included.
+    expect(
+      sessionSubagents([
+        ev("thinking", { subagent_id: "sub-1", text: "…" }),
+        ev("summary", { subagent_id: "sub-1", text: "rapport" }),
+        // The PARENT responds: the round is over, with all the above.
+        ev("summary", { text: "voilà ce que j'ai trouvé" }),
+        ev("user_message", { text: "continue" }),
+        ev("thinking", { subagent_id: "sub-2", subagent_mode: "implement", text: "…" }),
+      ]),
+    ).toEqual([
+      expect.objectContaining({ id: "sub-1", endedAt: expect.any(String) }),
+      expect.objectContaining({ id: "sub-2", endedAt: null }),
+    ]);
+  });
+
+  it("freezes the child that returned its summary and keeps the other running", () => {
+    const found = sessionSubagents([
+      ev("thinking", { subagent_id: "sub-1", subagent_mode: "explore", text: "…" }),
+      ev("thinking", { subagent_id: "sub-2", subagent_mode: "implement", text: "…" }),
+      ev("summary", { subagent_id: "sub-1", text: "rapport" }, "2026-08-08T10:02:00.000Z"),
+    ]);
+    expect(found).toEqual([
+      expect.objectContaining({ id: "sub-1", endedAt: "2026-08-08T10:02:00.000Z" }),
+      expect.objectContaining({ id: "sub-2", endedAt: null }),
+    ]);
+  });
+
+  it("freezes a failed child", () => {
+    const [sub] = sessionSubagents([
+      ev("thinking", { subagent_id: "sub-1", text: "…" }),
+      ev("error", { subagent_id: "sub-1", message: "boum" }, "2026-08-08T10:01:00.000Z"),
+    ]);
+    expect(sub.endedAt).toBe("2026-08-08T10:01:00.000Z");
+  });
+
+  it("freezes a STOPPED child, which only the parent declares delivered", () => {
+    // Neither summary nor error: a suspended loop emits none. This is the
+    // event `status` of the PARENT which closes the line.
+    const [sub] = sessionSubagents([
+      ev("thinking", { subagent_id: "sub-1", text: "…" }),
+      ev(
+        "status",
+        { phase: "subagent_report", id: "sub-1", partial: true },
+        "2026-08-08T10:03:00.000Z",
+      ),
+    ]);
+    expect(sub.endedAt).toBe("2026-08-08T10:03:00.000Z");
+  });
+
+  it("returns children from oldest to newest", () => {
+    expect(
+      sessionSubagents([
         ev("thinking", { subagent_id: "sub-2", text: "…" }, "2026-08-08T10:00:10.000Z"),
         ev("thinking", { subagent_id: "sub-1", text: "…" }, "2026-08-08T10:00:00.000Z"),
       ]).map((s) => s.id),

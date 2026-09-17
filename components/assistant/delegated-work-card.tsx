@@ -228,8 +228,8 @@ function DelegatedWorkMeta({
  */
 function DelegatedSubagents({ subagents }: { subagents: TurnSubagent[] }) {
   const t = useTranslations("Agent");
-  const now = useNow({ updateInterval: 1000 });
   const runningCount = subagents.filter((subagent) => !subagent.endedAt).length;
+  const now = useNow({ updateInterval: runningCount > 0 ? 1000 : undefined });
 
   return (
     <div className="rounded-lg border bg-muted/30 p-2">
