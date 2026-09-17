@@ -55,6 +55,13 @@ import { useRuntimeConfig } from "@/lib/runtime-config-provider";
  * ONLY sends catalog events, to sanitized props. No capture
  * Automatic DOM, no screen recording — user tickets and comments
  * should never pass through an analytics tool.
+ *
+ * ERROR TRACKING (MIN-542). An explicit operator opt-in
+ * (`MINDDY_PUBLIC_ERROR_TRACKING=1`, off by default, self-hosted included)
+ * enables exception autocapture: window errors and unhandled promise
+ * rejections, no console capture, no DOM. It changes WHAT can leave, not
+ * WHO decides: the consent states below govern exceptions exactly like any
+ * other event — « REFUSE » silences them too.
  */
 
 const IDLE_TIMEOUT_MS = 800;
@@ -93,6 +100,9 @@ export function PostHogInit() {
     // Without this flag, double mounting StrictMode (dev) would initialize to
     // a component disassembled, and `posthog.init` would protest.
     let cancelled = false;
+    // Read before the lazy import: inside the callback, `posthog` names the
+    // SDK module, not the runtime config.
+    const errorTracking = posthog.errorTracking;
 
     const applyConsent = () => {
       const posthog = getAnalyticsClient();
@@ -133,6 +143,19 @@ export function PostHogInit() {
           person_profiles: "identified_only",
           autocapture: false,
           disable_session_recording: true,
+          // Exception autocapture (MIN-542): opt-in only, via
+          // `MINDDY_PUBLIC_ERROR_TRACKING=1`. Window errors and unhandled
+          // promise rejections; `console.error` stays OFF — what the console
+          // logs must not leave the browser. Errors caught by an `error.tsx`
+          // boundary never reach this listener (React swallows them) and are
+          // reported explicitly through `captureClientException`.
+          capture_exceptions: errorTracking
+            ? {
+                capture_unhandled_errors: true,
+                capture_unhandled_rejections: true,
+                capture_console_errors: false,
+              }
+            : false,
           // We capture from the first visit, but as long as the banner is not
           // decided persistence remains IN MEMORY: nothing is written on
           // device and identity dies with the tab (see header).

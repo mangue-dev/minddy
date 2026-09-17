@@ -6,6 +6,7 @@ import {
   type ServerAnalyticsEventName,
 } from "@/lib/analytics-events";
 import { getAppEnv } from "@/lib/env";
+import { isErrorTrackingFlagOn } from "@/lib/error-tracking-flag";
 import {
   sanitizeAnalyticsEventName,
   sanitizeAnalyticsProps,
@@ -33,7 +34,7 @@ let client: PostHog | null = null;
  * however necessary for anonymous public uploads: it prevents the
  * SDK server from creating a person profile for a disposable UUID.
  */
-function sanitizeServerProperties(
+export function sanitizeServerProperties(
   properties: Record<string, unknown> | undefined,
 ): Record<string, string | number | boolean | null> {
   const sanitized = sanitizeAnalyticsProps(properties);
@@ -86,6 +87,14 @@ export function getServerPostHog(): PostHog | null {
       host: config.host,
       flushAt: 5,
       flushInterval: 10_000,
+      // Error tracking opt-in (MIN-542): also report uncaught exceptions and
+      // unhandled rejections raised OUTSIDE the `onRequestError` hook — cron
+      // jobs, agent code, background tasks. The SDK installs the process
+      // listeners itself and re-raises fatal errors after reporting, so the
+      // runtime exit behavior is unchanged.
+      enableExceptionAutocapture: isErrorTrackingFlagOn(
+        process.env.MINDDY_PUBLIC_ERROR_TRACKING,
+      ),
     });
   }
   return client;
