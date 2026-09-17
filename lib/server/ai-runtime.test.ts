@@ -118,6 +118,20 @@ describe("resolveAiRuntime", () => {
     ).resolves.toMatchObject({ mode: "byok", model: "whisper-admin" });
   });
 
+  it("keeps embeddings on the platform when BYOK has no embedding endpoint (MIN-544)", async () => {
+    getUserByok.mockResolvedValue({
+      provider: "opencode-go",
+      apiKey: "opencode-key",
+      baseUrl: "https://opencode.ai/zen/go/v1",
+      featureModels: {},
+    });
+    // The gateway lists only chat models: sending the chat default as an
+    // embedding id would be a guaranteed 400, so the feature stays on minddy.
+    await expect(
+      resolveAiRuntime({ userId: "u1", modelKey: "feedback_embedding_model" }),
+    ).resolves.toMatchObject({ mode: "platform", provider: "openrouter" });
+  });
+
   it("rejects a corrupted local-provider assignment on a server surface", async () => {
     getUserByok.mockResolvedValue({
       provider: "local_openai",

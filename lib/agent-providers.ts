@@ -18,6 +18,10 @@ export type AgentProviderId =
   | "openai"
   | "anthropic"
   | "google"
+  /** OpenCode Go subscription, served by the OpenCode Zen gateway (MIN-544). */
+  | "opencode-go"
+  /** OpenCode Zen pay-as-you-go gateway — same API as Go, other base path (MIN-544). */
+  | "opencode-zen"
   | "generic"
   /** Endpoint OpenAI-compatible atteint seulement depuis l'app de bureau. */
   | "local_openai"
@@ -169,6 +173,46 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
       reasoningField: "reasoning_effort",
     },
     keysUrl: "https://aistudio.google.com/apikey",
+  },
+  {
+    // OpenCode Go is a $10/month subscription of the OpenCode Zen gateway:
+    // same console, same API, another base path (`/zen/go/v1`). Every model
+    // the gateway lists is served through OpenAI-compatible
+    // `<baseUrl>/chat/completions` (models.dev declares both providers on
+    // @ai-sdk/openai-compatible), so the uniform loop/VM transport works as-is.
+    // The `/models` listing is PUBLIC: it feeds the catalog but cannot probe
+    // a key — see `probeRequestFor` (byok-validate.ts).
+    id: "opencode-go",
+    label: "OpenCode Go",
+    baseUrl: "https://opencode.ai/zen/go/v1",
+    defaultModel: "glm-5.3-flash",
+    keyPlaceholder: "Your OpenCode key",
+    logoModel: "opencode/x",
+    listStrategy: "openai",
+    // Conservative profile: the gateway tolerance for reasoning fields is not
+    // verified, so direct calls send none (the agent harness is unaffected:
+    // the opencode VM path nests `reasoning: {effort}` for every provider).
+    requestProfile: {
+      streamUsage: true,
+      outputTokenField: "max_tokens",
+    },
+    keysUrl: "https://opencode.ai/auth",
+  },
+  {
+    // OpenCode Zen is the pay-as-you-go twin of Go: same console, same API
+    // shape, base path `/zen/v1`.
+    id: "opencode-zen",
+    label: "OpenCode Zen",
+    baseUrl: "https://opencode.ai/zen/v1",
+    defaultModel: "glm-5.3-flash",
+    keyPlaceholder: "Your OpenCode key",
+    logoModel: "opencode/x",
+    listStrategy: "openai",
+    requestProfile: {
+      streamUsage: true,
+      outputTokenField: "max_tokens",
+    },
+    keysUrl: "https://opencode.ai/auth",
   },
   {
     id: "generic",

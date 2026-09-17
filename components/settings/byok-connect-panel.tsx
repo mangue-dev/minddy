@@ -36,8 +36,8 @@ import { agentPreferencesQueryKey } from "@/lib/use-agent-preferences-query";
  * (MIN-46, extracted by MIN-149).
  *
  * Only one selector FIRST: “Quota minddy” (platform mode, capped)
- * OR a BYOK provider (OpenRouter / OpenAI / Anthropic / Google / generic, at
- * its costs, only one asset at a time). Going back to the minddy quota removes the active key
+ * OR a BYOK provider (OpenRouter / OpenAI / Anthropic / Google / OpenCode /
+ * generic, at its costs, only one asset at a time). Going back to the minddy quota removes the active key
  * — this is what "minddy quota" means on the server side: absence of
  * BYOK.
  *
