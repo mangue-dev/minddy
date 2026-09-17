@@ -24,12 +24,15 @@ import type { IssuePr } from "@/lib/agent-api";
 interface AgentActivity {
   working: Set<string>;
   session: Set<string>;
+  /** Issue → common conversation to reopen in the FAB ("Open agent"). */
+  conversations: Map<string, string>;
   prs: Map<string, IssuePr>;
 }
 
 const EMPTY: AgentActivity = {
   working: new Set(),
   session: new Set(),
+  conversations: new Map(),
   prs: new Map(),
 };
 const AgentActivityContext = createContext<AgentActivity>(EMPTY);
@@ -37,6 +40,7 @@ const AgentActivityContext = createContext<AgentActivity>(EMPTY);
 type ActivityPayload = {
   workingIssueIds?: string[];
   sessionIssueIds?: string[];
+  sessionConversations?: Record<string, string>;
   pullRequests?: Record<string, IssuePr>;
 };
 
@@ -95,6 +99,7 @@ export async function fetchAgentActivity(
   return {
     workingIssueIds: data.workingIssueIds ?? [],
     sessionIssueIds: data.sessionIssueIds ?? [],
+    sessionConversations: data.sessionConversations ?? {},
     pullRequests: data.pullRequests ?? {},
   };
 }
@@ -119,9 +124,14 @@ export function AgentActivityProvider({
 
   const working = data?.workingIssueIds ?? [];
   const session = data?.sessionIssueIds ?? [];
+  const conversations = data?.sessionConversations ?? {};
   const prs = data?.pullRequests ?? {};
   const workingKey = working.slice().sort().join(",");
   const sessionKey = session.slice().sort().join(",");
+  const conversationsKey = Object.entries(conversations)
+    .map(([k, v]) => `${k}:${v}`)
+    .sort()
+    .join(",");
   const prsKey = Object.entries(prs)
     .map(([k, v]) => `${k}:${v.prId}:${v.state}`)
     .sort()
@@ -132,10 +142,11 @@ export function AgentActivityProvider({
     () => ({
       working: new Set(working),
       session: new Set(session),
+      conversations: new Map(Object.entries(conversations)),
       prs: new Map(Object.entries(prs)),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workingKey, sessionKey, prsKey],
+    [workingKey, sessionKey, conversationsKey, prsKey],
   );
 
   return (
@@ -153,6 +164,14 @@ export function useAgentActive(issueId: string): boolean {
 /** True if a resumeable agent session exists on this issue (work or rest). */
 export function useAgentHasSession(issueId: string): boolean {
   return useContext(AgentActivityContext).session.has(issueId);
+}
+
+/**
+ * The common conversation to reopen for this issue, or null. Only the newest
+ * run that carries one speaks; older sessions predate the shared identity.
+ */
+export function useIssueConversation(issueId: string): string | null {
+  return useContext(AgentActivityContext).conversations.get(issueId) ?? null;
 }
 
 /**

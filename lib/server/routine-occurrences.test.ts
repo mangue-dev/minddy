@@ -101,7 +101,6 @@ beforeEach(() => {
   h.state.start.mockReset().mockResolvedValue({
     conversationId: h.state.occurrence.conversation_id,
     turnId: h.state.turn.id,
-    detailHref: `/numo?conversation=${h.state.occurrence.conversation_id}`,
   });
 });
 

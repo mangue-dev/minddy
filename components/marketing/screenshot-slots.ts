@@ -77,7 +77,7 @@ const SLOTS = {
   },
   workflowAgent: {
     id: "workflowAgent",
-    route: "/numo",
+    route: "/projects/<id>, panneau Numo ouvert (G puis A), conversation avec un run délégué en cours",
     shot:
       "Un run d'agent en cours : fil d'exécution avec appels d'outils (lecture de fichiers, édition), statut « en cours », et l'issue rattachée en en-tête.",
     altKey: "shotAlt_workflowAgent",

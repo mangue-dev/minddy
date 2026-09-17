@@ -14,6 +14,8 @@ export interface AgentRunRow {
   pr_number: number | null;
   pr_state: string | null;
   created_at: string;
+  /** Common conversation this run was delegated from, when it carries one. */
+  parent_numo_conversation_id?: string | null;
 }
 
 /** A pull request attached to an issue, sorted by `updated_at` descending. */
@@ -75,11 +77,17 @@ export interface AgentActivityResponse {
   workingIssueIds: string[];
   /**
    * Issues with an agent conversation, whether active or at rest.
- */
+   */
   sessionIssueIds: string[];
   /**
+   * Issue → common conversation to reopen, taken from the newest run that
+   * carries one (rows arrive newest-first). Older runs predate the shared
+   * identity and name no conversation: the issue is simply absent.
+   */
+  sessionConversations: Record<string, string>;
+  /**
    * Pull requests in every state; clients decide which states receive a chip.
- */
+   */
   pullRequests: Record<string, IssuePrRef>;
 }
 
@@ -128,9 +136,18 @@ export function buildAgentActivity(
   const sessionIssueIds = [
     ...new Set(rows.flatMap((r) => (r.issue_id ? [r.issue_id] : []))),
   ];
+  // Newest-first rows: the first run of an issue that names its conversation
+  // wins, so "open agent" reopens the most recent session.
+  const sessionConversations: Record<string, string> = {};
+  for (const row of rows) {
+    if (!row.issue_id || !row.parent_numo_conversation_id) continue;
+    if (sessionConversations[row.issue_id]) continue;
+    sessionConversations[row.issue_id] = row.parent_numo_conversation_id;
+  }
   return {
     workingIssueIds,
     sessionIssueIds,
+    sessionConversations,
     pullRequests: pickIssuePullRequests(prRows),
   };
 }

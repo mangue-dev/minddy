@@ -98,8 +98,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                               <BulkActionsProvider>
                                 {/* “Save current view” (⌘K) starts from
  address; surfaces whose selection
- does not live there (a conversation of /agents, the open
- PR, the active view of a board) the
+ does not live there (the PR
+ open, the active view of a board) the
  publish here. Above the shell, therefore:
  it is the palette which reads. */}
                                 <CurrentViewProvider>

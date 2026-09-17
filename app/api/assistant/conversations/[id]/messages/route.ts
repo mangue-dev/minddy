@@ -18,7 +18,7 @@ export async function GET(
   // The legacy renderer only accepts assistant messages from the common identity.
   const { data: conversation } = await supabase
     .from("numo_conversation_history")
-    .select("id, source, detail_href")
+    .select("id, source")
     .eq("id", conversationId)
     .single();
 
@@ -26,8 +26,10 @@ export async function GET(
     return Response.json({ error: "Not found" }, { status: 404 });
   }
 
+  // 409 instead of a partial history: a worker conversation only reads whole
+  // in the common timeline, never in the legacy assistant renderer.
   if (conversation.source !== "assistant") {
-    return Response.json({ error: "Open work detail", detailHref: conversation.detail_href }, { status: 409 });
+    return Response.json({ error: "Open work detail" }, { status: 409 });
   }
 
   const { data, error } = await supabase

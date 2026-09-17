@@ -31,7 +31,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const [{ data }, { data: prs }] = await Promise.all([
     auth.supabase
       .from("agent_runs")
-      .select("issue_id, status, id, pr_number, pr_state, created_at")
+      .select("issue_id, status, id, pr_number, pr_state, created_at, parent_numo_conversation_id")
       .eq("project_id", id)
       .neq("status", "failed")
       .not("issue_id", "is", null)

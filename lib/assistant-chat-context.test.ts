@@ -89,6 +89,7 @@ describe("persistent conversation context", () => {
     h.active.mockReturnValue(new Promise((done) => { resolve = done; }));
     h.panel.pendingOptions = { projectId: "b", prompt: "Discuss B" };
     await render();
+    await act(async () => value.requestRestore());
     expect(value.restoring).toBe(true);
     h.panel = { ...h.panel, isOpen: false };
     await render();
@@ -114,6 +115,7 @@ describe("persistent conversation context", () => {
     };
 
     await render();
+    await act(async () => value.requestRestore());
 
     expect(h.pointer).toHaveBeenLastCalledWith(null);
   });

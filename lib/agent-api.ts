@@ -854,7 +854,6 @@ export async function submitPullRequestReviewApi(
   published: "review" | "comment" | "none";
   conversation?: { id: string };
   turn?: { id: string };
-  detail_href?: string;
 }> {
   trackEvent("pr_review_submitted", { verdict: input.verdict });
   return parseJson(
@@ -885,7 +884,6 @@ export async function requestPullRequestAiReviewApi(
   ok: true;
   conversation: { id: string };
   turn: { id: string };
-  detail_href: string;
 }> {
   trackEvent("pr_ai_review_requested");
   return parseJson(
@@ -974,7 +972,7 @@ export interface PullRequestListResponse {
  * `pin` PIN a PR in the answer even if it falls off the page — a
  * deep-link to an old PR should not depend on the depth of the
  * scrolling. `{ pr }` for a direct link, `{ run }` for historical links
- * of the app (the issue sidebar and /agents speak in run).
+ * of the app (the issue sidebar speaks in run).
  */
 export async function fetchAllPullRequestsApi(input: {
   state: PullRequestStateFilter;
@@ -1419,7 +1417,6 @@ export async function postPullRequestCommentApi(
   review?: {
     conversationId: string;
     turnId: string;
-    detailHref: string;
   } | null;
 }> {
   return parseJson(

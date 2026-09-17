@@ -219,17 +219,16 @@ describe("buildPushPayload", () => {
     );
   });
 
-  it("ouvre et nomme une conversation d'agent sans ticket", () => {
+  it("pushes nothing for a conversation-only row (no URL can carry it)", () => {
     const ctx = emptyPushContext();
     ctx.agentConversations.set("conversation-1", null);
     const row = issueRow("agent_done", {
       issue_id: null,
       agent_conversation_id: "conversation-1",
     });
-    expect(buildPushPayload(ctx, row, "fr")).toMatchObject({
-      title: fr.Inbox.someAgentConversationFallback,
-      url: "/agents?run=conversation-1",
-    });
+    // A Numo conversation has no page any more: the payload is skipped rather
+    // than opening something unrelated (better nothing than the wrong screen).
+    expect(buildPushPayload(ctx, row, "fr")).toBeNull();
   });
 });
 

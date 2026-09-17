@@ -83,7 +83,6 @@ export interface StartNumoIntentInput {
 export interface StartedNumoIntent {
   conversationId: string;
   turnId: string;
-  detailHref: string;
 }
 
 export async function numoIntentErrorResponse(
@@ -266,6 +265,5 @@ export async function startNumoIntent(
   return {
     conversationId: conversation.id,
     turnId: turn.id,
-    detailHref: `/numo?conversation=${encodeURIComponent(conversation.id)}`,
   };
 }

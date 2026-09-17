@@ -8,8 +8,8 @@ import { fetchPullRequestAiReviewApi } from "./agent-api";
  * (MIN-168).
  *
  * It no longer takes place here. Before, the pass had its own stream of events and its own live topic (`pr-review:{id}`), replayed in the thread map; since it is an agent run, its progress is that of
- * any session — `agent_run_events`, the topic `agent-run:{id}`, and the
- * conversation of `/agents` which already knows how to return everything. The PR thread now only has to say that the agent is working or that it has finished, and to open the session.
+ * any session — `agent_run_events` on the topic `agent-run:{id}`, which the
+ * common timeline already knows how to return everything from. The PR thread now only has to say that the agent is working or that it has finished, and to open the session in the FAB.
  *
  * Hence this hook is reduced to a poll: there is no longer any text to follow per second,
  * only a status that switches. The poll ONLY runs while a session

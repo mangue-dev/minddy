@@ -864,8 +864,6 @@ export function secondaryNavBackTarget(
   }
   if (pathname.startsWith("/trash")) return { label: t("trash"), href: "/home" };
   if (pathname.startsWith("/pull-requests")) return { label: t("pullRequests"), href: "/home" };
-  if (pathname.startsWith("/agents") || pathname.startsWith("/numo"))
-    return { label: t("agents"), href: "/home" };
   if (pathname.startsWith("/routines")) return { label: t("routines"), href: "/home" };
   if (pathname.startsWith("/settings")) return { label: t("accountSettings"), href: "/home" };
   if (pathname.startsWith("/admin")) return { label: t("adminDashboard"), href: "/home" };

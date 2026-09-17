@@ -42,16 +42,11 @@ import { useProjects } from "@/lib/projects-context";
 import { appTabRoute } from "@/lib/app-tab-location";
 import { objectivesQueryFn } from "@/lib/objectives-api";
 import { APP_TAB_MAX_NAME, type AppTab } from "@/lib/app-tabs";
-import {
-  useAgentSessionsQuery,
-  useOpenPullRequestCountQuery,
-} from "@/lib/use-agent-runs";
+import { useOpenPullRequestCountQuery } from "@/lib/use-agent-runs";
 import {
   fetchPullRequestApi,
-  isAgentSessionUnread,
   type PullRequestRef,
 } from "@/lib/agent-api";
-import { useAgentReads } from "@/lib/use-agent-reads";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { fetchPagesApi } from "@/lib/pages-api";
 import { pagesKey } from "@/lib/use-pages-query";
@@ -64,7 +59,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 const routeLabels: Record<string, MessageKey<"Nav">> = {
-  home: "home", all: "allIssues", inbox: "inbox", numo: "agents", agents: "agents", routines: "routines",
+  home: "home", all: "allIssues", inbox: "inbox", routines: "routines",
   "pull-requests": "pullRequests", statistics: "statistics", trash: "trash", settings: "settings", billing: "billing",
   admin: "adminDashboard", pages: "pages", tickets: "tickets", objectives: "objectives", feedback: "feedback", triage: "triage",
 };
@@ -174,18 +169,11 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   }, [routinesData]);
 
   // Notification badges on the tabs follow the same rules as the sidebar (same
-  // counters, same caching): open PRs on the PR tab, working/unread marks on
-  // the Agents/Numo tab. They sit ON the tab icon's top-right corner, drawn
-  // plain — no pill, no ring — as if laid directly over the icon.
+  // counters, same caching): open PRs on the PR tab. They sit ON the tab icon's
+  // top-right corner, drawn plain — no pill, no ring — as if laid directly over
+  // the icon.
   const openPrCount = useOpenPullRequestCountQuery();
   const { agentsAllowed } = usePlanGates();
-  const { sessions: agentSessions } = useAgentSessionsQuery();
-  const { reads: agentReads } = useAgentReads();
-  const anyAgentWorking = agentSessions.some((sessionItem) => sessionItem.working);
-  const anyAgentAwaiting = agentSessions.some(
-    (sessionItem) => sessionItem.awaitingInput && isAgentSessionUnread(sessionItem, agentReads),
-  );
-  const anyAgentUnread = agentSessions.some((sessionItem) => isAgentSessionUnread(sessionItem, agentReads));
   const sectionBadges = (section: string): ReactNode => {
     if (section === "pull-requests") {
       if (!agentsAllowed || openPrCount <= 0) return null;
@@ -200,10 +188,6 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
         </span>
       );
     }
-    if (!agentsAllowed || (section !== "numo" && section !== "agents")) return null;
-    if (anyAgentWorking) return <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />;
-    if (anyAgentAwaiting) return <span className="size-2 shrink-0 rounded-full bg-yellow-500" aria-label={nav("agentsAwaiting")} />;
-    if (anyAgentUnread) return <span className="size-2 shrink-0 rounded-full bg-blue-500" aria-label={nav("agentsUnread")} />;
     return null;
   };
 
