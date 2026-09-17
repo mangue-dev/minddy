@@ -994,6 +994,22 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("mcpToolsListed") : t("listMcpToolsFailed");
     },
   },
+  list_mcp_presets: {
+    icon: Plug,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("listingMcpPresets");
+      return success ? t("mcpPresetsListed") : t("listMcpPresetsFailed");
+    },
+  },
+  configure_mcp_connection: {
+    icon: Plug,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("configuringMcpConnection");
+      return success
+        ? t("mcpConnectionConfigured")
+        : t("configureMcpConnectionFailed");
+    },
+  },
   call_mcp_tool: {
     icon: Plug,
     getLabel: (_args, _result, success, status, t) => {

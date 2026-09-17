@@ -1,7 +1,7 @@
 import "server-only";
 import { DATABASE_TOOL_PARAMETERS, databaseToolDescription } from "@/lib/server/database-tool-schema";
 
-import { MCP_CLIENT_TOOLS } from "@/lib/mcp-client-tools";
+import { MCP_CLIENT_TOOLS, MCP_SETUP_TOOLS } from "@/lib/mcp-client-tools";
 
 import {
   ISSUE_STATUSES,
@@ -204,6 +204,7 @@ const VIEW_PROJECT_FILTER_PROPERTY = {
 
 export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   ...MCP_CLIENT_TOOLS,
+  ...MCP_SETUP_TOOLS,
   // ── Read tools ────────────────────────────────────────────────────────
   {
     type: "function",
@@ -2416,6 +2417,7 @@ export const ACCOUNT_TOOLS = new Set([
 // tools). web_search looks OUTSIDE minddy — a project_id would be meaningless.
 const NON_PROJECT_TOOLS = new Set([
   ...MCP_CLIENT_TOOLS.map((tool) => tool.function.name),
+  ...MCP_SETUP_TOOLS.map((tool) => tool.function.name),
   "ask_user",
   "web_search",
   "get_help",
@@ -2593,7 +2595,13 @@ const REPORT_AUTOMATION_OUTCOME_TOOL: AssistantToolDef = {
 
 export const AUTOMATION_ASSISTANT_TOOLS = [
   ...CONVERSATION_ASSISTANT_TOOLS.filter(
-    (tool) => tool.function.name !== "ask_user",
+    (tool) =>
+      tool.function.name !== "ask_user" &&
+      // Connection setup is an account-level write with a one-shot OAuth link
+      // that expires in 10 minutes: no user is watching an automated run, and
+      // an injected instruction must not be able to add MCP endpoints to the
+      // account (each one widens what call_mcp_tool can reach).
+      tool.function.name !== "configure_mcp_connection",
   ),
   REPORT_AUTOMATION_OUTCOME_TOOL,
 ];

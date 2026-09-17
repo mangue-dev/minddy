@@ -1,7 +1,8 @@
 import "server-only";
 
-import { MCP_CLIENT_TOOL_NAMES } from "@/lib/mcp-client-tools";
+import { MCP_CLIENT_TOOL_NAMES, MCP_SETUP_TOOL_NAMES } from "@/lib/mcp-client-tools";
 import { executeMcpTool } from "@/lib/server/mcp-client";
+import { executeMcpSetupTool } from "@/lib/server/mcp-setup";
 
 import { resolveApplicationLocale } from "@/lib/locale-language";
 
@@ -830,6 +831,9 @@ export async function executeTool(
   try {
     if (MCP_CLIENT_TOOL_NAMES.has(toolName)) {
       return executeMcpTool(ctx.userId, toolName, args);
+    }
+    if (MCP_SETUP_TOOL_NAMES.has(toolName)) {
+      return executeMcpSetupTool(ctx.userId, toolName, args);
     }
     if (toolName === "get_help") {
       const topic = typeof args.topic === "string" ? args.topic : "";

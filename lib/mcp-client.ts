@@ -70,7 +70,11 @@ export interface McpConnection {
   created_at: string;
 }
 
-export function mcpConnectionNeedsAuth(connection: McpConnection): boolean {
+export function mcpConnectionNeedsAuth(connection: {
+  auth_mode: McpConnection["auth_mode"];
+  oauth_connected: boolean;
+  has_token?: boolean;
+}): boolean {
   return connection.auth_mode === "oauth"
     ? !connection.oauth_connected
     : connection.auth_mode === "bearer" && !connection.has_token;
