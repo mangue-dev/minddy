@@ -5,7 +5,7 @@ summary: Work with Numo in minddy and connect external agents or personal MCP to
 category: automation
 audience: both
 tags: [agent, mcp, oauth, codex, claude, cursor]
-lastReviewed: 2026-09-13
+lastReviewed: 2026-09-17
 ---
 
 Numo is minddy's built-in conversation for understanding and acting on project work. The **Numo** page is the main place to start or find conversations. The floating Numo button is a compact view of that same experience: it adds the current page as context, and a conversation started there remains available on the Numo page. Contextual actions such as **Hand to Numo** also enter this common conversation instead of opening a separate agent destination.
@@ -26,6 +26,18 @@ Canva, Sentry, Supabase, Vercel, and Stripe. Services open a connection dialog w
 their configuration already filled in. Provider prerequisites and setup links
 appear when needed. Provider endpoints were checked
 against those documents on September 4, 2026.
+
+Numo can do this setup for you in a conversation: ask it to configure a service
+("configure the Notion MCP") and it resolves the service in the catalog, checks
+the provider's current prerequisites online first (an OAuth app to register, a
+developer-preview or approval program, per-service restrictions), then creates
+the connection enabled and waiting for authentication. It answers with the exact
+remaining step — usually the provider's OAuth authorization link to open right
+away, or where to enter credentials such as a bearer token or an OAuth app's
+client id and secret. Connections created this way appear in Account settings →
+MCP for Numo like any other, where they can be edited, tested, disabled or
+removed. An unattended routine cannot create connections: this setup only runs
+in a conversation with you.
 
 Choose **Connect** to add the service and open the provider's OAuth flow. In the desktop app, that flow opens in the system browser and returns to the app when it completes. An
 installed OAuth connection that is not authenticated shows an orange triangle;

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ASSISTANT_TOOLS,
+  AUTOMATION_ASSISTANT_TOOLS,
   GLOBAL_ASSISTANT_TOOLS,
   PROJECT_ASSISTANT_TOOLS,
   PROJECT_SCOPED_TOOLS,
@@ -293,6 +294,48 @@ describe("Numo tool contracts", () => {
     });
     expect(move?.function.description).toMatch(/never changes status/i);
     expect(move?.function.description).toMatch(/assignment changes per item/i);
+  });
+
+  it("lets Numo set up MCP connections without a project (MIN-541)", () => {
+    for (const name of ["list_mcp_presets", "configure_mcp_connection"]) {
+      const setup = tool(name);
+      expect(setup, name).toBeDefined();
+
+      const global = GLOBAL_ASSISTANT_TOOLS.find(
+        (candidate) => candidate.function.name === name,
+      );
+      expect(global?.function.parameters.properties).not.toHaveProperty(
+        "project_id",
+      );
+    }
+
+    // The research-before-create discipline is part of the contract: the tool
+    // must send the model to the provider's prerequisites BEFORE creating.
+    const configure = tool("configure_mcp_connection");
+    expect(configure?.function.description).toMatch(/RESEARCH FIRST/);
+    expect(configure?.function.description).toMatch(/web_search/);
+    expect(configure?.function.description).toMatch(
+      /enabled and left waiting for authentication/,
+    );
+    expect(configure?.function.parameters.properties).toHaveProperty("preset_id");
+    expect(configure?.function.parameters.properties).toHaveProperty(
+      "connection_id",
+    );
+    expect(configure?.function.parameters.properties).toHaveProperty("token");
+    expect(configure?.function.parameters.properties).toHaveProperty(
+      "oauth_client_secret",
+    );
+  });
+
+  it("keeps connection setup out of unattended automation runs", () => {
+    const automation = AUTOMATION_ASSISTANT_TOOLS.map(
+      (candidate) => candidate.function.name,
+    );
+    // An automation has no user to open the expiring OAuth link, and an
+    // injected instruction must not be able to add MCP endpoints to the
+    // account. The read-only catalog stays available.
+    expect(automation).not.toContain("configure_mcp_connection");
+    expect(automation).toContain("list_mcp_presets");
   });
 });
 
