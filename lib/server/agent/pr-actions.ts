@@ -261,8 +261,7 @@ export async function authorizePrRequest(
 /**
  * Same thing from a `runId`: what the facades do
  * `agent-runs/[runId]/pr/*`, kept for existing `?run=` deep-links and
- * for the diff view of the agent conversation — breaking them would mean breaking
- * `/agents`.
+ * for the diff view of the agent conversation.
  *
  * `noPr` distinguishes “this run has no PR” (legitimate empty response on GET,
  * 400 on POST) of “unknown run” (404).
@@ -1087,7 +1086,6 @@ export async function startNumoPrReview(input: {
       return {
         conversationId: thread.conversation_id,
         turnId: reserved.event.turn_id,
-        detailHref: `/numo?conversation=${encodeURIComponent(thread.conversation_id)}`,
       };
     }
     if (!reserved.created) return null;
@@ -1116,7 +1114,6 @@ export async function startNumoPrReview(input: {
       return {
         conversationId: thread.conversation_id,
         turnId: pendingInput.turnId,
-        detailHref: `/numo?conversation=${encodeURIComponent(thread.conversation_id)}`,
       };
     }
 
@@ -2714,7 +2711,6 @@ export async function prReviewResponse(
       ? {
           conversation: { id: startedIntent.conversationId },
           turn: { id: startedIntent.turnId },
-          detail_href: startedIntent.detailHref,
         }
       : {}),
   });
@@ -2749,7 +2745,6 @@ export async function prAiReviewResponse(
         ok: true,
         conversation: { id: started.conversationId },
         turn: { id: started.turnId },
-        detail_href: started.detailHref,
       },
       { status: 202 },
     );

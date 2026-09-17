@@ -58,6 +58,7 @@ import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import {
   useAgentActive,
   useAgentHasSession,
+  useIssueConversation,
   useIssuePr,
 } from "@/components/agent/agent-activity-context";
 import {
@@ -996,10 +997,10 @@ const IssueCardContent = memo(function IssueCardContent({
   const tCommon = useTranslations("Common");
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { openIntent } = useAssistantPanel();
+  const { openIntent, open: openAssistant } = useAssistantPanel();
   const agentActive = useAgentActive(issue.id);
-  // Historical worker activity remains available as a read-only navigation
-  // target; new voluntary work enters Numo below.
+  // A prior session exists → the menu carries “Open agent” (it reopens the
+  // conversation in the FAB); new voluntary work enters Numo below.
   const agentHasSession = useAgentHasSession(issue.id);
   // The ticket's PR → chip on the card (if it still calls for action) and
   // “View pull request” in the menu (whatever its state).
@@ -1073,10 +1074,15 @@ const IssueCardContent = memo(function IssueCardContent({
   const [customTarget, setCustomTarget] = useState<CustomPromptTarget | null>(
     null,
   );
-  // Historical worker navigation remains separate from new work. Opening a
-  // prior session is read-only navigation; every new request uses Numo.
+  // Reopening a prior session happens in the FAB, the only surface a Numo
+  // conversation lives in now: the card opens the conversation the newest run
+  // was delegated from. New work goes through Numo itself.
+  const issueConversation = useIssueConversation(issue.id);
   const openAgentSession = () => {
-    router.push(`/agents?issue=${issue.id}`);
+    openAssistant({
+      conversationId: issueConversation,
+      projectId: issue.project_id,
+    });
   };
   const entrustToNumo = (
     prompt: string,
@@ -1296,7 +1302,11 @@ const IssueCardContent = memo(function IssueCardContent({
   // `useStableCallback` freezes their identity without freezing what they do.
   const agentActions = useAgentMenuActions({
     agentsEnabled: true,
-    hasSession: agentHasSession,
+    // A session is only worth its menu entry when it can actually reopen:
+    // the card opens the conversation in the FAB, and runs that predate the
+    // shared identity name none — opening the live thread instead would be
+    // a lie about what the entry does.
+    hasSession: agentHasSession && issueConversation !== null,
     hasPlan: issueHasPlan,
     onCopyPrompt: useStableCallback(() => void copyPrompt()),
     onCopyPlanPrompt: useStableCallback(() => void copyPlanPrompt()),

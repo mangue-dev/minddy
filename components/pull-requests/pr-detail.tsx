@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Button,
@@ -602,7 +601,6 @@ export function PrDetail({
 }) {
   const t = useTranslations("PullRequests");
   const tAgent = useTranslations("Agent");
-  const router = useRouter();
   const agentErrorMessage = useAgentErrorMessage();
   const { openIntent, open: openAssistant } = useAssistantPanel();
   const { loadConversation } = useAssistantChatContext();
@@ -822,10 +820,6 @@ export function PrDetail({
   const currentHeadSha = pr?.headSha ?? null;
   const reviewUpToDate =
     !!currentHeadSha && reviewSession.reviewedHeadSha === currentHeadSha;
-  const completedReviewSessionHref =
-    reviewSession.run?.status === "completed"
-      ? `/agents?run=${encodeURIComponent(reviewSession.run.runId)}`
-      : null;
 
   // The deployment story is STICKY (MIN-548 review): one fetch that comes
   // back empty — a provider that stamps nothing while the environment
@@ -933,32 +927,26 @@ export function PrDetail({
 
   // The review gesture lives in ONE card (MIN-548) — running, up to date, or
   // waiting for the ask — instead of entries buried in the header menus.
-  // A review that is up to date but whose session went unreadable says
-  // nothing an action could serve: no card.
+  // The card only exists where its conversation can open in the FAB: a run
+  // too old to carry its conversation has no destination left at all.
   const numoReviewCard =
-    !prPageContext || (reviewUpToDate && !completedReviewSessionHref)
+    !prPageContext || (reviewUpToDate && !reviewSession.run?.conversationId)
       ? null
       : aiReviewActive
         ? {
             kind: "running" as const,
             label: aiReviewLabel,
-            href: reviewSession.run
-              ? `/agents?run=${encodeURIComponent(reviewSession.run.runId)}`
-              : null,
             onOpen: reviewSession.run?.conversationId
               ? openReviewConversation
               : null,
             startedAt: reviewSession.run?.createdAt ?? null,
             durationMs: null,
           }
-        : reviewUpToDate && completedReviewSessionHref
+        : reviewUpToDate
           ? {
               kind: "current" as const,
               label: aiReviewLabel,
-              href: completedReviewSessionHref,
-              onOpen: reviewSession.run?.conversationId
-                ? openReviewConversation
-                : null,
+              onOpen: openReviewConversation,
               startedAt: null,
               durationMs:
                 reviewSession.run?.createdAt && reviewSession.run?.completedAt
@@ -969,7 +957,6 @@ export function PrDetail({
           : {
               kind: "requested" as const,
               label: aiReviewLabel,
-              href: null,
               onOpen: null,
               startedAt: null,
               durationMs: null,
@@ -1396,9 +1383,9 @@ export function PrDetail({
       setCommentBody("");
       await refetchComments();
       // A PR @Numo mention is admitted as a common conversation on the server.
-      // Open that exact durable conversation instead of looking for a worker
-      // review session that no longer owns the user-facing request.
-      if (review) router.push(review.detailHref);
+      // Open that exact durable conversation in the FAB — it has no page any
+      // more, and no URL can express it.
+      if (review) openAssistant({ conversationId: review.conversationId });
     } catch (err) {
       toast.error((err as Error).message);
     } finally {

@@ -17,7 +17,6 @@ import { useTranslations } from "next-intl";
 import {
   AppShell,
   MobileNav,
-  Spinner,
   cn,
   toast,
 } from "mangue-ui";
@@ -46,6 +45,7 @@ import {
 } from "lucide-react";
 import { InboxPopover } from "@/components/inbox-popover";
 import { openInbox } from "@/lib/inbox-launcher";
+import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
@@ -65,13 +65,10 @@ import {
   replacePagesHistory,
 } from "@/lib/pages-navigation";
 import {
-  useAgentSessionsQuery,
   useOpenPullRequestCountQuery,
 } from "@/lib/use-agent-runs";
 import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";
 import { useTriageCountsQuery, triageCountTotal } from "@/lib/use-triage-counts-query";
-import { useAgentReads } from "@/lib/use-agent-reads";
-import { isAgentSessionUnread } from "@/lib/agent-api";
 import { issueIdentifier } from "@/lib/issue-constants";
 import {
   type PaletteGroup,
@@ -286,6 +283,7 @@ function identifierBadge(id: string) {
 
 export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const t = useTranslations("Nav");
+  const openAssistant = useAssistantPanel().open;
   const ti = useTranslations("Issue");
   const tk = useTranslations("Keyboard");
   const tScratch = useTranslations("Scratchpad");
@@ -417,8 +415,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     setExportOpen(true);
   }, []);
 
-  const isAgents = pathname.startsWith("/agents");
-  const isNumo = pathname.startsWith("/numo");
   const isRoutines = pathname.startsWith("/routines");
   const { counts: triageCounts } = useTriageCountsQuery();
 
@@ -622,19 +618,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       </span>
     ) : undefined;
 
-  // Agents: a spinner on the tab as soon as a session is WORKING (generation in
-  // course), all projects combined; otherwise a blue bubble if at least one session has
-  // FINISHED without having been consulted (work in progress takes precedence over unread work).
-  const { sessions: agentSessions } = useAgentSessionsQuery();
-  const { reads: agentReads } = useAgentReads();
-  const anyAgentWorking = agentSessions.some((s) => s.working);
-  const anyAgentUnread = agentSessions.some((s) => isAgentSessionUnread(s, agentReads));
-  // A session is waiting for a response (ask_user) and is not read → YELLOW dot
-  // priority on the blue “finished, unread”.
-  const anyAgentAwaiting = agentSessions.some(
-    (s) => s.awaitingInput && isAgentSessionUnread(s, agentReads),
-  );
-
   const commandGroups = useMemo<PaletteGroup[]>(() => {
     const groups: PaletteGroup[] = [];
     const createKw = ["create", "créer", "new", "nouveau"];
@@ -771,13 +754,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 onSelect: () => router.push("/pull-requests"),
               },
               {
+                // Numo has no page of its own any more (the FAB hosts the whole
+                // conversation): the entry, like its chord, OPENS the panel.
                 key: "go-agents",
                 label: t("agents"),
                 icon: NumoNavIcon,
-                href: "/numo",
                 keys: ["G", "J"],
-                entityType: "navigation",
-                onSelect: () => router.push("/numo"),
+                keywords: ["numo", "chat", "assistant", "conversation"],
+                onSelect: () => openAssistant(),
               },
               {
                 // ROUTINES (MIN-185) have their own page and their own
@@ -1018,7 +1002,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     }
 
     return groups;
-  }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
+  }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, openAssistant, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
 
   // ── Settings: one line per CARD, not per tab ───────────────────────
   // A settings tab is a column of cards; “Cadence”, “Zone
@@ -1289,32 +1273,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       t("pullRequestsBadge", { count: openPrCount })
     ),
   };
-  const agentsItem: AppNavItem = {
-    key: "agents",
-    label: t("agents"),
-    icon: NumoNavIcon,
-    href: "/numo",
-    active: (isNumo || isAgents) && !isRoutines,
-    shortcut: "J",
-    descends: true,
-    disabled: !agentsAllowed,
-    tooltip: agentsAllowed ? undefined : tBilling("agentsGateTitle"),
-    badge:
-      agentsAllowed && anyAgentWorking ? (
-        <Spinner className="size-3.5 text-muted-foreground" />
-      ) : agentsAllowed && anyAgentAwaiting ? (
-        // A session is waiting for a response from the user → YELLOW point.
-        <span
-          className="size-2 rounded-full bg-yellow-500"
-          aria-label={t("agentsAwaiting")}
-        />
-      ) : agentsAllowed && anyAgentUnread ? (
-        <span
-          className="size-2 rounded-full bg-blue-500"
-          aria-label={t("agentsUnread")}
-        />
-      ) : undefined,
-  };
+  // Numo has no sidebar item any more: the conversation is only reachable from
+  // the FAB, whose animated border carries the “working” signal. The finished /
+  // awaiting / unread dots of the former item live in the inbox rows and in the
+  // conversation history of the panel. The palette entry and G J open it.
   const routinesItem: AppNavItem = {
     key: "routines",
     label: t("routines"),
@@ -1423,7 +1385,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         items: [
           inboxItem,
           pullRequestsItem,
-          agentsItem,
           routinesItem,
           {
             key: "all-global",
@@ -1500,7 +1461,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, objectiveBoardId, projects, projectDrafts, openProjectDraft, deleteProjectDraft, inboxCount, triageCount, feedbackCount, triageCounts, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, homeBadge, t, tProjects]);
+  }, [currentProject, pathname, objectiveBoardId, projects, projectDrafts, openProjectDraft, deleteProjectDraft, inboxCount, triageCount, feedbackCount, triageCounts, openPrCount, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, homeBadge, t, tProjects]);
 
   // Inbox is a compact top control on desktop. Mobile keeps the regular row,
   // where there is no primary sidebar to host that control.

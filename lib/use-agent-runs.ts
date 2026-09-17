@@ -427,10 +427,10 @@ export function useOpenPullRequestCountQuery() {
 }
 
 /**
- * Global list of agent sessions (Agents page). Polling ~5 sec as a
+ * Global list of agent sessions (the FAB's activity signals). Polling ~5 sec as a
  * WORK session (Numo is running), otherwise no polling — modeled on
  * `useAllPullRequestsQuery`. `refetchOnMount: always` for the same reason as the
- * events: at rest the list no longer polls, so return to /agents after having
+ * events: at rest the list no longer polls, so reopening the FAB after having
  * left the tab would redisplay outdated/unread statuses (“fresh” cache 5 min)
  * until fully recharged.
  */

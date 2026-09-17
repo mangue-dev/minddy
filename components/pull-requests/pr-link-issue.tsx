@@ -33,7 +33,7 @@ import type { GlobalBoardResponse } from "@/lib/types";
  * catch-up, and it takes the exact place of the "no ticket" that it replaces.
  *
  * The gesture is in TWO stages, because it is definitive: we choose from the
- * same ticket picker as the /agents composer (global board loaded
+ * same ticket picker as the Numo panel (global board loaded
  * lazily, upon opening), then we confirm in a dialog which names the
  * ticket AND announces the status it will take — the consequence is said before the
  * gesture, not after.
@@ -62,7 +62,7 @@ export function PrLinkIssue({
   const [pending, setPending] = useState<{ id: string; identifier: string } | null>(null);
   const [linking, setLinking] = useState(false);
 
-  // Same cache as the “All tickets” board and the /agents picker:
+  // Same cache as the “All tickets” board and the Numo panel picker:
   // nothing is loaded until the menu is opened.
   const { data, isPending } = useQuery({
     queryKey: GLOBAL_BOARD_KEY,

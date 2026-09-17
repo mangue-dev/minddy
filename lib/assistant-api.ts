@@ -61,7 +61,6 @@ export async function deleteConversation(
 export interface ActiveConversationRef {
   conversationId: string | null;
   projectId: string | null;
-  detailHref?: string | null;
 }
 
 export async function fetchActiveConversation(): Promise<ActiveConversationRef> {

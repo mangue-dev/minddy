@@ -3,7 +3,7 @@ import { PUBLIC_ROUTE_PATHS } from "@/lib/public-routes";
 import { leavesTheWindow, routeDisposition } from "./window-routes";
 
 describe("routeDisposition", () => {
-  it("laisse l'app et l'authentification — c'est tout ce que la fenêtre montre", () => {
+  it("lets the app and authentication through — all the window shows", () => {
     for (const path of [
       "/home",
       "/login",
@@ -12,8 +12,7 @@ describe("routeDisposition", () => {
       "/projects/abc",
       "/settings/account",
       "/auth/callback",
-      "/agents",
-      "/numo",
+      "/routines",
     ]) {
       expect(routeDisposition(path), path).toBe("allow");
     }

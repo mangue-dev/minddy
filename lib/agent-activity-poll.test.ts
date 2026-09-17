@@ -37,6 +37,7 @@ describe("fetchAgentActivity", () => {
     await expect(fetchAgentActivity("p1")).resolves.toEqual({
       workingIssueIds: ["i1"],
       sessionIssueIds: [],
+      sessionConversations: {},
       pullRequests: {},
     });
   });

@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   try {
     const conversation = data ? await getNumoConversation(auth.supabase, data.conversation_id) : null;
     return Response.json({ conversationId: conversation?.id ?? null,
-      projectId: conversation?.project_id ?? null, detailHref: conversation?.detail_href ?? null });
+      projectId: conversation?.project_id ?? null });
   } catch {
     return Response.json({ error: "Unable to read active conversation" }, { status: 500 });
   }

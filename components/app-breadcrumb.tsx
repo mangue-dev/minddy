@@ -164,7 +164,6 @@ function MobileBreadcrumb({
   isAdmin,
   isAllGlobal,
   isPullRequests,
-  isAgents,
   isRoutines,
 }: {
   project: Project | null;
@@ -179,7 +178,6 @@ function MobileBreadcrumb({
   isAdmin: boolean;
   isAllGlobal: boolean;
   isPullRequests: boolean;
-  isAgents: boolean;
   isRoutines: boolean;
 }) {
   const t = useTranslations("Nav");
@@ -224,10 +222,6 @@ function MobileBreadcrumb({
     backHref = "/home";
     backIcon = homeIcon;
     current = <CurrentLabel>{t("pullRequests")}</CurrentLabel>;
-  } else if (isAgents) {
-    backHref = "/home";
-    backIcon = homeIcon;
-    current = <CurrentLabel>{t("agents")}</CurrentLabel>;
   } else if (isRoutines) {
     backHref = "/home";
     backIcon = homeIcon;
@@ -324,8 +318,6 @@ export function AppBreadcrumb({
   const isAdmin = pathname.startsWith("/admin");
   const isAllGlobal = pathname === "/all";
   const isPullRequests = pathname.startsWith("/pull-requests");
-  const isAgents =
-    pathname.startsWith("/agents") || pathname.startsWith("/numo");
   const isRoutines = pathname.startsWith("/routines");
 
   return (
@@ -388,12 +380,6 @@ export function AppBreadcrumb({
           </span>
         </BreadcrumbLevel>
 
-        <BreadcrumbLevel show={isAgents} levelKey="agents">
-          <span className="text-sm font-medium text-foreground">
-            {t("agents")}
-          </span>
-        </BreadcrumbLevel>
-
         <BreadcrumbLevel show={isRoutines} levelKey="routines">
           <span className="text-sm font-medium text-foreground">
             {t("routines")}
@@ -449,7 +435,6 @@ export function AppBreadcrumb({
         isAdmin={isAdmin}
         isAllGlobal={isAllGlobal}
         isPullRequests={isPullRequests}
-        isAgents={isAgents}
         isRoutines={isRoutines}
       />
     </>

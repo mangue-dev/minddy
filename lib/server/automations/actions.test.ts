@@ -155,7 +155,6 @@ beforeEach(() => {
     return {
       conversationId: "conversation-1",
       turnId: "turn-1",
-      detailHref: "/numo?conversation=conversation-1",
     };
   });
   h.bind.mockImplementation(async () => {

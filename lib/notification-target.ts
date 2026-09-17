@@ -45,6 +45,13 @@ export interface NotificationTarget {
  * THE ORDER counts and is not arbitrary: a line only carries one target, but
  * nothing in the schema requires it, and the goal comes before the ticket because
  * a goal notification can carry a context `issue_id`.
+ *
+ * Numo conversations have NO path of their own any more (the FAB hosts the
+ * whole conversation): a row that carries one falls through to the parent
+ * context it names — ticket, objective, PR, routine… — and leads nowhere
+ * (`null`) when the conversation alone was the target. The inbox intercepts
+ * those rows and opens the Numo panel directly; only the native push payload
+ * keeps no URL for them.
  */
 export function notificationTargetPath(n: NotificationTarget): string | null {
   // The routine passes BEFORE the project test: its screen is global (the view
@@ -54,14 +61,6 @@ export function notificationTargetPath(n: NotificationTarget): string | null {
   // The pull request too: its page is global, and a PR without a ticket has nothing
   // else to open — this is even the normal case of a human RA.
   if (n.pull_request_id) return `/pull-requests?pr=${n.pull_request_id}`;
-  if (n.numo_conversation_id) {
-    const conversation = encodeURIComponent(n.numo_conversation_id);
-    const work = n.numo_work_id
-      ? `&work=${encodeURIComponent(n.numo_work_id)}`
-      : "";
-    return `/numo?conversation=${conversation}${work}`;
-  }
-  if (n.agent_conversation_id) return `/agents?run=${n.agent_conversation_id}`;
   if (!n.project_id) return null;
   if (n.objective_id) {
     return `/projects/${n.project_id}/objectives?open=${n.objective_id}`;
@@ -104,9 +103,6 @@ export const NOTIFICATION_TARGET_PARAMS = [
   "issue",
   "routine",
   "pr",
-  "run",
-  "conversation",
-  "work",
 ] as const;
 
 /** The i18n key of the phrase "who did what", namespace `Inbox`. Typed as

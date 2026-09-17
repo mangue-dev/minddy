@@ -156,9 +156,7 @@ interface PrStatusCard {
 export interface PrNumoReviewCardSpec {
   kind: "running" | "current" | "requested";
   label: string;
-  /** The session, when one exists — the whole card opens it. */
-  href: string | null;
-  /** Opens the pass IN the Numo panel — the whole card is the gesture. */
+  /** Opens the pass in the Numo panel — the whole card is the gesture. */
   onOpen: (() => void) | null;
   /** Live clock of a running review. */
   startedAt: string | null;
@@ -428,14 +426,11 @@ function buildStatusCards(
         avatars: null,
         iconKind: "mergeability",
         // The pass lives in Numo's panel: hovering says so, clicking opens
-        // it there — the forge page is only the fallback of a run too old
-        // to carry its conversation.
-        hoverLabel: t("numoReviewOpenSession"),
-        onSelect:
-          numoReview.onOpen ??
-          (numoReview.href
-            ? () => window.open(numoReview.href as string, "_self")
-            : undefined),
+        // it there. A run too old to carry its conversation has no
+        // destination — the card stays informational, without a hover word
+        // promising a gesture that does nothing.
+        hoverLabel: numoReview.onOpen ? t("numoReviewOpenSession") : undefined,
+        onSelect: numoReview.onOpen ?? undefined,
       });
     }
   }

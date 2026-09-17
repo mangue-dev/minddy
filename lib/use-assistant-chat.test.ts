@@ -70,7 +70,6 @@ function detail(): NumoConversationDetail {
       archived_at: null,
       pinned_at: null,
       last_read_at: null,
-      detail_href: null,
       latest_work_id: null,
       created_at: "2026-09-12T10:00:00.000Z",
       updated_at: "2026-09-12T10:00:00.000Z",

@@ -8,7 +8,7 @@ import {
 
 /**
  * Frontage by RUN of review reactions (MIN-139) — like its neighbors, it
- * resolves the run → its PR and delegates, for the deep-links `?run=` and `/agents`.
+ * resolves the run → its PR and delegates, for the historical `?run=` deep-links.
  *
  *  POST → { comment_id, content, on }
  */

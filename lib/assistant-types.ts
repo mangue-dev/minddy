@@ -50,7 +50,6 @@ export interface NumoConversation extends Omit<Conversation, "user_id"> {
   archived_at: string | null;
   pinned_at: string | null;
   last_read_at: string | null;
-  detail_href: string | null;
   latest_work_id: string | null;
   /** Explicit conversation choice; null preserves the account default. */
   model?: string | null;
@@ -90,7 +89,6 @@ export interface NumoWorkReference {
   visibility: "private" | "project";
   pinned_at: string | null;
   last_read_at: string | null;
-  detail_href: string;
 }
 
 export interface NumoConversationDetail {

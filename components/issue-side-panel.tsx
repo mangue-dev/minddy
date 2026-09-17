@@ -243,7 +243,7 @@ export function IssueSidePanel({
   const descriptionEdited = useRef(false);
   // Agent conversation, in modal ABOVE the panel: hot restart
   // must not cost the context of the ticket (the card has nothing to lose
-  // and navigate to /agents).
+  // and leaves its page).
   const [chatOpen, setChatOpen] = useState(false);
   // “Personalized”: the free instructions dialog, opened either to copy the
   // prompt, or to launch the agent (`null` = closed).

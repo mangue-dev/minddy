@@ -6,11 +6,8 @@
  * “Save current view” (command palette) starts from the address:
  * it already has the route, the wiki page, the settings tab, the objective
  * open. But many surfaces keep their selection in MEMORY and
- * voluntarily clean up the URL behind them — /agents deletes `?run=` as soon as
- * that we choose a conversation (otherwise the following navigation to this
- * same conversation would be inert: pushing the current address does nothing),
- * /pull-requests keeps the clicked PR outside the address, a board keeps its view
- * active in localStorage.
+ * voluntarily clean up the URL behind them — /pull-requests keeps the clicked
+ * PR outside the address, a board keeps its view active in localStorage.
  *
  * These surfaces therefore PUBLISH the address which reconstitutes them, via
  * `usePublishCurrentView`.

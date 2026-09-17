@@ -192,9 +192,9 @@ describe("application tab sessions", () => {
   });
   it("prioritizes an explicit deep link over window restoration", async () => {
     const { session, rows, navigate } = setup();
-    await session.initialize("/agents?run=a", { id: rows()[1].id, href: "/all" });
+    await session.initialize("/routines?routine=a", { id: rows()[1].id, href: "/all" });
     expect(navigate).not.toHaveBeenCalled();
-    expect(session.getSnapshot().tabs.find((row) => row.id === session.getSnapshot().activeId)?.href).toBe("/agents?run=a");
+    expect(session.getSnapshot().tabs.find((row) => row.id === session.getSnapshot().activeId)?.href).toBe("/routines?routine=a");
     session.dispose();
   });
   it("restores on reload without overwriting another tab's location", async () => {
@@ -237,12 +237,11 @@ describe("application tab sessions", () => {
   });
   it("restores every surface whose selection is kept out of the address", async () => {
     // The same prefix rule must hold wherever a page publishes the href that
-    // reconstructs it while cleaning its address: agents drop ?run=, the
-    // boards consume ?view=, the objectives page drops ?open=, feedback
-    // drops ?post=, wiki pages carry ?entry= and an anchor.
+    // reconstructs it while cleaning its address: the boards consume ?view=,
+    // the objectives page drops ?open=, feedback drops ?post=, wiki pages
+    // carry ?entry= and an anchor. (Numo conversations have no URL at all
+    // any more — the FAB is not a tab surface.)
     const cases: [address: string, remembered: string][] = [
-      ["/agents", "/agents?run=c1"],
-      ["/numo", "/numo?conversation=c2"],
       ["/all", "/all?view=v1"],
       ["/all", "/all?view=cycle"],
       ["/projects/p1", "/projects/p1?view=v2"],

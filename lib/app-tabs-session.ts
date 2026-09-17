@@ -168,8 +168,8 @@ export class AppTabsSession {
       const restoredHref = restored ? normalizeAppTabLocation(restored.href) : null;
       const restoredTab = restored ? this.snapshot.tabs.find((tab) => tab.id === restored.id) : null;
       // Several surfaces keep their selection out of the address and publish
-      // the href that reconstructs them instead (/pull-requests hides `?pr=`,
-      // /agents removes `?run=`). A reload of such a page lands on a URL that
+      // the href that reconstructs them instead (/pull-requests hides `?pr=`).
+      // A reload of such a page lands on a URL that
       // is a prefix of the remembered destination: when the remembered tab
       // opens the same page and the URL brings no selection of its own, the
       // load restores that tab — it is not a deep link free to claim another

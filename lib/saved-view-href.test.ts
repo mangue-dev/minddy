@@ -43,7 +43,6 @@ describe("buildViewHref", () => {
   it("retire les dialogues et les instructions à usage unique", () => {
     expect(buildViewHref("/projects/p1", "?new=issue")).toBe("/projects/p1");
     expect(buildViewHref("/projects/p1", "?setup=import")).toBe("/projects/p1");
-    expect(buildViewHref("/agents", "?compose=new")).toBe("/agents");
     expect(buildViewHref("/billing", "?billing=success")).toBe("/billing");
   });
 
@@ -68,8 +67,8 @@ describe("buildViewHref", () => {
   });
 
   it("encode les valeurs publiées", () => {
-    expect(buildViewHref("/agents", "", { run: "a b&c" })).toBe(
-      "/agents?run=a+b%26c"
+    expect(buildViewHref("/routines", "", { routine: "a b&c" })).toBe(
+      "/routines?routine=a+b%26c"
     );
   });
 });

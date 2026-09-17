@@ -25,6 +25,12 @@ import { trackEvent } from "@/lib/analytics";
 export interface OpenAssistantOptions {
   /** Project context attached by this opening; never replaces the conversation. */
   projectId?: string | null;
+  /**
+   * Open ON a persisted conversation instead of the live one. The panel loads
+   * it and marks it read — the entry of inbox rows and "view the session"
+   * gestures, which have no page to push any more.
+   */
+  conversationId?: string | null;
   /** Auto-send a one-shot message right after opening. */
   prompt?: string;
   /**

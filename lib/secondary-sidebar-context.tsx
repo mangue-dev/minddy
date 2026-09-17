@@ -96,8 +96,6 @@ export function SecondarySidebarProvider({
 export function routeHasSecondaryNav(pathname: string): boolean {
   if (pathname.startsWith("/trash")) return true;
   if (pathname.startsWith("/pull-requests")) return true;
-  if (pathname.startsWith("/agents")) return true;
-  if (pathname.startsWith("/numo")) return true;
   if (pathname.startsWith("/routines")) return true;
   if (pathname.startsWith("/settings")) return true;
   if (pathname.startsWith("/admin")) return true;

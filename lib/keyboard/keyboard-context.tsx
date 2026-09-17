@@ -144,7 +144,9 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
           go("/pull-requests");
           return true;
         case "j":
-          go("/numo");
+          // Numo has no page of its own any more: like G A, the chord opens
+          // (or closes) the panel.
+          toggleAssistantRef.current();
           return true;
         case "u":
           go("/routines");
