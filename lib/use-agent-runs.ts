@@ -167,7 +167,7 @@ export function useAgentRunEventsQuery(runId: string | null, active: boolean) {
  * precisely when the user is looking.
  */
 export function usePullRequestQuery(prId: string, enabled: boolean) {
-  const { data, isPending, refetch } = useQuery({
+  const { data, isPending, refetch, dataUpdatedAt } = useQuery({
     queryKey: ["pull-request", prId],
     queryFn: () => fetchPullRequestApi(prId),
     enabled,
@@ -175,6 +175,9 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
   });
   return {
     pr: data?.pr ?? null,
+    /** When the forge GET powering `pr` was RECEIVED — what orders it against
+        the panel's own writes (see `pullRequestStateToPropagate` callers). */
+    prFetchedAt: dataUpdatedAt,
     files: data?.files ?? [],
     checks: data?.checks ?? null,
     checksError: data?.checksError ?? null,

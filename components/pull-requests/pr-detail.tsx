@@ -116,6 +116,7 @@ import { PrEndpointProvider } from "@/lib/pr-endpoint-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { usePrReviewSession } from "@/lib/use-pr-review-session";
 import { usePrLive } from "@/lib/use-pr-live";
+import { pullRequestStateToPropagate } from "@/lib/pr-state";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { useForgeUploads } from "@/lib/use-forge-uploads";
 import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
@@ -609,6 +610,7 @@ export function PrDetail({
 
   const {
     pr,
+    prFetchedAt,
     files,
     checks,
     deploymentUrl,
@@ -652,6 +654,27 @@ export function PrDetail({
   // such as a comment posted on github.com, a pushed commit, an approval or
   // a resolved wire reaches the open panel without reloading.
   usePrLive(item.prId);
+
+  /**
+   * The panel's state IS the forge's GET (see `isDraft`): when it disagrees
+   * with the list's, the page pushes it into the sidebar in the same
+   * rendering — no extra round trip, no filter moved. `usePrLive` reread
+   * `pr`, but the list cache does not subscribe to this PR's topic; the
+   * monotonic guard (see `pullRequestStateToPropagate`) keeps an old
+   * observation from rolling a fresh state back, and `prFetchedAt` keeps a
+   * GET received before one of the panel's own writes from overriding it.
+   */
+  const lastLocalStateWriteAt = useRef(0);
+  useEffect(() => {
+    if (!pr) return;
+    const state = pullRequestStateToPropagate(pr, item, {
+      fetchedAt: prFetchedAt,
+      notBefore: lastLocalStateWriteAt.current,
+    });
+    if (!state) return;
+    lastLocalStateWriteAt.current = Date.now();
+    onStateChange(item.prId, state);
+  }, [pr, prFetchedAt, item, onStateChange]);
 
   const [acting, setActing] = useState<
     null | "merge" | "close" | "reopen" | "ready_for_review" | "convert_to_draft"
@@ -1001,6 +1024,9 @@ export function PrDetail({
             : pr?.draft
               ? "draft"
               : "open";
+    // The panel's own write starts HERE: any forge GET received before this
+    // instant says nothing about the transition (see the propagation effect).
+    lastLocalStateWriteAt.current = Date.now();
     const rollback = onOptimisticStateChange(item.prId, optimisticState);
     setActing(action);
     setConfirmAction(null);
@@ -1908,21 +1934,24 @@ export function PrDetail({
               {pr?.title ?? item.title ?? item.issue?.title ?? identifier}
             </h1>
             <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-muted-foreground">
-              {/* Author first — avatar and name, like a comment header. A Numo
-                  PR never shows the forge App bot: Numo takes the author seat. */}
+              {/* Author first — avatar and name, like a comment header. Only a
+                  PR Numo OPENED takes the Numo seat (the forge login depends
+                  on the installation): a human PR Numo merely corrected — a
+                  fix session bears the number without having opened it —
+                  keeps its real author. */}
               {author ? (
                 <span className="inline-flex items-center gap-1.5">
-                  {item.runId ? (
+                  {item.numoOpened ? (
                     <NumoIcon animated={false} className="size-4" />
                   ) : (
                     <ForgeUserAvatar user={author} className="size-4" />
                   )}
                   <span className="font-medium text-foreground">
-                    {item.runId
+                    {item.numoOpened
                       ? t("numoAuthor")
                       : parseForgeLogin(author.login).name}
                   </span>
-                  {!item.runId && parseForgeLogin(author.login).isBot ? (
+                  {!item.numoOpened && parseForgeLogin(author.login).isBot ? (
                     <BotBadge />
                   ) : null}
                 </span>

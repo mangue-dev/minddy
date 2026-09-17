@@ -84,6 +84,14 @@ export interface PullRequestListItem {
    * none. It is he who carries the historical `?run=` deep-links.
    */
   runId: string | null;
+  /**
+   * A Numo run OPENED this PR at the forge — not merely worked on it. It is
+   * what says “Numo” as the author and feeds the “opened by Numo” filter:
+   * the forge login depends on the installation (app account or linked
+   * account), and a fix session requested on a human PR bears the number
+   * without having opened it.
+   */
+  numoOpened: boolean;
   /** A run that WORKS (queued/running) on ​​this PR = “Numo is working again”. */
   activeRunId: string | null;
   /** An ACTIVE run occupies the issue → no new change request (MIN-68). */
@@ -260,6 +268,28 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // ── Which PRs Numo OPENED ────────────────────────────────────────────────
+  // A run BEARING the PR is not a run that OPENED it: a fix session requested
+  // on a human PR inherits its number, and reading the author on `runId`
+  // would impersonate Numo on a PR a human opened. The fact lives in the
+  // `pr_opened` event of the run that created the PR at the forge
+  // (`registerPr` emits it on the real opening only — a session that lands
+  // on an existing PR traces `pr_committed`, and the webhook says the rest).
+  const openedRunIds = new Set<string>();
+  const allRunIds = [
+    ...new Set([...runsByPr.values()].flatMap((runs) => runs.map((r) => r.id))),
+  ];
+  if (allRunIds.length > 0) {
+    const { data } = await auth.supabase
+      .from("agent_run_events")
+      .select("run_id")
+      .in("run_id", allRunIds)
+      .eq("type", "pr_opened");
+    for (const row of (data ?? []) as unknown as Array<{ run_id: string }>) {
+      openedRunIds.add(row.run_id);
+    }
+  }
+
   const projectById = new Map(repos.map((r) => [r.project.id, r.project]));
   const projectByRepo = new Map(
     repos.map((r) => [repoSyncKey(r.provider, r.repoFullName), r.project]),
@@ -292,6 +322,7 @@ export async function GET(request: NextRequest) {
         projectByRepo.get(repoSyncKey(provider, row.repo_full_name)) ??
         null,
       runId: runs[0]?.id ?? null,
+      numoOpened: runs.some((r) => openedRunIds.has(r.id)),
       activeRunId: working[0]?.id ?? null,
       busyRunId: working[0]?.id ?? null,
       runIds: runs.map((r) => r.id),
