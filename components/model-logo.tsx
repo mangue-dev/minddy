@@ -23,6 +23,7 @@ import {
   Moonshot,
   Nvidia,
   OpenAI,
+  OpenCode,
   OpenRouter,
   Perplexity,
   Poolside,
@@ -82,6 +83,12 @@ const PROVIDER_LOGOS: Record<string, ComponentType<LobeLogo>> = {
   cohere: Cohere.Color,
   perplexity: Perplexity.Color,
   openrouter: OpenRouter,
+  // The two OpenCode BYOK providers (MIN-544) are keyed by their provider id,
+  // not by an OpenRouter slug: `ProviderLogo` receives the raw id from the
+  // connect panel and the key recall card. The gateway publishes no `opencode`
+  // vendor on OpenRouter, so no other id can collide here.
+  "opencode-go": OpenCode,
+  "opencode-zen": OpenCode,
   minimax: Minimax.Color,
   nvidia: Nvidia.Color,
   bedrock: Bedrock.Color,

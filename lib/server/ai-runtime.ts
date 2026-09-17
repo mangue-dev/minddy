@@ -71,7 +71,13 @@ async function providerDefaultModel(
   // No equivalent native endpoint at Anthropic; without explicit admin choice,
   // these calls stay on Minddy instead of sending an obviously false model.
   if (modelKey === "transcription_model" && provider !== "openai") return null;
-  if (modelKey === "feedback_embedding_model" && provider === "anthropic") return null;
+  // Only OpenAI and Google expose a native embedding endpoint. Every other
+  // provider (anthropic, the OpenCode gateways, generic) would otherwise fall
+  // through to its CHAT default — a chat id sent as an embedding model is a
+  // guaranteed 400. These calls stay on minddy's quota instead.
+  if (modelKey === "feedback_embedding_model" && provider !== "openai" && provider !== "google") {
+    return null;
+  }
   if (provider === "generic") return null;
   if (modelKey === "feedback_embedding_model" && provider === "google") {
     return "gemini-embedding-001";
