@@ -40,21 +40,27 @@ const OG_LOCALE: Record<Locale, string> = { en: "en_US", fr: "fr_FR",
  * a page which would only have had its title left with the `og:description` of
  * the landing.
  *
- * No image: the `/og` route can only render the six pages of the site public,
- * and sticking a generic minddy sticker on a customer's board would be a contradiction in terms. A `summary` card without an image displays title and description — this
- * which is exactly what it says.
+ * `image` is optional on purpose. Public token pages (`publicTokenMetadata`)
+ * stay image-free: sticking a generic minddy sticker on a customer's board
+ * would be a contradiction in terms, and a `summary` card without an image
+ * displays title and description — which is exactly what it says. The brand
+ * pages with no route of their own (`/login`, `/signup`) pass the landing's
+ * thumbnail so that every sticker of the site carries the pastel image.
  */
 export function socialMetadata({
   title,
   description,
   url,
   locale,
+  image,
 }: {
   title: string;
   description: string;
   /** URL (absolute or relative to `metadataBase`) of the page. */
   url?: string;
   locale: Locale;
+  /** Absolute URL of the sharing thumbnail, when the page has one. */
+  image?: string;
 }): Pick<Metadata, "openGraph" | "twitter"> {
   return {
     openGraph: {
@@ -64,8 +70,18 @@ export function socialMetadata({
       ...(url ? { url } : {}),
       title,
       description,
+      ...(image
+        ? { images: [{ url: image, width: 1200, height: 630, alt: title }] }
+        : {}),
     },
-    twitter: { card: "summary", title, description },
+    twitter: {
+      // Without an image, `summary_large_image` would reserve a dead zone:
+      // the compact card shows title and description at their best.
+      card: image ? "summary_large_image" : "summary",
+      title,
+      description,
+      ...(image ? { images: [image] } : {}),
+    },
   };
 }
 

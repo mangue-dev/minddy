@@ -6,21 +6,21 @@ import { MINDDY_LOGO_PATH, MINDDY_LOGO_VIEWBOX } from "@/lib/brand";
 import { locales, defaultLocale, type Locale } from "@/i18n/config";
 import { loadMessages } from "@/i18n/messages";
 import { PUBLIC_ROUTES, routeByKey, type PublicRouteKey } from "@/lib/public-routes";
-import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { metaExcerpt } from "@/lib/seo";
+import { SITE_NAME } from "@/lib/site";
 
 /**
- * Public site sharing thumbnail (MIN-88) — what you see when a link
- * minddy is stuck in Slack, it inevitable: it only covered the segment
- * `(marketing)` (the legal and `/login` pages therefore had NO thumbnail),
- * it was frozen in English, and its title was a manual copy of
- * `en.Landing.metaTitle` — outside the i18n catalog, therefore out of reach of a
- * copy audit, and already out of sync.
+ * Public site sharing thumbnail (MIN-88, redesign MIN-512) — what you see when a
+ * minddy link is stuck in Slack, X or an email client. A parameterized route
+ * renders one image per public page and per language: `?route=<key>&locale=<lang>`
+ * reads the texts in `messages/<lang>.json`, so the sticker never drifts from the
+ * page copy. `lib/seo.ts` is the only caller.
  *
- * A parameterized route sets all three: `?route=<key>&locale=<language>` reads the
- * texts in `messages/<language>.json`, for any public page and
- * in both languages. `lib/seo.ts` is the only caller.
- *
- * Deliberately sober: the brand, the promise, nothing else.
+ * The design borrows the landing's palette instead of inventing one: the pastel
+ * surfaces of `components/marketing/card-tones.ts` (sage, lavender, peach, sky)
+ * laid over a warm cream, with the brand drawn in ink like the app's `--primary`.
+ * Deliberately flat — satori has no blur, and at sticker size the pastel blocks
+ * carry more than any detail would.
  */
 
 export const contentType = "image/png";
@@ -34,7 +34,7 @@ function parseParams(request: NextRequest): { key: PublicRouteKey; locale: Local
   const rawKey = params.get("route") ?? "";
   const rawLocale = params.get("locale") ?? "";
   return {
-    // Public parameters, therefore arbitrary: we return to the landing in
+    // Public parameters, therefore arbitrary: we fall back to the landing in
     // English rather than rendering an error image in a link preview.
     key: (ROUTE_KEYS.has(rawKey) ? rawKey : "home") as PublicRouteKey,
     locale: ((locales as readonly string[]).includes(rawLocale)
@@ -46,12 +46,41 @@ function parseParams(request: NextRequest): { key: PublicRouteKey; locale: Local
 /**
  * How many thumbnails a single IP address can RENDER per minute.
  *
- * The satori rendering of a 1200x630 PNG is, by far, the most expensive calculation that
- * This app offers no authentication. The bound is high because
+ * The satori rendering of a 1200x630 PNG is, by far, the most expensive
+ * calculation this app offers without authentication. The bound is high because
  * legitimate scrapers (Slack, X, an email client) type in bursts on the
- * twelve canonical addresses — but it exists, which was not the case.
+ * eighteen canonical addresses — but it exists, which was not always the case.
  */
 const OG_RATE_LIMIT = { limit: 60, windowMs: 60_000 };
+
+/** Warm ink used for every text and the logo, in the spirit of `--primary`. */
+const INK = "#26332c";
+const MUTED = "#5e6b61";
+
+/**
+ * The title is the only variable-height element: metaTitles range from
+ * "Legal notice" to a 71-character French sentence. Three sizes, chosen by
+ * length, keep the block between one and three lines inside the card for every
+ * known catalog entry — a fixed size either wastes the short titles or
+ * overflows on the long ones.
+ */
+function titleFontSize(length: number): number {
+  if (length > 56) return 58;
+  if (length > 38) return 68;
+  return 80;
+}
+
+/**
+ * Some metaTitles open with the brand — "minddy: open-source project
+ * management…" — which the wordmark in the header already says. Drop that
+ * leading "<name>:" (French spacing included) so the headline starts on its
+ * substance; titles where the brand is part of the sentence ("minddy Cloud
+ * pricing…", "minddy pour macOS") keep it.
+ */
+function headlineOf(title: string): string {
+  const brand = SITE_NAME.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return title.replace(new RegExp(`^${brand}\\s*:\\s*`, "i"), "");
+}
 
 export async function GET(request: NextRequest) {
   const { key, locale } = parseParams(request);
@@ -61,8 +90,8 @@ export async function GET(request: NextRequest) {
   // parameters, but the CDN indexes on the entire URL: `?route=home&x=1`,
   // `&x=2`, `&x=3`… are as many new entries, therefore as many renderings. A
   // non-canonical address is therefore returned to the canonical — 308, without
-  // render the image — and there are only a dozen URLs left to render for everything
-  // the site. The limiter below only keeps these twelve.
+  // rendering the image — and there are only about twenty URLs left to render
+  // for the whole site. The limiter below only keeps these.
   const canonical = `route=${key}&locale=${locale}`;
   if (request.nextUrl.search.replace(/^\?/, "") !== canonical) {
     const target = new URL(request.nextUrl);
@@ -78,9 +107,8 @@ export async function GET(request: NextRequest) {
 
   const messages = await loadMessages(locale) as Record<string, Record<string, string>>;
   const namespace = messages[route.namespace] ?? {};
-  const title = namespace.metaTitle ?? SITE_NAME;
-  const description = namespace.metaDescription ?? "";
-  const siteHost = new URL(SITE_URL).host;
+  const headline = headlineOf(namespace.metaTitle ?? SITE_NAME);
+  const description = metaExcerpt(namespace.metaDescription ?? "");
 
   return new ImageResponse(
     (
@@ -89,43 +117,105 @@ export async function GET(request: NextRequest) {
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          background: "#0d0e10",
+          overflow: "hidden",
+          position: "relative",
+          background:
+            "linear-gradient(120deg, #f7f3e8 0%, #e4edda 45%, #dde9f4 100%)",
           padding: 80,
-          fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <svg width={72} height={72} viewBox={MINDDY_LOGO_VIEWBOX} fill="#fafafa">
-            <path fillRule="evenodd" clipRule="evenodd" d={MINDDY_LOGO_PATH} />
-          </svg>
-          <span style={{ fontSize: 52, fontWeight: 600, color: "#fafafa", letterSpacing: -1.5 }}>
-            {SITE_NAME}
-          </span>
-        </div>
+        {/* Pastel shapes cropped by the canvas, echoing the landing's cards
+            (components/marketing/card-tones.ts) in deliberately fuller tints
+            so the hues survive thumbnail size. First in DOM order: the content
+            below paints on top of them. */}
+        <div
+          style={{
+            position: "absolute",
+            top: -210,
+            right: -170,
+            width: 560,
+            height: 560,
+            borderRadius: 9999,
+            background: "#eae0f6",
+            display: "flex",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: -210,
+            left: -160,
+            width: 520,
+            height: 520,
+            borderRadius: 9999,
+            background: "#f5e2c6",
+            display: "flex",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: -170,
+            right: -130,
+            width: 400,
+            height: 400,
+            borderRadius: 9999,
+            background: "#f2d8e2",
+            display: "flex",
+          }}
+        />
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          <span
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            width: "100%",
+            height: "100%",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+            <svg width={62} height={62} viewBox={MINDDY_LOGO_VIEWBOX} fill={INK}>
+              <path fillRule="evenodd" clipRule="evenodd" d={MINDDY_LOGO_PATH} />
+            </svg>
+            <span style={{ fontSize: 46, color: INK, letterSpacing: -1.5 }}>
+              {SITE_NAME}
+            </span>
+          </div>
+
+          <div
             style={{
-              fontSize: 68,
-              fontWeight: 600,
-              color: "#fafafa",
-              letterSpacing: -2.5,
-              lineHeight: 1.1,
-              maxWidth: 900,
+              display: "flex",
+              flexDirection: "column",
+              flexGrow: 1,
+              justifyContent: "center",
+              gap: 26,
             }}
           >
-            {title}
-          </span>
-          <span style={{ fontSize: 30, color: "#9ca3af", maxWidth: 820, lineHeight: 1.4 }}>
-            {description}
-          </span>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ width: 40, height: 3, background: "#3098D0" }} />
-          <span style={{ fontSize: 26, color: "#6b7280" }}>{siteHost}</span>
+            <span
+              style={{
+                fontSize: titleFontSize(headline.length),
+                color: INK,
+                letterSpacing: -2.2,
+                lineHeight: 1.12,
+                maxWidth: 1010,
+              }}
+            >
+              {headline}
+            </span>
+            {description ? (
+              <span
+                style={{
+                  fontSize: 27,
+                  color: MUTED,
+                  maxWidth: 940,
+                  lineHeight: 1.5,
+                }}
+              >
+                {description}
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
     ),
