@@ -25,6 +25,7 @@ import {
   ACCOUNT_THEME_HEADER,
   isAccountTheme,
 } from "@/lib/account-theme";
+import { ogImageUrl } from "@/lib/seo";
 import { SITE_NAME, SITE_URL, SITE_VERIFICATION } from "@/lib/site";
 import type { Locale } from "@/i18n/config";
 import "./globals.css";
@@ -99,7 +100,13 @@ export async function generateMetadata(): Promise<Metadata> {
     // nothing derives from what does not exist: without these defects, a page which
     // does not declare its own block — the four legal pages, /login —
     // left without the slightest sticker. `lib/seo.ts` replaces them page by page
-    // on the six public roads; this is the net for everything else.
+    // on the public roads; this is the net for everything else.
+    //
+    // The image (MIN-512): every page WITHOUT its own social block — the whole
+    // authenticated app, /forgot-password, /reset-password, not-found — shares
+    // the landing's pastel thumbnail, in the reader's language. Pages that
+    // declare their own `openGraph` replace this whole object (Next does not
+    // merge it), which is why `lib/seo.ts` re-declares the image there.
     openGraph: {
       type: "website",
       siteName: "minddy",
@@ -107,11 +114,20 @@ export async function generateMetadata(): Promise<Metadata> {
       url: SITE_URL,
       title: "minddy",
       description: t("description"),
+      images: [
+        {
+          url: ogImageUrl("home", locale as Locale),
+          width: 1200,
+          height: 630,
+          alt: SITE_NAME,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: "minddy",
       description: t("description"),
+      images: [ogImageUrl("home", locale as Locale)],
     },
     // Site ownership in Google Search Console / Bing Webmaster Tools.
     // Empty string keys are omitted: until token is stuck

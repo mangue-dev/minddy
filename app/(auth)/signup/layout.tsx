@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import type { Locale } from "@/i18n/config";
-import { socialMetadata } from "@/lib/seo";
+import { ogImageUrl, socialMetadata } from "@/lib/seo";
 
 /**
  * `/signup` is public (the hero, the nav and the footer send there) but
@@ -30,8 +30,15 @@ export async function generateMetadata(): Promise<Metadata> {
     // Explicit social block: `/signup` is public and sticks (“register
     // here"), and Next replaces the parent's `openGraph` object instead of
     // complete — without it, the link preview would say “minddy — A minimal
-    // issue tracker”, like the landing.
-    ...socialMetadata({ title, description, url: "/signup", locale: locale as Locale }),
+    // issue tracker”, like the landing. The landing's pastel thumbnail rides
+    // along (MIN-512): the doorstep of the site deserves a sticker too.
+    ...socialMetadata({
+      title,
+      description,
+      url: "/signup",
+      locale: locale as Locale,
+      image: ogImageUrl("home", locale as Locale),
+    }),
   };
 }
 
