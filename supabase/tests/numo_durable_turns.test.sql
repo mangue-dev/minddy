@@ -62,6 +62,15 @@ SELECT pg_temp.assert_numo_turn((
   WHERE id = '51600000-0000-4000-8000-000000000043'
 ), 'activity event id is idempotent');
 
+SELECT public.append_numo_turn_event(
+  (SELECT id FROM public.numo_assistant_turns WHERE conversation_id = '51600000-0000-4000-8000-000000000020'),
+  '51600000-0000-4000-8000-000000000047', 'reasoning_delta', '{"text":"Trace so far"}'
+);
+SELECT pg_temp.assert_numo_turn((
+  SELECT count(*) = 1 FROM public.numo_turn_events
+  WHERE id = '51600000-0000-4000-8000-000000000047' AND type = 'reasoning_delta'
+), 'reasoning snapshot passes the activity type check');
+
 SELECT public.checkpoint_numo_turn(
   (SELECT id FROM public.numo_assistant_turns WHERE conversation_id = '51600000-0000-4000-8000-000000000020'),
   '51600000-0000-4000-8000-000000000042', 'waiting_work',
