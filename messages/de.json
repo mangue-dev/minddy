@@ -456,6 +456,7 @@
     "historyFeatureRoutineCompute": "Routine-Maschine",
     "historyFeatureImportMap": "Importspaltenübereinstimmung",
     "historyFeatureBriefSplit": "Briefing aufgeschlüsselt",
+    "historyFeatureJevDecision": "KI-Entscheidung",
     "agentsGateTitle": "Numo-Arbeit ist nicht verfügbar",
     "agentsGateDescription": "Numo-Arbeit ist für dieses Konto nicht aktiviert.",
     "agentsGateCta": "Pläne anzeigen",
@@ -4217,6 +4218,14 @@
       },
       "merge_message_model": {
         "label": "Modell für generierte Merge-Commits"
+      },
+      "jev_decisions_enabled": {
+        "label": "Jev-Entscheidungen",
+        "desc": "Schaltet die KI-Entscheidungsschicht überall auf einmal ein oder aus. Aus: jeder Entscheidungsaufruf fällt auf seinen LLM-Durchlauf zurück. Not-Aus-Schalter, keine Produkteinstellung."
+      },
+      "jev_model": {
+        "label": "Jev-Entscheidungsmodell",
+        "desc": "Das System-One-Modell, das strukturierte Fragen beantwortet (Kategorien, Triage, Prüfung). Erreicht über den Decisions-Endpunkt von OpenRouter, abgerechnet nur nach Eingabe-Tokens."
       }
     },
     "finance": {
@@ -4297,7 +4306,8 @@
         "routine_compute": "Routine-Sandbox",
         "import_map": "Importspaltenübereinstimmung",
         "brief_split": "Briefaufschlüsselung",
-        "landing_demo": "Öffentliche Diktat-Demo"
+        "landing_demo": "Öffentliche Diktat-Demo",
+        "jev_decision": "Jev-Entscheidungen"
       },
       "stripeHidden": "Stripe Umsatz ist ausgeblendet: Abrechnung ist auf dieser Instanz nicht verbunden."
     },

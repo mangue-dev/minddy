@@ -124,6 +124,22 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // the start of a new project then falls on import and manual entry.
   { key: "brief_enabled", kind: "flag", fallback: "true", group: "automations" },
   { key: "brief_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
+  // AI decision layer (MIN-557): Jev, the System One model that answers typed
+  // questions over a structured state, reached through OpenRouter's decisions
+  // endpoint (see docs/plans/min-561-jev-prerequisites.md for the verified
+  // access path). The flag is an incident kill-switch, NOT a product setting —
+  // per MIN-557 there is no “fast/normal” switch in the UI; the callers fall
+  // back to their LLM pass when it is off. No suffix (MIN-263): the chat
+  // routing shortcuts mean nothing on the decisions endpoint, and a failed
+  // decision replays as a NEW call, never as a variant id.
+  { key: "jev_decisions_enabled", kind: "flag", fallback: "true", group: "automations" },
+  {
+    key: "jev_model",
+    kind: "model",
+    fallback: "typesafe/jev-1.13",
+    group: "automations",
+    noSuffix: true,
+  },
   // Web search (tool `web_search` from Numo and agents): the model that reads
   // the results of the OpenRouter plugin. The flag cuts her everywhere at once.
   { key: "web_search_enabled", kind: "flag", fallback: "true", group: "assistant" },
