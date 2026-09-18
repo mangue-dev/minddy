@@ -15,7 +15,7 @@ import {MCP_PRESETS, mcpPresetForUrl} from "@/lib/mcp-catalog";
 import type {McpPreset} from "@/lib/mcp-catalog";
 import {mcpConnectionNeedsAuth} from "@/lib/mcp-client";
 import type {McpConnection} from "@/lib/mcp-client";
-import {MCP_AUTHORIZATION_PARAM, prepareMcpAuthorization} from "@/lib/mcp-authorization";
+import {MCP_AUTHORIZATION_PARAM, MCP_DESKTOP_PARAM, prepareMcpAuthorization} from "@/lib/mcp-authorization";
 import {getDesktopBridge} from "@/lib/desktop/bridge";
 import {useAuth} from "@/lib/auth-context";
 import {MCP_CONNECTIONS_QUERY_KEY as queryKey, useMcpConnections} from "@/lib/use-mcp-connections";
@@ -83,7 +83,10 @@ export function AccountMcpClients() {
     const current = new URL(window.location.href);
     const outcome = current.searchParams.get("mcp");
     if (outcome) {
+      // Every outcome is announced: an "error" that only vanished from the URL
+      // read as "nothing happened" after a completed provider consent.
       if (outcome === "connected") toast.success(t("oauthConnected"));
+      else toast.error(t("oauthFailed"));
       channel?.postMessage("changed");
       void queryClient.invalidateQueries({ queryKey });
       current.searchParams.delete("mcp");
@@ -102,8 +105,13 @@ export function AccountMcpClients() {
   useEffect(() => {
     const current = new URL(window.location.href);
     const connectionId = current.searchParams.get(MCP_AUTHORIZATION_PARAM);
+    // A desktop handoff opens this page in the system browser; the marker
+    // tells the server to bounce the browser back to the app at the end.
+    const desktopHandoff =
+      current.searchParams.get(MCP_DESKTOP_PARAM) === "1";
     if (!connectionId || !data || getDesktopBridge()) return;
     current.searchParams.delete(MCP_AUTHORIZATION_PARAM);
+    current.searchParams.delete(MCP_DESKTOP_PARAM);
     window.history.replaceState(window.history.state, "", current);
     // Only start for a connection owned by the signed-in browser account.
     if (!data.connections.some((connection) => connection.id === connectionId)) {
@@ -111,7 +119,11 @@ export function AccountMcpClients() {
       return;
     }
     setBusy(true);
-    void request(`${endpoint}/${connectionId}/authorize`, "POST")
+    void request(
+      `${endpoint}/${connectionId}/authorize`,
+      "POST",
+      desktopHandoff ? { desktop: true } : undefined,
+    )
       .then((result) => {
         if (!result?.url) throw new Error("oauth");
         window.location.replace(result.url);

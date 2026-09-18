@@ -6103,6 +6103,7 @@
     "signIn": "Anmelden",
     "reconnect": "Neu verbinden",
     "oauthConnected": "Konto verbunden",
+    "oauthFailed": "Die Verbindung wurde nicht abgeschlossen. Versuchen Sie, sich erneut anzumelden.",
     "authentication": "Authentifizierung",
     "oauth": "Mit OAuth anmelden",
     "bearer": "Bearer-Token",

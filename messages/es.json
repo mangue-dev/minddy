@@ -6103,6 +6103,7 @@
     "signIn": "Iniciar sesión",
     "reconnect": "Reconectar",
     "oauthConnected": "Cuenta conectada",
+    "oauthFailed": "La conexión no se completó. Intenta iniciar sesión de nuevo.",
     "authentication": "Autenticación",
     "oauth": "Iniciar sesión con OAuth",
     "bearer": "Token Bearer",
