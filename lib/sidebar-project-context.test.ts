@@ -36,10 +36,19 @@ describe("primary sidebar project context", () => {
     expect(shell.match(/<AppSidebar\s/g)).toHaveLength(1);
     expect(shell.match(/currentProject=\{currentProject\}/g)).toHaveLength(1);
     expect(shell.match(/projects=\{projects\}/g)).toHaveLength(1);
-    expect(sidebar.match(/<SidebarNav\s/g)).toHaveLength(1);
-    expect(sidebar.match(/onMenuOpenChange=\{handleMenuOpenChange\}/g)).toHaveLength(2);
+    // Two nav panels share the wiring: the project panel of the route, and
+    // the home panel the back rows lift to from a project page.
+    expect(sidebar.match(/<SidebarNav\s/g)).toHaveLength(2);
+    expect(sidebar.match(/onMenuOpenChange=\{handleMenuOpenChange\}/g)).toHaveLength(3);
     expect(shell).toContain("pinned={sidebarLayerOpen}");
     expect(shell).toContain("onLayerOpenChange={setSidebarLayerOpen}");
+    expect(shell).toContain("homeSections={homeDesktopSections}");
+  });
+
+  it("keeps the back rows sidebar-only: they lift a level, they never navigate", () => {
+    expect(sidebar).not.toContain("router.push");
+    expect(sidebar).toContain("onClick={goBack}");
+    expect(sidebar).toContain("onClick={onBack}");
   });
 
   it("hosts the inbox in the top bar independently of sidebar expansion", () => {

@@ -1289,10 +1289,101 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     tooltip: agentsAllowed ? undefined : tBilling("agentsGateTitle"),
   };
 
+  /**
+   * The HOME panel — the sidebar's top level. It is shown as-is when no
+   * project is open, and it is also what the back rows lift to FROM a
+   * project (the browse keeps the page while the panel goes up): one variant
+   * for both, since none of its rows depend on the page underneath.
+   */
+  const homeSections = useMemo<AppNavSection[]>(
+    () => [
+      {
+        items: [
+          inboxItem,
+          pullRequestsItem,
+          routinesItem,
+          {
+            key: "all-global",
+            label: t("allIssues"),
+            icon: LayoutGrid,
+            href: "/all",
+            active: pathname === "/all",
+            shortcut: "B",
+          },
+          {
+            key: "home",
+            label: t("home"),
+            icon: Home,
+            href: "/home",
+            active: pathname.startsWith("/home"),
+            shortcut: "H",
+            badge: smartAssignBadge,
+          },
+        ],
+      },
+      {
+        items: [
+          ...projects.map((p) => {
+            // A single number for both halves of the line: enter the
+            // project breaks it down into its Triage and Feedback tabs, and the
+            // total must land there exactly.
+            const toTriage = triageCountTotal(triageCounts[p.id]);
+            return {
+              key: `project-${p.id}`,
+              label: p.name,
+              icon: projectOrbIcon(projectOrbSeed(p), p.icon_url),
+              href: `/projects/${p.id}`,
+              // Entering a project swaps the whole sidebar the same way a
+              // level-2 page does: the row says so with its chevron.
+              descends: true,
+              ...countBadges(toTriage, t("triageBadge", { count: toTriage })),
+            };
+          }),
+          // The drafts, following the projects and in the same list: this is
+          // the same thing up to one state, and relegating them elsewhere would require
+          // to go get them. The line is that of a project — orb, name —
+          // except its mark, and clicking reopens the wizard where we left it.
+          ...projectDrafts.map(
+            (d): AppNavItem => ({
+              key: `project-draft-${d.id}`,
+              label: d.name,
+              icon: projectOrbIcon(draftOrbSeed(d), draftIconUrl(d)),
+              onClick: () => openProjectDraft(d),
+              badge: draftBadge(tProjects("draftBadge")),
+              tooltip: tProjects("draftResume", { name: d.name }),
+              contextActions: [
+                {
+                  id: "delete-project-draft",
+                  label: tProjects("draftDelete"),
+                  icon: <Trash2 className="size-4" />,
+                  variant: "destructive",
+                  onSelect: () => {
+                    void deleteProjectDraft(d.id).catch((err: Error) =>
+                      toast.error(err.message),
+                    );
+                  },
+                },
+              ],
+            }),
+          ),
+          {
+            key: "new-project",
+            label: t("newProject"),
+            icon: Plus,
+            onClick: openCreateProject,
+            disabled: projectLimitReached,
+          },
+        ],
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pathname, inboxCount, openPrCount, projects, projectDrafts, openProjectDraft, deleteProjectDraft, triageCounts, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, t, tProjects]
+  );
+
   const sections = useMemo<AppNavSection[]>(() => {
-    if (currentProject) {
-      const base = `/projects/${currentProject.id}`;
-      return [
+    if (!currentProject) return homeSections;
+    const base = `/projects/${currentProject.id}`;
+    return [
         {
           // Project mode keeps ONLY the project context: back home, the
           // project switcher, and the project's own items (MIN-546 review).
@@ -1379,89 +1470,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           ],
         },
       ];
-    }
-    return [
-      {
-        items: [
-          inboxItem,
-          pullRequestsItem,
-          routinesItem,
-          {
-            key: "all-global",
-            label: t("allIssues"),
-            icon: LayoutGrid,
-            href: "/all",
-            active: pathname === "/all",
-            shortcut: "B",
-          },
-          {
-            key: "home",
-            label: t("home"),
-            icon: Home,
-            href: "/home",
-            active: pathname.startsWith("/home"),
-            shortcut: "H",
-            badge: smartAssignBadge,
-          },
-        ],
-      },
-      {
-        items: [
-          ...projects.map((p) => {
-            // A single number for both halves of the line: enter the
-            // project breaks it down into its Triage and Feedback tabs, and the
-            // total must land there exactly.
-            const toTriage = triageCountTotal(triageCounts[p.id]);
-            return {
-              key: `project-${p.id}`,
-              label: p.name,
-              icon: projectOrbIcon(projectOrbSeed(p), p.icon_url),
-              href: `/projects/${p.id}`,
-              // Entering a project swaps the whole sidebar the same way a
-              // level-2 page does: the row says so with its chevron.
-              descends: true,
-              ...countBadges(toTriage, t("triageBadge", { count: toTriage })),
-            };
-          }),
-          // The drafts, following the projects and in the same list: this is
-          // the same thing up to one state, and relegating them elsewhere would require
-          // to go get them. The line is that of a project — orb, name —
-          // except its mark, and clicking reopens the wizard where we left it.
-          ...projectDrafts.map(
-            (d): AppNavItem => ({
-              key: `project-draft-${d.id}`,
-              label: d.name,
-              icon: projectOrbIcon(draftOrbSeed(d), draftIconUrl(d)),
-              onClick: () => openProjectDraft(d),
-              badge: draftBadge(tProjects("draftBadge")),
-              tooltip: tProjects("draftResume", { name: d.name }),
-              contextActions: [
-                {
-                  id: "delete-project-draft",
-                  label: tProjects("draftDelete"),
-                  icon: <Trash2 className="size-4" />,
-                  variant: "destructive",
-                  onSelect: () => {
-                    void deleteProjectDraft(d.id).catch((err: Error) =>
-                      toast.error(err.message),
-                    );
-                  },
-                },
-              ],
-            }),
-          ),
-          {
-            key: "new-project",
-            label: t("newProject"),
-            icon: Plus,
-            onClick: openCreateProject,
-            disabled: projectLimitReached,
-          },
-        ],
-      },
-    ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, objectiveBoardId, projects, projectDrafts, openProjectDraft, deleteProjectDraft, inboxCount, triageCount, feedbackCount, triageCounts, openPrCount, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, homeBadge, t, tProjects]);
+  }, [currentProject, homeSections, pathname, objectiveBoardId, triageCount, feedbackCount, homeBadge, t]);
 
   // Inbox is a compact top control on desktop. Mobile keeps the regular row,
   // where there is no primary sidebar to host that control.
@@ -1472,6 +1482,15 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         items: section.items.filter((item) => item.key !== "inbox"),
       })),
     [sections],
+  );
+  // The home panel the back rows lift to, same desktop filter.
+  const homeDesktopSections = useMemo(
+    () =>
+      homeSections.map((section) => ({
+        ...section,
+        items: section.items.filter((item) => item.key !== "inbox"),
+      })),
+    [homeSections],
   );
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
@@ -1576,6 +1595,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         >
           <AppSidebar
             sections={desktopSections}
+            homeSections={homeDesktopSections}
             modeKey={modeKey}
             currentProject={currentProject}
             projects={projects}

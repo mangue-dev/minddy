@@ -13,7 +13,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import {
@@ -65,7 +65,8 @@ import { UserAvatar } from "@/components/user-avatar";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
-import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
+import { isPlainNavigationClick } from "@/components/editor-node-link";
+import { useSecondarySidebar, sidebarPanelForRoute } from "@/lib/secondary-sidebar-context";
 import { projectIdFromPath, projectTabHref } from "@/lib/project-id-from-path";
 import { usePrefetchProject } from "@/lib/use-prefetch-project";
 import { usePrefetchPages } from "@/lib/use-pages-query";
@@ -316,11 +317,17 @@ function SidebarNav({
   currentProject,
   projects,
   onMenuOpenChange,
+  onBack,
+  resetBack,
 }: {
   sections: AppNavSection[];
   currentProject: Project | null;
   projects: Project[];
   onMenuOpenChange?: (open: boolean) => void;
+  /** The project panel's home-back row: one level up, sidebar only. */
+  onBack?: () => void;
+  /** Any navigable row picked from this panel leaves the browse. */
+  resetBack: () => void;
 }) {
   return (
     <nav
@@ -328,6 +335,19 @@ function SidebarNav({
         "scrollbar-quiet flex-1 overflow-x-hidden overflow-y-auto pt-[calc((var(--app-content-header-height)-2.25rem)/2)] pb-2",
         GUTTER,
       )}
+      // A plain click on a row that NAVIGATES ends the browse: the capture
+      // runs before the row's own handler, so the panel resets to the route's
+      // level and the incoming navigation finds its place. Modifier/middle
+      // clicks want a tab or a window — the current page stays, the browse
+      // stays with it. (The home-back row is a button, not a link: it steps
+      // UP a level instead of ending the browse.)
+      onClickCapture={(event) => {
+        if (!isPlainNavigationClick(event)) return;
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        if (!target.closest("a[href]")) return;
+        resetBack();
+      }}
     >
       {sections.map((section, index) => (
         <div key={section.key ?? index} className={cn(index > 0 && "mt-4")}>
@@ -350,6 +370,7 @@ function SidebarNav({
                     currentProject={currentProject}
                     projects={projects}
                     onMenuOpenChange={onMenuOpenChange}
+                    onBack={onBack}
                   />
                 ) : (
                   <SidebarRow item={item} />
@@ -368,11 +389,13 @@ function ProjectContextRow({
   currentProject,
   projects,
   onMenuOpenChange,
+  onBack,
 }: {
   homeItem: AppNavItem;
   currentProject: Project;
   projects: Project[];
   onMenuOpenChange?: (open: boolean) => void;
+  onBack?: () => void;
 }) {
   const tk = useTranslations("Keyboard");
   const pathname = usePathname();
@@ -407,9 +430,14 @@ function ProjectContextRow({
       <div className="flex items-center gap-1">
         <Tooltip delayDuration={SIDEBAR_TOOLTIP_DELAY_MS} disableHoverableContent>
           <TooltipTrigger asChild>
-            <MotionLink
-              href={homeItem.href as string}
+            {/* The back gesture of the project panel: one level up IN THE
+                SIDEBAR only — the page keeps its place until a row of the
+                panel above is picked. A plain click never navigates; the
+                context menu (open in a new tab, copy) still speaks the href. */}
+            <motion.button
+              type="button"
               aria-label={homeItem.label}
+              onClick={onBack}
               onContextMenu={(event) => {
                 event.preventDefault();
                 setHomeMenuPosition({ x: event.clientX, y: event.clientY });
@@ -420,7 +448,7 @@ function ProjectContextRow({
             >
               <ChevronLeft className="size-3.5" aria-hidden />
               <Home className="size-[18px]" aria-hidden />
-            </MotionLink>
+            </motion.button>
           </TooltipTrigger>
           <TooltipContent side="right" className="flex items-center gap-2">
             <span>{homeItem.label}</span>
@@ -838,12 +866,14 @@ function SidebarFooter({
 /* ─── Levels (MIN-546) ─────────────────────────────────────────────── */
 
 /**
- * Where the back row of a level 2/3 sidebar returns, and how the current
- * page is named there.
+ * What the back row of a level 2/3 sidebar is NAMED after, and which route
+ * would carry the panel one level up — the href a context menu (open in a
+ * new tab, copy) still speaks. The row itself only lifts the sidebar's
+ * panel; it never navigates.
  *
- * Global pages go back to the home level; a project page goes back to the
- * project's Tickets page. Pure static route mapping: the level switches from
- * the server's HTML, no mounted-count involved.
+ * Global pages name the home level; a project page names the project's
+ * Tickets page. Pure static route mapping: the level switches from the
+ * server's HTML, no mounted-count involved.
  */
 export function secondaryNavBackTarget(
   pathname: string,
@@ -878,10 +908,18 @@ export function secondaryNavBackTarget(
  * its level swaps: the top band (quick actions, then the page's filter strip)
  * and the footer stay put while only the panel between them fades/slides —
  * level 2 enters from the right, level 1 from the left. `modeKey` ("home" |
- * `project-<id>`) keys the level-1 panel; the panel itself is chosen by the
+ * `project-<id>`) keys the project panel; the panel itself is chosen by the
  * route: `routeHasSecondaryNav` routes swap the nav for the page's teleported
  * secondary bar, under the back row. The aside NEVER resizes: a level change
  * is a content swap inside the same column, and nothing outside moves.
+ *
+ * The back rows BROWSE the levels without leaving the page (the `backLevel`
+ * of the secondary sidebar context): pressing back lifts the panel one level
+ * — a project page falls back to the project panel, then to the home panel —
+ * while the main content keeps its place, and any picked row navigates for
+ * real, rebasing the levels to the route. `homeSections` carries the home
+ * panel for those lifts reached FROM a project page (the shell passes both
+ * variants; the route only ever asks for one of them).
  *
  * The teleport points (`headerSlot`, `slot`) are installed by the level-2/3
  * panel and stay mounted across route changes within it — the pages' bars
@@ -889,12 +927,15 @@ export function secondaryNavBackTarget(
  */
 export function AppSidebar({
   sections,
+  homeSections,
   modeKey,
   currentProject,
   projects,
   onLayerOpenChange,
 }: {
   sections: AppNavSection[];
+  /** The home panel, for the back-row lifts reached from a project page. */
+  homeSections: AppNavSection[];
   modeKey: string;
   currentProject: Project | null;
   projects: Project[];
@@ -903,14 +944,18 @@ export function AppSidebar({
   const reduce = useReducedMotion();
   const t = useTranslations("Nav");
   const pathname = usePathname();
-  const router = useRouter();
-  const { setHeaderSlot, setSlot } = useSecondarySidebar();
+  const { setHeaderSlot, setSlot, backLevel, goBack, resetBack } =
+    useSecondarySidebar();
 
-  // The active route names which level the sidebar shows. Route-derived, so
-  // the server HTML already carries the right one; the `present` count is not
-  // consulted — the level switches as the URL switches, and the teleported
-  // bar arrives with it.
+  // The active route names the base level; the back rows stack browse levels
+  // on top of it without touching the URL.
   const back = secondaryNavBackTarget(pathname, t);
+  const panel = sidebarPanelForRoute(
+    back !== null,
+    currentProject !== null,
+    backLevel,
+  );
+  const showSecondary = panel === "secondary";
 
   // Menus open out of the bar (Radix portal); while one is up, the hidden
   // navigation overlay must stay pinned (see SidebarNavOverlay).
@@ -929,6 +974,22 @@ export function AppSidebar({
       currentProject={currentProject}
       projects={projects}
       onMenuOpenChange={handleMenuOpenChange}
+      onBack={goBack}
+      resetBack={resetBack}
+    />
+  );
+
+  // The home panel, for the back lifts reached from a project page: no
+  // project context row (its rows are plain navigation), and no active row —
+  // the page under it is not the panel's place until one is picked.
+  const homeLevel = (
+    <SidebarNav
+      sections={homeSections}
+      currentProject={null}
+      projects={projects}
+      onMenuOpenChange={handleMenuOpenChange}
+      onBack={goBack}
+      resetBack={resetBack}
     />
   );
 
@@ -956,7 +1017,7 @@ export function AppSidebar({
             <div className={GUTTER}>
               <button
                 type="button"
-                onClick={() => router.push(back.href)}
+                onClick={goBack}
                 className={cn(
                   "relative flex h-9 w-full min-w-0 cursor-pointer items-center rounded-lg text-sm font-medium transition-colors",
                   ROW_PL,
@@ -1003,38 +1064,39 @@ export function AppSidebar({
         "flex h-full flex-col overflow-hidden bg-sidebar text-sidebar-foreground",
       )}
     >
-      {/* The top band COMMANDS the column: level 1 keeps the creation
-          controls, level 2/3 shows the page's filter strip teleported here.
+      {/* The top band COMMANDS the column: level 2/3 keeps the page's filter
+          strip teleported here, the other levels the creation controls.
           Pinned strip — what drives the list should be here. */}
       <div
         className={cn(
           "sidebar-brand-row relative flex h-[var(--app-content-header-height)] shrink-0 items-center",
           // Level 2/3: the teleported filter strip carries its own gutter, so
           // the band's px-2.5 must not wrap it a second time.
-          !back && GUTTER,
-          // Level 1 closes the band with the same hairline the level-2/3
-          // filter strip draws (border-b on its header): the command row is
-          // separated from the option rows below on every level.
-          !back && "border-b border-border",
+          !showSecondary && GUTTER,
+          // The other levels close the band with the same hairline the
+          // level-2/3 filter strip draws (border-b on its header): the
+          // command row is separated from the option rows below on every
+          // level.
+          !showSecondary && "border-b border-border",
         )}
       >
-        <div className={cn("flex h-full w-full min-w-0 items-center", back && "hidden")}>
+        <div className={cn("flex h-full w-full min-w-0 items-center", showSecondary && "hidden")}>
           <SidebarQuickActions />
         </div>
         <div
           ref={setHeaderSlot}
           className={cn(
             "relative h-[var(--app-content-header-height)] w-full min-w-0",
-            !back && "hidden",
+            !showSecondary && "hidden",
           )}
         />
       </div>
 
-      {/* Both levels live in the same flex-1 area, stacked absolutely so a
+      {/* All levels live in the same flex-1 area, stacked absolutely so a
           swap animates over a stable layout instead of resizing anything. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
         <AnimatePresence mode="wait" initial={false}>
-          {back ? (
+          {showSecondary ? (
             <motion.div
               key="secondary-level"
               className="absolute inset-0 flex min-h-0 flex-col pr-0"
@@ -1045,13 +1107,24 @@ export function AppSidebar({
             >
               {level2}
             </motion.div>
+          ) : panel === "home" ? (
+            <motion.div
+              key="home"
+              className="absolute inset-0 flex min-h-0 flex-col"
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              transition={reduce ? { duration: 0 } : transitions.fade}
+            >
+              {homeLevel}
+            </motion.div>
           ) : (
             <motion.div
               key={modeKey}
               className="absolute inset-0 flex min-h-0 flex-col"
-              initial={{ opacity: 0, x: modeKey === "home" ? -16 : 16 }}
+              initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: modeKey === "home" ? -16 : 16 }}
+              exit={{ opacity: 0, x: 16 }}
               transition={reduce ? { duration: 0 } : transitions.fade}
             >
               {level1}
@@ -1060,13 +1133,13 @@ export function AppSidebar({
         </AnimatePresence>
         {/* Fades: scrolling options dissolve into the panel instead of being
             clipped hard against the band and the footer. The top fade lives
-            on level 2/3 ONLY: it milestones the back row, which level 1 does
-            not have (its first row is a plain option, e.g. pull requests,
-            and a fade there just dims it). Starts BELOW the first row —
-            geometry: row top padding + h-9 (2.25rem) + pb-2. Kept short
+            on level 2/3 ONLY: it milestones the back row, which the other
+            levels do not have (their first row is a plain option, e.g. pull
+            requests, and a fade there just dims it). Starts BELOW the first
+            row — geometry: row top padding + h-9 (2.25rem) + pb-2. Kept short
             (h-5): the panel's own scroll gap is wide, and a taller fade
             would sit on the first option row. */}
-        {back ? (
+        {showSecondary ? (
           <div
             aria-hidden
             className="pointer-events-none absolute inset-x-0 top-[calc((var(--app-content-header-height)-2.25rem)/2+2.25rem+0.5rem)] h-5 bg-gradient-to-b from-sidebar to-transparent"
