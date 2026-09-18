@@ -3,6 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
+import { newRunId } from "@/lib/server/ai-usage";
 import {
   embedText,
   matchFeedbackPosts,
@@ -22,6 +23,7 @@ import {
   decideFeedbackReview,
   resolveFeedbackReviewMode,
   type FeedbackReviewMode,
+  type FeedbackReviewVerdict,
 } from "@/lib/feedback/review-policy";
 import { defaultLocale } from "@/i18n/config";
 import {
@@ -40,12 +42,32 @@ import {
   type FeedbackPostStatus,
   type FeedbackReviewState,
 } from "@/lib/feedback/types";
-import { buildFeedbackReviewPrompt } from "@/lib/feedback/review-prompt";
+import { buildFeedbackReviewSpec } from "@/lib/server/decisions/prepare";
+import { loadJevDecisionSettings } from "@/lib/server/decisions/runner";
+import { runJevDecision } from "@/lib/server/decisions/jev";
+import {
+  decisionConfidence,
+  type DecisionAnswers,
+  type DecisionSpec,
+} from "@/lib/server/decisions/types";
+import { SMART_FILL_NONE } from "@/lib/server/smart-fill";
 
 /**
- * Feedback review pass (MIN-87) — ONE pass, ONE LLM call per post, which
- * replaces the two separate passes before (MIN-37 deduplication then
- * MIN-54 classification).
+ * Feedback review pass (MIN-87), now two-stage (MIN-565).
+ *
+ * Stage one is Jev, the System One classifier of the decision layer
+ * (`lib/server/decisions/`): one cheap structured call that answers junk,
+ * sensitivity, duplicate and categories on the SAME world the LLM prompt
+ * paints. The short-circuit is deliberately narrow — ONLY a clean answer
+ * (nothing to moderate, nothing to protect, no duplicate) at a confidence
+ * above the Jev floor skips the LLM: that is the case the pure policy would
+ * settle with "categorize and publish" anyway, so the LLM is paid only for
+ * what passes (MIN-557). A Jev moderation verdict — junk, sensitive, a
+ * suspected duplicate — NEVER auto-acts on its own: the full LLM pass
+ * re-decides everything, translation included, which Jev does not produce.
+ *
+ * Stage two is that LLM pass, ONE call per post, which replaces the two
+ * separate passes before (MIN-37 deduplication then MIN-54 classification).
  *
  * Why merge them: they were rotating in the wrong order. The merge
  * went first, and a merged post leaves the classification queue (the
@@ -53,13 +75,13 @@ import { buildFeedbackReviewPrompt } from "@/lib/feedback/review-prompt";
  * post, its voice inflating the canonical, and a security report could be
  * merged BEFORE being detected sensitive, so never be reported to
  * the team. A single decision, made in the correct order (moderate → protect →
- * categorize → deduplicate), removes the window — and halves the cost.
+ * categorize → deduplicate), removes the window.
  *
  * Two triggers share the same core:
  * - `reviewFeedbackPost(id)` — at the submission, via `after()`: a return
- * appears on the board in a few seconds instead of waiting for the cron;
+ *   appears on the board in a few seconds instead of waiting for the cron;
  * - `runFeedbackReview()` — the hourly cron, safety net for posts
- * whose immediate review has failed (LLM down, budget returned since).
+ *   whose immediate review has failed (LLM down, budget returned since).
  *
  * Competition: claim `for update skip locked` + 15 min lease
  * (self-healing if a run crashes); 3 failures → abandoned, the post remains in
@@ -412,15 +434,48 @@ interface ProjectCategory {
   name: string;
 }
 
-async function reviewOne(
-  post: ClaimedPost,
-  settings: ReviewSettings,
-  report: ReviewReport
-): Promise<boolean> {
+/**
+ * What one review verdict adds to the pure policy's input: the language and
+ * translation FINDINGS, which only the LLM pass produces (Jev generates no
+ * text — MIN-565). A Jev short-circuit carries nulls, and the update block
+ * writes them as "no translation", like any pass that read no translatable
+ * content.
+ */
+interface ReviewPassVerdict extends FeedbackReviewVerdict {
+  sourceLanguage: FeedbackLanguage | null;
+  translation: {
+    title: string;
+    body: string | null;
+    language: FeedbackLanguage;
+  } | null;
+}
+
+/**
+ * Everything `reviewOne` decides on, assembled once (MIN-565): the decision
+ * spec the Jev filter consumes — built pure by `buildFeedbackReviewSpec` on
+ * the SAME post, candidates and categories the LLM pass reads — plus the
+ * context pieces the pass and the application still need afterwards.
+ * `null` = the embedding could not be produced, the post fails closed.
+ */
+interface PreparedReview {
+  spec: DecisionSpec;
+  candidates: MatchedPost[];
+  categories: ProjectCategory[];
+  translation: FeedbackTranslationSettings;
+  lookForDuplicates: boolean;
+}
+
+/**
+ * The context of one review: embedding (backfill if the submission could not
+ * calculate), kNN neighbors, project categories, translation settings — the
+ * same inputs `reviewOne` has always gathered, arranged once and handed to
+ * both engines through the spec.
+ */
+async function prepareFeedbackReview(
+  post: ClaimedPost
+): Promise<PreparedReview | null> {
   const service = getServiceClient();
 
-  // ── Context: embedding (backfill if the submission could not
-  // calculate), kNN neighbors, project categories ────────────────────────────
   let embedding = post.embedding ? parseEmbedding(post.embedding) : null;
   if (!embedding) {
     embedding = await embedText(
@@ -430,7 +485,7 @@ async function reviewOne(
       // Background pass (cron): no trigger, the owner pays (MIN-131).
       { record: { billTo: { projectOwner: post.project_id }, projectId: post.project_id } }
     );
-    if (!embedding) return false;
+    if (!embedding) return null;
     await service
       .from("feedback_posts")
       .update({ embedding: toVectorLiteral(embedding) })
@@ -468,15 +523,116 @@ async function reviewOne(
     name: c.name,
   })) as ProjectCategory[];
 
-  // ── Single call: duplicate + categories + junk + sensitive ────────────────
-  const verdict = await reviewWithLlm(
-    settings.model,
-    post,
+  const spec = buildFeedbackReviewSpec({
+    post: { title: post.submitted_title, body: post.submitted_body },
     candidates,
     categories,
-    translation
-  );
+    translation,
+  });
+
+  return { spec, candidates, categories, translation, lookForDuplicates };
+}
+
+/**
+ * A Jev outcome replayed as the verdict the pure policy consumes — the
+ * adapter that keeps `decideFeedbackReview` engine-agnostic. `parseJevAnswers`
+ * already validated every value against the spec, so this only unwraps: the
+ * "none" sentinels fold to null, the duplicate certainty is the choice's
+ * calibrated probability, and the reason stays empty — Jev produces no text.
+ */
+export function feedbackVerdictFromAnswers(
+  answers: DecisionAnswers
+): FeedbackReviewVerdict {
+  const kind = answers["sensitivity_kind"]?.value;
+  const duplicate = answers["duplicate_of"];
+  const categoryAnswer = answers["category_ids"]?.value;
+  return {
+    duplicateOf:
+      typeof duplicate?.value === "string" && duplicate.value !== SMART_FILL_NONE
+        ? duplicate.value
+        : null,
+    confidence: duplicate ? clamp01(duplicate.probability ?? duplicate.confidence) : 0,
+    categoryIds: Array.isArray(categoryAnswer)
+      ? categoryAnswer.filter((id): id is string => typeof id === "string")
+      : [],
+    isJunk: answers["is_junk"]?.value === true,
+    isSensitive: answers["is_sensitive"]?.value === true,
+    sensitivityKind:
+      typeof kind === "string" && kind !== SMART_FILL_NONE
+        ? normalizeSensitivityKind(kind)
+        : null,
+    reason: null,
+  };
+}
+
+/**
+ * The ONLY shape the Jev filter may settle on its own: nothing to moderate,
+ * nothing to protect, no duplicate — the case the policy resolves with
+ * "categorize and publish" anyway. Every other Jev verdict (junk, sensitive,
+ * a suspected duplicate) hands the post to the full LLM pass: a moderation
+ * decision from the classifier alone never auto-acts (MIN-565).
+ */
+export function isCleanFeedbackVerdict(verdict: FeedbackReviewVerdict): boolean {
+  return !verdict.isJunk && !verdict.isSensitive && verdict.duplicateOf === null;
+}
+
+/**
+ * The two-stage verdict (MIN-565): Jev first, and only a CLEAN answer at a
+ * confidence above the Jev floor skips the LLM; everything else — sensitive,
+ * junk, a suspected duplicate, low confidence, Jev unavailable or switched
+ * off — goes to the full LLM pass, which re-decides and translates.
+ * `null` = both engines failed, the post fails closed to human review.
+ */
+async function reviewVerdictFor(
+  post: ClaimedPost,
+  settings: ReviewSettings,
+  prepared: PreparedReview
+): Promise<ReviewPassVerdict | null> {
+  // One decision = one ledger run, whoever answers — the runner's contract,
+  // replayed here because the feedback's LLM fallback is its own richer pass.
+  const runId = newRunId();
+  const jev = await loadJevDecisionSettings();
+  if (jev.enabled) {
+    const answers = await runJevDecision(prepared.spec, {
+      runId,
+      seq: 0,
+      // The review is authorized by the owner's budget (reviewModeForProject):
+      // it is to him that BOTH stages bill themselves, explicitly (MIN-131).
+      billTo: { projectOwner: post.project_id },
+      projectId: post.project_id,
+    });
+    if (answers) {
+      const confidence = decisionConfidence(prepared.spec, answers);
+      const candidate = feedbackVerdictFromAnswers(answers);
+      if (confidence >= jev.confidenceFloor && isCleanFeedbackVerdict(candidate)) {
+        // Jev decided nothing the policy needs text for: the post publishes
+        // as submitted, its translation columns untouched except by the
+        // uniform write below (a claimed post never carries a translation
+        // yet — the claim excludes reviewed posts).
+        return { ...candidate, sourceLanguage: null, translation: null };
+      }
+    }
+  }
+
+  return reviewWithLlm(settings.model, post, prepared, {
+    runId,
+    seq: jev.enabled ? 1 : 0,
+  });
+}
+
+async function reviewOne(
+  post: ClaimedPost,
+  settings: ReviewSettings,
+  report: ReviewReport
+): Promise<boolean> {
+  const prepared = await prepareFeedbackReview(post);
+  if (!prepared) return false;
+
+  const verdict = await reviewVerdictFor(post, settings, prepared);
   if (!verdict) return false;
+
+  const { translation, lookForDuplicates } = prepared;
+  const service = getServiceClient();
 
   // Race guard: the team was able to merge/publish/reject the post during the call.
   const { data: fresh } = await service
@@ -643,19 +799,14 @@ function parseEmbedding(value: unknown): number[] | null {
 async function reviewWithLlm(
   model: string,
   post: ClaimedPost,
-  candidates: MatchedPost[],
-  categories: ProjectCategory[],
-  translation: FeedbackTranslationSettings
-) {
-  // The prompt and the tool schema are built by the pure builder
-  // (lib/feedback/review-prompt.ts) so the decision layer's LLM fallback
-  // (MIN-562) replays the exact same strings.
-  const { systemPrompt, userMessage, parameters } = buildFeedbackReviewPrompt({
-    post: { title: post.submitted_title, body: post.submitted_body },
-    candidates,
-    categories,
-    translation,
-  });
+  prepared: PreparedReview,
+  ledger: { runId: string; seq?: number }
+): Promise<ReviewPassVerdict | null> {
+  const { spec, candidates, categories, translation } = prepared;
+  // The prompt and the tool schema ride in the spec, built pure by the same
+  // builder that briefed Jev (`buildFeedbackReviewSpec`): both engines decide
+  // on the exact same strings (MIN-562).
+  const { toolName, systemPrompt, userMessage, parameters } = spec.llm;
   // The real ids the response is validated against below.
   const candidateIds = candidates.map((c) => c.id);
   const categoryIds = categories.map((c) => c.id);
@@ -665,7 +816,7 @@ async function reviewWithLlm(
     model,
     systemPrompt,
     userMessage,
-    "review_feedback",
+    toolName,
     parameters,
     {
       xTitle: "Feedback Review (minddy)",
@@ -675,6 +826,9 @@ async function reviewWithLlm(
         feature: "feedback_classify",
         // Basic review: it is the owner's budget which authorizes it (line 164),
         // it is therefore to him that she invoices herself — explicitly (MIN-131).
+        // Same run as the Jev filter: a mixed decision reads as one gesture.
+        runId: ledger.runId,
+        seq: ledger.seq,
         billTo: { projectOwner: post.project_id },
         projectId: post.project_id,
       },
