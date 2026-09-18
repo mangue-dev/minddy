@@ -749,6 +749,18 @@ export function PrDetail({
   // than the columns of the board: it only lights up on the side where there REMAINS some
   // something to see, what a fixed border cannot say.
   const feedFade = useScrollFade<HTMLDivElement>();
+  // The scroll host carries BOTH the fade's ref (edge measuring) and the raw
+  // node (the floating back-to-top scrolls it). A stable callback, and not an
+  // inline arrow: an inline identity detaches and reattaches at every render,
+  // which used to schedule one render per render and blow up as React #185
+  // under the merge flow's synchronous burst (MIN-560).
+  const scrollHostRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      feedFade.ref(el);
+      scrollContainerRef.current = el;
+    },
+    [feedFade.ref],
+  );
   // “Cite” written in the draft from outside the composer: this
   // counter tells him to go take the cursor again.
   const [quoteFocus, setQuoteFocus] = useState(0);
@@ -1908,10 +1920,7 @@ export function PrDetail({
           scroll container instead of the page. */}
       <div className="relative min-h-0 flex-1">
         <div
-          ref={(el) => {
-            feedFade.ref(el);
-            scrollContainerRef.current = el;
-          }}
+          ref={scrollHostRef}
           onScroll={(e) => {
             feedFade.scrollProps.onScroll();
             setScrolledDown(e.currentTarget.scrollTop > 600);

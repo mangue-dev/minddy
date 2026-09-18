@@ -88,7 +88,13 @@ export function useScrollFade<T extends HTMLElement>(
 
   const ref = useCallback<RefCallback<T>>((el) => {
     elRef.current = el;
-    setNode(el);
+    // Detaches never update the state. A caller whose ref identity changes on
+    // every render (an inline wrapper) would otherwise detach → setNode(null)
+    // → one scheduled render per render, a self-sustaining update loop that
+    // ends in React error #185 once renders go synchronous (MIN-560). The
+    // observer effect's cleanup disconnects on unmount, so a node left behind
+    // here is never observed after the element is gone.
+    if (el) setNode(el);
   }, []);
 
   // Recompute when the container resizes or its content changes (add/remove/
