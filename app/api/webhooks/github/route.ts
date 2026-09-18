@@ -23,6 +23,7 @@ import {
   isPullRequestComment,
   prActionForPullRequest,
   prActionForReview,
+  prEventOccurredAt,
 } from "@/lib/server/agent/pr-webhook-core";
 import {
   normalizeGithubIssueCommentEvent,
@@ -158,6 +159,8 @@ interface PullRequestPayload {
   user?: { login?: string; avatar_url?: string } | null;
   created_at?: string;
   updated_at?: string;
+  /** Present on the `closed` action (with `merged_at` when the close is a merge). */
+  closed_at?: string | null;
 }
 
 interface PullRequestEvent {
@@ -229,7 +232,14 @@ interface PullRequestReviewEvent {
   action?: string;
   /** `body` separates the review which CARRYS a message from the simple envelope of
       remarques de ligne (cf. `prActionForReview`). */
-  review?: { state?: string; body?: string | null; user?: GithubActor };
+  review?: {
+    state?: string;
+    body?: string | null;
+    user?: GithubActor;
+    /** THE TIME of the review — the activity line dates from it, not from the
+        delivery of the hook (a replayed webhook must not say “just now”). */
+    submitted_at?: string;
+  };
   pull_request?: { number?: number };
   repository?: { full_name?: string };
   sender?: GithubActor;
@@ -242,7 +252,9 @@ interface IssueCommentEvent {
   issue?: { number?: number; pull_request?: unknown } | null;
   /** `body` serves the mention `@numo` (MIN-162): this is the only signal we have
       from a call to Numo written from github.com. */
-  comment?: { id?: number; body?: string | null; user?: GithubActor } | null;
+  comment?:
+    | { id?: number; body?: string | null; user?: GithubActor; created_at?: string }
+    | null;
   /** On `edited`, the previous values — `changes.body.from` is the body BEFORE
       the rewrite: the snapshot the edit history records (MIN-548). */
   changes?: { body?: { from?: string | null } } | null;
@@ -253,7 +265,7 @@ interface IssueCommentEvent {
 /** LINE note (review comment anchored in the diff). */
 interface PullRequestReviewCommentEvent {
   action?: string;
-  comment?: { user?: GithubActor } | null;
+  comment?: { user?: GithubActor; created_at?: string } | null;
   pull_request?: { number?: number };
   repository?: { full_name?: string };
   sender?: GithubActor;
@@ -348,6 +360,7 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   // from GitHub. The in-app gesture made by Numo goes through the App bot →
   // ignored (already drawn on the agent or route side).
   const actionType = prActionForPullRequest(action, merged);
+  const prEventAt = prEventOccurredAt(action, payload.pull_request);
   // Two independent axes (same shape as the GitLab receiver): `synchronize`
   // doesn't change ANY run state — it just tells. Take it out here, like
   // did it `if (!prState) return`, amounted to never tracing it.
@@ -393,6 +406,7 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       actionType: byHuman ? actionType : null,
       accountId: actorAccountId(payload.sender),
       login: payload.sender?.login ?? null,
+      occurredAt: prEventAt,
     });
     return;
   }
@@ -432,6 +446,7 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       prNumber: number,
       provider: "github",
       login: payload.sender?.login ?? null,
+      occurredAt: prEventAt,
     });
     // Inbox: the author of the run learns that his PR has been merged (MIN-138).
     await notifyForgePrAction({
@@ -455,6 +470,8 @@ async function recordGithubGesture(opts: {
   number: number | undefined;
   repoFullName: string | undefined;
   actor: GithubActor | undefined | null;
+  /** Forge instant of the gesture (review submitted at, comment created at). */
+  occurredAt?: string | null;
 }): Promise<void> {
   if (
     !opts.type ||
@@ -470,6 +487,7 @@ async function recordGithubGesture(opts: {
     type: opts.type,
     accountId: actorAccountId(opts.actor),
     login: opts.actor?.login ?? null,
+    occurredAt: opts.occurredAt ?? null,
   });
 }
 
@@ -515,6 +533,7 @@ async function handlePullRequestReview(
     number: payload.pull_request?.number,
     repoFullName: payload.repository?.full_name,
     actor: payload.review?.user ?? payload.sender,
+    occurredAt: payload.review?.submitted_at ?? null,
   });
 }
 
@@ -558,6 +577,7 @@ async function handleIssueComment(payload: IssueCommentEvent): Promise<void> {
     number,
     repoFullName,
     actor,
+    occurredAt: payload.comment?.created_at ?? null,
   });
 
   // `@numo` written FROM github.com (MIN-162). Two guards before touching it:
@@ -626,6 +646,7 @@ async function handlePullRequestReviewComment(
     number: payload.pull_request?.number,
     repoFullName: payload.repository?.full_name,
     actor: payload.comment?.user ?? payload.sender,
+    occurredAt: payload.comment?.created_at ?? null,
   });
 }
 
