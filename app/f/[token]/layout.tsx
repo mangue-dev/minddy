@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { FullCatalogMessages } from "@/components/full-catalog-messages";
+import { LazyToaster } from "@/components/lazy-toaster";
 import { buildBoardAccentCss } from "@/lib/feedback/accent";
 import { getBoardContext } from "@/lib/server/feedback/board-context";
 
@@ -12,6 +13,10 @@ import { getBoardContext } from "@/lib/server/feedback/board-context";
  * defined, sets a `<style>` server-rendered which overrides --primary/--brand/--ring
  * before the first paint. Without an accent, it adds nothing. The light/dark theme
  * itself remains managed by the root layout (MIN-60).
+ *
+ * The board has no bottom-bar status line (MIN-555): its dictation and submit
+ * feedback stays on the classic sonner toaster, mounted here for the whole
+ * public segment.
  */
 export default async function PublicFeedbackLayout({
   params,
@@ -27,7 +32,10 @@ export default async function PublicFeedbackLayout({
   return (
     <>
       {css && <style dangerouslySetInnerHTML={{ __html: css }} />}
-      <FullCatalogMessages>{children}</FullCatalogMessages>
+      <FullCatalogMessages>
+        {children}
+        <LazyToaster />
+      </FullCatalogMessages>
     </>
   );
 }

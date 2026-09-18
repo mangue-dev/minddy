@@ -1,4 +1,9 @@
 {
+  "StatusLine": {
+    "bellLabel": "Erreurs récentes",
+    "historyTitle": "Erreurs récentes",
+    "clear": "Effacer"
+  },
   "Scratchpad": {
     "title": "Carnet de tâches",
     "srDescription": "Votre carnet de tâches personnel.",

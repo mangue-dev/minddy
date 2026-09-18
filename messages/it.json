@@ -1,4 +1,9 @@
 {
+  "StatusLine": {
+    "bellLabel": "Errori recenti",
+    "historyTitle": "Errori recenti",
+    "clear": "Svuota"
+  },
   "Scratchpad": {
     "title": "Taccuino delle attività",
     "srDescription": "Il tuo taccuino personale delle attività.",

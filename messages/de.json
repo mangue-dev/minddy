@@ -1,4 +1,9 @@
 {
+  "StatusLine": {
+    "bellLabel": "Letzte Fehler",
+    "historyTitle": "Letzte Fehler",
+    "clear": "Löschen"
+  },
   "Scratchpad": {
     "title": "Aufgabennotizbuch",
     "srDescription": "Ihr persönliches Aufgabennotizbuch.",
