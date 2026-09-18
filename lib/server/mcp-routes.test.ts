@@ -177,6 +177,18 @@ describe("MCP account routes and assistant dispatch", () => {
     expect(mocks.probe).not.toHaveBeenCalled();
     expect(mocks.authorize).not.toHaveBeenCalled();
   });
+  it("marks a desktop-launched flow with a short-lived return cookie", async () => {
+    const response = await authorize(request("POST", { desktop: true }), context);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toContain(
+      "mcp_desktop_return=1",
+    );
+  });
+  it("leaves the plain web flow without the desktop return cookie", async () => {
+    const response = await authorize(request("POST"), context);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
   it("uses optimistic endpoint matching and clears pending OAuth when editing", async () => {
     await PATCH(request("PATCH", { name: "Renamed" }), context);
     expect(mocks.calls[0]).toMatchObject({
