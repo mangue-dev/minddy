@@ -36,6 +36,9 @@ export type MarkdownEditorProps = {
       editor: onCommit only fires on blur, callers track typing through this. */
   onEmptyChange?: (empty: boolean) => void;
   onEdit?: () => void;
+  /** Live markdown on every edit — lets a caller commit what is on screen
+      without a blur (close, tab switch, window blur). */
+  onChange?: (markdown: string) => void;
   mentions?: MarkdownEditorMentions;
   placeholder?: string;
   className?: string;

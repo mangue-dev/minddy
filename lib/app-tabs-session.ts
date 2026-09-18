@@ -4,7 +4,10 @@ import { AppTabRequestError } from "./app-tabs-api";
 
 /** Whether `url` reopens the remembered destination's page while carrying no
  *  selection of its own: same path, and every URL param or anchor already
- *  present in the remembered href. */
+ *  present in the remembered href. An anchor the memory LACKS is not a
+ *  selection of its own either — in-page anchors are sub-selections a previous
+ *  session may not have published — only two DIFFERENT anchors are two
+ *  destinations. */
 function reopensRemembered(url: string, remembered: string): boolean {
   const parts = (href: string) => {
     const [body = "", ...hash] = href.split("#");
@@ -14,7 +17,7 @@ function reopensRemembered(url: string, remembered: string): boolean {
   const from = parts(url);
   const to = parts(remembered);
   if (from.path !== to.path) return false;
-  if (from.hash && from.hash !== to.hash) return false;
+  if (from.hash && to.hash && from.hash !== to.hash) return false;
   for (const [key, value] of from.params) {
     if (to.params.get(key) !== value) return false;
   }
@@ -166,7 +169,20 @@ export class AppTabsSession {
       // `tabs[0]` unconditionally is what ground the first tab's location under
       // the load URL — the home tab turned into a replica of the current page.
       const restoredHref = restored ? normalizeAppTabLocation(restored.href) : null;
-      const restoredTab = restored ? this.snapshot.tabs.find((tab) => tab.id === restored.id) : null;
+      let restoredTab = restored
+        ? this.snapshot.tabs.find((tab) => tab.id === restored.id) ?? null
+        : null;
+      if (!restoredTab && restored && restoredHref && reopensRemembered(normalized, restoredHref)) {
+        // The remembered row was closed elsewhere (another window, another
+        // device): the row that still displays the remembered page stands in
+        // for it, so a refresh restores THAT row instead of grinding the
+        // first one under the load URL.
+        restoredTab =
+          this.snapshot.tabs.find((tab) => {
+            const current = normalizeAppTabLocation(tab.href);
+            return current !== null && current === restoredHref;
+          }) ?? null;
+      }
       // Several surfaces keep their selection out of the address and publish
       // the href that reconstructs them instead (/pull-requests hides `?pr=`).
       // A reload of such a page lands on a URL that
@@ -175,6 +191,12 @@ export class AppTabsSession {
       // load restores that tab — it is not a deep link free to claim another
       // row and grind its location under the load URL.
       const reloaded = Boolean(restoredTab && restoredHref && reopensRemembered(normalized, restoredHref));
+      // The address bar is the freshest intent: when it carries everything the
+      // memory has (same selection, maybe an anchor more), it wins — an anchor
+      // the memory lacks must survive the reload. When the memory is the
+      // richer one, it reconstructs the selection the URL keeps out of the
+      // address (?pr=…).
+      const loadWins = Boolean(restoredHref && reopensRemembered(restoredHref, normalized));
       const chosen =
         (restoredTab && (!explicit || restoredHref === normalized || reloaded)
           ? restoredTab
@@ -185,7 +207,7 @@ export class AppTabsSession {
       if (!chosen || this.disposed) return;
       const destination = explicit
         ? reloaded
-          ? restoredHref ?? normalized
+          ? loadWins ? normalized : restoredHref ?? normalized
           : normalized
         : restoredTab && restoredTab.id === chosen.id
           ? restoredHref ?? chosen.href
@@ -255,6 +277,15 @@ export class AppTabsSession {
       }
     });
   }
+  /** Pending location writes leave WITH the page (a refresh hides it first):
+      the debounced flush would never fire, and the next load would restore a
+      stale destination — or treat the fresh URL as an unmatched deep link and
+      grind the first tab under it. The queue keeps the writes ordered; the
+      fetch itself races the unload, which makes this best effort. */
+  onPageHide = () => {
+    clearTimeout(this.timer);
+    void this.flushLocation();
+  };
   private select(tab: AppTab) {
     if (this.disposed) return;
     const previous = this.snapshot.activeId;

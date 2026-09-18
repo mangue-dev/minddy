@@ -100,9 +100,14 @@ export function AssistantPanel() {
       command,
       attachments,
       intent,
+      displayMode,
     } = pendingOptions;
     const targetProjectId =
       projectId === undefined ? scopeProjectId : projectId;
+
+    // The opener decides how the session presents itself (home sends open
+    // fullscreen). Absent = the toolbar toggle stays authoritative.
+    if (displayMode) setDisplayMode(displayMode);
 
     if (conversationId) {
       // Loading first marks the choice, so the panel's restore can never

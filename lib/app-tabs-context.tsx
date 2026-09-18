@@ -74,6 +74,20 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
     try { restored = JSON.parse(sessionStorage.getItem(storageKey) ?? "null") ?? undefined; } catch { /* Ignore a malformed snapshot. */ }
     void session.initialize(window.location.pathname + window.location.search + window.location.hash, restored);
   }, [query.data, session, storageKey]);
+  // A refresh hides the page first: push the pending location write out
+  // immediately, or the next load restores a destination the session outgrew.
+  useEffect(() => {
+    const onHide = () => session.onPageHide();
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") onHide();
+    };
+    window.addEventListener("pagehide", onHide);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [session]);
   const value = useMemo(() => ({ ...snapshot, session, loading: query.isPending,
     loadError: query.isError, reload: () => { void query.refetch(); } }), [snapshot, session, query.isPending, query.isError, query.refetch]);
   return <Context.Provider value={value}>

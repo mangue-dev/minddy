@@ -302,3 +302,70 @@ export function isServiceAccountGesture(type: PrActionEventType): boolean {
     type === "pr_committed"
   );
 }
+
+// ── THE TIME OF THE GESTURE ─────────────────────────────────────────────────
+
+/** What the forge-instant rule reads from a GitHub `pull_request` payload. */
+export interface GithubPrOccurredAtInput {
+  created_at?: string;
+  updated_at?: string;
+  closed_at?: string | null;
+  merged_at?: string | null;
+  merged?: boolean;
+}
+
+/**
+ * The forge instant of a `pull_request` gesture, when the payload carries one:
+ * the specific timestamp when it exists, `updated_at` otherwise (the field the
+ * forge touches on a push, a reopen or a close). The activity line dates from
+ * it, not from the delivery of the hook — a replayed or delayed webhook must
+ * not show a 3-hour-old push as “just now”.
+ */
+export function prEventOccurredAt(
+  action: string,
+  pr: GithubPrOccurredAtInput | undefined,
+): string | null {
+  if (!pr) return null;
+  if (action === "opened") return pr.created_at ?? pr.updated_at ?? null;
+  if (action === "closed") {
+    return (pr.merged ? pr.merged_at : null) ?? pr.closed_at ?? pr.updated_at ?? null;
+  }
+  if (action === "reopened" || action === "synchronize") return pr.updated_at ?? null;
+  return null;
+}
+
+/** What the forge-instant rule reads from a GitLab `object_attributes`. */
+export interface GitlabMrOccurredAtInput {
+  action?: string;
+  /** The only `update` that is traced is the one carrying a push. */
+  oldrev?: string;
+  created_at?: string;
+  updated_at?: string;
+  merged_at?: string | null;
+  closed_at?: string | null;
+}
+
+/**
+ * The forge instant of a `merge_request` gesture, when the payload carries
+ * one: the specific timestamp when it exists, `updated_at` otherwise (the
+ * field GitLab touches on a push, a reopen or a close). Same contract as
+ * `prEventOccurredAt` on the GitHub side.
+ */
+export function mrEventOccurredAt(attrs: GitlabMrOccurredAtInput): string | null {
+  switch (attrs.action) {
+    case "open":
+      return attrs.created_at ?? attrs.updated_at ?? null;
+    case "merge":
+      return attrs.merged_at ?? attrs.updated_at ?? null;
+    case "close":
+      return attrs.closed_at ?? attrs.updated_at ?? null;
+    case "reopen":
+      return attrs.updated_at ?? null;
+    // The only `update` that is traced is the one carrying a push (`oldrev`):
+    // `updated_at` then moves with the push.
+    case "update":
+      return attrs.oldrev ? attrs.updated_at ?? null : null;
+    default:
+      return null;
+  }
+}

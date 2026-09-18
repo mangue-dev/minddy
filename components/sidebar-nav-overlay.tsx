@@ -33,6 +33,12 @@ export function SidebarNavOverlay({
   const [open, setOpen] = useState(false);
   const [focusWithin, setFocusWithin] = useState(false);
   const panel = useRef<HTMLDivElement | null>(null);
+  // Last position the page has seen of the pointer. On the macOS desktop app,
+  // while the cursor is over a draggable window region the renderer receives
+  // NO pointer events — crossing into one is delivered as the pointer leaving
+  // the document — so the last seen position is what tells a genuine exit from
+  // a slide into the drag band above the panel.
+  const lastPointer = useRef<{ x: number; y: number }>({ x: Number.NaN, y: Number.NaN });
 
   const shown = !hidden || open || focusWithin || pinned;
   const flowWidth = hidden ? 0 : dockedWidth;
@@ -46,7 +52,12 @@ export function SidebarNavOverlay({
     setFocusWithin(false);
   }, [hidden]);
 
-  const openPanel = useCallback(() => setOpen(true), []);
+  const openPanel = useCallback((e?: { clientX: number; clientY: number }) => {
+    if (e) {
+      lastPointer.current = { x: e.clientX, y: e.clientY };
+    }
+    setOpen(true);
+  }, []);
   // Without grace period: the block follows the pointer, it does not make it wait.
   // The primary rail keeps one (70 ms) because it REMAINS on the screen one
   // when folded — a touch makes it beat. This one goes away entirely;
@@ -71,7 +82,27 @@ export function SidebarNavOverlay({
  */
   useEffect(() => {
     if (!hidden || !open || pinned) return;
+    /** Is this page position over the OPEN panel's box? Shared by the
+        geometry rule and the leave handler below. */
+    const insidePanelBox = (x: number, y: number): boolean => {
+      const el = panel.current;
+      if (!el) return false;
+      // The area tested is that of the OPEN block, not the rectangle it occupies
+      // the moment: during its entry, a pointer which goes towards the place where
+      // he arrives would be “out” and would send him back immediately. It is calculated on
+      // the chassis navigation box (its `offsetParent`, zero width) —
+      // it is also she who ensures that everything is measured from the edge of the
+      // CONTAINER, not monitor, on ultrawide.
+      const box = (el.offsetParent ?? el).getBoundingClientRect();
+      return (
+        x >= box.left &&
+        x <= box.left + width &&
+        y >= box.top &&
+        y <= box.bottom
+      );
+    };
     const onMove = (e: PointerEvent) => {
+      lastPointer.current = { x: e.clientX, y: e.clientY };
       const el = panel.current;
       if (!el) return;
       // A menu ⋯, an account menu or a tooltip appears OUTSIDE the block
@@ -91,25 +122,24 @@ export function SidebarNavOverlay({
         setOpen(true);
         return;
       }
-      // The area tested is that of the OPEN block, not the rectangle it occupies
-      // the moment: during its entry, a pointer which goes towards the place where
-      // he arrives would be “out” and would send him back immediately. It is calculated on
-      // the chassis navigation box (its `offsetParent`, zero width) —
-      // it is also she who ensures that everything is measured from the edge of the
-      // CONTAINER, not monitor, on ultrawide.
-      const box = (el.offsetParent ?? el).getBoundingClientRect();
-      const inside =
-        e.clientX >= box.left &&
-        e.clientX <= box.left + width &&
-        e.clientY >= box.top &&
-        e.clientY <= box.bottom;
-      setOpen(inside);
+      setOpen(insidePanelBox(e.clientX, e.clientY));
     };
     document.addEventListener("pointermove", onMove);
     // Exiting the WINDOW from the top or from the right no longer produces any
     // `pointermove`: without this the block would remain open behind another
     // tab, to reveal itself unfolded upon return.
+    //
+    // On the macOS desktop app this event ALSO fires when the pointer slides
+    // into a `-webkit-app-region: drag` rect — the top bar above the panel,
+    // the content header it overlaps — because macOS claims the cursor before
+    // the page sees anything. Closing then shut the floating sidebar the
+    // moment it reached the top band, and hovering it became impossible. So
+    // only a leave whose last seen position was ALREADY outside the panel is
+    // a genuine exit; otherwise the next real `pointermove` re-evaluates the
+    // geometry and closes by the rule above.
     const onDocumentLeave = () => {
+      const { x, y } = lastPointer.current;
+      if (Number.isFinite(x) && insidePanelBox(x, y)) return;
       closePanel();
     };
     document.documentElement.addEventListener("pointerleave", onDocumentLeave);

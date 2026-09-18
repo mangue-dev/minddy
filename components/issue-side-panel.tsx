@@ -241,6 +241,16 @@ export function IssueSidePanel({
       i.e. would undo the edit the agent just wrote. */
   const titleEdited = useRef(false);
   const descriptionEdited = useRef(false);
+  /** Live markdown of the description editor, kept current on every edit (and
+      re-seeded on each mount/remount of the surface). Lets a close, a tab
+      switch or a window blur commit what is on screen even though the
+      editor's own blur never ran. */
+  const latestDescription = useRef("");
+  /** Raised when a description commit just went out: the container's blur —
+      which always follows the editor's in the same event — must not remount
+      the surface with the stale reflection the prop still carries. One-shot:
+      consumed by the very next container blur. */
+  const justCommitted = useRef(false);
   // Agent conversation, in modal ABOVE the panel: hot restart
   // must not cost the context of the ticket (the card has nothing to lose
   // and leaves its page).
@@ -313,6 +323,8 @@ export function IssueSidePanel({
       shownFor.current = issue.id;
       shownTitle.current = issue.title;
       shownDescription.current = description;
+      latestDescription.current = description;
+      justCommitted.current = false;
       titleEdited.current = false;
       descriptionEdited.current = false;
       setTitle(issue.title);
@@ -339,6 +351,7 @@ export function IssueSidePanel({
       !descriptionRef.current?.contains(document.activeElement)
     ) {
       shownDescription.current = description;
+      latestDescription.current = description;
       setEditorKey((k) => k + 1);
     }
   }, [issue?.id, issue?.title, issue?.description]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -648,6 +661,7 @@ export function IssueSidePanel({
     }
     if (fields.description !== undefined) {
       shownDescription.current = fields.description.trim();
+      latestDescription.current = fields.description.trim();
       descriptionEdited.current = false;
       setEditorKey((k) => k + 1);
     }
@@ -714,8 +728,10 @@ export function IssueSidePanel({
       toast.info(t("dictationInFlight"), { id: "dictation-in-flight" });
       return false;
     }
-    // A remote close must not discard a focused field that has not blurred yet.
-    if (titleEdited.current || descriptionEdited.current) return false;
+    // A field that has not blurred yet still holds uncommitted text: flush it
+    // rather than refuse the departure — the text is the user's, committing
+    // it is what they intend (refusing used to wedge the tab switch instead).
+    commitPendingEditsRef.current();
     const saved = await Promise.all(pendingWrites.current);
     return saved.every(Boolean) && !titleEdited.current && !descriptionEdited.current;
   });
@@ -727,12 +743,20 @@ export function IssueSidePanel({
       toast.info(t("dictationInFlight"), { id: "dictation-in-flight" });
       return;
     }
+    // Closing must not discard what is on screen: Escape, ✕ and Radix's
+    // outside dismissal can all run without the editor's blur ever firing.
+    // Commit first — the flags clear, so remote adoption resumes cleanly.
+    if (!next) commitPendingEditsRef.current();
     onOpenChange(next);
   };
 
-  if (!issue) return null;
+  // ── Editable fields: write + commit ─────────────────────────────────────
+  // Defined unconditionally (before the panel's early return) so the close
+  // handler and the window-blur listener below can always reach them; every
+  // one of them no-ops without an open ticket.
 
   const patch = async (updates: IssueUpdateInput) => {
+    if (!issue) return false;
     const write = onUpdate(issue.id, updates).then(() => true, (err) => {
       // Keep failed text edits recoverable instead of accepting a tab departure.
       if (updates.title !== undefined) titleEdited.current = true;
@@ -745,12 +769,8 @@ export function IssueSidePanel({
     finally { pendingWrites.current.delete(write); }
   };
 
-  const isChild = !!issue.parent_id;
-  const parent = issue.parent_id
-    ? allIssues.find((i) => i.id === issue.parent_id) ?? null
-    : null;
-
   const commitTitle = () => {
+    if (!issue) return;
     const trimmed = title.trim();
     // The field only lost focus, without a strike. If an agent has
     // renamed the ticket in the meantime, it is HIS title that is valid: ours is not
@@ -768,13 +788,52 @@ export function IssueSidePanel({
 
   const commitDescription = (markdown: string) => {
     // Same caveat as for the title: a blur without typing does not rewrite anything.
-    if (!descriptionEdited.current) return;
+    if (!issue || !descriptionEdited.current) return;
     descriptionEdited.current = false;
     const next = markdown.trim() || null;
     if (next === (issue.description ?? null)) return;
     shownDescription.current = next ?? "";
+    justCommitted.current = true;
     void patch({ description: next });
   };
+
+  /** Commit the description that is on screen, whether or not the editor ever
+      blurred (Escape, ✕, tab switch, window blur all skip its blur). */
+  const commitDescriptionNow = () => {
+    commitDescription(latestDescription.current);
+  };
+
+  /** Flush both editable fields. Clears the edited flags, so remote adoption
+      (MIN-89) resumes immediately after. */
+  const commitPendingEdits = () => {
+    commitTitle();
+    commitDescriptionNow();
+  };
+  const commitPendingEditsRef = useRef(commitPendingEdits);
+  commitPendingEditsRef.current = commitPendingEdits;
+
+  // Leaving the window (⌘-tab, another application, a native menu) blurs
+  // nothing inside the page: an in-progress edit would linger uncommitted, and
+  // worse, keep the edited flags raised — which suppresses remote adoption
+  // (MIN-89), so Numo's or a teammate's rewrite stayed invisible until the
+  // panel was reopened. Commit on the way out; real time then flows again.
+  const dictationInFlightRef = useRef(false);
+  dictationInFlightRef.current = transcribing || numoBusy;
+  useEffect(() => {
+    const commitOnWindowBlur = () => {
+      if (dictationInFlightRef.current) return;
+      commitPendingEditsRef.current();
+    };
+    window.addEventListener("blur", commitOnWindowBlur);
+    return () => window.removeEventListener("blur", commitOnWindowBlur);
+  }, []);
+
+  if (!issue) return null;
+
+  const isChild = !!issue.parent_id;
+  const parent = issue.parent_id
+    ? allIssues.find((i) => i.id === issue.parent_id) ?? null
+    : null;
 
   const handleDelete = async () => {
     await onDelete(issue.id);
@@ -971,7 +1030,13 @@ export function IssueSidePanel({
 
             <Tabs
               value={tab}
-              onValueChange={(v) => setTab(v as "description" | "plan")}
+              onValueChange={(v) => {
+                // Radix activates a tab on mousedown — BEFORE the browser moves
+                // focus, so the description editor unmounts without its blur
+                // ever firing. Commit what is on screen first.
+                if (v !== tab) commitDescriptionNow();
+                setTab(v as "description" | "plan");
+              }}
             >
               <TabsList variant="line" className={TAB_LIST_DENSE}>
                 <TabsTrigger value="description" className={TAB_TRIGGER_DENSE}>
@@ -1012,6 +1077,15 @@ export function IssueSidePanel({
                 <div
                   ref={descriptionRef}
                   onBlur={() => {
+                    // A commit just went out in this same event (the editor's
+                    // blur fires before this container's): the prop still
+                    // carries the pre-edit reflection, and remounting with it
+                    // would wipe what the user just wrote. Skip exactly one
+                    // adoption — the next blur re-arms it.
+                    if (justCommitted.current) {
+                      justCommitted.current = false;
+                      return;
+                    }
                     const description = issue.description ?? "";
                     if (
                       descriptionEdited.current ||
@@ -1020,6 +1094,7 @@ export function IssueSidePanel({
                       return;
                     }
                     shownDescription.current = description;
+                    latestDescription.current = description;
                     setEditorKey((k) => k + 1);
                   }}
                 >
@@ -1028,6 +1103,12 @@ export function IssueSidePanel({
                     mentions={mentions}
                     value={issue.description ?? ""}
                     onCommit={commitDescription}
+                    // Live markdown on every edit: a close (Escape, ✕, outside
+                    // click), a tab switch or a window blur can all skip the
+                    // editor's blur — the flush reads this instead.
+                    onChange={(markdown) => {
+                      latestDescription.current = markdown;
+                    }}
                     onEdit={() => {
                       descriptionEdited.current = true;
                     }}

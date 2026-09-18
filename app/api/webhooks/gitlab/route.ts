@@ -18,6 +18,7 @@ import {
   gitlabMrState,
   gitlabMrStateForAction,
   isServiceAccountGesture,
+  mrEventOccurredAt,
   prActionForMergeRequest,
   prActionForNote,
 } from "@/lib/server/agent/pr-webhook-core";
@@ -137,6 +138,9 @@ interface MergeRequestAttributes {
   last_commit?: { id?: string } | null;
   created_at?: string;
   updated_at?: string;
+  /** THE TIME of the transition — present when the action carried it out. */
+  merged_at?: string | null;
+  closed_at?: string | null;
 }
 
 interface MergeRequestEvent {
@@ -318,6 +322,7 @@ async function handleMergeRequest(
 
   const prState = gitlabMrStateForAction(payload);
   const actionType = prActionForMergeRequest(attrs);
+  const prEventAt = actionType ? mrEventOccurredAt(attrs) : null;
   if (!prState && !actionType) return;
 
   // Runs affected. merge/close/reopen/open resets pr_state in passing.
@@ -359,6 +364,7 @@ async function handleMergeRequest(
       actionType: echoed ? null : actionType,
       accountId: actorAccountId(payload.user),
       login: payload.user?.username ?? null,
+      occurredAt: prEventAt,
     });
     return;
   }
@@ -403,6 +409,7 @@ async function handleMergeRequest(
     prNumber: iid,
     provider: "gitlab",
     login: payload.user?.username ?? null,
+    occurredAt: prEventAt,
   });
   // Inbox: the author of the run learns that his MR (MIN-138) has been approved or merged.
   await notifyForgePrAction({
@@ -424,6 +431,9 @@ interface NoteEvent {
     noteable_type?: string;
     position?: unknown;
     note?: string | null;
+    /** THE TIME of the note — the activity line dates from it, not from the
+        delivery of the hook (a replayed webhook must not say “just now”). */
+    created_at?: string;
   };
   /** Present when the note concerns a merge request. */
   merge_request?: { iid?: number };
@@ -458,6 +468,7 @@ async function handleNote(
     type,
     accountId: actorAccountId(payload.user),
     login: payload.user?.username ?? null,
+    occurredAt: payload.object_attributes?.created_at ?? null,
   });
 
   // `@numo` written from GitLab (MIN-162) — the exact counterpart of the receiver
