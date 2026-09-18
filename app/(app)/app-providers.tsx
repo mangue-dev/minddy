@@ -25,6 +25,7 @@ import { AppTabsProvider } from "@/lib/app-tabs-context";
 import { IssuePanelProvider } from "@/lib/issue-panel-context";
 import { AppShellChrome } from "@/components/app-shell-chrome";
 import { AssistantFab } from "@/components/assistant-fab";
+import { StatusLineFloating } from "@/components/status-line";
 import { AnalyticsProjectGroup } from "@/components/analytics-project-group";
 import { PushServiceWorker } from "@/components/push-service-worker";
 import { DesktopNotifications } from "@/components/desktop-notifications";
@@ -111,6 +112,10 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                             </CreateProvider>
                             <AssistantPanel />
                             <AssistantFab />
+                            {/* The mobile projection of the status line (MIN-555):
+  the desktop pill lives in the FAB band itself, but the nav pill
+  has no room for a text line — this one floats just above it. */}
+                            <StatusLineFloating />
                             <ScratchpadModal />
                             <DeferredKeyboardCheatsheet />
                             <AnalyticsProjectGroup />

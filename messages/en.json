@@ -1,4 +1,9 @@
 {
+  "StatusLine": {
+    "bellLabel": "Recent errors",
+    "historyTitle": "Recent errors",
+    "clear": "Clear"
+  },
   "Scratchpad": {
     "title": "Task notebook",
     "srDescription": "Your personal task notebook.",

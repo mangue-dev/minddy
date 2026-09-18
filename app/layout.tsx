@@ -14,7 +14,6 @@ import { ThemeProvider } from "mangue-ui/components/theme-provider";
 import { BrowserIntlProvider } from "@/components/browser-intl-provider";
 import { CookieBanner } from "@/components/cookie-banner";
 import { DesktopChrome } from "@/components/desktop-chrome";
-import { LazyToaster } from "@/components/lazy-toaster";
 import { PostHogInit } from "@/components/posthog-init";
 import { ThemeInitScript } from "@/components/theme-init-script";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -240,7 +239,6 @@ export default async function RootLayout({
                 read the window movement zones, which do not have
                 other possible source than the page. Don't give anything back. */}
             <DesktopChrome />
-            <LazyToaster />
             <CookieBanner />
             {/* PostHog (MIN-78). Mounted here, therefore active EVERYWHERE — including on
                 public pages (landing, feedback board, shared views),

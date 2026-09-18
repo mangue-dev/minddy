@@ -12,6 +12,7 @@ import { useAssistantBusy } from "@/lib/assistant-chat-context";
 import { useAgentSessionsQuery } from "@/lib/use-agent-runs";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
+import { StatusLine } from "@/components/status-line";
 import {
   Tooltip,
   TooltipContent,
@@ -19,8 +20,9 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Chrome-style bottom-right chrome buttons of the band: Numo's opener first,
- * the task-notebook ("chrome" pill) right after. Always visible.
+ * Chrome-style bottom-right chrome buttons of the band: the status line first
+ * (MIN-555, only when something is to show), then Numo's opener, then the
+ * task-notebook ("chrome" pill). Always visible.
  *
  * Closing the panel during a turn no longer stops Numo (the conversation lives in
  * AssistantChatProvider): the Numo button then carries the shared animated border of the app
@@ -73,6 +75,10 @@ export function AssistantFab() {
             "pb-[env(safe-area-inset-bottom)]",
           )}
         >
+          {/* The toast replacement (MIN-555): one status line, the pill just
+  before Numo, plus the error-history bell. Renders nothing until a
+  `toast.*` call fires. */}
+          <StatusLine />
           <div className="relative">
             {/* `keepMounted`: the button must not be raised when the border
  turns on or off — otherwise its entry animation would replay

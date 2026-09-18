@@ -1,4 +1,5 @@
 import { FullCatalogMessages } from "@/components/full-catalog-messages";
+import { LazyToaster } from "@/components/lazy-toaster";
 import { AuthShell } from "./auth-shell";
 
 /**
@@ -7,11 +8,16 @@ import { AuthShell } from "./auth-shell";
  * landing in client navigation would only have the namespaces of the public site and
  * would display the path of its keys (MIN-100). The layout, which depends on the
  * `usePathname`, lives in `auth-shell.tsx`.
+ *
+ * These screens have no bottom-bar status line (MIN-555): feedback stays on
+ * the classic sonner toaster, mounted here for the whole segment (the login
+ * and reset-password forms toast on success and failure).
  */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <FullCatalogMessages>
       <AuthShell>{children}</AuthShell>
+      <LazyToaster />
     </FullCatalogMessages>
   );
 }
