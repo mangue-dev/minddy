@@ -1453,20 +1453,25 @@ if (!app.requestSingleInstanceLock()) {
       app.getVersion()
     );
 
-    // `minddy://`. Apart from packaged apps (dev), macOS needs binary and
-    // project path to know what to restart.
+    // `minddy://`. Apart from packaged apps (dev), Windows and Linux need the
+    // binary and project path to know what to restart — and both pass them on
+    // the command line, so the dev app really opens.
     //
-    // ⚠ The scheme is GLOBAL to the system, and the last registered wins: a
-    // dev session takes control of the `minddy://` of the installed app, including
-    // including its return of payment. This is the price to pay to be able to test
-    // a deep link in dev — but if a link opens the wrong window afterwards
-    // suddenly, this is where you have to look, not in the link.
-    // AppX/MSIX owns protocol registration through AppxManifest.xml. Writing a
-    // parallel registry association from inside the Store sandbox would create
-    // a competing owner and is unnecessary.
+    // ⚠ macOS is different, and claiming the scheme in dev there is pure
+    // harm: Electron marks `path`/`args` as Windows-only, so LaunchServices
+    // registers the bare `Electron.app` binary — a bounce later opens a NAKED
+    // Electron shell (no app, no session) and the installed app loses its
+    // deep-link return. So a dev shell only claims the scheme when explicitly
+    // asked to (`MINDDY_DESKTOP_CLAIM_PROTOCOL=1`), and the installed app
+    // reclaims the scheme on its next launch either way: the last registered
+    // wins.
     if (app.isPackaged && !process.windowsStore) {
       app.setAsDefaultProtocolClient(DESKTOP_PROTOCOL);
-    } else if (!app.isPackaged) {
+    } else if (
+      !app.isPackaged &&
+      (process.platform !== "darwin" ||
+        process.env.MINDDY_DESKTOP_CLAIM_PROTOCOL?.trim() === "1")
+    ) {
       app.setAsDefaultProtocolClient(DESKTOP_PROTOCOL, process.execPath, [
         path.resolve(process.argv[1] ?? ""),
       ]);
