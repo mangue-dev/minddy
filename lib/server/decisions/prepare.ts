@@ -44,17 +44,19 @@ import {
 } from "@/lib/server/smart-assign";
 import type { DecisionOption, DecisionQuestion, DecisionSpec } from "@/lib/server/decisions/types";
 
-/** Human names for the "nothing" sentinels the engines can pick. */
-const NO_OBJECTIVE: DecisionOption = {
-  value: SMART_FILL_NONE,
-  label: "No objective",
-  description: "No objective of this project fits this issue.",
-};
-const NO_EFFORT: DecisionOption = {
-  value: SMART_FILL_NONE,
-  label: "Nothing estimable",
-  description: "The text describes nothing sizable — a question, a note.",
-};
+/**
+ * MODULE-LEVEL RULE — the reason `NO_OBJECTIVE`/`NO_EFFORT` below are built
+ * INLINE instead of as module constants.
+ *
+ * The LLM recipes live in the use-case modules (`smart-fill.ts`,
+ * `smart-assign.ts`), the spec builders live here, so the imports are mutual.
+ * A module-level binding of THIS file that reads a use-case module's export
+ * (e.g. `SMART_FILL_NONE`) evaluates while that module is still initializing:
+ * a TDZ crash at import time in production bundles — the Next build dies on
+ * it during page-data collection — that vitest never reproduces (Vite's SSR
+ * transform resolves the cycle differently). Everything of the other side is
+ * therefore read lazily, inside the builders' function bodies.
+ */
 
 function choiceOptions(entries: { value: string; label: string }[]): DecisionOption[] {
   return entries.map((e) => ({ value: e.value, label: e.label }));
@@ -93,10 +95,21 @@ export function buildSmartFillSpec(input: {
       label: "What is the t-shirt size of the work described?",
       options: [
         ...choiceOptions(ISSUE_EFFORTS.map((e) => ({ value: e, label: e }))),
-        NO_EFFORT,
+        {
+          value: SMART_FILL_NONE,
+          label: "Nothing estimable",
+          description: "The text describes nothing sizable — a question, a note.",
+        },
       ],
     },
-    {
+  ];
+  // A question with no option teaches nothing and fails the spec validation
+  // (`validateDecisionSpec` refuses an empty choice): with no category to
+  // classify into, the question is simply not asked — the patch carries no
+  // category field, exactly like an LLM answering an empty array. The other
+  // three questions always have an option (the enums, the "none" sentinels).
+  if (ctx.categories.length > 0) {
+    questions.push({
       key: "category_ids",
       kind: "multi_choice",
       label: "Which of this project's categories does the issue belong to?",
@@ -104,19 +117,23 @@ export function buildSmartFillSpec(input: {
         ctx.categories.slice(0, MAX_CONTEXT_ITEMS).map((c) => ({ value: c.id, label: c.name }))
       ),
       maxSelections: MAX_CATEGORIES_PER_ISSUE,
-    },
-    {
-      key: "objective_id",
-      kind: "single_choice",
-      label: "Which objective does the issue plainly belong to?",
-      options: [
-        ...choiceOptions(
-          ctx.objectives.slice(0, MAX_CONTEXT_ITEMS).map((o) => ({ value: o.id, label: o.name }))
-        ),
-        NO_OBJECTIVE,
-      ],
-    },
-  ];
+    });
+  }
+  questions.push({
+    key: "objective_id",
+    kind: "single_choice",
+    label: "Which objective does the issue plainly belong to?",
+    options: [
+      ...choiceOptions(
+        ctx.objectives.slice(0, MAX_CONTEXT_ITEMS).map((o) => ({ value: o.id, label: o.name }))
+      ),
+      {
+        value: SMART_FILL_NONE,
+        label: "No objective",
+        description: "No objective of this project fits this issue.",
+      },
+    ],
+  });
   return {
     useCase: "smart_fill",
     state: {

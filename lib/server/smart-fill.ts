@@ -3,9 +3,10 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { aiModelFallback } from "@/lib/ai-model-config";
-import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { hasUsageBudget } from "@/lib/server/usage";
-import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
+import { runDecision } from "@/lib/server/decisions/runner";
+import { buildSmartFillSpec } from "@/lib/server/decisions/prepare";
+import type { DecisionAnswers } from "@/lib/server/decisions/types";
 import {
   ISSUE_EFFORTS,
   ISSUE_PRIORITIES,
@@ -38,6 +39,12 @@ import {
  * budget, silent model, JSON crooked: the patch is empty and the ticket is born
  * as it was written. A ticket without priority is a ticket; a creation that
  * fails because a help failed, no.
+ *
+ * **One pass, two engines (MIN-563).** The judgment runs through the decision
+ * layer ([decisions/runner.ts](decisions/runner.ts)): Jev answers on the
+ * structured state first, and the LLM pass below (`buildSmartFillPrompt`,
+ * `fillParameters`) is replayed verbatim as the fallback. `sanitizeSmartFill`
+ * stays the single door every answer walks through, whichever engine said it.
  *
  * **Who pays: the one who activated the scale**, therefore the author of the ticket - and not the
  * project owner as Smart Assign. It's not an inconsistency, it's the same
@@ -243,8 +250,37 @@ async function gatherContext(projectId: string): Promise<SmartFillContext> {
 }
 
 /**
+ * The runner's typed answers, replayed as the tool-arguments shape
+ * `sanitizeSmartFill` was built on. Pure, and deliberately boring: it copies
+ * the values of the answers that exist, and the sanitizer does ALL the
+ * judging — an invented id, a `none` priority, a fifth category — whichever
+ * engine produced them. A missing answer simply leaves its key out, which is
+ * how "the engine said nothing about it" reaches the patch as an absent field.
+ */
+export function smartFillAnswersToRaw(answers: DecisionAnswers): Record<string, unknown> {
+  const raw: Record<string, unknown> = {};
+  const priority = answers.priority?.value;
+  if (typeof priority === "string") raw.priority = priority;
+  const effort = answers.effort?.value;
+  if (typeof effort === "string") raw.effort = effort;
+  const objectiveId = answers.objective_id?.value;
+  if (typeof objectiveId === "string") raw.objective_id = objectiveId;
+  const categoryIds = answers.category_ids?.value;
+  if (Array.isArray(categoryIds)) raw.category_ids = categoryIds.filter((id) => typeof id === "string");
+  return raw;
+}
+
+/**
  * The entry point. Makes the patch to merge into the row before the insert, or
  * an EMPTY patch — never an exception, never a failed creation.
+ *
+ * Since MIN-563 the pass runs through the decision layer
+ * ([runner.ts](decisions/runner.ts)): Jev first (one fast call on the same
+ * structured state), the existing LLM pass as fallback — unchanged, replayed
+ * verbatim by the spec's recipe — and the empty patch when BOTH engines fail,
+ * the same degradation as before. The gates stay here: the flag, the budget
+ * of the actor (the one who armed the pass pays for whichever engine
+ * answers), and the context gathering.
  */
 export async function runSmartFill({
   projectId,
@@ -263,37 +299,19 @@ export async function runSmartFill({
 }): Promise<SmartFillPatch> {
   if (!actorId || !title.trim()) return {};
   try {
-    const config = await getAppConfigValues([
-      "smart_fill_enabled",
-      ...modelConfigKeys("smart_fill_model"),
-    ]);
+    const config = await getAppConfigValues(["smart_fill_enabled"]);
     const enabled = (config["smart_fill_enabled"] ?? aiModelFallback("smart_fill_enabled")) !== "false";
     if (!enabled) return {};
     // The budget of THE ONE WHO ARMED the scale, as for dictation. Dry, we
     // does not fill out — and the ticket is still born.
     if (!(await hasUsageBudget(actorId, "automations"))) return {};
 
-    const { model } = resolveFromValues("smart_fill_model", config);
     const ctx = await gatherContext(projectId);
-
-    const raw = await forcedToolCall(
-      model,
-      buildSmartFillPrompt(projectName, ctx),
-      buildSmartFillUserMessage(title, description),
-      "fill_issue",
-      fillParameters(ctx),
-      {
-        xTitle: "minddy Smart-fill",
-        logPrefix: "smart-fill",
-        modelKey: "smart_fill_model",
-        maxTokens: 256,
-        // Someone is waiting in front of their screen: beyond that, the ticket must be born
-        // without its filling rather than making you wait a minute.
-        timeoutMs: 20_000,
-        record: { feature: "smart_fill", billTo: { userId: actorId }, projectId },
-      },
-    );
-    return sanitizeSmartFill(raw, ctx);
+    const spec = buildSmartFillSpec({ projectName, title, description, ctx });
+    const outcome = await runDecision(spec, { billTo: { userId: actorId }, projectId });
+    // `null` (both engines down) and an outcome without answers land on the
+    // same empty patch: the ticket is born as it was written.
+    return sanitizeSmartFill(outcome ? smartFillAnswersToRaw(outcome.answers) : null, ctx);
   } catch (err) {
     console.error("[smart-fill] fill failed:", (err as Error).message);
     return {};

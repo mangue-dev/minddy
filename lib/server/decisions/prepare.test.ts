@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildFeedbackReviewSpec, buildSmartAssignSpec, buildSmartFillSpec } from "./prepare";
+import { validateDecisionSpec } from "./types";
 import type { SmartFillContext } from "@/lib/server/smart-fill";
 
 /**
@@ -81,6 +82,25 @@ describe("buildSmartFillSpec", () => {
     const categories = spec70.questions.find((q) => q.key === "category_ids");
     expect(categories?.kind === "multi_choice" && categories.options).toHaveLength(60);
     expect(spec70.state.categories).toHaveLength(60);
+  });
+
+  it("does not ask the categories question when the project has none", () => {
+    // A multi-choice with no option is a spec the runner refuses outright
+    // (`validateDecisionSpec`) — the whole fill would die on a project that
+    // simply has no category yet. The question is skipped instead; the patch
+    // carries no category field, exactly like an LLM answering an empty array.
+    const specEmpty = buildSmartFillSpec({
+      projectName: "p",
+      title: "t",
+      description: null,
+      ctx: { categories: [], objectives: [] },
+    });
+    expect(specEmpty.questions.map((q) => q.key)).toEqual([
+      "priority",
+      "effort",
+      "objective_id",
+    ]);
+    expect(validateDecisionSpec(specEmpty)).toBe(true);
   });
 });
 
