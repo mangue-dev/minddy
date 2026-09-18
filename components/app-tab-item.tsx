@@ -61,7 +61,11 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
               event.preventDefault(); const box = event.currentTarget.getBoundingClientRect(); setMenu({ x: box.left, y: box.bottom });
             }
           }}
-          className={cn("flex h-full min-w-0 flex-1 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring", tab.pinned ? "justify-center" : "pl-2.5 pr-6")}>
+          // No focus ring on a tab: a bare keydown (Shift, Space…) on a
+          // mouse-focused tab would light one, and the active tab already
+          // stands out on its own background — see the tabs rule in
+          // globals.css for the panel tabs' side of the same call.
+          className={cn("flex h-full min-w-0 flex-1 items-center gap-2 rounded-md outline-none", tab.pinned ? "justify-center" : "pl-2.5 pr-6")}>
           {/* The badge sits ON the icon's top-right corner (half over the
               icon glyphs), so it works on the square pinned tabs too. Its
               backing is exactly the tab's own background, muted so only the

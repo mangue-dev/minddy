@@ -92,7 +92,7 @@ export function SecondarySidebar({
   itemContextActions?: (target: Element) => ContextMenuAction[];
   children: ReactNode;
 }) {
-  const { headerSlot, slot, register } = useSecondarySidebar();
+  const { headerSlot, slot, register, hosting } = useSecondarySidebar();
   const isMobileLayout = useMediaQuery("(max-width: 767px)");
   // Nothing in the server rendering: the space is reserved by the primary
   // sidebar's route-level panel anyway (routeHasSecondaryNav), and
@@ -117,7 +117,8 @@ export function SecondarySidebar({
 
   if (!mounted) return null;
 
-  const hoisted = !isMobileLayout && slot !== null && headerSlot !== null;
+  const hoisted =
+    !isMobileLayout && hosting && slot !== null && headerSlot !== null;
 
   /**
    * The title line COMMANDS the column, it does not name it: the filter
@@ -182,6 +183,12 @@ export function SecondarySidebar({
       </>
     );
   }
+
+  // The back row's browse has docked the bar away: the sidebar shows an upper
+  // level while the page keeps its place. Render NOTHING here — falling back
+  // to the inline column would reflow the content the user did not leave.
+  // (Mobile keeps its own inline column whatever the sidebar does.)
+  if (!isMobileLayout && !hosting) return null;
 
   return (
     <aside

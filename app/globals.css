@@ -597,6 +597,24 @@ a.markdown-link::before {
   }
 }
 
+/* ─── Tabs: no focus ring ───────────────────────────────────────────── */
+
+/* The same Chromium behavior the base rule above mutes for the UA outline
+   also re-lights the focus RINGS of the tab triggers: click a tab (mouse
+   focus — nothing shows), then press Shift, Space or any other key for its
+   own sake, and Chromium re-evaluates `:focus-visible` on that keydown —
+   the trigger lights its blue ring although the keyboard never navigated.
+   A tab already shows its selection; it must not grow a second state just
+   because a key was pressed. Drop the ring and the border tint on the
+   panel tabs (mangue-ui `TabsTrigger`). Declared out of any layer on
+   purpose: the trigger's ring utilities live in the utilities layer, and an
+   out-of-layer rule beats them regardless of specificity — the same trick
+   as the finger-target rules below. */
+[data-slot="tabs-trigger"]:focus-visible {
+  --tw-ring-shadow: 0 0 0 #0000;
+  border-color: transparent;
+}
+
 /* ─── Numo (assistant) ──────────────────────────────────────────────── */
 
 /* Numo compact ⇄ expanded morph. The panel keeps right/bottom anchoring

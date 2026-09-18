@@ -2668,7 +2668,11 @@ export function PrDetail({
               )}
               rows={reviewMode === "findings" ? 5 : 4}
               autoFocus
-              className="min-w-0 w-full max-w-full resize-none whitespace-pre-wrap [overflow-wrap:anywhere] rounded-none border-0 bg-card pb-10 focus-visible:border-0 focus-visible:ring-0"
+              // Height-capped like the merge dialog's commit message: the
+              // base `field-sizing-content` would grow the box with the
+              // message until it dwarfed the dialog — past the cap the box
+              // scrolls instead, and the handle still lets it be pulled.
+              className="min-w-0 w-full max-w-full max-h-44 resize-y overflow-y-auto whitespace-pre-wrap [overflow-wrap:anywhere] rounded-none border-0 bg-card pb-10 focus-visible:border-0 focus-visible:ring-0"
             />
             <div className="absolute bottom-1.5 left-1.5 z-10">
               <AttachButton
