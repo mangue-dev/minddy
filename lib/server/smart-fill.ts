@@ -64,14 +64,15 @@ export interface SmartFillContext {
 }
 
 /** Title/description truncated before prompt: a ticket pasted from a document
- * whole must not cause the cost of storage to drift. */
-const MAX_TITLE_CHARS = 500;
-const MAX_DESCRIPTION_CHARS = 4000;
+ * whole must not cause the cost of storage to drift. Exported for the
+ * decision layer, whose builders truncate the structured state the same way. */
+export const MAX_TITLE_CHARS = 500;
+export const MAX_DESCRIPTION_CHARS = 4000;
 /** Beyond that, the list no longer guides the model, it drowns it out — and a project to
  * three hundred goals is not an OBVIOUS goal anyway. */
-const MAX_CONTEXT_ITEMS = 60;
+export const MAX_CONTEXT_ITEMS = 60;
 /** More categories than that on a ticket means a ticket that is no longer stored. */
-const MAX_CATEGORIES_PER_ISSUE = 3;
+export const MAX_CATEGORIES_PER_ISSUE = 3;
 
 /**
  * THE SENTINEL OF “NOTHING” — `"none"`, not `null`.
@@ -83,7 +84,7 @@ const MAX_CATEGORIES_PER_ISSUE = 3;
  * Then a small model responds much better to a value it can choose
  * in a list than an absence that it must produce.
  */
-const NONE = "none";
+export const SMART_FILL_NONE = "none";
 
 /**
  * The patch, filtered against REAL project ids and field enums.
@@ -109,7 +110,7 @@ export function sanitizeSmartFill(
   // response (a one-line ticket, a question): it arrives in `"none"` —
   // the sentinel of the schema — and translates to `null`. The literal `null` is
   // also accepted: this is what a model renders spontaneously despite the diagram.
-  if (raw.effort === NONE || raw.effort === null) patch.effort = null;
+  if (raw.effort === SMART_FILL_NONE || raw.effort === null) patch.effort = null;
   else if (isEffort(raw.effort)) patch.effort = raw.effort;
 
   if (Array.isArray(raw.category_ids)) {
@@ -166,6 +167,17 @@ ${categoryLines}
 ${objectiveLines}`;
 }
 
+/**
+ * The user message of the pass: the issue itself, truncated to the same
+ * ceilings as the prompt lists. Exported for the decision layer, which
+ * replays the pass verbatim as its LLM fallback (MIN-562).
+ */
+export function buildSmartFillUserMessage(title: string, description: string | null): string {
+  return `## Issue\nTitle: ${title.slice(0, MAX_TITLE_CHARS)}\nDescription: ${
+    description?.trim() ? description.slice(0, MAX_DESCRIPTION_CHARS) : "(none)"
+  }`;
+}
+
 
 /**
  * The tool schema, built WITH the context: the possible ids are
@@ -176,16 +188,19 @@ ${objectiveLines}`;
  * ALL fields are `required`. An argument presented as optional is not
  * just not answered by a small model, and Smart-fill turns by
  * construction on a fast model: “no response” must be a VALUE.
+ *
+ * Exported for the decision layer (MIN-562): its LLM fallback replays this
+ * exact schema so the pass behaves identically on both engines.
  */
-function fillParameters(ctx: SmartFillContext): Record<string, unknown> {
+export function fillParameters(ctx: SmartFillContext): Record<string, unknown> {
   return {
     type: "object",
     properties: {
       priority: { type: "string", enum: [...ISSUE_PRIORITIES] },
       effort: {
         type: "string",
-        enum: [...ISSUE_EFFORTS, NONE],
-        description: `T-shirt size, or "${NONE}" when nothing is estimable.`,
+        enum: [...ISSUE_EFFORTS, SMART_FILL_NONE],
+        description: `T-shirt size, or "${SMART_FILL_NONE}" when nothing is estimable.`,
       },
       category_ids: {
         type: "array",
@@ -194,8 +209,8 @@ function fillParameters(ctx: SmartFillContext): Record<string, unknown> {
       },
       objective_id: {
         type: "string",
-        enum: [...ctx.objectives.map((o) => o.id), NONE],
-        description: `Id of the objective this issue belongs to, or "${NONE}".`,
+        enum: [...ctx.objectives.map((o) => o.id), SMART_FILL_NONE],
+        description: `Id of the objective this issue belongs to, or "${SMART_FILL_NONE}".`,
       },
     },
     required: ["priority", "effort", "category_ids", "objective_id"],
@@ -264,9 +279,7 @@ export async function runSmartFill({
     const raw = await forcedToolCall(
       model,
       buildSmartFillPrompt(projectName, ctx),
-      `## Issue\nTitle: ${title.slice(0, MAX_TITLE_CHARS)}\nDescription: ${
-        description?.trim() ? description.slice(0, MAX_DESCRIPTION_CHARS) : "(none)"
-      }`,
+      buildSmartFillUserMessage(title, description),
       "fill_issue",
       fillParameters(ctx),
       {
