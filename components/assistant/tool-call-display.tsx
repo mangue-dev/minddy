@@ -1012,9 +1012,32 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   call_mcp_tool: {
     icon: Plug,
-    getLabel: (_args, _result, success, status, t) => {
-      if (status === "running") return t("callingMcpTool");
-      return success ? t("mcpToolCalled") : t("callMcpToolFailed");
+    getLabel: (args, _result, success, status, t) => {
+      // The wrapper tool carries the REAL MCP tool in its arguments
+      // (`lib/mcp-client-tools.ts`): naming it is the whole point of the
+      // line — “MCP tool completed” says nothing about WHAT ran.
+      const tool = typeof args.tool === "string" && args.tool.trim() ? args.tool.trim() : null;
+      // The arguments travel with it: a compact single-line JSON preview,
+      // truncated here because the row truncates again with CSS — this bound
+      // only keeps a 4 KB payload out of the label string.
+      let preview = "";
+      if (tool && args.arguments != null) {
+        try {
+          const json = JSON.stringify(args.arguments);
+          preview = json.length > 80 ? `${json.slice(0, 80)}…` : json;
+        } catch { /* Non-serializable payload: the name alone still says it. */ }
+      }
+      const withArgs = (label: string) => (preview ? `${label} ${preview}` : label);
+      if (!tool) {
+        // Absent arguments (running label without context, replay): the
+        // generic wording still reads.
+        if (status === "running") return t("callingMcpTool");
+        return success ? t("mcpToolCalled") : t("callMcpToolFailed");
+      }
+      if (status === "running") return withArgs(t("callingMcpToolNamed", { tool }));
+      return withArgs(
+        success ? t("mcpToolCalledNamed", { tool }) : t("callMcpToolFailedNamed", { tool }),
+      );
     },
   },
   web_search: {
