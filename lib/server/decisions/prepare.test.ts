@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { buildFeedbackReviewSpec, buildSmartAssignSpec, buildSmartFillSpec } from "./prepare";
+import {
+  buildFeedbackReviewSpec,
+  buildSmartAssignSpec,
+  buildSmartFillSpec,
+  prepareSmartAssign,
+} from "./prepare";
 import { validateDecisionSpec } from "./types";
 import type { SmartFillContext } from "@/lib/server/smart-fill";
+import type { User } from "@supabase/supabase-js";
 
 /**
  * The builders are the guarantee that both engines see the SAME world: real
@@ -142,6 +148,83 @@ describe("buildSmartAssignSpec", () => {
     expect(spec.llm.systemPrompt).toContain("automatic issue router");
     expect(spec.llm.userMessage).toContain("(no rule)");
     expect(spec.llm.userMessage).toContain("Ada");
+  });
+});
+
+describe("prepareSmartAssign", () => {
+  // The minimal account shape `fetchAuthUsersById` returns; only the
+  // metadata and the email are read.
+  const authUser = (id: string, displayName: string | null, email: string | null): User =>
+    ({
+      id,
+      email,
+      user_metadata: displayName ? { display_name: displayName } : {},
+    }) as unknown as User;
+
+  const spec = prepareSmartAssign({
+    projectName: "minddy",
+    issue: {
+      title: "Where does this go?",
+      description: "A routing question for the team.",
+      priority: "high",
+      effort: null,
+    },
+    memberIds: ["user-owner", "user-dev", "user-ghost"],
+    ownerId: "user-owner",
+    rules: { "user-dev": "Everything about the tests" },
+    authUsers: new Map([
+      ["user-owner", authUser("user-owner", "Clément", "clement@example.com")],
+      ["user-dev", authUser("user-dev", null, "ada@example.com")],
+    ]),
+    categoryNames: ["Bug", "Technique"],
+  });
+
+  it("resolves the team into the spec: names, owner mark, raw rules", () => {
+    expect(spec.state.members).toEqual([
+      { id: "user-owner", name: "Clément", owner: true, rule: null },
+      { id: "user-dev", name: "ada", owner: false, rule: "Everything about the tests" },
+      // An account missing from the resolution must never crash the spec —
+      // it degrades to the generic label, like the LLM pass always saw it.
+      { id: "user-ghost", name: "User", owner: false, rule: null },
+    ]);
+  });
+
+  it("joins the category names the caller resolved", () => {
+    expect(spec.state.issue).toMatchObject({
+      title: "Where does this go?",
+      description: "A routing question for the team.",
+      categories: "Bug, Technique",
+      priority: "high",
+    });
+  });
+
+  it("offers exactly the caller's team as the user_id options", () => {
+    const question = spec.questions[0];
+    expect(question.key).toBe("user_id");
+    expect(question.kind === "single_choice" && question.options.map((o) => o.value)).toEqual([
+      "user-owner",
+      "user-dev",
+      "user-ghost",
+    ]);
+    expect(validateDecisionSpec(spec)).toBe(true);
+  });
+
+  it("replays the existing pass verbatim from the same members", () => {
+    expect(spec.llm.toolName).toBe("choose_assignee");
+    expect(spec.llm.parameters).toEqual(
+      buildSmartAssignSpec({
+        projectName: "minddy",
+        issue: {
+          title: "Where does this go?",
+          description: "A routing question for the team.",
+          categories: "Bug, Technique",
+          priority: "high",
+          effort: null,
+        },
+        members: spec.state.members as never,
+      }).llm.parameters
+    );
+    expect(spec.llm.userMessage).toContain("user-ghost");
   });
 });
 

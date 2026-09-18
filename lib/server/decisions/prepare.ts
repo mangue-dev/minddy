@@ -42,6 +42,9 @@ import {
   smartAssignParameters,
   type SmartAssignMember,
 } from "@/lib/server/smart-assign";
+import { toNamed } from "@/lib/server/auth-users";
+import { displayName } from "@/lib/display-name";
+import type { User } from "@supabase/supabase-js";
 import type { DecisionOption, DecisionQuestion, DecisionSpec } from "@/lib/server/decisions/types";
 
 /**
@@ -209,6 +212,56 @@ export function buildSmartAssignSpec(input: {
       userMessage: buildSmartAssignUserMessage(issue, buildSmartAssignMemberLines(members)),
     },
   };
+}
+
+/**
+ * SMART ASSIGN — the spec, from the rows the caller fetched (`runSmartAssign`
+ * in `lib/server/smart-assign.ts`): the team resolved from Supabase Auth
+ * (`fetchAuthUsersById`), the issue's category names, the owner-written
+ * rules. One member line per teammate (name, `[owner]` mark, raw rule), the
+ * issue capped to the same ceilings as the LLM prompt — the assembly the
+ * pre-decision pass used to build inline.
+ *
+ * The member order is the caller's (owner first, then members) and is what
+ * both the structured state and the `user_id` option list keep — the
+ * `choose_assignee` enum is rebuilt from the same list, so both engines see
+ * the exact same electorate.
+ */
+export function prepareSmartAssign(input: {
+  projectName: string;
+  issue: {
+    title: string;
+    description: string | null;
+    priority: string | null;
+    effort: string | null;
+  };
+  /** Owner first, then members — the caller's team, in claim order. */
+  memberIds: string[];
+  ownerId: string;
+  /** Owner-written rules, keyed by member id (raw — trimmed downstream). */
+  rules: Record<string, string>;
+  /** Resolved accounts, from `fetchAuthUsersById(service, memberIds)`. */
+  authUsers: Map<string, User>;
+  /** The issue's category names, already resolved by the caller. */
+  categoryNames: string[];
+}): DecisionSpec {
+  const members: SmartAssignMember[] = input.memberIds.map((id) => ({
+    id,
+    name: displayName(toNamed(input.authUsers.get(id))),
+    owner: id === input.ownerId,
+    rule: input.rules[id] ?? null,
+  }));
+  return buildSmartAssignSpec({
+    projectName: input.projectName,
+    issue: {
+      title: input.issue.title,
+      description: input.issue.description,
+      categories: input.categoryNames.join(", "),
+      priority: input.issue.priority,
+      effort: input.issue.effort,
+    },
+    members,
+  });
 }
 
 /**
