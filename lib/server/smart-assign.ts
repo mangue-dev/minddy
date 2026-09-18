@@ -253,6 +253,78 @@ async function claimForSmartAssign(
   return chosen;
 }
 
+/** One team member as the AI pass sees them: resolved name, owner mark and
+ * the owner-written rule (raw — the builders trim it). The pure prompt
+ * builders below and the decision layer (`lib/server/decisions/prepare.ts`)
+ * both consume this shape. */
+export interface SmartAssignMember {
+  id: string;
+  name: string;
+  owner: boolean;
+  rule: string | null;
+}
+
+/** The member block of the prompt: one line per member, rule included. */
+export function buildSmartAssignMemberLines(members: SmartAssignMember[]): string {
+  return members
+    .map((member) => {
+      const owner = member.owner ? " [owner]" : "";
+      const rule = member.rule?.trim();
+      return `- ${member.name} (user_id: ${member.id})${owner}\n  Rule: ${rule || "(no rule)"}`;
+    })
+    .join("\n");
+}
+
+/** The system prompt. Rules first: the per-member written rules are what
+ * makes the choice possible, names only break ties. */
+export function buildSmartAssignSystemPrompt(projectName: string): string {
+  return `You are Smart Assign, minddy's automatic issue router for the project "${projectName}".
+A new issue needs an owner. Choose the ONE team member best suited to handle it and call choose_assignee.
+
+Rules:
+- You MUST call choose_assignee with exactly one user_id from the member list. Never refuse, never reply in plain text.
+- Each member may have an assignment rule: free text written by the project owner describing the kind of tasks they should get (any language). Match the issue against these rules first.
+- Use the issue's title, description and categories to identify the type of work; priority and effort are tiebreakers only.
+- A member without a rule can still be chosen if nothing else matches better.
+- If nothing clearly matches, pick the project owner.`;
+}
+
+/** The user message: the issue to route, then the members it can route to. */
+export function buildSmartAssignUserMessage(
+  issue: {
+    title: string;
+    description: string | null;
+    categories: string;
+    priority: string | null;
+    effort: string | null;
+  },
+  memberLines: string
+): string {
+  const description =
+    issue.description && issue.description.trim()
+      ? issue.description.slice(0, MAX_DESCRIPTION_CHARS)
+      : "(none)";
+  return `## Issue
+Title: ${issue.title}
+Description: ${description}
+Categories: ${issue.categories || "None"}
+Priority: ${issue.priority ?? "none"}
+Effort: ${issue.effort ?? "—"}
+
+## Members
+${memberLines}`;
+}
+
+/** The tool schema: the model MUST pick a user_id from the enum. */
+export function smartAssignParameters(memberIds: string[]): Record<string, unknown> {
+  return {
+    type: "object",
+    properties: { user_id: { type: "string", enum: memberIds } },
+    required: ["user_id"],
+    additionalProperties: false,
+  };
+}
+
 /**
  * CATCH-UP (cron `/api/cron/smart-assign`): tickets that a
  * trigger should have assigned and which remained without anyone.
@@ -421,54 +493,37 @@ async function chooseAssigneeViaAI({
     ]);
     const model = resolveFromValues("smart_assign_model", modelCfg).model;
 
-    const memberLines = memberIds
-      .map((id) => {
-        const name = displayName(toNamed(authUsers.get(id)));
-        const owner = id === ownerId ? " [owner]" : "";
-        const rule = rules[id]?.trim();
-        return `- ${name} (user_id: ${id})${owner}\n  Rule: ${rule || "(no rule)"}`;
-      })
-      .join("\n");
+    const members: SmartAssignMember[] = memberIds.map((id) => ({
+      id,
+      name: displayName(toNamed(authUsers.get(id))),
+      owner: id === ownerId,
+      rule: rules[id] ?? null,
+    }));
+    const memberLines = buildSmartAssignMemberLines(members);
     const categories = (categoryRows ?? [])
       .map((r) => (r.categories as { name?: string } | null)?.name)
       .filter(Boolean)
       .join(", ");
 
-    const systemPrompt = `You are Smart Assign, minddy's automatic issue router for the project "${projectName}".
-A new issue needs an owner. Choose the ONE team member best suited to handle it and call choose_assignee.
-
-Rules:
-- You MUST call choose_assignee with exactly one user_id from the member list. Never refuse, never reply in plain text.
-- Each member may have an assignment rule: free text written by the project owner describing the kind of tasks they should get (any language). Match the issue against these rules first.
-- Use the issue's title, description and categories to identify the type of work; priority and effort are tiebreakers only.
-- A member without a rule can still be chosen if nothing else matches better.
-- If nothing clearly matches, pick the project owner.`;
-
-    const description =
-      typeof issue.description === "string" && issue.description.trim()
-        ? issue.description.slice(0, MAX_DESCRIPTION_CHARS)
-        : "(none)";
-    const userMessage = `## Issue
-Title: ${issue.title as string}
-Description: ${description}
-Categories: ${categories || "None"}
-Priority: ${(issue.priority as string) ?? "none"}
-Effort: ${(issue.effort as string) ?? "—"}
-
-## Members
-${memberLines}`;
+    const systemPrompt = buildSmartAssignSystemPrompt(projectName);
+    const userMessage = buildSmartAssignUserMessage(
+      {
+        title: issue.title as string,
+        description:
+          typeof issue.description === "string" ? issue.description : null,
+        categories,
+        priority: (issue.priority as string) ?? null,
+        effort: (issue.effort as string) ?? null,
+      },
+      memberLines
+    );
 
     const args = await forcedToolCall(
       model,
       systemPrompt,
       userMessage,
       "choose_assignee",
-      {
-        type: "object",
-        properties: { user_id: { type: "string", enum: memberIds } },
-        required: ["user_id"],
-        additionalProperties: false,
-      },
+      smartAssignParameters(memberIds),
       {
         xTitle: "Smart Assign (minddy)",
         logPrefix: "[smart-assign]",
