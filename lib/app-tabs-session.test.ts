@@ -235,6 +235,39 @@ describe("application tab sessions", () => {
     expect(rows().find((row) => row.id === admin.id)?.href).toBe("/pull-requests?pr=y");
     session.dispose();
   });
+  it("restores a reload whose URL carries an anchor the memory lacks", async () => {
+    // In-page anchors do not re-arm route sync, so the remembered destination
+    // can lack the hash the reload lands on. That is not a deep link: the
+    // remembered tab comes back, the first row keeps its own href, and the
+    // anchor survives in the restored destination.
+    const admin = { ...createHomeTab("owner"), href: "/admin" };
+    const wiki = { ...createHomeTab("owner", undefined, 1), href: "/projects/p1/pages/pg1?entry=e1" };
+    const { session, transport, navigate, rows } = setup([admin, wiki]);
+    await session.initialize("/projects/p1/pages/pg1?entry=e1#usage", { id: wiki.id, href: wiki.href });
+    expect(session.getSnapshot().activeId).toBe(wiki.id);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(rows().find((row) => row.id === admin.id)?.href).toBe("/admin");
+    // The fresher address (with the anchor) becomes the tab's destination.
+    await session.retry();
+    expect(transport.patch).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: wiki.id }),
+      { href: "/projects/p1/pages/pg1?entry=e1#usage" },
+    );
+    session.dispose();
+  });
+  it("restores the matching tab when the remembered row was closed elsewhere", async () => {
+    // The memory names a tab another window has since closed: the row that
+    // still displays the remembered page stands in for it, instead of letting
+    // the reload grind the first row under the load URL.
+    const admin = { ...createHomeTab("owner"), href: "/admin" };
+    const board = { ...createHomeTab("owner", undefined, 1), href: "/all?view=x" };
+    const { session, transport, rows } = setup([admin, board]);
+    await session.initialize("/all?view=x", { id: "closed-elsewhere", href: "/all?view=x" });
+    expect(session.getSnapshot().activeId).toBe(board.id);
+    expect(transport.patch).not.toHaveBeenCalled();
+    expect(rows().find((row) => row.id === admin.id)?.href).toBe("/admin");
+    session.dispose();
+  });
   it("restores every surface whose selection is kept out of the address", async () => {
     // The same prefix rule must hold wherever a page publishes the href that
     // reconstructs it while cleaning its address: the boards consume ?view=,
