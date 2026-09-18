@@ -112,7 +112,7 @@ vi.mock("@/lib/server/oauth/clients", async (importOriginal) => ({
 const { validateAuthorizeRequest } = await import(
   "@/lib/server/oauth/authorize-validation"
 );
-const { rotateRefreshToken, handleRefreshReuse } = await import(
+const { rotateRefreshToken, revokeGrantForReuse } = await import(
   "@/lib/server/oauth/grants"
 );
 const { selectClientsWithoutGrants } = await import("@/lib/server/oauth/clients");
@@ -188,6 +188,8 @@ describe("authorization request: no redirect on protocol error", () => {
 
 describe("refresh token bound to its client", () => {
   const TOKEN = "mdyrt_secret";
+  /** 64 hex chars — the sha256 fingerprint the actor api_keys row carries. */
+  const ACTOR_KEY_HASH = "ab".repeat(32);
   const FUTURE = new Date(Date.now() + 3600_000).toISOString();
 
   beforeEach(() => {
@@ -200,32 +202,79 @@ describe("refresh token bound to its client", () => {
         scope: "minddy",
         refresh_token_hash: sha256Hex(TOKEN),
         refresh_token_expires_at: FUTURE,
+        access_token_expires_at: FUTURE,
         prev_refresh_token_hash: null,
         revoked_at: null,
+        api_keys: { key_hash: ACTOR_KEY_HASH, revoked_at: null },
       },
     ];
+    db.api_keys = [{ id: "key-1", revoked_at: null }];
   });
 
   it("exchanges the token for the client that obtained it", async () => {
-    const pair = await rotateRefreshToken(TOKEN, "cli_legit");
-    expect(pair?.scope).toBe("minddy");
+    const result = await rotateRefreshToken(TOKEN, "cli_legit");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.pair.scope).toBe("minddy");
+    // The successor is stored, and the rotated-away token is remembered as
+    // the N-1 one.
+    expect(db.oauth_grants[0].refresh_token_hash).toBe(
+      sha256Hex(result.pair.refreshToken)
+    );
+    expect(db.oauth_grants[0].prev_refresh_token_hash).toBe(sha256Hex(TOKEN));
   });
 
   it("rejects the same token presented by another client", async () => {
-    expect(await rotateRefreshToken(TOKEN, "cli_attacker")).toBeNull();
+    const result = await rotateRefreshToken(TOKEN, "cli_attacker");
+    expect(result.ok).toBe(false);
     // And above all: the line has not moved. A refusal which would still have
     // rotated the token would disconnect the legitimate client.
     expect(updateLog).toHaveLength(0);
     expect(db.oauth_grants[0].refresh_token_hash).toBe(sha256Hex(TOKEN));
   });
 
-  it("a replay revocation remains with the affected client", async () => {
+  it("a replay by another client never revokes the grant", async () => {
     db.oauth_grants[0].prev_refresh_token_hash = sha256Hex("mdyrt_old");
-    expect(await handleRefreshReuse("mdyrt_old", "cli_attacker")).toBe(false);
+    const result = await rotateRefreshToken("mdyrt_old", "cli_attacker");
+    expect(result.ok).toBe(false);
     expect(db.oauth_grants[0].revoked_at ?? null).toBeNull();
+  });
 
-    expect(await handleRefreshReuse("mdyrt_old", "cli_legit")).toBe(true);
+  // MIN-558: MCP clients fly several requests in parallel, and more than one
+  // can cross the access-token expiry and refresh with the same token. The
+  // successor being deterministic, every racer must receive the SAME pair —
+  // nobody is left holding an orphan token, and the grant survives.
+  it("concurrent double refresh converges on the same pair without revoking", async () => {
+    const first = await rotateRefreshToken(TOKEN, "cli_legit");
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+
+    const second = await rotateRefreshToken(TOKEN, "cli_legit");
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+
+    expect(second.pair.refreshToken).toBe(first.pair.refreshToken);
+    expect(db.oauth_grants[0].refresh_token_hash).toBe(
+      sha256Hex(first.pair.refreshToken)
+    );
+    expect(db.oauth_grants[0].revoked_at ?? null).toBeNull();
+  });
+
+  it("a replay outside the grace window revokes the grant", async () => {
+    // The last rotation stamped access_token_expires_at with its own time +
+    // the access TTL: put it far enough in the past to be outside the window.
+    db.oauth_grants[0].prev_refresh_token_hash = sha256Hex("mdyrt_old");
+    db.oauth_grants[0].access_token_expires_at = new Date(
+      Date.now() - 10 * 60_000 + 30 * 24 * 3600_000
+    ).toISOString();
+
+    const result = await rotateRefreshToken("mdyrt_old", "cli_legit");
+    expect(result.ok).toBe(false);
+    if (result.ok || result.reason !== "reuse") return;
+
+    await revokeGrantForReuse({ id: result.grant.id, apiKeyId: result.grant.apiKeyId });
     expect(db.oauth_grants[0].revoked_at).toBeTruthy();
+    expect(db.api_keys[0].revoked_at).toBeTruthy();
   });
 });
 

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 /**
  * OAuth server crypto primitives. All secrets (codes, tokens) are
@@ -17,6 +17,39 @@ export const CLIENT_ID_PREFIX = "mdyc_";
 /** sha256 hex — the only ever persisted form of a secret. */
 export function sha256Hex(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+/** Domain separation for the refresh-token successor derivation (MIN-558). */
+const REFRESH_SUCCESSOR_INFO = "minddy:oauth:refresh-successor:v1";
+
+/**
+ * Deterministic successor of a refresh token (MIN-558).
+ *
+ * Refresh rotation normally mints a random token. But MCP clients fire
+ * concurrent requests, and several of them can cross the access-token expiry
+ * at the same moment and refresh with the SAME token. With a random
+ * successor, the loser of the rotation is left holding an orphan token that
+ * can never authenticate again — and the winner's successor makes every other
+ * racer's token permanently stale. With a DETERMINISTIC successor, every
+ * racer presenting the same token receives the same pair: they converge.
+ *
+ * The derivation is keyed by the grant's actor `api_keys.key_hash` — a secret
+ * generated at grant creation, never revealed, stable for the grant's life.
+ * Someone holding only the presented token cannot compute the successor
+ * (the HMAC key is server-side data), and someone holding only the database
+ * cannot invert the hashes. Presenting the token still grants exactly one
+ * step forward: replaying a rotated token remains detectable, per
+ * RFC 9700 §4.14.2.
+ */
+export function deriveRefreshSuccessor(
+  actorKeyHashHex: string,
+  presentedRefreshToken: string
+): { value: string; hash: string } {
+  const mac = createHmac("sha256", Buffer.from(actorKeyHashHex, "hex"))
+    .update(`${REFRESH_SUCCESSOR_INFO}:${presentedRefreshToken}`)
+    .digest("base64url");
+  const value = REFRESH_TOKEN_PREFIX + mac;
+  return { value, hash: sha256Hex(value) };
 }
 
 export function generateSecret(prefix: string): { value: string; hash: string } {
