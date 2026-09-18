@@ -13,6 +13,7 @@ const marks: Record<string, BrandMark> = {
   slack: { logo: "/mcp-providers/slack.png" },
   figma: { logo: "/mcp-providers/figma.svg" },
   asana: { logo: "/mcp-providers/asana.ico" },
+  posthog: { logo: "/mcp-providers/posthog.svg" },
   sentry: { logo: "/mcp-providers/sentry.ico" },
   supabase: { logo: "/mcp-providers/supabase.png" },
   vercel: { logo: "/mcp-providers/vercel.png" },

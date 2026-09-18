@@ -7,7 +7,7 @@ import {
   type OAuthClientProvider,
 } from "@modelcontextprotocol/client";
 import { getServiceClient } from "@/lib/supabase-service";
-import { canonicalAppOrigin } from "./app-origin";
+import { oauthAppOrigin } from "./app-origin";
 import { assertPublicHttpUrl } from "./safe-fetch";
 import { encryptMcpToken, decryptMcpToken } from "./mcp-credentials";
 import { mcpFetch, MCP_TIMEOUT_MS } from "./mcp-http";
@@ -23,7 +23,7 @@ type OAuthData = {
   scope?: string;
 };
 export const mcpOAuthCallback = () =>
-  `${canonicalAppOrigin()}/api/account/mcp-connections/oauth/callback`;
+  `${oauthAppOrigin()}/api/account/mcp-connections/oauth/callback`;
 
 function readData(encrypted: string | null): OAuthData {
   return encrypted
@@ -181,6 +181,21 @@ export async function startMcpOAuth(
   delete data.tokens;
   delete data.verifier;
   delete data.discovery;
+  // A dynamically registered client is bound to the redirect_uris it was
+  // registered with. When the app origin moved since (preview ↔ production,
+  // domain change), the provider rejects the next authorization with
+  // "redirect_uri is not registered for this client" — drop the client so
+  // discovery registers a fresh one bound to the current callback. A
+  // hand-configured client (pasted app credentials) carries no redirect_uris
+  // and is kept.
+  const registeredRedirects = (
+    data.client as { redirect_uris?: unknown } | undefined
+  )?.redirect_uris;
+  if (
+    Array.isArray(registeredRedirects) &&
+    !registeredRedirects.includes(mcpOAuthCallback())
+  )
+    delete data.client;
   const fetchFn = mcpFetch(AbortSignal.timeout(MCP_TIMEOUT_MS));
   const headers = new Headers(
     connection.headers_encrypted

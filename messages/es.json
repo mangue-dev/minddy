@@ -6104,6 +6104,7 @@
     "reconnect": "Reconectar",
     "oauthConnected": "Cuenta conectada",
     "oauthFailed": "La conexión no se completó. Intenta iniciar sesión de nuevo.",
+    "openingSignIn": "Abriendo la página de inicio de sesión…",
     "authentication": "Autenticación",
     "oauth": "Iniciar sesión con OAuth",
     "bearer": "Token Bearer",
