@@ -456,6 +456,7 @@
     "historyFeatureRoutineCompute": "Machine de la routine",
     "historyFeatureImportMap": "Correspondance des colonnes d'un import",
     "historyFeatureBriefSplit": "Découpe d'un brief",
+    "historyFeatureJevDecision": "Décision IA",
     "agentsGateTitle": "Le travail avec Numo n’est pas disponible",
     "agentsGateDescription": "Le travail avec Numo n’est pas activé sur ce compte.",
     "agentsGateCta": "Voir les plans",
@@ -4217,6 +4218,14 @@
       },
       "merge_message_model": {
         "label": "Modèle des commits de fusion générés"
+      },
+      "jev_decisions_enabled": {
+        "label": "Décisions Jev",
+        "desc": "Active ou coupe la couche de décision IA partout d'un coup. Coupée, chaque appel de décision retombe sur sa passe LLM. Kill-switch d'incident, pas un réglage produit."
+      },
+      "jev_model": {
+        "label": "Modèle de décisions Jev",
+        "desc": "Le modèle System One qui répond à des questions structurées (catégories, triage, relecture). Rejoint via l'endpoint decisions d'OpenRouter, facturé sur les tokens d'entrée seulement."
       }
     },
     "finance": {
@@ -4297,7 +4306,8 @@
         "routine_compute": "Sandbox des routines",
         "import_map": "Correspondance d'un import",
         "brief_split": "Découpe d'un brief",
-        "landing_demo": "Démo publique de la dictée"
+        "landing_demo": "Démo publique de la dictée",
+        "jev_decision": "Décisions Jev"
       },
       "stripeHidden": "Les revenus Stripe sont masqués : la facturation n'est pas connectée sur cette instance."
     },

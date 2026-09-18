@@ -456,6 +456,7 @@
     "historyFeatureRoutineCompute": "Máquina de rotina",
     "historyFeatureImportMap": "Correspondência de coluna de importação",
     "historyFeatureBriefSplit": "Decomposição de briefing",
+    "historyFeatureJevDecision": "Decisão de IA",
     "agentsGateTitle": "O trabalho com o Numo não está disponível",
     "agentsGateDescription": "O trabalho com o Numo não está ativado nesta conta.",
     "agentsGateCta": "Ver planos",
@@ -4217,6 +4218,14 @@
       },
       "merge_message_model": {
         "label": "Modelo para commits de mesclagem gerados"
+      },
+      "jev_decisions_enabled": {
+        "label": "Decisões Jev",
+        "desc": "Ativa ou desliga a camada de decisão de IA em todos os lugares de uma vez. Desligada, cada chamada de decisão volta para sua passagem LLM. Interruptor de emergência, não uma configuração de produto."
+      },
+      "jev_model": {
+        "label": "Modelo de decisões Jev",
+        "desc": "O modelo System One que responde perguntas estruturadas (categorias, triagem, revisão). Acessado pelo endpoint decisions do OpenRouter, cobrado apenas pelos tokens de entrada."
       }
     },
     "finance": {
@@ -4297,7 +4306,8 @@
         "routine_compute": "Sandbox de rotina",
         "import_map": "Correspondência de coluna de importação",
         "brief_split": "Breve detalhamento",
-        "landing_demo": "Demonstração de ditado público"
+        "landing_demo": "Demonstração de ditado público",
+        "jev_decision": "Decisões Jev"
       },
       "stripeHidden": "A receita da Stripe está oculta: o faturamento não está conectado a esta instância."
     },

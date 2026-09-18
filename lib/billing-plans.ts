@@ -207,6 +207,10 @@ export const BILLABLE_FEATURES = [
   // another invoice line. See the `routines` segment below.
   "routine_code",
   "routine_compute",
+  // Jev decisions (MIN-561): the System One calls of the AI decision layer,
+  // priced on input tokens only. Billed to the user like the automations it
+  // backs, so it joins their segment below.
+  "jev_decision",
 ] as const;
 
 export type BillableFeature = (typeof BILLABLE_FEATURES)[number];
@@ -289,7 +293,7 @@ export const USAGE_SEGMENTS: UsageSegment[] = [
   // single product hid the other half of the line.
   {
     id: "automations",
-    features: ["smart_assign", "smart_fill"],
+    features: ["smart_assign", "smart_fill", "jev_decision"],
     barClass: "bg-fuchsia-500",
   },
 ];

@@ -73,7 +73,16 @@ export type AiFeature =
  * “Agents”. The subagents of a routine run bill themselves with their mother.
  */
   | "routine_code"
-  | "routine_compute";
+  | "routine_compute"
+  /**
+   * A Jev decision (MIN-561): one call to the System One model that answers
+   * typed questions over a structured state, priced on input tokens only
+   * (output is free). Its own feature because the decision layer (MIN-562)
+   * will back several automations, and their Jev share must stay readable.
+   * The usage bar files it under “Automations” (`USAGE_SEGMENTS`), as its
+   * callers are the same gestures.
+   */
+  | "jev_decision";
 
 /** Form of the `usage` object returned by OpenRouter (chat / embeddings / audio). */
 export interface OpenRouterUsage {

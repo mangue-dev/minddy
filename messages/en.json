@@ -456,6 +456,7 @@
     "historyFeatureRoutineCompute": "Routine machine",
     "historyFeatureImportMap": "Import column matching",
     "historyFeatureBriefSplit": "Brief broken down",
+    "historyFeatureJevDecision": "AI decision",
     "agentsGateTitle": "Numo work is unavailable",
     "agentsGateDescription": "Numo work is not enabled for this account.",
     "agentsGateCta": "View plans",
@@ -4217,6 +4218,14 @@
       },
       "merge_message_model": {
         "label": "Model for generated merge commits"
+      },
+      "jev_decisions_enabled": {
+        "label": "Jev decisions",
+        "desc": "Turns the AI decision layer on or off everywhere at once. Off, every decision call falls back to its LLM pass. Incident kill-switch, not a product setting."
+      },
+      "jev_model": {
+        "label": "Jev decisions model",
+        "desc": "The System One model answering structured questions (categories, triage, review). Reached through OpenRouter's decisions endpoint, priced on input tokens only."
       }
     },
     "finance": {
@@ -4297,7 +4306,8 @@
         "routine_compute": "Routine sandbox",
         "import_map": "Import column matching",
         "brief_split": "Brief breakdown",
-        "landing_demo": "Public dictation demo"
+        "landing_demo": "Public dictation demo",
+        "jev_decision": "Jev decisions"
       },
       "stripeHidden": "Stripe revenue is hidden: billing is not connected on this instance."
     },
