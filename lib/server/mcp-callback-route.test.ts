@@ -23,6 +23,7 @@ vi.mock("@/lib/server/git/callback-session", () => ({
 
 vi.mock("@/lib/server/app-origin", () => ({
   canonicalAppOrigin: () => "https://www.minddy.app",
+  oauthAppOrigin: () => "https://www.minddy.app",
 }));
 
 vi.mock("@/lib/server/mcp-oauth", () => ({

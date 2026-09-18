@@ -108,6 +108,14 @@ export const MCP_PRESETS: McpPreset[] = [
     docs: "https://developers.asana.com/docs/integrating-with-asanas-mcp-server",
   },
   {
+    id: "posthog",
+    name: "PostHog",
+    url: "https://mcp.posthog.com/mcp",
+    auth: "oauth",
+    setup: "standard",
+    docs: "https://posthog.com/docs/model-context-protocol",
+  },
+  {
     id: "canva",
     name: "Canva",
     url: "https://mcp.canva.com/mcp",

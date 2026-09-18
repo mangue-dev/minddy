@@ -60,6 +60,9 @@ export function AccountMcpClients() {
   const [search, setSearch] = useState("");
   const [preset, setPreset] = useState<McpPreset | null>(null);
   const [busy, setBusy] = useState(false);
+  // The desktop handoff lands here to start OAuth in this browser session;
+  // discovery and registration can take a few seconds, so the wait is shown.
+  const [autoStarting, setAutoStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const errorText = (err: unknown) => {
@@ -118,6 +121,7 @@ export function AccountMcpClients() {
       toast.error(t("errorOAuth"));
       return;
     }
+    setAutoStarting(true);
     setBusy(true);
     void request(
       `${endpoint}/${connectionId}/authorize`,
@@ -129,7 +133,10 @@ export function AccountMcpClients() {
         window.location.replace(result.url);
       })
       .catch(() => toast.error(t("errorOAuth")))
-      .finally(() => setBusy(false));
+      .finally(() => {
+        setBusy(false);
+        setAutoStarting(false);
+      });
   }, [data, t]);
 
   const closeDialog = () => {
@@ -267,6 +274,11 @@ export function AccountMcpClients() {
   const content = (
     <section className="space-y-5" aria-label={t("title")}>
       <p className="text-sm text-muted-foreground">{t("routines")}</p>
+      {autoStarting && (
+        <p className="text-sm text-muted-foreground" role="status">
+          {t("openingSignIn")}
+        </p>
+      )}
       {isPending && (
         <p className="text-sm text-muted-foreground">{t("loading")}</p>
       )}

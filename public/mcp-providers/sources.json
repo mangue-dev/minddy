@@ -128,5 +128,11 @@
     "asset": "https://brand.github.com/GitHub_Logos.zip",
     "archiveMember": "GitHub Logos/SVG/GitHub_Invertocat_White.svg",
     "verified": "2026-09-04"
+  },
+  {
+    "file": "posthog.svg",
+    "source": "https://posthog.com",
+    "asset": "https://posthog.com/favicon.svg",
+    "verified": "2026-09-18"
   }
 ]

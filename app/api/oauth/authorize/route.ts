@@ -9,7 +9,7 @@ import { oauthIssuer } from "@/lib/server/oauth/issuer";
 import { ensureGrantWithActorKey } from "@/lib/server/oauth/grants";
 import { createAuthorizationCode } from "@/lib/server/oauth/codes";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
-import { canonicalAppOrigin } from "@/lib/server/app-origin";
+import { oauthAppOrigin } from "@/lib/server/app-origin";
 
 /**
  * Consent decision (POST of the /oauth/authorize form). Session
@@ -118,8 +118,9 @@ export async function POST(request: NextRequest) {
 
   // “Successful connection” interstitial (minddy design): it validates the
   // `continue` against client redirect_uris then redirects to the
-  // callback which carries the code.
-  const successUrl = new URL("/oauth/success", canonicalAppOrigin());
+  // callback which carries the code. Same STABLE origin as the issuer:
+  // the consent browser holds its session there, not on a deployment URL.
+  const successUrl = new URL("/oauth/success", oauthAppOrigin());
   successUrl.searchParams.set("client_id", client.client_id);
   successUrl.searchParams.set("continue", buildCallbackUrl(redirectUri, { code, state }));
   return NextResponse.redirect(successUrl, { status: 303, headers: NO_STORE });

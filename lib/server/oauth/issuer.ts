@@ -1,6 +1,6 @@
 import "server-only";
 
-import { canonicalAppOrigin } from "@/lib/server/app-origin";
+import { oauthAppOrigin } from "@/lib/server/app-origin";
 
 /**
  * Coming from the authorization server (RFC 8414) — and by extension the basis of
@@ -12,11 +12,10 @@ import { canonicalAppOrigin } from "@/lib/server/app-origin";
  * retrieve the metadata with the desired header to be announced a
  * `authorization_endpoint` and a `token_endpoint` at home, under our name.
  *
- * `OAUTH_ISSUER` first — the explicit escape (dev tunnel, test domain
- *) — then the canonical origin of the app
- * ([app-origin.ts](../app-origin.ts)), which carries the other three cases and serves
- * also for invitation links: it's the same question, "which address is
- * ours", and it deserves only one answer.
+ * `OAUTH_ISSUER` first — the explicit escape (dev tunnel, test domain) —
+ * then the STABLE OAuth origin of the app ([app-origin.ts](../app-origin.ts)):
+ * the issuer is registered, not discovered, so it must not follow the
+ * deployment URL across preview deploys.
  */
 export function oauthIssuer(): string {
   const explicit = process.env.OAUTH_ISSUER?.trim();
@@ -28,7 +27,7 @@ export function oauthIssuer(): string {
     }
   }
 
-  return canonicalAppOrigin();
+  return oauthAppOrigin();
 }
 
 /** Canonical URL of the protected MCP resource (RFC 8707 / 9728). */
