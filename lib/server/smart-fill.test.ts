@@ -1,10 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildSmartFillPrompt,
   sanitizeSmartFill,
+  smartFillAnswersToRaw,
+  runSmartFill,
   type SmartFillContext,
 } from "./smart-fill";
+import type { DecisionAnswers, DecisionOutcome } from "./decisions/types";
 
 /**
  * THE WHITELIST, trained on what a small model really renders.
@@ -146,5 +149,217 @@ describe("buildSmartFillPrompt", () => {
     const prompt = buildSmartFillPrompt("Neuf", { categories: [], objectives: [] });
     expect(prompt).toContain("leave category_ids empty");
     expect(prompt).toContain('objective_id must be "none"');
+  });
+});
+
+describe("smartFillAnswersToRaw", () => {
+  it("replays the answers under the tool-arguments shape", () => {
+    const raw = smartFillAnswersToRaw({
+      priority: { value: "high", probability: 0.9, confidence: 0.9 },
+      effort: { value: "none", probability: null, confidence: null },
+      category_ids: { value: ["cat-bug", "cat-tech"], probability: 0.8, confidence: 0.7 },
+      objective_id: { value: "obj-v2", probability: 0.9, confidence: 0.9 },
+    });
+    expect(raw).toEqual({
+      priority: "high",
+      effort: "none",
+      category_ids: ["cat-bug", "cat-tech"],
+      objective_id: "obj-v2",
+    });
+  });
+
+  it("leaves absent what the engine did not answer", () => {
+    expect(smartFillAnswersToRaw({})).toEqual({});
+    expect(
+      smartFillAnswersToRaw({ priority: { value: "low", probability: null, confidence: null } })
+    ).toEqual({ priority: "low" });
+  });
+
+  it("drops non-textual values and non-textual ids of a multi-choice", () => {
+    // Jev never produces these for those keys, but the adapter is tolerant on
+    // the shape and the sanitizer stays the judge of everything else.
+    const raw = smartFillAnswersToRaw({
+      priority: { value: 3, probability: null, confidence: null },
+      category_ids: {
+        value: ["cat-bug", 42, null] as unknown as string[],
+        probability: null,
+        confidence: null,
+      },
+    });
+    expect(raw).toEqual({ category_ids: ["cat-bug"] });
+  });
+});
+
+/**
+ * THE BRANCH (MIN-563) — `runSmartFill` through the decision layer.
+ *
+ * The runner and the gates are doubles; what is being pinned down is the
+ * AGREEMENT: the spec carries the gathered context, both engines' answers
+ * come out through the same sanitizer, and NOTHING — neither an engine down,
+ * nor a runner that throws — ever leaves the empty patch. `createIssueForProject`
+ * only knows this contract.
+ */
+
+const { getAppConfigValuesMock, hasUsageBudgetMock, runDecisionMock, fromMock } = vi.hoisted(() => ({
+  getAppConfigValuesMock: vi.fn<() => Promise<Record<string, string | null>>>(),
+  hasUsageBudgetMock: vi.fn<() => Promise<boolean>>(),
+  runDecisionMock: vi.fn<(spec: unknown, input: unknown) => Promise<DecisionOutcome | null>>(),
+  fromMock: vi.fn<(table: string) => unknown>(),
+}));
+
+vi.mock("@/lib/server/app-config", () => ({
+  getAppConfigValues: getAppConfigValuesMock,
+}));
+vi.mock("@/lib/server/usage", () => ({
+  hasUsageBudget: hasUsageBudgetMock,
+}));
+vi.mock("@/lib/server/decisions/runner", () => ({
+  runDecision: runDecisionMock,
+}));
+vi.mock("@/lib/supabase-service", () => ({
+  getServiceClient: () => ({ from: fromMock }),
+}));
+
+const DB_CATEGORIES = [
+  { id: "cat-bug", name: "Bug" },
+  { id: "cat-feat", name: "Feature" },
+];
+const DB_OBJECTIVES = [{ id: "obj-v2", name: "Refonte v2", status: "in_progress" }];
+
+/** A PostgREST select chain reduced to what `gatherContext` touches: the
+ * chained filters are ignored, the await resolves the rows of the table. */
+function queryReturning(rows: unknown[]): unknown {
+  const query: Record<string, unknown> = {};
+  query.select = () => query;
+  query.eq = () => query;
+  query.in = () => query;
+  query.then = (onFulfilled: (value: unknown) => unknown) =>
+    Promise.resolve({ data: rows, error: null }).then(onFulfilled);
+  return query;
+}
+
+function outcome(answers: DecisionAnswers, engine: DecisionOutcome["engine"] = "jev"): DecisionOutcome {
+  return { engine, answers, confidence: 0.9, fallbackReason: null };
+}
+
+describe("runSmartFill — decision layer", () => {
+  beforeEach(() => {
+    getAppConfigValuesMock.mockReset().mockResolvedValue({});
+    hasUsageBudgetMock.mockReset().mockResolvedValue(true);
+    runDecisionMock.mockReset().mockResolvedValue(null);
+    fromMock.mockReset().mockImplementation((table: string) =>
+      queryReturning(table === "categories" ? DB_CATEGORIES : DB_OBJECTIVES)
+    );
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  const run = () =>
+    runSmartFill({
+      projectId: "project-1",
+      projectName: "minddy",
+      actorId: "user-1",
+      title: "Fix the flaky test",
+      description: "It fails on CI once in five runs.",
+    });
+
+  it("passes through the runner and sanitizes the JEV answers like any other", async () => {
+    runDecisionMock.mockResolvedValue(
+      outcome({
+        priority: { value: "high", probability: 0.9, confidence: 0.9 },
+        effort: { value: "m", probability: 0.8, confidence: 0.8 },
+        category_ids: { value: ["cat-bug", "cat-inventée"], probability: 0.8, confidence: 0.7 },
+        objective_id: { value: "none", probability: 0.9, confidence: 0.9 },
+      })
+    );
+    await expect(run()).resolves.toEqual({
+      priority: "high",
+      effort: "m",
+      category_ids: ["cat-bug"],
+    });
+  });
+
+  it("passes through the runner and sanitizes the LLM answers the same way", async () => {
+    runDecisionMock.mockResolvedValue(
+      outcome(
+        {
+          priority: { value: "medium", probability: null, confidence: null },
+          effort: { value: "none", probability: null, confidence: null },
+        },
+        "llm"
+      )
+    );
+    await expect(run()).resolves.toEqual({ priority: "medium", effort: null });
+  });
+
+  it("builds the spec from the gathered context and bills THE ACTOR", async () => {
+    runDecisionMock.mockResolvedValue(null);
+    await run();
+    const [spec, input] = runDecisionMock.mock.calls[0] as [
+      { useCase: string; state: Record<string, unknown> },
+      Record<string, unknown>,
+    ];
+    expect(spec.useCase).toBe("smart_fill");
+    expect(spec.state).toMatchObject({
+      project: "minddy",
+      issue: { title: "Fix the flaky test" },
+      categories: DB_CATEGORIES,
+      objectives: DB_OBJECTIVES,
+    });
+    expect(input).toEqual({ billTo: { userId: "user-1" }, projectId: "project-1" });
+  });
+
+  it("leaves the patch empty when BOTH engines fail — the ticket is born as it was written", async () => {
+    runDecisionMock.mockResolvedValue(null);
+    await expect(run()).resolves.toEqual({});
+  });
+
+  it("leaves the patch empty when the outcome carries no usable answer", async () => {
+    runDecisionMock.mockResolvedValue(outcome({}));
+    await expect(run()).resolves.toEqual({});
+  });
+
+  it("skips everything when the flag is off — no budget read, no runner call", async () => {
+    getAppConfigValuesMock.mockResolvedValue({ smart_fill_enabled: "false" });
+    await expect(run()).resolves.toEqual({});
+    expect(hasUsageBudgetMock).not.toHaveBeenCalled();
+    expect(runDecisionMock).not.toHaveBeenCalled();
+  });
+
+  it("skips everything when the budget is dry — no runner call", async () => {
+    hasUsageBudgetMock.mockResolvedValue(false);
+    await expect(run()).resolves.toEqual({});
+    expect(runDecisionMock).not.toHaveBeenCalled();
+  });
+
+  it("never calls anyone without an actor: an expense that cannot be attributed is not incurred", async () => {
+    await expect(
+      runSmartFill({
+        projectId: "project-1",
+        projectName: "minddy",
+        actorId: null,
+        title: "Fix the flaky test",
+        description: null,
+      })
+    ).resolves.toEqual({});
+    expect(getAppConfigValuesMock).not.toHaveBeenCalled();
+  });
+
+  it("never calls anyone for an empty title", async () => {
+    await expect(
+      runSmartFill({
+        projectId: "project-1",
+        projectName: "minddy",
+        actorId: "user-1",
+        title: "   ",
+        description: null,
+      })
+    ).resolves.toEqual({});
+    expect(runDecisionMock).not.toHaveBeenCalled();
+  });
+
+  it("swallows a runner crash into the empty patch — the creation is never blocked", async () => {
+    runDecisionMock.mockRejectedValue(new Error("network down"));
+    await expect(run()).resolves.toEqual({});
+    expect(console.error).toHaveBeenCalled();
   });
 });

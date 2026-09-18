@@ -96,7 +96,14 @@ export function buildSmartFillSpec(input: {
         NO_EFFORT,
       ],
     },
-    {
+  ];
+  // A question with no option teaches nothing and fails the spec validation
+  // (`validateDecisionSpec` refuses an empty choice): with no category to
+  // classify into, the question is simply not asked — the patch carries no
+  // category field, exactly like an LLM answering an empty array. The other
+  // three questions always have an option (the enums, the "none" sentinels).
+  if (ctx.categories.length > 0) {
+    questions.push({
       key: "category_ids",
       kind: "multi_choice",
       label: "Which of this project's categories does the issue belong to?",
@@ -104,19 +111,19 @@ export function buildSmartFillSpec(input: {
         ctx.categories.slice(0, MAX_CONTEXT_ITEMS).map((c) => ({ value: c.id, label: c.name }))
       ),
       maxSelections: MAX_CATEGORIES_PER_ISSUE,
-    },
-    {
-      key: "objective_id",
-      kind: "single_choice",
-      label: "Which objective does the issue plainly belong to?",
-      options: [
-        ...choiceOptions(
-          ctx.objectives.slice(0, MAX_CONTEXT_ITEMS).map((o) => ({ value: o.id, label: o.name }))
-        ),
-        NO_OBJECTIVE,
-      ],
-    },
-  ];
+    });
+  }
+  questions.push({
+    key: "objective_id",
+    kind: "single_choice",
+    label: "Which objective does the issue plainly belong to?",
+    options: [
+      ...choiceOptions(
+        ctx.objectives.slice(0, MAX_CONTEXT_ITEMS).map((o) => ({ value: o.id, label: o.name }))
+      ),
+      NO_OBJECTIVE,
+    ],
+  });
   return {
     useCase: "smart_fill",
     state: {
