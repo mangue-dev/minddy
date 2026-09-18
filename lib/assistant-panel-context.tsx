@@ -18,6 +18,7 @@ import type {
   NumoIntent,
   AssistantPageContext,
 } from "@/lib/assistant-types";
+import type { PanelDisplayMode } from "@/components/assistant/panel-geometry";
 import type { ResourceInput } from "@/lib/types";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { trackEvent } from "@/lib/analytics";
@@ -58,6 +59,13 @@ export interface OpenAssistantOptions {
   pageContext?: AssistantPageContext;
   /** Provenance retained when an old caller still uses `open` directly. */
   intent?: Pick<NumoIntent, "source" | "action">;
+  /**
+   * Display mode the panel should open in. Absent = keep whatever mode the
+   * session is already in (the toolbar toggle stays authoritative). The home
+   * composer asks for `"expanded"`: a message sent from the dashboard is a
+   * work session, not a popover glance.
+   */
+  displayMode?: PanelDisplayMode;
 }
 
 export interface AssistantPanelContextValue {
@@ -98,8 +106,13 @@ export interface AssistantPanelContextValue {
   /** `ownerId` counts surfaces: several can be mounted at once. */
   setFabSuppressed: (suppressed: boolean, ownerId: string) => void;
   open: (opts?: OpenAssistantOptions) => void;
-  /** The common entry for every voluntary request to Numo. */
-  openIntent: (intent: NumoIntent) => void;
+  /** The common entry for every voluntary request to Numo. `opts` carries the
+      opening-time presentation choices (e.g. the home composer opens
+      fullscreen). */
+  openIntent: (
+    intent: NumoIntent,
+    opts?: { displayMode?: PanelDisplayMode },
+  ) => void;
   close: () => void;
   toggle: () => void;
   /** Called by the panel after consuming pendingOptions. */
@@ -180,7 +193,7 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openIntent = useCallback(
-    (intent: NumoIntent) => {
+    (intent: NumoIntent, opts?: { displayMode?: PanelDisplayMode }) => {
       open({
         projectId: intent.projectId,
         prompt: intent.prompt,
@@ -189,6 +202,7 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
         command: intent.command,
         attachments: intent.attachments,
         intent: { source: intent.source, action: intent.action },
+        displayMode: opts?.displayMode,
       });
     },
     [open],

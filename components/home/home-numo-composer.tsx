@@ -75,7 +75,9 @@ export function HomeNumoComposer() {
           mentions,
           command,
           attachments,
-        })
+          // A message sent from the dashboard is a work session, not a
+          // popover glance: the panel opens fullscreen, not compact.
+        }, { displayMode: "expanded" })
       }
     />
   );
