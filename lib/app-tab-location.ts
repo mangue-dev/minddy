@@ -5,7 +5,7 @@ const ROUTES = new Set([
 ]);
 const PROJECT_SECTIONS = new Set(["feedback", "objectives", "pages", "settings", "triage"]);
 const SELECTION_PARAMS = new Set([
-  "view", "objective", "tab", "open", "post", "routine", "pr", "entry",
+  "view", "objective", "family", "tab", "open", "post", "routine", "pr", "entry",
 ]);
 export const APP_TAB_MAX_HREF = 2000;
 

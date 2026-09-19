@@ -13,6 +13,7 @@ export function mentionAttrsFromOption(option: MentionOption) {
     seed: option.avatarSeed ?? null,
     color: option.color ?? null,
     icon: option.iconUrl ?? option.icon ?? null,
+    status: option.status ?? null,
   };
 }
 
@@ -27,6 +28,7 @@ export function mentionAttrsFromScanned(mention: ScannedMention) {
         seed: mention.member.avatar_seed ?? null,
         color: null,
         icon: null,
+        status: null,
       };
     case "issue":
       return {
@@ -36,6 +38,7 @@ export function mentionAttrsFromScanned(mention: ScannedMention) {
         seed: null,
         color: null,
         icon: null,
+        status: mention.issue.status,
       };
     case "page":
       return {
@@ -45,6 +48,7 @@ export function mentionAttrsFromScanned(mention: ScannedMention) {
         seed: null,
         color: null,
         icon: mention.page.icon,
+        status: null,
       };
     case "forge":
       // The login IS the mention; the portrait travels with the segment so
@@ -56,6 +60,7 @@ export function mentionAttrsFromScanned(mention: ScannedMention) {
         seed: null,
         color: null,
         icon: mention.avatarUrl,
+        status: null,
       };
     case "project":
       return {
@@ -65,6 +70,7 @@ export function mentionAttrsFromScanned(mention: ScannedMention) {
         seed: mention.project.avatarSeed,
         color: null,
         icon: mention.project.iconUrl,
+        status: null,
       };
     case "objective":
       return {
@@ -74,6 +80,7 @@ export function mentionAttrsFromScanned(mention: ScannedMention) {
         seed: null,
         color: mention.objective.color,
         icon: null,
+        status: null,
       };
     default:
       return {
@@ -83,6 +90,7 @@ export function mentionAttrsFromScanned(mention: ScannedMention) {
         seed: null,
         color: null,
         icon: null,
+        status: null,
       };
   }
 }

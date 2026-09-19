@@ -155,6 +155,9 @@ function mentionFromNode(node: HTMLElement): MentionOption | null {
         : { iconUrl: node.dataset.mentionIcon }
       : {}),
     ...(node.dataset.mentionColor ? { color: node.dataset.mentionColor } : {}),
+    ...(node.dataset.mentionStatus
+      ? { status: node.dataset.mentionStatus as MentionOption["status"] }
+      : {}),
   };
 }
 
@@ -169,6 +172,7 @@ function createMentionNode(option: MentionOption): HTMLSpanElement {
   const iconAttr = option.iconUrl ?? option.icon;
   if (iconAttr) pill.dataset.mentionIcon = iconAttr;
   if (option.color) pill.dataset.mentionColor = option.color;
+  if (option.status) pill.dataset.mentionStatus = option.status;
   pill.className = MENTION_SLOT_CLASS;
   return pill;
 }
@@ -853,6 +857,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           ...(option.avatarSeed ? { avatarSeed: option.avatarSeed } : {}),
           ...(option.color ? { color: option.color } : {}),
           ...(option.icon ? { icon: option.icon } : {}),
+          ...(option.status ? { status: option.status } : {}),
         });
       }
       return out;
@@ -1345,6 +1350,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               iconUrl={option.iconUrl}
               icon={option.icon}
               color={option.color}
+              status={option.status}
             />,
             el,
             // Two mentions of the SAME person in a message: the key takes

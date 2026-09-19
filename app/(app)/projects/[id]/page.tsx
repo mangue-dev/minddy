@@ -1,5 +1,6 @@
 "use client";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
+import { useOptionalAppTabs } from "@/lib/app-tabs-context";
 
 import {
   Suspense,
@@ -43,8 +44,14 @@ import { cycleCompletionPercent } from "@/lib/cycle";
 import { useBoardViews } from "@/lib/use-board-views";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { buildViewHref } from "@/lib/saved-view-href";
+import { boardViewTabHref } from "@/lib/board-view-tab";
 import { ME_ASSIGNEE, filterIssues, visibleStatuses } from "@/lib/view-filter";
-import { STATUSES, issueIdentifier, type IssueStatus } from "@/lib/issue-constants";
+import {
+  STATUSES,
+  isClosedStatus,
+  issueIdentifier,
+  type IssueStatus,
+} from "@/lib/issue-constants";
 import {
   useAssistantContext,
   useAssistantPanel,
@@ -91,8 +98,8 @@ import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
 import {
   familyBoardStatuses,
-  issueFamilyBoardExitHref,
   issueFamilyBoardHref,
+  issueFamilyParentId,
   issueParentIds,
   resolveIssueFamily,
 } from "@/lib/issue-family-board";
@@ -154,6 +161,7 @@ function ProjectBoard() {
   // cleanly (`off` renders no button at all).
   const smartTriageMode = project?.smart_triage_mode ?? "rules";
   const { open: openAssistant, openIntent } = useAssistantPanel();
+  const appTabs = useOptionalAppTabs();
 
   // Right-click "Add to cycle" (MIN-32) — the cycle is canonical on /all, but
   // picking work into your week from a project board must work too. The patch
@@ -177,10 +185,11 @@ function ProjectBoard() {
   const familyParentIds = useMemo(() => issueParentIds(issues), [issues]);
   const buildFamilyMenuActions = useCallback(
     (issue: Issue): ContextMenuAction[] => {
-      if (!familyParentIds.has(issue.id)) return [];
+      const parentId = issueFamilyParentId(issue, familyParentIds);
+      if (!parentId) return [];
       const href = issueFamilyBoardHref(
         projectId,
-        issue.id,
+        parentId,
         searchParams,
       );
       return [
@@ -200,14 +209,16 @@ function ProjectBoard() {
               id: "issue-family-board-new-tab",
               label: tFamily("openNewTab"),
               icon: <ExternalLink className="size-4" />,
-              onSelect: () =>
-                window.open(href, "_blank", "noopener,noreferrer"),
+              onSelect: () => {
+                if (appTabs) void appTabs.session.create(href);
+                else window.open(href, "_blank", "noopener,noreferrer");
+              },
             },
           ],
         },
       ];
     },
-    [familyParentIds, projectId, searchParams, tFamily],
+    [appTabs, familyParentIds, projectId, searchParams, tFamily],
   );
   const buildIssueMenuActions = useCallback(
     (issue: Issue): ContextMenuAction[] => [
@@ -471,10 +482,6 @@ function ProjectBoard() {
     (activeFamily || activeObjective) && config.sort === "manual"
       ? "smart"
       : config.sort;
-  const familyExitHref = activeFamily
-    ? issueFamilyBoardExitHref(projectId, searchParams)
-    : null;
-
   // The scoring INPUTS (created, edited, deleted tickets) age the scores:
   // a fingerprint over the board's rows rides the refetch decision below —
   // NOT the query key (a new key would bill a pass on every keystroke).
@@ -830,12 +837,14 @@ function ProjectBoard() {
         </div>
       ) : (
         <>
-          {activeFamily && familyExitHref ? (
+          {activeFamily ? (
             <IssueFamilyBoardHeader
               parent={activeFamily.parent}
               projectKey={project.key}
               childCount={activeFamily.issues.length - 1}
-              exitHref={familyExitHref}
+              completedChildCount={activeFamily.issues
+                .slice(1)
+                .filter((issue) => isClosedStatus(issue.status)).length}
             />
           ) : activeObjective ? (
             <ObjectiveBoardHeader
@@ -853,6 +862,11 @@ function ProjectBoard() {
           ) : (
             <BoardToolbar
               tabOrderScope={project.id}
+              viewHref={(view) =>
+                view
+                  ? boardViewTabHref(pathname, searchParams, view)
+                  : boardViewTabHref("/all", "", "cycle")
+              }
               views={views}
               activeViewId={activeViewId}
               generatingViewIds={generatingViewIds}

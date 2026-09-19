@@ -13,12 +13,14 @@ describe("agent mentions", () => {
   it("keeps valid structured mentions and drops forged fields", () => {
     expect(
       parseAgentMentions([
-        { type: "issue", id: "issue-1", label: "MIN-42" },
+        { type: "issue", id: "issue-1", label: "MIN-42", status: "done" },
+        { type: "issue", id: "issue-2", label: "MIN-43", status: "forged" },
         { type: "unknown", id: "x", label: "Nope" },
         { type: "member", id: "user-1", label: "Alice", avatarSeed: "seed" },
       ]),
     ).toEqual([
-      { type: "issue", id: "issue-1", label: "MIN-42" },
+      { type: "issue", id: "issue-1", label: "MIN-42", status: "done" },
+      { type: "issue", id: "issue-2", label: "MIN-43" },
       { type: "member", id: "user-1", label: "Alice", avatarSeed: "seed" },
     ]);
   });

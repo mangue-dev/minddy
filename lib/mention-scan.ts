@@ -13,6 +13,7 @@ import {
   MENTION_TOKEN_END_PATTERN,
 } from "@/lib/mention-token";
 import { PROJECT_KEY_MAX, PROJECT_KEY_MIN } from "@/lib/project-key";
+import type { IssueStatus } from "@/lib/issue-constants";
 import type { Member } from "@/lib/types";
 
 /** What is written after the “@” to quote a member. */
@@ -41,6 +42,8 @@ export interface MentionIssue {
   /** “MIN-42” — HIM is written after the at sign. */
   identifier: string;
   title: string;
+  /** Live workflow state, used as the issue's figure on every mention surface. */
+  status: IssueStatus;
 }
 
 /** An OBJECTIVE such as a mention needs to be known. Its color travels

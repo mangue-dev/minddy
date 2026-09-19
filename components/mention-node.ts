@@ -23,6 +23,7 @@ export const MENTION_ATTRS = [
   "seed",
   "color",
   "icon",
+  "status",
 ] as const;
 
 export const MentionNodeBase = Node.create({
@@ -54,6 +55,7 @@ export const MentionNodeBase = Node.create({
             seed: node.dataset.mentionSeed ?? null,
             color: node.dataset.mentionColor ?? null,
             icon: node.dataset.mentionIcon ?? null,
+            status: node.dataset.mentionStatus ?? null,
           };
         },
       },
@@ -70,6 +72,7 @@ export const MentionNodeBase = Node.create({
         ...(node.attrs.seed ? { "data-mention-seed": node.attrs.seed } : {}),
         ...(node.attrs.color ? { "data-mention-color": node.attrs.color } : {}),
         ...(node.attrs.icon ? { "data-mention-icon": node.attrs.icon } : {}),
+        ...(node.attrs.status ? { "data-mention-status": node.attrs.status } : {}),
       },
       `@${node.attrs.mentionLabel}`,
     ];

@@ -130,6 +130,7 @@ export function useNumoMentionables(
         projectId: i.project_id,
         label: i.identifier,
         detail: i.title,
+        status: i.status,
         keywords: [i.title],
       })),
       ...objectives.map((o) => ({

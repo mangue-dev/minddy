@@ -75,3 +75,13 @@ export function issueParentIds(issues: FamilyIssue[]): Set<string> {
       .filter((id): id is string => id !== null),
   );
 }
+
+/** Parent id that owns an issue's family board, whether the clicked issue is
+ * the parent itself or one of its direct children. */
+export function issueFamilyParentId(
+  issue: FamilyIssue,
+  parentIds: ReadonlySet<string>,
+): string | null {
+  if (parentIds.has(issue.id)) return issue.id;
+  return issue.parent_id;
+}

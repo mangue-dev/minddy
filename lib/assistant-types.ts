@@ -1,5 +1,6 @@
 import type { ReasoningLevel } from "./agent-reasoning";
 import type { ResourceInput } from "./types";
+import type { IssueStatus } from "./issue-constants";
 
 // ── Numo (AI assistant) shared types ─────────────────────────────────
 
@@ -245,6 +246,8 @@ export interface AssistantMention {
   color?: string | null;
   /** Wiki pages: their emoji (MIN-273). */
   icon?: string | null;
+  /** Issues: workflow state captured for immediate rendering; live sources win. */
+  status?: IssueStatus;
 }
 
 /** A repository skill explicitly attached to one Numo message. */
