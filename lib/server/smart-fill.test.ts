@@ -415,6 +415,28 @@ describe("resolveSmartFillPayer", () => {
       .resolves.toEqual({ userId: "project-owner", scope: "triage" });
   });
 
+  it("does not let a promoting member override the owner's triage opt-out", async () => {
+    getUserByIdMock.mockResolvedValue({
+      data: { user: { user_metadata: { smart_fill_triage: false } } },
+      error: null,
+    });
+
+    await expect(
+      resolve({
+        actorId: "member-1",
+        explicit: true,
+        ownerBilledTriage: true,
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      resolve({
+        actorId: "project-owner",
+        explicit: true,
+        ownerBilledTriage: true,
+      }),
+    ).resolves.toEqual({ userId: "project-owner", scope: "triage" });
+  });
+
   it("does not bill unattributed non-triage or excluded system copies", async () => {
     await expect(resolve({ actorId: null })).resolves.toBeNull();
     await expect(resolve({ excluded: true })).resolves.toBeNull();

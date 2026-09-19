@@ -150,7 +150,10 @@ async function resolveSmartFillPayerUnsafe(
   if (error || !data.user) return null;
   const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
   if (!resolveSmartFill(meta)) return null;
-  if (input.explicit !== true && !resolveSmartFillScope(meta, scope)) return null;
+  const canOverrideScope =
+    input.explicit === true &&
+    (!input.ownerBilledTriage || input.actorId === userId);
+  if (!canOverrideScope && !resolveSmartFillScope(meta, scope)) return null;
   return { userId, scope };
 }
 
