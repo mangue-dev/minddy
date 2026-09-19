@@ -29,6 +29,7 @@ import type { AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
 import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
+import { providerSupportsModelCapability } from "@/lib/model-catalog-capability";
 import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
 
 /**
@@ -106,6 +107,16 @@ const TTL_MS = 60 * 60 * 1000;
 const MAX_MODELS_RESPONSE_BYTES = 5 * 1024 * 1024;
 const cache = new Map<string, { at: number; models: AgentModelEntry[] }>();
 
+function byokCatalogCacheKey(
+  userId: string,
+  provider: AgentProviderId,
+  baseUrl: string,
+  credentialVersion: string,
+  capability: ModelCatalogCapability,
+): string {
+  return `byok|${userId}|${provider}|${baseUrl}|${capability}|${credentialVersion}`;
+}
+
 /** Discard non-conversational models (embeddings, audio, image, etc.). */
 const NON_CHAT_RE = /(embed(?:ding)?|whisper|tts|dall-e|moderation|audio|image|imagen|veo|realtime|transcribe|rerank)/i;
 
@@ -173,6 +184,7 @@ async function listOpenAICompat(
   provider: AgentProviderId,
   baseUrl: string,
   apiKey: string,
+  capability: ModelCatalogCapability,
 ): Promise<AgentModelEntry[]> {
   const res = await fetchAiProviderBytes(provider, `${baseUrl}/models`, {
     headers: { Authorization: `Bearer ${apiKey}` },
@@ -182,7 +194,12 @@ async function listOpenAICompat(
   const body = JSON.parse(res.bytes.toString("utf8")) as { data?: Array<{ id: string }> };
   const models = (body.data ?? [])
     .map((m) => m.id?.replace(/^models\//, "")) // Gemini prefix `models/…`
-    .filter((id): id is string => !!id && !NON_CHAT_RE.test(id))
+    .filter((id): id is string => {
+      if (!id) return false;
+      if (capability === "transcription") return /(transcri|whisper)/i.test(id);
+      if (capability === "embedding") return /embed/i.test(id);
+      return !NON_CHAT_RE.test(id);
+    })
     .map((id) => ({ id, name: id }));
   return sortById(models);
 }
@@ -207,18 +224,20 @@ async function loadModels(
   provider: AgentProviderId,
   baseUrl: string,
   apiKey: string,
+  capability: ModelCatalogCapability = "text",
 ): Promise<AgentModelEntry[]> {
+  if (!providerSupportsModelCapability(provider, capability)) return [];
   const strategy = getAgentProvider(provider)?.listStrategy ?? "openrouter";
   switch (strategy) {
     case "openrouter":
-      return listOpenRouter(apiKey);
+      return listOpenRouter(apiKey, capability);
     case "anthropic":
       return listAnthropic(baseUrl, apiKey);
     case "openai":
-      return listOpenAICompat(provider, baseUrl, apiKey);
+      return listOpenAICompat(provider, baseUrl, apiKey, capability);
     case "generic":
       // Arbitrary endpoint: may not expose /models → failure is tolerated.
-      return listOpenAICompat(provider, baseUrl, apiKey);
+      return listOpenAICompat(provider, baseUrl, apiKey, capability);
     case "none":
       // Local endpoints are never reached from the cloud. The field of
       // model remains free in the picker: the user enters the id exposed by
@@ -343,6 +362,7 @@ export async function getAgentModelsForUser(
   let provider: AgentProviderId = DEFAULT_AGENT_PROVIDER;
   let baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!;
   let apiKey = "";
+  let credentialVersion: string | null = null;
   let mode: "platform" | "byok" = "platform";
   let endpointConfigured = true;
   try {
@@ -353,6 +373,7 @@ export async function getAgentModelsForUser(
     provider = endpoint.provider;
     baseUrl = normalizeBaseUrl(endpoint.baseUrl);
     apiKey = endpoint.apiKey;
+    credentialVersion = endpoint.credentialVersion;
     mode = endpoint.mode;
   } catch {
     endpointConfigured = false;
@@ -390,8 +411,12 @@ export async function getAgentModelsForUser(
     return { ...header, models: [], recommended: [], maxMultiplier: null };
   }
 
-  const cacheKey = `${provider}|${baseUrl}`;
-  const hit = cache.get(cacheKey);
+  const cacheKey = mode === "byok"
+    ? credentialVersion
+      ? byokCatalogCacheKey(userId, provider, baseUrl, credentialVersion, "text")
+      : null
+    : `${provider}|${baseUrl}|text`;
+  const hit = cacheKey ? cache.get(cacheKey) : undefined;
   if (hit && Date.now() - hit.at < TTL_MS) {
     return {
       ...header,
@@ -400,7 +425,7 @@ export async function getAgentModelsForUser(
   }
   try {
     const models = await loadModels(provider, baseUrl, apiKey);
-    cache.set(cacheKey, { at: Date.now(), models });
+    if (cacheKey) cache.set(cacheKey, { at: Date.now(), models });
     return {
       ...header,
       ...(await withMultipliers(models, limit, provider === "openrouter")),
@@ -416,6 +441,48 @@ export async function getAgentModelsForUser(
 /** Catalog for Numo conversations, using the assistant BYOK surface. */
 export function getAssistantModelsForUser(userId: string): Promise<AgentModelsCatalog> {
   return getAgentModelsForUser(userId, "assistant");
+}
+
+/** Capability-aware catalog for the active BYOK settings screen. */
+export async function getActiveByokModelCatalog(
+  userId: string,
+  capability: ModelCatalogCapability,
+): Promise<AgentModelsCatalog> {
+  const byok = await getUserByok(userId);
+  if (!byok) {
+    return {
+      provider: DEFAULT_AGENT_PROVIDER,
+      defaultModel: null,
+      models: [],
+      recommended: [],
+      maxMultiplier: null,
+    };
+  }
+  const header = {
+    provider: byok.provider,
+    defaultModel: null,
+    recommended: [] as string[],
+    maxMultiplier: null,
+  };
+  if (!providerSupportsModelCapability(byok.provider, capability)) {
+    return { ...header, models: [] };
+  }
+  const cacheKey = byokCatalogCacheKey(
+    userId,
+    byok.provider,
+    byok.baseUrl,
+    byok.credentialVersion,
+    capability,
+  );
+  const hit = cache.get(cacheKey);
+  if (hit && Date.now() - hit.at < TTL_MS) return { ...header, models: hit.models };
+  try {
+    const models = await loadModels(byok.provider, byok.baseUrl, byok.apiKey, capability);
+    cache.set(cacheKey, { at: Date.now(), models });
+    return { ...header, models };
+  } catch {
+    return { ...header, models: hit?.models ?? [] };
+  }
 }
 
 /**

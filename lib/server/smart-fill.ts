@@ -390,7 +390,7 @@ export async function runSmartFill({
     if (!enabled) return {};
     // The budget of THE ONE WHO ARMED the scale, as for dictation. Dry, we
     // does not fill out — and the ticket is still born.
-    if (!(await hasUsageBudget(billToUserId, "automations"))) return {};
+    if (!(await hasUsageBudget(billToUserId, "automations", "smart_fill_model"))) return {};
 
     const ctx = await gatherContext(projectId);
     const spec = buildSmartFillSpec({ projectName, title, description, ctx });

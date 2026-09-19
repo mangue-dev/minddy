@@ -21,7 +21,7 @@ vi.mock("@/lib/server/agent/model", () => ({
 }));
 vi.mock("@/lib/server/safe-fetch", () => ({ safeFetchResponse }));
 
-const { fetchAiChat, resolveAiRuntime } = await import("@/lib/server/ai-runtime");
+const { fetchAiChat, resolveAiRuntime, usesByokForSurface } = await import("@/lib/server/ai-runtime");
 
 describe("resolveAiRuntime", () => {
   beforeEach(() => {
@@ -132,6 +132,24 @@ describe("resolveAiRuntime", () => {
     ).resolves.toMatchObject({ mode: "platform", provider: "openrouter" });
   });
 
+  it("ignores an explicit model override for an unsupported provider capability", async () => {
+    getUserByok.mockResolvedValue({
+      provider: "anthropic",
+      apiKey: "anthropic-key",
+      baseUrl: "https://api.anthropic.com/v1",
+      featureModels: { transcription_model: "made-up-transcriber" },
+    });
+    config.set("transcription_model", "openai/whisper-large-v3");
+
+    await expect(
+      resolveAiRuntime({ userId: "u1", modelKey: "transcription_model" }),
+    ).resolves.toMatchObject({
+      mode: "platform",
+      provider: "openrouter",
+      model: "openai/whisper-large-v3",
+    });
+  });
+
   it("rejects a corrupted local-provider assignment on a server surface", async () => {
     getUserByok.mockResolvedValue({
       provider: "local_openai",
@@ -143,6 +161,26 @@ describe("resolveAiRuntime", () => {
     await expect(
       resolveAiRuntime({ userId: "u1", modelKey: "assistant_model" }),
     ).rejects.toMatchObject({ code: "localEndpointRequiresLocalRun" });
+  });
+});
+
+describe("usesByokForSurface", () => {
+  it("requires the provider to cover every requested model family", async () => {
+    getUserByok.mockResolvedValue({
+      provider: "anthropic",
+      apiKey: "anthropic-key",
+      baseUrl: "https://api.anthropic.com/v1",
+      featureModels: {},
+    });
+
+    await expect(usesByokForSurface("u1", "voice", "dictate_model")).resolves.toBe(true);
+    await expect(usesByokForSurface("u1", "voice", "transcription_model")).resolves.toBe(false);
+    await expect(
+      usesByokForSurface("u1", "feedback", [
+        "feedback_analysis_model",
+        "feedback_embedding_model",
+      ]),
+    ).resolves.toBe(false);
   });
 });
 

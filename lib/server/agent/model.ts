@@ -140,6 +140,8 @@ export async function resolveAgentModel(userId: string): Promise<ResolvedAgentMo
 export interface UserByok {
   provider: AgentProviderId;
   apiKey: string;
+  /** Non-secret row version used to invalidate credential-bound caches. */
+  credentialVersion: string;
   /** Effective URL base (register, or custom for 'generic'). */
   baseUrl: string;
   enabledSurfaces: AiSurface[];
@@ -226,7 +228,9 @@ export async function getUserByok(
   const supabase = getServiceClient();
   const { data } = await supabase
     .from("user_ai_keys")
-    .select("provider, key_encrypted, base_url, validated_at, enabled_surfaces, feature_models")
+    .select(
+      "provider, key_encrypted, base_url, validated_at, updated_at, enabled_surfaces, feature_models",
+    )
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -236,6 +240,7 @@ export async function getUserByok(
     key_encrypted: string | null;
     base_url: string | null;
     validated_at: string | null;
+    updated_at: string;
     enabled_surfaces: AiSurface[] | null;
     feature_models: ByokFeatureModels | null;
   } | null;
@@ -284,6 +289,7 @@ export async function getUserByok(
   return {
     provider,
     apiKey: apiKey ?? "",
+    credentialVersion: row.updated_at,
     baseUrl,
     enabledSurfaces,
     featureModels: row.feature_models ?? {},
@@ -395,6 +401,8 @@ export class ManagedAgentServiceUnavailableError extends Error {
 
 export interface ResolvedAgentEndpoint {
   apiKey: string;
+  /** Present only for BYOK and changes when its stored credential is updated. */
+  credentialVersion: string | null;
   mode: AgentKeyMode;
   provider: AgentProviderId;
   /** Base URL OpenAI-compatible (sans /chat/completions). */
@@ -408,6 +416,7 @@ function resolvePlatformAgentEndpoint(): ResolvedAgentEndpoint {
   const baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER);
   return {
     apiKey: platform,
+    credentialVersion: null,
     mode: "platform",
     provider: DEFAULT_AGENT_PROVIDER,
     baseUrl: baseUrl!,
@@ -428,7 +437,13 @@ export async function resolveAgentApiKey(
     if (isLocalAgentProvider(byok.provider) && !options.allowLocal) {
       throw new LocalEndpointRequiresLocalRunError();
     }
-    return { apiKey: byok.apiKey, mode: "byok", provider: byok.provider, baseUrl: byok.baseUrl };
+    return {
+      apiKey: byok.apiKey,
+      credentialVersion: byok.credentialVersion,
+      mode: "byok",
+      provider: byok.provider,
+      baseUrl: byok.baseUrl,
+    };
   }
   if (options.requireByok) throw new ByokCredentialUnavailableError();
   return resolvePlatformAgentEndpoint();
@@ -462,6 +477,7 @@ export async function resolveAgentApiKeyForRun(
   }
   return {
     apiKey: byok.apiKey,
+    credentialVersion: byok.credentialVersion,
     mode: "byok",
     provider: byok.provider,
     baseUrl: byok.baseUrl,

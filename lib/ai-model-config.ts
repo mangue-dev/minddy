@@ -21,6 +21,7 @@ import { DEFAULT_RECOMMENDED_MODELS } from "@/lib/recommended-models";
 import { DEFAULT_REASONING_LEVEL } from "@/lib/agent-reasoning";
 import {
   modelCatalogCapabilityForKey,
+  providerSupportsModelKey,
   type ModelCatalogCapability,
 } from "@/lib/model-catalog-capability";
 
@@ -226,6 +227,7 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
  */
 for (const provider of AGENT_PROVIDERS.filter((entry) => entry.id !== "openrouter")) {
   for (const modelKey of BYOK_MODEL_KEYS) {
+    if (!providerSupportsModelKey(provider.id, modelKey)) continue;
     let fallback = provider.defaultModel ?? "";
     if (modelKey === "transcription_model") {
       fallback = provider.id === "openai" ? "gpt-4o-mini-transcribe" : "";

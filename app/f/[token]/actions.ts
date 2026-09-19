@@ -310,7 +310,7 @@ export async function dictateFeedbackAction(
   });
   if (!rate.allowed) return { ok: false, error: "rateLimited" };
 
-  if (!(await ownerHasUsageBudget(ctx.project.id, "feedback"))) {
+  if (!(await ownerHasUsageBudget(ctx.project.id, "feedback", "dictate_model"))) {
     return { ok: false, error: "unavailable" };
   }
 
@@ -375,7 +375,11 @@ export async function findSimilarPostsAction(
   });
   if (!rate.allowed) return [];
 
-  if (!(await ownerHasUsageBudget(ctx.project.id, "feedback"))) return [];
+  if (!(await ownerHasUsageBudget(
+    ctx.project.id,
+    "feedback",
+    "feedback_embedding_model",
+  ))) return [];
 
   // 5 s: the first cold call (config + OpenRouter) can exceed 3 s,
   // and failure here is silent to the visitor.

@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
 
   // Plan usage budget (MIN-72) — pre-flight before call.
   try {
-    await ensureUsageBudget(auth.user.id, "voice");
+    await ensureUsageBudget(auth.user.id, "voice", "dictate_model");
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
     throw err;

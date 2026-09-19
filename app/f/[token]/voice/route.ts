@@ -85,7 +85,7 @@ export async function POST(
   }
 
   // The owner pays: without a budget, the microphone stays silent rather than digging.
-  if (!(await ownerHasUsageBudget(ctx.project.id, "feedback"))) {
+  if (!(await ownerHasUsageBudget(ctx.project.id, "feedback", "transcription_model"))) {
     return NextResponse.json({ error: "unavailable" }, { status: 503 });
   }
 

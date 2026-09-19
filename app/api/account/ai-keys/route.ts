@@ -24,6 +24,11 @@ import { parseAiSurfaces, parseByokFeatureModels } from "@/lib/ai-surfaces";
 import { BYOK_MODEL_KEYS } from "@/lib/ai-surfaces";
 import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
 import type { AgentProviderId } from "@/lib/agent-providers";
+import type { ByokFeatureModels } from "@/lib/ai-surfaces";
+import {
+  byokCapabilitiesForProvider,
+  providerSupportsModelKey,
+} from "@/lib/model-catalog-capability";
 
 /**
  * Account “BYOK” key (MIN-46 / MIN-10). ONE active provider: OpenRouter,
@@ -43,6 +48,57 @@ const SANITIZED =
 // Wide bounds: an actual API key and base URL fit well below.
 const MAX_KEY_LENGTH = 1024;
 const MAX_BASE_URL_LENGTH = 2048;
+
+interface SanitizedAiKeyRow {
+  id: string;
+  provider: string;
+  key_prefix: string | null;
+  base_url: string | null;
+  created_at: string;
+  last_used_at: string | null;
+  validated_at: string | null;
+  enabled_surfaces: string[];
+  feature_models: ByokFeatureModels;
+}
+
+function supportedFeatureModels(
+  provider: AgentProviderId,
+  featureModels: ByokFeatureModels | null | undefined,
+): ByokFeatureModels {
+  return Object.fromEntries(
+    Object.entries(featureModels ?? {}).filter(([modelKey]) =>
+      providerSupportsModelKey(provider, modelKey),
+    ),
+  ) as ByokFeatureModels;
+}
+
+async function decorateAiKey(row: SanitizedAiKeyRow) {
+  if (!isKnownAgentProvider(row.provider)) {
+    return {
+      ...row,
+      feature_models: {},
+      supported_capabilities: [],
+      resolved_feature_models: {},
+    };
+  }
+  const provider = row.provider as AgentProviderId;
+  const resolvedEntries = await Promise.all(
+    BYOK_MODEL_KEYS.filter((modelKey) => providerSupportsModelKey(provider, modelKey)).map(
+      async (modelKey) => [
+        modelKey,
+        await resolveByokFeatureDefaultModel(provider, modelKey),
+      ] as const,
+    ),
+  );
+  return {
+    ...row,
+    feature_models: supportedFeatureModels(provider, row.feature_models),
+    supported_capabilities: byokCapabilitiesForProvider(provider),
+    resolved_feature_models: Object.fromEntries(
+      resolvedEntries.filter((entry) => entry[1] !== null),
+    ),
+  };
+}
 
 /**
  * Local endpoints are never reached from this route: check their
@@ -69,22 +125,7 @@ export async function GET(request: NextRequest) {
     .select(SANITIZED)
     .eq("user_id", auth.user.id)
     .order("created_at", { ascending: false });
-  const keys = await Promise.all(
-    (data ?? []).map(async (row) => {
-      const resolvedEntries = await Promise.all(
-        BYOK_MODEL_KEYS.map(async (modelKey) => [
-          modelKey,
-          await resolveByokFeatureDefaultModel(row.provider as AgentProviderId, modelKey),
-        ] as const),
-      );
-      return {
-        ...row,
-        resolved_feature_models: Object.fromEntries(
-          resolvedEntries.filter((entry) => entry[1] !== null),
-        ),
-      };
-    }),
-  );
+  const keys = await Promise.all((data ?? []).map((row) => decorateAiKey(row as SanitizedAiKeyRow)));
   return NextResponse.json({ keys });
 }
 
@@ -208,7 +249,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: t("aiKeySaveFailed") }, { status: 500 });
   }
 
-  return NextResponse.json({ key: data });
+  return NextResponse.json({ key: await decorateAiKey(data as SanitizedAiKeyRow) });
 }
 
 export async function DELETE(request: NextRequest) {
@@ -246,10 +287,11 @@ export async function PATCH(request: NextRequest) {
     .select("provider")
     .eq("user_id", auth.user.id)
     .maybeSingle();
-  const activeProvider = (active as { provider?: string } | null)?.provider;
-  if (!activeProvider) {
+  const activeProviderValue = (active as { provider?: string } | null)?.provider;
+  if (!activeProviderValue || !isKnownAgentProvider(activeProviderValue)) {
     return NextResponse.json({ error: "No BYOK key configured" }, { status: 404 });
   }
+  const activeProvider = activeProviderValue;
   const localProvider = isLocalAgentProvider(activeProvider);
   const update: { enabled_surfaces?: string[]; feature_models?: Record<string, string> } = {};
   if ("enabled_surfaces" in body) {
@@ -266,6 +308,12 @@ export async function PATCH(request: NextRequest) {
   if ("feature_models" in body) {
     const models = parseByokFeatureModels(body.feature_models);
     if (!models) return NextResponse.json({ error: "Invalid feature models" }, { status: 400 });
+    if (Object.keys(models).some((modelKey) => !providerSupportsModelKey(activeProvider, modelKey))) {
+      return NextResponse.json(
+        { error: "Model type is not supported by the active BYOK provider" },
+        { status: 400 },
+      );
+    }
     update.feature_models = models;
   }
   if (Object.keys(update).length === 0) {
@@ -288,5 +336,5 @@ export async function PATCH(request: NextRequest) {
   if (!data) {
     return NextResponse.json({ error: "BYOK configuration changed; retry" }, { status: 409 });
   }
-  return NextResponse.json({ key: data });
+  return NextResponse.json({ key: await decorateAiKey(data as SanitizedAiKeyRow) });
 }

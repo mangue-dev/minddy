@@ -20,6 +20,7 @@ import {aiKeysQueryKey, useAiKeysQuery} from "@/lib/use-ai-keys-query";
 import {AI_SURFACE_DEFINITIONS} from "@/lib/ai-surfaces";
 import type {AiSurface, ByokModelKey} from "@/lib/ai-surfaces";
 import {isLocalAgentProvider} from "@/lib/agent-providers";
+import {modelCatalogCapabilityForKey} from "@/lib/model-catalog-capability";
 
 /**
  * “Code agent” section of account settings (MIN-46): the provider and
@@ -209,26 +210,32 @@ function ByokSurfacePreferences({
             ) : null}
             {enabled && surface.modelKeys.length > 0 ? (
               <div className="mb-3 ml-4 border-l border-border/70 pl-4">
-                {surface.modelKeys.map((modelKey) => (
-                  <SettingsRow
-                    key={modelKey}
-                    label={tAdmin(`fields.${modelKey}.label` as never)}
-                    control={
-                      <ModelCombobox
-                        value={key.feature_models[modelKey] ?? ""}
-                        onChange={(value) => void saveModel(modelKey, value)}
-                        defaultLabel={t("byokModelDefault")}
-                        defaultModelId={
-                          key.resolved_feature_models?.[modelKey] ?? providerDefaultModel
-                        }
-                        placeholder={tAgent("modelSearchPlaceholder")}
-                        emptyLabel={tAgent("modelSearchEmpty")}
-                        loadingLabel={tAgent("modelSearchLoading")}
-                        freeTextLabel={(q) => tAgent("modelUseCustom", { model: q })}
-                      />
-                    }
-                  />
-                ))}
+                {surface.modelKeys
+                  .filter((modelKey) =>
+                    key.supported_capabilities.includes(modelCatalogCapabilityForKey(modelKey)),
+                  )
+                  .map((modelKey) => (
+                    <SettingsRow
+                      key={modelKey}
+                      label={tAdmin(`fields.${modelKey}.label` as never)}
+                      control={
+                        <ModelCombobox
+                          scope="byok"
+                          capability={modelCatalogCapabilityForKey(modelKey)}
+                          value={key.feature_models[modelKey] ?? ""}
+                          onChange={(value) => void saveModel(modelKey, value)}
+                          defaultLabel={t("byokModelDefault")}
+                          defaultModelId={
+                            key.resolved_feature_models?.[modelKey] ?? providerDefaultModel
+                          }
+                          placeholder={tAgent("modelSearchPlaceholder")}
+                          emptyLabel={tAgent("modelSearchEmpty")}
+                          loadingLabel={tAgent("modelSearchLoading")}
+                          freeTextLabel={(q) => tAgent("modelUseCustom", { model: q })}
+                        />
+                      }
+                    />
+                  ))}
               </div>
             ) : null}
           </div>

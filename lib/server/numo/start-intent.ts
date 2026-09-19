@@ -148,7 +148,7 @@ export async function startNumoIntent(
   }
   const projectId = validated.context?.projectId ?? input.projectId ?? null;
 
-  const admittedUsage = await ensureUsageBudget(input.userId, "assistant");
+  const admittedUsage = await ensureUsageBudget(input.userId, "assistant", "assistant_model");
   const configuration = await resolveNumoTurnConfiguration({
     userId: input.userId,
   });

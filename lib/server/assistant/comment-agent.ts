@@ -306,7 +306,7 @@ export async function runCommentMention(input: {
   const access = issue
     ? await getProjectAccess(actorId, issue.project_id as string)
     : null;
-  if (!issue || !access || !await hasUsageBudget(actorId, "assistant")) return;
+  if (!issue || !access || !await hasUsageBudget(actorId, "assistant", "assistant_model")) return;
 
   const [{ data: comments }, { data: attachments }, { data: root }] = await Promise.all([
     service.from("comments")
@@ -403,7 +403,7 @@ export async function runObjectiveCommentMention(input: {
   if (
     !objective
     || !await getProjectAccess(actorId, objective.project_id as string)
-    || !await hasUsageBudget(actorId, "assistant")
+    || !await hasUsageBudget(actorId, "assistant", "assistant_model")
   ) return;
   const [{ data: comments }, { data: attachments }, { data: root }] = await Promise.all([
     service.from("comments").select("id, author_id, body, via_assistant, created_at")
@@ -493,7 +493,7 @@ export async function runPageCommentMention(input: {
   if (
     !page
     || !await getProjectAccess(actorId, page.project_id as string)
-    || !await hasUsageBudget(actorId, "assistant")
+    || !await hasUsageBudget(actorId, "assistant", "assistant_model")
   ) return;
   const [{ data: comments }, { data: root }] = await Promise.all([
     service.from("page_comments").select("id, author_id, body, via_assistant, created_at")
@@ -584,7 +584,7 @@ export async function runFeedbackCommentMention(input: {
   if (
     !post
     || !await getProjectAccess(actorId, post.project_id as string)
-    || !await hasUsageBudget(actorId, "assistant")
+    || !await hasUsageBudget(actorId, "assistant", "assistant_model")
   ) return;
   const [{ data: comments }, { data: attachments }, { data: root }] = await Promise.all([
     service.from("comments").select(

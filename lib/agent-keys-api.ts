@@ -3,6 +3,8 @@
 import type { SandboxPreferences } from "./agent-sandbox-config";
 import type { ReasoningLevel } from "./agent-reasoning";
 import type { AiSurface, ByokFeatureModels } from "./ai-surfaces";
+import type { ModelCatalogCapability } from "./model-catalog-capability";
+import type { AgentProviderId } from "./agent-providers";
 import { trackEvent } from "./analytics";
 
 /**
@@ -29,7 +31,7 @@ async function parseJson<T>(response: Response): Promise<T> {
 
 export interface AiKey {
   id: string;
-  provider: string;
+  provider: AgentProviderId;
   key_prefix: string | null;
   base_url: string | null;
   created_at: string;
@@ -42,6 +44,8 @@ export interface AiKey {
   validated_at: string | null;
   enabled_surfaces: AiSurface[];
   feature_models: ByokFeatureModels;
+  /** Model families automatically covered by the active provider. */
+  supported_capabilities: readonly ModelCatalogCapability[];
   /** Effective admin/provider defaults, secrets excluded. */
   resolved_feature_models?: ByokFeatureModels;
 }

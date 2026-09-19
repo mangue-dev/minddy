@@ -91,15 +91,23 @@ async function freshCatalog(
       provider: endpoint?.provider ?? "openrouter",
     })),
     resolveAgentApiKey: vi.fn(async () => {
-      if (endpoint) return endpoint;
+      if (endpoint) return { ...endpoint, credentialVersion: `${endpoint.apiKey}-version` };
       return {
         provider: "openrouter",
         baseUrl: "https://openrouter.ai/api/v1",
         apiKey: "platform-key",
+        credentialVersion: null,
         mode: "platform",
       };
     }),
-    getUserByok: vi.fn(async () => null),
+    getUserByok: vi.fn(async () => endpoint
+      ? {
+          ...endpoint,
+          credentialVersion: `${endpoint.apiKey}-version`,
+          enabledSurfaces: ["agent"],
+          featureModels: {},
+        }
+      : null),
     userHasByokKey: vi.fn(async () => endpoint?.mode === "byok"),
   }));
   vi.doMock("@/lib/server/ai-runtime", () => ({
@@ -227,6 +235,88 @@ describe("getAgentModelsForUser", () => {
       maxBytes: 5 * 1024 * 1024,
     });
     expect(vi.mocked(listOpenRouterIndex)).not.toHaveBeenCalled();
+  });
+});
+
+describe("getActiveByokModelCatalog", () => {
+  it("returns no specialized models when the active provider lacks the capability", async () => {
+    const { getActiveByokModelCatalog } = await freshCatalog(
+      INDEX,
+      null,
+      {
+        provider: "anthropic",
+        baseUrl: "https://api.anthropic.com/v1",
+        apiKey: "user-key",
+        mode: "byok",
+      },
+    );
+
+    await expect(getActiveByokModelCatalog("user-1", "embedding")).resolves.toMatchObject({
+      provider: "anthropic",
+      models: [],
+    });
+  });
+
+  it("filters an OpenAI-compatible catalog to the requested family", async () => {
+    const { getActiveByokModelCatalog } = await freshCatalog(
+      INDEX,
+      null,
+      {
+        provider: "openai",
+        baseUrl: "https://api.openai.com/v1",
+        apiKey: "user-key",
+        mode: "byok",
+      },
+    );
+    const { safeFetch } = await import("@/lib/server/safe-fetch");
+    vi.mocked(safeFetch).mockResolvedValue({
+      status: 200,
+      ok: true,
+      headers: new Headers({ "content-type": "application/json" }),
+      url: new URL("https://api.openai.com/v1/models"),
+      bytes: Buffer.from(
+        JSON.stringify({
+          data: [
+            { id: "gpt-5.6-sol" },
+            { id: "gpt-4o-mini-transcribe" },
+            { id: "text-embedding-3-small" },
+          ],
+        }),
+      ),
+      truncated: false,
+    });
+
+    await expect(getActiveByokModelCatalog("user-1", "transcription")).resolves.toMatchObject({
+      models: [{ id: "gpt-4o-mini-transcribe", name: "gpt-4o-mini-transcribe" }],
+    });
+  });
+
+  it("does not reuse a catalog after the user's credential rotates", async () => {
+    const { getActiveByokModelCatalog } = await freshCatalog(
+      INDEX,
+      null,
+      {
+        provider: "openai",
+        baseUrl: "https://api.openai.com/v1",
+        apiKey: "first-user-key",
+        mode: "byok",
+      },
+    );
+    const { getUserByok } = await import("./model");
+    const { safeFetch } = await import("@/lib/server/safe-fetch");
+
+    await getActiveByokModelCatalog("user-1", "text");
+    vi.mocked(getUserByok).mockResolvedValue({
+      provider: "openai",
+      baseUrl: "https://api.openai.com/v1",
+      apiKey: "rotated-user-key",
+      credentialVersion: "rotated-user-key-version",
+      enabledSurfaces: ["agent"],
+      featureModels: {},
+    });
+    await getActiveByokModelCatalog("user-1", "text");
+
+    expect(safeFetch).toHaveBeenCalledTimes(2);
   });
 });
 

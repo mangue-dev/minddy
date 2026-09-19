@@ -44,7 +44,7 @@ export async function POST(
   if (!auth.ok) return auth.response;
 
   try {
-    await ensureUsageBudget(auth.user.id, "feedback");
+    await ensureUsageBudget(auth.user.id, "feedback", "dictate_model");
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
     throw err;
