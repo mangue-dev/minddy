@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ByokConnectPanel } from "@/components/settings/byok-connect-panel";
+import { RuntimeConfigProvider } from "@/lib/runtime-config-provider";
 import messages from "@/messages/en.json";
 
 vi.mock("@/components/model-logo", () => ({
@@ -89,7 +90,7 @@ describe("ByokConnectPanel", () => {
       .IS_REACT_ACT_ENVIRONMENT;
   });
 
-  async function renderPanel() {
+  async function renderPanel(managedAi = true) {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -97,10 +98,34 @@ describe("ByokConnectPanel", () => {
       root.render(
         createElement(QueryClientProvider, {
           client: queryClient,
-          children: createElement(NextIntlClientProvider, {
-            locale: "en",
-            messages,
-            children: createElement(ByokConnectPanel),
+          children: createElement(RuntimeConfigProvider, {
+            config: {
+              appUrl: "https://www.minddy.app",
+              supabaseUrl: "https://supabase.example.com",
+              supabaseAnonKey: "anon-key",
+              siteName: "minddy",
+              contactEmail: "support@example.com",
+              productFeedbackIntegrationEnabled: false,
+              productFeedbackUrl: null,
+              posthog: {
+                key: null,
+                host: null,
+                allowLocalhost: false,
+                errorTracking: false,
+              },
+              vapidPublicKey: null,
+              capabilities: {
+                managedAi: {
+                  state: managedAi ? "available" : "disabled",
+                  configured: managedAi,
+                },
+              },
+            },
+            children: createElement(NextIntlClientProvider, {
+              locale: "en",
+              messages,
+              children: createElement(ByokConnectPanel),
+            }),
           }),
         }),
       );
@@ -131,5 +156,16 @@ describe("ByokConnectPanel", () => {
     expect(container.querySelector('input[type="password"]')).not.toBeNull();
     expect(container.textContent).toContain("Save key");
     expect(container.textContent).not.toContain("No API key is needed");
+  });
+
+  it("defaults to an external provider when managed AI is unavailable", async () => {
+    await renderPanel(false);
+
+    const select = container.querySelector("select");
+    expect(select?.value).toBe("openrouter");
+    expect(select?.querySelector('option[value="minddy"]')).toBeNull();
+    expect(container.querySelector('input[type="password"]')).not.toBeNull();
+    expect(container.textContent).toContain("Save key");
+    expect(container.textContent).not.toContain("minddy Cloud");
   });
 });

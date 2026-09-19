@@ -26,6 +26,7 @@ import {
   isLocalAgentProvider,
 } from "@/lib/agent-providers";
 import { addAiKeyApi, deleteAiKeyApi, type AiKey } from "@/lib/agent-keys-api";
+import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { aiKeysQueryKey, useAiKeysQuery } from "@/lib/use-ai-keys-query";
 import { agentModelsQueryKey } from "@/lib/use-agent-models-query";
 import { agentPreferencesQueryKey } from "@/lib/use-agent-preferences-query";
@@ -43,9 +44,15 @@ export function ByokConnectPanel({
   const t = useTranslations("Account");
   const tc = useTranslations("Common");
   const queryClient = useQueryClient();
+  const { capabilities } = useRuntimeConfig();
+  const managedAiAvailable = capabilities.managedAi?.configured === true;
   const { keys, loading } = useAiKeysQuery();
   const [editing, setEditing] = useState<AiKey | null>(null);
-  const [provider, setProvider] = useState(MINDDY_CLOUD_PROVIDER);
+  const [provider, setProvider] = useState(() =>
+    managedAiAvailable
+      ? MINDDY_CLOUD_PROVIDER
+      : (AGENT_PROVIDERS.find((entry) => !isLocalAgentProvider(entry.id))?.id ?? ""),
+  );
   const [keyDraft, setKeyDraft] = useState("");
   const [baseUrlDraft, setBaseUrlDraft] = useState("");
   const [saving, setSaving] = useState(false);
@@ -69,12 +76,16 @@ export function ByokConnectPanel({
   useEffect(() => {
     if (
       editing ||
-      provider === MINDDY_CLOUD_PROVIDER ||
+      (managedAiAvailable && provider === MINDDY_CLOUD_PROVIDER) ||
       (provider && availableProviders.some((entry) => entry.id === provider))
     )
       return;
-    setProvider(MINDDY_CLOUD_PROVIDER);
-  }, [availableProviders, editing, provider]);
+    setProvider(
+      managedAiAvailable
+        ? MINDDY_CLOUD_PROVIDER
+        : (availableProviders[0]?.id ?? ""),
+    );
+  }, [availableProviders, editing, managedAiAvailable, provider]);
 
   const selectedDef = getAgentProvider(provider);
   const localProvider = !!selectedDef && isLocalAgentProvider(selectedDef.id);
@@ -88,7 +99,11 @@ export function ByokConnectPanel({
     setEditing(null);
     setKeyDraft("");
     setBaseUrlDraft("");
-    setProvider(MINDDY_CLOUD_PROVIDER);
+    setProvider(
+      managedAiAvailable
+        ? MINDDY_CLOUD_PROVIDER
+        : (availableProviders[0]?.id ?? ""),
+    );
   };
   const beginEdit = (key: AiKey) => {
     setEditing(key);
@@ -206,7 +221,7 @@ export function ByokConnectPanel({
             <SelectContent>
               <SelectGroup>
                 <SelectLabel>{t("aiProviderCloudGroup")}</SelectLabel>
-                {!editing ? (
+                {managedAiAvailable && !editing ? (
                   <SelectItem value={MINDDY_CLOUD_PROVIDER}>
                     {t("aiProviderMinddy")}
                   </SelectItem>
@@ -238,7 +253,7 @@ export function ByokConnectPanel({
               ) : null}
             </SelectContent>
           </Select>
-          {!selectedDef ? (
+          {provider === MINDDY_CLOUD_PROVIDER ? (
             <p className="text-xs text-muted-foreground">
               {t("aiProviderMinddyHint")}
             </p>
