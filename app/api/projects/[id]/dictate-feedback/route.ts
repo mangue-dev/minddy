@@ -24,7 +24,7 @@ import {
  * of a board token.
  *
  * Listening goes through `/api/transcribe` with `feature=feedback_voice`:
- * the route returns the `runId` which it resumes, and the two calls of a socket
+ * the route returns the `runId` which it resumes, and the three calls of a take
  * make only one line in the ledger.
  *
  * This route does not write ANYTHING in base: it returns a patch, which the modal applies.
@@ -108,7 +108,8 @@ export async function POST(
       projectName: (project as { name: string }).name,
       surface: "internal",
       runId: hasRun ? (body.runId as string) : newRunId(),
-      seq: hasRun ? 1 : 0,
+      // Transcription and cleanup occupy seq 0 and 1 on a complete take.
+      seq: hasRun ? 2 : 0,
       billTo: { userId: auth.user.id },
       projectId,
     });

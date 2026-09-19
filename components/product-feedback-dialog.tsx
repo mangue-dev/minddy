@@ -90,6 +90,7 @@ export function ProductFeedbackDialog({
       onCancel={requestClose}
       className="sm:max-w-lg"
       dictation={{
+        context: "feedback_form",
         feature: "feedback_voice",
         onTranscription: (text) => {
           setDescription((value) => `${value}${value ? "\n\n" : ""}${text}`);

@@ -1110,6 +1110,7 @@
     "rateLimitReached": "Dictation quota reached. Try again in {minutes} min.",
     "tooLarge": "Recording too large. Try a shorter dictation.",
     "error": "Transcription failed.",
+    "polishFailed": "The cleanup step failed; the recognized text was preserved.",
     "emptyResult": "No speech was detected.",
     "unavailable": "Voice dictation isn't available right now.",
     "inFlight": "Dictation in progress; one moment.",
@@ -4208,7 +4209,7 @@
       },
       "dictate_model": {
         "label": "Dictation → draft",
-        "desc": "Turns the voice transcript into an issue, objective or task draft."
+        "desc": "Cleans every voice transcript, then turns structured dictation into an issue, objective, feedback, or task draft."
       },
       "transcription_model": {
         "label": "Speech-to-text",

@@ -217,6 +217,7 @@ export function PrCommentComposer({
         >
           <AttachButton onFiles={uploads.addFiles} disabled={posting} />
           <DictateButton
+            context="pull_request_comment"
             onTranscription={(text) =>
               onChange((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
             }

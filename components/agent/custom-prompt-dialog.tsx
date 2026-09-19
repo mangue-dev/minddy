@@ -78,6 +78,7 @@ export function CustomPromptDialog({
       submitDisabled={!instructions.trim()}
       onSubmit={submit}
       dictation={{
+        context: "agent_instruction",
         onTranscription: (text) => setInstructions((value) => `${value}${value ? " " : ""}${text}`),
       }}
     >

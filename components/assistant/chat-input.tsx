@@ -1704,6 +1704,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 <>
                   {!isStreaming && (
                     <DictateButton
+                      context="assistant_message"
                       onTranscription={appendDictated}
                       disabled={disabled}
                       className={canAttach ? "-ml-0.5" : undefined}

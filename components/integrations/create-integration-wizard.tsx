@@ -295,6 +295,7 @@ export function CreateIntegrationWizard({
             className="min-h-32 resize-none pb-12"
           />
           <DictateButton
+            context="form_field"
             floating
             disabled={creating}
             onTranscription={(text) =>

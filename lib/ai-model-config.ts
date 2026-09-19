@@ -189,7 +189,7 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
     fallback: JSON.stringify(DEFAULT_RECOMMENDED_MODELS),
     group: "agent",
   },
-  // Voice (dictation → ticket)
+  // Voice (speech-to-text → destination-aware cleanup and structured drafts)
   { key: "dictate_model", kind: "model", fallback: "google/gemini-3.1-flash-lite", group: "voice" },
   {
     key: "transcription_model",

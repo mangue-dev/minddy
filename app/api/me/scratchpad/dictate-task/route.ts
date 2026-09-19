@@ -18,6 +18,7 @@ import {
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import { cleanDictatedTaskLine } from "@/lib/scratchpad";
 import { responseLanguageInstruction } from "@/lib/locale-language";
+import { normalizeDictationText } from "@/lib/dictation-context";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -161,7 +162,7 @@ export async function POST(request: NextRequest) {
 
   const transcript =
     typeof body.transcript === "string"
-      ? sanitizeAssistantMessageContent(body.transcript).slice(0, MAX_TRANSCRIPT_CHARS)
+      ? normalizeDictationText(body.transcript, MAX_TRANSCRIPT_CHARS)
       : "";
   if (!transcript.trim()) {
     return NextResponse.json({ error: "transcript is required" }, { status: 400 });

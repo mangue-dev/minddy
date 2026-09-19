@@ -1110,6 +1110,7 @@
     "rateLimitReached": "Quota de dictée atteint. Réessayez dans {minutes} min.",
     "tooLarge": "Enregistrement trop lourd. Réessayez avec une dictée plus courte.",
     "error": "Échec de la transcription.",
+    "polishFailed": "La mise au propre a échoué ; le texte reconnu a été conservé.",
     "emptyResult": "Aucune voix détectée.",
     "unavailable": "La dictée n'est pas disponible pour le moment.",
     "inFlight": "Dictée en cours; un instant.",
@@ -4208,7 +4209,7 @@
       },
       "dictate_model": {
         "label": "Dictée → brouillon",
-        "desc": "Transforme la transcription vocale en brouillon de ticket, d'objectif ou de tâche."
+        "desc": "Met chaque transcription vocale au propre, puis transforme les dictées structurées en brouillon de ticket, d'objectif, de retour ou de tâche."
       },
       "transcription_model": {
         "label": "Transcription vocale",

@@ -46,54 +46,34 @@ import {
   aiChatProviderHeaders,
   translateAiChatRequest,
 } from "@/lib/ai-chat";
+import { polishDictationTranscript } from "@/lib/server/dictation-polish";
+import { resolvePolishedDictation } from "@/lib/dictation-context";
 
 /**
- * Dictation, playable without an account (MIN-150).
+ * Dictation demo available without an account (MIN-150).
  *
- * Minddy's only AI endpoint open to an ANONYMOUS visitor. It exists because
- * that the value of the product was only demonstrable after registration: we let go
- * a sentence, all the fields are sorted — and no screenshot is
- * feel that.
+ * This is minddy's only AI endpoint open to an anonymous visitor. It
+ * transcribes and cleans up a short take, or resolves a server-owned sample,
+ * then fills a fictional issue (`lib/demo-dictation.ts`). It never reads a
+ * project or writes an issue. Its only persistent effects are reading the AI
+ * configuration and recording platform-funded usage.
  *
- * What it does, and nothing else: transcribe a take of a few seconds
- * (or reread an example sentence), then store it in the fields of a ticket
- * FICTITIOUS (`lib/demo-dictation.ts`). He reads no projects, writes no
- * ticket, only touches the base for two things: reading the AI ​​configuration,
- * and enter the expense in the ledger — in `platform`, because it is free.
+ * Four safeguards bound that usage: a same-origin check, an hourly IP limit,
+ * a per-instance daily ceiling, and the `demo_dictation_enabled` admin switch.
+ * The first three live in `lib/server/demo-dictation.ts` and are covered by
+ * its tests. Bot detection could be added later if these inexpensive controls
+ * stop being sufficient.
  *
- * ## What protects him
- *
- * Four safeguards, from least expensive to most expensive (the first three are in
- * `lib/server/demo-dictation.ts`, exercised by its test):
- *
- * 1. **Same origin** — the zero-cost filter against the script that wants a
- *     API de transcription gratuite.
- *  2. **Par IP** — dix passages par heure. Un visiteur curieux en joue trois ou
- * four ; beyond that, it is no longer a visit.
- * 3. **Overall daily ceiling**, per instance: the expense of one day is
- * limited whatever happens, including on rotating addresses.
- * 4. **`demo_dictation_enabled`** switch in `/admin`: the demo cuts out
- * without deployment.
- *
- * If we had to go further, it would be bot detection in front of the page —
- * but it is paid by weight on the landing, and the passage costs $0.0003 (measured
- * to the ledger: $0.0001 transcription + $0.0002 storage). The ceiling
- * daily therefore limits the expense to ~$0.15 per day and per instance: very
- * below what that weight would cost.
- *
- * ## No free text input
- *
- * The model only sees two things: the transcription of the visitor's voice,
- * or an example sentence that the SERVER rereads in its own catalog to
- * from an identifier (`stripe`, `export`, `onboarding`). The customer does not send
- * never text, and everything the model returns is re-validated
- * (`sanitizeDemoTicket`) before leaving here.
+ * The client cannot submit arbitrary text. The model sees either recognized
+ * speech or a sample sentence selected by identifier from the server catalog,
+ * and every generated field is validated by `sanitizeDemoTicket` before it is
+ * returned.
  */
 
 export const runtime = "nodejs";
-// A demo take takes 15 seconds at most: short transcription, small model for
-// storage. Nothing to do with the 300 s of /api/transcribe.
-export const maxDuration = 60;
+// A demo take is short, but it now includes transcription, cleanup, and issue
+// formatting. The extra headroom covers two sequential lightweight model calls.
+export const maxDuration = 120;
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -159,6 +139,7 @@ export async function POST(request: NextRequest) {
   // ── The entrance: a microphone, or an example sentence ──────────────
   const runId = newRunId();
   const usageRows: AiUsageInput[] = [];
+  let nextUsageSeq = 0;
   let transcript = "";
   let locale: Locale = defaultLocale;
   let timeZone = "UTC";
@@ -197,6 +178,7 @@ export async function POST(request: NextRequest) {
           usedModel = m;
           return transcribeAudio(m, audioBase64, format, apiKey, {
             language: locale,
+            temperature: 0,
             title: "minddy public demo",
           });
         },
@@ -206,10 +188,10 @@ export async function POST(request: NextRequest) {
       // All calls of a passage share `runId` and the feature `landing_demo`: the
       // admin table makes ONE line (“the demo”), and its cost per run is the price
       // of a passage. The `seq` and the model distinguish the transcription from
-      // the one or two storage attempts in the detail of the run.
+      // cleanup and the one or two form-formatting attempts in the run detail.
       usageRows.push({
         runId,
-        seq: 0,
+        seq: nextUsageSeq++,
         feature: "landing_demo",
         model: usedModel,
         promptTokens: result.inputTokens || null,
@@ -227,6 +209,26 @@ export async function POST(request: NextRequest) {
       after(() => recordAiUsage(usageRows));
       return NextResponse.json({ error: "empty" }, { status: 422 });
     }
+
+    // The public demo uses the same editorial pass as every authenticated
+    // dictation before its issue-specific formatter fills the fictional form.
+    const cleaned = await polishDictationTranscript({
+      transcript,
+      context: "issue_form",
+      record: {
+        runId,
+        seq: nextUsageSeq++,
+        feature: "landing_demo",
+        billTo: BILL_TO,
+      },
+    }).catch((err) => {
+      console.error(
+        "[api/demo/dictate] cleanup failed, returning raw transcript:",
+        err instanceof Error ? err.message : err,
+      );
+      return null;
+    });
+    transcript = resolvePolishedDictation(transcript, cleaned).text;
   } else {
     let body: { sample?: unknown; locale?: unknown; timeZone?: unknown };
     try {
@@ -308,7 +310,7 @@ export async function POST(request: NextRequest) {
     const u = parseOpenRouterUsage(data.usage);
     usageRows.push({
       runId,
-      seq: usageRows.length,
+      seq: nextUsageSeq++,
       feature: "landing_demo",
       model: data.model ?? result.model,
       generationId: data.id ?? null,

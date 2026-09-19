@@ -1110,6 +1110,7 @@
     "rateLimitReached": "Diktatkontingent erreicht. Versuchen Sie es in {minutes} Minuten noch einmal.",
     "tooLarge": "Aufnahme zu groß. Versuchen Sie es mit einem kürzeren Diktat.",
     "error": "Transkription fehlgeschlagen.",
+    "polishFailed": "Die Bereinigung ist fehlgeschlagen; der erkannte Text wurde beibehalten.",
     "emptyResult": "Es wurde keine Sprache erkannt.",
     "unavailable": "Sprachdiktat ist derzeit nicht verfügbar.",
     "inFlight": "Diktat läuft; einen Moment bitte.",
@@ -4208,7 +4209,7 @@
       },
       "dictate_model": {
         "label": "Diktat → Entwurf",
-        "desc": "Verwandelt das Sprachtranskript in einen Problem-, Ziel- oder Aufgabenentwurf."
+        "desc": "Bereinigt jedes Sprachtranskript und wandelt strukturierte Diktate in Entwürfe für Vorgänge, Ziele, Feedback oder Aufgaben um."
       },
       "transcription_model": {
         "label": "Speech-to-Text",

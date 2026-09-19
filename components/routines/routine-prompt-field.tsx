@@ -87,6 +87,7 @@ export function RoutinePromptField({
         />
         {/* Dictation appends to the existing instruction. */}
         <DictateButton
+          context="routine_instruction"
           floating
           disabled={disabled}
           onTranscription={(text) =>

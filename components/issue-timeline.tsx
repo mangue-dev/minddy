@@ -891,6 +891,7 @@ export function ReplyComposer({
         </SendShortcutTooltip>
         {/* Dictate at the far right of the reply row (spec). */}
         <DictateButton
+          context="comment"
           onTranscription={(text) =>
             setDraft((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
           }
@@ -1281,6 +1282,7 @@ export function CommentComposer({
           <AttachButton onFiles={uploads.addFiles} disabled={posting} />
         )}
         <DictateButton
+          context="comment"
           onTranscription={(text) =>
             setDraft((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
           }

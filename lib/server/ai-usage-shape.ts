@@ -47,15 +47,15 @@ export type AiFeature =
  */
   | "brief_split"
   /**
- * Landing dictation demo (MIN-150): its TWO calls (transcription
- * then storage) are written under this single feature, under a common run_id
+   * Landing dictation demo (MIN-150): transcription, cleanup, and form
+   * formatting are written under this single feature, under a common run_id
  *. One line = one demo played, its average cost per run = the price of one
  * passage. Putting them under 'transcription'/'dictation' mixed them with the dictation of the real accounts, and made the two questions insoluble.
  */
   | "landing_demo"
   /**
- * Dictate feedback — on the public board as well as in the dashboard. Its TWO calls
- * (listening then storage by Numo) are written under this single feature,
+   * Dictate feedback — on the public board as well as in the dashboard. Its three calls
+   * (listening, cleanup, then storage by Numo) are written under this single feature,
  * under a common run_id: a line = a socket, its average cost per run = the
  * price of a dictated return. On the user side it joins the segment
  * “Returns” (`USAGE_SEGMENTS`): it is feedback, not dictation of

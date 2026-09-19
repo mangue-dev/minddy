@@ -597,6 +597,7 @@ function ViewNameDialog({
         }
       }}
       dictation={withDescription ? {
+        context: "agent_instruction",
         onTranscription: (text) => setDescription((value) => `${value}${value ? " " : ""}${text}`),
         disabled: busy,
       } : undefined}
