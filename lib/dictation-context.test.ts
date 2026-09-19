@@ -52,6 +52,56 @@ describe("dictation context", () => {
     });
   });
 
+  it("rejects cleanup output that summarizes or truncates the recognized speech", () => {
+    const raw =
+      "Create a ticket for the login failure affecting French customers, include the browser logs, and assign it to Maya for Friday.";
+
+    expect(resolvePolishedDictation(raw, "Done.")).toEqual({
+      text: raw,
+      polished: false,
+    });
+    expect(resolvePolishedDictation("hello there", "Done.")).toEqual({
+      text: "hello there",
+      polished: false,
+    });
+    expect(resolvePolishedDictation(raw, "Create a ticket for the login failure.")).toEqual({
+      text: raw,
+      polished: false,
+    });
+    expect(
+      resolvePolishedDictation(raw, "The deployment completed successfully for everyone."),
+    ).toEqual({ text: raw, polished: false });
+  });
+
+  it("accepts faithful cleanup that removes fillers and keeps a final correction", () => {
+    const raw =
+      "Um the meeting is Tuesday, no sorry, the meeting is Thursday at three with Amine.";
+    const cleaned = "The meeting is Thursday at three with Amine.";
+
+    expect(resolvePolishedDictation(raw, cleaned)).toEqual({
+      text: cleaned,
+      polished: true,
+    });
+    expect(resolvePolishedDictation("teh issue", "The issue.")).toEqual({
+      text: "The issue.",
+      polished: true,
+    });
+  });
+
+  it("checks fidelity for scripts that do not use spaces between words", () => {
+    const raw = "明日の会議は午後三時から東京オフィスで開催します";
+    const cleaned = "明日の会議は午後3時から、東京オフィスで開催します。";
+
+    expect(resolvePolishedDictation(raw, cleaned)).toEqual({
+      text: cleaned,
+      polished: true,
+    });
+    expect(resolvePolishedDictation(raw, "会議を開催します。")).toEqual({
+      text: raw,
+      polished: false,
+    });
+  });
+
   it("normalizes long dictation without the assistant message cap", () => {
     const long = `  ${"voice ".repeat(3_000)}\r\nnext\u0000 line  `;
     const normalized = normalizeDictationText(long, 24_000);

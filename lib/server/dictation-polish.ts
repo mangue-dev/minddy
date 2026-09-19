@@ -11,8 +11,13 @@ import {
 } from "@/lib/server/feedback/forced-tool-call";
 import { resolveConfiguredModel } from "@/lib/server/model-config";
 
-const MAX_TRANSCRIPT_CHARS = 64_000;
+// A token-dense transcript can approach three output tokens per UTF-16 code
+// unit once the forced tool-call JSON is included. Keep the accepted input
+// below one third of the output allowance so every accepted transcript has
+// room for a faithful cleaned copy and the structured-output envelope.
+const MAX_TRANSCRIPT_CHARS = 20_000;
 const MAX_OUTPUT_CHARS = 64_000;
+const MAX_OUTPUT_TOKENS = 65_536;
 
 const DELIVER_DICTATION_PARAMETERS = {
   type: "object",
@@ -56,8 +61,8 @@ export async function polishDictationTranscript({
       record,
       modelKey: "dictate_model",
       surface,
-      maxTokens: 8192,
-      timeoutMs: 45_000,
+      maxTokens: MAX_OUTPUT_TOKENS,
+      timeoutMs: 90_000,
     },
   );
 

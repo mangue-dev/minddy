@@ -27,6 +27,76 @@ const DICTATION_CONTEXT_SET = new Set<string>(DICTATION_CONTEXTS);
 // matches control characters while preserving tabs as collapsible whitespace.
 // oxlint-disable-next-line no-control-regex
 const DICTATION_CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+const DICTATION_CONTENT_CHAR = /[\p{L}\p{M}\p{N}]/u;
+const MIN_FIDELITY_SOURCE_CHARS = 12;
+const FIDELITY_NGRAM_SIZE = 3;
+const MIN_SOURCE_NGRAM_COVERAGE = 0.55;
+
+function comparableContentCharacters(value: string): string[] {
+  return Array.from(value.normalize("NFKC").toLowerCase()).filter((character) =>
+    DICTATION_CONTENT_CHAR.test(character),
+  );
+}
+
+function contentNgrams(characters: string[]): Set<string> {
+  const ngrams = new Set<string>();
+  for (let index = 0; index <= characters.length - FIDELITY_NGRAM_SIZE; index += 1) {
+    ngrams.add(characters.slice(index, index + FIDELITY_NGRAM_SIZE).join(""));
+  }
+  return ngrams;
+}
+
+function characterEditDistance(left: string[], right: string[]): number {
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    const current = [leftIndex];
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      current[rightIndex] = Math.min(
+        (previous[rightIndex] ?? 0) + 1,
+        (current[rightIndex - 1] ?? 0) + 1,
+        (previous[rightIndex - 1] ?? 0) +
+          (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1),
+      );
+    }
+    previous = current;
+  }
+  return previous[right.length] ?? left.length;
+}
+
+/**
+ * Reject obvious summaries, partial generations, and unrelated model replies.
+ * Character n-grams work across whitespace-free and mixed-language scripts,
+ * while ignoring the punctuation and layout that the cleanup pass may change.
+ */
+function plausiblyPreservesDictation(rawText: string, cleanedText: string): boolean {
+  const rawCharacters = comparableContentCharacters(rawText);
+  const cleanedCharacters = comparableContentCharacters(cleanedText);
+  if (rawCharacters.length === 0 || cleanedCharacters.length === 0) return false;
+
+  // Short phrases do not contain enough trigrams for a stable coverage score.
+  // A bounded edit-distance comparison still distinguishes spelling cleanup
+  // from a generic acknowledgement such as "Done".
+  if (rawCharacters.length < MIN_FIDELITY_SOURCE_CHARS) {
+    const longestLength = Math.max(rawCharacters.length, cleanedCharacters.length);
+    return (
+      cleanedCharacters.length <= rawCharacters.length * 2 + 10 &&
+      characterEditDistance(rawCharacters, cleanedCharacters) / longestLength <= 2 / 3
+    );
+  }
+
+  // Cleanup can add a few connective words, but a much larger response is no
+  // longer an editorial pass over the dictated source.
+  if (cleanedCharacters.length > rawCharacters.length * 1.75 + 80) return false;
+
+  const rawNgrams = contentNgrams(rawCharacters);
+  const cleanedNgrams = contentNgrams(cleanedCharacters);
+  let retainedNgrams = 0;
+  for (const ngram of rawNgrams) {
+    if (cleanedNgrams.has(ngram)) retainedNgrams += 1;
+  }
+
+  return retainedNgrams / rawNgrams.size >= MIN_SOURCE_NGRAM_COVERAGE;
+}
 
 export function normalizeDictationText(value: unknown, maxChars: number): string {
   if (typeof value !== "string") return "";
@@ -58,7 +128,7 @@ export function resolvePolishedDictation(
 ): { text: string; polished: boolean } {
   const raw = rawText.trim();
   const cleaned = cleanedText?.trim() ?? "";
-  return /[\p{L}\p{N}]/u.test(cleaned)
+  return plausiblyPreservesDictation(raw, cleaned)
     ? { text: cleaned, polished: true }
     : { text: raw, polished: false };
 }
