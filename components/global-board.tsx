@@ -501,6 +501,10 @@ function GlobalBoardInner() {
   });
   const smartScores = useMemo(() => {
     if (!smartScoresQuery.data) return null;
+    // An EMPTY merge (every pass rejected) means nothing was ranked: null
+    // keeps the whole board on the rules ranking instead of a score map
+    // that would read every ticket as neutral.
+    if (Object.keys(smartScoresQuery.data).length === 0) return null;
     return new Map(Object.entries(smartScoresQuery.data));
   }, [smartScoresQuery.data]);
 

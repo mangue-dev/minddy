@@ -188,6 +188,33 @@ describe("smartIssueComparator — AI scores (MIN-576)", () => {
     expect(ordered).toEqual(["b", "c", "a"]);
   });
 
+  it("keeps the rules ranking for the tickets no pass ranked (failed column, rules project)", () => {
+    const issues = [
+      issue("a"), // medium, unscored
+      issue("b", { priority: "low" }), // low, unscored
+      issue("c", { priority: "low", due_date: "2026-07-29" }), // low, unscored, due tomorrow — the rules lift it
+      issue("d", { due_date: "2026-07-29" }), // medium, scored
+    ];
+    const scores = new Map<string, number | null>([["d", 3]]);
+    const ordered = issues
+      .slice()
+      .sort(issueComparator("smart", { jevScores: scores, now: NOW }))
+      .map((i) => i.id);
+    // The ranked ticket first; the unranked ones keep the rules order
+    // (c's imminent due date passes b's plain low), NOT age/position.
+    expect(ordered).toEqual(["d", "c", "a", "b"]);
+  });
+
+  it("ranks a scored ticket above an unscored one — the cap tail semantics", () => {
+    const issues = [issue("a"), issue("b")];
+    const scores = new Map<string, number | null>([["a", 1]]);
+    const ordered = issues
+      .slice()
+      .sort(issueComparator("smart", { jevScores: scores, now: NOW }))
+      .map((i) => i.id);
+    expect(ordered).toEqual(["a", "b"]);
+  });
+
   it("falls back to the rules ranking without scores — the rules order stands", () => {
     const issues = [issue("a", { priority: "urgent" }), issue("b", { priority: "low" })];
     const ordered = issues

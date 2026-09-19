@@ -362,10 +362,14 @@ function ProjectBoard() {
     retry: false,
   });
   const smartScores = useMemo(() => {
+    // Gated on the MODE, not just the query's enabled flag: a cached score
+    // map must not outlive the project's switch back to rules (the query
+    // keeps its data while disabled).
+    if (smartTriageMode !== "jev") return null;
     const scores = smartScoresQuery.data;
     if (!scores) return null;
     return new Map(Object.entries(scores));
-  }, [smartScoresQuery.data]);
+  }, [smartScoresQuery.data, smartTriageMode]);
   const handleOpenIssue = useCallback((issue: Issue) => {
     setOpenIssueId(issue.id);
     setOpenIssueTab("description");

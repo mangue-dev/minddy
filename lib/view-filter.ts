@@ -179,18 +179,41 @@ function dueTiebreak(a: Issue, b: Issue): number {
 
 /**
  * The "smart" order. With AI scores in the context (project mode `jev`,
- * MIN-576): the scored order — highest urgency first. Without: the rules —
+ * MIN-576): a PRESENCE-BASED hybrid — only the tickets a scoring pass
+ * actually ranked compare by score among themselves; the others (a failed
+ * column, a rules-mode project, the capped tail) keep the rules ranking
+ * among themselves, and a ranked ticket outranks an unranked one, exactly
+ * like the scored head above the rules tail. Without scores: the rules —
  * priority first, but imminent due dates and open "blocks" relations buy
- * back priority tiers — a medium ticket due tomorrow or blocking work passes
- * an undated high. Ties read the due date, then the manual position. Without
- * a context (no relations known), it degrades to the priority arrangement
- * plus the due-date boosts.
+ * back priority tiers — a medium ticket due tomorrow or blocking work
+ * passes an undated high. Ties read the due date, then the manual position.
+ * Without a context (no relations known), it degrades to the priority
+ * arrangement plus the due-date boosts.
  */
 export function smartIssueComparator(
   ctx: SmartSortContext = {}
 ): (a: Issue, b: Issue) => number {
   const now = ctx.now ?? Date.now();
-  if (ctx.jevScores) return triageScoreComparator(ctx.jevScores);
+  const rules = rulesComparator(ctx, now);
+  const scores = ctx.jevScores;
+  if (!scores) return rules;
+  const scored = triageScoreComparator(scores);
+  return (a, b) => {
+    const aScore = scores.get(a.id);
+    const bScore = scores.get(b.id);
+    if (aScore != null && bScore != null) return scored(a, b);
+    if (aScore == null && bScore == null) return rules(a, b);
+    // Mixed pair: the ranked ticket first — the AI put it there.
+    return aScore != null ? -1 : 1;
+  };
+}
+
+/** The rules ranking the smart sort degrades to — priority first, due-date
+ * and open-block boosts buying back tiers. */
+function rulesComparator(
+  ctx: SmartSortContext,
+  now: number
+): (a: Issue, b: Issue) => number {
   const blockers = blockingIds(ctx.relations, ctx.statusById);
   return (a, b) => {
     const rankA =
