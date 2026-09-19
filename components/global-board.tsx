@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button, Skeleton, toast } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
@@ -22,8 +22,6 @@ import { STATUSES } from "@/lib/issue-constants";
 import { trackEvent } from "@/lib/analytics";
 import { smartTriageApi } from "@/lib/issues-api";
 import {
-  GLOBAL_BOARD_KEY,
-  patchIssueEverywhere,
 } from "@/lib/optimistic/issue-writes";
 import {
   cycleBlockingRelations,
@@ -458,61 +456,53 @@ function GlobalBoardInner() {
     return map;
   }, [scopedIssues]);
 
-  // ── Smart triage (MIN-566, MIN-575) ─────────────────────────────────────
-  // The cross-project board reorders EVERY project that has tickets on the
-  // board — one API call per project, each under ITS OWN mode and rules
-  // (the engine choice stays per project), the actor's budget carrying every
-  // AI pass. There is no "off" mode anymore: every project with tickets is
-  // a target.
-  const queryClient = useQueryClient();
-  const triageTargets = useMemo(
-    () => projects.filter((p) => (issuesByProject.get(p.id)?.length ?? 0) > 0),
+  // ── Smart sort scoring (MIN-566, MIN-576) ───────────────────────────────
+  // The AI urgency scores ride the view sort: every project whose triage
+  // mode is the AI one (and that has tickets here) is scored automatically
+  // when the board reads its "smart" order — nothing written (the manual
+  // drag order stays untouched), a short cache bounds the cost, and a
+  // failed or unauthorized pass leaves that project's tickets on the rules
+  // order. Rules-mode projects score nothing: the client-side comparator
+  // already covers them for free.
+  const jevProjectIds = useMemo(
+    () =>
+      projects
+        .filter((p) => p.smart_triage_mode === "jev" && (issuesByProject.get(p.id)?.length ?? 0) > 0)
+        .map((p) => p.id),
     [projects, issuesByProject]
   );
-  const [smartTriageRunning, setSmartTriageRunning] = useState(false);
-  const runGlobalSmartTriage = useCallback(() => {
-    if (smartTriageRunning || triageTargets.length === 0) return;
-    setSmartTriageRunning(true);
-    void (async () => {
+  const smartScoresQuery = useQuery({
+    queryKey: ["smart-triage-scores", "global", jevProjectIds],
+    queryFn: async () => {
       const results = await Promise.allSettled(
-        triageTargets.map((p) => smartTriageApi(p.id))
+        jevProjectIds.map((id) => smartTriageApi(id, { persist: false }))
       );
-      let firstFailure: string | null = null;
-      const touchedProjects: string[] = [];
-      results.forEach((result, index) => {
-        const project = triageTargets[index];
-        if (result.status === "rejected") {
-          firstFailure ??= (result.reason as Error)?.message ?? String(result.reason);
-          return;
-        }
-        const { mode, moves, columns, scored } = result.value;
-        // The writes are already persisted server-side: apply them to every
-        // cache that copies the line (project, /all, palette index).
-        for (const move of moves) {
-          patchIssueEverywhere(queryClient, project.id, move.id, {
-            position: move.position,
-          } as Partial<Issue>);
-        }
-        touchedProjects.push(project.id);
+      const merged: Record<string, number> = {};
+      results.forEach((result) => {
+        if (result.status === "rejected") return; // silent rules fallback
+        const { mode, scored, columns, scores } = result.value;
         trackEvent("smart_triage_ran", {
           mode,
           scored,
           columns,
-          issues: moves.length,
+          issues: Object.keys(scores ?? {}).length,
           scope: "global",
         });
+        for (const [issueId, score] of Object.entries(scores ?? {})) {
+          merged[issueId] = score;
+        }
       });
-      for (const pid of touchedProjects) {
-        void queryClient.invalidateQueries({ queryKey: ["issues", pid] });
-      }
-      // The aggregate read is the authority for THIS board.
-      if (touchedProjects.length > 0) {
-        void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
-      }
-      if (firstFailure) toast.error(firstFailure);
-      setSmartTriageRunning(false);
-    })();
-  }, [triageTargets, smartTriageRunning, queryClient]);
+      return merged;
+    },
+    enabled: config.sort === "smart" && jevProjectIds.length > 0,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+  const smartScores = useMemo(() => {
+    if (!smartScoresQuery.data) return null;
+    return new Map(Object.entries(smartScoresQuery.data));
+  }, [smartScoresQuery.data]);
 
   // Relations (MIN-25) from any card of this board — the write goes through
   // the card's own project route (relations are same-project by construction).
@@ -622,20 +612,6 @@ function GlobalBoardInner() {
             completionPercent: currentCycleCompletionPercent,
             onSelect: () => switchCycleMode(true),
           }}
-          // Smart triage (MIN-566, MIN-575): every project with tickets on
-          // this board is reordered in one click, each under its own mode.
-          // No tickets at all → no button, nothing to reorder.
-          smartTriage={
-            triageTargets.length > 0
-              ? {
-                  mode: triageTargets.some((p) => p.smart_triage_mode === "jev")
-                    ? "jev"
-                    : "rules",
-                  running: smartTriageRunning,
-                  onRun: runGlobalSmartTriage,
-                }
-              : undefined
-          }
           rightControls={
             cycleMode ? (
               cyclesEnabled && selectedCycle ? (
@@ -744,6 +720,8 @@ function GlobalBoardInner() {
             issues={filtered}
             statuses={statuses}
             sort={config.sort}
+            // The Smart sort's AI scores (jev-mode projects, MIN-576).
+            smartScores={smartScores}
             projectMap={projectMap}
             memberMapByProject={memberMapByProject}
             categoryMapByProject={categoryMapByProject}

@@ -258,24 +258,10 @@ function blockTiebreak(a: TriageIssue[], b: TriageIssue[], now: number): number 
  * highest first; ties and unscored tickets (the LLM pass may answer only part
  * of the column) fold back on the age-then-position tie-break, never on a
  * guessed score. Pure — the orchestration hands it the answers whichever
- * engine produced them.
+ * engine produced them. The comparison itself lives in
+ * `lib/triage-score-order.ts` (shared with the Smart view sort, MIN-576).
  */
-export const TRIAGE_NEUTRAL_SCORE = 3;
-
-export function jevTriageOrder(
-  issues: TriageIssue[],
-  scores: Map<string, number | null>
-): TriageIssue[] {
-  return [...issues].sort((a, b) => {
-    const scoreA = scores.get(a.id) ?? TRIAGE_NEUTRAL_SCORE;
-    const scoreB = scores.get(b.id) ?? TRIAGE_NEUTRAL_SCORE;
-    const diff = scoreB - scoreA;
-    if (diff !== 0) return diff;
-    const ageDiff = a.created_at.localeCompare(b.created_at);
-    if (ageDiff !== 0) return ageDiff;
-    return a.position - b.position;
-  });
-}
+export { TRIAGE_NEUTRAL_SCORE, triageScoreOrder as jevTriageOrder } from "./triage-score-order";
 
 /** The urgency scale a triage decision asks for — shared by the state builder
     (prepare.ts) and the score consumers, so both engines answer the same

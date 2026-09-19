@@ -176,3 +176,24 @@ describe("smart sort — stacked boosts and fallbacks", () => {
     expect(sorted.map((i) => i.id)).toEqual(["due-soon", "high"]);
   });
 });
+
+describe("smartIssueComparator — AI scores (MIN-576)", () => {
+  it("orders by the AI urgency score when the project scored (mode jev)", () => {
+    const issues = [issue("a"), issue("b"), issue("c")];
+    const scores = new Map([["a", 1], ["b", 5], ["c", 3]]);
+    const ordered = issues
+      .slice()
+      .sort(issueComparator("smart", { jevScores: scores }))
+      .map((i) => i.id);
+    expect(ordered).toEqual(["b", "c", "a"]);
+  });
+
+  it("falls back to the rules ranking without scores — the rules order stands", () => {
+    const issues = [issue("a", { priority: "urgent" }), issue("b", { priority: "low" })];
+    const ordered = issues
+      .slice()
+      .sort(issueComparator("smart"))
+      .map((i) => i.id);
+    expect(ordered).toEqual(["a", "b"]);
+  });
+});

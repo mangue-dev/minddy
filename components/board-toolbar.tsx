@@ -49,7 +49,6 @@ import {
   IterationCw,
   ListFilter,
   ArrowUpDown,
-  ListOrdered,
   Loader2,
   Lock,
   MoreHorizontal,
@@ -101,7 +100,6 @@ import type {
   ViewFilters,
   ViewSort,
 } from "@/lib/types";
-import type { SmartTriageMode } from "@/lib/smart-triage";
 import {
   Tooltip,
   TooltipContent,
@@ -652,7 +650,6 @@ export function BoardToolbar({
   cycleTab,
   rightControls,
   tabOrderScope,
-  smartTriage,
 }: {
   views: View[];
   activeViewId: string | null;
@@ -694,16 +691,6 @@ export function BoardToolbar({
   /** Scope key for the per-user tab-strip order (MIN-34): a project id, or
       "global" for the /all board. Drag reorder persists to localStorage here. */
   tabOrderScope: string;
-  /** The board's "Smart triage" button (MIN-566). Passed only when the
-      project's mode is not `off` — the off mode renders nothing, the opt-in
-      stays invisible. Reordering only exists under a manual view order (same
-      rule as drag-and-drop), so the button disables with an explanation
-      otherwise. */
-  smartTriage?: {
-    mode: SmartTriageMode;
-    running: boolean;
-    onRun: () => void;
-  };
 }) {
   const [createOpen, setCreateOpen] = useState(false);
   // "Save as new view" from the Save split button: same create flow, but the
@@ -956,42 +943,6 @@ export function BoardToolbar({
               <Save />
               {t("saveAsView")}
             </Button>
-          )}
-
-          {/* Smart triage (MIN-566) — the on-demand column reorder, opt-in
-              per project. Next to the sort control: the pair answers "in what
-              order do I read this board", one persistently (positions), one
-              per view. Off renders nothing; other sorts disable with the
-              gesture that unlocks, the same way drag-and-drop does. */}
-          {smartTriage && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  aria-label={t("smartTriage")}
-                  disabled={config.sort !== "manual" || smartTriage.running}
-                  onClick={smartTriage.onRun}
-                >
-                  {smartTriage.running ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    <ListOrdered
-                      className={cn(
-                        smartTriage.mode === "jev" && "text-primary"
-                      )}
-                    />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {config.sort !== "manual"
-                  ? t("smartTriageNeedsManualOrder")
-                  : smartTriage.mode === "jev"
-                    ? t("smartTriageHintJev")
-                    : t("smartTriageHintRules")}
-              </TooltipContent>
-            </Tooltip>
           )}
 
           {/* Order — icon only, accent-coloured when a non-default sort is active */}

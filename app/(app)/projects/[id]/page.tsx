@@ -11,7 +11,7 @@ import {
   useState,
 } from "react";
 import dynamic from "next/dynamic";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useParams,
   usePathname,
@@ -80,7 +80,6 @@ import {
   insertIssueEverywhere,
   issueWrites,
   mergeServerIssue,
-  patchIssueEverywhere,
   removeIssueEverywhere,
 } from "@/lib/optimistic/issue-writes";
 import { trackEvent } from "@/lib/analytics";
@@ -338,33 +337,35 @@ function ProjectBoard() {
   // (no per-issue PATCH) and refetches to stay authoritative. The manual
   // drag order remains editable: this is one gesture among others, not a
   // lock-in.
-  const [smartTriageRunning, setSmartTriageRunning] = useState(false);
-  const runSmartTriage = useCallback(() => {
-    if (!project || smartTriageRunning) return;
-    setSmartTriageRunning(true);
-    void (async () => {
-      try {
-        const { mode, moves, columns, scored } = await smartTriageApi(project.id);
-        for (const move of moves) {
-          patchIssueEverywhere(queryClient, project.id, move.id, {
-            position: move.position,
-          } as Partial<Issue>);
-        }
-        void queryClient.invalidateQueries({ queryKey: ["issues", project.id] });
-        trackEvent("smart_triage_ran", {
-          mode,
-          scored,
-          columns,
-          issues: moves.length,
-          scope: "project",
-        });
-      } catch (err) {
-        toast.error((err as Error).message);
-      } finally {
-        setSmartTriageRunning(false);
-      }
-    })();
-  }, [project, queryClient, smartTriageRunning]);
+  // Smart sort scoring (MIN-576): the AI urgency scores ride the view sort.
+  // When the board reads its "smart" order and the project's triage mode is
+  // the AI one, the scores are fetched automatically — nothing written (the
+  // manual drag order stays untouched), a short cache bounds the cost, and a
+  // failed or unauthorized pass simply leaves the rules order in place.
+  const smartScoresQuery = useQuery({
+    queryKey: ["smart-triage-scores", project?.id ?? null],
+    queryFn: async () => {
+      if (!project) return null;
+      const result = await smartTriageApi(project.id, { persist: false });
+      trackEvent("smart_triage_ran", {
+        mode: result.mode,
+        scored: result.scored,
+        columns: result.columns,
+        issues: Object.keys(result.scores ?? {}).length,
+        scope: "project",
+      });
+      return result.scores;
+    },
+    enabled: !!project && config.sort === "smart" && smartTriageMode === "jev",
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+  const smartScores = useMemo(() => {
+    const scores = smartScoresQuery.data;
+    if (!scores) return null;
+    return new Map(Object.entries(scores));
+  }, [smartScoresQuery.data]);
   const handleOpenIssue = useCallback((issue: Issue) => {
     setOpenIssueId(issue.id);
     setOpenIssueTab("description");
@@ -768,14 +769,6 @@ function ProjectBoard() {
                 completionPercent: currentCycleCompletionPercent,
                 onSelect: () => router.push("/all?view=cycle"),
               }}
-              // Smart triage (MIN-566, MIN-575): always rendered — the
-              // project setting only picks the engine (rules | jev), there
-              // is no "off" anymore.
-              smartTriage={{
-                mode: smartTriageMode,
-                running: smartTriageRunning,
-                onRun: runSmartTriage,
-              }}
             />
           )}
           <div className="min-h-0 flex-1 pt-3">
@@ -785,6 +778,9 @@ function ProjectBoard() {
               relations={relations}
               statuses={statuses}
               sort={sort}
+              // The Smart sort's AI scores (project mode jev, MIN-576): the
+              // comparator orders by urgency when the view sort is "smart".
+              smartScores={smartScores}
               buildMenuActions={buildCycleMenuActions}
               currentCycleId={currentCycle?.id ?? null}
               onSetCycle={onSetIssueCycle}

@@ -78,6 +78,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   relations,
   statuses,
   sort,
+  smartScores,
   projectId,
   projectKey,
   members,
@@ -105,6 +106,12 @@ export const KanbanBoard = memo(function KanbanBoard({
   relations: IssueRelation[];
   statuses: StatusMeta[];
   sort: ViewSort;
+  /**
+   * The project's AI urgency scores (project mode `jev`, MIN-576): when
+   * present, the "smart" sort orders by score. `null` = rules mode, a
+   * pending/failed scoring pass — the rules order stands.
+   */
+  smartScores?: Map<string, number | null> | null;
   projectId: string;
   projectKey: string;
   members: Member[];
@@ -187,12 +194,14 @@ export const KanbanBoard = memo(function KanbanBoard({
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
   // Smart sort reads relations + statuses (a done blocker no longer lifts its
   // target), resolved against ALL issues — a filter may hide the other end.
+  // The AI scores (project mode jev, MIN-576) ride on top: with them, the
+  // scored order IS the smart order.
   const comparator = useMemo(() => {
     const statusById = new Map(
       Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
     );
-    return issueComparator(sort, { relations, statusById });
-  }, [sort, relations, allIssueMap]);
+    return issueComparator(sort, { relations, statusById, jevScores: smartScores ?? undefined });
+  }, [sort, relations, allIssueMap, smartScores]);
   const columns = useMemo(
     () => buildColumns(statuses, issues, comparator),
     [buildColumns, issues, statuses, comparator],

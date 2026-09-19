@@ -335,4 +335,48 @@ describe("runSmartTriage — jev mode", () => {
     expect(spec.questions).toHaveLength(40);
     expect(spec.state.tickets).toHaveLength(40);
   });
+
+  it("scores WITHOUT writing when persist is false — the Smart sort's call (MIN-576)", async () => {
+    runDecisionMock.mockResolvedValue({
+      engine: "jev",
+      answers: {
+        a: { value: 5, probability: null, confidence: 0.9 },
+        b: { value: 1, probability: null, confidence: 0.9 },
+        c: { value: 3, probability: null, confidence: 0.9 },
+      },
+      confidence: 0.9,
+      fallbackReason: null,
+    });
+
+    const result = await runSmartTriage({
+      projectId: "project-1",
+      actorId: "user-9",
+      persist: false,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.scored).toBe(true);
+    // Nothing written: the view sort carries the order, the manual drag
+    // order stays untouched.
+    expect(result.moves).toEqual([]);
+    expect(rpcMock).not.toHaveBeenCalled();
+    // The scores ride back to the client's comparator.
+    expect(result.scores).toEqual({ a: 5, b: 1, c: 3 });
+  });
+
+  it("answers null scores in rules mode — the client comparator needs nothing", async () => {
+    DB.project.smart_triage_mode = "rules";
+    DB.issues = [issue({ id: "a", position: 10 }), issue({ id: "b", position: 20 })];
+    const result = await runSmartTriage({
+      projectId: "project-1",
+      actorId: "user-1",
+      persist: false,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.scored).toBe(false);
+    expect(result.scores).toBeNull();
+    expect(result.moves).toEqual([]);
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
 });

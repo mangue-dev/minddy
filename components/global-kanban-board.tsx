@@ -99,6 +99,7 @@ export function GlobalKanbanBoard({
   onCreateIssue,
   onAddRelation,
   comparator,
+  smartScores,
   buildMenuActions,
   currentCycleId,
   bulkCycleId,
@@ -150,6 +151,12 @@ export function GlobalKanbanBoard({
   /** Cycle mode (MIN-32): the reco order replaces `sort` — the ONLY order, so
       same-column reordering is disabled; cross-column drag still moves status. */
   comparator?: (a: Issue, b: Issue) => number;
+  /**
+   * Merged AI urgency scores of the board's jev-mode projects (MIN-576):
+   * when present, the "smart" sort orders by score. `null` = no AI mode
+   * armed or a pending/failed pass — the rules order stands.
+   */
+  smartScores?: Map<string, number | null> | null;
   /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
   /** My current cycle's id — cards in it show the blue cycle icon. Unset in
@@ -217,13 +224,19 @@ export function GlobalKanbanBoard({
   // Cycle mode passes its own comparator; otherwise the view sort rules —
   // and "smart" reads relations + statuses (a done blocker no longer lifts
   // its target), resolved against ALL issues (the other end may be hidden).
+  // The AI scores of the jev-mode projects (MIN-576) ride on top: with
+  // scores, the scored order IS the smart order.
   const displayComparator = useMemo(() => {
     if (comparator) return comparator;
     const statusById = new Map(
       Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
     );
-    return issueComparator(sort, { relations, statusById });
-  }, [comparator, sort, relations, allIssueMap]);
+    return issueComparator(sort, {
+      relations,
+      statusById,
+      jevScores: smartScores ?? undefined,
+    });
+  }, [comparator, sort, relations, allIssueMap, smartScores]);
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
   const columns = useMemo(
     () => buildColumns(statuses, issues, displayComparator),
