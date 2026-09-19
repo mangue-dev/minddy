@@ -110,6 +110,14 @@ describe("mapLlmAnswers — smart_fill", () => {
     expect(answers.priority?.value).toBe("low");
     expect(answers.effort).toBeUndefined();
   });
+
+  it("keeps an EMPTY category selection as the verdict it is (MIN-567 review)", () => {
+    // The tool schema REQUIRES category_ids, so an empty array is a judged
+    // "nothing fits" — silence would hide it from the shadow comparison.
+    // The sanitizer still writes nothing for it, on the use case's side.
+    const answers = mapLlmAnswers(SPEC, { category_ids: [] });
+    expect(answers.category_ids?.value).toEqual([]);
+  });
 });
 
 describe("mapLlmAnswers — smart_assign", () => {

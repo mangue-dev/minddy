@@ -459,6 +459,7 @@
     "historyFeatureImportMap": "Correspondência de coluna de importação",
     "historyFeatureBriefSplit": "Decomposição de briefing",
     "historyFeatureJevDecision": "Decisão de IA",
+    "historyFeatureJevShadow": "Verificação de decisões",
     "historyFeatureSmartTriage": "Triagem inteligente",
     "agentsGateTitle": "O trabalho com o Numo não está disponível",
     "agentsGateDescription": "O trabalho com o Numo não está ativado nesta conta.",
@@ -4327,7 +4328,8 @@
         "import_map": "Correspondência de coluna de importação",
         "brief_split": "Breve detalhamento",
         "landing_demo": "Demonstração de ditado público",
-        "jev_decision": "Decisões Jev"
+        "jev_decision": "Decisões Jev",
+        "jev_shadow": "Sombra Jev"
       },
       "stripeHidden": "A receita da Stripe está oculta: o faturamento não está conectado a esta instância."
     },
@@ -4422,6 +4424,32 @@
       "totalProjects": "Projetos",
       "totalIssues": "Problemas",
       "issuesPerProject": "Problemas por projeto"
+    },
+    "decisions": {
+      "title": "Decisões de IA",
+      "info": "Amostragem em sombra: após uma decisão Jev confiante, a passada LLM é repetida em uma pequena amostra e a concordância é registrada. A LLM é a referência; esses dados calibram o piso de confiança e as alternâncias LLM-primeiro.",
+      "enabled": "Decisões Jev ativas",
+      "disabled": "Decisões Jev desativadas — cada caso de uso decide com a LLM",
+      "floor": "Piso de confiança",
+      "shadowRate": "Taxa de amostragem em sombra",
+      "llmFirst": "Casos de uso LLM-primeiro",
+      "llmFirstNone": "nenhum",
+      "useCase": "Caso de uso",
+      "samples": "Amostras",
+      "agreement": "Concordância",
+      "weekly": "Por semana",
+      "jevLatency": "Latência Jev",
+      "llmLatency": "Latência LLM",
+      "shadowCost": "Custo de sombra",
+      "weeklyHint": "Concordância por semana nas últimas 6, da mais antiga à mais recente. Lê-se onde os dois motores responderam; repetições falhas não contam.",
+      "noData": "Ainda sem comparações em sombra. As amostras aparecem conforme decisões Jev confiantes ocorrem no tráfego real.",
+      "replayFailed": "{count, plural, one {# repetição falhou} other {# repetições falharam}}",
+      "useCases": {
+        "smart_fill": "Preenchimento inteligente",
+        "smart_assign": "Atribuição inteligente",
+        "smart_triage": "Triagem inteligente",
+        "feedback_review": "Revisão do feedback"
+      }
     },
     "favorites": {
       "pickModel": "Escolha um modelo",

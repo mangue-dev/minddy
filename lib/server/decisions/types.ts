@@ -23,6 +23,14 @@ export type DecisionUseCase =
   | "feedback_review"
   | "smart_triage";
 
+/** Every known use case, for config parsing (`jev_llm_first`, MIN-567). */
+export const DECISION_USE_CASES: DecisionUseCase[] = [
+  "smart_fill",
+  "smart_assign",
+  "feedback_review",
+  "smart_triage",
+];
+
 /** Which engine produced the answers of a decision. */
 export type DecisionEngine = "jev" | "llm";
 
@@ -34,7 +42,14 @@ export type DecisionEngine = "jev" | "llm";
 export type DecisionFallbackReason =
   | "jev_disabled"
   | "jev_unavailable"
-  | "jev_low_confidence";
+  | "jev_low_confidence"
+  /**
+   * The use case is calibrated LLM-first (MIN-567): listed in the
+   * `jev_llm_first` `app_config` key, it skips Jev entirely. A use case ends
+   * up here only when the shadow comparison showed it structurally bad at
+   * Jev — the switch is a config edit, never a deploy.
+   */
+  | "jev_llm_first";
 
 /**
  * Hard ceiling of the choices engine, taken from the decisions API (MIN-561

@@ -109,14 +109,19 @@ export function mapLlmAnswers(spec: DecisionSpec, raw: Record<string, unknown>):
       const max =
         categoryQuestion?.kind === "multi_choice" ? categoryQuestion.maxSelections : 0;
       if (allowedCategories.length > 0 && Array.isArray(raw.category_ids)) {
-        const ids = [
-          ...new Set(
-            raw.category_ids.filter(
-              (id): id is string => typeof id === "string" && allowedCategories.includes(id)
-            )
-          ),
-        ].slice(0, max);
-        if (ids.length > 0) answers.category_ids = { value: ids, probability: null, confidence: null };
+        const picked = raw.category_ids.filter(
+          (id): id is string => typeof id === "string" && allowedCategories.includes(id)
+        );
+        // An EMPTY selection is a verdict — "nothing fits" — never silence:
+        // the tool schema REQUIRES the argument, so a missing key is silence
+        // and an empty array is a judged "no category". But ids picked then
+        // ALL filtered out were garbage, not a verdict — that stays silence
+        // (the sanitizer's own reading). The shadow comparison (MIN-567)
+        // reads the difference; the use case's policy still decides what an
+        // empty list is worth on the write side.
+        if (picked.length === 0 && raw.category_ids.length > 0) break;
+        const ids = [...new Set(picked)].slice(0, max);
+        answers.category_ids = { value: ids, probability: null, confidence: null };
       }
       break;
     }
@@ -167,14 +172,14 @@ export function mapLlmAnswers(spec: DecisionSpec, raw: Record<string, unknown>):
       }
       const allowedCategories = options("category_ids");
       if (allowedCategories.length > 0 && Array.isArray(raw.category_ids)) {
-        const ids = [
-          ...new Set(
-            raw.category_ids.filter(
-              (id): id is string => typeof id === "string" && allowedCategories.includes(id)
-            )
-          ),
-        ];
-        if (ids.length > 0) answers.category_ids = { value: ids, probability: null, confidence: null };
+        // Empty selection = an explicit "no category fits"; ids picked then
+        // all filtered out stay silence (same reading as smart_fill above).
+        const picked = raw.category_ids.filter(
+          (id): id is string => typeof id === "string" && allowedCategories.includes(id)
+        );
+        if (picked.length === 0 && raw.category_ids.length > 0) break;
+        const ids = [...new Set(picked)];
+        answers.category_ids = { value: ids, probability: null, confidence: null };
       }
       break;
     }
@@ -208,7 +213,9 @@ export async function runLlmDecision(
       ...(profile.maxTokens !== undefined ? { maxTokens: profile.maxTokens } : {}),
       ...(profile.timeoutMs !== undefined ? { timeoutMs: profile.timeoutMs } : {}),
       record: {
-        feature: profile.feature,
+        // The shadow replay (MIN-567) overrides the feature so the sampling
+        // delta does not read as a real pass of the use case.
+        feature: ctx.feature ?? profile.feature,
         runId: ctx.runId,
         seq: ctx.seq,
         billTo: ctx.billTo,

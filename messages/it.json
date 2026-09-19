@@ -459,6 +459,7 @@
     "historyFeatureImportMap": "Importare corrispondenza di colonna",
     "historyFeatureBriefSplit": "Analisi del brief",
     "historyFeatureJevDecision": "Decisione IA",
+    "historyFeatureJevShadow": "Verifica delle decisioni",
     "historyFeatureSmartTriage": "Triage intelligente",
     "agentsGateTitle": "Il lavoro con Numo non è disponibile",
     "agentsGateDescription": "Il lavoro con Numo non è attivo per questo account.",
@@ -4327,7 +4328,8 @@
         "import_map": "Importare corrispondenza di colonna",
         "brief_split": "Breve ripartizione",
         "landing_demo": "Demo pubblica della dettatura",
-        "jev_decision": "Decisioni Jev"
+        "jev_decision": "Decisioni Jev",
+        "jev_shadow": "Ombra Jev"
       },
       "stripeHidden": "Il ricavo di Stripe è nascosto: la fatturazione non è collegata in questa istanza."
     },
@@ -4422,6 +4424,32 @@
       "totalProjects": "Progetti",
       "totalIssues": "Ticket",
       "issuesPerProject": "Ticket per progetto"
+    },
+    "decisions": {
+      "title": "Decisioni IA",
+      "info": "Campionamento in ombra: dopo una decisione Jev sicura, il passaggio LLM viene ripetuto su un piccolo campione e l’accordo viene registrato. L’LLM è il riferimento; questi dati calibrano la soglia di confidenza e le commutazioni LLM-prima.",
+      "enabled": "Decisioni Jev attive",
+      "disabled": "Decisioni Jev disattivate — ogni caso d’uso decide con l’LLM",
+      "floor": "Soglia di confidenza",
+      "shadowRate": "Tasso di campionamento in ombra",
+      "llmFirst": "Casi d’uso LLM-prima",
+      "llmFirstNone": "nessuno",
+      "useCase": "Caso d’uso",
+      "samples": "Campioni",
+      "agreement": "Accordo",
+      "weekly": "Per settimana",
+      "jevLatency": "Latenza Jev",
+      "llmLatency": "Latenza LLM",
+      "shadowCost": "Costo ombra",
+      "weeklyHint": "Accordo per settimana sulle ultime 6, dalla più vecchia alla più recente. Si legge dove entrambi i motori hanno risposto; i replay falliti non contano.",
+      "noData": "Ancora nessun confronto in ombra. I campioni compaiono man mano che arrivano decisioni Jev sicure sul traffico reale.",
+      "replayFailed": "{count, plural, one {# replay fallito} other {# replay falliti}}",
+      "useCases": {
+        "smart_fill": "Compilazione intelligente",
+        "smart_assign": "Assegnazione intelligente",
+        "smart_triage": "Triage intelligente",
+        "feedback_review": "Revisione del feedback"
+      }
     },
     "favorites": {
       "pickModel": "Scegli un modello",

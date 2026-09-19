@@ -1554,6 +1554,48 @@ export interface AdminOverview {
   };
 }
 
+/** One week of the shadow comparison (MIN-567), for ONE use case — read
+ * from the `ai_decision_evaluations_weekly` view, newest week first. Weeks
+ * carry SUMS and COUNTS, never per-week averages: weeks of very different
+ * traffic must weigh by their sample count when the dashboard aggregates
+ * them, so every displayed latency and cost stays a per-sample average. */
+export interface AdminDecisionsQualityWeek {
+  useCase: string;
+  /** ISO instant of the Monday starting the week (UTC). */
+  weekStart: string;
+  /** Confident Jev decisions sampled, whatever the replay did. */
+  samples: number;
+  /** Of which the replay answered at least one comparable question. */
+  comparable: number;
+  /** Of which every comparable answer matched. */
+  agreeCount: number;
+  /** Of which the LLM replay failed (no reference to compare against). */
+  replayFailed: number;
+  /** End-to-end latency of the Jev legs: the week's sum over its count. */
+  jevLatencySum: number;
+  jevLatencyCount: number;
+  /** End-to-end latency of the LLM replays: the week's sum over its count. */
+  llmLatencySum: number;
+  llmLatencyCount: number;
+  /** Ledger cost of the replays — the delta sampling adds: sum over count. */
+  llmCostSum: number;
+  llmCostCount: number;
+}
+
+/**
+ * `GET /api/admin/decisions-quality` — the Jev decision knobs and the
+ * shadow comparison's weekly agreement, per use case (MIN-567).
+ */
+export interface AdminDecisionsQuality {
+  settings: {
+    enabled: boolean;
+    confidenceFloor: number;
+    shadowSampleRate: number;
+    llmFirstUseCases: string[];
+  };
+  weeks: AdminDecisionsQualityWeek[];
+}
+
 /**
  * A day of the Finance page (MIN-92). The series is DENSIFIED on the SQL side:
  * a day without an AI call is a zero bar, not a hole.

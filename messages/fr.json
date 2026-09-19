@@ -459,6 +459,7 @@
     "historyFeatureImportMap": "Correspondance des colonnes d'un import",
     "historyFeatureBriefSplit": "Découpe d'un brief",
     "historyFeatureJevDecision": "Décision IA",
+    "historyFeatureJevShadow": "Contrôle des décisions",
     "historyFeatureSmartTriage": "Tri intelligent",
     "agentsGateTitle": "Le travail avec Numo n’est pas disponible",
     "agentsGateDescription": "Le travail avec Numo n’est pas activé sur ce compte.",
@@ -4327,7 +4328,8 @@
         "import_map": "Correspondance d'un import",
         "brief_split": "Découpe d'un brief",
         "landing_demo": "Démo publique de la dictée",
-        "jev_decision": "Décisions Jev"
+        "jev_decision": "Décisions Jev",
+        "jev_shadow": "Ombre Jev"
       },
       "stripeHidden": "Les revenus Stripe sont masqués : la facturation n'est pas connectée sur cette instance."
     },
@@ -4422,6 +4424,32 @@
       "totalProjects": "Projets",
       "totalIssues": "Tickets",
       "issuesPerProject": "Tickets par projet"
+    },
+    "decisions": {
+      "title": "Décisions IA",
+      "info": "Échantillonnage ombre : après une décision Jev confiante, la passe LLM est rejouée sur un petit échantillon et l’accord est enregistré. Le LLM sert de référence ; ces données calibrent le plancher de confiance et les bascules LLM-d’abord.",
+      "enabled": "Décisions Jev actives",
+      "disabled": "Décisions Jev désactivées — chaque use case décide avec le LLM",
+      "floor": "Plancher de confiance",
+      "shadowRate": "Taux d’échantillonnage ombre",
+      "llmFirst": "Use cases LLM-d’abord",
+      "llmFirstNone": "aucun",
+      "useCase": "Use case",
+      "samples": "Échantillons",
+      "agreement": "Accord",
+      "weekly": "Par semaine",
+      "jevLatency": "Latence Jev",
+      "llmLatency": "Latence LLM",
+      "shadowCost": "Coût ombre",
+      "weeklyHint": "Accord par semaine sur les 6 dernières, de la plus ancienne à la plus récente. Se lit là où les deux moteurs ont répondu ; les replays échoués n’y comptent pas.",
+      "noData": "Aucune comparaison ombre pour l’instant. Les échantillons apparaissent au fil des décisions Jev confiantes sur le trafic réel.",
+      "replayFailed": "{count, plural, one {# replay échoué} other {# replays échoués}}",
+      "useCases": {
+        "smart_fill": "Smart Fill",
+        "smart_assign": "Smart Assign",
+        "smart_triage": "Tri intelligent",
+        "feedback_review": "Revue du feedback"
+      }
     },
     "favorites": {
       "pickModel": "Choisir un modèle",

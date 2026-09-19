@@ -208,6 +208,9 @@ export async function runSmartAssign(
       const outcome = await runDecision(spec, {
         billTo: { projectOwner: params.projectId },
         projectId: params.projectId,
+        // The shadow comparison (MIN-567) traces its sample back to the
+        // issue it judged.
+        subjectId: params.issueId,
       });
       return smartAssignPickFrom(outcome, memberIds);
     } catch (err) {

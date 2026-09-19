@@ -592,7 +592,11 @@ async function reviewVerdictFor(
   // replayed here because the feedback's LLM fallback is its own richer pass.
   const runId = newRunId();
   const jev = await loadJevDecisionSettings();
-  if (jev.enabled) {
+  // The LLM-first switch (MIN-567) applies to this bespoke flow too: a use
+  // case listed in `jev_llm_first` skips the Jev stage entirely — the review
+  // is structurally bad at Jev, the operator said so, config only.
+  const jevStageRan = jev.enabled && !jev.llmFirstUseCases.includes("feedback_review");
+  if (jevStageRan) {
     const answers = await runJevDecision(prepared.spec, {
       runId,
       seq: 0,
@@ -616,7 +620,7 @@ async function reviewVerdictFor(
 
   return reviewWithLlm(settings.model, post, prepared, {
     runId,
-    seq: jev.enabled ? 1 : 0,
+    seq: jevStageRan ? 1 : 0,
   });
 }
 

@@ -10,10 +10,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * The billing shape is asserted too: one run id per decision, one line per
  * engine (Jev seq 0, LLM seq 1) — a mixed decision reads as one gesture
  * with two lines, never a double imputation.
+ *
+ * The shadow sampling (MIN-567) is pinned here as well, on a deterministic
+ * roll: a CONFIDENT Jev decision schedules the comparison in the
+ * background (`afterOrNow`, captured, never awaited on the decision path),
+ * a roll over the rate schedules nothing, and a decision that already fell
+ * back to the LLM is never sampled — the LLM decided for real, there is
+ * nothing left to compare against.
  */
 
-const { getAppConfigValuesMock, runJevDecisionMock, runLlmDecisionMock } = vi.hoisted(() => {
+const {
+  getAppConfigValuesMock,
+  afterOrNowMock,
+  runJevDecisionMock,
+  runLlmDecisionMock,
+  runShadowComparisonMock,
+} = vi.hoisted(() => {
   const getAppConfigValuesMock = vi.fn<() => Promise<Record<string, string | null>>>();
+  const afterOrNowMock = vi.fn<(work: () => void | Promise<void>) => void>();
   const mkAdapter = () =>
     vi.fn<
       (
@@ -23,19 +37,27 @@ const { getAppConfigValuesMock, runJevDecisionMock, runLlmDecisionMock } = vi.ho
     >();
   return {
     getAppConfigValuesMock,
+    afterOrNowMock,
     runJevDecisionMock: mkAdapter(),
     runLlmDecisionMock: mkAdapter(),
+    runShadowComparisonMock: vi.fn<(input: unknown) => Promise<void>>(),
   };
 });
 
 vi.mock("@/lib/server/app-config", () => ({
   getAppConfigValues: getAppConfigValuesMock,
 }));
+vi.mock("@/lib/server/after-safe", () => ({
+  afterOrNow: afterOrNowMock,
+}));
 vi.mock("@/lib/server/decisions/jev", () => ({
   runJevDecision: runJevDecisionMock,
 }));
 vi.mock("@/lib/server/decisions/llm", () => ({
   runLlmDecision: runLlmDecisionMock,
+}));
+vi.mock("@/lib/server/decisions/shadow", () => ({
+  runShadowComparison: runShadowComparisonMock,
 }));
 
 const { runDecision, loadJevDecisionSettings, shouldShadowSample } = await import("./runner");
@@ -63,9 +85,16 @@ const CONFIDENT_ANSWERS = {
 
 beforeEach(() => {
   getAppConfigValuesMock.mockReset().mockResolvedValue({});
+  afterOrNowMock.mockReset().mockImplementation(() => {});
   runJevDecisionMock.mockReset();
   runLlmDecisionMock.mockReset();
+  runShadowComparisonMock.mockReset().mockResolvedValue(undefined);
 });
+
+/** The deterministic roll of the shadow sampling: Math.random is the draw. */
+function roll(value: number) {
+  vi.spyOn(Math, "random").mockReturnValue(value);
+}
 
 describe("runDecision", () => {
   it("trusts a confident Jev: one Jev call, ZERO LLM call", async () => {
@@ -162,12 +191,126 @@ describe("runDecision", () => {
   });
 });
 
+describe("shadow sampling (MIN-567)", () => {
+  it("samples a confident Jev decision on a roll under the rate, AFTER the response", async () => {
+    getAppConfigValuesMock.mockResolvedValue({ jev_shadow_sample_rate: "0.05" });
+    runJevDecisionMock.mockResolvedValue(CONFIDENT_ANSWERS);
+    roll(0.04);
+    const outcome = await runDecision(SPEC, {
+      billTo: BILL_TO,
+      projectId: "project-1",
+      subjectId: "issue-1",
+    });
+    // The decision is final BEFORE the comparison runs: the shadow measures,
+    // it never decides.
+    expect(outcome).toMatchObject({ engine: "jev", fallbackReason: null });
+    expect(afterOrNowMock).toHaveBeenCalledTimes(1);
+    expect(runShadowComparisonMock).not.toHaveBeenCalled();
+    const [work] = afterOrNowMock.mock.calls[0] as [() => Promise<void>];
+    await work();
+    expect(runShadowComparisonMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        spec: SPEC,
+        jevAnswers: CONFIDENT_ANSWERS,
+        jevConfidence: 0.9,
+        billTo: BILL_TO,
+        projectId: "project-1",
+        subjectId: "issue-1",
+        jevLatencyMs: expect.any(Number),
+      })
+    );
+  });
+
+  it("never samples on a roll over the rate", async () => {
+    getAppConfigValuesMock.mockResolvedValue({ jev_shadow_sample_rate: "0.05" });
+    runJevDecisionMock.mockResolvedValue(CONFIDENT_ANSWERS);
+    roll(0.06);
+    await runDecision(SPEC, { billTo: BILL_TO });
+    expect(afterOrNowMock).not.toHaveBeenCalled();
+  });
+
+  it("never samples at rate 0, whatever the roll", async () => {
+    getAppConfigValuesMock.mockResolvedValue({ jev_shadow_sample_rate: "0" });
+    runJevDecisionMock.mockResolvedValue(CONFIDENT_ANSWERS);
+    roll(0);
+    await runDecision(SPEC, { billTo: BILL_TO });
+    expect(afterOrNowMock).not.toHaveBeenCalled();
+  });
+
+  it("NEVER samples a decision that already fell back to the LLM", async () => {
+    // Unavailable, under the floor, switched off: whatever the reason, the
+    // LLM decided for real — there is nothing left to compare against.
+    getAppConfigValuesMock.mockResolvedValue({ jev_shadow_sample_rate: "1" });
+    runJevDecisionMock.mockResolvedValue(null);
+    runLlmDecisionMock.mockResolvedValue({
+      priority: { value: "high", probability: null, confidence: null },
+    });
+    roll(0);
+    await runDecision(SPEC, { billTo: BILL_TO });
+    expect(afterOrNowMock).not.toHaveBeenCalled();
+    getAppConfigValuesMock.mockResolvedValue({
+      jev_shadow_sample_rate: "1",
+      jev_confidence_floor: "0.99",
+    });
+    runJevDecisionMock.mockResolvedValue({
+      priority: { value: "high", probability: 0.3, confidence: 0.3 },
+    });
+    await runDecision(SPEC, { billTo: BILL_TO });
+    expect(afterOrNowMock).not.toHaveBeenCalled();
+    getAppConfigValuesMock.mockResolvedValue({
+      jev_decisions_enabled: "false",
+      jev_shadow_sample_rate: "1",
+    });
+    await runDecision(SPEC, { billTo: BILL_TO });
+    expect(afterOrNowMock).not.toHaveBeenCalled();
+  });
+
+  it("samples each confident decision independently", async () => {
+    getAppConfigValuesMock.mockResolvedValue({ jev_shadow_sample_rate: "1" });
+    runJevDecisionMock.mockResolvedValue(CONFIDENT_ANSWERS);
+    roll(0);
+    await runDecision(SPEC, { billTo: BILL_TO });
+    await runDecision(SPEC, { billTo: BILL_TO });
+    expect(afterOrNowMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("LLM-first switch (MIN-567)", () => {
+  it("sends a listed use case straight to the LLM, without touching Jev", async () => {
+    getAppConfigValuesMock.mockResolvedValue({
+      jev_llm_first: "smart_fill",
+      jev_shadow_sample_rate: "1",
+    });
+    roll(0);
+    runLlmDecisionMock.mockResolvedValue({
+      priority: { value: "high", probability: null, confidence: null },
+    });
+    const outcome = await runDecision(SPEC, { billTo: BILL_TO });
+    expect(runJevDecisionMock).not.toHaveBeenCalled();
+    expect(runLlmDecisionMock).toHaveBeenCalledTimes(1);
+    expect(runLlmDecisionMock.mock.calls[0][1].seq).toBe(0);
+    expect(outcome).toMatchObject({ engine: "llm", fallbackReason: "jev_llm_first" });
+    // LLM-first is NOT shadowed the other way round: the LLM decided for
+    // real, and the LLM is the reference — there is no Jev side to compare.
+    expect(afterOrNowMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps other use cases on Jev while one is LLM-first", async () => {
+    getAppConfigValuesMock.mockResolvedValue({ jev_llm_first: "smart_assign" });
+    runJevDecisionMock.mockResolvedValue(CONFIDENT_ANSWERS);
+    const outcome = await runDecision(SPEC, { billTo: BILL_TO });
+    expect(runJevDecisionMock).toHaveBeenCalledTimes(1);
+    expect(outcome).toMatchObject({ engine: "jev", fallbackReason: null });
+  });
+});
+
 describe("loadJevDecisionSettings", () => {
-  it("defaults to enabled, floor 0.55, shadow rate 0.05", async () => {
+  it("defaults to enabled, floor 0.55, shadow rate 0.05, no LLM-first use case", async () => {
     await expect(loadJevDecisionSettings()).resolves.toEqual({
       enabled: true,
       confidenceFloor: 0.55,
       shadowSampleRate: 0.05,
+      llmFirstUseCases: [],
     });
   });
 
@@ -180,6 +323,7 @@ describe("loadJevDecisionSettings", () => {
       enabled: true,
       confidenceFloor: 0.7,
       shadowSampleRate: 0.5,
+      llmFirstUseCases: [],
     });
     getAppConfigValuesMock.mockResolvedValue({
       jev_confidence_floor: "12",
@@ -189,6 +333,20 @@ describe("loadJevDecisionSettings", () => {
       enabled: true,
       confidenceFloor: 1,
       shadowSampleRate: 0,
+      llmFirstUseCases: [],
+    });
+  });
+
+  it("parses the LLM-first list case-insensitively, dropping unknown names", async () => {
+    getAppConfigValuesMock.mockResolvedValue({
+      jev_llm_first: " Smart_Fill ,unknown_use_case,SMART-TRIAGE , smart_assign ",
+    });
+    await expect(loadJevDecisionSettings()).resolves.toMatchObject({
+      llmFirstUseCases: ["smart_fill", "smart_assign"],
+    });
+    getAppConfigValuesMock.mockResolvedValue({ jev_llm_first: "" });
+    await expect(loadJevDecisionSettings()).resolves.toMatchObject({
+      llmFirstUseCases: [],
     });
   });
 
