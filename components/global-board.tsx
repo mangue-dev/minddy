@@ -463,7 +463,9 @@ function GlobalBoardInner() {
   // drag order stays untouched), a short cache bounds the cost, and a
   // failed or unauthorized pass leaves that project's tickets on the rules
   // order. Rules-mode projects score nothing: the client-side comparator
-  // already covers them for free.
+  // already covers them for free. Cycle mode is excluded: the cycle view
+  // carries its own comparator, and a visit must not bill scoring passes
+  // it never reads.
   const jevProjectIds = useMemo(
     () =>
       projects
@@ -494,7 +496,7 @@ function GlobalBoardInner() {
       });
       return merged;
     },
-    enabled: config.sort === "smart" && jevProjectIds.length > 0,
+    enabled: !cycleMode && config.sort === "smart" && jevProjectIds.length > 0,
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
     retry: false,

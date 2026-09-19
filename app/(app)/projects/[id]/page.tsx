@@ -337,39 +337,6 @@ function ProjectBoard() {
   // (no per-issue PATCH) and refetches to stay authoritative. The manual
   // drag order remains editable: this is one gesture among others, not a
   // lock-in.
-  // Smart sort scoring (MIN-576): the AI urgency scores ride the view sort.
-  // When the board reads its "smart" order and the project's triage mode is
-  // the AI one, the scores are fetched automatically — nothing written (the
-  // manual drag order stays untouched), a short cache bounds the cost, and a
-  // failed or unauthorized pass simply leaves the rules order in place.
-  const smartScoresQuery = useQuery({
-    queryKey: ["smart-triage-scores", project?.id ?? null],
-    queryFn: async () => {
-      if (!project) return null;
-      const result = await smartTriageApi(project.id, { persist: false });
-      trackEvent("smart_triage_ran", {
-        mode: result.mode,
-        scored: result.scored,
-        columns: result.columns,
-        issues: Object.keys(result.scores ?? {}).length,
-        scope: "project",
-      });
-      return result.scores;
-    },
-    enabled: !!project && config.sort === "smart" && smartTriageMode === "jev",
-    staleTime: 5 * 60_000,
-    refetchOnWindowFocus: false,
-    retry: false,
-  });
-  const smartScores = useMemo(() => {
-    // Gated on the MODE, not just the query's enabled flag: a cached score
-    // map must not outlive the project's switch back to rules (the query
-    // keeps its data while disabled).
-    if (smartTriageMode !== "jev") return null;
-    const scores = smartScoresQuery.data;
-    if (!scores) return null;
-    return new Map(Object.entries(scores));
-  }, [smartScoresQuery.data, smartTriageMode]);
   const handleOpenIssue = useCallback((issue: Issue) => {
     setOpenIssueId(issue.id);
     setOpenIssueTab("description");
@@ -432,6 +399,44 @@ function ProjectBoard() {
   // old manual default, whose positions mean nothing in this filtered scope.
   const sort =
     activeObjective && config.sort === "manual" ? "smart" : config.sort;
+
+  // Smart sort scoring (MIN-576): the AI urgency scores ride the view sort.
+  // When the board reads its "smart" order and the project's triage mode is
+  // the AI one, the scores are fetched automatically — nothing written (the
+  // manual drag order stays untouched), a short cache bounds the cost, and a
+  // failed or unauthorized pass simply leaves the rules order in place.
+  // The gate reads the EFFECTIVE sort (an open objective turns a manual
+  // view sort into the smart order) — the same one the board renders with.
+  const smartScoresQuery = useQuery({
+    queryKey: ["smart-triage-scores", project?.id ?? null],
+    queryFn: async () => {
+      if (!project) return null;
+      const result = await smartTriageApi(project.id, { persist: false });
+      trackEvent("smart_triage_ran", {
+        mode: result.mode,
+        scored: result.scored,
+        columns: result.columns,
+        issues: Object.keys(result.scores ?? {}).length,
+        scope: "project",
+      });
+      return result.scores;
+    },
+    enabled: !!project && sort === "smart" && smartTriageMode === "jev",
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+  const smartScores = useMemo(() => {
+    // Gated on the MODE, not just the query's enabled flag: a cached score
+    // map must not outlive the project's switch back to rules (the query
+    // keeps its data while disabled). A FAILED refresh is dropped too —
+    // expired scores must not pose as current evidence; the rules order
+    // stands until a pass succeeds again.
+    if (smartTriageMode !== "jev" || smartScoresQuery.isError) return null;
+    const scores = smartScoresQuery.data;
+    if (!scores) return null;
+    return new Map(Object.entries(scores));
+  }, [smartScoresQuery.data, smartScoresQuery.isError, smartTriageMode]);
 
   const handleAskNumoForIssues = useCallback(
     (selectedIssues: Issue[]) => {
