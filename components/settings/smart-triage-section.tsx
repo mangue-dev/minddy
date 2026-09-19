@@ -7,6 +7,8 @@ import { useProjects } from "@/lib/projects-context";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import {
+  DEFAULT_SMART_TRIAGE_MODE,
+  parseSmartTriageMode,
   SMART_TRIAGE_MODES,
   type SmartTriageMode,
 } from "@/lib/smart-triage";
@@ -35,11 +37,17 @@ export function SmartTriageSection({
   const { updateProject } = useProjects();
 
   // Mirror the mode locally so it flips instantly, then reconcile from the
-  // project (realtime / refetch) — the Smart Assign toggle's pattern.
-  const [mode, setMode] = useState<SmartTriageMode>(project.smart_triage_mode);
+  // project (realtime / refetch) — the Smart Assign toggle's pattern. The
+  // project value is NORMALIZED through the parser: a legacy `off` row (a
+  // database the migration has not reached yet) must render as the default
+  // (rules) — both a selected segment and the matching hint — never as a
+  // selector with no choice and a hint that lies about the active engine.
+  const [mode, setMode] = useState<SmartTriageMode>(
+    parseSmartTriageMode(project.smart_triage_mode) ?? DEFAULT_SMART_TRIAGE_MODE
+  );
   const [saving, setSaving] = useState(false);
   useEffect(() => {
-    setMode(project.smart_triage_mode);
+    setMode(parseSmartTriageMode(project.smart_triage_mode) ?? DEFAULT_SMART_TRIAGE_MODE);
   }, [project.smart_triage_mode]);
 
   const change = async (next: SmartTriageMode) => {
@@ -50,7 +58,7 @@ export function SmartTriageSection({
       await updateProject(project.id, { smart_triage_mode: next });
       toast.success(t("smartTriageSavedToast"));
     } catch (e) {
-      setMode(project.smart_triage_mode);
+      setMode(parseSmartTriageMode(project.smart_triage_mode) ?? DEFAULT_SMART_TRIAGE_MODE);
       toast.error((e as Error).message);
     } finally {
       setSaving(false);
