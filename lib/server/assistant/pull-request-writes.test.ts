@@ -5,9 +5,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * re-describe, comment, edit a comment Numo posted itself.
  *
  * The forge is replaced wholesale — what we pin here is the GUARDRAIL work:
- * the merge pre-checks (draft, conflicts, red or running CI), the ownership
- * gate of the comment edit (bot identity on GitHub, Numo signature
- * elsewhere), the signature of Numo's comments, and the after-merge
+ * the merge pre-checks (draft and conflicts), forge-owned policy enforcement,
+ * the ownership gate of the comment edit (bot identity on GitHub, Numo
+ * signature elsewhere), the signature of Numo's comments, and the after-merge
  * bookkeeping (row + runs + issue status through the shared sync core).
  */
 
@@ -140,20 +140,6 @@ describe("merge_pull_request", () => {
     mergeableState: "clean",
     ...overrides,
   });
-  const checks = (state: string | null, failing: string[] = []) => ({
-    state,
-    passing: state === "success" ? 3 : 0,
-    total: 3,
-    checks: failing.map((name) => ({
-      name,
-      state: "failure" as const,
-      url: null,
-      appName: null,
-      appAvatarUrl: null,
-      description: null,
-      durationMs: null,
-    })),
-  });
   const run = (args: Record<string, unknown> = {}) =>
     executePullRequestWriteTool(ctx, "merge_pull_request", {
       issue_id: ISSUE_OK,
@@ -164,7 +150,6 @@ describe("merge_pull_request", () => {
     forgeFor.mockReturnValue(
       forgeWith({
         getPullRequest: vi.fn().mockResolvedValue(pr()),
-        listChecks: vi.fn().mockResolvedValue(checks("success")),
         mergePullRequest: vi.fn().mockResolvedValue(undefined),
       }),
     );
@@ -215,33 +200,26 @@ describe("merge_pull_request", () => {
     expect(upsertPullRequest).not.toHaveBeenCalled();
   });
 
-  it("refuses a merge against red or running CI checks", async () => {
-    for (const [summary, fragment] of [
-      [checks("failure", ["build", "lint"]), "build, lint"],
-      [checks("pending"), "still running"],
-    ] as const) {
+  it("lets the forge enforce required checks without inspecting the aggregate CI state", async () => {
+    for (const state of ["failure", "pending"] as const) {
+      const listChecks = vi.fn().mockResolvedValue({ state });
+      const mergePullRequest = vi.fn().mockResolvedValue(undefined);
       forgeFor.mockReturnValueOnce(
         forgeWith({
-          getPullRequest: vi.fn().mockResolvedValue(pr()),
-          listChecks: vi.fn().mockResolvedValue(summary),
+          getPullRequest: vi.fn().mockResolvedValue(
+            pr({ mergeable: true, mergeableState: "unstable" }),
+          ),
+          listChecks,
+          mergePullRequest,
         }),
       );
-      const { result, success } = await run();
-      expect(success).toBe(false);
-      expect((result as { error: string }).error).toContain(fragment);
-    }
-  });
 
-  it("merges when the checks are unreadable — the forge keeps the final word", async () => {
-    forgeFor.mockReturnValue(
-      forgeWith({
-        getPullRequest: vi.fn().mockResolvedValue(pr()),
-        listChecks: vi.fn().mockRejectedValue(new Error("forbidden")),
-        mergePullRequest: vi.fn().mockResolvedValue(undefined),
-      }),
-    );
-    const { success } = await run();
-    expect(success).toBe(true);
+      const { success } = await run();
+
+      expect(success).toBe(true);
+      expect(listChecks).not.toHaveBeenCalled();
+      expect(mergePullRequest).toHaveBeenCalledOnce();
+    }
   });
 
   it("reports a pull request that is already merged without touching the forge", async () => {

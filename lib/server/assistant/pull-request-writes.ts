@@ -38,8 +38,9 @@ import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
  * borrow the hand of the member who asked.
  *
  * The merge carries the guardrails the product asks for: the tool re-checks
- * the draft state, the merge conflicts and the CI checks BEFORE calling the
- * forge, and refuses with a readable error; the tool DESCRIPTION is what
+ * the draft state and merge conflicts BEFORE calling the forge, while the
+ * forge remains authoritative for its branch-protection policy. The tool
+ * DESCRIPTION is what
  * tells the model to confirm with the user first (the same prompt-driven
  * garde-fou as every other destructive Numo tool). The linked issue's status
  * then follows the PR through the shared sync core — merged → done.
@@ -47,9 +48,6 @@ import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 
 /** Comment body accepted — GitHub refuses beyond 65,536 characters. */
 const MAX_BODY_LENGTH = 65_536;
-
-/** Failing checks named before refusing a merge — beyond that, the model has the idea. */
-const MAX_FAILING_CHECKS_NAMED = 5;
 
 export interface PullRequestWriteContext {
   projectId: string;
@@ -258,36 +256,9 @@ async function mergePullRequest(
         success: false,
       };
     }
-    // Red or running CI: refusing is the whole point of the pre-check. An
-    // unreadable checks summary (`null`, like a repo without CI or a missing
-    // App permission) stays non-blocking — the forge has the final word.
-    const checks = pr.headSha
-      ? await forge
-          .listChecks({ ...call, sha: pr.headSha })
-          .catch(() => null)
-      : null;
-    if (checks?.state === "failure") {
-      const failing = checks.checks
-        .filter((c) => c.state === "failure")
-        .slice(0, MAX_FAILING_CHECKS_NAMED)
-        .map((c) => c.name);
-      return {
-        result: {
-          error: `CI checks are failing (${failing.join(", ")}) — never merge a red pull request. Delegate the fix to the code agent instead.`,
-        },
-        success: false,
-      };
-    }
-    if (checks?.state === "pending") {
-      return {
-        result: {
-          error:
-            "CI checks are still running — wait for them to finish before merging.",
-        },
-        success: false,
-      };
-    }
-
+    // The forge is the authority on required checks. The aggregate checks
+    // summary also contains optional jobs, so treating any red or running job
+    // as a local blocker would reject merges that branch protection permits.
     await forge.mergePullRequest({ ...call, ...(method ? { method } : {}) });
     const issueStatus = await settleState(ctx, target, number, row, "merged");
     return {
@@ -299,7 +270,7 @@ async function mergePullRequest(
       },
       success: true,
     };
-  }, "A merge is refused when the branch is protected, the checks are red, the approvals are missing or the branch conflicts.");
+  }, "The forge refuses a merge when its branch protection requirements are not satisfied or the branch conflicts.");
 }
 
 // ── update_pull_request ─────────────────────────────────────────────────────
