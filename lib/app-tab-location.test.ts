@@ -7,6 +7,7 @@ describe("application tab destinations", () => {
   });
   it("keeps repeatable selections and removes one-use commands", () => {
     expect(normalizeAppTabLocation("/routines?routine=a&new=1&setup=git&compose=1&billing=success")).toBe("/routines?routine=a");
+    expect(normalizeAppTabLocation("/projects/p?view=b&family=parent&issue=child")).toBe("/projects/p?family=parent&view=b");
     expect(normalizeAppTabLocation("/projects/p/pages/a?entry=b#heading")).toBe("/projects/p/pages/a?entry=b#heading");
     expect(normalizeAppTabLocation("/settings?tab=security&section=account-security#hint")).toBe("/settings?tab=security");
   });

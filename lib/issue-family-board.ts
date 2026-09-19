@@ -82,6 +82,6 @@ export function issueFamilyParentId(
   issue: FamilyIssue,
   parentIds: ReadonlySet<string>,
 ): string | null {
-  if (issue.parent_id) return issue.parent_id;
-  return parentIds.has(issue.id) ? issue.id : null;
+  if (parentIds.has(issue.id)) return issue.id;
+  return issue.parent_id;
 }

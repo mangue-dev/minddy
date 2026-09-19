@@ -30,13 +30,19 @@ describe("issue family board", () => {
   });
 
   it("resolves the same family from its parent and a child", () => {
-    const parentIds = new Set(["parent"]);
+    const parentIds = new Set(["parent", "child-with-children"]);
     expect(issueFamilyParentId({ id: "parent", parent_id: null }, parentIds)).toBe(
       "parent",
     );
     expect(issueFamilyParentId({ id: "child", parent_id: "parent" }, parentIds)).toBe(
       "parent",
     );
+    expect(
+      issueFamilyParentId(
+        { id: "child-with-children", parent_id: "parent" },
+        parentIds,
+      ),
+    ).toBe("child-with-children");
     expect(issueFamilyParentId({ id: "solo", parent_id: null }, parentIds)).toBeNull();
   });
 
