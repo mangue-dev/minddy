@@ -743,6 +743,13 @@
     "deleteView": "Cancella vista",
     "cycleTab": "Ciclo"
   },
+  "IssueFamily": {
+    "menuLabel": "Bacheca di questa famiglia",
+    "openHere": "Apri la bacheca di questa famiglia",
+    "openNewTab": "Apri in una nuova scheda",
+    "backToBoard": "Torna alla bacheca completa",
+    "childCount": "{count, plural, one {# sotto-attività} other {# sotto-attività}}"
+  },
   "ShareView": {
     "title": "Condividere la vista",
     "description": "Scegli chi può vedere «{name}». Le viste condivise sono sempre di sola lettura.",

@@ -743,6 +743,13 @@
     "deleteView": "Ansicht löschen",
     "cycleTab": "Zyklus"
   },
+  "IssueFamily": {
+    "menuLabel": "Board dieser Ticketfamilie",
+    "openHere": "Board dieser Ticketfamilie öffnen",
+    "openNewTab": "In einem neuen Tab öffnen",
+    "backToBoard": "Zurück zum vollständigen Board",
+    "childCount": "{count, plural, one {# Unteraufgabe} other {# Unteraufgaben}}"
+  },
   "ShareView": {
     "title": "Ansicht teilen",
     "description": "Wählen Sie aus, wer „{name}“ sehen kann. Geteilte Ansichten sind immer schreibgeschützt.",

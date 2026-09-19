@@ -88,6 +88,7 @@ const DEFAULTS = {
   effort: null as IssueEffort | null,
   assignee_id: null as string | null,
   objective_id: null as string | null,
+  parent_id: null as string | null,
   due_date: null as string | null,
   recurrence: null as RecurrenceCadence | null,
 };
@@ -105,6 +106,7 @@ export function CreateIssueDialog({
   initialStatus,
   initialObjectiveId,
   initialAssigneeId,
+  initialParentId,
   initialTitle,
   initialDescription,
   initialCategoryIds,
@@ -129,6 +131,9 @@ export function CreateIssueDialog({
   initialStatus?: IssueStatus;
   /** Preset the objective (when creating from an objective-filtered board). */
   initialObjectiveId?: string | null;
+  /** Preset the parent (when creating from a family-scoped board, so the new
+      issue lands IN the family instead of silently next to it). */
+  initialParentId?: string | null;
   /** Preset the assignee (when creating from an assignee-filtered board, so
       the new issue doesn't instantly vanish from it). */
   initialAssigneeId?: string | null;
@@ -242,12 +247,14 @@ export function CreateIssueDialog({
     ...DEFAULTS,
     status: initialStatus ?? DEFAULTS.status,
     objective_id: initialObjectiveId ?? DEFAULTS.objective_id,
+    parent_id: initialParentId ?? DEFAULTS.parent_id,
     assignee_id: initialAssigneeId ?? defaultAssigneeId,
   });
 
   // Apply the presets each time the dialog opens (a column's "+" reopens it with
   // that column's status; objective mode reopens it with the objective set;
-  // the auto-assign preference seeds the assignee). Re-seeding on
+  // family mode reopens it under the active parent; the auto-assign
+  // preference seeds the assignee). Re-seeding on
   // defaultAssigneeId also covers members loading in after the dialog opens.
   useEffect(() => {
     if (!open) return;
@@ -255,9 +262,10 @@ export function CreateIssueDialog({
       ...f,
       status: initialStatus ?? DEFAULTS.status,
       objective_id: initialObjectiveId ?? DEFAULTS.objective_id,
+      parent_id: initialParentId ?? DEFAULTS.parent_id,
       assignee_id: initialAssigneeId ?? defaultAssigneeId,
     }));
-  }, [open, initialStatus, initialObjectiveId, initialAssigneeId, defaultAssigneeId]);
+  }, [open, initialStatus, initialObjectiveId, initialParentId, initialAssigneeId, defaultAssigneeId]);
 
   // The starting content, placed ONCE per opening. The flag is a ref and
   // not an effect dependency: `initialCategoryIds` is an array, therefore a
@@ -448,6 +456,9 @@ export function CreateIssueDialog({
       effort: draft.effort,
       assignee_id: draft.assignee_id,
       objective_id: draft.objective_id,
+      // Drafts never recorded a parent: the dialog's own preset reasserts
+      // itself, so a draft recovered on a family board still lands there.
+      parent_id: initialParentId ?? DEFAULTS.parent_id,
       due_date: draft.due_date,
       recurrence: draft.recurrence ?? null,
     });
