@@ -21,7 +21,7 @@ describe("buildBoardColumns", () => {
         issue("later", "todo", 20),
         issue("first", "todo", 10),
       ],
-      (a, b) => a.position - b.position
+      (columnIssues) => (a, b) => a.position - b.position
     );
 
     expect(columns.map((column) => column.status.value)).toEqual([
@@ -36,7 +36,7 @@ describe("buildBoardColumns", () => {
 
   it("does not mutate the source issue order", () => {
     const issues = [issue("later", "todo", 20), issue("first", "todo", 10)];
-    buildBoardColumns(statuses, issues, (a, b) => a.position - b.position);
+    buildBoardColumns(statuses, issues, (columnIssues) => (a, b) => a.position - b.position);
     expect(issues.map((item) => item.id)).toEqual(["later", "first"]);
   });
 
@@ -44,11 +44,11 @@ describe("buildBoardColumns", () => {
     const build = createBoardColumnsBuilder();
     const todo = issue("todo", "todo", 10);
     const doing = issue("doing", "in_progress", 10);
-    const first = build(statuses, [todo, doing], (a, b) => a.position - b.position);
+    const first = build(statuses, [todo, doing], (columnIssues) => (a, b) => a.position - b.position);
     const second = build(
       statuses,
       [{ ...todo, title: "Updated" }, doing],
-      (a, b) => a.position - b.position
+      (columnIssues) => (a, b) => a.position - b.position
     );
 
     expect(second[0]).not.toBe(first[0]);

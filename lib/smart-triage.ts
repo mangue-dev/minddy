@@ -1,8 +1,9 @@
 import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
 import { isClosedStatus } from "@/lib/issue-constants";
 import { calendarDaysBetween } from "@/lib/due-date";
-import type { IssueRelation } from "@/lib/types";
-import { dueBoost, PRIORITY_ORDER } from "@/lib/view-filter";
+import type { Issue, IssueRelation, ViewSort } from "@/lib/types";
+import { dueBoost, issueComparator, PRIORITY_ORDER } from "@/lib/view-filter";
+import { triageScoreComparator } from "@/lib/triage-score-order";
 
 /**
  * Smart Triage (MIN-566) — the on-demand reorder of a board column, ALWAYS
@@ -45,6 +46,56 @@ export function parseSmartTriageMode(value: unknown): SmartTriageMode | null {
   return (SMART_TRIAGE_MODES as readonly unknown[]).includes(value)
     ? (value as SmartTriageMode)
     : null;
+}
+
+/**
+ * The board's per-column comparator factory (MIN-576) — the ONE ordering the
+ * Smart view sort reads, whichever engine the project's mode named:
+ *
+ * - `smart` — the FULL triage rules per column (`triageIssueComparator`:
+ *   relations tier first, quick wins, objectives kept together — the same
+ *   rules the server's reorder applies, so the two orders can never drift);
+ *   with AI scores in the context, a presence-based hybrid rides on top:
+ *   the tickets a scoring pass ranked compare by score among themselves,
+ *   the others (a failed column, the capped tail) keep the rules ranking
+ *   among themselves, and a ranked ticket outranks an unranked one.
+ * - any other sort — the view sort's own comparator, column-blind.
+ *
+ * Per COLUMN because the rules group objectives over the column's own issue
+ * set — one global comparator would tear an objective across statuses.
+ */
+export function boardComparatorFactory(
+  sort: ViewSort,
+  ctx: {
+    relations?: IssueRelation[];
+    statusById?: Map<string, IssueStatus>;
+    now?: number;
+    jevScores?: Map<string, number | null>;
+  }
+): (columnIssues: Issue[]) => (a: Issue, b: Issue) => number {
+  if (sort !== "smart") {
+    const comparator = issueComparator(sort, ctx);
+    return () => comparator;
+  }
+  const scores = ctx.jevScores;
+  const scored = scores ? triageScoreComparator(scores) : null;
+  return (columnIssues) => {
+    const rules = triageIssueComparator({
+      issues: columnIssues,
+      relations: ctx.relations,
+      statusById: ctx.statusById,
+      now: ctx.now,
+    });
+    if (!scored) return rules;
+    return (a, b) => {
+      const aScore = scores?.get(a.id);
+      const bScore = scores?.get(b.id);
+      if (aScore != null && bScore != null) return scored(a, b);
+      if (aScore == null && bScore == null) return rules(a, b);
+      // Mixed pair: the ranked ticket first — the AI put it there.
+      return aScore != null ? -1 : 1;
+    };
+  };
 }
 
 /** One position the server rewrote — applied optimistically by the client. */

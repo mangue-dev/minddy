@@ -5,7 +5,6 @@ import {
   type StatusMeta,
 } from "./issue-constants";
 import { calendarDaysBetween, isDueDateOverdue, parseDueDate } from "./due-date";
-import { triageScoreComparator } from "./triage-score-order";
 import type { Issue, IssueRelation, ViewConfig, ViewSort } from "./types";
 
 /** Dynamic assignee filter value: "assigned to me", resolved at filter time
@@ -117,14 +116,6 @@ export type SmartSortContext = {
   /** Frozen "now", so a comparator stays stable across a drag gesture.
       Defaults to Date.now() at comparator creation. */
   now?: number;
-  /**
-   * Per-ticket AI urgency scores (MIN-576): when present, the scored order
-   * IS the smart order — the project's triage mode is `jev`, the board
-   * fetched the scores automatically, and the rules ranking degrades under
-   * them. Unscored tickets read as the neutral score. The caller owns the
-   * freshness (a short-lived cache; a failed fetch simply omits the map).
-   */
-  jevScores?: Map<string, number | null>;
 };
 
 /** How many priority tiers each smart criterion lifts an issue (in
@@ -178,42 +169,20 @@ function dueTiebreak(a: Issue, b: Issue): number {
 }
 
 /**
- * The "smart" order. With AI scores in the context (project mode `jev`,
- * MIN-576): a PRESENCE-BASED hybrid — only the tickets a scoring pass
- * actually ranked compare by score among themselves; the others (a failed
- * column, a rules-mode project, the capped tail) keep the rules ranking
- * among themselves, and a ranked ticket outranks an unranked one, exactly
- * like the scored head above the rules tail. Without scores: the rules —
- * priority first, but imminent due dates and open "blocks" relations buy
- * back priority tiers — a medium ticket due tomorrow or blocking work
- * passes an undated high. Ties read the due date, then the manual position.
- * Without a context (no relations known), it degrades to the priority
- * arrangement plus the due-date boosts.
+ * The "smart" order: priority first, but imminent due dates and open "blocks"
+ * relations buy back priority tiers — a medium ticket due tomorrow or blocking
+ * work passes an undated high. Ties read the due date, then the manual
+ * position. Without a context (no relations known), it degrades to the
+ * priority arrangement plus the due-date boosts.
+ *
+ * This reduced ranking serves the public share page only: a signed-in board
+ * sorts through `boardComparatorFactory` (lib/smart-triage.ts, MIN-576),
+ * which applies the project's full triage rules and its AI scores.
  */
 export function smartIssueComparator(
   ctx: SmartSortContext = {}
 ): (a: Issue, b: Issue) => number {
   const now = ctx.now ?? Date.now();
-  const rules = rulesComparator(ctx, now);
-  const scores = ctx.jevScores;
-  if (!scores) return rules;
-  const scored = triageScoreComparator(scores);
-  return (a, b) => {
-    const aScore = scores.get(a.id);
-    const bScore = scores.get(b.id);
-    if (aScore != null && bScore != null) return scored(a, b);
-    if (aScore == null && bScore == null) return rules(a, b);
-    // Mixed pair: the ranked ticket first — the AI put it there.
-    return aScore != null ? -1 : 1;
-  };
-}
-
-/** The rules ranking the smart sort degrades to — priority first, due-date
- * and open-block boosts buying back tiers. */
-function rulesComparator(
-  ctx: SmartSortContext,
-  now: number
-): (a: Issue, b: Issue) => number {
   const blockers = blockingIds(ctx.relations, ctx.statusById);
   return (a, b) => {
     const rankA =

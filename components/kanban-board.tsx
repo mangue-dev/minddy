@@ -37,7 +37,7 @@ import { issueIdentifier } from "@/lib/issue-constants";
 import { promptRelations } from "@/lib/issue-prompt";
 import { useBulkSelectionActions } from "@/lib/use-bulk-selection-actions";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
-import { issueComparator } from "@/lib/view-filter";
+import { boardComparatorFactory } from "@/lib/smart-triage";
 import { createBoardColumnsBuilder } from "@/lib/board-columns";
 import {
   BOARD_MOUSE_ACTIVATION_DISTANCE,
@@ -196,15 +196,19 @@ export const KanbanBoard = memo(function KanbanBoard({
   // target), resolved against ALL issues — a filter may hide the other end.
   // The AI scores (project mode jev, MIN-576) ride on top: with them, the
   // scored order IS the smart order.
-  const comparator = useMemo(() => {
+  const makeComparator = useMemo(() => {
     const statusById = new Map(
       Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
     );
-    return issueComparator(sort, { relations, statusById, jevScores: smartScores ?? undefined });
+    return boardComparatorFactory(sort, {
+      relations,
+      statusById,
+      jevScores: smartScores ?? undefined,
+    });
   }, [sort, relations, allIssueMap, smartScores]);
   const columns = useMemo(
-    () => buildColumns(statuses, issues, comparator),
-    [buildColumns, issues, statuses, comparator],
+    () => buildColumns(statuses, issues, makeComparator),
+    [buildColumns, issues, statuses, makeComparator],
   );
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -292,7 +296,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   // calculation (see lib/use-board-drop.ts).
   const drop = useBoardDrop({
     columns,
-    comparator,
+    makeComparator,
     manual: sort === "manual",
     issueMap,
     selectedIds,

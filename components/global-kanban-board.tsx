@@ -31,7 +31,7 @@ import type {
   Project,
   ViewSort,
 } from "@/lib/types";
-import { issueComparator } from "@/lib/view-filter";
+import { boardComparatorFactory } from "@/lib/smart-triage";
 import { resolveRelationsByIssue } from "@/lib/relation-constants";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { promptRelations } from "@/lib/issue-prompt";
@@ -226,12 +226,14 @@ export function GlobalKanbanBoard({
   // its target), resolved against ALL issues (the other end may be hidden).
   // The AI scores of the jev-mode projects (MIN-576) ride on top: with
   // scores, the scored order IS the smart order.
-  const displayComparator = useMemo(() => {
-    if (comparator) return comparator;
+  // Cycle mode pins ONE comparator for every column (the reco order);
+  // otherwise the view sort builds its comparator per column (MIN-576).
+  const makeComparator = useMemo(() => {
+    if (comparator) return () => comparator;
     const statusById = new Map(
       Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
     );
-    return issueComparator(sort, {
+    return boardComparatorFactory(sort, {
       relations,
       statusById,
       jevScores: smartScores ?? undefined,
@@ -239,8 +241,8 @@ export function GlobalKanbanBoard({
   }, [comparator, sort, relations, allIssueMap, smartScores]);
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
   const columns = useMemo(
-    () => buildColumns(statuses, issues, displayComparator),
-    [buildColumns, issues, statuses, displayComparator],
+    () => buildColumns(statuses, issues, makeComparator),
+    [buildColumns, issues, statuses, makeComparator],
   );
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -350,7 +352,7 @@ export function GlobalKanbanBoard({
   // calculation as the project board (see lib/use-board-drop.ts).
   const drop = useBoardDrop({
     columns,
-    comparator: displayComparator,
+    makeComparator,
     manual: sort === "manual",
     issueMap,
     selectedIds,
