@@ -111,7 +111,8 @@ interface EvaluationRow {
   llm_confidence: number | null;
   agree: boolean | null;
   jev_latency_ms: number;
-  llm_latency_ms: number | null;
+  /** Measured even on a failed replay — the wait is real. */
+  llm_latency_ms: number;
   llm_cost: number | null;
 }
 
@@ -161,7 +162,10 @@ export async function runShadowComparison(input: ShadowComparisonInput): Promise
       llm_confidence: llmConfidence,
       agree,
       jev_latency_ms: Math.round(input.jevLatencyMs),
-      llm_latency_ms: llmAnswers === null ? null : llmLatencyMs,
+      // The latency of a FAILED replay is real waiting time: it counts in
+      // the weekly latency comparison (timeouts included), while the
+      // agreement stays out of it — `replay_failed` is the failure marker.
+      llm_latency_ms: Math.round(llmLatencyMs),
       llm_cost: llmCost,
     });
   } catch (err) {

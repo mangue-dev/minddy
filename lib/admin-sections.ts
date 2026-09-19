@@ -219,19 +219,15 @@ export function useAdminSections(): AdminSection[] {
         icon: Crosshair,
         title: t("decisions.title"),
         keywords: [
+          // Searchable as-is: the section TITLE is already translated (the
+          // filter matches it too), so no locale-specific aliases live here.
           t("decisions.floor"),
           t("decisions.shadowRate"),
           t("decisions.agreement"),
           "AI decisions",
-          "décisions IA",
-          "decisions ia",
           "jev",
           "shadow",
-          "ombre",
           "agreement",
-          "accord",
-          "precision",
-          "précision",
           "calibration",
           "llm-first",
         ],

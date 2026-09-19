@@ -223,9 +223,11 @@ describe("runShadowComparison", () => {
       llm_answers: null,
       llm_confidence: null,
       agree: null,
-      llm_latency_ms: null,
       llm_cost: 0,
     });
+    // A failed replay still WAITED: its latency counts in the weekly
+    // comparison, `replay_failed` is what marks it.
+    expect(typeof row.llm_latency_ms).toBe("number");
   });
 
   it("keeps an empty replay answer as incomparable, but still measured", async () => {

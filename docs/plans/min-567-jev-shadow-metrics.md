@@ -134,7 +134,9 @@ multiply it by the rate when reading it. The latency averages
 (`jev_latency_sum / jev_latency_count`, `llm_latency_sum /
 llm_latency_count`) answer "how much slower is the LLM when someone is
 waiting" — the replay runs after the response, so only its cost, never its
-latency, is borne by the user.
+latency, is borne by the user. A FAILED replay still counts in the latency
+(its wait is real); `replay_failed` is what marks it, and the agreement
+stays out of it.
 
 ## Prompt alignment (System One format) — evaluated, not adopted
 
