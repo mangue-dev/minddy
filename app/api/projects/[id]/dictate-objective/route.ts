@@ -257,7 +257,7 @@ export async function POST(
 
   // Plan usage budget (MIN-72) — pre-flight before the mini-dictation agent.
   try {
-    await ensureUsageBudget(auth.user.id, "voice");
+    await ensureUsageBudget(auth.user.id, "voice", "dictate_model");
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
     throw err;

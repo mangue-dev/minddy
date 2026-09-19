@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import {
   getUserByok,
   getUserDefaultModel,
@@ -106,6 +108,20 @@ export interface AgentModelsCatalog {
 const TTL_MS = 60 * 60 * 1000;
 const MAX_MODELS_RESPONSE_BYTES = 5 * 1024 * 1024;
 const cache = new Map<string, { at: number; models: AgentModelEntry[] }>();
+
+function byokCatalogCacheKey(
+  userId: string,
+  provider: AgentProviderId,
+  baseUrl: string,
+  apiKey: string,
+  capability: ModelCatalogCapability,
+): string {
+  const credentialFingerprint = createHash("sha256")
+    .update(apiKey)
+    .digest("base64url")
+    .slice(0, 22);
+  return `byok|${userId}|${provider}|${baseUrl}|${capability}|${credentialFingerprint}`;
+}
 
 /** Discard non-conversational models (embeddings, audio, image, etc.). */
 const NON_CHAT_RE = /(embed(?:ding)?|whisper|tts|dall-e|moderation|audio|image|imagen|veo|realtime|transcribe|rerank)/i;
@@ -399,7 +415,9 @@ export async function getAgentModelsForUser(
     return { ...header, models: [], recommended: [], maxMultiplier: null };
   }
 
-  const cacheKey = `${provider}|${baseUrl}`;
+  const cacheKey = mode === "byok"
+    ? byokCatalogCacheKey(userId, provider, baseUrl, apiKey, "text")
+    : `${provider}|${baseUrl}|text`;
   const hit = cache.get(cacheKey);
   if (hit && Date.now() - hit.at < TTL_MS) {
     return {
@@ -451,7 +469,13 @@ export async function getActiveByokModelCatalog(
   if (!providerSupportsModelCapability(byok.provider, capability)) {
     return { ...header, models: [] };
   }
-  const cacheKey = `${byok.provider}|${byok.baseUrl}|${capability}`;
+  const cacheKey = byokCatalogCacheKey(
+    userId,
+    byok.provider,
+    byok.baseUrl,
+    byok.apiKey,
+    capability,
+  );
   const hit = cache.get(cacheKey);
   if (hit && Date.now() - hit.at < TTL_MS) return { ...header, models: hit.models };
   try {

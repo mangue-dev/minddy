@@ -152,8 +152,19 @@ export async function resolveAiRuntime(params: {
   };
 }
 
-export async function usesByokForSurface(userId: string, surface: AiSurface): Promise<boolean> {
-  return (await getUserByok(userId, surface)) !== null;
+export async function usesByokForSurface(
+  userId: string,
+  surface: AiSurface,
+  modelKeys?: ByokModelKey | readonly ByokModelKey[],
+): Promise<boolean> {
+  const byok = await getUserByok(userId, surface);
+  if (!byok) return false;
+  const required = modelKeys
+    ? Array.isArray(modelKeys)
+      ? modelKeys
+      : [modelKeys]
+    : [];
+  return required.every((modelKey) => providerSupportsModelKey(byok.provider, modelKey));
 }
 
 async function retryRejectedChatRequest(

@@ -19,7 +19,7 @@ import {
   type AiFeature,
   type AiUsageBillTo,
 } from "@/lib/server/ai-usage";
-import type { AiSurface } from "@/lib/ai-surfaces";
+import type { AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
 import { usesByokForSurface } from "@/lib/server/ai-runtime";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 
@@ -174,10 +174,11 @@ export function segmentizeUsage(
 export async function ensureUsageBudget(
   userId: string,
   surface?: AiSurface,
+  modelKeys?: ByokModelKey | readonly ByokModelKey[],
 ): Promise<UserUsage> {
   const usage = await getUserUsage(userId);
   if (!isManagedAiEnabled()) return usage;
-  if (surface && (await usesByokForSurface(userId, surface))) return usage;
+  if (surface && modelKeys && (await usesByokForSurface(userId, surface, modelKeys))) return usage;
   const included = usage.billing.plan.includedUsageUsd;
   if (usage.usedUsd >= included) {
     throw new PlanLimitError("usage_budget_exceeded", {
@@ -189,10 +190,14 @@ export async function ensureUsageBudget(
 }
 
 /** Boolean variant for background jobs (cron feedback, smart assign). */
-export async function hasUsageBudget(userId: string, surface?: AiSurface): Promise<boolean> {
+export async function hasUsageBudget(
+  userId: string,
+  surface?: AiSurface,
+  modelKeys?: ByokModelKey | readonly ByokModelKey[],
+): Promise<boolean> {
   try {
     if (!isManagedAiEnabled()) return true;
-    if (surface && (await usesByokForSurface(userId, surface))) return true;
+    if (surface && modelKeys && (await usesByokForSurface(userId, surface, modelKeys))) return true;
     const usage = await getUserUsage(userId);
     return usage.usedUsd < usage.billing.plan.includedUsageUsd;
   } catch (err) {
@@ -210,6 +215,7 @@ export async function hasUsageBudget(userId: string, surface?: AiSurface): Promi
 export async function ownerHasUsageBudget(
   projectId: string,
   surface?: AiSurface,
+  modelKeys?: ByokModelKey | readonly ByokModelKey[],
 ): Promise<boolean> {
   try {
     const service = getServiceClient();
@@ -220,7 +226,7 @@ export async function ownerHasUsageBudget(
       .maybeSingle();
     const ownerId = (data as { owner_id?: string } | null)?.owner_id;
     if (!ownerId) return true;
-    return await hasUsageBudget(ownerId, surface);
+    return await hasUsageBudget(ownerId, surface, modelKeys);
   } catch (err) {
     console.error("[usage] owner budget check failed:", (err as Error).message);
     return true;

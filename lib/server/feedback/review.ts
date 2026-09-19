@@ -228,7 +228,7 @@ export async function isFeedbackReviewEnabled(projectId: string): Promise<boolea
 async function reviewModeForProject(projectId: string): Promise<FeedbackReviewMode> {
   const [project, hasBudget] = await Promise.all([
     projectReviewSettings(projectId),
-    ownerHasUsageBudget(projectId, "feedback"),
+    ownerHasUsageBudget(projectId, "feedback", "feedback_analysis_model"),
   ]);
   return resolveFeedbackReviewMode({
     reviewEnabled: project.reviewEnabled,

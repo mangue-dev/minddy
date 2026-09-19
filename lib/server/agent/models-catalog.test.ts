@@ -284,6 +284,33 @@ describe("getActiveByokModelCatalog", () => {
       models: [{ id: "gpt-4o-mini-transcribe", name: "gpt-4o-mini-transcribe" }],
     });
   });
+
+  it("does not reuse a catalog after the user's credential rotates", async () => {
+    const { getActiveByokModelCatalog } = await freshCatalog(
+      INDEX,
+      null,
+      {
+        provider: "openai",
+        baseUrl: "https://api.openai.com/v1",
+        apiKey: "first-user-key",
+        mode: "byok",
+      },
+    );
+    const { getUserByok } = await import("./model");
+    const { safeFetch } = await import("@/lib/server/safe-fetch");
+
+    await getActiveByokModelCatalog("user-1", "text");
+    vi.mocked(getUserByok).mockResolvedValue({
+      provider: "openai",
+      baseUrl: "https://api.openai.com/v1",
+      apiKey: "rotated-user-key",
+      enabledSurfaces: ["agent"],
+      featureModels: {},
+    });
+    await getActiveByokModelCatalog("user-1", "text");
+
+    expect(safeFetch).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("recommended models", () => {

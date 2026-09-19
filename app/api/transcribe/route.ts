@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
   // only one managed transcription per account until its usage row is written,
   // so concurrent requests cannot all spend against the same stale remainder.
   try {
-    await ensureUsageBudget(user.id, "voice");
+    await ensureUsageBudget(user.id, "voice", "transcription_model");
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
     throw err;
