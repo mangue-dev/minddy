@@ -13,12 +13,14 @@ import {
 import type { Project } from "@/lib/types";
 
 /**
- * Project-level Smart Triage preference (MIN-566): the per-project reorder
- * mode. `off` (default) never reorders — the board stays drag-only; `rules`
- * reorders through the static rules; `jev` replaces the ranking with an AI
- * urgency score that bills the Automations segment. The reorder itself is a
- * BUTTON on the board, never a background pass — this screen only decides
- * what that button does and who sees it.
+ * Project-level Smart Triage preference (MIN-566, MIN-575): the per-project
+ * ENGINE choice. `rules` reorders through the static rules (free); `jev`
+ * replaces the ranking with an AI urgency score that bills the Automations
+ * segment. There is no "off" — the triage is always available, the switch is
+ * only about who ranks (MIN-575: a "disabled" state while the smart view sort
+ * kept reordering by rules was a lie). The reorder itself is a BUTTON on the
+ * board, never a background pass — this screen only decides what that button
+ * does.
  *
  * Owner-only: members get the state read-only, like Smart Assign's switch.
  */
@@ -58,18 +60,14 @@ export function SmartTriageSection({
   const modeOptions = SMART_TRIAGE_MODES.map((value) => ({
     value,
     label:
-      value === "off"
-        ? t("smartTriageModeOff")
-        : value === "rules"
-          ? t("smartTriageModeRules")
-          : t("smartTriageModeJev"),
+      value === "rules"
+        ? t("smartTriageModeRules")
+        : t("smartTriageModeJev"),
   }));
   const modeHint =
-    mode === "off"
-      ? t("smartTriageModeOffDesc")
-      : mode === "rules"
-        ? t("smartTriageModeRulesDesc")
-        : t("smartTriageModeJevDesc");
+    mode === "rules"
+      ? t("smartTriageModeRulesDesc")
+      : t("smartTriageModeJevDesc");
 
   return (
     <SettingsGroup

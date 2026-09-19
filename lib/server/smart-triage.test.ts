@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * Smart Triage orchestration (MIN-566) — the server half of the button.
  *
- * Pinned here: `off` is a loud no-op (no fetch beyond the project row, no
- * write, no decision); `rules` orders through the pure comparator and rewrites
+ * Pinned here: `rules` orders through the pure comparator and rewrites
  * the positions inside each column's current range; `jev` pre-flights the
  * ACTOR's budget, runs ONE decision per column, orders by score and keeps the
  * rules order when both engines fail. Access is enforced here (the service
- * client bypasses RLS).
+ * client bypasses RLS). There is no "off" mode (MIN-575) — a retired `off`
+ * value on a row reads as the default, rules.
  */
 
 const {
@@ -74,7 +74,7 @@ const DB = {
   project: {
     id: "project-1",
     name: "minddy",
-    smart_triage_mode: "off",
+    smart_triage_mode: "rules",
   },
   issues: [] as Array<Record<string, unknown>>,
   relations: [] as Array<Record<string, unknown>>,
@@ -141,7 +141,7 @@ function issue(overrides: {
 }
 
 beforeEach(() => {
-  DB.project = { id: "project-1", name: "minddy", smart_triage_mode: "off" };
+  DB.project = { id: "project-1", name: "minddy", smart_triage_mode: "rules" };
   DB.issues = [];
   DB.relations = [];
   DB.objectives = [];
@@ -162,22 +162,17 @@ beforeEach(() => {
   buildSmartTriageSpecMock.mockImplementation((input) => fakeSpec(input as Parameters<typeof fakeSpec>[0]));
 });
 
-describe("runSmartTriage — mode off", () => {
-  it("is a loud no-op: no issues fetch, no write, no decision", async () => {
+describe("runSmartTriage — retired off value", () => {
+  it("reads a legacy `off` row as the default (rules), never as a no-op", async () => {
+    DB.project.smart_triage_mode = "off";
     DB.issues = [issue({ id: "a" }), issue({ id: "b" })];
     const result = await runSmartTriage({ projectId: "project-1", actorId: "user-1" });
-    expect(result).toEqual({
-      ok: true,
-      mode: "off",
-      moves: [],
-      columns: 0,
-      scored: false,
-    });
-    expect(ensureUsageBudgetMock).not.toHaveBeenCalled();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.mode).toBe("rules");
+    expect(rpcMock).toHaveBeenCalled();
     expect(runDecisionMock).not.toHaveBeenCalled();
-    expect(rpcMock).not.toHaveBeenCalled();
-    // Only the project row was read (the access check is its own module).
-    expect(fromMock).toHaveBeenCalledTimes(1);
+    expect(ensureUsageBudgetMock).not.toHaveBeenCalled();
   });
 });
 

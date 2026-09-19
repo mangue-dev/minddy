@@ -458,18 +458,15 @@ function GlobalBoardInner() {
     return map;
   }, [scopedIssues]);
 
-  // ── Smart triage (MIN-566) ──────────────────────────────────────────────
-  // The cross-project board reorders EVERY triage-armed project that has
-  // tickets on the board — one API call per project, each under ITS OWN
-  // mode and rules (the opt-in stays per project), the actor's budget
-  // carrying every Jev pass. Projects left on `off` are never touched:
-  // their cards keep their order inside the column.
+  // ── Smart triage (MIN-566, MIN-575) ─────────────────────────────────────
+  // The cross-project board reorders EVERY project that has tickets on the
+  // board — one API call per project, each under ITS OWN mode and rules
+  // (the engine choice stays per project), the actor's budget carrying every
+  // AI pass. There is no "off" mode anymore: every project with tickets is
+  // a target.
   const queryClient = useQueryClient();
   const triageTargets = useMemo(
-    () =>
-      projects.filter(
-        (p) => p.smart_triage_mode !== "off" && (issuesByProject.get(p.id)?.length ?? 0) > 0
-      ),
+    () => projects.filter((p) => (issuesByProject.get(p.id)?.length ?? 0) > 0),
     [projects, issuesByProject]
   );
   const [smartTriageRunning, setSmartTriageRunning] = useState(false);
@@ -497,15 +494,13 @@ function GlobalBoardInner() {
           } as Partial<Issue>);
         }
         touchedProjects.push(project.id);
-        if (mode !== "off") {
-          trackEvent("smart_triage_ran", {
-            mode,
-            scored,
-            columns,
-            issues: moves.length,
-            scope: "global",
-          });
-        }
+        trackEvent("smart_triage_ran", {
+          mode,
+          scored,
+          columns,
+          issues: moves.length,
+          scope: "global",
+        });
       });
       for (const pid of touchedProjects) {
         void queryClient.invalidateQueries({ queryKey: ["issues", pid] });
@@ -627,9 +622,9 @@ function GlobalBoardInner() {
             completionPercent: currentCycleCompletionPercent,
             onSelect: () => switchCycleMode(true),
           }}
-          // Smart triage (MIN-566): every triage-armed project with tickets
-          // on this board is reordered in one click, each under its own mode.
-          // No armed project → no button, the opt-in stays invisible.
+          // Smart triage (MIN-566, MIN-575): every project with tickets on
+          // this board is reordered in one click, each under its own mode.
+          // No tickets at all → no button, nothing to reorder.
           smartTriage={
             triageTargets.length > 0
               ? {

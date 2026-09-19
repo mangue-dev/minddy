@@ -13,8 +13,9 @@ type RouteContext = { params: Promise<{ id: string }> };
  * scoring pass per column (`jev`, billed to the CALLER in Automations).
  *
  * Body (all optional): `{ statuses?: IssueStatus[] }` — the columns to
- * reorder, restricted server-side to the open ones. Off mode answers an empty
- * move list: no write, no error — the button simply does nothing.
+ * reorder, restricted server-side to the open ones. There is no "off" mode
+ * (MIN-575): the triage is always available, the project setting only picks
+ * the engine (rules | jev).
  *
  * The move list is applied by the client (optimistic positions); the writes
  * have already happened here. A Jev budget that ran dry mid-request throws a
