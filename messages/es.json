@@ -743,6 +743,13 @@
     "deleteView": "Borrar vista",
     "cycleTab": "Ciclo"
   },
+  "IssueFamily": {
+    "menuLabel": "Tablero de esta familia",
+    "openHere": "Abrir el tablero de esta familia",
+    "openNewTab": "Abrir en una pestaña nueva",
+    "backToBoard": "Volver al tablero completo",
+    "childCount": "{count, plural, one {# subtarea} other {# subtareas}}"
+  },
   "ShareView": {
     "title": "Compartir vista",
     "description": "Elige quién puede ver «{name}». Las vistas compartidas siempre son de solo lectura.",

@@ -743,6 +743,13 @@
     "deleteView": "Delete view",
     "cycleTab": "Cycle"
   },
+  "IssueFamily": {
+    "menuLabel": "Issue family board",
+    "openHere": "Open this family board",
+    "openNewTab": "Open in a new tab",
+    "backToBoard": "Back to the full board",
+    "childCount": "{count, plural, one {# sub-issue} other {# sub-issues}}"
+  },
   "ShareView": {
     "title": "Share view",
     "description": "Choose who can see “{name}”. Shared views are always read-only.",

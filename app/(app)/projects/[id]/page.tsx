@@ -27,7 +27,7 @@ import {
   toast,
 } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
-import { FileUp, LayoutGrid, Plus } from "lucide-react";
+import { ExternalLink, FileUp, LayoutGrid, Network, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -56,6 +56,8 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { ObjectiveBoardHeader } from "@/components/objective-banner";
+import { IssueFamilyBoardHeader } from "@/components/issue-family-banner";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { BoardLoadingSkeleton } from "@/components/board-loading-skeleton";
 // Deferred: the import wizard (and its papaparse CSV machinery) only runs from
 // ?setup=import — a one-time gesture that must not tax every board navigation.
@@ -88,6 +90,12 @@ import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
 import {
+  issueFamilyBoardExitHref,
+  issueFamilyBoardHref,
+  issueParentIds,
+  resolveIssueFamily,
+} from "@/lib/issue-family-board";
+import {
   loadCreateIssueDialog,
   loadIssueSidePanel,
   preloadSurface,
@@ -102,6 +110,7 @@ import type {
 
 function ProjectBoard() {
   const t = useTranslations("Board");
+  const tFamily = useTranslations("IssueFamily");
   const tSeed = useTranslations("Seed");
   const tProjects = useTranslations("Projects");
   const params = useParams<{ id: string }>();
@@ -110,6 +119,7 @@ function ProjectBoard() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const objectiveParam = searchParams.get("objective");
+  const familyParam = searchParams.get("family");
   const issueParam = searchParams.get("issue");
   const newParam = searchParams.get("new");
   const viewParam = searchParams.get("view");
@@ -162,6 +172,48 @@ function ProjectBoard() {
     currentCycle?.id ?? null,
     nextCycle?.id ?? null,
     onSetIssueCycle
+  );
+  const familyParentIds = useMemo(() => issueParentIds(issues), [issues]);
+  const buildFamilyMenuActions = useCallback(
+    (issue: Issue): ContextMenuAction[] => {
+      if (!familyParentIds.has(issue.id)) return [];
+      const href = issueFamilyBoardHref(
+        projectId,
+        issue.id,
+        searchParams,
+      );
+      return [
+        {
+          id: "issue-family-board",
+          label: tFamily("menuLabel"),
+          keywords: ["family", "parent", "children", "famille", "sous-ticket"],
+          icon: <Network className="size-4" />,
+          children: [
+            {
+              id: "issue-family-board-current",
+              label: tFamily("openHere"),
+              icon: <LayoutGrid className="size-4" />,
+              onSelect: () => window.history.pushState(null, "", href),
+            },
+            {
+              id: "issue-family-board-new-tab",
+              label: tFamily("openNewTab"),
+              icon: <ExternalLink className="size-4" />,
+              onSelect: () =>
+                window.open(href, "_blank", "noopener,noreferrer"),
+            },
+          ],
+        },
+      ];
+    },
+    [familyParentIds, projectId, searchParams, tFamily],
+  );
+  const buildIssueMenuActions = useCallback(
+    (issue: Issue): ContextMenuAction[] => [
+      ...buildFamilyMenuActions(issue),
+      ...buildCycleMenuActions(issue),
+    ],
+    [buildCycleMenuActions, buildFamilyMenuActions],
   );
   const currentCycleCompletionPercent = useMemo(() => {
     const currentCycleId = currentCycle?.id;
@@ -372,8 +424,13 @@ function ProjectBoard() {
     [generatingViews]
   );
 
-  // Objective mode: the board is filtered to a single objective (plan §6).
-  const activeObjective = objectiveParam
+  // Family mode takes precedence over the objective and saved-view filters.
+  // Its URL keeps the current view so leaving the family restores it intact.
+  const activeFamily = useMemo(
+    () => resolveIssueFamily(issues, familyParam),
+    [issues, familyParam],
+  );
+  const activeObjective = !activeFamily && objectiveParam
     ? objectives.find((o) => o.id === objectiveParam) ?? null
     : null;
 
@@ -389,16 +446,25 @@ function ProjectBoard() {
     [issues, activeObjective]
   );
 
-  const boardIssues = activeObjective ? objectiveIssues : normalIssues;
+  const boardIssues = activeFamily
+    ? activeFamily.issues
+    : activeObjective
+      ? objectiveIssues
+      : normalIssues;
   const statuses = useMemo(
-    () => (activeObjective ? STATUSES : visibleStatuses(config)),
-    [activeObjective, config],
+    () => (activeFamily || activeObjective ? STATUSES : visibleStatuses(config)),
+    [activeFamily, activeObjective, config],
   );
   // Objective mode no longer forces a manual order (MIN-510): it follows the
   // board's sort, with "smart" — the app-wide default — standing in for the
   // old manual default, whose positions mean nothing in this filtered scope.
   const sort =
-    activeObjective && config.sort === "manual" ? "smart" : config.sort;
+    (activeFamily || activeObjective) && config.sort === "manual"
+      ? "smart"
+      : config.sort;
+  const familyExitHref = activeFamily
+    ? issueFamilyBoardExitHref(projectId, searchParams)
+    : null;
 
   // The scoring INPUTS (created, edited, deleted tickets) age the scores:
   // a fingerprint over the board's rows rides the refetch decision below —
@@ -755,7 +821,14 @@ function ProjectBoard() {
         </div>
       ) : (
         <>
-          {activeObjective ? (
+          {activeFamily && familyExitHref ? (
+            <IssueFamilyBoardHeader
+              parent={activeFamily.parent}
+              projectKey={project.key}
+              childCount={activeFamily.issues.length - 1}
+              exitHref={familyExitHref}
+            />
+          ) : activeObjective ? (
             <ObjectiveBoardHeader
               objective={activeObjective}
               objectives={objectives}
@@ -808,7 +881,7 @@ function ProjectBoard() {
               // The Smart sort's AI scores (project mode jev, MIN-576): the
               // comparator orders by urgency when the view sort is "smart".
               smartScores={smartScores}
-              buildMenuActions={buildCycleMenuActions}
+              buildMenuActions={buildIssueMenuActions}
               currentCycleId={currentCycle?.id ?? null}
               onSetCycle={onSetIssueCycle}
               projectId={project.id}

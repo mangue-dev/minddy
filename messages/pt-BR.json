@@ -743,6 +743,13 @@
     "deleteView": "Excluir visualização",
     "cycleTab": "Ciclo"
   },
+  "IssueFamily": {
+    "menuLabel": "Quadro desta família",
+    "openHere": "Abrir o quadro desta família",
+    "openNewTab": "Abrir em uma nova aba",
+    "backToBoard": "Voltar ao quadro completo",
+    "childCount": "{count, plural, one {# subtarefa} other {# subtarefas}}"
+  },
   "ShareView": {
     "title": "Compartilhar visualização",
     "description": "Escolha quem pode ver “{name}”. As visualizações compartilhadas são sempre somente leitura.",

@@ -743,6 +743,13 @@
     "deleteView": "Supprimer la vue",
     "cycleTab": "Cycle"
   },
+  "IssueFamily": {
+    "menuLabel": "Board de cette famille",
+    "openHere": "Ouvrir le board de cette famille",
+    "openNewTab": "Ouvrir dans un nouvel onglet",
+    "backToBoard": "Retour au board complet",
+    "childCount": "{count, plural, one {# sous-ticket} other {# sous-tickets}}"
+  },
   "ShareView": {
     "title": "Partager la vue",
     "description": "Choisissez qui peut consulter « {name} ». Les vues partagées sont toujours en lecture seule.",
