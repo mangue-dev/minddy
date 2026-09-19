@@ -443,38 +443,52 @@ export async function createIssueForProject({
         .filter((v): v is string => typeof v === "string")
         .slice(0, MAX_CATEGORY_REFS)
     : [];
-  // Smart-fill only stores the ticket if NOBODY has stored it — neither by id nor
-  // by name. Hand-picked categories are a choice, and adding the
-  // would undo half.
+  // Smart-fill supplies categories only when none were explicitly selected
+  // by ID or name. Preserve the author's selection.
   const requestedIds =
     pickedIds.length === 0 && requestedNames.length === 0 ? smartFillCategoryIds : pickedIds;
   if (requestedIds.length > 0 || requestedNames.length > 0) {
     const resolved = new Set<string>();
     if (requestedIds.length > 0) {
-      const { data: cats } = await service
+      const { data: cats, error } = await service
         .from("categories")
         .select("id")
         .eq("project_id", projectId)
         .in("id", requestedIds);
-      (cats ?? []).forEach((c) => resolved.add(c.id as string));
+      if (error) {
+        console.error("[create-issue] category ID lookup failed:", error.message);
+      } else {
+        (cats ?? []).forEach((c) => resolved.add(c.id as string));
+      }
     }
     if (requestedNames.length > 0) {
-      const { data: cats } = await service
+      const { data: cats, error } = await service
         .from("categories")
         .select("id")
         .eq("project_id", projectId)
         .in("name", requestedNames);
-      (cats ?? []).forEach((c) => resolved.add(c.id as string));
+      if (error) {
+        console.error("[create-issue] category name lookup failed:", error.message);
+      } else {
+        (cats ?? []).forEach((c) => resolved.add(c.id as string));
+      }
     }
-    categoryIds = [...resolved];
-    if (categoryIds.length > 0) {
-      await service
+    const resolvedIds = [...resolved];
+    if (resolvedIds.length > 0) {
+      const { error } = await service
         .from("issue_categories")
-        .insert(categoryIds.map((category_id) => ({ issue_id: data.id, category_id })));
-      smartFillCategoriesApplied =
-        pickedIds.length === 0 &&
-        requestedNames.length === 0 &&
-        smartFillCategoryIds.length > 0;
+        .insert(resolvedIds.map((category_id) => ({ issue_id: data.id, category_id })));
+      if (error) {
+        // The issue already exists. Report only persisted links so callers do
+        // not retry creation or display categories that will vanish on reload.
+        console.error("[create-issue] category links failed:", error.message);
+      } else {
+        categoryIds = resolvedIds;
+        smartFillCategoriesApplied =
+          pickedIds.length === 0 &&
+          requestedNames.length === 0 &&
+          smartFillCategoryIds.length > 0;
+      }
     }
   }
 
