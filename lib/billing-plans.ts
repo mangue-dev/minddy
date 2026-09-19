@@ -215,6 +215,11 @@ export const BILLABLE_FEATURES = [
   // Jev half rides `jev_decision`, this is the fallback engine's own line.
   // Same segment below, same gesture.
   "smart_triage",
+  // The shadow comparison of the decision layer (MIN-567): the LLM pass
+  // replayed on a ~5% sample after a confident Jev decision. One line under
+  // its own feature so the sampling delta stays readable (and removable)
+  // next to the decisions it measures.
+  "jev_shadow",
 ] as const;
 
 export type BillableFeature = (typeof BILLABLE_FEATURES)[number];
@@ -297,7 +302,7 @@ export const USAGE_SEGMENTS: UsageSegment[] = [
   // single product hid the other half of the line.
   {
     id: "automations",
-    features: ["smart_assign", "smart_fill", "jev_decision", "smart_triage"],
+    features: ["smart_assign", "smart_fill", "jev_decision", "smart_triage", "jev_shadow"],
     barClass: "bg-fuchsia-500",
   },
 ];

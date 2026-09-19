@@ -208,7 +208,9 @@ export async function runLlmDecision(
       ...(profile.maxTokens !== undefined ? { maxTokens: profile.maxTokens } : {}),
       ...(profile.timeoutMs !== undefined ? { timeoutMs: profile.timeoutMs } : {}),
       record: {
-        feature: profile.feature,
+        // The shadow replay (MIN-567) overrides the feature so the sampling
+        // delta does not read as a real pass of the use case.
+        feature: ctx.feature ?? profile.feature,
         runId: ctx.runId,
         seq: ctx.seq,
         billTo: ctx.billTo,

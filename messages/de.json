@@ -459,6 +459,7 @@
     "historyFeatureImportMap": "Importspaltenübereinstimmung",
     "historyFeatureBriefSplit": "Briefing aufgeschlüsselt",
     "historyFeatureJevDecision": "KI-Entscheidung",
+    "historyFeatureJevShadow": "Entscheidungsprüfung",
     "historyFeatureSmartTriage": "Smart-Triage",
     "agentsGateTitle": "Numo-Arbeit ist nicht verfügbar",
     "agentsGateDescription": "Numo-Arbeit ist für dieses Konto nicht aktiviert.",
@@ -4329,7 +4330,8 @@
         "import_map": "Importspaltenübereinstimmung",
         "brief_split": "Briefaufschlüsselung",
         "landing_demo": "Öffentliche Diktat-Demo",
-        "jev_decision": "Jev-Entscheidungen"
+        "jev_decision": "Jev-Entscheidungen",
+        "jev_shadow": "Jev-Schatten"
       },
       "stripeHidden": "Stripe Umsatz ist ausgeblendet: Abrechnung ist auf dieser Instanz nicht verbunden."
     },
@@ -4424,6 +4426,32 @@
       "totalProjects": "Projekte",
       "totalIssues": "Probleme",
       "issuesPerProject": "Probleme pro Projekt"
+    },
+    "decisions": {
+      "title": "KI-Entscheidungen",
+      "info": "Schattenstichprobe: Nach einer sicheren Jev-Entscheidung wird der LLM-Durchlauf an einer kleinen Stichprobe wiederholt und die Übereinstimmung erfasst. Das LLM ist die Referenz; diese Daten kalibrieren die Konfidenzschwelle und die LLM-first-Umschaltungen.",
+      "enabled": "Jev-Entscheidungen aktiv",
+      "disabled": "Jev-Entscheidungen aus — jeder Use Case entscheidet mit dem LLM",
+      "floor": "Konfidenzschwelle",
+      "shadowRate": "Schatten-Stichprobenrate",
+      "llmFirst": "LLM-first Use Cases",
+      "llmFirstNone": "keine",
+      "useCase": "Use Case",
+      "samples": "Stichproben",
+      "agreement": "Übereinstimmung",
+      "weekly": "Pro Woche",
+      "jevLatency": "Jev-Latenz",
+      "llmLatency": "LLM-Latenz",
+      "shadowCost": "Schattenkosten",
+      "weeklyHint": "Übereinstimmung pro Woche über die letzten 6 Wochen, älteste zuerst. Gelesen wird nur, wo beide Motoren geantwortet haben; fehlgeschlagene Replays zählen nicht.",
+      "noData": "Noch keine Schattenvergleiche. Stichproben entstehen mit sicheren Jev-Entscheidungen im echten Betrieb.",
+      "replayFailed": "{count, plural, one {# Replay fehlgeschlagen} other {# Replays fehlgeschlagen}}",
+      "useCases": {
+        "smart_fill": "Smart Fill",
+        "smart_assign": "Smart Assign",
+        "smart_triage": "Smart-Triage",
+        "feedback_review": "Feedback-Prüfung"
+      }
     },
     "favorites": {
       "pickModel": "Wählen Sie ein Modell aus",

@@ -459,6 +459,7 @@
     "historyFeatureImportMap": "Import column matching",
     "historyFeatureBriefSplit": "Brief broken down",
     "historyFeatureJevDecision": "AI decision",
+    "historyFeatureJevShadow": "Decision check",
     "historyFeatureSmartTriage": "Smart Triage",
     "agentsGateTitle": "Numo work is unavailable",
     "agentsGateDescription": "Numo work is not enabled for this account.",
@@ -4329,7 +4330,8 @@
         "import_map": "Import column matching",
         "brief_split": "Brief breakdown",
         "landing_demo": "Public dictation demo",
-        "jev_decision": "Jev decisions"
+        "jev_decision": "Jev decisions",
+        "jev_shadow": "Jev shadow"
       },
       "stripeHidden": "Stripe revenue is hidden: billing is not connected on this instance."
     },
@@ -4424,6 +4426,32 @@
       "totalProjects": "Projects",
       "totalIssues": "Issues",
       "issuesPerProject": "Issues per project"
+    },
+    "decisions": {
+      "title": "AI decisions",
+      "info": "Shadow sampling: after a confident Jev decision, the LLM pass is replayed on a small sample and the agreement is recorded. The LLM is the reference; the data calibrates the confidence floor and the LLM-first switches.",
+      "enabled": "Jev decisions on",
+      "disabled": "Jev decisions off — every use case decides with the LLM",
+      "floor": "Confidence floor",
+      "shadowRate": "Shadow sample rate",
+      "llmFirst": "LLM-first use cases",
+      "llmFirstNone": "none",
+      "useCase": "Use case",
+      "samples": "Samples",
+      "agreement": "Agreement",
+      "weekly": "Per week",
+      "jevLatency": "Jev latency",
+      "llmLatency": "LLM latency",
+      "shadowCost": "Shadow cost",
+      "weeklyHint": "Agreement per week over the last 6 weeks, oldest first. Read where both engines answered; failed replays stay out of it.",
+      "noData": "No shadow comparison yet. Samples appear as confident Jev decisions are made on real traffic.",
+      "replayFailed": "{count, plural, one {# replay failed} other {# replays failed}}",
+      "useCases": {
+        "smart_fill": "Smart Fill",
+        "smart_assign": "Smart Assign",
+        "smart_triage": "Smart Triage",
+        "feedback_review": "Feedback review"
+      }
     },
     "favorites": {
       "pickModel": "Pick a model",

@@ -4,6 +4,7 @@ import { fetchAiProvider } from "@/lib/server/ai-provider-request";
 import {
   parseOpenRouterUsage,
   recordAiUsage,
+  type AiFeature,
   type AiUsageBillTo,
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
@@ -57,6 +58,12 @@ export interface DecisionCallContext {
   seq?: number;
   billTo: AiUsageBillTo;
   projectId?: string | null;
+  /**
+   * Ledger feature of THIS call, when it must not read as the use case's
+   * pass — the shadow replay (MIN-567) bills under `jev_shadow`, so the
+   * sampling delta stays separable from the real LLM passes in finance.
+   */
+  feature?: AiFeature;
 }
 
 /**

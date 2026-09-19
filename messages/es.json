@@ -459,6 +459,7 @@
     "historyFeatureImportMap": "Correspondencia de columnas de importación",
     "historyFeatureBriefSplit": "Desglose de brief",
     "historyFeatureJevDecision": "Decisión de IA",
+    "historyFeatureJevShadow": "Verificación de decisiones",
     "historyFeatureSmartTriage": "Triage inteligente",
     "agentsGateTitle": "El trabajo con Numo no está disponible",
     "agentsGateDescription": "El trabajo con Numo no está activado en esta cuenta.",
@@ -4329,7 +4330,8 @@
         "import_map": "Importe de la correspondencia de la columna",
         "brief_split": "Breve desglose",
         "landing_demo": "Demostración de dictado público",
-        "jev_decision": "Decisiones Jev"
+        "jev_decision": "Decisiones Jev",
+        "jev_shadow": "Sombra Jev"
       },
       "stripeHidden": "Los ingresos de Stripe están ocultos: la facturación no está conectada en esta instancia."
     },
@@ -4424,6 +4426,32 @@
       "totalProjects": "Proyectos",
       "totalIssues": "Incidencias",
       "issuesPerProject": "Incidencias por proyecto"
+    },
+    "decisions": {
+      "title": "Decisiones de IA",
+      "info": "Muestreo en la sombra: tras una decisión Jev segura, la pasada LLM se repite en una muestra pequeña y se registra la coincidencia. La LLM es la referencia; estos datos calibran el suelo de confianza y los cambios a LLM-primero.",
+      "enabled": "Decisiones Jev activas",
+      "disabled": "Decisiones Jev desactivadas — cada caso de uso decide con la LLM",
+      "floor": "Suelo de confianza",
+      "shadowRate": "Tasa de muestreo en la sombra",
+      "llmFirst": "Casos de uso LLM-primero",
+      "llmFirstNone": "ninguno",
+      "useCase": "Caso de uso",
+      "samples": "Muestras",
+      "agreement": "Coincidencia",
+      "weekly": "Por semana",
+      "jevLatency": "Latencia Jev",
+      "llmLatency": "Latencia LLM",
+      "shadowCost": "Coste de sombra",
+      "weeklyHint": "Coincidencia por semana en las últimas 6, de la más antigua a la más reciente. Se lee donde ambos motores respondieron; las repeticiones fallidas no cuentan.",
+      "noData": "Aún no hay comparaciones en la sombra. Las muestras aparecen con las decisiones Jev seguras sobre tráfico real.",
+      "replayFailed": "{count, plural, one {# repetición fallida} other {# repeticiones fallidas}}",
+      "useCases": {
+        "smart_fill": "Relleno inteligente",
+        "smart_assign": "Asignación inteligente",
+        "smart_triage": "Triage inteligente",
+        "feedback_review": "Revisión del feedback"
+      }
     },
     "favorites": {
       "pickModel": "Elige un modelo",

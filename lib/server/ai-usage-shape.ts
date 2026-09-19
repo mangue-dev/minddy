@@ -84,6 +84,15 @@ export type AiFeature =
     */
   | "jev_decision"
   /**
+   * The shadow replay of a sampled decision (MIN-567): the LLM pass run
+   * again in the background after a confident Jev decision, to measure the
+   * agreement. Its own feature — NOT the use case's pass feature, or the
+   * finance view would read phantom LLM decisions into the real ones; the
+   * sampling delta stays readable as one line. Same segment as
+   * `jev_decision` ("Automations"), same gesture.
+   */
+  | "jev_shadow"
+  /**
    * Smart Triage (MIN-566): the LLM scoring pass of a column reorder — ONE
    * call per column, answering every ticket id on the 1–5 urgency scale. Its
    * own feature next to `jev_decision` (which carries the System One half of
