@@ -123,11 +123,18 @@ is the same edit — empty the value, let the shadow rebuild the evidence.
 
 ## Cost and latency
 
-The view's `llm_cost` column is the sampling delta per decision: expect
-roughly `rate × (LLM pass cost)`, e.g. 0.05 × the smart-fill pass. The
-`jev_latency_ms` / `llm_latency_ms` averages answer "how much slower is
-the LLM when someone is waiting" — the replay runs after the response, so
-only its cost, never its latency, is borne by the user.
+The view exposes `llm_cost_sum` over `llm_cost_count`: the dashboard reads
+the AVERAGE cost of one sampled replay — one full LLM pass, e.g. the
+smart-fill pass — NOT a rate-scaled figure. The overhead the sampling adds
+PER ORIGINATING decision is `rate × (that average)` (0.05 × the pass at the
+default rate); the two units answer different questions — "what does a
+shadow comparison cost" vs "what does the measurement apparatus add to
+every decision" — and the dashboard shows the first, so do not divide or
+multiply it by the rate when reading it. The latency averages
+(`jev_latency_sum / jev_latency_count`, `llm_latency_sum /
+llm_latency_count`) answer "how much slower is the LLM when someone is
+waiting" — the replay runs after the response, so only its cost, never its
+latency, is borne by the user.
 
 ## Prompt alignment (System One format) — evaluated, not adopted
 
