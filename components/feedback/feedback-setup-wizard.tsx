@@ -459,6 +459,7 @@ export function FeedbackSetupWizard({
               className="min-h-32 resize-none pb-12"
             />
             <DictateButton
+              context="form_field"
               floating
               disabled={generating}
               onTranscription={(text) =>

@@ -443,6 +443,7 @@ export function ObjectiveDetail({
  only triggers it, and it then reappears as a stop button. */}
           <DictateButton
             ref={dictateRef}
+            context="objective_form"
             hideWhenIdle
             onTranscription={(text) => {
               track("objective_dictation_used", { surface: "page" });

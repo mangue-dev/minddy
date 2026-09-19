@@ -74,6 +74,7 @@ export function PageAgentCopyDialog({
       cancelLabel={tCommon("cancel")}
       onSubmit={submit}
       dictation={{
+        context: "agent_instruction",
         onTranscription: (text) => setInstructions((value) => `${value}${value ? " " : ""}${text}`),
       }}
     >

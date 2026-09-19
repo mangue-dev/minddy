@@ -813,6 +813,7 @@ function ComposerDialog({
                vocal” doesn’t teach him anything. She promises the result — to speak,
                and find the written return. */
             <DictateButton
+              context="feedback_form"
               onTranscription={onTranscript}
               uploadAudio={uploadAudio}
               onProcessingChange={setTranscribing}

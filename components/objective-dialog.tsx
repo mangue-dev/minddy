@@ -589,6 +589,7 @@ export function ObjectiveDialog({
                   </>
                 ) : (
                   <DictateButton
+                    context="objective_form"
                     onTranscription={(text) => {
                       track("objective_dictation_used", {
                         surface: "create_dialog",

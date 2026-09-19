@@ -24,6 +24,7 @@ import { KbdSequence } from "@/components/ui/kbd";
 import { DictateWaveform } from "./dictate-waveform";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { resolveKeyToken } from "@/lib/keyboard/shortcuts";
+import type { DictationContext } from "@/lib/dictation-context";
 import {
   Tooltip,
   TooltipContent,
@@ -55,6 +56,8 @@ export interface DictateButtonProps {
   ref?: Ref<DictateButtonHandle>;
   /** Called with the transcribed text when recording completes. */
   onTranscription: (text: string) => void;
+  /** What the text will become after dictation, used by the cleanup pass. */
+  context: DictationContext;
   /** Optional usage-ledger attribution for a specialized dictation surface. */
   feature?: "feedback_voice";
   /**
@@ -68,7 +71,11 @@ export interface DictateButtonProps {
    * common — pick up the microphone, the wave, the chrono, the silence — remains
    * here, and that's why the hook is a prop and not a fork.
    */
-  uploadAudio?: (blob: Blob, locale: string) => Promise<string | null>;
+  uploadAudio?: (
+    blob: Blob,
+    locale: string,
+    context: DictationContext,
+  ) => Promise<string | null>;
   /** Position the button absolutely (top-right). Defaults to inline-flex. */
   floating?: boolean;
   /** Disable the button (e.g. when streaming or submitting). */
@@ -190,6 +197,7 @@ function pickRecorderMimeType(): string | undefined {
 export function DictateButton({
   ref,
   onTranscription,
+  context,
   feature,
   uploadAudio,
   floating = false,
@@ -259,7 +267,7 @@ export function DictateButton({
       const upload = uploadAudioRef.current;
       if (upload) {
         try {
-          const text = (await upload(blob, locale))?.trim() ?? "";
+          const text = (await upload(blob, locale, context))?.trim() ?? "";
           if (!isMountedRef.current) return;
           // Same guard as below: without letters or numbers, Whisper has furnished
           // silence. The caller has already spoken about his own failures.
@@ -281,6 +289,7 @@ export function DictateButton({
       // short clips (a lone "bonjour" comes back as "hello") — pinning the
       // language keeps the transcription in the user's language, untranslated.
       formData.append("lang", locale);
+      formData.append("context", context);
       if (feature) formData.append("feature", feature);
 
       try {
@@ -302,12 +311,15 @@ export function DictateButton({
           }
           return;
         }
-        const data = (await res.json()) as { text?: string };
+        const data = (await res.json()) as { text?: string; polished?: boolean };
         const text = (data.text ?? "").trim();
         if (!isMountedRef.current) return;
         // A transcript with no letter or digit ("...", "♪") is Whisper's
         // silence filler — treat it as an empty transcription.
-        if (/[\p{L}\p{N}]/u.test(text)) onTranscription(text);
+        if (/[\p{L}\p{N}]/u.test(text)) {
+          onTranscription(text);
+          if (data.polished === false) toast.error(t("polishFailed"));
+        }
         else toast.error(t("emptyResult"));
       } catch (err) {
         if (!isMountedRef.current) return;
@@ -317,7 +329,7 @@ export function DictateButton({
         if (isMountedRef.current) setStatus("idle");
       }
     },
-    [feature, onTranscription, t, locale],
+    [context, feature, onTranscription, t, locale],
   );
 
   const stopRecording = useCallback(() => {

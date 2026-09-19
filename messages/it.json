@@ -1110,6 +1110,7 @@
     "rateLimitReached": "Limite di dettatura raggiunto. Riprova tra {minutes} min.",
     "tooLarge": "Registrazione troppo grande. Prova un dittato più corto.",
     "error": "La trascrizione non è riuscita.",
+    "polishFailed": "La pulizia non è riuscita; il testo riconosciuto è stato conservato.",
     "emptyResult": "Non è stato rilevato alcun discorso.",
     "unavailable": "La dettatura vocale non è disponibile al momento.",
     "inFlight": "Dittatura in corso; un momento.",
@@ -4208,7 +4209,7 @@
       },
       "dictate_model": {
         "label": "Dittatura → bozza",
-        "desc": "Trasforma la trascrizione vocale in un ticket, obiettivo o progetto di attività."
+        "desc": "Ripulisce ogni trascrizione vocale e trasforma i dettati strutturati in bozze di ticket, obiettivi, feedback o attività."
       },
       "transcription_model": {
         "label": "Discorso a testo",

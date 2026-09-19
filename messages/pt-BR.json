@@ -1110,6 +1110,7 @@
     "rateLimitReached": "Cota de ditado atingida. Tente novamente em {minutes} min.",
     "tooLarge": "A gravação é muito grande. Tente um ditado mais curto.",
     "error": "Falha na transcrição.",
+    "polishFailed": "A limpeza falhou; o texto reconhecido foi preservado.",
     "emptyResult": "Nenhuma fala foi detectada.",
     "unavailable": "O ditado por voz não está disponível no momento.",
     "inFlight": "Ditado em andamento; um momento.",
@@ -4208,7 +4209,7 @@
       },
       "dictate_model": {
         "label": "Ditado → rascunho",
-        "desc": "Transforma a transcrição de voz em um rascunho de problema, objetivo ou tarefa."
+        "desc": "Limpa todas as transcrições de voz e transforma ditados estruturados em rascunhos de tíquetes, objetivos, feedbacks ou tarefas."
       },
       "transcription_model": {
         "label": "Fala para texto",

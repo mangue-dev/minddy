@@ -25,10 +25,15 @@ import {
   type FeedbackVoiceTurn,
 } from "@/lib/feedback/types";
 import { fetchAiChat, resolveAiRuntime } from "@/lib/server/ai-runtime";
+import { polishDictationTranscript } from "@/lib/server/dictation-polish";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { ByokModelKey } from "@/lib/ai-surfaces";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { responseLanguageInstruction } from "@/lib/locale-language";
+import {
+  normalizeDictationText,
+  resolvePolishedDictation,
+} from "@/lib/dictation-context";
 
 /**
  * Dictate a return — the core shared by the TWO surfaces (MIN-37).
@@ -40,7 +45,7 @@ import { responseLanguageInstruction } from "@/lib/locale-language";
  * solves the project — remains in the entry points, because it is exactly
  * which is NOT common.
  *
- * One take = two calls (listening then storage), a `runId`, the feature
+ * One take = three calls (listening, cleanup, then form storage), a `runId`, the feature
  * `feedback_voice`: in the ledger, one line = a dictated return.
  */
 
@@ -182,7 +187,7 @@ export function sanitizeFeedbackPatch(
 /** Cuts the transcript and history tours received from the client. */
 export function normalizeVoiceTranscript(value: unknown): string {
   return typeof value === "string"
-    ? sanitizeAssistantMessageContent(value).slice(0, MAX_TRANSCRIPT_CHARS)
+    ? normalizeDictationText(value, MAX_TRANSCRIPT_CHARS)
     : "";
 }
 
@@ -222,7 +227,7 @@ export async function feedbackVoiceEnabled(): Promise<boolean> {
 }
 
 /**
- * Listening: audio → text, one line in the ledger (seq 0 of the run).
+ * Listening: audio → raw text (seq 0), then destination-aware cleanup (seq 1).
  *
  * Returns `null` when the model has heard nothing — Whisper fills the silence
  * ("...", "♪"), and a return invented from that costs more expensive than
@@ -240,7 +245,7 @@ export async function transcribeFeedbackAudio({
   runId: string;
   billTo: AiUsageBillTo;
   projectId: string;
-}): Promise<{ text: string | null; usage: AiUsageInput[] }> {
+}): Promise<{ text: string | null; polished: boolean; usage: AiUsageInput[] }> {
   const format = resolveAudioFormat(audio.type || "audio/webm");
   if (!format) throw new Error(`Unsupported audio mime type: ${audio.type}`);
 
@@ -259,6 +264,7 @@ export async function transcribeFeedbackAudio({
       usedModel = m;
       return transcribeAudio(m, audioBase64, format, apiKey, {
         language: locale,
+        temperature: 0,
         title: "minddy Feedback voice",
         providerId: runtime?.provider,
         baseUrl: runtime?.baseUrl,
@@ -282,8 +288,32 @@ export async function transcribeFeedbackAudio({
       projectId,
     },
   ];
-  const text = result.text.trim();
-  return { text: /[\p{L}\p{N}]/u.test(text) ? text : null, usage };
+  const rawText = result.text.trim();
+  if (!/[\p{L}\p{N}]/u.test(rawText)) {
+    return { text: null, polished: false, usage };
+  }
+
+  const cleaned = await polishDictationTranscript({
+    transcript: rawText,
+    context: "feedback_form",
+    record: {
+      runId,
+      seq: 1,
+      feature: "feedback_voice",
+      billTo,
+      projectId,
+    },
+    surface: "feedback",
+  }).catch((err) => {
+    console.error(
+      "[feedback-voice] cleanup failed, returning raw transcript:",
+      err instanceof Error ? err.message : err,
+    );
+    return null;
+  });
+
+  const resultText = resolvePolishedDictation(rawText, cleaned);
+  return { text: resultText.text, polished: resultText.polished, usage };
 }
 
 type OpenRouterMessage = {
@@ -323,7 +353,7 @@ export async function runFeedbackVoicePass({
   projectName: string;
   surface: "board" | "internal";
   runId: string;
-  /** Position of the call in the run: 1 after listening, 0 if it comes alone. */
+  /** Position of the call in the run: 2 after listening and cleanup, 0 alone. */
   seq: number;
   billTo: AiUsageBillTo;
   projectId: string;

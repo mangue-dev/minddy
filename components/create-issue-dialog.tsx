@@ -807,6 +807,7 @@ export function CreateIssueDialog({
                 </span>
               ) : (
                 <DictateButton
+                  context="issue_form"
                   onTranscription={(text) => {
                     track("issue_dictation_used", { surface: "create_dialog" });
                     onTranscript(text);

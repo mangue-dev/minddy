@@ -2540,6 +2540,7 @@ export function PrDetail({
         }}
         onSubmit={() => void submitReview()}
         dictation={{
+          context: "pull_request_comment",
           onTranscription: (text) =>
             setReviewMessage((value) => `${value}${value ? " " : ""}${text}`),
           disabled: submitting,

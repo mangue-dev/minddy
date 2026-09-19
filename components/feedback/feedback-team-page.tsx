@@ -2788,6 +2788,7 @@ function InternalFeedbackDialog({
       `feedback.${blob.type.includes("ogg") ? "ogg" : "webm"}`
     );
     form.append("lang", locale);
+    form.append("context", "feedback_form");
     form.append("feature", "feedback_voice");
     const res = await fetch("/api/transcribe", { method: "POST", body: form });
     if (!res.ok) {
@@ -2978,6 +2979,7 @@ function InternalFeedbackDialog({
             </span>
           ) : (
             <DictateButton
+              context="feedback_form"
               onTranscription={onTranscript}
               uploadAudio={uploadAudio}
               onProcessingChange={setTranscribing}

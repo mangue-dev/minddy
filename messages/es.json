@@ -1110,6 +1110,7 @@
     "rateLimitReached": "Has alcanzado la cuota de dictado. Inténtalo de nuevo dentro de {minutes} min.",
     "tooLarge": "La grabación es demasiado grande. Prueba con un dictado más corto.",
     "error": "No se ha podido transcribir.",
+    "polishFailed": "La limpieza ha fallado; se ha conservado el texto reconocido.",
     "emptyResult": "No se ha detectado voz.",
     "unavailable": "El dictado por voz no está disponible ahora mismo.",
     "inFlight": "Dictado en curso; espera un momento.",
@@ -4208,7 +4209,7 @@
       },
       "dictate_model": {
         "label": "Dictado → borrador",
-        "desc": "Convierte la transcripción de voz en un borrador de incidencias, objetivos o tareas."
+        "desc": "Limpia todas las transcripciones de voz y convierte los dictados estructurados en borradores de incidencias, objetivos, sugerencias o tareas."
       },
       "transcription_model": {
         "label": "De habla a texto",
