@@ -1555,7 +1555,10 @@ export interface AdminOverview {
 }
 
 /** One week of the shadow comparison (MIN-567), for ONE use case — read
- * from the `ai_decision_evaluations_weekly` view, newest week first. */
+ * from the `ai_decision_evaluations_weekly` view, newest week first. Weeks
+ * carry SUMS and COUNTS, never per-week averages: weeks of very different
+ * traffic must weigh by their sample count when the dashboard aggregates
+ * them, so every displayed latency and cost stays a per-sample average. */
 export interface AdminDecisionsQualityWeek {
   useCase: string;
   /** ISO instant of the Monday starting the week (UTC). */
@@ -1568,11 +1571,15 @@ export interface AdminDecisionsQualityWeek {
   agreeCount: number;
   /** Of which the LLM replay failed (no reference to compare against). */
   replayFailed: number;
-  /** Average end-to-end latency of each engine, milliseconds. */
-  jevLatencyMs: number | null;
-  llmLatencyMs: number | null;
-  /** Average ledger cost of the LLM replay — the delta sampling adds. */
-  llmCost: number | null;
+  /** End-to-end latency of the Jev legs: the week's sum over its count. */
+  jevLatencySum: number;
+  jevLatencyCount: number;
+  /** End-to-end latency of the LLM replays: the week's sum over its count. */
+  llmLatencySum: number;
+  llmLatencyCount: number;
+  /** Ledger cost of the replays — the delta sampling adds: sum over count. */
+  llmCostSum: number;
+  llmCostCount: number;
 }
 
 /**

@@ -8,11 +8,13 @@ import {
   StatsSection,
 } from "@/components/stats/stats-chrome";
 import { ADMIN_SECTIONS, adminSectionAnchor } from "@/lib/admin-sections";
+import {
+  buildUseCaseRows,
+  KNOWN_USE_CASES,
+  type UseCaseRow,
+} from "@/lib/admin-decisions-quality";
 import type { MessageKey } from "@/lib/i18n-keys";
-import type {
-  AdminDecisionsQuality,
-  AdminDecisionsQualityWeek,
-} from "@/lib/types";
+import type { AdminDecisionsQuality } from "@/lib/types";
 
 /**
  * `/admin` → Overview → “AI decisions” (MIN-567): the shadow comparison of
@@ -25,79 +27,12 @@ import type {
  * LLM-first (`jev_llm_first`) when it proves structurally bad. The knobs
  * are shown next to the data because the two are read together; they are
  * plain `app_config` keys, edited from the database, not from this page.
+ *
+ * The weekly figures arrive as SUMS and COUNTS and are aggregated in
+ * `lib/admin-decisions-quality.ts` (pure, tested): weeks of very different
+ * traffic weigh by their sample counts, so the displayed latencies and cost
+ * stay per-sample averages.
  */
-
-/** Weekly agreement is read over the last few weeks — a trend, not a flood. */
-const WEEKS_SHOWN = 6;
-
-/** Canonical row order, then anything else by sample count. */
-const USE_CASE_ORDER = ["smart_fill", "smart_assign", "smart_triage"];
-
-/** Use cases with a translated label; anything else shows its raw key. */
-const KNOWN_USE_CASES = new Set([...USE_CASE_ORDER, "feedback_review"]);
-
-interface UseCaseRow {
-  useCase: string;
-  samples: number;
-  comparable: number;
-  agreeCount: number;
-  replayFailed: number;
-  /** Agreement of each displayed week, oldest → newest; `null` = no data. */
-  series: (number | null)[];
-  jevLatencyMs: number | null;
-  llmLatencyMs: number | null;
-  llmCost: number | null;
-}
-
-function buildRows(weeks: AdminDecisionsQualityWeek[]): UseCaseRow[] {
-  const weekKeys = [
-    ...new Set(weeks.map((week) => week.weekStart)),
-  ]
-    .sort()
-    .slice(-WEEKS_SHOWN);
-  const byUseCase = new Map<string, AdminDecisionsQualityWeek[]>();
-  for (const week of weeks) {
-    const rows = byUseCase.get(week.useCase) ?? [];
-    rows.push(week);
-    byUseCase.set(week.useCase, rows);
-  }
-  const useCases = [
-    ...USE_CASE_ORDER.filter((useCase) => byUseCase.has(useCase)),
-    ...[...byUseCase.keys()]
-      .filter((useCase) => !USE_CASE_ORDER.includes(useCase))
-      .sort(
-        (a, b) =>
-          (byUseCase.get(b)?.length ?? 0) - (byUseCase.get(a)?.length ?? 0) ||
-          a.localeCompare(b),
-      ),
-  ];
-  return useCases.map((useCase) => {
-    const rows = byUseCase.get(useCase) ?? [];
-    const byWeek = new Map(rows.map((row) => [row.weekStart, row]));
-    const series = weekKeys.map((weekStart) => {
-      const row = byWeek.get(weekStart);
-      if (!row || row.comparable === 0) return null;
-      return row.agreeCount / row.comparable;
-    });
-    const sum = (pick: (row: AdminDecisionsQualityWeek) => number | null) => {
-      const values = rows.map(pick);
-      const total = values.reduce<number>((acc, value) => acc + (value ?? 0), 0);
-      const counted = values.filter((value) => value != null).length;
-      return counted > 0 ? total / counted : null;
-    };
-    return {
-      useCase,
-      samples: rows.reduce((acc, row) => acc + row.samples, 0),
-      comparable: rows.reduce((acc, row) => acc + row.comparable, 0),
-      agreeCount: rows.reduce((acc, row) => acc + row.agreeCount, 0),
-      replayFailed: rows.reduce((acc, row) => acc + row.replayFailed, 0),
-      series,
-      jevLatencyMs: sum((row) => row.jevLatencyMs),
-      llmLatencyMs: sum((row) => row.llmLatencyMs),
-      llmCost: sum((row) => row.llmCost),
-    };
-  });
-}
 
 function fmtLatency(ms: number | null): string {
   if (ms == null) return "—";
@@ -132,8 +67,8 @@ export function AdminDecisionsQuality() {
     void load();
   }, [load]);
 
-  const rows = useMemo(
-    () => (data ? buildRows(data.weeks) : []),
+  const rows: UseCaseRow[] = useMemo(
+    () => (data ? buildUseCaseRows(data.weeks) : []),
     [data],
   );
 

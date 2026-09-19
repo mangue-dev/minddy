@@ -81,12 +81,24 @@ the LLM pass as the reference. The method:
 
    Raising the floor sends more low-confidence Jev decisions to the LLM
    (slower, pricier, closer to the old behavior); lowering it trusts more
-   Jev. Never lower the floor on the strength of the shadow agreement
-   alone — high agreement among CONFIDENT decisions says the confident
-   band is safe, it says nothing about the band below the current floor.
-   To learn about that band, raise the sample rate temporarily
-   (`jev_shadow_sample_rate`, e.g. 0.2) and watch the buckets between the
-   current floor and the proposed one.
+   Jev. Never lower the floor on the strength of the shadow agreement alone
+   — high agreement among CONFIDENT decisions says the confident band is
+   safe, it says nothing about the band below the current floor.
+
+   **What the shadow can and cannot see:** the sampling roll happens only
+   inside the confident branch, so buckets BELOW the current floor never
+   produce rows — at any sample rate. The LLM pass that answers those
+   decisions is the real fallback (same run), not a shadow, and it is not
+   recorded. To evaluate a LOWER floor, treat it as the measured experiment
+   it is: the candidate band is currently decided by the LLM; lower the
+   floor one step and that band becomes Jev-decided AND sampled, so the
+   next week's rows show its agreement directly. If it lands below target,
+   raise the floor back — a week of one-step exposure is the price of the
+   evidence. (Recording the fallback pairs — Jev's discarded answers against
+   the LLM pass that already ran on the same run — would measure the
+   sub-floor bands with zero exposure and zero extra LLM cost; that was a
+   deliberate scope cut of MIN-567, worth an issue if downward calibration
+   becomes frequent.)
 
 4. When the floor moves, note the date, the sample size and the buckets in
    this file, under "Calibration history".

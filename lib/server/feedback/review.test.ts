@@ -434,6 +434,20 @@ describe("reviewFeedbackPost — Jev first filter (MIN-565)", () => {
     expect(options?.record?.runId).toBe("run-test");
   });
 
+  it("skips Jev for a use case listed LLM-first (MIN-567) — the switch covers the bespoke flow", async () => {
+    getAppConfigValuesMock.mockResolvedValue({ jev_llm_first: "feedback_review" });
+    forcedToolCallMock.mockResolvedValue(llmArgs());
+
+    const report = await reviewFeedbackPost("post-new", "project-1");
+
+    expect(runJevDecisionMock).not.toHaveBeenCalled();
+    expect(forcedToolCallMock).toHaveBeenCalledTimes(1);
+    expect(report.posts_reviewed).toBe(1);
+    // The LLM pass is the FIRST generation, exactly like a kill-switched run.
+    const options = forcedToolCallMock.mock.calls[0]?.[5];
+    expect(options?.record?.seq).toBe(0);
+  });
+
   it("bills a mixed decision as ONE run — Jev then the LLM pass", async () => {
     runJevDecisionMock.mockResolvedValue(null);
     forcedToolCallMock.mockResolvedValue(llmArgs());

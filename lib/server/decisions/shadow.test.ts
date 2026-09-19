@@ -112,6 +112,22 @@ describe("compareDecisionAnswers", () => {
     expect(compareDecisionAnswers(SPEC, JEV_ANSWERS, llm)).toBe(true);
   });
 
+  it("reads an EMPTY multi-choice verdict as a real answer, not silence", () => {
+    // The LLM tool schema requires category_ids: `[]` is a judged "nothing
+    // fits". Against a Jev answer that picked categories, it must DISAGREE —
+    // skipping it would inflate the agreement metric.
+    const empty = {
+      priority: { value: "high", probability: null, confidence: null },
+      category_ids: { value: [], probability: null, confidence: null },
+    };
+    expect(compareDecisionAnswers(SPEC, JEV_ANSWERS, empty)).toBe(false);
+    const jevEmpty = {
+      ...JEV_ANSWERS,
+      category_ids: { value: [], probability: null, confidence: null },
+    };
+    expect(compareDecisionAnswers(SPEC, jevEmpty, empty)).toBe(true);
+  });
+
   it("returns null when nothing is comparable (the reference answered nothing)", () => {
     expect(compareDecisionAnswers(SPEC, JEV_ANSWERS, {})).toBeNull();
   });

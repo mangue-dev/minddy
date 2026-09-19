@@ -49,9 +49,12 @@ export async function GET(request: NextRequest) {
       comparable: Number(row.comparable) || 0,
       agreeCount: Number(row.agree_count) || 0,
       replayFailed: Number(row.replay_failed) || 0,
-      jevLatencyMs: row.jev_latency_ms == null ? null : Number(row.jev_latency_ms),
-      llmLatencyMs: row.llm_latency_ms == null ? null : Number(row.llm_latency_ms),
-      llmCost: row.llm_cost == null ? null : Number(row.llm_cost),
+      jevLatencySum: Number(row.jev_latency_sum) || 0,
+      jevLatencyCount: Number(row.jev_latency_count) || 0,
+      llmLatencySum: Number(row.llm_latency_sum) || 0,
+      llmLatencyCount: Number(row.llm_latency_count) || 0,
+      llmCostSum: Number(row.llm_cost_sum) || 0,
+      llmCostCount: Number(row.llm_cost_count) || 0,
     })
   );
 
