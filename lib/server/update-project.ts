@@ -21,8 +21,9 @@ import type { Project } from "@/lib/types";
  * A unique-violation on `key` (23505) surfaces as `projectKeyAlreadyUsed`.
  * `smart_assign_enabled` is gated by the billing stub (`canUseSmartAssign`) on
  * enable; `smart_assign_rules` replaces the whole map, keys whitelisted to
- * the current team. `smart_triage_mode` accepts only the three known values;
- * arming `jev` additionally requires the owner's usage budget — the rules
+ * the current team. `smart_triage_mode` accepts only the two known values
+ * (rules | jev — there is no "off" since MIN-575); arming `jev` additionally
+ * requires the owner's usage budget — the rules
  * mode costs nothing and stays un-gated.
  */
 export type UpdateProjectResult =

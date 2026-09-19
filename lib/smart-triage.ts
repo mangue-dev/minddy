@@ -5,18 +5,20 @@ import type { IssueRelation } from "@/lib/types";
 import { dueBoost, PRIORITY_ORDER } from "@/lib/view-filter";
 
 /**
- * Smart Triage (MIN-566) — the on-demand reorder of a board column, opt-in PER
- * PROJECT. The mode lives on the project row (`smart_triage_mode`), never on a
- * platform switch (MIN-557):
+ * Smart Triage (MIN-566) — the on-demand reorder of a board column, ALWAYS
+ * available; the project only chooses the engine (MIN-575: no "off" mode —
+ * a switch that says "disabled" while the smart view sort keeps reordering
+ * by rules is a lie). The mode lives on the project row
+ * (`smart_triage_mode`), never on a platform switch (MIN-557):
  *
- * - `off` — today's behavior. Nothing runs, ever: no button, no reorder.
  * - `rules` — the static rules (Phase A): relations decide first (a ticket that
  *   blocks open work on top, a blocked ticket at the bottom), then the
  *   quick wins (low effort buys back priority tiers), objective tickets kept
  *   together, due dates and age as tie-breaks. Free, deterministic, testable.
  * - `jev` — Phase B: one decision-layer scoring pass per column (System One
  *   first, the LLM scoring pass as fallback) replaces the rules RANKING with a
- *   per-ticket urgency score; everything else stays identical.
+ *   per-ticket urgency score; everything else stays identical. Named "AI" in
+ *   the interface — the engine's name is an internal detail.
  *
  * Either way the reorder is a gesture: someone clicks "Smart triage", the
  * server rewrites the column's positions, and the manual drag order remains
@@ -27,15 +29,18 @@ import { dueBoost, PRIORITY_ORDER } from "@/lib/view-filter";
  * `lib/server/smart-triage.ts`.
  */
 
-export const SMART_TRIAGE_MODES = ["off", "rules", "jev"] as const;
+export const SMART_TRIAGE_MODES = ["rules", "jev"] as const;
 
 export type SmartTriageMode = (typeof SMART_TRIAGE_MODES)[number];
 
-/** The default once the triage is armed: rules, never Jev without a choice. */
+/** The mode of every project that has not chosen: rules — the free engine,
+ * never the AI pass by accident. */
 export const DEFAULT_SMART_TRIAGE_MODE: SmartTriageMode = "rules";
 
-/** `null` on anything but the three known values — a bad payload is refused,
- * never coerced into a mode that runs AI where none was asked. */
+/** `null` on anything but the two known values — a bad payload is refused,
+ * never coerced into a mode that runs AI where none was asked. The retired
+ * `off` value reads as `null` too: read sites fall back to the default, so a
+ * row that predates MIN-575 keeps working. */
 export function parseSmartTriageMode(value: unknown): SmartTriageMode | null {
   return (SMART_TRIAGE_MODES as readonly unknown[]).includes(value)
     ? (value as SmartTriageMode)

@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * The `smart_triage_mode` validation of the project settings (MIN-566): only
- * the three known values pass, `off` and `rules` cost nothing, arming `jev`
- * requires the owner's usage budget (the scoring passes bill it), and a
- * member's write is refused before anything else.
+ * The `smart_triage_mode` validation of the project settings (MIN-566):
+ * only the two known values pass (MIN-575 — there is no "off"), `rules`
+ * costs nothing, arming `jev` requires the owner's usage budget (the
+ * scoring passes bill it), and a member's write is refused before anything
+ * else.
  */
 
 const {
@@ -76,8 +77,8 @@ beforeEach(() => {
 });
 
 describe("updateProjectSettings — smart_triage_mode", () => {
-  it("accepts the three known values and defaults the triage to rules", async () => {
-    for (const mode of ["off", "rules", "jev"] as const) {
+  it("accepts the two known values (MIN-575: there is no off)", async () => {
+    for (const mode of ["rules", "jev"] as const) {
       const result = await updateProjectSettings({
         projectId: "project-1",
         actorId: "user-owner",
@@ -89,7 +90,7 @@ describe("updateProjectSettings — smart_triage_mode", () => {
   });
 
   it("refuses an unknown mode as a client bug, without coercing it", async () => {
-    for (const bad of ["smart", "RULES", "", null, 1]) {
+    for (const bad of ["off", "smart", "RULES", "", null, 1]) {
       const result = await updateProjectSettings({
         projectId: "project-1",
         actorId: "user-owner",
@@ -104,7 +105,7 @@ describe("updateProjectSettings — smart_triage_mode", () => {
     }
   });
 
-  it("gates arming jev on the owner's usage budget, rules and off stay free", async () => {
+  it("gates arming jev on the owner's usage budget, rules stays free", async () => {
     hasUsageBudgetMock.mockResolvedValue(false);
     const jev = await updateProjectSettings({
       projectId: "project-1",
@@ -118,14 +119,12 @@ describe("updateProjectSettings — smart_triage_mode", () => {
     expect(hasUsageBudgetMock).toHaveBeenCalledWith("user-owner", "automations");
     expect(updated).toBeNull();
 
-    for (const mode of ["off", "rules"] as const) {
-      const result = await updateProjectSettings({
-        projectId: "project-1",
-        actorId: "user-owner",
-        input: { smart_triage_mode: mode },
-      });
-      expect(result.ok).toBe(true);
-    }
+    const result = await updateProjectSettings({
+      projectId: "project-1",
+      actorId: "user-owner",
+      input: { smart_triage_mode: "rules" },
+    });
+    expect(result.ok).toBe(true);
   });
 
   it("refuses a member before anything else", async () => {
