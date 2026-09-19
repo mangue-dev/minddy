@@ -1,9 +1,10 @@
 # Supabase error audit (MIN-549)
 
 Investigated on 2026-09-19. All times are UTC. Preview and production resolve
-to the same Supabase project. Hosted inspection was read-only; fixes and write
-replays were tested on a disposable local Supabase instance with synthetic data.
-No hosted migrations, data repairs, grants, or production deployment were applied.
+to the same Supabase project. The initial hosted audit was read-only; fixes and
+write replays were tested on a disposable local Supabase instance with synthetic
+data. The user subsequently authorized the hosted migration rollout recorded
+below. No production application deployment was performed.
 
 ## Evidence and attribution
 
@@ -41,7 +42,7 @@ authentication defect.
 | Boolean-to-timestamp cast (`42846`) | 6 | Includes four application statements and two diagnostic statements. Already addressed by `20270106890000_fix_numo_stop_null_cast.sql`, present in hosted history. |
 | `agent_run_budget_values_invalid` (`22023`) | 4 | Existing budget guard rejection; cause and preview reproduction remain unproven. Inspect routine input/budget metadata on a fresh occurrence. |
 | Missing `projects.smart_triage_mode` (`42703`) | 5 | Short rollout interval Sep 19 11:39, followed by the schema migration. A failed function REVOKE and one view-column rename also appear during migration work; current repository migrations contain the corresponding fixes. |
-| Missing `user_ai_capability_assignments` | 19 API Gateway 404s in the last window | The existing BYOK migration `20270106990000` is absent from hosted migration history. This is a pending schema rollout, potentially affecting current preview code too; coordinate it before validating BYOK. It is not evidence for changing the new BYOK queries back to the old schema. |
+| Missing `user_ai_capability_assignments` | 19 API Gateway 404s in the last window | The existing BYOK migration `20270106990000` was absent at baseline, potentially affecting current preview code too. It was subsequently applied during the authorized rollout below. This was not evidence for changing the new BYOK queries back to the old schema. |
 
 Other low-volume events: three `conversation_busy` refusals, one
 `routine_not_found`, one duplicate agent event sequence, one numeric UUID input,
@@ -187,12 +188,37 @@ not a successful full clean-install validation. Repairing that historical view
 migration while preserving its dependent views, policies and grants is a
 separate bootstrap follow-up. No historical migration was edited here.
 
-Hosted recurrence verification remains a rollout step: the policy migration has
-not been applied to the shared database. After its coordinated application and
-preview deployment, repeat authenticated global/project board reads and a
-Smart-fill creation, check activity attribution, then query a bounded window
-for `23502` and `57014` and correlate with that exact preview deployment.
-Successful local replay does not establish absence of future hosted errors.
+## Authorized hosted rollout
+
+On 2026-09-19, starting at **19:50:33**, the user authorized applying the pending
+migrations to the shared database. `supabase db push --linked --skip-vault --yes`
+successfully applied `20270106990000_multi_provider_byok.sql` and
+`20270107000000_issue_read_policy_batching.sql`. A subsequent dry run reported
+no pending migrations. No seed data, custom roles or Vault updates were included.
+
+Schema verification confirmed the indexed issue policy, the category parent
+policy, the BYOK table's RLS and indexes, and service-role-only execution grants
+on the BYOK mutation functions. A zero-row PostgREST request to the new assignment
+table returned HTTP 200. There were no existing BYOK keys to backfill.
+
+Read-only transactions under the `authenticated` role returned **615 issues and
+909 category links**. Hashes of their identities exactly matched the original
+owner/member access predicate. Without an identity, both counts were zero.
+Three global issue reads with embedded categories took **11.409, 14.091 and
+26.843 ms** in PostgreSQL. These are SQL probes on hosted data, not authenticated
+HTTP requests through the application or its session/MFA hook.
+
+In the bounded **19:50:33–19:55:02** post-migration log window, PostgreSQL returned
+no `23502` or `57014` errors, and PostgREST returned no messages matching those
+codes or the missing BYOK assignment table. One `42501` was our diagnostic
+attempt to switch roles through the Management API's restricted read-only
+connection. The successful probes instead used an administrative connection
+inside explicit read-only transactions, without changing any grants.
+
+End-to-end preview verification remains: repeat authenticated global/project
+board reads and a Smart-fill creation, check saved activity attribution, and
+correlate a later log window with that exact preview deployment. The short
+observation above does not establish absence of future hosted errors.
 
 For subsequent audits, use the [Supabase log query API](https://supabase.com/docs/guides/observability/advanced-log-filtering)
 with explicit UTC windows of at most 24 hours, enumerate `source`, and aggregate
