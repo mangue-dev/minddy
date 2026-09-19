@@ -25,13 +25,23 @@ vi.mock("./byok-validate", () => ({
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
     from(table: string) {
-      if (table !== "user_ai_keys") throw new Error(`table inattendue : ${table}`);
+      if (table === "user_ai_capability_assignments") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({ data: { ai_key_id: "key-1" } }),
+              }),
+            }),
+          }),
+        };
+      }
+      if (table !== "user_ai_keys")
+        throw new Error(`unexpected table: ${table}`);
       return {
         select: () => ({
           eq: () => ({
-            order: () => ({
-              limit: () => ({ maybeSingle: async () => ({ data: keyRow }) }),
-            }),
+            eq: () => ({ maybeSingle: async () => ({ data: keyRow }) }),
           }),
         }),
         update: (patch: unknown) => ({
@@ -48,17 +58,14 @@ vi.mock("@/lib/supabase-service", () => ({
 }));
 vi.mock("./byok-credentials", () => ({
   LOCAL_ENDPOINT_WITHOUT_API_KEY: "sans-cle-local",
-  decryptUserAiKey: (value: string | null) => (!value || value === "corrompu" ? null : "sk-clair"),
+  decryptUserAiKey: (value: string | null) =>
+    !value || value === "corrompu" ? null : "sk-clair",
   encryptUserAiKey: (value: string) => value,
   keyPrefix: (value: string) => value.slice(0, 6),
 }));
 
-const {
-  getUserByok,
-  resolveAgentApiKey,
-  userHasByokKey,
-  resetByokProbeCache,
-} = await import("./model");
+const { getUserByok, resolveAgentApiKey, userHasByokKey, resetByokProbeCache } =
+  await import("./model");
 
 const USER = "5ad9b962-93e7-4a7c-a44b-f4925484ba93";
 
@@ -86,13 +93,17 @@ describe("getUserByok — la validation gouverne", () => {
 
   it("sert sans probe une clé déjà validée", async () => {
     keyRow!.validated_at = "2026-08-01T00:00:00.000Z";
-    await expect(getUserByok(USER)).resolves.toMatchObject({ provider: "openrouter" });
+    await expect(getUserByok(USER)).resolves.toMatchObject({
+      provider: "openrouter",
+    });
     expect(probeByokKey).not.toHaveBeenCalled();
   });
 
   it("rattrape une ligne d'avant MIN-344 : la clé répond → on pose la date", async () => {
     probeByokKey.mockResolvedValue("valid");
-    await expect(getUserByok(USER)).resolves.toMatchObject({ apiKey: "sk-clair" });
+    await expect(getUserByok(USER)).resolves.toMatchObject({
+      apiKey: "sk-clair",
+    });
     expect(updated).toHaveLength(1);
     expect(updated[0]).toHaveProperty("validated_at");
   });
@@ -125,7 +136,9 @@ describe("getUserByok — la validation gouverne", () => {
     await expect(resolveAgentApiKey(USER)).rejects.toMatchObject({
       code: "localEndpointRequiresLocalRun",
     });
-    await expect(resolveAgentApiKey(USER, "agent", { allowLocal: true })).resolves.toMatchObject({
+    await expect(
+      resolveAgentApiKey(USER, "agent", { allowLocal: true }),
+    ).resolves.toMatchObject({
       mode: "byok",
       provider: "local_openai",
     });
@@ -159,7 +172,9 @@ describe("getUserByok — la validation gouverne", () => {
       apiKey: "",
       baseUrl: "http://127.0.0.1:11434/v1",
     });
-    await expect(resolveAgentApiKey(USER, "agent", { allowLocal: true })).resolves.toMatchObject({
+    await expect(
+      resolveAgentApiKey(USER, "agent", { allowLocal: true }),
+    ).resolves.toMatchObject({
       mode: "byok",
       apiKey: "",
     });
@@ -173,7 +188,10 @@ const plan = { id: "pro", allowAgents: true, includedUsageUsd: 10 };
 let usage = {
   usedUsd: 0,
   byFeature: {} as Record<string, number>,
-  period: { start: "2026-08-01T00:00:00.000Z", end: "2026-09-01T00:00:00.000Z" },
+  period: {
+    start: "2026-08-01T00:00:00.000Z",
+    end: "2026-09-01T00:00:00.000Z",
+  },
 };
 
 vi.mock("@/lib/server/billing-accounts", () => ({
@@ -196,14 +214,21 @@ describe("checkAgentQuota — BYOK bypasses minddy usage", () => {
     usage = {
       usedUsd: 0,
       byFeature: {},
-      period: { start: "2026-08-01T00:00:00.000Z", end: "2026-09-01T00:00:00.000Z" },
+      period: {
+        start: "2026-08-01T00:00:00.000Z",
+        end: "2026-09-01T00:00:00.000Z",
+      },
     };
   });
 
   it("allows unlimited tokens", async () => {
     usage.usedUsd = 9_999;
     const quota = await checkAgentQuota(USER);
-    expect(quota).toMatchObject({ allowed: true, unlimited: true, mode: "byok" });
+    expect(quota).toMatchObject({
+      allowed: true,
+      unlimited: true,
+      mode: "byok",
+    });
   });
 
   it("does not read a minddy plan or ledger for BYOK", async () => {
@@ -242,7 +267,9 @@ describe("checkAgentQuota — BYOK bypasses minddy usage", () => {
   it("ignores token usage", async () => {
     usage.byFeature = { agent_code: 500, sandbox_compute: 1 };
     usage.usedUsd = 501;
-    await expect(checkAgentQuota(USER)).resolves.toMatchObject({ allowed: true });
+    await expect(checkAgentQuota(USER)).resolves.toMatchObject({
+      allowed: true,
+    });
   });
 
   it("falls back to the platform budget for an unvalidated key", async () => {

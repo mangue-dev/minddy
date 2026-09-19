@@ -32,13 +32,16 @@ import { fetchOpenRouterWithSuffixFallback } from "@/lib/server/model-config";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { fetchAiProvider } from "@/lib/server/ai-provider-request";
 import { providerSupportsModelKey } from "@/lib/model-catalog-capability";
+import { modelCatalogCapabilityForKey } from "@/lib/model-catalog-capability";
 
 export type AiKeyMode = "platform" | "byok";
 
 /** No platform fallback outside AI service explicitly operated by minddy. */
 export class ManagedAiUnavailableError extends Error {
   constructor() {
-    super("Managed AI is not configured. Configure BYOK or enable MINDDY_MANAGED_AI.");
+    super(
+      "Managed AI is not configured. Configure BYOK or enable MINDDY_MANAGED_AI.",
+    );
     this.name = "ManagedAiUnavailableError";
   }
 }
@@ -104,7 +107,11 @@ export async function resolveAiRuntime(params: {
   const surface = params.surface ?? surfaceForModelKey(params.modelKey);
   const modelOverride = params.modelOverride?.trim() || null;
   const [byok, rootModel] = await Promise.all([
-    getUserByok(params.userId, surface),
+    getUserByok(
+      params.userId,
+      surface,
+      modelCatalogCapabilityForKey(params.modelKey),
+    ),
     platformModel(params.modelKey),
   ]);
 
@@ -128,8 +135,9 @@ export async function resolveAiRuntime(params: {
         provider: byok.provider,
         baseUrl: byok.baseUrl,
         model,
-        requestProfile:
-          getAgentProvider(byok.provider)?.requestProfile ?? { outputTokenField: "max_tokens" },
+        requestProfile: getAgentProvider(byok.provider)?.requestProfile ?? {
+          outputTokenField: "max_tokens",
+        },
       };
     }
   }
@@ -145,10 +153,10 @@ export async function resolveAiRuntime(params: {
     provider: DEFAULT_AGENT_PROVIDER,
     baseUrl,
     model: modelOverride || rootModel || aiModelFallback(params.modelKey),
-    requestProfile:
-      getAgentProvider(DEFAULT_AGENT_PROVIDER)?.requestProfile ?? {
-        outputTokenField: "max_completion_tokens",
-      },
+    requestProfile: getAgentProvider(DEFAULT_AGENT_PROVIDER)
+      ?.requestProfile ?? {
+      outputTokenField: "max_completion_tokens",
+    },
   };
 }
 
@@ -157,14 +165,22 @@ export async function usesByokForSurface(
   surface: AiSurface,
   modelKeys?: ByokModelKey | readonly ByokModelKey[],
 ): Promise<boolean> {
-  const byok = await getUserByok(userId, surface);
-  if (!byok) return false;
   const required = modelKeys
     ? Array.isArray(modelKeys)
       ? modelKeys
       : [modelKeys]
     : [];
-  return required.every((modelKey) => providerSupportsModelKey(byok.provider, modelKey));
+  if (required.length === 0)
+    return (await getUserByok(userId, surface, "text")) !== null;
+  const credentials = await Promise.all(
+    required.map((modelKey) =>
+      getUserByok(userId, surface, modelCatalogCapabilityForKey(modelKey)),
+    ),
+  );
+  return credentials.every(
+    (byok, index) =>
+      !!byok && providerSupportsModelKey(byok.provider, required[index]!),
+  );
 }
 
 async function retryRejectedChatRequest(
@@ -233,7 +249,12 @@ export async function fetchAiChat(
   const firstRequest = request(model);
   const firstResponse = await http(endpoint, firstRequest);
   return {
-    response: await retryRejectedChatRequest(endpoint, firstResponse, firstRequest, http),
+    response: await retryRejectedChatRequest(
+      endpoint,
+      firstResponse,
+      firstRequest,
+      http,
+    ),
     model,
   };
 }

@@ -25,7 +25,14 @@ vi.mock("@/lib/supabase-service", () => ({
         order: () => query,
         limit: () => query,
         maybeSingle: async () => ({
-          data: table === "user_agent_preferences" ? h.preference : h.byok,
+          data:
+            table === "user_agent_preferences"
+              ? h.preference
+              : table === "user_ai_capability_assignments"
+                ? h.byok
+                  ? { ai_key_id: "key-1" }
+                  : null
+                : h.byok,
         }),
       };
       return query;
