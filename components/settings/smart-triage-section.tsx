@@ -7,18 +7,22 @@ import { useProjects } from "@/lib/projects-context";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import {
+  DEFAULT_SMART_TRIAGE_MODE,
+  parseSmartTriageMode,
   SMART_TRIAGE_MODES,
   type SmartTriageMode,
 } from "@/lib/smart-triage";
 import type { Project } from "@/lib/types";
 
 /**
- * Project-level Smart Triage preference (MIN-566): the per-project reorder
- * mode. `off` (default) never reorders — the board stays drag-only; `rules`
- * reorders through the static rules; `jev` replaces the ranking with an AI
- * urgency score that bills the Automations segment. The reorder itself is a
- * BUTTON on the board, never a background pass — this screen only decides
- * what that button does and who sees it.
+ * Project-level Smart Triage preference (MIN-566, MIN-575): the per-project
+ * ENGINE choice. `rules` reorders through the static rules (free); `jev`
+ * replaces the ranking with an AI urgency score that bills the Automations
+ * segment. There is no "off" — the triage is always available, the switch is
+ * only about who ranks (MIN-575: a "disabled" state while the smart view sort
+ * kept reordering by rules was a lie). The reorder itself is a BUTTON on the
+ * board, never a background pass — this screen only decides what that button
+ * does.
  *
  * Owner-only: members get the state read-only, like Smart Assign's switch.
  */
@@ -33,11 +37,17 @@ export function SmartTriageSection({
   const { updateProject } = useProjects();
 
   // Mirror the mode locally so it flips instantly, then reconcile from the
-  // project (realtime / refetch) — the Smart Assign toggle's pattern.
-  const [mode, setMode] = useState<SmartTriageMode>(project.smart_triage_mode);
+  // project (realtime / refetch) — the Smart Assign toggle's pattern. The
+  // project value is NORMALIZED through the parser: a legacy `off` row (a
+  // database the migration has not reached yet) must render as the default
+  // (rules) — both a selected segment and the matching hint — never as a
+  // selector with no choice and a hint that lies about the active engine.
+  const [mode, setMode] = useState<SmartTriageMode>(
+    parseSmartTriageMode(project.smart_triage_mode) ?? DEFAULT_SMART_TRIAGE_MODE
+  );
   const [saving, setSaving] = useState(false);
   useEffect(() => {
-    setMode(project.smart_triage_mode);
+    setMode(parseSmartTriageMode(project.smart_triage_mode) ?? DEFAULT_SMART_TRIAGE_MODE);
   }, [project.smart_triage_mode]);
 
   const change = async (next: SmartTriageMode) => {
@@ -48,7 +58,7 @@ export function SmartTriageSection({
       await updateProject(project.id, { smart_triage_mode: next });
       toast.success(t("smartTriageSavedToast"));
     } catch (e) {
-      setMode(project.smart_triage_mode);
+      setMode(parseSmartTriageMode(project.smart_triage_mode) ?? DEFAULT_SMART_TRIAGE_MODE);
       toast.error((e as Error).message);
     } finally {
       setSaving(false);
@@ -58,18 +68,14 @@ export function SmartTriageSection({
   const modeOptions = SMART_TRIAGE_MODES.map((value) => ({
     value,
     label:
-      value === "off"
-        ? t("smartTriageModeOff")
-        : value === "rules"
-          ? t("smartTriageModeRules")
-          : t("smartTriageModeJev"),
+      value === "rules"
+        ? t("smartTriageModeRules")
+        : t("smartTriageModeJev"),
   }));
   const modeHint =
-    mode === "off"
-      ? t("smartTriageModeOffDesc")
-      : mode === "rules"
-        ? t("smartTriageModeRulesDesc")
-        : t("smartTriageModeJevDesc");
+    mode === "rules"
+      ? t("smartTriageModeRulesDesc")
+      : t("smartTriageModeJevDesc");
 
   return (
     <SettingsGroup

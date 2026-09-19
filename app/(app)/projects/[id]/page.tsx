@@ -142,7 +142,7 @@ function ProjectBoard() {
   const isOwner = !!project && project.owner_id === myUserId;
   // Smart triage mode (MIN-566) — read once so the toolbar prop narrows off
   // cleanly (`off` renders no button at all).
-  const smartTriageMode = project?.smart_triage_mode ?? "off";
+  const smartTriageMode = project?.smart_triage_mode ?? "rules";
   const { open: openAssistant, openIntent } = useAssistantPanel();
 
   // Right-click "Add to cycle" (MIN-32) — the cycle is canonical on /all, but
@@ -351,16 +351,13 @@ function ProjectBoard() {
           } as Partial<Issue>);
         }
         void queryClient.invalidateQueries({ queryKey: ["issues", project.id] });
-        // An off-mode call moved nothing by definition — nothing to measure.
-        if (mode !== "off") {
-          trackEvent("smart_triage_ran", {
-            mode,
-            scored,
-            columns,
-            issues: moves.length,
-            scope: "project",
-          });
-        }
+        trackEvent("smart_triage_ran", {
+          mode,
+          scored,
+          columns,
+          issues: moves.length,
+          scope: "project",
+        });
       } catch (err) {
         toast.error((err as Error).message);
       } finally {
@@ -771,17 +768,14 @@ function ProjectBoard() {
                 completionPercent: currentCycleCompletionPercent,
                 onSelect: () => router.push("/all?view=cycle"),
               }}
-              // Smart triage (MIN-566): off renders nothing — the opt-in
-              // stays invisible until the project arms it in settings.
-              smartTriage={
-                smartTriageMode !== "off"
-                  ? {
-                      mode: smartTriageMode,
-                      running: smartTriageRunning,
-                      onRun: runSmartTriage,
-                    }
-                  : undefined
-              }
+              // Smart triage (MIN-566, MIN-575): always rendered — the
+              // project setting only picks the engine (rules | jev), there
+              // is no "off" anymore.
+              smartTriage={{
+                mode: smartTriageMode,
+                running: smartTriageRunning,
+                onRun: runSmartTriage,
+              }}
             />
           )}
           <div className="min-h-0 flex-1 pt-3">

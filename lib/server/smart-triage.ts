@@ -12,6 +12,7 @@ import {
   jevTriageOrder,
   MAX_TRIAGE_TICKETS_PER_DECISION,
   parseSmartTriageMode,
+  DEFAULT_SMART_TRIAGE_MODE,
   triageAgeDays,
   triageIssueComparator,
   type SmartTriageMove,
@@ -32,7 +33,8 @@ import type { IssueRelation } from "@/lib/types";
  *
  * Everything here is a gesture, never a background pass: the button triggers
  * it, the positions are rewritten, and the manual drag order stays editable.
- * Mode `off` is a loud no-op — no fetch beyond the project row, no write.
+ * There is no "off" mode (MIN-575): the triage is always available, the
+ * project setting only chooses the engine.
  *
  * Closed columns are never reordered: triaging a graveyard is churn, not
  * signal. Only backlog / todo / in_progress / in_review move.
@@ -105,9 +107,10 @@ export async function runSmartTriage({
     .is("deleted_at", null)
     .maybeSingle();
   if (!project) return { ok: false, status: 404, errorKey: "projectNotFound" };
-  const mode = parseSmartTriageMode(project.smart_triage_mode) ?? "off";
-  // Off means off: not "degrade to rules". The project decided.
-  if (mode === "off") return { ok: true, mode, moves: [], columns: 0, scored: false };
+  // A retired value (`off`, MIN-575) reads as the default: rules. There is
+  // no "off" mode anymore — the triage is always available.
+  const mode =
+    parseSmartTriageMode(project.smart_triage_mode) ?? DEFAULT_SMART_TRIAGE_MODE;
 
   const requested = Array.isArray(statuses)
     ? (statuses.filter(

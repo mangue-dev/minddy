@@ -43,19 +43,20 @@ function order(issues: TriageIssue[], ctx: Omit<Parameters<typeof triageIssueCom
 }
 
 describe("parseSmartTriageMode", () => {
-  it("accepts the three known values only", () => {
-    expect(parseSmartTriageMode("off")).toBe("off");
+  it("accepts the two known values only (MIN-575: off is retired)", () => {
     expect(parseSmartTriageMode("rules")).toBe("rules");
     expect(parseSmartTriageMode("jev")).toBe("jev");
+    expect(parseSmartTriageMode("off")).toBeNull();
     expect(parseSmartTriageMode("smart")).toBeNull();
     expect(parseSmartTriageMode(undefined)).toBeNull();
     expect(parseSmartTriageMode(null)).toBeNull();
     expect(parseSmartTriageMode(1)).toBeNull();
   });
 
-  it("defaults to rules once the triage is on", () => {
-    // Phase A is the default behavior of the mode: arming the triage without
-    // choosing must never arm the AI pass by accident (MIN-557).
+  it("defaults to rules — never the AI pass by accident", () => {
+    // Rules is the default behavior of the mode: a project (or a retired
+    // `off` row) without a choice must never arm the AI pass by accident
+    // (MIN-557).
     expect(DEFAULT_SMART_TRIAGE_MODE).toBe("rules");
   });
 });
