@@ -170,7 +170,8 @@ export async function runSmartTriage({
   );
   // The other ends of the blocks edges may sit outside the reordered columns
   // (a blocker still in backlog): their open/closed state decides whether the
-  // edge is ACTIVE, so their statuses are read too.
+  // edge is ACTIVE, so their statuses are read too — LIVE rows only, relation
+  // rows surviving a trash deletion must not drag live tickets around.
   const storedRelations = (relationRows.data ?? []) as unknown as IssueRelation[];
   const columnIds = new Set(issues.map((issue) => issue.id));
   const outsideIds = new Set<string>();
@@ -183,6 +184,7 @@ export async function runSmartTriage({
     const { data: statusRows } = await service
       .from("issues")
       .select("id, status")
+      .is("deleted_at", null)
       .in("id", [...outsideIds]);
     for (const row of (statusRows ?? []) as Array<{ id: string; status: IssueStatus }>) {
       statusById.set(row.id, row.status);
@@ -204,10 +206,22 @@ export async function runSmartTriage({
       (o) => [o.id, o.status]
     )
   );
-  const { relations } = cycleBlockingRelations(
+  const { relations: foldedRelations, objectiveStatuses } = cycleBlockingRelations(
     storedRelations,
     issuesByObjective,
     objectiveStatusById
+  );
+  // Objective liveness joins the map: an objective-source edge resolves
+  // against the objective's OWN status (a done objective no longer blocks,
+  // like a done issue), not against a missing entry read as "open".
+  for (const [id, status] of objectiveStatuses) statusById.set(id, status);
+  // An edge whose end is unknown here is not a dependency: the end is
+  // trashed (never fetched), foreign, or an objective that vanished — the
+  // rules would rather ignore it than act on a guessed "open".
+  const relations = foldedRelations.filter(
+    (r) =>
+      r.type !== "blocks" ||
+      (statusById.has(r.source_id) && statusById.has(r.target_id))
   );
 
   const objectiveNameById = new Map<string, string>(
@@ -288,15 +302,23 @@ export async function runSmartTriage({
   }
 
   if (moves.length > 0) {
-    const writes = await Promise.all(
-      moves.map((move) =>
-        service.from("issues").update({ position: move.position }).eq("id", move.id)
-      )
-    );
-    const failure = writes.find(({ error }) => error);
-    if (failure?.error) {
-      console.error("[smart-triage] position write failed:", failure.error.message);
-      throw new Error(failure.error.message);
+    // ONE atomic write: the batch commits together or not at all — a
+    // half-reordered board would disagree with the client until the next
+    // reconciliation. The RPC returns the rows actually updated; a silent
+    // miss (a ticket trashed mid-flight) fails the request rather than
+    // letting the visible and persisted orders drift.
+    const { data: applied, error } = await service.rpc("apply_smart_triage_moves", {
+      p_project_id: projectId,
+      p_moves: moves,
+    });
+    if (error) {
+      console.error("[smart-triage] position write failed:", error.message);
+      throw new Error(error.message);
+    }
+    if (applied !== moves.length) {
+      const message = `apply_smart_triage_moves wrote ${applied}/${moves.length} positions`;
+      console.error("[smart-triage]", message);
+      throw new Error(message);
     }
   }
 

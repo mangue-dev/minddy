@@ -26,3 +26,38 @@ ALTER TABLE "public"."ai_usage" DROP CONSTRAINT IF EXISTS "ai_usage_feature_chec
 
 ALTER TABLE "public"."ai_usage"
     ADD CONSTRAINT "ai_usage_feature_check" CHECK (("feature" = ANY (ARRAY['numo_chat'::text, 'numo_comment'::text, 'dictation'::text, 'transcription'::text, 'smart_assign'::text, 'smart_fill'::text, 'feedback_classify'::text, 'feedback_analyze'::text, 'embedding'::text, 'agent_code'::text, 'sandbox_compute'::text, 'web_search'::text, 'pr_review'::text, 'import_map'::text, 'landing_demo'::text, 'brief_split'::text, 'feedback_voice'::text, 'routine_code'::text, 'routine_compute'::text, 'jev_decision'::text, 'smart_triage'::text])));
+
+-- The reorder itself is ONE transaction: every position of the batch commits
+-- together or nothing does — a half-reordered board would disagree with the
+-- client until the next reconciliation. The server has already decided the
+-- order; the function only writes it back, scoped to the project, skipping
+-- trashed rows. Returns the number of rows actually updated so a silent miss
+-- (a ticket trashed mid-flight) is detectable.
+CREATE OR REPLACE FUNCTION "public"."apply_smart_triage_moves"(
+    "p_project_id" "uuid",
+    "p_moves" "jsonb"
+) RETURNS integer
+    LANGUAGE "plpgsql"
+    SET "search_path" = ''
+    AS $$
+DECLARE
+    applied integer := 0;
+    move "jsonb";
+BEGIN
+    IF "p_moves" IS NULL OR "jsonb_typeof"("p_moves") <> 'array' THEN
+        RAISE EXCEPTION 'p_moves must be a jsonb array of {id, position}';
+    END IF;
+    FOR move IN SELECT * FROM "jsonb_array_elements"("p_moves") LOOP
+        UPDATE "public"."issues"
+            SET "position" = ("move"->>'position')::double precision
+            WHERE "id" = ("move"->>'id')::"uuid"
+              AND "project_id" = "p_project_id"
+              AND "deleted_at" IS NULL;
+        IF FOUND THEN applied := applied + 1; END IF;
+    END LOOP;
+    RETURN applied;
+END;
+$$;
+
+REVOKE ALL ON "public"."apply_smart_triage_moves" FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON "public"."apply_smart_triage_moves" TO "service_role";

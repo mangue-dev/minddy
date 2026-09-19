@@ -123,13 +123,16 @@ export async function updateProjectSettings({
   // an unknown value is a client bug, refused rather than coerced. Arming
   // `jev` costs usage (the scoring passes bill the ACTOR in Automations), so
   // the owner's budget gates the switch — the same "arming" logic as the
-  // neighbors. `rules` and `off` cost nothing and pass freely.
+  // neighbors. The check reads the AUTOMATIONS surface, like the run-time
+  // preflight does: an owner whose BYOK key covers Automations can arm Jev
+  // even with their managed budget dry. `rules` and `off` cost nothing and
+  // pass freely.
   if ("smart_triage_mode" in input) {
     const mode = parseSmartTriageMode(input.smart_triage_mode);
     if (!mode) {
       return { ok: false, status: 400, errorKey: "invalidSmartTriageMode" };
     }
-    if (mode === "jev" && !(await hasUsageBudget(access.project.owner_id))) {
+    if (mode === "jev" && !(await hasUsageBudget(access.project.owner_id, "automations"))) {
       return { ok: false, status: 403, errorKey: "smartTriageNotAllowed" };
     }
     updates.smart_triage_mode = mode;

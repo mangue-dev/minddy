@@ -174,35 +174,78 @@ export function triageIssueComparator(
     blockers.has(id) ? 0 : blocked.has(id) ? 2 : 1;
   const rank = new Map<string, number>();
   for (const issue of issues) rank.set(issue.id, quickWinRank(issue, now));
-  // Objective blocks, per tier: key = objective id (or the ticket's own id when
-  // ungrouped), value = the block's best quick-win rank. Two tickets of one
-  // objective never separate inside a tier, wherever the block lands.
-  const groupKey = new Map<string, string>();
-  const groupRank = new Map<string, number>();
+
+  // Objective blocks, per tier: key = objective id (or the ticket's own id
+  // when ungrouped). Each group's rank is its BEST member's — the block is
+  // judged by its most urgent ticket, never dragged down by a late one.
+  const groups = new Map<
+    string,
+    { tier: 0 | 1 | 2; best: number; members: TriageIssue[] }
+  >();
   for (const issue of issues) {
     const tier = tierOf(issue.id);
     const key = `${tier}:${issue.objective_id ?? `solo:${issue.id}`}`;
-    groupKey.set(issue.id, key);
+    let group = groups.get(key);
+    if (!group) {
+      group = { tier, best: Number.POSITIVE_INFINITY, members: [] };
+      groups.set(key, group);
+    }
     const r = rank.get(issue.id) ?? 0;
-    const best = groupRank.get(key);
-    groupRank.set(key, best === undefined ? r : Math.min(best, r));
+    group.best = Math.min(group.best, r);
+    group.members.push(issue);
   }
-  return (a, b) => {
-    const tierDiff = tierOf(a.id) - tierOf(b.id);
-    if (tierDiff !== 0) return tierDiff;
-    const keyA = groupKey.get(a.id) ?? "";
-    const keyB = groupKey.get(b.id) ?? "";
-    const groupDiff = (groupRank.get(keyA) ?? 0) - (groupRank.get(keyB) ?? 0);
-    if (groupDiff !== 0) return groupDiff;
-    const rankDiff = (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0);
-    if (rankDiff !== 0) return rankDiff;
-    const dueDiff = dueTiebreak(a, b);
-    if (dueDiff !== 0) return dueDiff;
-    // Age: the ticket that has waited longest reads as the next one.
-    const ageDiff = a.created_at.localeCompare(b.created_at);
-    if (ageDiff !== 0) return ageDiff;
-    return a.position - b.position;
-  };
+
+  // The group tie-break compares BLOCKS as wholes — best rank first, then
+  // the block's most imminent due date, then its oldest member. Comparing
+  // members individually here would let two tied blocks interleave and tear
+  // an objective apart.
+  const groupList = [...groups.values()].sort((a, b) => {
+    if (a.tier !== b.tier) return a.tier - b.tier;
+    if (a.best !== b.best) return a.best - b.best;
+    return blockTiebreak(a.members, b.members, now);
+  });
+
+  // Members inside a block: the full tie-break chain, then the id so the
+  // order is total. The final order index makes the comparator itself
+  // trivial — and guarantees contiguity by construction.
+  const orderIndex = new Map<string, number>();
+  let next = 0;
+  for (const group of groupList) {
+    const sorted = [...group.members].sort(
+      (a, b) =>
+        (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0) ||
+        dueTiebreak(a, b) ||
+        a.created_at.localeCompare(b.created_at) ||
+        a.position - b.position ||
+        (a.id < b.id ? -1 : 1)
+    );
+    for (const member of sorted) orderIndex.set(member.id, next++);
+  }
+  return (a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0);
+}
+
+/** The tie-break between two tied blocks: their best members compared on
+    due date, age and position — the same chain the members use, read at the
+    block level so a block never splits. */
+function blockTiebreak(a: TriageIssue[], b: TriageIssue[], now: number): number {
+  const best = (members: TriageIssue[]): TriageIssue =>
+    members.reduce((current, candidate) => {
+      const diff =
+        (quickWinRank(candidate, now) - quickWinRank(current, now)) ||
+        dueTiebreak(candidate, current) ||
+        candidate.created_at.localeCompare(current.created_at) ||
+        candidate.position - current.position;
+      return diff < 0 ? candidate : current;
+    });
+  const aBest = best(a);
+  const bBest = best(b);
+  const dueDiff = dueTiebreak(aBest, bBest);
+  if (dueDiff !== 0) return dueDiff;
+  const ageDiff = aBest.created_at.localeCompare(bBest.created_at);
+  if (ageDiff !== 0) return ageDiff;
+  const positionDiff = aBest.position - bBest.position;
+  if (positionDiff !== 0) return positionDiff;
+  return aBest.id < bBest.id ? -1 : aBest.id > bBest.id ? 1 : 0;
 }
 
 /**

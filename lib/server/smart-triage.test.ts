@@ -17,6 +17,7 @@ const {
   runDecisionMock,
   buildSmartTriageSpecMock,
   fromMock,
+  rpcMock,
 } = vi.hoisted(() => ({
   getProjectAccessMock: vi.fn<
     (userId: string, projectId: string) => Promise<unknown>
@@ -30,10 +31,13 @@ const {
   >(),
   buildSmartTriageSpecMock: vi.fn<(input: unknown) => unknown>(),
   fromMock: vi.fn<(table: string) => unknown>(),
+  rpcMock: vi.fn<
+    (name: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>
+  >(),
 }));
 
 vi.mock("@/lib/supabase-service", () => ({
-  getServiceClient: () => ({ from: fromMock }),
+  getServiceClient: () => ({ from: fromMock, rpc: rpcMock }),
 }));
 vi.mock("@/lib/server/project-access", () => ({
   getProjectAccess: getProjectAccessMock,
@@ -78,15 +82,13 @@ const DB = {
   categories: [] as Array<Record<string, unknown>>,
 };
 
-interface WriteRecord {
-  payload: Record<string, unknown>;
-  eqs: Array<[string, unknown]>;
-}
-let updates: WriteRecord[] = [];
+/** The moves of the atomic RPC — the observable of the reorder. */
+let writtenMoves: Array<{ id: string; position: number }> = [];
+let rpcResult: { data: unknown; error: unknown } = { data: null, error: null };
 
 /** A PostgREST chain reduced to what the run touches: filters are ignored,
- * the await / `maybeSingle()` resolve the table's rows, `update()` records its
- * payload and its `.eq("id", …)` target. */
+ * the await / `maybeSingle()` resolve the table's rows. The position writes
+ * ride the atomic RPC, not this path. */
 function chain(table: string): unknown {
   const resolve = (): { data: unknown; error: unknown } => {
     switch (table) {
@@ -105,19 +107,9 @@ function chain(table: string): unknown {
     }
   };
   const query: Record<string, unknown> = {};
-  let updating: WriteRecord | null = null;
-  for (const method of ["select", "is", "not", "in", "or", "order", "limit", "range"]) {
+  for (const method of ["select", "eq", "is", "not", "in", "or", "order", "limit", "range"]) {
     query[method] = () => query;
   }
-  query.eq = (col: unknown, value: unknown) => {
-    if (updating) updating.eqs.push([col as string, value]);
-    return query;
-  };
-  query.update = (payload: unknown) => {
-    updating = { payload: payload as Record<string, unknown>, eqs: [] };
-    updates.push(updating);
-    return query;
-  };
   query.maybeSingle = () => Promise.resolve(resolve());
   query.then = (
     onFulfilled: (value: { data: unknown; error: unknown }) => unknown
@@ -154,9 +146,16 @@ beforeEach(() => {
   DB.relations = [];
   DB.objectives = [];
   DB.categories = [];
-  updates = [];
+  writtenMoves = [];
+  rpcResult = { data: null, error: null };
   fromMock.mockClear();
   fromMock.mockImplementation((table: string) => chain(table));
+  rpcMock.mockClear();
+  rpcMock.mockImplementation(async (_name, params) => {
+    writtenMoves = params.p_moves as Array<{ id: string; position: number }>;
+    if (rpcResult.error) return rpcResult;
+    return { data: writtenMoves.length, error: null };
+  });
   getProjectAccessMock.mockResolvedValue({ isOwner: true });
   ensureUsageBudgetMock.mockResolvedValue({});
   runDecisionMock.mockResolvedValue(null);
@@ -176,7 +175,7 @@ describe("runSmartTriage — mode off", () => {
     });
     expect(ensureUsageBudgetMock).not.toHaveBeenCalled();
     expect(runDecisionMock).not.toHaveBeenCalled();
-    expect(updates).toEqual([]);
+    expect(rpcMock).not.toHaveBeenCalled();
     // Only the project row was read (the access check is its own module).
     expect(fromMock).toHaveBeenCalledTimes(1);
   });
@@ -223,13 +222,13 @@ describe("runSmartTriage — rules mode", () => {
     expect(result.scored).toBe(false);
     expect(ensureUsageBudgetMock).not.toHaveBeenCalled();
     expect(runDecisionMock).not.toHaveBeenCalled();
-    expect(updates.length).toBeGreaterThan(0);
+    expect(rpcMock).toHaveBeenCalledTimes(1);
 
     const positionOf = (id: string): number => {
       // The orchestration skips no-change writes: an issue that keeps its
       // place reads its ORIGINAL position.
-      const write = updates.find((u) => u.eqs.some(([, v]) => v === id));
-      if (write) return write.payload.position as number;
+      const write = writtenMoves.find((m) => m.id === id);
+      if (write) return write.position;
       return DB.issues.find((row) => row.id === id)!.position as number;
     };
     // todo: the blocker first, the blocked last, the plain one between.
@@ -245,8 +244,13 @@ describe("runSmartTriage — rules mode", () => {
     expect(positionOf("b")!).toBeGreaterThanOrEqual(10);
     expect(positionOf("a")!).toBeLessThanOrEqual(30);
     // The done column is untouched.
-    expect(updates.find((u) => u.eqs.some(([, v]) => v === "g"))).toBeUndefined();
-    expect(updates.find((u) => u.eqs.some(([, v]) => v === "h"))).toBeUndefined();
+    expect(writtenMoves.find((m) => m.id === "g")).toBeUndefined();
+    expect(writtenMoves.find((m) => m.id === "h")).toBeUndefined();
+    // The batch is atomic: ONE rpc call, scoped to the project.
+    expect(rpcMock).toHaveBeenCalledWith("apply_smart_triage_moves", {
+      p_project_id: "project-1",
+      p_moves: expect.any(Array),
+    });
   });
 
   it("skips single-ticket columns: there is no order to decide", async () => {
@@ -256,7 +260,7 @@ describe("runSmartTriage — rules mode", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.columns).toBe(0);
-    expect(updates).toEqual([]);
+    expect(rpcMock).not.toHaveBeenCalled();
   });
 });
 
@@ -296,7 +300,7 @@ describe("runSmartTriage — jev mode", () => {
     expect(state.tickets).toHaveLength(3);
 
     const positionOf = (id: string): number =>
-      updates.find((u) => u.eqs.some(([, v]) => v === id))!.payload.position as number;
+      writtenMoves.find((m) => m.id === id)!.position;
     expect(positionOf("b")).toBeLessThan(positionOf("c"));
     expect(positionOf("c")).toBeLessThan(positionOf("a"));
   });
@@ -308,7 +312,7 @@ describe("runSmartTriage — jev mode", () => {
     if (!result.ok) return;
     expect(result.scored).toBe(false);
     // Still a reorder: the rules order IS the degradation.
-    expect(updates.length).toBeGreaterThan(0);
+    expect(rpcMock).toHaveBeenCalledTimes(1);
   });
 
   it("caps the scored head and keeps the rules order for the tail", async () => {

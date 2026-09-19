@@ -184,6 +184,20 @@ describe("triageIssueComparator — objectives stay together", () => {
       "solo",
     ]);
   });
+
+  it("keeps two tied blocks contiguous — members never interleave across groups", () => {
+    // The pinned regression: two objective blocks whose BEST ranks tie must
+    // be emitted whole. Comparing members individually would emit
+    // a1, b1, b2, a2 — both blocks torn apart.
+    const issues = [
+      ticket({ id: "a2", priority: "low", objective_id: "obj-1", position: 4 }),
+      ticket({ id: "b2", priority: "medium", objective_id: "obj-2", position: 3 }),
+      ticket({ id: "a1", priority: "urgent", objective_id: "obj-1", position: 1 }),
+      ticket({ id: "b1", priority: "urgent", objective_id: "obj-2", position: 2 }),
+    ];
+    const result = order(issues);
+    expect(result).toEqual(["a1", "a2", "b1", "b2"]);
+  });
 });
 
 describe("jevTriageOrder", () => {

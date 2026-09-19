@@ -112,7 +112,10 @@ describe("updateProjectSettings — smart_triage_mode", () => {
       input: { smart_triage_mode: "jev" },
     });
     expect(jev).toEqual({ ok: false, status: 403, errorKey: "smartTriageNotAllowed" });
-    expect(hasUsageBudgetMock).toHaveBeenCalledWith("user-owner");
+    // The AUTOMATIONS surface rides along: an owner whose BYOK key covers
+    // Automations can arm Jev even with the managed budget dry — the same
+    // surface the run-time preflight reads.
+    expect(hasUsageBudgetMock).toHaveBeenCalledWith("user-owner", "automations");
     expect(updated).toBeNull();
 
     for (const mode of ["off", "rules"] as const) {
