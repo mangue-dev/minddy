@@ -83,6 +83,7 @@ export async function promoteFeedbackPost(params: {
     projectName: params.projectName ?? null,
     actorId: params.actorId,
     mcpKeyId: params.mcpKeyId ?? null,
+    smartFillOwnerTriage: true,
     input: {
       title: post.title as string,
       description: sections.join("\n\n"),

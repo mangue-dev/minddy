@@ -20,6 +20,7 @@ interface Row extends Record<string, unknown> {}
 
 let eventRows: Row[] = [];
 let categoryLinkRows: Row[] = [];
+let knownCategoryRows: Row[] = [];
 /** The order of writes, as they end up in the timeline. */
 let writeLog: string[] = [];
 /** Reminders scheduled by `after()` — captured, never played. */
@@ -70,7 +71,9 @@ function table(name: string) {
   });
   query.single = async () => ({ data: inserted[0] ?? null, error: null });
   query.then = (onFulfilled: (value: unknown) => unknown) =>
-    Promise.resolve({ data: [], error: null }).then(onFulfilled);
+    Promise.resolve({ data: name === "categories" ? knownCategoryRows : [], error: null }).then(
+      onFulfilled,
+    );
   return query;
 }
 
@@ -93,7 +96,11 @@ vi.mock("@/lib/server/attachments", () => ({
 }));
 /** What Smart-fill responds to, when a test calls it. */
 let smartFillPatch: Record<string, unknown> = {};
-vi.mock("@/lib/server/smart-fill", () => ({ runSmartFill: async () => smartFillPatch }));
+let smartFillPayer: { userId: string; scope: "created" | "triage" } | null = null;
+vi.mock("@/lib/server/smart-fill", () => ({
+  resolveSmartFillPayer: async () => smartFillPayer,
+  runSmartFill: async () => smartFillPatch,
+}));
 vi.mock("@/lib/server/notifications", () => ({ insertNotifications: async () => {} }));
 vi.mock("@/lib/server/stat-events", () => ({ insertStatEvents: async () => {} }));
 vi.mock("@/lib/server/description-mentions", () => ({
@@ -126,9 +133,11 @@ const create = (input: Record<string, unknown> = {}) =>
 beforeEach(() => {
   eventRows = [];
   categoryLinkRows = [];
+  knownCategoryRows = [];
   writeLog = [];
   afterCallbacks = [];
   smartFillPatch = {};
+  smartFillPayer = null;
 });
 
 describe("createIssueForProject — activité de naissance", () => {
@@ -165,11 +174,47 @@ describe("createIssueForProject — activité de naissance", () => {
     // Smart-fill fills a field left empty — the event follows the `created`.
     smartFillPatch = { priority: "high" };
 
-    await create({ smart_fill: true });
+    smartFillPayer = { userId: "member-1", scope: "created" };
+    await create();
 
     expect(eventRows.map((r) => [r.type, r.field, r.via_smart_fill ?? false])).toEqual([
       ["created", undefined, false],
       ["updated", "smart_fill", true],
     ]);
+  });
+
+  it("preserves supplied values and reports only fields it actually filled", async () => {
+    smartFillPayer = { userId: "member-1", scope: "created" };
+    smartFillPatch = {
+      priority: "high",
+      effort: "m",
+      objective_id: "objective-1",
+      category_ids: ["category-smart"],
+    };
+
+    await create({ priority: "urgent", category_ids: ["category-manual"] });
+
+    expect(eventRows[1]).toMatchObject({
+      field: "smart_fill",
+      to_value: "effort,objective_id",
+      via_smart_fill: true,
+    });
+  });
+
+  it("reports Smart Fill categories only when they were actually linked", async () => {
+    smartFillPayer = { userId: "member-1", scope: "created" };
+    smartFillPatch = { category_ids: ["category-smart"] };
+    knownCategoryRows = [{ id: "category-smart" }];
+
+    await create();
+
+    expect(categoryLinkRows).toEqual([
+      { issue_id: "issue-1", category_id: "category-smart" },
+    ]);
+    expect(eventRows[1]).toMatchObject({
+      field: "smart_fill",
+      to_value: "category_ids",
+      via_smart_fill: true,
+    });
   });
 });

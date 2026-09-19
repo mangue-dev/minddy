@@ -4,6 +4,7 @@ import {
   buildSmartFillPrompt,
   sanitizeSmartFill,
   smartFillAnswersToRaw,
+  resolveSmartFillPayer,
   runSmartFill,
   type SmartFillContext,
 } from "./smart-fill";
@@ -200,8 +201,9 @@ describe("smartFillAnswersToRaw", () => {
  * only knows this contract.
  */
 
-const { getAppConfigValuesMock, hasUsageBudgetMock, runDecisionMock, fromMock } = vi.hoisted(() => ({
+const { getAppConfigValuesMock, getUserByIdMock, hasUsageBudgetMock, runDecisionMock, fromMock } = vi.hoisted(() => ({
   getAppConfigValuesMock: vi.fn<() => Promise<Record<string, string | null>>>(),
+  getUserByIdMock: vi.fn(),
   hasUsageBudgetMock: vi.fn<() => Promise<boolean>>(),
   runDecisionMock: vi.fn<(spec: unknown, input: unknown) => Promise<DecisionOutcome | null>>(),
   fromMock: vi.fn<(table: string) => unknown>(),
@@ -217,7 +219,10 @@ vi.mock("@/lib/server/decisions/runner", () => ({
   runDecision: runDecisionMock,
 }));
 vi.mock("@/lib/supabase-service", () => ({
-  getServiceClient: () => ({ from: fromMock }),
+  getServiceClient: () => ({
+    from: fromMock,
+    auth: { admin: { getUserById: getUserByIdMock } },
+  }),
 }));
 
 const DB_CATEGORIES = [
@@ -233,6 +238,7 @@ function queryReturning(rows: unknown[]): unknown {
   query.select = () => query;
   query.eq = () => query;
   query.in = () => query;
+  query.maybeSingle = async () => ({ data: rows[0] ?? null, error: null });
   query.then = (onFulfilled: (value: unknown) => unknown) =>
     Promise.resolve({ data: rows, error: null }).then(onFulfilled);
   return query;
@@ -245,6 +251,10 @@ function outcome(answers: DecisionAnswers, engine: DecisionOutcome["engine"] = "
 describe("runSmartFill — decision layer", () => {
   beforeEach(() => {
     getAppConfigValuesMock.mockReset().mockResolvedValue({});
+    getUserByIdMock.mockReset().mockResolvedValue({
+      data: { user: { user_metadata: {} } },
+      error: null,
+    });
     hasUsageBudgetMock.mockReset().mockResolvedValue(true);
     runDecisionMock.mockReset().mockResolvedValue(null);
     fromMock.mockReset().mockImplementation((table: string) =>
@@ -257,7 +267,7 @@ describe("runSmartFill — decision layer", () => {
     runSmartFill({
       projectId: "project-1",
       projectName: "minddy",
-      actorId: "user-1",
+      billToUserId: "user-1",
       title: "Fix the flaky test",
       description: "It fails on CI once in five runs.",
     });
@@ -336,7 +346,7 @@ describe("runSmartFill — decision layer", () => {
       runSmartFill({
         projectId: "project-1",
         projectName: "minddy",
-        actorId: null,
+        billToUserId: null,
         title: "Fix the flaky test",
         description: null,
       })
@@ -349,7 +359,7 @@ describe("runSmartFill — decision layer", () => {
       runSmartFill({
         projectId: "project-1",
         projectName: "minddy",
-        actorId: "user-1",
+        billToUserId: "user-1",
         title: "   ",
         description: null,
       })
@@ -361,5 +371,98 @@ describe("runSmartFill — decision layer", () => {
     runDecisionMock.mockRejectedValue(new Error("network down"));
     await expect(run()).resolves.toEqual({});
     expect(console.error).toHaveBeenCalled();
+  });
+});
+
+describe("resolveSmartFillPayer", () => {
+  beforeEach(() => {
+    getUserByIdMock.mockReset().mockResolvedValue({
+      data: { user: { user_metadata: {} } },
+      error: null,
+    });
+    fromMock.mockReset().mockImplementation((table: string) => {
+      if (table === "integrations") return queryReturning([{ created_by: "integration-owner" }]);
+      if (table === "api_keys") return queryReturning([{ user_id: "mcp-owner" }]);
+      if (table === "projects") return queryReturning([{ owner_id: "project-owner" }]);
+      return queryReturning([]);
+    });
+  });
+
+  const resolve = (overrides: Partial<Parameters<typeof resolveSmartFillPayer>[0]> = {}) =>
+    resolveSmartFillPayer({
+      projectId: "project-1",
+      actorId: "user-1",
+      status: "backlog",
+      ...overrides,
+    });
+
+  it("bills direct and Numo-style creations to their actor", async () => {
+    await expect(resolve()).resolves.toEqual({ userId: "user-1", scope: "created" });
+    expect(getUserByIdMock).toHaveBeenCalledWith("user-1");
+  });
+
+  it("bills integrations and MCP agents to the users who created them", async () => {
+    await expect(resolve({ actorId: null, integrationId: "integration-1", status: "triage" }))
+      .resolves.toEqual({ userId: "integration-owner", scope: "triage" });
+    await expect(resolve({ actorId: "request-user", mcpKeyId: "key-1" }))
+      .resolves.toEqual({ userId: "mcp-owner", scope: "created" });
+  });
+
+  it("bills unattributed triage and promoted feedback to the project owner", async () => {
+    await expect(resolve({ actorId: null, status: "triage" }))
+      .resolves.toEqual({ userId: "project-owner", scope: "triage" });
+    await expect(resolve({ actorId: "member-1", ownerBilledTriage: true }))
+      .resolves.toEqual({ userId: "project-owner", scope: "triage" });
+  });
+
+  it("does not let a promoting member override the owner's triage opt-out", async () => {
+    getUserByIdMock.mockResolvedValue({
+      data: { user: { user_metadata: { smart_fill_triage: false } } },
+      error: null,
+    });
+
+    await expect(
+      resolve({
+        actorId: "member-1",
+        explicit: true,
+        ownerBilledTriage: true,
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      resolve({
+        actorId: "project-owner",
+        explicit: true,
+        ownerBilledTriage: true,
+      }),
+    ).resolves.toEqual({ userId: "project-owner", scope: "triage" });
+  });
+
+  it("does not bill unattributed non-triage or excluded system copies", async () => {
+    await expect(resolve({ actorId: null })).resolves.toBeNull();
+    await expect(resolve({ excluded: true })).resolves.toBeNull();
+  });
+
+  it("honors the master switch and independent automatic scope opt-outs", async () => {
+    getUserByIdMock.mockResolvedValue({
+      data: { user: { user_metadata: { smart_fill_created: false } } },
+      error: null,
+    });
+    await expect(resolve()).resolves.toBeNull();
+    await expect(resolve({ explicit: true })).resolves.toEqual({
+      userId: "user-1",
+      scope: "created",
+    });
+
+    getUserByIdMock.mockResolvedValue({
+      data: { user: { user_metadata: { smart_fill: false } } },
+      error: null,
+    });
+    await expect(resolve({ explicit: true })).resolves.toBeNull();
+  });
+
+  it("honors a per-ticket opt-out before reading provenance", async () => {
+    await expect(resolve({ explicit: false })).resolves.toBeNull();
+    expect(fromMock).not.toHaveBeenCalled();
+    expect(getUserByIdMock).not.toHaveBeenCalled();
   });
 });

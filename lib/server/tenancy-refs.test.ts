@@ -171,7 +171,10 @@ vi.mock("@/lib/server/attachments", () => ({
   copyResourcesToProject: async () => [],
   insertAttachments: async () => {},
 }));
-vi.mock("@/lib/server/smart-fill", () => ({ runSmartFill: async () => ({}) }));
+vi.mock("@/lib/server/smart-fill", () => ({
+  resolveSmartFillPayer: async () => null,
+  runSmartFill: async () => ({}),
+}));
 
 const { updateIssueFields } = await import("@/lib/server/update-issue");
 const { createIssueForProject } = await import("@/lib/server/create-issue");

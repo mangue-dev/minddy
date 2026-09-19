@@ -36,6 +36,13 @@ describe("Numo tool contracts", () => {
     expect(status?.description).not.toContain("triage");
   });
 
+  it("advertises independent Smart Fill monitoring controls", () => {
+    const settings = tool("update_account_settings")?.function.parameters.properties;
+    expect(settings).toHaveProperty("smart_fill");
+    expect(settings).toHaveProperty("smart_fill_created");
+    expect(settings).toHaveProperty("smart_fill_triage");
+  });
+
   it("advertises the internal feedback comment tool", () => {
     const comment = tool("add_feedback_comment");
 
