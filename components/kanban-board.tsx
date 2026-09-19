@@ -33,6 +33,7 @@ import type {
   ViewSort,
 } from "@/lib/types";
 import { resolveRelationsByIssue } from "@/lib/relation-constants";
+import { cycleBlockingRelations } from "@/lib/cycle";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { promptRelations } from "@/lib/issue-prompt";
 import { useBulkSelectionActions } from "@/lib/use-bulk-selection-actions";
@@ -192,20 +193,48 @@ export const KanbanBoard = memo(function KanbanBoard({
   }, [issues, relations, allIssueMap]);
 
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
-  // Smart sort reads relations + statuses (a done blocker no longer lifts its
-  // target), resolved against ALL issues — a filter may hide the other end.
-  // The AI scores (project mode jev, MIN-576) ride on top: with them, the
-  // scored order IS the smart order.
-  const makeComparator = useMemo(() => {
+  // The smart sort's relations resolve against ALL issues (a filter may
+  // hide the other end) and fold objective-ended "blocks" edges onto the
+  // objective's open tickets — the same preparation the server reorder
+  // applies, so a ticket blocked through its objective still sinks (MIN-576
+  // review). An edge whose end is unknown here is not a dependency: the end
+  // is trashed or foreign — the rules ignore it rather than act on a
+  // guessed "open".
+  const triageContext = useMemo(() => {
     const statusById = new Map(
       Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
     );
-    return boardComparatorFactory(sort, {
+    const issuesByObjective = new Map<string, string[]>();
+    for (const issue of allIssues) {
+      if (!issue.objective_id) continue;
+      const list = issuesByObjective.get(issue.objective_id);
+      if (list) list.push(issue.id);
+      else issuesByObjective.set(issue.objective_id, [issue.id]);
+    }
+    const { relations: folded, objectiveStatuses } = cycleBlockingRelations(
       relations,
+      issuesByObjective,
+      new Map(objectives.map((o) => [o.id, o.status])),
+    );
+    for (const [id, status] of objectiveStatuses) statusById.set(id, status);
+    return {
+      relations: folded.filter(
+        (r) =>
+          r.type !== "blocks" ||
+          (statusById.has(r.source_id) && statusById.has(r.target_id)),
+      ),
       statusById,
-      jevScores: smartScores ?? undefined,
-    });
-  }, [sort, relations, allIssueMap, smartScores]);
+    };
+  }, [relations, allIssues, objectives, allIssueMap]);
+  const makeComparator = useMemo(
+    () =>
+      boardComparatorFactory(sort, {
+        relations: triageContext.relations,
+        statusById: triageContext.statusById,
+        jevScores: smartScores ?? undefined,
+      }),
+    [sort, triageContext, smartScores],
+  );
   const columns = useMemo(
     () => buildColumns(statuses, issues, makeComparator),
     [buildColumns, issues, statuses, makeComparator],

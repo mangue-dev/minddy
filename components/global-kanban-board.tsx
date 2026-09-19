@@ -32,6 +32,8 @@ import type {
   ViewSort,
 } from "@/lib/types";
 import { boardComparatorFactory } from "@/lib/smart-triage";
+import { cycleBlockingRelations } from "@/lib/cycle";
+import type { ObjectiveStatus } from "@/lib/objective-constants";
 import { resolveRelationsByIssue } from "@/lib/relation-constants";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { promptRelations } from "@/lib/issue-prompt";
@@ -221,24 +223,47 @@ export function GlobalKanbanBoard({
     return map;
   }, [issues, relations, allIssueMap]);
 
-  // Cycle mode passes its own comparator; otherwise the view sort rules —
-  // and "smart" reads relations + statuses (a done blocker no longer lifts
-  // its target), resolved against ALL issues (the other end may be hidden).
-  // The AI scores of the jev-mode projects (MIN-576) ride on top: with
-  // scores, the scored order IS the smart order.
   // Cycle mode pins ONE comparator for every column (the reco order);
   // otherwise the view sort builds its comparator per column (MIN-576).
+  // The smart sort's relations resolve against ALL issues and fold
+  // objective-ended "blocks" edges onto the objective's open tickets — the
+  // same preparation the server reorder applies (MIN-576 review).
   const makeComparator = useMemo(() => {
     if (comparator) return () => comparator;
     const statusById = new Map(
       Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
     );
+    const rows = allIssues ?? issues;
+    const issuesByObjective = new Map<string, string[]>();
+    for (const issue of rows) {
+      if (!issue.objective_id) continue;
+      const list = issuesByObjective.get(issue.objective_id);
+      if (list) list.push(issue.id);
+      else issuesByObjective.set(issue.objective_id, [issue.id]);
+    }
+    const objectiveStatusById = new Map<string, ObjectiveStatus>();
+    for (const byProject of objectiveMapByProject.values()) {
+      for (const objective of byProject.values()) {
+        objectiveStatusById.set(objective.id, objective.status);
+      }
+    }
+    const { relations: folded, objectiveStatuses } = cycleBlockingRelations(
+      relations ?? [],
+      issuesByObjective,
+      objectiveStatusById,
+    );
+    for (const [id, status] of objectiveStatuses) statusById.set(id, status);
+    const known = folded.filter(
+      (r) =>
+        r.type !== "blocks" ||
+        (statusById.has(r.source_id) && statusById.has(r.target_id)),
+    );
     return boardComparatorFactory(sort, {
-      relations,
+      relations: known,
       statusById,
       jevScores: smartScores ?? undefined,
     });
-  }, [comparator, sort, relations, allIssueMap, smartScores]);
+  }, [comparator, sort, relations, allIssueMap, smartScores, allIssues, issues, objectiveMapByProject]);
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
   const columns = useMemo(
     () => buildColumns(statuses, issues, makeComparator),

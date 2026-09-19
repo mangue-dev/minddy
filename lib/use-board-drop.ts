@@ -289,7 +289,16 @@ export function useBoardDrop({
         ? previewBoardMove({
             moves: planned.moves,
             displayItems: displayItems ?? [],
-            comparator: makeComparator(displayItems ?? []),
+            // The rules comparator's order index is precomputed over the
+            // set it receives: the INCOMING cards must be in it, or they
+            // all tie at the fallback rank and the marker lies (MIN-576
+            // review).
+            comparator: makeComparator([
+              ...(displayItems ?? []),
+              ...planned.moves
+                .map((m) => m.issue)
+                .filter((incoming) => !(displayItems ?? []).some((i) => i.id === incoming.id)),
+            ]),
           })
         : null;
       setPreview((current) =>

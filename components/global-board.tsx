@@ -466,12 +466,14 @@ function GlobalBoardInner() {
   // already covers them for free. Cycle mode is excluded: the cycle view
   // carries its own comparator, and a visit must not bill scoring passes
   // it never reads.
+  // Only the projects the VIEW actually shows: a filtered view must not
+  // bill scoring passes for work it does not display (MIN-576 review).
   const jevProjectIds = useMemo(
     () =>
       projects
-        .filter((p) => p.smart_triage_mode === "jev" && (issuesByProject.get(p.id)?.length ?? 0) > 0)
+        .filter((p) => p.smart_triage_mode === "jev" && filtered.some((i) => i.project_id === p.id))
         .map((p) => p.id),
-    [projects, issuesByProject]
+    [projects, filtered]
   );
   const smartScoresQuery = useQuery({
     queryKey: ["smart-triage-scores", "global", jevProjectIds],

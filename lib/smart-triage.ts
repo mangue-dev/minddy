@@ -277,7 +277,11 @@ export function triageIssueComparator(
     );
     for (const member of sorted) orderIndex.set(member.id, next++);
   }
-  return (a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0);
+  // An id the index never saw (a card projected into a drag preview) sorts
+  // LAST — index 0 would put it at the top of the column it lands in.
+  const unranked = orderIndex.size;
+  return (a, b) =>
+    (orderIndex.get(a.id) ?? unranked) - (orderIndex.get(b.id) ?? unranked);
 }
 
 /** The tie-break between two tied blocks: their best members compared on
