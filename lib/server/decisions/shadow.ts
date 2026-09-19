@@ -3,7 +3,7 @@ import "server-only";
 import { newRunId, spentFromLedger, type AiUsageBillTo } from "@/lib/server/ai-usage";
 import { runLlmDecision } from "@/lib/server/decisions/llm";
 import {
-  decisionConfidence,
+  clamp01,
   type DecisionAnswer,
   type DecisionAnswers,
   type DecisionSpec,
@@ -81,6 +81,26 @@ export function compareDecisionAnswers(
   return compared > 0 ? agree : null;
 }
 
+/**
+ * The weakest confidence the replay actually DECLARED, `null` when none of
+ * its answers carries one — deliberately NOT `decisionConfidence`, whose
+ * neutral value (1) would dress an unknown up as a certainty and corrupt
+ * any query that reads `llm_confidence` back. The LLM passes carry no
+ * confidence today (except the feedback duplicate verdict); when one
+ * appears, it lands here.
+ */
+function declaredLlmConfidence(spec: DecisionSpec, answers: DecisionAnswers): number | null {
+  let weakest: number | null = null;
+  for (const question of spec.questions) {
+    const answer: DecisionAnswer | undefined = answers[question.key];
+    if (!answer) continue;
+    const value = clamp01(answer.confidence);
+    if (value === null) continue;
+    weakest = weakest === null ? value : Math.min(weakest, value);
+  }
+  return weakest;
+}
+
 /** The one row shape `ai_decision_evaluations` accepts. */
 interface EvaluationRow {
   use_case: string;
@@ -127,7 +147,7 @@ export async function runShadowComparison(input: ShadowComparisonInput): Promise
     const agree = llmAnswers
       ? compareDecisionAnswers(input.spec, input.jevAnswers, llmAnswers)
       : null;
-    const llmConfidence = llmAnswers ? decisionConfidence(input.spec, llmAnswers) : null;
+    const llmConfidence = llmAnswers ? declaredLlmConfidence(input.spec, llmAnswers) : null;
     // The replay already wrote its line (a call = one ledger line): reading
     // the run back keeps the row's cost the TRUE delta of sampling, even
     // when the pass retries its fetch internally.

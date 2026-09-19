@@ -197,7 +197,20 @@ describe("runShadowComparison", () => {
     await runShadowComparison(INPUT);
     const row = insert.mock.calls[0][0] as Record<string, unknown>;
     expect(row.agree).toBe(false);
-    expect(row.llm_confidence).toBe(1);
+    // No answer declared a confidence: unknown stays null, never a
+    // dressed-up 1 (the review's finding).
+    expect(row.llm_confidence).toBeNull();
+  });
+
+  it("persists the weakest DECLARED confidence of the replay, when one exists", async () => {
+    const insert = expectRow();
+    runLlmDecisionMock.mockResolvedValue({
+      priority: { value: "high", probability: null, confidence: null },
+      category_ids: { value: ["cat-1"], probability: null, confidence: 0.7 },
+    });
+    await runShadowComparison(INPUT);
+    const row = insert.mock.calls[0][0] as Record<string, unknown>;
+    expect(row.llm_confidence).toBe(0.7);
   });
 
   it("writes an unknown agreement when the replay fails — never an exception", async () => {
