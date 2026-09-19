@@ -400,18 +400,25 @@ function ProjectBoard() {
   const sort =
     activeObjective && config.sort === "manual" ? "smart" : config.sort;
 
-  // Smart sort scoring (MIN-576): the AI urgency scores ride the view sort.
-  // When the board reads its "smart" order and the project's triage mode is
-  // the AI one, the scores are fetched automatically — nothing written (the
-  // manual drag order stays untouched), a short cache bounds the cost, and a
-  // failed or unauthorized pass simply leaves the rules order in place.
-  // The gate reads the EFFECTIVE sort (an open objective turns a manual
-  // view sort into the smart order) — the same one the board renders with.
+  // The scoring INPUTS (created, edited, deleted tickets) age the scores:
+  // a fingerprint over the board's rows rides the refetch decision below —
+  // NOT the query key (a new key would bill a pass on every keystroke).
+  const scoringFingerprint = useMemo(() => {
+    let latest = "";
+    for (const issue of issues) {
+      if (issue.updated_at > latest) latest = issue.updated_at;
+    }
+    return `${issues.length}:${latest}`;
+  }, [issues]);
+  const fetchedFingerprintRef = useRef<string | null>(null);
+  const lastFetchAtRef = useRef(0);
   const smartScoresQuery = useQuery({
     queryKey: ["smart-triage-scores", project?.id ?? null],
     queryFn: async () => {
       if (!project) return null;
       const result = await smartTriageApi(project.id, { persist: false });
+      fetchedFingerprintRef.current = scoringFingerprint;
+      lastFetchAtRef.current = Date.now();
       trackEvent("smart_triage_ran", {
         mode: result.mode,
         scored: result.scored,
@@ -426,6 +433,17 @@ function ProjectBoard() {
     refetchOnWindowFocus: false,
     retry: false,
   });
+  // A changed fingerprint (tickets created, edited, deleted) refetches the
+  // scores — throttled to one pass a minute so an editing burst cannot
+  // churn billed passes; a continuously mounted board never keeps scores
+  // that predate its tickets.
+  useEffect(() => {
+    if (sort !== "smart" || smartTriageMode !== "jev") return;
+    if (fetchedFingerprintRef.current === scoringFingerprint) return;
+    if (Date.now() - lastFetchAtRef.current < 60_000) return;
+    if (smartScoresQuery.isFetching) return;
+    void smartScoresQuery.refetch();
+  }, [scoringFingerprint, sort, smartTriageMode, smartScoresQuery]);
   const smartScores = useMemo(() => {
     // Gated on the MODE, not just the query's enabled flag: a cached score
     // map must not outlive the project's switch back to rules (the query

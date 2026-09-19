@@ -107,6 +107,7 @@ export function useBoardDrop({
   const trackedPlanRef = useRef<{
     planned: object | null;
     displayItems: Issue[] | undefined;
+    makeComparator: (columnIssues: Issue[]) => (a: Issue, b: Issue) => number;
   } | null>(null);
 
   const itemsByStatus = useMemo(() => {
@@ -280,11 +281,15 @@ export function useBoardDrop({
         : undefined;
       if (
         trackedPlanRef.current?.planned === planned &&
-        trackedPlanRef.current.displayItems === displayItems
+        trackedPlanRef.current.displayItems === displayItems &&
+        // Scores can arrive DURING a drag: the comparator generation rides
+        // the identity, or the marker keeps a stale insertion point while
+        // the drop lands elsewhere (MIN-576 review).
+        trackedPlanRef.current.makeComparator === makeComparator
       ) {
         return;
       }
-      trackedPlanRef.current = { planned, displayItems };
+      trackedPlanRef.current = { planned, displayItems, makeComparator };
       const next = planned
         ? previewBoardMove({
             moves: planned.moves,

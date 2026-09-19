@@ -475,12 +475,26 @@ function GlobalBoardInner() {
         .map((p) => p.id),
     [projects, filtered]
   );
+  // The scoring INPUTS age the scores: a fingerprint over the displayed
+  // rows rides the refetch decision below — NOT the query key (a new key
+  // would bill a pass on every keystroke).
+  const scoringFingerprint = useMemo(() => {
+    let latest = "";
+    for (const issue of filtered) {
+      if (issue.updated_at > latest) latest = issue.updated_at;
+    }
+    return `${filtered.length}:${latest}`;
+  }, [filtered]);
+  const fetchedFingerprintRef = useRef<string | null>(null);
+  const lastFetchAtRef = useRef(0);
   const smartScoresQuery = useQuery({
     queryKey: ["smart-triage-scores", "global", jevProjectIds],
     queryFn: async () => {
       const results = await Promise.allSettled(
         jevProjectIds.map((id) => smartTriageApi(id, { persist: false }))
       );
+      fetchedFingerprintRef.current = scoringFingerprint;
+      lastFetchAtRef.current = Date.now();
       const merged: Record<string, number> = {};
       results.forEach((result) => {
         if (result.status === "rejected") return; // silent rules fallback
@@ -503,6 +517,15 @@ function GlobalBoardInner() {
     refetchOnWindowFocus: false,
     retry: false,
   });
+  // A changed fingerprint refetches the scores — throttled to one pass a
+  // minute; a mounted board never keeps scores that predate its tickets.
+  useEffect(() => {
+    if (cycleMode || config.sort !== "smart" || jevProjectIds.length === 0) return;
+    if (fetchedFingerprintRef.current === scoringFingerprint) return;
+    if (Date.now() - lastFetchAtRef.current < 60_000) return;
+    if (smartScoresQuery.isFetching) return;
+    void smartScoresQuery.refetch();
+  }, [scoringFingerprint, cycleMode, config.sort, jevProjectIds.length, smartScoresQuery]);
   const smartScores = useMemo(() => {
     if (!smartScoresQuery.data) return null;
     // An EMPTY merge (every pass rejected) means nothing was ranked: null
