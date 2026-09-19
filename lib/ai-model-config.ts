@@ -106,6 +106,12 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // cuts it everywhere at once, and the form falls back to hand entry.
   { key: "smart_fill_enabled", kind: "flag", fallback: "true", group: "automations" },
   { key: "smart_fill_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
+  // Smart Triage (lib/server/smart-triage.ts, MIN-566): the LLM scoring pass
+  // of a column reorder — ONE call per column, answering every ticket id on
+  // the 1–5 urgency scale (the Jev half rides `jev_model` above). Someone
+  // waits in front of their board: a fast model, like smart-fill's. The rules
+  // mode costs nothing; only this fallback pass reads the key.
+  { key: "smart_triage_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
   // Title of a Numo conversation (lib/server/assistant/title.ts): a call from
   // a few dozen tokens per new conversation — a small model is enough,
   // and that's exactly the kind of call where a big guy doesn't justify himself.

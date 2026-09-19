@@ -8,6 +8,7 @@ import { Button, ConfirmDeleteDialog, toast } from "mangue-ui";
 import {
   GitBranch,
   Import as ImportIcon,
+  ListOrdered,
   MessagesSquare,
   Plug,
   Repeat,
@@ -29,6 +30,7 @@ import { ProjectGitSection } from "@/components/settings/project-git-section";
 import { ProjectImportSection } from "@/components/settings/project-import-section";
 import { ProjectRecurrencesSection } from "@/components/settings/project-recurrences-section";
 import { SmartAssignSection } from "@/components/settings/smart-assign-section";
+import { SmartTriageSection } from "@/components/settings/smart-triage-section";
 import { SettingsGroup } from "@/components/settings/settings-ui";
 import {
   PROJECT_SETTINGS_DEFAULT_TAB,
@@ -154,6 +156,12 @@ export default function ProjectSettingsPage() {
         ? t("smartAssignIncompleteTab")
         : undefined,
       content: <SmartAssignSection project={project} isOwner={isOwner} />,
+    },
+    {
+      value: "smart-triage",
+      label: t("smartTriageTab"),
+      icon: ListOrdered,
+      content: <SmartTriageSection project={project} isOwner={isOwner} />,
     },
     {
       value: "feedback",

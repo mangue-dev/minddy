@@ -56,6 +56,19 @@ const LLM_PASSES: Record<DecisionSpec["useCase"], LlmPassProfile> = {
     xTitle: "Feedback Review (minddy)",
     logPrefix: "[feedback-review]",
   },
+  // The scoring pass of Smart Triage (MIN-566): ONE call per column, whose
+  // `scores` object answers every ticket id on the 1–5 urgency scale. Someone
+  // is waiting in front of their board, and a column can carry forty tickets —
+  // a tighter output ceiling than the default, but a longer window than
+  // smart-fill's single verdict.
+  smart_triage: {
+    modelKey: "smart_triage_model",
+    feature: "smart_triage",
+    xTitle: "Smart Triage (minddy)",
+    logPrefix: "[smart-triage]",
+    maxTokens: 1024,
+    timeoutMs: 20_000,
+  },
 };
 
 /** One allowed-value check for a choice answer. */
@@ -110,6 +123,26 @@ export function mapLlmAnswers(spec: DecisionSpec, raw: Record<string, unknown>):
     case "smart_assign": {
       const assignee = choiceAnswer(raw.user_id, options("user_id"));
       if (assignee) answers.user_id = assignee;
+      break;
+    }
+    case "smart_triage": {
+      // One score per ticket id, under `scores` — the shape of the forced
+      // tool. A value outside the scale, or a missing ticket, simply produces
+      // no answer: the consumer reads it as the neutral score, never a guess.
+      const scores = raw.scores;
+      if (scores && typeof scores === "object" && !Array.isArray(scores)) {
+        const record = scores as Record<string, unknown>;
+        for (const question of spec.questions) {
+          if (question.kind !== "score") continue;
+          const parsed = Number.parseInt(String(record[question.key] ?? ""), 10);
+          if (!question.levels.some((level) => level.value === parsed)) continue;
+          answers[question.key] = {
+            value: parsed,
+            probability: null,
+            confidence: null,
+          };
+        }
+      }
       break;
     }
     case "feedback_review": {

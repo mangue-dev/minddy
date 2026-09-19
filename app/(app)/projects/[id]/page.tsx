@@ -75,13 +75,15 @@ const IssueSidePanel = dynamic(
   { ssr: false },
 );
 import { takeSeedHandoff } from "@/lib/project-seed-handoff";
-import { createIssueApi } from "@/lib/issues-api";
+import { createIssueApi, smartTriageApi } from "@/lib/issues-api";
 import {
   insertIssueEverywhere,
   issueWrites,
   mergeServerIssue,
+  patchIssueEverywhere,
   removeIssueEverywhere,
 } from "@/lib/optimistic/issue-writes";
+import { trackEvent } from "@/lib/analytics";
 import { createIssueDeferred } from "@/lib/create-issue-deferred";
 import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
@@ -138,6 +140,9 @@ function ProjectBoard() {
   // Import and priming by Numo are reserved for the owner (the API
   // reserve): the empty board only shows what is actually within range.
   const isOwner = !!project && project.owner_id === myUserId;
+  // Smart triage mode (MIN-566) — read once so the toolbar prop narrows off
+  // cleanly (`off` renders no button at all).
+  const smartTriageMode = project?.smart_triage_mode ?? "off";
   const { open: openAssistant, openIntent } = useAssistantPanel();
 
   // Right-click "Add to cycle" (MIN-32) — the cycle is canonical on /all, but
@@ -326,6 +331,37 @@ function ProjectBoard() {
     setOpenIssueId(id);
     setOpenIssueTab("description");
   }, []);
+
+  // Smart triage (MIN-566): the toolbar button. The server rewrites the
+  // open columns' positions per the project's mode and returns the moves —
+  // they are ALREADY persisted, the client only applies them to the caches
+  // (no per-issue PATCH) and refetches to stay authoritative. The manual
+  // drag order remains editable: this is one gesture among others, not a
+  // lock-in.
+  const [smartTriageRunning, setSmartTriageRunning] = useState(false);
+  const runSmartTriage = useCallback(() => {
+    if (!project || smartTriageRunning) return;
+    setSmartTriageRunning(true);
+    void (async () => {
+      try {
+        const { mode, moves, columns, scored } = await smartTriageApi(project.id);
+        for (const move of moves) {
+          patchIssueEverywhere(queryClient, project.id, move.id, {
+            position: move.position,
+          } as Partial<Issue>);
+        }
+        void queryClient.invalidateQueries({ queryKey: ["issues", project.id] });
+        // An off-mode call moved nothing by definition — nothing to measure.
+        if (mode !== "off") {
+          trackEvent("smart_triage_ran", { mode, scored, columns, issues: moves.length });
+        }
+      } catch (err) {
+        toast.error((err as Error).message);
+      } finally {
+        setSmartTriageRunning(false);
+      }
+    })();
+  }, [project, queryClient, smartTriageRunning]);
   const handleOpenIssue = useCallback((issue: Issue) => {
     setOpenIssueId(issue.id);
     setOpenIssueTab("description");
@@ -729,6 +765,17 @@ function ProjectBoard() {
                 completionPercent: currentCycleCompletionPercent,
                 onSelect: () => router.push("/all?view=cycle"),
               }}
+              // Smart triage (MIN-566): off renders nothing — the opt-in
+              // stays invisible until the project arms it in settings.
+              smartTriage={
+                smartTriageMode !== "off"
+                  ? {
+                      mode: smartTriageMode,
+                      running: smartTriageRunning,
+                      onRun: runSmartTriage,
+                    }
+                  : undefined
+              }
             />
           )}
           <div className="min-h-0 flex-1 pt-3">

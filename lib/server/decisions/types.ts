@@ -17,7 +17,11 @@
  */
 
 /** The use cases the decision layer serves in the first lot (MIN-557). */
-export type DecisionUseCase = "smart_fill" | "smart_assign" | "feedback_review";
+export type DecisionUseCase =
+  | "smart_fill"
+  | "smart_assign"
+  | "feedback_review"
+  | "smart_triage";
 
 /** Which engine produced the answers of a decision. */
 export type DecisionEngine = "jev" | "llm";
