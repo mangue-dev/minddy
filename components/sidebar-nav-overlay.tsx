@@ -199,7 +199,7 @@ export function SidebarNavOverlay({
         // as a slice of content riding above the sidebar. The closed state's
         // hotzone stays at z-[41], above the bar, so the top-left corner still
         // recalls navigation.
-        className="absolute inset-y-0 left-0 z-[38] flex h-full overflow-hidden rounded-r-[var(--app-pane-radius)] bg-sidebar transition-shadow duration-200 data-[floating=false]:rounded-r-none data-[floating=true]:shadow-[16px_0_40px_-24px_rgba(0,0,0,0.35)]"
+        className="sidebar-nav-panel absolute inset-y-0 left-0 z-[38] flex h-full overflow-hidden rounded-r-[var(--app-pane-radius)] bg-sidebar transition-shadow duration-200 data-[floating=false]:rounded-r-none data-[floating=true]:shadow-[16px_0_40px_-24px_rgba(0,0,0,0.35)]"
         data-open={shown}
         data-floating={hidden && shown}
         initial={{ width: panelWidth, x: shown ? 0 : -width }}

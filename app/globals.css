@@ -2443,6 +2443,13 @@ html[data-desktop-platform="darwin"] .app-content-header {
   -webkit-app-region: drag;
 }
 
+/* A recalled navigation panel overlaps content headers. Chromium's native
+   draggable-region hit testing can otherwise keep the covered header active,
+   making the sidebar rows under that band visible but unclickable. */
+html[data-desktop-app] .sidebar-nav-panel {
+  -webkit-app-region: no-drag;
+}
+
 html[data-desktop-platform="darwin"] .app-content-header
   :is(
     a,

@@ -11,13 +11,15 @@
 // from the wiki are recognized by the same sign on both sides.
 
 import { useEffect, useRef } from "react";
-import { BookText, FileText } from "lucide-react";
+import { BookText } from "lucide-react";
 import { cn } from "mangue-ui";
 import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
 import { NumoFace } from "@/components/numo-face";
 import { filterMentionItems } from "@/lib/mention-menu";
+import { StatusIndicator } from "@/components/issue-indicators";
+import type { IssueStatus } from "@/lib/issue-constants";
 
 export interface MentionOption {
   /** Source project for contextual mentions retained across navigation. */
@@ -45,6 +47,8 @@ export interface MentionOption {
   color?: string | null;
   /** Pages: their emoji, when they have one (MIN-273). */
   icon?: string | null;
+  /** Issues: their live workflow state replaces the generic page glyph. */
+  status?: IssueStatus;
   /** Second row of the line: the title of a ticket, the name of the project of an objective. What distinguishes MIN-42 from MIN-43 when choosing. */
   detail?: string;
   /** Search terms in addition to the label (email, project key, title). */
@@ -118,6 +122,9 @@ export function MentionFigure({
       </span>
     );
   }
+  if (option.type === "issue" && option.status) {
+    return <StatusIndicator status={option.status} className={className} />;
+  }
   return (
     <span
       className={cn(
@@ -125,7 +132,7 @@ export function MentionFigure({
         className,
       )}
     >
-      <FileText className="size-3" />
+      <span className="size-2 rounded-full bg-current" />
     </span>
   );
 }

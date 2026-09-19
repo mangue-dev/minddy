@@ -23,6 +23,7 @@ const issue = (identifier: string): MentionIssue => ({
   project_id: "p1",
   identifier,
   title: `Titre de ${identifier}`,
+  status: "in_progress",
 });
 
 const objective = (name: string): MentionObjective => ({

@@ -31,6 +31,7 @@ describe("markdown persisted mentions", () => {
     ];
     const mentionLinks: MentionLinks = {
       href: (type, id) => `/${type}/${id}`,
+      issueStatus: () => null,
       navigate: () => {},
     };
 
@@ -60,6 +61,7 @@ describe("markdown persisted mentions", () => {
     ];
     const mentionLinks: MentionLinks = {
       href: (type, id) => `/${type}/${id}`,
+      issueStatus: () => null,
       navigate: () => {},
     };
 

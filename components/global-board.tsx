@@ -17,6 +17,7 @@ import { useAppTabLocalState } from "@/lib/app-tab-local-state";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 import { useOptionalAppTabs } from "@/lib/app-tabs-context";
 import { buildViewHref } from "@/lib/saved-view-href";
+import { boardViewTabHref } from "@/lib/board-view-tab";
 import { filterIssues, visibleStatuses } from "@/lib/view-filter";
 import { STATUSES } from "@/lib/issue-constants";
 import { trackEvent } from "@/lib/analytics";
@@ -615,6 +616,9 @@ function GlobalBoardInner() {
       {!nothingAnywhere && (
         <BoardToolbar
           tabOrderScope="global"
+          viewHref={(view) =>
+            boardViewTabHref(pathname, searchParams, view ?? "cycle")
+          }
           views={views}
           activeViewId={cycleMode ? null : activeViewId}
           generatingViewIds={generatingViewIds}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   DndContext,
@@ -59,6 +59,7 @@ import {
   Share2,
   Trash2,
   Triangle,
+  ExternalLink,
 } from "lucide-react";
 import {
   StatusIndicator,
@@ -88,6 +89,7 @@ import {
 import { ME_ASSIGNEE, activeFilterCount } from "@/lib/view-filter";
 import { CYCLE_TAB_KEY, mergeTabOrder } from "@/lib/tab-order";
 import { useTabOrderQuery } from "@/lib/use-tab-order-query";
+import { useOptionalAppTabs } from "@/lib/app-tabs-context";
 import { displayName } from "@/lib/display-name";
 import { useSubmitShortcut } from "@/lib/keyboard/use-submit-shortcut";
 import type {
@@ -651,6 +653,7 @@ export function BoardToolbar({
   cycleTab,
   rightControls,
   tabOrderScope,
+  viewHref,
 }: {
   views: View[];
   activeViewId: string | null;
@@ -692,6 +695,8 @@ export function BoardToolbar({
   /** Scope key for the per-user tab-strip order (MIN-34): a project id, or
       "global" for the /all board. Drag reorder persists to localStorage here. */
   tabOrderScope: string;
+  /** Deep link for a saved view, or the cycle pill when `view` is null. */
+  viewHref: (view: View | null) => string;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
   // "Save as new view" from the Save split button: same create flow, but the
@@ -713,6 +718,8 @@ export function BoardToolbar({
   const tf = useTranslations("Field");
   const tSort = useTranslations("Sort");
   const tApi = useTranslations("ApiErrors");
+  const tActions = useTranslations("CommandPaletteActions");
+  const appTabs = useOptionalAppTabs();
   // The "Mes tickets" pill wears MY avatar, not a generic person glyph.
   const myAvatarSource = useMyAvatarSource();
 
@@ -720,6 +727,17 @@ export function BoardToolbar({
   // The system view is neither renamable, nor deletable, nor unlockable.
   const isSystem = activeView?.kind === "my";
   const customCount = views.filter((v) => v.kind !== "my").length;
+  const openViewInNewTab = useCallback(
+    (view: View | null) => {
+      const href = viewHref(view);
+      if (appTabs) {
+        void appTabs.session.create(href);
+        return;
+      }
+      window.open(href, "_blank", "noopener,noreferrer");
+    },
+    [appTabs, viewHref],
+  );
 
   // ── Tab reorder (MIN-34) ────────────────────────────────────────────────
   // The strip = view pills + the Cycle pill, all drag-reorderable. The order is
@@ -780,6 +798,12 @@ export function BoardToolbar({
     const editable = view !== null && view.kind !== "my";
     const actions: ContextMenuAction[] = [
       {
+        id: "open-new-tab",
+        label: tActions("openInNewTab"),
+        icon: <ExternalLink className="size-4" />,
+        onSelect: () => openViewInNewTab(view),
+      },
+      {
         id: "rename",
         label: t("renameView"),
         icon: <Pencil className="size-4" />,
@@ -807,7 +831,7 @@ export function BoardToolbar({
       onSelect: () => view && setDeleteTarget(view),
     });
     return actions;
-  }, [viewMenu, withShare, customCount, t]);
+  }, [viewMenu, withShare, customCount, t, tActions, openViewInNewTab]);
 
   return (
     <>
@@ -997,7 +1021,7 @@ export function BoardToolbar({
                   <Button
                     variant="outline"
                     size="icon-sm"
-                    disabled={!activeView || (isSystem && !withShare)}
+                    disabled={!activeView}
                     aria-label={t("viewOptions", { name: activeView?.name ?? "" })}
                   >
                     <MoreHorizontal />
@@ -1009,6 +1033,13 @@ export function BoardToolbar({
               </TooltipContent>
             </Tooltip>
             <DropdownMenuContent align="end">
+              {activeView && (
+                <DropdownMenuItem onSelect={() => openViewInNewTab(activeView)}>
+                  <ExternalLink />
+                  {tActions("openInNewTab")}
+                </DropdownMenuItem>
+              )}
+              {activeView && (!isSystem || withShare) && <DropdownMenuSeparator />}
               {!isSystem && (
                 <DropdownMenuItem
                   onSelect={() => activeView && setRenameTarget(activeView)}

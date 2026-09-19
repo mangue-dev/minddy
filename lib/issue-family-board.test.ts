@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   familyBoardStatuses,
+  issueFamilyParentId,
   issueFamilyBoardExitHref,
   issueFamilyBoardHref,
   issueParentIds,
@@ -26,6 +27,17 @@ describe("issue family board", () => {
         "view=mine&objective=objective-1&issue=open-1&setup=import",
       ),
     ).toBe("/projects/project%2Fid?view=mine&family=parent%3Fone");
+  });
+
+  it("resolves the same family from its parent and a child", () => {
+    const parentIds = new Set(["parent"]);
+    expect(issueFamilyParentId({ id: "parent", parent_id: null }, parentIds)).toBe(
+      "parent",
+    );
+    expect(issueFamilyParentId({ id: "child", parent_id: "parent" }, parentIds)).toBe(
+      "parent",
+    );
+    expect(issueFamilyParentId({ id: "solo", parent_id: null }, parentIds)).toBeNull();
   });
 
   it("returns to the same board view by removing only the family scope", () => {

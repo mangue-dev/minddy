@@ -12,6 +12,7 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import type { MentionTargetType } from "@/lib/mention-target";
+import type { IssueStatus } from "@/lib/issue-constants";
 
 export interface MentionLinks {
   /**
@@ -20,6 +21,8 @@ export interface MentionLinks {
  * then remains text: better than opening a false URL.
  */
   href: (type: MentionTargetType, id: string) => string | null;
+  /** Current issue state when this mention source has resolved the ticket. */
+  issueStatus: (id: string) => IssueStatus | null;
   /**
  * Handle an ordinary click. Issues open in the app-wide side panel without
  * leaving the current page; other linked entities use client-side routing.

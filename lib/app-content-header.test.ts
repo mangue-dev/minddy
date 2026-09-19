@@ -70,6 +70,9 @@ describe("application content header", () => {
     expect(styles).toMatch(
       /html\[data-desktop-platform="darwin"\] \.app-content-header[\s\S]*?:is\([\s\S]*?button,[\s\S]*?\)\s*\{\s*-webkit-app-region:\s*no-drag;/,
     );
+    expect(styles).toMatch(
+      /html\[data-desktop-app\] \.sidebar-nav-panel\s*\{\s*-webkit-app-region:\s*no-drag;/,
+    );
   });
 
   it("keeps the trash content pane under the shared action header", () => {
