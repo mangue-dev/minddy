@@ -26,9 +26,12 @@ import {
   isLocalAgentProvider,
 } from "@/lib/agent-providers";
 import { addAiKeyApi, deleteAiKeyApi, type AiKey } from "@/lib/agent-keys-api";
+import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { aiKeysQueryKey, useAiKeysQuery } from "@/lib/use-ai-keys-query";
 import { agentModelsQueryKey } from "@/lib/use-agent-models-query";
 import { agentPreferencesQueryKey } from "@/lib/use-agent-preferences-query";
+
+const MINDDY_CLOUD_PROVIDER = "minddy";
 
 /** Multi-provider BYOK credential list shared by account settings and onboarding. */
 export function ByokConnectPanel({
@@ -41,10 +44,15 @@ export function ByokConnectPanel({
   const t = useTranslations("Account");
   const tc = useTranslations("Common");
   const queryClient = useQueryClient();
+  const { capabilities } = useRuntimeConfig();
+  const managedAiAvailable = capabilities.managedAi?.configured === true;
   const { keys, loading } = useAiKeysQuery();
-  const [formOpen, setFormOpen] = useState(true);
   const [editing, setEditing] = useState<AiKey | null>(null);
-  const [provider, setProvider] = useState("");
+  const [provider, setProvider] = useState(() =>
+    managedAiAvailable
+      ? MINDDY_CLOUD_PROVIDER
+      : (AGENT_PROVIDERS.find((entry) => !isLocalAgentProvider(entry.id))?.id ?? ""),
+  );
   const [keyDraft, setKeyDraft] = useState("");
   const [baseUrlDraft, setBaseUrlDraft] = useState("");
   const [saving, setSaving] = useState(false);
@@ -68,11 +76,16 @@ export function ByokConnectPanel({
   useEffect(() => {
     if (
       editing ||
+      (managedAiAvailable && provider === MINDDY_CLOUD_PROVIDER) ||
       (provider && availableProviders.some((entry) => entry.id === provider))
     )
       return;
-    setProvider(availableProviders[0]?.id ?? "");
-  }, [availableProviders, editing, provider]);
+    setProvider(
+      managedAiAvailable
+        ? MINDDY_CLOUD_PROVIDER
+        : (availableProviders[0]?.id ?? ""),
+    );
+  }, [availableProviders, editing, managedAiAvailable, provider]);
 
   const selectedDef = getAgentProvider(provider);
   const localProvider = !!selectedDef && isLocalAgentProvider(selectedDef.id);
@@ -86,22 +99,17 @@ export function ByokConnectPanel({
     setEditing(null);
     setKeyDraft("");
     setBaseUrlDraft("");
-    setProvider("");
-    setFormOpen(false);
-  };
-  const beginAdd = () => {
-    setEditing(null);
-    setKeyDraft("");
-    setBaseUrlDraft("");
-    setProvider(availableProviders[0]?.id ?? "");
-    setFormOpen(true);
+    setProvider(
+      managedAiAvailable
+        ? MINDDY_CLOUD_PROVIDER
+        : (availableProviders[0]?.id ?? ""),
+    );
   };
   const beginEdit = (key: AiKey) => {
     setEditing(key);
     setProvider(key.provider);
     setKeyDraft("");
     setBaseUrlDraft(key.base_url ?? "");
-    setFormOpen(true);
   };
   const selectProvider = (next: string) => {
     setProvider(next);
@@ -161,11 +169,6 @@ export function ByokConnectPanel({
 
   return (
     <div className={cn("flex max-w-2xl flex-col gap-3", className)}>
-      {keys.length === 0 ? (
-        <p className="text-xs text-muted-foreground">
-          {t("aiProviderMinddyHint")}
-        </p>
-      ) : null}
       {keys.map((key) => {
         const definition = getAgentProvider(key.provider);
         return (
@@ -206,8 +209,7 @@ export function ByokConnectPanel({
         );
       })}
 
-      {formOpen && selectedDef ? (
-        <div className="flex flex-col gap-3 rounded-lg border border-border/70 p-3">
+      <div className="flex flex-col gap-3 rounded-lg border border-border/70 p-3">
           <Select
             value={provider}
             onValueChange={selectProvider}
@@ -219,6 +221,11 @@ export function ByokConnectPanel({
             <SelectContent>
               <SelectGroup>
                 <SelectLabel>{t("aiProviderCloudGroup")}</SelectLabel>
+                {managedAiAvailable && !editing ? (
+                  <SelectItem value={MINDDY_CLOUD_PROVIDER}>
+                    {t("aiProviderMinddy")}
+                  </SelectItem>
+                ) : null}
                 {cloudProviders.map((entry) => (
                   <SelectItem key={entry.id} value={entry.id}>
                     <span className="flex items-center gap-2">
@@ -246,7 +253,12 @@ export function ByokConnectPanel({
               ) : null}
             </SelectContent>
           </Select>
-          {selectedDef.requiresBaseUrl ? (
+          {provider === MINDDY_CLOUD_PROVIDER ? (
+            <p className="text-xs text-muted-foreground">
+              {t("aiProviderMinddyHint")}
+            </p>
+          ) : null}
+          {selectedDef?.requiresBaseUrl ? (
             <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
               {localProvider
                 ? t("aiKeyLocalBaseUrlLabel")
@@ -260,26 +272,28 @@ export function ByokConnectPanel({
               />
             </label>
           ) : null}
-          <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
-            {localProvider ? t("aiKeyOptionalLabel") : t("aiKeyLabel")}
-            <Input
-              value={keyDraft}
-              onChange={(event) => setKeyDraft(event.target.value)}
-              placeholder={
-                localProvider
-                  ? t("aiKeyOptionalPlaceholder")
-                  : selectedDef.keyPlaceholder
-              }
-              type="password"
-              autoComplete="new-password"
-              spellCheck={false}
-              className="font-mono text-[13px]"
-              onKeyDown={(event) => {
-                if (event.key === "Enter") void saveKey();
-              }}
-            />
-          </label>
-          {!editing && selectedDef.keysUrl ? (
+          {selectedDef ? (
+            <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
+              {localProvider ? t("aiKeyOptionalLabel") : t("aiKeyLabel")}
+              <Input
+                value={keyDraft}
+                onChange={(event) => setKeyDraft(event.target.value)}
+                placeholder={
+                  localProvider
+                    ? t("aiKeyOptionalPlaceholder")
+                    : selectedDef.keyPlaceholder
+                }
+                type="password"
+                autoComplete="new-password"
+                spellCheck={false}
+                className="font-mono text-[13px]"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") void saveKey();
+                }}
+              />
+            </label>
+          ) : null}
+          {!editing && selectedDef?.keysUrl ? (
             <a
               href={selectedDef.keysUrl}
               target="_blank"
@@ -290,31 +304,23 @@ export function ByokConnectPanel({
             </a>
           ) : null}
           <div className="flex justify-end gap-2">
-            {keys.length > 0 ? (
+            {editing ? (
               <Button type="button" variant="outline" onClick={resetForm}>
                 {tc("cancel")}
               </Button>
             ) : null}
-            <Button
-              type="button"
-              onClick={() => void saveKey()}
-              disabled={saving || (!localProvider && !keyDraft.trim())}
-            >
-              {saving ? <Spinner /> : null}
-              {editing ? tc("save") : t("aiKeySave")}
-            </Button>
+            {selectedDef ? (
+              <Button
+                type="button"
+                onClick={() => void saveKey()}
+                disabled={saving || (!localProvider && !keyDraft.trim())}
+              >
+                {saving ? <Spinner /> : null}
+                {editing ? tc("save") : t("aiKeySave")}
+              </Button>
+            ) : null}
           </div>
         </div>
-      ) : availableProviders.length > 0 ? (
-        <Button
-          type="button"
-          variant="outline"
-          className="self-start"
-          onClick={beginAdd}
-        >
-          {t("aiKeyAddProvider")}
-        </Button>
-      ) : null}
       {keys.some((key) => !key.validated_at) ? (
         <p className="text-xs text-amber-600 dark:text-amber-500">
           {t("aiKeyUnconfirmed")}
