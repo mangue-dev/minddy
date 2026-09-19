@@ -272,7 +272,7 @@ describe("boardComparatorFactory (MIN-576)", () => {
 
   function sorted(issues: Issue[], sort: Parameters<typeof boardComparatorFactory>[0], ctx: Parameters<typeof boardComparatorFactory>[1] = {}): string[] {
     const make = boardComparatorFactory(sort, { now: NOW, ...ctx });
-    return [...issues].sort(make(issues)).map((i) => i.id);
+    return issues.slice().sort(make(issues.slice())).map((i) => i.id);
   }
 
   it("applies the FULL triage rules in rules mode — the same order the server reorder writes", () => {
@@ -301,8 +301,8 @@ describe("boardComparatorFactory (MIN-576)", () => {
       boardTicket({ id: "z", objective_id: "obj-2", effort: "xs", position: 30 }),
     ];
     const make = boardComparatorFactory("smart", { now: NOW });
-    const columnA = [...issues.slice(0, 2)].sort(make(issues.slice(0, 2))).map((i) => i.id);
-    const columnB = [...issues.slice(2)].sort(make(issues.slice(2))).map((i) => i.id);
+    const columnA = issues.slice(0, 2).sort(make(issues.slice(0, 2))).map((i) => i.id);
+    const columnB = issues.slice(2).sort(make(issues.slice(2))).map((i) => i.id);
     expect(columnA).toEqual(["a", "b"]);
     expect(columnB).toEqual(["z"]);
   });
