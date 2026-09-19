@@ -169,3 +169,48 @@ describe("mapLlmAnswers — feedback_review", () => {
     expect(answers.duplicate_of).toBeUndefined();
   });
 });
+
+describe("mapLlmAnswers — smart_triage", () => {
+  const TRIAGE_SPEC: DecisionSpec = {
+    useCase: "smart_triage",
+    state: { project: "p", tickets: [] },
+    questions: [
+      {
+        key: "issue-1",
+        kind: "score",
+        label: "next?",
+        levels: [1, 2, 3, 4, 5].map((value) => ({ value, label: String(value) })),
+      },
+      {
+        key: "issue-2",
+        kind: "score",
+        label: "next?",
+        levels: [1, 2, 3, 4, 5].map((value) => ({ value, label: String(value) })),
+      },
+    ],
+    llm: { toolName: "score_tickets", parameters: {}, systemPrompt: "s", userMessage: "u" },
+  };
+
+  it("maps the forced tool's scores object, one answer per ticket id", () => {
+    const answers = mapLlmAnswers(TRIAGE_SPEC, {
+      scores: { "issue-1": 5, "issue-2": 1 },
+    });
+    expect(answers["issue-1"]).toEqual({ value: 5, probability: null, confidence: null });
+    expect(answers["issue-2"]).toEqual({ value: 1, probability: null, confidence: null });
+  });
+
+  it("drops out-of-scale values and missing tickets — the consumer reads neutral", () => {
+    const answers = mapLlmAnswers(TRIAGE_SPEC, {
+      scores: { "issue-1": 9, "issue-2": 0, "issue-3": 4 },
+    });
+    expect(answers["issue-1"]).toBeUndefined();
+    expect(answers["issue-2"]).toBeUndefined();
+    expect(answers["issue-3"]).toBeUndefined();
+  });
+
+  it("ignores a malformed scores payload entirely", () => {
+    expect(mapLlmAnswers(TRIAGE_SPEC, {})).toEqual({});
+    expect(mapLlmAnswers(TRIAGE_SPEC, { scores: "nope" })).toEqual({});
+    expect(mapLlmAnswers(TRIAGE_SPEC, { scores: ["nope"] })).toEqual({});
+  });
+});

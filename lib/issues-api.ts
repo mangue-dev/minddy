@@ -12,6 +12,7 @@ import type {
   IssueUpdateInput,
   RecurringIssue,
 } from "./types";
+import type { SmartTriageMode, SmartTriageMove } from "./smart-triage";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -221,4 +222,28 @@ export async function deleteIssueApi(
     );
   }
   trackEvent("issue_deleted", { surface: meta?.surface ?? "unknown" });
+}
+
+/**
+ * The board's "Smart triage" button (MIN-566): the server reorders the
+ * project's open columns per its mode and returns the rewritten positions.
+ * The writes are already persisted when this resolves — the caller applies
+ * the moves to its caches, it must NOT re-PATCH each issue.
+ */
+export async function smartTriageApi(
+  projectId: string,
+  statuses?: string[]
+): Promise<{
+  mode: SmartTriageMode;
+  moves: SmartTriageMove[];
+  columns: number;
+  scored: boolean;
+}> {
+  return parseJson(
+    await fetch(`/api/projects/${projectId}/smart-triage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(statuses ? { statuses } : {}),
+    })
+  );
 }

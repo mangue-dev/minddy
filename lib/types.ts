@@ -9,6 +9,7 @@ import type { RepoProviderId } from "./repo-providers";
 import type { RecurrenceCadence } from "./recurrence";
 import type { BillingPlanId } from "./billing-plans";
 import type { AutomationOverride, AutomationRule } from "./automations";
+import type { SmartTriageMode } from "./smart-triage";
 import type { CommentVisibility } from "./feedback/types";
 
 export interface Objective {
@@ -518,6 +519,12 @@ export interface Project {
   /** Smart Assign rules, user_id → free text describing the member's preferred
       tasks (kept on the project — the owner has no project_members row). */
   smart_assign_rules: Record<string, string>;
+  /** Smart Triage (MIN-566): the on-demand column reorder, opt-in per project.
+      `off` (default) never reorders; `rules` orders by the static rules;
+      `jev` replaces the ranking with a decision-layer scoring pass. The
+      reorder runs only when someone clicks the board's "Smart triage" button
+      — the manual drag order stays editable. */
+  smart_triage_mode: SmartTriageMode;
   /** Numo reviews incoming feedback (categorize, junk, sensitive) before it is
       published. Off means feedback goes out as submitted. */
   feedback_review_enabled: boolean;
@@ -566,6 +573,9 @@ export interface ProjectUpdateInput {
   smart_assign_enabled?: boolean;
   auto_assign_enabled?: boolean;
   smart_assign_rules?: Record<string, string>;
+  /** Smart Triage mode (MIN-566) — validated server-side against the known
+      values; arming `jev` additionally requires the owner's AI budget. */
+  smart_triage_mode?: SmartTriageMode;
   feedback_review_enabled?: boolean;
   feedback_review_skip_over_budget?: boolean;
   feedback_translate_enabled?: boolean;

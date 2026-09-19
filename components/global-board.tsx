@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button, Skeleton, toast } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
@@ -18,6 +19,12 @@ import { useOptionalAppTabs } from "@/lib/app-tabs-context";
 import { buildViewHref } from "@/lib/saved-view-href";
 import { filterIssues, visibleStatuses } from "@/lib/view-filter";
 import { STATUSES } from "@/lib/issue-constants";
+import { trackEvent } from "@/lib/analytics";
+import { smartTriageApi } from "@/lib/issues-api";
+import {
+  GLOBAL_BOARD_KEY,
+  patchIssueEverywhere,
+} from "@/lib/optimistic/issue-writes";
 import {
   cycleBlockingRelations,
   cycleCompletionPercent,
@@ -451,6 +458,67 @@ function GlobalBoardInner() {
     return map;
   }, [scopedIssues]);
 
+  // ── Smart triage (MIN-566) ──────────────────────────────────────────────
+  // The cross-project board reorders EVERY triage-armed project that has
+  // tickets on the board — one API call per project, each under ITS OWN
+  // mode and rules (the opt-in stays per project), the actor's budget
+  // carrying every Jev pass. Projects left on `off` are never touched:
+  // their cards keep their order inside the column.
+  const queryClient = useQueryClient();
+  const triageTargets = useMemo(
+    () =>
+      projects.filter(
+        (p) => p.smart_triage_mode !== "off" && (issuesByProject.get(p.id)?.length ?? 0) > 0
+      ),
+    [projects, issuesByProject]
+  );
+  const [smartTriageRunning, setSmartTriageRunning] = useState(false);
+  const runGlobalSmartTriage = useCallback(() => {
+    if (smartTriageRunning || triageTargets.length === 0) return;
+    setSmartTriageRunning(true);
+    void (async () => {
+      const results = await Promise.allSettled(
+        triageTargets.map((p) => smartTriageApi(p.id))
+      );
+      let firstFailure: string | null = null;
+      const touchedProjects: string[] = [];
+      results.forEach((result, index) => {
+        const project = triageTargets[index];
+        if (result.status === "rejected") {
+          firstFailure ??= (result.reason as Error)?.message ?? String(result.reason);
+          return;
+        }
+        const { mode, moves, columns, scored } = result.value;
+        // The writes are already persisted server-side: apply them to every
+        // cache that copies the line (project, /all, palette index).
+        for (const move of moves) {
+          patchIssueEverywhere(queryClient, project.id, move.id, {
+            position: move.position,
+          } as Partial<Issue>);
+        }
+        touchedProjects.push(project.id);
+        if (mode !== "off") {
+          trackEvent("smart_triage_ran", {
+            mode,
+            scored,
+            columns,
+            issues: moves.length,
+            scope: "global",
+          });
+        }
+      });
+      for (const pid of touchedProjects) {
+        void queryClient.invalidateQueries({ queryKey: ["issues", pid] });
+      }
+      // The aggregate read is the authority for THIS board.
+      if (touchedProjects.length > 0) {
+        void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
+      }
+      if (firstFailure) toast.error(firstFailure);
+      setSmartTriageRunning(false);
+    })();
+  }, [triageTargets, smartTriageRunning, queryClient]);
+
   // Relations (MIN-25) from any card of this board — the write goes through
   // the card's own project route (relations are same-project by construction).
   const handleAddRelation = useCallback(
@@ -559,6 +627,20 @@ function GlobalBoardInner() {
             completionPercent: currentCycleCompletionPercent,
             onSelect: () => switchCycleMode(true),
           }}
+          // Smart triage (MIN-566): every triage-armed project with tickets
+          // on this board is reordered in one click, each under its own mode.
+          // No armed project → no button, the opt-in stays invisible.
+          smartTriage={
+            triageTargets.length > 0
+              ? {
+                  mode: triageTargets.some((p) => p.smart_triage_mode === "jev")
+                    ? "jev"
+                    : "rules",
+                  running: smartTriageRunning,
+                  onRun: runGlobalSmartTriage,
+                }
+              : undefined
+          }
           rightControls={
             cycleMode ? (
               cyclesEnabled && selectedCycle ? (

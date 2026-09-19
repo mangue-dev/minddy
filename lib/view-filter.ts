@@ -96,7 +96,9 @@ export function activeFilterCount(config: ViewConfig): number {
   return n;
 }
 
-const PRIORITY_ORDER: Record<string, number> = {
+/** Shared with the Smart Triage rules (lib/smart-triage.ts) — the same tiers
+    must not drift between the view sort and the column reorder. */
+export const PRIORITY_ORDER: Record<string, number> = {
   urgent: 0,
   high: 1,
   medium: 2,
@@ -125,8 +127,9 @@ const DUE_WEEK_BOOST = 1;
 const DUE_FORTNIGHT_BOOST = 0.5;
 
 /** Priority tiers an issue's due date buys back: overdue counts double,
-    then it fades over a fortnight. */
-function dueBoost(due: string | null | undefined, now: number): number {
+    then it fades over a fortnight. Exported for the Smart Triage rules
+    (lib/smart-triage.ts) — one home for the numbers, two readers. */
+export function dueBoost(due: string | null | undefined, now: number): number {
   const d = parseDueDate(due);
   if (!d) return 0;
   if (isDueDateOverdue(d, now)) return DUE_OVERDUE_BOOST;

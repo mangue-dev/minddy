@@ -15,6 +15,7 @@ import {
   KeyRound,
   Languages,
   ListPlus,
+  ListOrdered,
   Lock,
   LogOut,
   MessagesSquare,
@@ -78,6 +79,7 @@ export type ProjectSettingsTab =
   | "members"
   | "recurrences"
   | "smart-assign"
+  | "smart-triage"
   | "feedback"
   | "git"
   | "import"
@@ -121,6 +123,7 @@ export const SETTINGS_SECTIONS = {
   projectMembers: "project-members",
   projectRecurrences: "project-recurrences",
   projectSmartAssign: "project-smart-assign",
+  projectSmartTriage: "project-smart-triage",
   projectFeedbackBoard: "project-feedback-board",
   projectFeedbackApi: "project-feedback-api",
   projectFeedbackReview: "project-feedback-review",
@@ -218,6 +221,7 @@ export function useSettingsSections(): SettingsSection[] {
       members: tSettings("membersTab"),
       recurrences: tSettings("recurrencesTab"),
       "smart-assign": tSettings("smartAssignTab"),
+      "smart-triage": tSettings("smartTriageTab"),
       feedback: tSettings("feedbackTab"),
       git: tSettings("gitTab"),
       import: tSettings("importTab"),
@@ -578,6 +582,19 @@ export function useSettingsSections(): SettingsSection[] {
           "smart assign", "assignation", "assignment", "assigné", "assigne",
           "assignee", "règles", "regles", "rules", "répartition",
           "repartition", "automatique", "automatic",
+        ],
+      }),
+      project({
+        id: SETTINGS_SECTIONS.projectSmartTriage,
+        tab: "smart-triage",
+        icon: ListOrdered,
+        title: tSettings("smartTriageTab"),
+        audience: "owner",
+        keywords: [
+          "tri", "trier", "triage", "smart triage", "trier", "order", "ordre",
+          "réordonner", "reordonner", "reorder", "prioriser", "prioritize",
+          "quick wins", "priorité", "priorite", "priority", "effort",
+          "blocants", "blockers", "colonnes", "columns", "board", "jev",
         ],
       }),
       project({

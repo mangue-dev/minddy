@@ -16,6 +16,8 @@ import {
   ISSUE_EFFORTS,
   ISSUE_PRIORITIES,
 } from "@/lib/issue-validation";
+import type { IssueStatus } from "@/lib/issue-constants";
+import { TRIAGE_SCORE_LEVELS } from "@/lib/smart-triage";
 import type { FeedbackSensitivityKind } from "@/lib/feedback/types";
 import { FEEDBACK_SENSITIVITY_KINDS } from "@/lib/feedback/types";
 import type { FeedbackTranslationSettings } from "@/lib/feedback/translation-policy";
@@ -262,6 +264,117 @@ export function prepareSmartAssign(input: {
     },
     members,
   });
+}
+
+/**
+ * SMART TRIAGE — which tickets of ONE column are the team's next moves
+ * (MIN-566, phase B).
+ *
+ * One decision per column: the state paints the project, the column and every
+ * ticket with the facts the rules already weigh (priority, effort, due date,
+ * age, objective, categories, open blocks) — the engines rank the SAME world
+ * the static rules see, only finer. One `score` question per ticket, keyed by
+ * the ticket id, on the shared 1–5 urgency scale (`TRIAGE_SCORE_LEVELS`); the
+ * tickets arrive capped (`MAX_TRIAGE_TICKETS_PER_DECISION`) and already in
+ * rules order, so the tail past the cap keeps a sane rank.
+ *
+ * The LLM recipe is the scoring pass on the same world: one forced call whose
+ * `scores` object answers every ticket id.
+ */
+export function buildSmartTriageSpec(input: {
+  projectName: string;
+  /** The column being reordered, with its meaning on the board. */
+  column: { status: IssueStatus; meaning: string };
+  /** The column's tickets, capped and already in rules order. */
+  tickets: {
+    id: string;
+    title: string;
+    priority: string;
+    effort: string | null;
+    due: string | null;
+    /** Whole days since creation, rounded — "how long has it waited". */
+    ageDays: number;
+    objective: string | null;
+    categories: string;
+    /** Open tickets this one blocks / is blocked by, already resolved. */
+    blocksOpen: number;
+    blockedByOpen: number;
+  }[];
+}): DecisionSpec {
+  const { projectName, column, tickets } = input;
+  const questions: DecisionQuestion[] = tickets.map((ticket) => ({
+    key: ticket.id,
+    kind: "score",
+    label: `How likely is "${ticket.title}" the team's next move?`,
+    levels: TRIAGE_SCORE_LEVELS.map((level) => ({ ...level })),
+  }));
+  const allowed = TRIAGE_SCORE_LEVELS.map((level) => level.value);
+  return {
+    useCase: "smart_triage",
+    state: {
+      project: projectName,
+      column: { status: column.status, meaning: column.meaning },
+      tickets: tickets.map((ticket) => ({
+        id: ticket.id,
+        title: truncate(ticket.title, 200),
+        priority: ticket.priority,
+        effort: ticket.effort,
+        due: ticket.due,
+        age_days: ticket.ageDays,
+        objective: ticket.objective,
+        categories: ticket.categories,
+        blocks_open: ticket.blocksOpen,
+        blocked_by_open: ticket.blockedByOpen,
+      })),
+    },
+    questions,
+    llm: {
+      toolName: "score_tickets",
+      parameters: {
+        type: "object",
+        properties: {
+          scores: {
+            type: "object",
+            description:
+              "One urgency score per ticket id, on the 1–5 scale (5 = the next move).",
+            properties: Object.fromEntries(
+              tickets.map((ticket) => [
+                ticket.id,
+                { type: "integer", enum: allowed },
+              ])
+            ),
+            required: tickets.map((ticket) => ticket.id),
+            additionalProperties: false,
+          },
+        },
+        required: ["scores"],
+        additionalProperties: false,
+      },
+      systemPrompt: [
+        "You rank the tickets of one kanban column by how likely each one is the team's NEXT move.",
+        "A next move is: unblocked work that unblocks others first, then quick wins (high priority, low effort, imminent due date), with tickets of the same objective read together.",
+        `Project: ${projectName}. Column: ${column.status} — ${column.meaning}.`,
+        "Score EVERY ticket on the 1–5 scale (1 = later, 5 = the very next move). Never skip one, never invent an id.",
+      ].join(" "),
+      userMessage: [
+        `Project "${projectName}", column "${column.status}" (${column.meaning}). Score these tickets:`,
+        ...tickets.map((t) =>
+          [
+            `- ${t.id}`,
+            `"${truncate(t.title, 200) ?? ""}"`,
+            `priority ${t.priority}`,
+            `effort ${t.effort ?? "none"}`,
+            `due ${t.due ?? "-"}`,
+            `age ${t.ageDays}d`,
+            `objective ${t.objective ?? "-"}`,
+            `categories ${t.categories || "-"}`,
+            `blocks ${t.blocksOpen} open`,
+            `blocked by ${t.blockedByOpen} open`,
+          ].join(" · ")
+        ),
+      ].join("\n"),
+    },
+  };
 }
 
 /**

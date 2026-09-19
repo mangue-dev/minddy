@@ -4,6 +4,7 @@ import {
   buildFeedbackReviewSpec,
   buildSmartAssignSpec,
   buildSmartFillSpec,
+  buildSmartTriageSpec,
   prepareSmartAssign,
 } from "./prepare";
 import { validateDecisionSpec } from "./types";
@@ -285,5 +286,75 @@ describe("buildFeedbackReviewSpec", () => {
     const properties = spec.llm.parameters.properties as Record<string, unknown>;
     expect(Object.keys(properties)).toContain("duplicate_of");
     expect(Object.keys(properties)).toContain("language");
+  });
+});
+
+describe("buildSmartTriageSpec", () => {
+  const base = {
+    projectName: "minddy",
+    column: { status: "todo" as const, meaning: "next work, in order" },
+    tickets: [
+      {
+        id: "issue-1",
+        title: "Fix the login crash",
+        priority: "high",
+        effort: "m",
+        due: "2026-09-20",
+        ageDays: 4,
+        objective: "v2",
+        categories: "Bug",
+        blocksOpen: 2,
+        blockedByOpen: 0,
+      },
+      {
+        id: "issue-2",
+        title: "Update the README",
+        priority: "low",
+        effort: null,
+        due: null,
+        ageDays: 30,
+        objective: null,
+        categories: "",
+        blocksOpen: 0,
+        blockedByOpen: 1,
+      },
+    ],
+  };
+
+  it("asks ONE score question per ticket, keyed by the ticket id", () => {
+    const spec = buildSmartTriageSpec(base);
+    expect(spec.useCase).toBe("smart_triage");
+    expect(spec.questions.map((q) => q.key)).toEqual(["issue-1", "issue-2"]);
+    expect(spec.questions.every((q) => q.kind === "score")).toBe(true);
+    expect(spec.questions[0].kind === "score" && spec.questions[0].levels.map((l) => l.value)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it("paints the column and every ticket with the facts the rules weigh", () => {
+    const spec = buildSmartTriageSpec(base);
+    expect(spec.state.column).toEqual(base.column);
+    const tickets = spec.state.tickets as Array<Record<string, unknown>>;
+    expect(tickets[0]).toMatchObject({
+      id: "issue-1",
+      blocks_open: 2,
+      blocked_by_open: 0,
+      age_days: 4,
+    });
+  });
+
+  it("requires a score for every ticket id in the LLM recipe", () => {
+    const spec = buildSmartTriageSpec(base);
+    expect(spec.llm.toolName).toBe("score_tickets");
+    const properties = (spec.llm.parameters as { properties: Record<string, unknown> })
+      .properties;
+    const scores = properties.scores as {
+      properties: Record<string, unknown>;
+      required: string[];
+    };
+    expect(Object.keys(scores.properties)).toEqual(["issue-1", "issue-2"]);
+    expect(scores.required).toEqual(["issue-1", "issue-2"]);
+  });
+
+  it("produces a spec the runner would accept", () => {
+    expect(validateDecisionSpec(buildSmartTriageSpec(base))).toBe(true);
   });
 });
