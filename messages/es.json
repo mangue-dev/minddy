@@ -722,7 +722,7 @@
     "hideDone": "Ocultar las incidencias completadas",
     "hideRecurring": "Ocultar las incidencias recurrentes",
     "smartTriage": "Triage inteligente",
-    "smartTriageHintRules": "Reordena cada columna abierta según las reglas del proyecto: bloqueantes primero, luego victorias rápidas (prioridad, esfuerzo, fecha límite), objetivos agrupados.",
+    "smartTriageHintRules": "Reordena cada columna abierta según las reglas: bloqueantes primero, luego victorias rápidas (prioridad, esfuerzo, fecha límite), objetivos agrupados.",
     "smartTriageHintJev": "Reordena cada columna abierta según una puntuación de urgencia de IA (consume tu uso de IA). Bloqueantes primero, luego victorias rápidas, objetivos agrupados.",
     "smartTriageNeedsManualOrder": "Cambia el orden de la vista a “Manual” para aplicar el triage inteligente.",
     "smartTriageDone": "Columnas reordenadas.",

@@ -722,7 +722,7 @@
     "hideDone": "Masquer les tickets terminés",
     "hideRecurring": "Masquer les tickets récurrents",
     "smartTriage": "Tri intelligent",
-    "smartTriageHintRules": "Réordonne chaque colonne ouverte selon les règles du projet : les bloquants d’abord, puis les gains rapides (priorité, effort, échéance), objectifs regroupés.",
+    "smartTriageHintRules": "Réordonne chaque colonne ouverte selon les règles : bloquants d’abord, puis gains rapides (priorité, effort, échéance), objectifs regroupés.",
     "smartTriageHintJev": "Réordonne chaque colonne ouverte selon un score d’urgence IA (consomme votre usage IA). Bloquants d’abord, puis gains rapides, objectifs regroupés.",
     "smartTriageNeedsManualOrder": "Passez l’ordre de la vue en « Manuel » pour appliquer le tri intelligent.",
     "smartTriageDone": "Colonnes réordonnées.",

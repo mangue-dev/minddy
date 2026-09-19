@@ -231,14 +231,16 @@ export interface AnalyticsEventProps {
   board_filter_applied: { filter: string; active_filter_count: number };
   board_filters_cleared: NoProps;
   board_sorted: { field: string };
-  /** The board's "Smart triage" button (MIN-566): one click = one reorder of
-      the project's open columns. `mode` = the project's setting; `scored`
-      tells whether the Jev pass actually ranked (vs the rules degradation). */
+  /** The board's "Smart triage" button (MIN-566): one click = one reorder.
+      On the cross-project board the event fires per project call. `mode` =
+      the project's setting; `scored` tells whether the Jev pass actually
+      ranked (vs the rules degradation). */
   smart_triage_ran: {
     mode: "rules" | "jev";
     scored: boolean;
     columns: number;
     issues: number;
+    scope: "global" | "project";
   };
   issue_dragged: { from: IssueStatus; to: IssueStatus; scope: "global" | "project" };
   view_created: { has_filters: boolean };

@@ -722,7 +722,7 @@
     "hideDone": "Hide done issues",
     "hideRecurring": "Hide recurring issues",
     "smartTriage": "Smart triage",
-    "smartTriageHintRules": "Reorder every open column by this project’s rules: blockers first, then quick wins (priority, effort, due date), objectives kept together.",
+    "smartTriageHintRules": "Reorder every open column by the rules: blockers first, then quick wins (priority, effort, due date), objectives kept together.",
     "smartTriageHintJev": "Reorder every open column by an AI urgency score (uses your AI usage). Blockers first, then quick wins, objectives kept together.",
     "smartTriageNeedsManualOrder": "Switch the view’s order to “Manual” to apply the smart triage.",
     "smartTriageDone": "Columns reordered.",

@@ -353,7 +353,13 @@ function ProjectBoard() {
         void queryClient.invalidateQueries({ queryKey: ["issues", project.id] });
         // An off-mode call moved nothing by definition — nothing to measure.
         if (mode !== "off") {
-          trackEvent("smart_triage_ran", { mode, scored, columns, issues: moves.length });
+          trackEvent("smart_triage_ran", {
+            mode,
+            scored,
+            columns,
+            issues: moves.length,
+            scope: "project",
+          });
         }
       } catch (err) {
         toast.error((err as Error).message);

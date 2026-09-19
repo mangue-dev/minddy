@@ -722,7 +722,7 @@
     "hideDone": "Erledigte Probleme ausblenden",
     "hideRecurring": "Wiederkehrende Probleme ausblenden",
     "smartTriage": "Smart-Triage",
-    "smartTriageHintRules": "Ordnet jede offene Spalte nach den Regeln des Projekts: Blockierer zuerst, dann Quick Wins (Priorität, Aufwand, Fälligkeit), Ziele zusammengehalten.",
+    "smartTriageHintRules": "Ordnet jede offene Spalte nach den Regeln: Blockierer zuerst, dann Quick Wins (Priorität, Aufwand, Fälligkeit), Ziele zusammengehalten.",
     "smartTriageHintJev": "Ordnet jede offene Spalte nach einem KI-Dringlichkeitswert (verbraucht deine KI-Nutzung). Blockierer zuerst, dann Quick Wins, Ziele zusammengehalten.",
     "smartTriageNeedsManualOrder": "Stelle die Ansichtssortierung auf „Manuell“, um das Smart-Triage anzuwenden.",
     "smartTriageDone": "Spalten neu geordnet.",

@@ -722,7 +722,7 @@
     "hideDone": "Ocultar problemas concluídos",
     "hideRecurring": "Ocultar problemas recorrentes",
     "smartTriage": "Triagem inteligente",
-    "smartTriageHintRules": "Reordena cada coluna aberta pelas regras do projeto: bloqueadores primeiro, depois ganhos rápidos (prioridade, esforço, prazo), objetivos agrupados.",
+    "smartTriageHintRules": "Reordena cada coluna aberta pelas regras: bloqueadores primeiro, depois ganhos rápidos (prioridade, esforço, prazo), objetivos agrupados.",
     "smartTriageHintJev": "Reordena cada coluna aberta por uma pontuação de urgência de IA (consome seu uso de IA). Bloqueadores primeiro, depois ganhos rápidos, objetivos agrupados.",
     "smartTriageNeedsManualOrder": "Mude a ordem da visualização para “Manual” para aplicar a triagem inteligente.",
     "smartTriageDone": "Colunas reordenadas.",
