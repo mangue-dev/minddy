@@ -1,8 +1,19 @@
 import type { Issue } from "@/lib/types";
+import { ALL_STATUSES, type StatusMeta } from "@/lib/issue-constants";
 
 export const ISSUE_FAMILY_PARAM = "family";
 
 type FamilyIssue = Pick<Issue, "id" | "parent_id">;
+
+/**
+ * The columns a family board renders: the FULL status sweep. A family keeps
+ * its members whatever their status — `triage` (arrival zone) and
+ * `duplicate` (closed as a duplicate) included — so every member always
+ * finds its column, whatever the board it came from would have hidden.
+ */
+export function familyBoardStatuses(): StatusMeta[] {
+  return ALL_STATUSES;
+}
 
 function boardParams(search: string | URLSearchParams): URLSearchParams {
   return new URLSearchParams(

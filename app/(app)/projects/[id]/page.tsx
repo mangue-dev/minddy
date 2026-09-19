@@ -90,6 +90,7 @@ import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
 import {
+  familyBoardStatuses,
   issueFamilyBoardExitHref,
   issueFamilyBoardHref,
   issueParentIds,
@@ -452,7 +453,15 @@ function ProjectBoard() {
       ? objectiveIssues
       : normalIssues;
   const statuses = useMemo(
-    () => (activeFamily || activeObjective ? STATUSES : visibleStatuses(config)),
+    () =>
+      // Family mode shows the FULL status sweep (see familyBoardStatuses):
+      // the family keeps its members whatever their status, so every member
+      // always finds its column, even when the saved view would hide it.
+      activeFamily
+        ? familyBoardStatuses()
+        : activeObjective
+          ? STATUSES
+          : visibleStatuses(config),
     [activeFamily, activeObjective, config],
   );
   // Objective mode no longer forces a manual order (MIN-510): it follows the
@@ -917,6 +926,10 @@ function ProjectBoard() {
           onCreate={createIssue}
           onCreateInProject={createIssueInProject}
           initialStatus={createStatus}
+          // Family mode: a new issue created from this scoped board lands IN
+          // the family — without the preset it would be born top-level and
+          // instantly vanish from the board it was created on.
+          initialParentId={activeFamily?.parent.id ?? null}
           // The project board opens its own dialog (column presets) —
           // distinguished from the global dialog in the stats.
           analyticsSource={activeObjective ? "objective" : "board"}
