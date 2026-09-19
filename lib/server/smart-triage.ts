@@ -77,6 +77,12 @@ export type SmartTriageResult =
       /** Whether at least one column was ranked by a decision engine (jev
           mode) rather than by the rules. Feedback + metrics only. */
       scored: boolean;
+      /**
+       * Per-ticket urgency scores of the scored columns, when the run
+       * scored (`jev` mode). `null` in rules mode — the client's Smart sort
+       * reads them (MIN-576); missing tickets read as the neutral score.
+       */
+      scores: Record<string, number> | null;
     };
 
 /**
@@ -84,17 +90,25 @@ export type SmartTriageResult =
  * `smart_triage_mode`. Throws a `PlanLimitError` in jev mode when the ACTOR's
  * budget is dry (the route maps it) — arming Jev then triaging with an empty
  * budget must say so, not silently fall back to the rules.
+ *
+ * `persist` (MIN-576): the board's Smart sort scores WITHOUT writing — the
+ * display order lives in the view sort, the manual drag order stays
+ * untouched — while the persisted mode keeps the write for a caller that
+ * wants the computed order to become the board's baseline.
  */
 export async function runSmartTriage({
   projectId,
   actorId,
   statuses,
+  persist = true,
 }: {
   projectId: string;
   /** Who clicked — the payer of the Jev pass in jev mode. */
   actorId: string;
   /** Columns to reorder (open ones). Default: every open column. */
   statuses?: unknown;
+  /** Write the computed order into the positions. Default: write. */
+  persist?: boolean;
 }): Promise<SmartTriageResult> {
   const service = getServiceClient();
   const access = await getProjectAccess(actorId, projectId);
@@ -118,7 +132,8 @@ export async function runSmartTriage({
           typeof s === "string" && (TRIAGE_STATUSES as string[]).includes(s)
       ) as IssueStatus[])
     : TRIAGE_STATUSES;
-  if (requested.length === 0) return { ok: true, mode, moves: [], columns: 0, scored: false };
+  if (requested.length === 0)
+    return { ok: true, mode, moves: [], columns: 0, scored: false, scores: null };
 
   if (mode === "jev") await ensureUsageBudget(actorId, "automations");
 
@@ -240,6 +255,7 @@ export async function runSmartTriage({
 
   const now = Date.now();
   const moves: SmartTriageMove[] = [];
+  const scores: Record<string, number> = {};
   let columns = 0;
   let scored = false;
 
@@ -280,6 +296,9 @@ export async function runSmartTriage({
         // `category_ids`/`title` for the writes below.
         const orderedHead = jevTriageOrder(decision.head, decision.scores);
         ordered = [...orderedHead, ...rulesOrder.slice(decision.head.length)] as TriageIssueRow[];
+        for (const [id, score] of decision.scores) {
+          if (score !== null) scores[id] = score;
+        }
       } else {
         // Both engines failed: the rules order IS the degradation. The column
         // still gets reordered — the user asked for a triage, not an error.
@@ -304,7 +323,9 @@ export async function runSmartTriage({
     }
   }
 
-  if (moves.length > 0) {
+  // The Smart sort scores WITHOUT writing (persist=false, MIN-576): the
+  // computed order is returned, the positions stay the manual drag order.
+  if (persist && moves.length > 0) {
     // ONE atomic write: the batch commits together or not at all — a
     // half-reordered board would disagree with the client until the next
     // reconciliation. The RPC returns the rows actually updated; a silent
@@ -325,7 +346,14 @@ export async function runSmartTriage({
     }
   }
 
-  return { ok: true, mode, moves, columns, scored };
+  return {
+    ok: true,
+    mode,
+    moves: persist ? moves : [],
+    columns,
+    scored,
+    scores: scored ? scores : null,
+  };
 }
 
 /** The per-ticket open-blocks counts the state paints, from the folded edges. */

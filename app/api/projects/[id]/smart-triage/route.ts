@@ -7,15 +7,18 @@ import { runSmartTriage } from "@/lib/server/smart-triage";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * POST /api/projects/[id]/smart-triage — the board's "Smart triage" button
- * (MIN-566). Reorders the project's open columns according to the project's
- * `smart_triage_mode`: static rules (`rules`, free) or one decision-layer
- * scoring pass per column (`jev`, billed to the CALLER in Automations).
+ * POST /api/projects/[id]/smart-triage — the board's Smart ordering
+ * (MIN-566, MIN-576). Scores the project's open columns according to the
+ * project's `smart_triage_mode`: static rules (`rules`, free) or one
+ * decision-layer scoring pass per column (`jev`, billed to the CALLER in
+ * Automations).
  *
- * Body (all optional): `{ statuses?: IssueStatus[] }` — the columns to
- * reorder, restricted server-side to the open ones. There is no "off" mode
- * (MIN-575): the triage is always available, the project setting only picks
- * the engine (rules | jev).
+ * Body (all optional): `{ statuses?: IssueStatus[], persist?: boolean }` —
+ * the columns to score (restricted server-side to the open ones), and
+ * whether the computed order is written into the positions. The board's
+ * Smart sort calls with `persist: false`: the scores drive the view sort,
+ * the manual drag order stays untouched. Default: persist (the order
+ * becomes the board's baseline, the historical behavior).
  *
  * The move list is applied by the client (optimistic positions); the writes
  * have already happened here. A Jev budget that ran dry mid-request throws a
@@ -33,13 +36,15 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     body = {};
   }
-  const statuses = (body as { statuses?: unknown } | null)?.statuses;
+  const payload = (body ?? {}) as { statuses?: unknown; persist?: unknown };
+  const statuses = payload.statuses;
 
   try {
     const result = await runSmartTriage({
       projectId: id,
       actorId: auth.user.id,
       statuses,
+      persist: payload.persist !== false,
     });
     if (!result.ok) {
       return NextResponse.json(
@@ -52,6 +57,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       moves: result.moves,
       columns: result.columns,
       scored: result.scored,
+      scores: result.scores,
     });
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);

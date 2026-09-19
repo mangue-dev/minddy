@@ -31,7 +31,9 @@ import type {
   Project,
   ViewSort,
 } from "@/lib/types";
-import { issueComparator } from "@/lib/view-filter";
+import { boardComparatorFactory } from "@/lib/smart-triage";
+import { cycleBlockingRelations } from "@/lib/cycle";
+import type { ObjectiveStatus } from "@/lib/objective-constants";
 import { resolveRelationsByIssue } from "@/lib/relation-constants";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { promptRelations } from "@/lib/issue-prompt";
@@ -99,6 +101,7 @@ export function GlobalKanbanBoard({
   onCreateIssue,
   onAddRelation,
   comparator,
+  smartScores,
   buildMenuActions,
   currentCycleId,
   bulkCycleId,
@@ -150,6 +153,12 @@ export function GlobalKanbanBoard({
   /** Cycle mode (MIN-32): the reco order replaces `sort` — the ONLY order, so
       same-column reordering is disabled; cross-column drag still moves status. */
   comparator?: (a: Issue, b: Issue) => number;
+  /**
+   * Merged AI urgency scores of the board's jev-mode projects (MIN-576):
+   * when present, the "smart" sort orders by score. `null` = no AI mode
+   * armed or a pending/failed pass — the rules order stands.
+   */
+  smartScores?: Map<string, number | null> | null;
   /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
   /** My current cycle's id — cards in it show the blue cycle icon. Unset in
@@ -214,20 +223,51 @@ export function GlobalKanbanBoard({
     return map;
   }, [issues, relations, allIssueMap]);
 
-  // Cycle mode passes its own comparator; otherwise the view sort rules —
-  // and "smart" reads relations + statuses (a done blocker no longer lifts
-  // its target), resolved against ALL issues (the other end may be hidden).
-  const displayComparator = useMemo(() => {
-    if (comparator) return comparator;
+  // Cycle mode pins ONE comparator for every column (the reco order);
+  // otherwise the view sort builds its comparator per column (MIN-576).
+  // The smart sort's relations resolve against ALL issues and fold
+  // objective-ended "blocks" edges onto the objective's open tickets — the
+  // same preparation the server reorder applies (MIN-576 review).
+  const makeComparator = useMemo(() => {
+    if (comparator) return () => comparator;
     const statusById = new Map(
       Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
     );
-    return issueComparator(sort, { relations, statusById });
-  }, [comparator, sort, relations, allIssueMap]);
+    const rows = allIssues ?? issues;
+    const issuesByObjective = new Map<string, string[]>();
+    for (const issue of rows) {
+      if (!issue.objective_id) continue;
+      const list = issuesByObjective.get(issue.objective_id);
+      if (list) list.push(issue.id);
+      else issuesByObjective.set(issue.objective_id, [issue.id]);
+    }
+    const objectiveStatusById = new Map<string, ObjectiveStatus>();
+    for (const byProject of objectiveMapByProject.values()) {
+      for (const objective of byProject.values()) {
+        objectiveStatusById.set(objective.id, objective.status);
+      }
+    }
+    const { relations: folded, objectiveStatuses } = cycleBlockingRelations(
+      relations ?? [],
+      issuesByObjective,
+      objectiveStatusById,
+    );
+    for (const [id, status] of objectiveStatuses) statusById.set(id, status);
+    const known = folded.filter(
+      (r) =>
+        r.type !== "blocks" ||
+        (statusById.has(r.source_id) && statusById.has(r.target_id)),
+    );
+    return boardComparatorFactory(sort, {
+      relations: known,
+      statusById,
+      jevScores: smartScores ?? undefined,
+    });
+  }, [comparator, sort, relations, allIssueMap, smartScores, allIssues, issues, objectiveMapByProject]);
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
   const columns = useMemo(
-    () => buildColumns(statuses, issues, displayComparator),
-    [buildColumns, issues, statuses, displayComparator],
+    () => buildColumns(statuses, issues, makeComparator),
+    [buildColumns, issues, statuses, makeComparator],
   );
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -337,7 +377,7 @@ export function GlobalKanbanBoard({
   // calculation as the project board (see lib/use-board-drop.ts).
   const drop = useBoardDrop({
     columns,
-    comparator: displayComparator,
+    makeComparator,
     manual: sort === "manual",
     issueMap,
     selectedIds,

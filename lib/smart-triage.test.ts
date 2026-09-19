@@ -8,8 +8,10 @@ import {
   parseSmartTriageMode,
   triageAgeDays,
   triageIssueComparator,
+  boardComparatorFactory,
   type TriageIssue,
 } from "./smart-triage";
+import type { Issue } from "./types";
 import type { IssueStatus } from "./issue-constants";
 import type { IssueRelation } from "./types";
 
@@ -257,5 +259,74 @@ describe("MAX_TRIAGE_TICKETS_PER_DECISION", () => {
     // The LLM fallback answers one score per ticket in a single forced call;
     // past a few dozen the tool schema (and the bill) stop making sense.
     expect(MAX_TRIAGE_TICKETS_PER_DECISION).toBeLessThanOrEqual(50);
+  });
+});
+
+describe("boardComparatorFactory (MIN-576)", () => {
+  const NOW = Date.parse("2026-09-14T12:00:00Z");
+
+  /** The comparator's board shape: a full Issue cast — the factory serves
+   * the kanban boards, whose rows are Issues. */
+  const boardTicket = (overrides: Partial<TriageIssue> & { id: string }): Issue =>
+    ticket(overrides) as unknown as Issue;
+
+  function sorted(issues: Issue[], sort: Parameters<typeof boardComparatorFactory>[0], ctx: Parameters<typeof boardComparatorFactory>[1] = {}): string[] {
+    const make = boardComparatorFactory(sort, { now: NOW, ...ctx });
+    return issues.slice().sort(make(issues.slice())).map((i) => i.id);
+  }
+
+  it("applies the FULL triage rules in rules mode — the same order the server reorder writes", () => {
+    // A blocker rises above the middle tier, its blocked target sinks below,
+    // the xs quick win passes the xl high, the objective pair stays together.
+    const issues = [
+      boardTicket({ id: "a", priority: "urgent", position: 10 }),
+      boardTicket({ id: "b", priority: "low", position: 20 }),
+      boardTicket({ id: "c", priority: "medium", position: 30 }),
+      boardTicket({ id: "d", priority: "high", effort: "xl", position: 40 }),
+      boardTicket({ id: "e", priority: "medium", effort: "xs", objective_id: "obj-1", position: 50 }),
+      boardTicket({ id: "f", priority: "high", effort: "xs", objective_id: "obj-1", position: 60 }),
+    ];
+    const relations: IssueRelation[] = [
+      { id: "r1", source_id: "b", target_id: "a", type: "blocks" },
+    ];
+    expect(sorted(issues, "smart", { relations })).toEqual(["b", "f", "e", "d", "c", "a"]);
+  });
+
+  it("keeps the per-column grouping: the rules read the column's own issue set", () => {
+    // The same objective split across two calls (two columns) groups per
+    // column — a global comparator would tear it across statuses.
+    const issues = [
+      boardTicket({ id: "a", objective_id: "obj-1", position: 10 }),
+      boardTicket({ id: "b", objective_id: "obj-1", position: 20 }),
+      boardTicket({ id: "z", objective_id: "obj-2", effort: "xs", position: 30 }),
+    ];
+    const make = boardComparatorFactory("smart", { now: NOW });
+    const columnA = issues.slice(0, 2).sort(make(issues.slice(0, 2))).map((i) => i.id);
+    const columnB = issues.slice(2).sort(make(issues.slice(2))).map((i) => i.id);
+    expect(columnA).toEqual(["a", "b"]);
+    expect(columnB).toEqual(["z"]);
+  });
+
+  it("hybrid: ranked tickets compare by score, the others keep the rules ranking", () => {
+    const issues = [
+      boardTicket({ id: "a", priority: "urgent", position: 10 }),
+      boardTicket({ id: "b", priority: "low", position: 20 }),
+      boardTicket({ id: "c", priority: "low", due_date: "2026-09-15", position: 30 }),
+      boardTicket({ id: "d", priority: "medium", position: 40 }),
+    ];
+    const scores = new Map<string, number | null>([["d", 2]]);
+    const ordered = sorted(issues, "smart", { jevScores: scores });
+    // d (scored, even at a low 2) outranks the unranked ones; among them
+    // the rules stand (a's urgent tier, then c's imminent due date passing
+    // b's plain low) — NOT age/position.
+    expect(ordered).toEqual(["d", "a", "c", "b"]);
+  });
+
+  it("delegates the other sorts to the view comparator, column-blind", () => {
+    const issues = [
+      boardTicket({ id: "a", position: 20 }),
+      boardTicket({ id: "b", position: 10 }),
+    ];
+    expect(sorted(issues, "manual")).toEqual(["b", "a"]);
   });
 });

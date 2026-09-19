@@ -68,7 +68,7 @@ export interface BoardDrop {
 
 export function useBoardDrop({
   columns,
-  comparator,
+  makeComparator,
   manual,
   issueMap,
   selectedIds,
@@ -76,8 +76,9 @@ export function useBoardDrop({
 }: {
   /** The columns as displayed — the order read is that of the screen. */
   columns: { status: StatusMeta; items: Issue[] }[];
-  /** The column display sort (the one that produced `items`). */
-  comparator: (a: Issue, b: Issue) => number;
+  /** The column display sort (the one that produced `items`) — built per
+      TARGET column: the smart sort's rules and scores are column-scoped. */
+  makeComparator: (columnIssues: Issue[]) => (a: Issue, b: Issue) => number;
   /** Manual sort: the only case where the order IN a column reorders. */
   manual: boolean;
   issueMap: Map<string, Issue>;
@@ -105,7 +106,8 @@ export function useBoardDrop({
   } | null>(null);
   const trackedPlanRef = useRef<{
     planned: object | null;
-    comparator: (a: Issue, b: Issue) => number;
+    displayItems: Issue[] | undefined;
+    makeComparator: (columnIssues: Issue[]) => (a: Issue, b: Issue) => number;
   } | null>(null);
 
   const itemsByStatus = useMemo(() => {
@@ -274,25 +276,41 @@ export function useBoardDrop({
   const track = useCallback(
     (event: BoardDragEvent) => {
       const planned = plan(event);
+      const displayItems = planned
+        ? itemsByStatus.get(planned.status)
+        : undefined;
       if (
         trackedPlanRef.current?.planned === planned &&
-        trackedPlanRef.current.comparator === comparator
+        trackedPlanRef.current.displayItems === displayItems &&
+        // Scores can arrive DURING a drag: the comparator generation rides
+        // the identity, or the marker keeps a stale insertion point while
+        // the drop lands elsewhere (MIN-576 review).
+        trackedPlanRef.current.makeComparator === makeComparator
       ) {
         return;
       }
-      trackedPlanRef.current = { planned, comparator };
+      trackedPlanRef.current = { planned, displayItems, makeComparator };
       const next = planned
         ? previewBoardMove({
             moves: planned.moves,
-            displayItems: itemsByStatus.get(planned.status) ?? [],
-            comparator,
+            displayItems: displayItems ?? [],
+            // The rules comparator's order index is precomputed over the
+            // set it receives: the INCOMING cards must be in it, or they
+            // all tie at the fallback rank and the marker lies (MIN-576
+            // review).
+            comparator: makeComparator([
+              ...(displayItems ?? []),
+              ...planned.moves
+                .map((m) => m.issue)
+                .filter((incoming) => !(displayItems ?? []).some((i) => i.id === incoming.id)),
+            ]),
           })
         : null;
       setPreview((current) =>
         sameDropPreview(current, next) ? current : next,
       );
     },
-    [comparator, itemsByStatus, plan],
+    [makeComparator, itemsByStatus, plan],
   );
 
   const start = useCallback(

@@ -33,11 +33,12 @@ import type {
   ViewSort,
 } from "@/lib/types";
 import { resolveRelationsByIssue } from "@/lib/relation-constants";
+import { cycleBlockingRelations } from "@/lib/cycle";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { promptRelations } from "@/lib/issue-prompt";
 import { useBulkSelectionActions } from "@/lib/use-bulk-selection-actions";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
-import { issueComparator } from "@/lib/view-filter";
+import { boardComparatorFactory } from "@/lib/smart-triage";
 import { createBoardColumnsBuilder } from "@/lib/board-columns";
 import {
   BOARD_MOUSE_ACTIVATION_DISTANCE,
@@ -78,6 +79,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   relations,
   statuses,
   sort,
+  smartScores,
   projectId,
   projectKey,
   members,
@@ -105,6 +107,12 @@ export const KanbanBoard = memo(function KanbanBoard({
   relations: IssueRelation[];
   statuses: StatusMeta[];
   sort: ViewSort;
+  /**
+   * The project's AI urgency scores (project mode `jev`, MIN-576): when
+   * present, the "smart" sort orders by score. `null` = rules mode, a
+   * pending/failed scoring pass — the rules order stands.
+   */
+  smartScores?: Map<string, number | null> | null;
   projectId: string;
   projectKey: string;
   members: Member[];
@@ -185,17 +193,51 @@ export const KanbanBoard = memo(function KanbanBoard({
   }, [issues, relations, allIssueMap]);
 
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
-  // Smart sort reads relations + statuses (a done blocker no longer lifts its
-  // target), resolved against ALL issues — a filter may hide the other end.
-  const comparator = useMemo(() => {
+  // The smart sort's relations resolve against ALL issues (a filter may
+  // hide the other end) and fold objective-ended "blocks" edges onto the
+  // objective's open tickets — the same preparation the server reorder
+  // applies, so a ticket blocked through its objective still sinks (MIN-576
+  // review). An edge whose end is unknown here is not a dependency: the end
+  // is trashed or foreign — the rules ignore it rather than act on a
+  // guessed "open".
+  const triageContext = useMemo(() => {
     const statusById = new Map(
       Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
     );
-    return issueComparator(sort, { relations, statusById });
-  }, [sort, relations, allIssueMap]);
+    const issuesByObjective = new Map<string, string[]>();
+    for (const issue of allIssues) {
+      if (!issue.objective_id) continue;
+      const list = issuesByObjective.get(issue.objective_id);
+      if (list) list.push(issue.id);
+      else issuesByObjective.set(issue.objective_id, [issue.id]);
+    }
+    const { relations: folded, objectiveStatuses } = cycleBlockingRelations(
+      relations,
+      issuesByObjective,
+      new Map(objectives.map((o) => [o.id, o.status])),
+    );
+    for (const [id, status] of objectiveStatuses) statusById.set(id, status);
+    return {
+      relations: folded.filter(
+        (r) =>
+          r.type !== "blocks" ||
+          (statusById.has(r.source_id) && statusById.has(r.target_id)),
+      ),
+      statusById,
+    };
+  }, [relations, allIssues, objectives, allIssueMap]);
+  const makeComparator = useMemo(
+    () =>
+      boardComparatorFactory(sort, {
+        relations: triageContext.relations,
+        statusById: triageContext.statusById,
+        jevScores: smartScores ?? undefined,
+      }),
+    [sort, triageContext, smartScores],
+  );
   const columns = useMemo(
-    () => buildColumns(statuses, issues, comparator),
-    [buildColumns, issues, statuses, comparator],
+    () => buildColumns(statuses, issues, makeComparator),
+    [buildColumns, issues, statuses, makeComparator],
   );
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -283,7 +325,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   // calculation (see lib/use-board-drop.ts).
   const drop = useBoardDrop({
     columns,
-    comparator,
+    makeComparator,
     manual: sort === "manual",
     issueMap,
     selectedIds,

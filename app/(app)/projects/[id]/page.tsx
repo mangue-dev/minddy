@@ -11,7 +11,7 @@ import {
   useState,
 } from "react";
 import dynamic from "next/dynamic";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useParams,
   usePathname,
@@ -80,7 +80,6 @@ import {
   insertIssueEverywhere,
   issueWrites,
   mergeServerIssue,
-  patchIssueEverywhere,
   removeIssueEverywhere,
 } from "@/lib/optimistic/issue-writes";
 import { trackEvent } from "@/lib/analytics";
@@ -338,33 +337,6 @@ function ProjectBoard() {
   // (no per-issue PATCH) and refetches to stay authoritative. The manual
   // drag order remains editable: this is one gesture among others, not a
   // lock-in.
-  const [smartTriageRunning, setSmartTriageRunning] = useState(false);
-  const runSmartTriage = useCallback(() => {
-    if (!project || smartTriageRunning) return;
-    setSmartTriageRunning(true);
-    void (async () => {
-      try {
-        const { mode, moves, columns, scored } = await smartTriageApi(project.id);
-        for (const move of moves) {
-          patchIssueEverywhere(queryClient, project.id, move.id, {
-            position: move.position,
-          } as Partial<Issue>);
-        }
-        void queryClient.invalidateQueries({ queryKey: ["issues", project.id] });
-        trackEvent("smart_triage_ran", {
-          mode,
-          scored,
-          columns,
-          issues: moves.length,
-          scope: "project",
-        });
-      } catch (err) {
-        toast.error((err as Error).message);
-      } finally {
-        setSmartTriageRunning(false);
-      }
-    })();
-  }, [project, queryClient, smartTriageRunning]);
   const handleOpenIssue = useCallback((issue: Issue) => {
     setOpenIssueId(issue.id);
     setOpenIssueTab("description");
@@ -427,6 +399,62 @@ function ProjectBoard() {
   // old manual default, whose positions mean nothing in this filtered scope.
   const sort =
     activeObjective && config.sort === "manual" ? "smart" : config.sort;
+
+  // The scoring INPUTS (created, edited, deleted tickets) age the scores:
+  // a fingerprint over the board's rows rides the refetch decision below —
+  // NOT the query key (a new key would bill a pass on every keystroke).
+  const scoringFingerprint = useMemo(() => {
+    let latest = "";
+    for (const issue of issues) {
+      if (issue.updated_at > latest) latest = issue.updated_at;
+    }
+    return `${issues.length}:${latest}`;
+  }, [issues]);
+  const fetchedFingerprintRef = useRef<string | null>(null);
+  const lastFetchAtRef = useRef(0);
+  const smartScoresQuery = useQuery({
+    queryKey: ["smart-triage-scores", project?.id ?? null],
+    queryFn: async () => {
+      if (!project) return null;
+      const result = await smartTriageApi(project.id, { persist: false });
+      fetchedFingerprintRef.current = scoringFingerprint;
+      lastFetchAtRef.current = Date.now();
+      trackEvent("smart_triage_ran", {
+        mode: result.mode,
+        scored: result.scored,
+        columns: result.columns,
+        issues: Object.keys(result.scores ?? {}).length,
+        scope: "project",
+      });
+      return result.scores;
+    },
+    enabled: !!project && sort === "smart" && smartTriageMode === "jev",
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+  // A changed fingerprint (tickets created, edited, deleted) refetches the
+  // scores — throttled to one pass a minute so an editing burst cannot
+  // churn billed passes; a continuously mounted board never keeps scores
+  // that predate its tickets.
+  useEffect(() => {
+    if (sort !== "smart" || smartTriageMode !== "jev") return;
+    if (fetchedFingerprintRef.current === scoringFingerprint) return;
+    if (Date.now() - lastFetchAtRef.current < 60_000) return;
+    if (smartScoresQuery.isFetching) return;
+    void smartScoresQuery.refetch();
+  }, [scoringFingerprint, sort, smartTriageMode, smartScoresQuery]);
+  const smartScores = useMemo(() => {
+    // Gated on the MODE, not just the query's enabled flag: a cached score
+    // map must not outlive the project's switch back to rules (the query
+    // keeps its data while disabled). A FAILED refresh is dropped too —
+    // expired scores must not pose as current evidence; the rules order
+    // stands until a pass succeeds again.
+    if (smartTriageMode !== "jev" || smartScoresQuery.isError) return null;
+    const scores = smartScoresQuery.data;
+    if (!scores) return null;
+    return new Map(Object.entries(scores));
+  }, [smartScoresQuery.data, smartScoresQuery.isError, smartTriageMode]);
 
   const handleAskNumoForIssues = useCallback(
     (selectedIssues: Issue[]) => {
@@ -768,14 +796,6 @@ function ProjectBoard() {
                 completionPercent: currentCycleCompletionPercent,
                 onSelect: () => router.push("/all?view=cycle"),
               }}
-              // Smart triage (MIN-566, MIN-575): always rendered — the
-              // project setting only picks the engine (rules | jev), there
-              // is no "off" anymore.
-              smartTriage={{
-                mode: smartTriageMode,
-                running: smartTriageRunning,
-                onRun: runSmartTriage,
-              }}
             />
           )}
           <div className="min-h-0 flex-1 pt-3">
@@ -785,6 +805,9 @@ function ProjectBoard() {
               relations={relations}
               statuses={statuses}
               sort={sort}
+              // The Smart sort's AI scores (project mode jev, MIN-576): the
+              // comparator orders by urgency when the view sort is "smart".
+              smartScores={smartScores}
               buildMenuActions={buildCycleMenuActions}
               currentCycleId={currentCycle?.id ?? null}
               onSetCycle={onSetIssueCycle}

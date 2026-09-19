@@ -1,8 +1,9 @@
 import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
 import { isClosedStatus } from "@/lib/issue-constants";
 import { calendarDaysBetween } from "@/lib/due-date";
-import type { IssueRelation } from "@/lib/types";
-import { dueBoost, PRIORITY_ORDER } from "@/lib/view-filter";
+import type { Issue, IssueRelation, ViewSort } from "@/lib/types";
+import { dueBoost, issueComparator, PRIORITY_ORDER } from "@/lib/view-filter";
+import { triageScoreComparator } from "@/lib/triage-score-order";
 
 /**
  * Smart Triage (MIN-566) — the on-demand reorder of a board column, ALWAYS
@@ -45,6 +46,56 @@ export function parseSmartTriageMode(value: unknown): SmartTriageMode | null {
   return (SMART_TRIAGE_MODES as readonly unknown[]).includes(value)
     ? (value as SmartTriageMode)
     : null;
+}
+
+/**
+ * The board's per-column comparator factory (MIN-576) — the ONE ordering the
+ * Smart view sort reads, whichever engine the project's mode named:
+ *
+ * - `smart` — the FULL triage rules per column (`triageIssueComparator`:
+ *   relations tier first, quick wins, objectives kept together — the same
+ *   rules the server's reorder applies, so the two orders can never drift);
+ *   with AI scores in the context, a presence-based hybrid rides on top:
+ *   the tickets a scoring pass ranked compare by score among themselves,
+ *   the others (a failed column, the capped tail) keep the rules ranking
+ *   among themselves, and a ranked ticket outranks an unranked one.
+ * - any other sort — the view sort's own comparator, column-blind.
+ *
+ * Per COLUMN because the rules group objectives over the column's own issue
+ * set — one global comparator would tear an objective across statuses.
+ */
+export function boardComparatorFactory(
+  sort: ViewSort,
+  ctx: {
+    relations?: IssueRelation[];
+    statusById?: Map<string, IssueStatus>;
+    now?: number;
+    jevScores?: Map<string, number | null>;
+  }
+): (columnIssues: Issue[]) => (a: Issue, b: Issue) => number {
+  if (sort !== "smart") {
+    const comparator = issueComparator(sort, ctx);
+    return () => comparator;
+  }
+  const scores = ctx.jevScores;
+  const scored = scores ? triageScoreComparator(scores) : null;
+  return (columnIssues) => {
+    const rules = triageIssueComparator({
+      issues: columnIssues,
+      relations: ctx.relations,
+      statusById: ctx.statusById,
+      now: ctx.now,
+    });
+    if (!scored) return rules;
+    return (a, b) => {
+      const aScore = scores?.get(a.id);
+      const bScore = scores?.get(b.id);
+      if (aScore != null && bScore != null) return scored(a, b);
+      if (aScore == null && bScore == null) return rules(a, b);
+      // Mixed pair: the ranked ticket first — the AI put it there.
+      return aScore != null ? -1 : 1;
+    };
+  };
 }
 
 /** One position the server rewrote — applied optimistically by the client. */
@@ -226,7 +277,11 @@ export function triageIssueComparator(
     );
     for (const member of sorted) orderIndex.set(member.id, next++);
   }
-  return (a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0);
+  // An id the index never saw (a card projected into a drag preview) sorts
+  // LAST — index 0 would put it at the top of the column it lands in.
+  const unranked = orderIndex.size;
+  return (a, b) =>
+    (orderIndex.get(a.id) ?? unranked) - (orderIndex.get(b.id) ?? unranked);
 }
 
 /** The tie-break between two tied blocks: their best members compared on
@@ -258,24 +313,10 @@ function blockTiebreak(a: TriageIssue[], b: TriageIssue[], now: number): number 
  * highest first; ties and unscored tickets (the LLM pass may answer only part
  * of the column) fold back on the age-then-position tie-break, never on a
  * guessed score. Pure — the orchestration hands it the answers whichever
- * engine produced them.
+ * engine produced them. The comparison itself lives in
+ * `lib/triage-score-order.ts` (shared with the Smart view sort, MIN-576).
  */
-export const TRIAGE_NEUTRAL_SCORE = 3;
-
-export function jevTriageOrder(
-  issues: TriageIssue[],
-  scores: Map<string, number | null>
-): TriageIssue[] {
-  return [...issues].sort((a, b) => {
-    const scoreA = scores.get(a.id) ?? TRIAGE_NEUTRAL_SCORE;
-    const scoreB = scores.get(b.id) ?? TRIAGE_NEUTRAL_SCORE;
-    const diff = scoreB - scoreA;
-    if (diff !== 0) return diff;
-    const ageDiff = a.created_at.localeCompare(b.created_at);
-    if (ageDiff !== 0) return ageDiff;
-    return a.position - b.position;
-  });
-}
+export { TRIAGE_NEUTRAL_SCORE, triageScoreOrder as jevTriageOrder } from "./triage-score-order";
 
 /** The urgency scale a triage decision asks for — shared by the state builder
     (prepare.ts) and the score consumers, so both engines answer the same

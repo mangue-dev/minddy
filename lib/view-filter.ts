@@ -174,6 +174,10 @@ function dueTiebreak(a: Issue, b: Issue): number {
  * work passes an undated high. Ties read the due date, then the manual
  * position. Without a context (no relations known), it degrades to the
  * priority arrangement plus the due-date boosts.
+ *
+ * This reduced ranking serves the public share page only: a signed-in board
+ * sorts through `boardComparatorFactory` (lib/smart-triage.ts, MIN-576),
+ * which applies the project's full triage rules and its AI scores.
  */
 export function smartIssueComparator(
   ctx: SmartSortContext = {}
