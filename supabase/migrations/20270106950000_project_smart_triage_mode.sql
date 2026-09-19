@@ -59,5 +59,8 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON "public"."apply_smart_triage_moves" FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON "public"."apply_smart_triage_moves" TO "service_role";
+-- `ON FUNCTION` with the full signature: a bare `ON <name>` resolves to a
+-- TABLE, and the function would never be found (the migration failed with
+-- "relation does not exist" on its first application).
+REVOKE ALL ON FUNCTION "public"."apply_smart_triage_moves"("uuid", "jsonb") FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION "public"."apply_smart_triage_moves"("uuid", "jsonb") TO "service_role";
