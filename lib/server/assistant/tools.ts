@@ -1459,7 +1459,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_account_settings",
       description:
-        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, the status Numo-created issues land in, the auto-assign (on create / on start) and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the code agent's default model, reasoning level and branch prefix, and the automation preset. Call this before update_account_settings so you use exact current values.",
+        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, the status Numo-created issues land in, the auto-assign, Smart Fill (master, created issues, triage), and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the code agent's default model, reasoning level and branch prefix, and the automation preset. Call this before update_account_settings so you use exact current values.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -1509,7 +1509,17 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           smart_fill: {
             type: "boolean",
             description:
-              "When creating an issue, let Smart-fill infer its priority, effort, categories and objective from the title and description.",
+              "Master switch for Smart Fill. When enabled, it can infer missing priority, effort, categories and objective from issue title and description.",
+          },
+          smart_fill_created: {
+            type: "boolean",
+            description:
+              "Automatically run Smart Fill on eligible newly created issues that are not in triage.",
+          },
+          smart_fill_triage: {
+            type: "boolean",
+            description:
+              "Automatically run Smart Fill on eligible triage issues and promoted feedback.",
           },
           cycles_enabled: {
             type: "boolean",

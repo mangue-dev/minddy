@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveSmartFill, SMART_FILL_META_KEY } from "./smart-fill";
+import {
+  resolveSmartFill,
+  resolveSmartFillScope,
+  SMART_FILL_CREATED_META_KEY,
+  SMART_FILL_META_KEY,
+  SMART_FILL_TRIAGE_META_KEY,
+} from "./smart-fill";
 
 /**
  * The default, and that alone — but it's the detail that decides whether the feature
@@ -28,5 +34,31 @@ describe("resolveSmartFill", () => {
 
   it("is not determined by the neighboring preference", () => {
     expect(resolveSmartFill({ auto_assign_on_start: false })).toBe(true);
+  });
+});
+
+describe("resolveSmartFillScope", () => {
+  it("enables both automatic scopes by default", () => {
+    expect(resolveSmartFillScope(undefined, "created")).toBe(true);
+    expect(resolveSmartFillScope({}, "triage")).toBe(true);
+  });
+
+  it("lets each automatic scope be disabled independently", () => {
+    const meta = {
+      [SMART_FILL_CREATED_META_KEY]: false,
+      [SMART_FILL_TRIAGE_META_KEY]: true,
+    };
+    expect(resolveSmartFillScope(meta, "created")).toBe(false);
+    expect(resolveSmartFillScope(meta, "triage")).toBe(true);
+  });
+
+  it("keeps the master switch authoritative", () => {
+    const meta = {
+      [SMART_FILL_META_KEY]: false,
+      [SMART_FILL_CREATED_META_KEY]: true,
+      [SMART_FILL_TRIAGE_META_KEY]: true,
+    };
+    expect(resolveSmartFillScope(meta, "created")).toBe(false);
+    expect(resolveSmartFillScope(meta, "triage")).toBe(false);
   });
 });

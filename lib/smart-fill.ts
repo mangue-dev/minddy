@@ -17,6 +17,10 @@
  */
 
 export const SMART_FILL_META_KEY = "smart_fill";
+export const SMART_FILL_CREATED_META_KEY = "smart_fill_created";
+export const SMART_FILL_TRIAGE_META_KEY = "smart_fill_triage";
+
+export type SmartFillScope = "created" | "triage";
 
 /** Does the account have Smart-fill enabled? Enabled by default; only an explicit `false`
  * disables it. */
@@ -24,4 +28,17 @@ export function resolveSmartFill(
   meta: Record<string, unknown> | null | undefined,
 ): boolean {
   return meta?.[SMART_FILL_META_KEY] !== false;
+}
+
+/** Whether automatic Smart Fill monitoring is enabled for one creation family.
+ * The master preference always wins; each family is enabled by default so
+ * existing accounts keep their current behavior after the finer controls ship. */
+export function resolveSmartFillScope(
+  meta: Record<string, unknown> | null | undefined,
+  scope: SmartFillScope,
+): boolean {
+  if (!resolveSmartFill(meta)) return false;
+  const key =
+    scope === "triage" ? SMART_FILL_TRIAGE_META_KEY : SMART_FILL_CREATED_META_KEY;
+  return meta?.[key] !== false;
 }

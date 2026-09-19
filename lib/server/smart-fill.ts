@@ -7,6 +7,7 @@ import { hasUsageBudget } from "@/lib/server/usage";
 import { runDecision } from "@/lib/server/decisions/runner";
 import { buildSmartFillSpec } from "@/lib/server/decisions/prepare";
 import type { DecisionAnswers } from "@/lib/server/decisions/types";
+import { resolveSmartFill, resolveSmartFillScope, type SmartFillScope } from "@/lib/smart-fill";
 import {
   ISSUE_EFFORTS,
   ISSUE_PRIORITIES,
@@ -46,12 +47,10 @@ import {
  * `fillParameters`) is replayed verbatim as the fallback. `sanitizeSmartFill`
  * stays the single door every answer walks through, whichever engine said it.
  *
- * **Who pays: the one who activated the scale**, therefore the author of the ticket - and not the
- * project owner as Smart Assign. It's not an inconsistency, it's the same
- * rule applied to two different settings: Smart Assign is a DU setting
- * PROJECT, which the owner activates for everyone; Smart-fill is a preference
- * IN ACCOUNT, let each arm for himself and cut by ticket. The payer follows the
- * person who decides.
+ * **Who pays: the account tied to the creation.** `resolveSmartFillPayer`
+ * resolves that account from the direct actor, Numo user, MCP key creator,
+ * integration creator, or project owner for owner-managed triage. Smart Fill
+ * then checks that account's preferences and automation budget.
  */
 
 /** The patch that Smart-fill knows how to install — the four fields that can be deduced, and
@@ -68,6 +67,91 @@ export interface SmartFillPatch {
 export interface SmartFillContext {
   categories: { id: string; name: string }[];
   objectives: { id: string; name: string; status: string }[];
+}
+
+export interface SmartFillPayerInput {
+  projectId: string;
+  actorId: string | null;
+  integrationId?: string | null;
+  mcpKeyId?: string | null;
+  status: unknown;
+  explicit?: unknown;
+  /** Feedback promotion belongs to the owner's triage flow even when a member
+   * performs the promotion and the resulting issue lands outside triage. */
+  ownerBilledTriage?: boolean;
+  /** Forge imports and recurrence copies are not new user-linked creations. */
+  excluded?: boolean;
+}
+
+/**
+ * Resolves who owns and pays for an automatic Smart Fill pass.
+ *
+ * Provenance is authoritative: integration and MCP rows identify their creator,
+ * Numo/direct web creations use the acting user, and unattributed triage belongs
+ * to the project owner. An explicit per-ticket opt-in can re-enable a disabled
+ * automatic scope, but it never overrides the account-wide master switch.
+ */
+export async function resolveSmartFillPayer(
+  input: SmartFillPayerInput,
+): Promise<{ userId: string; scope: SmartFillScope } | null> {
+  try {
+    return await resolveSmartFillPayerUnsafe(input);
+  } catch (err) {
+    console.error("[smart-fill] payer resolution failed:", (err as Error).message);
+    return null;
+  }
+}
+
+async function resolveSmartFillPayerUnsafe(
+  input: SmartFillPayerInput,
+): Promise<{ userId: string; scope: SmartFillScope } | null> {
+  if (input.explicit === false || input.excluded) return null;
+
+  const service = getServiceClient();
+  const scope: SmartFillScope =
+    input.ownerBilledTriage || input.status === "triage" ? "triage" : "created";
+  let userId: string | null = null;
+
+  if (input.ownerBilledTriage) {
+    const { data } = await service
+      .from("projects")
+      .select("owner_id")
+      .eq("id", input.projectId)
+      .maybeSingle();
+    userId = (data?.owner_id as string | null | undefined) ?? null;
+  } else if (input.integrationId) {
+    const { data } = await service
+      .from("integrations")
+      .select("created_by")
+      .eq("id", input.integrationId)
+      .eq("project_id", input.projectId)
+      .maybeSingle();
+    userId = (data?.created_by as string | null | undefined) ?? null;
+  } else if (input.mcpKeyId) {
+    const { data } = await service
+      .from("api_keys")
+      .select("user_id")
+      .eq("id", input.mcpKeyId)
+      .maybeSingle();
+    userId = (data?.user_id as string | null | undefined) ?? null;
+  } else if (input.actorId) {
+    userId = input.actorId;
+  } else if (scope === "triage") {
+    const { data } = await service
+      .from("projects")
+      .select("owner_id")
+      .eq("id", input.projectId)
+      .maybeSingle();
+    userId = (data?.owner_id as string | null | undefined) ?? null;
+  }
+
+  if (!userId) return null;
+  const { data, error } = await service.auth.admin.getUserById(userId);
+  if (error || !data.user) return null;
+  const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
+  if (!resolveSmartFill(meta)) return null;
+  if (input.explicit !== true && !resolveSmartFillScope(meta, scope)) return null;
+  return { userId, scope };
 }
 
 /** Title/description truncated before prompt: a ticket pasted from a document
@@ -285,30 +369,29 @@ export function smartFillAnswersToRaw(answers: DecisionAnswers): Record<string, 
 export async function runSmartFill({
   projectId,
   projectName,
-  actorId,
+  billToUserId,
   title,
   description,
 }: {
   projectId: string;
   projectName: string;
-  /** Who creates, therefore who pays. Without it (integration, webhook), we do not complete
-   * not: an expense that cannot be attributed to anyone is not incurred. */
-  actorId: string | null;
+  /** Account resolved from creation provenance and charged for this pass. */
+  billToUserId: string | null;
   title: string;
   description: string | null;
 }): Promise<SmartFillPatch> {
-  if (!actorId || !title.trim()) return {};
+  if (!billToUserId || !title.trim()) return {};
   try {
     const config = await getAppConfigValues(["smart_fill_enabled"]);
     const enabled = (config["smart_fill_enabled"] ?? aiModelFallback("smart_fill_enabled")) !== "false";
     if (!enabled) return {};
     // The budget of THE ONE WHO ARMED the scale, as for dictation. Dry, we
     // does not fill out — and the ticket is still born.
-    if (!(await hasUsageBudget(actorId, "automations"))) return {};
+    if (!(await hasUsageBudget(billToUserId, "automations"))) return {};
 
     const ctx = await gatherContext(projectId);
     const spec = buildSmartFillSpec({ projectName, title, description, ctx });
-    const outcome = await runDecision(spec, { billTo: { userId: actorId }, projectId });
+    const outcome = await runDecision(spec, { billTo: { userId: billToUserId }, projectId });
     // `null` (both engines down) and an outcome without answers land on the
     // same empty patch: the ticket is born as it was written.
     return sanitizeSmartFill(outcome ? smartFillAnswersToRaw(outcome.answers) : null, ctx);

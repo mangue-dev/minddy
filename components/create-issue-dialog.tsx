@@ -71,7 +71,7 @@ import type {
   IssuePriority,
   IssueEffort,
 } from "@/lib/issue-constants";
-import { resolveSmartFill } from "@/lib/smart-fill";
+import { resolveSmartFill, resolveSmartFillScope } from "@/lib/smart-fill";
 import type { RecurrenceCadence } from "@/lib/recurrence";
 import type {
   Category,
@@ -226,10 +226,27 @@ export function CreateIssueDialog({
    * where something is going to fill it, reads like an oversight.
    */
   const smartFillAvailable = resolveSmartFill(user?.user_metadata);
-  const [smartFill, setSmartFill] = useState(smartFillAvailable);
+  const smartFillDefault = resolveSmartFillScope(
+    user?.user_metadata,
+    (initialStatus ?? DEFAULTS.status) === "triage" ? "triage" : "created",
+  );
+  const smartFillTouchedRef = useRef(false);
+  const [smartFill, setSmartFill] = useState(smartFillDefault);
   useEffect(() => {
-    if (open) setSmartFill(smartFillAvailable);
-  }, [open, smartFillAvailable]);
+    if (open) {
+      smartFillTouchedRef.current = false;
+      setSmartFill(smartFillDefault);
+    }
+  }, [open, smartFillDefault]);
+  useEffect(() => {
+    if (!open || smartFillTouchedRef.current) return;
+    setSmartFill(
+      resolveSmartFillScope(
+        user?.user_metadata,
+        fields.status === "triage" ? "triage" : "created",
+      ),
+    );
+  }, [open, fields.status, user]);
 
   // Account preference (Preferences → auto-assign): pre-fill the assignee
   // with the creator. Guarded on membership — the assignee picker only lists
@@ -763,7 +780,13 @@ export function CreateIssueDialog({
                 />
               )}
               {smartFillAvailable && (
-                <SmartFillCompact value={smartFill} onChange={setSmartFill} />
+                <SmartFillCompact
+                  value={smartFill}
+                  onChange={(value) => {
+                    smartFillTouchedRef.current = true;
+                    setSmartFill(value);
+                  }}
+                />
               )}
             </div>
 
