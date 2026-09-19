@@ -8,8 +8,9 @@
 
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
-import { Sparkles, Tag, Target, Triangle, UserCircle2 } from "lucide-react";
+import { Tag, Target, Triangle, UserCircle2 } from "lucide-react";
 import { DateTimePicker } from "@/components/date-time-picker";
+import { SmartFillIcon } from "@/components/smart-icons";
 import {
   SearchSelect,
   SearchMultiSelect,
@@ -421,9 +422,7 @@ export function SmartFillCompact({
               : "text-muted-foreground",
           )}
         >
-          {/* The same glyph as the “Smart-fill” actor in the timeline
- (actor-avatars): what we arm here is what we reread there. */}
-          <Sparkles className="size-4 shrink-0" />
+          <SmartFillIcon className="size-4 shrink-0" />
           <span>{t("smartFillChip")}</span>
         </button>
       </TooltipTrigger>
