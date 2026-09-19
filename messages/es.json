@@ -2381,6 +2381,7 @@
     "byokSurface_voice": "Voz y dictado",
     "byokSurface_feedback": "Proceso de sugerencia",
     "byokSurfaceUsesKey": "Usa tu clave",
+    "byokSurfaceUsesKeyFor": "Usa tu clave para {capabilities}",
     "byokSurfaceUsesQuota": "Permanece en la cuota de minddy",
     "byokModelDefault": "Modelo preseleccionado por el proveedor",
     "aiKeyUnconfirmed": "No hemos podido contactar con tu proveedor para confirmar esta clave. Hasta que responda, las ejecuciones seguirán usando la cuota de minddy.",

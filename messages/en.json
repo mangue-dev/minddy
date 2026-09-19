@@ -2381,6 +2381,7 @@
     "byokSurface_voice": "Voice and dictation",
     "byokSurface_feedback": "Feedback processing",
     "byokSurfaceUsesKey": "Uses your key",
+    "byokSurfaceUsesKeyFor": "Uses your key for {capabilities}",
     "byokSurfaceUsesQuota": "Stays on minddy's quota",
     "byokModelDefault": "Provider preselected model",
     "aiKeyUnconfirmed": "We couldn't reach your provider to confirm this key. Until it answers, runs stay on minddy's quota.",

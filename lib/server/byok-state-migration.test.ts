@@ -46,6 +46,18 @@ describe("multi-provider BYOK persistence boundary", () => {
     );
   });
 
+  it("claims unassigned capabilities only when inserting a new credential", () => {
+    const updateBranch = migration.indexOf("if found then");
+    const updateReturn = migration.indexOf("return;", updateBranch);
+    const assignmentInsert = migration.indexOf(
+      "insert into public.user_ai_capability_assignments",
+      updateBranch,
+    );
+    expect(updateBranch).toBeGreaterThan(-1);
+    expect(updateReturn).toBeGreaterThan(updateBranch);
+    expect(assignmentInsert).toBeGreaterThan(updateReturn);
+  });
+
   it("uses only transactional functions for route-level mutations", () => {
     expect(route).toContain('.rpc("upsert_user_ai_key"');
     expect(route).toContain('.rpc("delete_user_ai_key"');

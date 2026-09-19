@@ -242,28 +242,35 @@ async function confirmsUnvalidatedKey(params: {
  * run anything; an unvalidated line is therefore no longer worth anything, neither
  * here nor in `checkAgentQuota`.
  */
-export async function getUserByok(
+async function resolveUserByok(
   userId: string,
   surface?: AiSurface,
-  capability: ModelCatalogCapability = "text",
+  target: { capability: ModelCatalogCapability } | { provider: AgentProviderId } = {
+    capability: "text",
+  },
 ): Promise<UserByok | null> {
   const supabase = getServiceClient();
-  const { data: assignment } = await supabase
-    .from("user_ai_capability_assignments")
-    .select("ai_key_id")
-    .eq("user_id", userId)
-    .eq("capability", capability)
-    .maybeSingle();
-  const aiKeyId = (assignment as { ai_key_id?: string } | null)?.ai_key_id;
-  if (!aiKeyId) return null;
-  const { data } = await supabase
+  let aiKeyId: string | null = null;
+  if ("capability" in target) {
+    const { data: assignment } = await supabase
+      .from("user_ai_capability_assignments")
+      .select("ai_key_id")
+      .eq("user_id", userId)
+      .eq("capability", target.capability)
+      .maybeSingle();
+    aiKeyId = (assignment as { ai_key_id?: string } | null)?.ai_key_id ?? null;
+    if (!aiKeyId) return null;
+  }
+  let keyQuery = supabase
     .from("user_ai_keys")
     .select(
       "provider, key_encrypted, base_url, validated_at, updated_at, enabled_surfaces, feature_models",
     )
-    .eq("user_id", userId)
-    .eq("id", aiKeyId)
-    .maybeSingle();
+    .eq("user_id", userId);
+  keyQuery = "provider" in target
+    ? keyQuery.eq("provider", target.provider)
+    : keyQuery.eq("id", aiKeyId!);
+  const { data } = await keyQuery.maybeSingle();
   const row = data as {
     provider: string;
     key_encrypted: string | null;
@@ -328,6 +335,23 @@ export async function getUserByok(
     enabledSurfaces,
     featureModels: row.feature_models ?? {},
   };
+}
+
+export async function getUserByok(
+  userId: string,
+  surface?: AiSurface,
+  capability: ModelCatalogCapability = "text",
+): Promise<UserByok | null> {
+  return resolveUserByok(userId, surface, { capability });
+}
+
+/** Resolve a frozen run from the provider recorded on that run, not current routing. */
+async function getUserByokForProvider(
+  userId: string,
+  surface: AiSurface,
+  provider: AgentProviderId,
+): Promise<UserByok | null> {
+  return resolveUserByok(userId, surface, { provider });
 }
 
 /** True if the user has a usable BYOK (→ unlimited use). */
@@ -507,7 +531,9 @@ export async function resolveAgentApiKeyForRun(
     return resolvePlatformAgentEndpoint();
   }
 
-  const byok = await getUserByok(userId, surface);
+  const byok = options.provider
+    ? await getUserByokForProvider(userId, surface, options.provider)
+    : await getUserByok(userId, surface);
   if (!byok || (options.provider && byok.provider !== options.provider)) {
     throw new ByokCredentialUnavailableError();
   }

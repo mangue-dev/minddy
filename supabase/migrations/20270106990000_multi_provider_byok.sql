@@ -73,6 +73,25 @@ declare
 begin
   perform pg_advisory_xact_lock(hashtextextended(p_user_id::text, 0));
 
+  select * into saved_key
+  from public.user_ai_keys
+  where user_id = p_user_id and provider = p_provider
+  for update;
+
+  if found then
+    return query
+    update public.user_ai_keys
+    set
+      key_encrypted = p_key_encrypted,
+      key_prefix = p_key_prefix,
+      base_url = p_base_url,
+      validated_at = p_validated_at,
+      updated_at = now()
+    where id = saved_key.id
+    returning *;
+    return;
+  end if;
+
   insert into public.user_ai_keys (
     user_id,
     provider,
@@ -95,13 +114,6 @@ begin
     end,
     '{}'::jsonb
   )
-  on conflict (user_id, provider) do update
-  set
-    key_encrypted = excluded.key_encrypted,
-    key_prefix = excluded.key_prefix,
-    base_url = excluded.base_url,
-    validated_at = excluded.validated_at,
-    updated_at = now()
   returning * into saved_key;
 
   supported_capabilities := case p_provider

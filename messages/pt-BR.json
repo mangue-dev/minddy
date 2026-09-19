@@ -2381,6 +2381,7 @@
     "byokSurface_voice": "Voz e ditado",
     "byokSurface_feedback": "Processamento de feedback",
     "byokSurfaceUsesKey": "Usa sua chave",
+    "byokSurfaceUsesKeyFor": "Usa sua chave para {capabilities}",
     "byokSurfaceUsesQuota": "Permanece ligado Cota de minddy",
     "byokModelDefault": "Modelo pré-selecionado do provedor",
     "aiKeyUnconfirmed": "Não foi possível entrar em contato com seu provedor para confirmar esta chave. Até que ele responda, as execuções permanecem na cota de minddy.",

@@ -2381,6 +2381,7 @@
     "byokSurface_voice": "Voce e dettatura",
     "byokSurface_feedback": "Procedura di feedback",
     "byokSurfaceUsesKey": "Usa la chiave",
+    "byokSurfaceUsesKeyFor": "Usa la chiave per {capabilities}",
     "byokSurfaceUsesQuota": "Sostiene al contingente di minddy",
     "byokModelDefault": "Modello predefinito del provider",
     "aiKeyUnconfirmed": "Non è stato possibile contattare il provider per verificare questa chiave. Finché non risponde, le esecuzioni continueranno a utilizzare la quota di minddy.",

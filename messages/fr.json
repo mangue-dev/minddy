@@ -2381,6 +2381,7 @@
     "byokSurface_voice": "Voix et dictée",
     "byokSurface_feedback": "Traitement des retours",
     "byokSurfaceUsesKey": "Utilise votre clé",
+    "byokSurfaceUsesKeyFor": "Utilise votre clé pour : {capabilities}",
     "byokSurfaceUsesQuota": "Reste sur le quota minddy",
     "byokModelDefault": "Modèle pré-sélectionné du provider",
     "aiKeyUnconfirmed": "Nous n'avons pas pu joindre votre fournisseur pour confirmer cette clé. Tant qu'il ne répond pas, les sessions restent sur le quota minddy.",

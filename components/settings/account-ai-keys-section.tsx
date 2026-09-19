@@ -119,7 +119,7 @@ export function AccountAiKeysSection() {
 
       {keys.length > 0 ? <ByokCapabilityAssignments keys={keys} /> : null}
 
-      {keys.map((key) => (
+      {keys.filter((key) => key.assigned_capabilities.length > 0).map((key) => (
         <ByokSurfacePreferences
           key={key.id}
           aiKey={key}
@@ -218,6 +218,13 @@ function ByokCapabilityAssignments({ keys }: { keys: AiKey[] }) {
   );
 }
 
+function capabilitiesForSurface(
+  surface: (typeof AI_SURFACE_DEFINITIONS)[number],
+): ModelCatalogCapability[] {
+  if (surface.id === "agent") return ["text"];
+  return [...new Set(surface.modelKeys.map(modelCatalogCapabilityForKey))];
+}
+
 /** Areas covered by the key and explicit model of each type of call. */
 function ByokSurfacePreferences({
   aiKey: key,
@@ -245,6 +252,17 @@ function ByokSurfacePreferences({
   const tAdmin = useTranslations("Admin");
   const tc = useTranslations("Common");
   const queryClient = useQueryClient();
+  const visibleSurfaces = AI_SURFACE_DEFINITIONS.filter(
+    (surface) =>
+      !isLocalAgentProvider(key.provider) || surface.id === "agent",
+  )
+    .map((surface) => ({
+      surface,
+      assignedCapabilities: capabilitiesForSurface(surface).filter((capability) =>
+        key.assigned_capabilities.includes(capability),
+      ),
+    }))
+    .filter(({ assignedCapabilities }) => assignedCapabilities.length > 0);
 
   const saveSurfaces = async (surface: AiSurface, enabled: boolean) => {
     const current = key.enabled_surfaces ?? [];
@@ -278,13 +296,10 @@ function ByokSurfacePreferences({
 
   return (
     <SettingsGroup
-      anchor={SETTINGS_SECTIONS.accountAgent}
+      anchor={showAgentPreferences ? SETTINGS_SECTIONS.accountAgent : undefined}
       title={`${t("byokSurfacesTitle")} · ${getAgentProvider(key.provider)?.label ?? key.provider}`}
     >
-      {AI_SURFACE_DEFINITIONS.filter(
-        (surface) =>
-          !isLocalAgentProvider(key.provider) || surface.id === "agent",
-      ).map((surface) => {
+      {visibleSurfaces.map(({ surface, assignedCapabilities }) => {
         const enabled = key.enabled_surfaces.includes(surface.id);
         return (
           <div
@@ -294,7 +309,13 @@ function ByokSurfacePreferences({
             <SettingsRow
               label={t(`byokSurface_${surface.id}`)}
               hint={
-                enabled ? t("byokSurfaceUsesKey") : t("byokSurfaceUsesQuota")
+                enabled
+                  ? t("byokSurfaceUsesKeyFor", {
+                      capabilities: assignedCapabilities
+                        .map((capability) => t(`byokCapability_${capability}`))
+                        .join(", "),
+                    })
+                  : t("byokSurfaceUsesQuota")
               }
               control={
                 <Switch

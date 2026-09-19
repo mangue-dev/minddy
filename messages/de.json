@@ -2381,6 +2381,7 @@
     "byokSurface_voice": "Sprache und Diktieren",
     "byokSurface_feedback": "Feedback-Verarbeitung",
     "byokSurfaceUsesKey": "Verwendet Ihren Schlüssel",
+    "byokSurfaceUsesKeyFor": "Verwendet Ihren Schlüssel für {capabilities}",
     "byokSurfaceUsesQuota": "Verwendet weiterhin das Kontingent von minddy",
     "byokModelDefault": "Vom Anbieter vorausgewähltes Modell",
     "aiKeyUnconfirmed": "Wir konnten Ihren Anbieter nicht erreichen, um diesen Schlüssel zu bestätigen. Bis er antwortet, bleiben die Ausführungen auf dem Kontingent von minddy.",
