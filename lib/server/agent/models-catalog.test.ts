@@ -99,7 +99,9 @@ async function freshCatalog(
         mode: "platform",
       };
     }),
-    getUserByok: vi.fn(async () => null),
+    getUserByok: vi.fn(async () => endpoint
+      ? { ...endpoint, enabledSurfaces: ["agent"], featureModels: {} }
+      : null),
     userHasByokKey: vi.fn(async () => endpoint?.mode === "byok"),
   }));
   vi.doMock("@/lib/server/ai-runtime", () => ({
@@ -227,6 +229,60 @@ describe("getAgentModelsForUser", () => {
       maxBytes: 5 * 1024 * 1024,
     });
     expect(vi.mocked(listOpenRouterIndex)).not.toHaveBeenCalled();
+  });
+});
+
+describe("getActiveByokModelCatalog", () => {
+  it("returns no specialized models when the active provider lacks the capability", async () => {
+    const { getActiveByokModelCatalog } = await freshCatalog(
+      INDEX,
+      null,
+      {
+        provider: "anthropic",
+        baseUrl: "https://api.anthropic.com/v1",
+        apiKey: "user-key",
+        mode: "byok",
+      },
+    );
+
+    await expect(getActiveByokModelCatalog("user-1", "embedding")).resolves.toMatchObject({
+      provider: "anthropic",
+      models: [],
+    });
+  });
+
+  it("filters an OpenAI-compatible catalog to the requested family", async () => {
+    const { getActiveByokModelCatalog } = await freshCatalog(
+      INDEX,
+      null,
+      {
+        provider: "openai",
+        baseUrl: "https://api.openai.com/v1",
+        apiKey: "user-key",
+        mode: "byok",
+      },
+    );
+    const { safeFetch } = await import("@/lib/server/safe-fetch");
+    vi.mocked(safeFetch).mockResolvedValue({
+      status: 200,
+      ok: true,
+      headers: new Headers({ "content-type": "application/json" }),
+      url: new URL("https://api.openai.com/v1/models"),
+      bytes: Buffer.from(
+        JSON.stringify({
+          data: [
+            { id: "gpt-5.6-sol" },
+            { id: "gpt-4o-mini-transcribe" },
+            { id: "text-embedding-3-small" },
+          ],
+        }),
+      ),
+      truncated: false,
+    });
+
+    await expect(getActiveByokModelCatalog("user-1", "transcription")).resolves.toMatchObject({
+      models: [{ id: "gpt-4o-mini-transcribe", name: "gpt-4o-mini-transcribe" }],
+    });
   });
 });
 
