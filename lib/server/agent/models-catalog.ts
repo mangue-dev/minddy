@@ -1,7 +1,5 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
-
 import {
   getUserByok,
   getUserDefaultModel,
@@ -113,14 +111,10 @@ function byokCatalogCacheKey(
   userId: string,
   provider: AgentProviderId,
   baseUrl: string,
-  apiKey: string,
+  credentialVersion: string,
   capability: ModelCatalogCapability,
 ): string {
-  const credentialFingerprint = createHash("sha256")
-    .update(apiKey)
-    .digest("base64url")
-    .slice(0, 22);
-  return `byok|${userId}|${provider}|${baseUrl}|${capability}|${credentialFingerprint}`;
+  return `byok|${userId}|${provider}|${baseUrl}|${capability}|${credentialVersion}`;
 }
 
 /** Discard non-conversational models (embeddings, audio, image, etc.). */
@@ -368,6 +362,7 @@ export async function getAgentModelsForUser(
   let provider: AgentProviderId = DEFAULT_AGENT_PROVIDER;
   let baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!;
   let apiKey = "";
+  let credentialVersion: string | null = null;
   let mode: "platform" | "byok" = "platform";
   let endpointConfigured = true;
   try {
@@ -378,6 +373,7 @@ export async function getAgentModelsForUser(
     provider = endpoint.provider;
     baseUrl = normalizeBaseUrl(endpoint.baseUrl);
     apiKey = endpoint.apiKey;
+    credentialVersion = endpoint.credentialVersion;
     mode = endpoint.mode;
   } catch {
     endpointConfigured = false;
@@ -416,9 +412,11 @@ export async function getAgentModelsForUser(
   }
 
   const cacheKey = mode === "byok"
-    ? byokCatalogCacheKey(userId, provider, baseUrl, apiKey, "text")
+    ? credentialVersion
+      ? byokCatalogCacheKey(userId, provider, baseUrl, credentialVersion, "text")
+      : null
     : `${provider}|${baseUrl}|text`;
-  const hit = cache.get(cacheKey);
+  const hit = cacheKey ? cache.get(cacheKey) : undefined;
   if (hit && Date.now() - hit.at < TTL_MS) {
     return {
       ...header,
@@ -427,7 +425,7 @@ export async function getAgentModelsForUser(
   }
   try {
     const models = await loadModels(provider, baseUrl, apiKey);
-    cache.set(cacheKey, { at: Date.now(), models });
+    if (cacheKey) cache.set(cacheKey, { at: Date.now(), models });
     return {
       ...header,
       ...(await withMultipliers(models, limit, provider === "openrouter")),
@@ -473,7 +471,7 @@ export async function getActiveByokModelCatalog(
     userId,
     byok.provider,
     byok.baseUrl,
-    byok.apiKey,
+    byok.credentialVersion,
     capability,
   );
   const hit = cache.get(cacheKey);

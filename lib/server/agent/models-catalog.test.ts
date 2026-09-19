@@ -91,16 +91,22 @@ async function freshCatalog(
       provider: endpoint?.provider ?? "openrouter",
     })),
     resolveAgentApiKey: vi.fn(async () => {
-      if (endpoint) return endpoint;
+      if (endpoint) return { ...endpoint, credentialVersion: `${endpoint.apiKey}-version` };
       return {
         provider: "openrouter",
         baseUrl: "https://openrouter.ai/api/v1",
         apiKey: "platform-key",
+        credentialVersion: null,
         mode: "platform",
       };
     }),
     getUserByok: vi.fn(async () => endpoint
-      ? { ...endpoint, enabledSurfaces: ["agent"], featureModels: {} }
+      ? {
+          ...endpoint,
+          credentialVersion: `${endpoint.apiKey}-version`,
+          enabledSurfaces: ["agent"],
+          featureModels: {},
+        }
       : null),
     userHasByokKey: vi.fn(async () => endpoint?.mode === "byok"),
   }));
@@ -304,6 +310,7 @@ describe("getActiveByokModelCatalog", () => {
       provider: "openai",
       baseUrl: "https://api.openai.com/v1",
       apiKey: "rotated-user-key",
+      credentialVersion: "rotated-user-key-version",
       enabledSurfaces: ["agent"],
       featureModels: {},
     });
