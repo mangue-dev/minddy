@@ -24,7 +24,7 @@ The last 24-hour window contains 71,476 API Gateway events, 384 Postgres events,
 225 PostgREST events and 686 Auth events. There are no deployed Edge Functions
 and neither `function_logs` nor `function_edge_logs` returned events in the
 four windows. Auth returned no failed requests in the last window; earlier
-windows contain seven rejected admin-user password fixtures and one
+windows contain six rejected admin-user password requests and one
 `refresh_token_not_found` response. These do not establish a recurring preview
 authentication defect.
 
@@ -32,7 +32,7 @@ authentication defect.
 | --- | ---: | --- |
 | Issue reads exceeding statement timeout (`57014`) | 25 Postgres; at least 49 preview request timeouts over four days | High: global board, issue reconciliation and project issue lists fail. 21 database statements were global reads and four were project-scoped reads. Corrected the repeated RLS work described below. |
 | Mixed activity batches violate `issue_events.via_smart_fill` NOT NULL (`23502`) | 8 Postgres; also confirmed in preview | High: ticket creation succeeds but its activity batch and associated webhook dispatch disappear. Fixed in `insertEvents`. |
-| `numo_turn_events_type_check` (`23514`) | 24 Postgres; at least 11 preview requests | Previously lost reasoning activity. Already fixed by `20270106920000_numo_turn_events_reasoning_delta.sql` (PR #236); migration is present in hosted history and no later occurrences appear after Sep 17 13:25. No duplicate fix. |
+| `numo_turn_events_type_check` (`23514`) | 24 Postgres; 11 messages in 10 distinct sampled preview requests | Previously lost reasoning activity. Already fixed by `20270106920000_numo_turn_events_reasoning_delta.sql` (PR #236); migration is present in hosted history and no later occurrences appear after Sep 17 13:25. No duplicate fix. |
 | Realtime topic access denied (`42501`) | 111 | Authorization refusals, last seen Sep 18 15:25. Do not weaken topic/session checks. No matching continuing preview defect established; investigate a fresh subscribed topic and membership generation if this recurs. |
 | Invalid UUID `undefined` (`22P02`) | 105 | Project reads, concentrated around Sep 17 18:58 and 22:07–22:09 alongside duplicate project creation. Origin is not established by these database logs. Follow up on the caller that continues after creation fails; do not treat the string as a valid project. |
 | Invalid UUID from PR capture fixture (`22P02`) | 13 | The literal matches `captures/shots/pull-request/fixture.mjs::PR_ID`. Capture traffic escaped its mocked route. Isolate capture networking; excluded from ordinary preview application failures. |
@@ -84,8 +84,9 @@ prove every historical timeout had the same cause.
 
 `20270107000000_issue_read_policy_batching.sql` changes only two SELECT policies:
 
-- `issues_select` uses the RLS-visible projects set, whose existing SELECT
-  policy has the same owner-or-member rule, and retains `deleted_at IS NULL`.
+- `issues_select` builds the accessible project set from indexed owner and
+  membership lookups, both still protected by their existing RLS policies,
+  and retains `deleted_at IS NULL`.
 - `issue_categories_select` relies on the parent issue's RLS visibility,
   removing the duplicate explicit project check.
 
@@ -94,28 +95,87 @@ timeout increase, retry loop or write-policy change is introduced. The existing
 behavior for tickets inside a trashed project remains unchanged. Live session
 and MFA enforcement still run through the PostgREST pre-request hook.
 
-On the same isolated PostgreSQL 17 database, five sequential runs per policy
-version over 650 synthetic issues and 1,300 category links measured:
+The initial batched candidate was measured on the same isolated PostgreSQL 17
+database with five sequential runs per policy version over 650 synthetic issues
+and 1,300 category links:
 
 | Policy | Execution times (ms) | Median |
 | --- | --- | ---: |
 | Original | 84.448, 76.076, 75.357, 75.971, 81.425 | 76.076 ms |
-| Corrected | 2.915, 2.700, 2.711, 3.104, 2.411 | 2.711 ms |
+| Initial batched candidate | 2.915, 2.700, 2.711, 3.104, 2.411 | 2.711 ms |
 
-This is approximately 28 times faster for this local fixture, not a hosted
-latency guarantee. Ten concurrent authenticated PostgREST reads then returned
+This initial comparison is approximately 28 times faster for this local fixture,
+not a hosted latency guarantee. Extended review then exposed a scaling problem
+in that candidate and refined it, as described below. Ten concurrent
+authenticated PostgREST reads against the initial candidate returned
 HTTP 200 with all 650 issues and 1,300 links, in 48–123 ms each. Five corrected
 activity batches returned HTTP 201. From **19:16:40.822** through the end of that
 replay, the local PostgREST and PostgreSQL container logs recorded no errors.
 Earlier deliberate failing requests are excluded from this post-fix window.
 
+## Extended independent review
+
+Three agents independently reviewed authorization/performance, event persistence
+and callers, and audit attribution. The evidence review corrected the Auth count
+and distinguished duplicate Numo log messages from unique requests above. The
+logged Auth failures do not establish that those requests were test fixtures.
+
+The review found four actionable cases, all reproduced locally:
+
+- **Cross-tenant scaling:** the initial unfiltered projects subquery evaluated
+  membership for every tenant project, even for one issue lookup. The final
+  migration uses an indexed owner/member UNION and adds no security-definer
+  function. The larger schema-prefix benchmark below verifies both narrow reads
+  and board reads against this final version.
+- **Category replacement after a failed read:** `setIssueCategories` treated a
+  failed category lookup as an empty selection, deleted the current links and
+  returned success. A malformed ID causing `22P02` reproduced the data loss;
+  transport failures reached the same path. Read errors now stop the operation
+  before any deletion and produce an explicit database error.
+- **Creation claiming nonexistent categories:** `createIssueForProject` ignored
+  category lookup/link errors, returned unpersisted IDs and could record a
+  Smart-fill category change that never happened. A simulated `23503` reproduced
+  the false success. Lookup/link failures are now logged; only successfully
+  inserted links appear in the response and Smart-fill attribution. The primary
+  issue remains successful because it has already committed, avoiding duplicate
+  creation on retry. Independently saved scalar fields retain their attribution.
+- **Duplicate webhook scheduling:** `after(run())` started a delivery before
+  verifying that a request context existed. When `after` threw, the fallback
+  started a second delivery with another delivery ID. Passing `run` as a callback
+  makes each path schedule exactly one execution.
+
+The last three are pre-existing caller defects found through code review and
+fault injection, not new frequencies inferred from the hosted log sample.
+Category replacement still consists of separate delete and insert requests;
+atomic replacement under concurrent writes or an insert failure remains a
+separate transaction-design follow-up.
+
+The final scaling benchmark loaded the real schema prefix through
+`20270106900000` on PostgreSQL 17, with unmodified authority/storage triggers
+and RLS. It used 10,000 synthetic projects, 10,001 memberships, 650 visible
+issues and 1,300 category links. Five sequential runs per policy and query shape
+produced these median database execution times:
+
+| Policy | Single issue | Board with category links |
+| --- | ---: | ---: |
+| Original | 0.106 ms | 152.432 ms |
+| Initial unfiltered candidate | 33.922 ms | 70.746 ms |
+| Final indexed UNION | 0.020 ms | 1.324 ms |
+
+The final single-issue plan uses the owner/member indexes and eight shared
+buffer hits, compared with 30,195 for the unfiltered candidate. These are local
+synthetic measurements, separate from the hosted observation and the smaller
+initial benchmark; they do not predict hosted latency.
+
 ## Verification and rollout
 
-- 23 focused Vitest tests passed across activity insertion, ticket birth,
-  occurrence timestamps and the existing Numo reasoning migration regression.
-- 19 pgTAP assertions passed: owner/member equivalence to the original
+- 178 focused Vitest tests passed across activity insertion, ticket birth,
+  occurrence timestamps, category replacement, webhook scheduling, tenancy
+  references, issue relations and the existing Numo reasoning migration regression.
+- 31 pgTAP assertions passed: owner/member equivalence to the original
   predicate, foreign and anonymous isolation, trash behavior, member writes,
-  membership revocation and identity changes between statements.
+  membership revocation, ownership transfer and identity changes between
+  statements, including reused generic prepared statements.
 - Typecheck, targeted lint, owned-English and whitespace checks passed.
 
 The disposable bootstrap exposed an **existing** failure in

@@ -62,23 +62,49 @@ SELECT lives_ok($$UPDATE public.issues SET title = 'Member edit' WHERE id = '549
 SELECT is((SELECT title FROM public.issues WHERE id = '54900000-0000-4000-8000-000000000020'), 'Member edit', 'the member update actually persists');
 SELECT throws_ok($$INSERT INTO public.issue_categories (issue_id, category_id) VALUES ('54900000-0000-4000-8000-000000000023', '54900000-0000-4000-8000-000000000030')$$, '42501', NULL, 'member cannot attach a category to a foreign issue');
 
+-- PostgREST reuses prepared statements across requests and JWT identities.
+SET LOCAL plan_cache_mode = force_generic_plan;
+PREPARE read_policy_issues AS SELECT id FROM public.issues ORDER BY id;
+PREPARE read_policy_categories AS SELECT issue_id, category_id FROM public.issue_categories ORDER BY issue_id, category_id;
+SELECT results_eq('EXECUTE read_policy_issues', 'SELECT id FROM expected_issues ORDER BY id', 'prepared issue reads match the member visibility');
+SELECT results_eq('EXECUTE read_policy_categories', 'SELECT issue_id, category_id FROM expected_categories ORDER BY issue_id, category_id', 'prepared category reads match the member visibility');
+
 RESET ROLE;
 DELETE FROM public.project_members WHERE user_id = '54900000-0000-4000-8000-000000000002';
 SET LOCAL ROLE authenticated;
 SELECT is((SELECT count(*)::int FROM public.issues), 0, 'membership revocation takes effect on the next statement');
 SELECT is((SELECT count(*)::int FROM public.issue_categories), 0, 'revocation also removes category visibility');
+SELECT is_empty('EXECUTE read_policy_issues', 'prepared issue reads observe membership revocation');
+SELECT is_empty('EXECUTE read_policy_categories', 'prepared category reads observe membership revocation');
 
 SELECT set_config('request.jwt.claim.sub', '54900000-0000-4000-8000-000000000003', true);
 SELECT is((SELECT count(*)::int FROM public.issues), 1, 'switching JWT identity does not reuse another user access');
 SELECT is((SELECT id::text FROM public.issues), '54900000-0000-4000-8000-000000000023', 'outsider sees their own issue only');
 SELECT is((SELECT issue_id::text FROM public.issue_categories), '54900000-0000-4000-8000-000000000023', 'outsider sees their own category link only');
+SELECT results_eq('EXECUTE read_policy_issues', $$VALUES ('54900000-0000-4000-8000-000000000023'::uuid)$$, 'prepared issue reads recompute the JWT identity');
+SELECT results_eq('EXECUTE read_policy_categories', $$VALUES ('54900000-0000-4000-8000-000000000023'::uuid, '54900000-0000-4000-8000-000000000032'::uuid)$$, 'prepared category reads recompute the JWT identity');
+
+RESET ROLE;
+UPDATE public.projects
+SET owner_id = '54900000-0000-4000-8000-000000000003'
+WHERE id = '54900000-0000-4000-8000-000000000010';
+SET LOCAL ROLE authenticated;
+SELECT results_eq('EXECUTE read_policy_issues', $$VALUES ('54900000-0000-4000-8000-000000000020'::uuid), ('54900000-0000-4000-8000-000000000023'::uuid)$$, 'prepared issue reads grant access to the new project owner');
+SELECT results_eq('EXECUTE read_policy_categories', $$VALUES ('54900000-0000-4000-8000-000000000020'::uuid, '54900000-0000-4000-8000-000000000030'::uuid), ('54900000-0000-4000-8000-000000000023'::uuid, '54900000-0000-4000-8000-000000000032'::uuid)$$, 'prepared category reads grant access to the new project owner');
+SELECT set_config('request.jwt.claim.sub', '54900000-0000-4000-8000-000000000001', true);
+SELECT results_eq('EXECUTE read_policy_issues', $$VALUES ('54900000-0000-4000-8000-000000000022'::uuid)$$, 'prepared issue reads remove access from the former project owner');
+SELECT results_eq('EXECUTE read_policy_categories', $$VALUES ('54900000-0000-4000-8000-000000000022'::uuid, '54900000-0000-4000-8000-000000000031'::uuid)$$, 'prepared category reads remove access from the former project owner');
 
 SELECT set_config('request.jwt.claim.sub', '', true);
 SELECT is((SELECT count(*)::int FROM public.issues), 0, 'missing identity fails closed');
 SELECT is((SELECT count(*)::int FROM public.issue_categories), 0, 'missing identity cannot read category links');
+SELECT is_empty('EXECUTE read_policy_issues', 'prepared issue reads fail closed without an identity');
+SELECT is_empty('EXECUTE read_policy_categories', 'prepared category reads fail closed without an identity');
 SET LOCAL ROLE anon;
 SELECT is((SELECT count(*)::int FROM public.issues), 0, 'anonymous callers cannot read issues');
 SELECT is((SELECT count(*)::int FROM public.issue_categories), 0, 'anonymous callers cannot read category links');
 RESET ROLE;
+DEALLOCATE read_policy_issues;
+DEALLOCATE read_policy_categories;
 SELECT * FROM finish();
 ROLLBACK;
