@@ -1,11 +1,11 @@
 import "server-only";
 
+import { getUserByok, getUserDefaultModel, resolveAgentApiKey } from "./model";
 import {
-  getUserByok,
-  getUserDefaultModel,
-  resolveAgentApiKey,
-} from "./model";
-import { getBaselinePricing, getModelPlanLimit, type ModelPlanLimit } from "./model-plan";
+  getBaselinePricing,
+  getModelPlanLimit,
+  type ModelPlanLimit,
+} from "./model-plan";
 import { listOpenRouterIndex } from "./openrouter-index";
 import {
   averageUsdPerMTok,
@@ -55,18 +55,18 @@ export interface AgentModelEntry {
   id: string;
   name: string;
   /**
- * The reasoning levels that this model accepts (MIN-122, refined), such as
- * that it publishes. Absent outside OpenRouter: the other endpoints do not have
- * a capacity index, and the selector then falls back to the generic
- * levels — the same conservative fallback as for the image.
- */
+   * The reasoning levels that this model accepts (MIN-122, refined), such as
+   * that it publishes. Absent outside OpenRouter: the other endpoints do not have
+   * a capacity index, and the selector then falls back to the generic
+   * levels — the same conservative fallback as for the image.
+   */
   reasoning?: ModelReasoning | null;
   /**
- * Usage cost relating to the default minddy model (cf.
- * lib/model-multiplier.ts). Absent when it means nothing: provider BYOK
- * (prices unknown to us, and paid by the user anyway), model
- * outside the OpenRouter catalog, or free baseline.
- */
+   * Usage cost relating to the default minddy model (cf.
+   * lib/model-multiplier.ts). Absent when it means nothing: provider BYOK
+   * (prices unknown to us, and paid by the user anyway), model
+   * outside the OpenRouter catalog, or free baseline.
+   */
   multiplier?: number;
 }
 
@@ -78,25 +78,25 @@ export interface AgentModelsCatalog {
   /**
    * Plan multiplier cap, or `null` when none applies (BYOK and the admin
    * catalog). `null` = the picker does not display a multiplier or gray out a model.
- */
+   */
   maxMultiplier?: number | null;
   /** Account Plan — to name the limit in the UI (“your Go plan”). */
   planId?: string;
   /**
- * RECOMMENDED ids, in the order desired by the admin, and restricted to those that
- * this catalog really contains. This is what the picker shows when opening,
- * before any keystroke (see lib/recommended-models.ts).
- *
- * Absent in the ADMIN catalog: there we set `app_config`, including
- * transcription or embedding models that we do not advise anyone — a
- * list of advice would hide precisely what we came to look for.
- */
+   * RECOMMENDED ids, in the order desired by the admin, and restricted to those that
+   * this catalog really contains. This is what the picker shows when opening,
+   * before any keystroke (see lib/recommended-models.ts).
+   *
+   * Absent in the ADMIN catalog: there we set `app_config`, including
+   * transcription or embedding models that we do not advise anyone — a
+   * list of advice would hide precisely what we came to look for.
+   */
   recommended?: string[];
   /**
- * Non-secret address that only the desktop application uses to discover
- * the local catalog. The server never joins it: `models` remains empty here
- * and the Electron bridge makes the call on loopback.
- */
+   * Non-secret address that only the desktop application uses to discover
+   * the local catalog. The server never joins it: `models` remains empty here
+   * and the Electron bridge makes the call on loopback.
+   */
   localEndpoint?: {
     provider: Extract<AgentProviderId, "local_openai" | "ollama">;
     baseUrl: string;
@@ -118,7 +118,8 @@ function byokCatalogCacheKey(
 }
 
 /** Discard non-conversational models (embeddings, audio, image, etc.). */
-const NON_CHAT_RE = /(embed(?:ding)?|whisper|tts|dall-e|moderation|audio|image|imagen|veo|realtime|transcribe|rerank)/i;
+const NON_CHAT_RE =
+  /(embed(?:ding)?|whisper|tts|dall-e|moderation|audio|image|imagen|veo|realtime|transcribe|rerank)/i;
 
 /**
  * The list as PROPOSED: without its version duplicates, and row.
@@ -191,7 +192,9 @@ async function listOpenAICompat(
     maxBytes: MAX_MODELS_RESPONSE_BYTES,
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const body = JSON.parse(res.bytes.toString("utf8")) as { data?: Array<{ id: string }> };
+  const body = JSON.parse(res.bytes.toString("utf8")) as {
+    data?: Array<{ id: string }>;
+  };
   const models = (body.data ?? [])
     .map((m) => m.id?.replace(/^models\//, "")) // Gemini prefix `models/…`
     .filter((id): id is string => {
@@ -205,11 +208,18 @@ async function listOpenAICompat(
 }
 
 /** Native Anthropic `/v1/models` endpoint (`x-api-key` + `anthropic-version`). */
-async function listAnthropic(baseUrl: string, apiKey: string): Promise<AgentModelEntry[]> {
-  const res = await fetchAiProviderBytes("anthropic", `${baseUrl}/models?limit=1000`, {
-    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-    maxBytes: MAX_MODELS_RESPONSE_BYTES,
-  });
+async function listAnthropic(
+  baseUrl: string,
+  apiKey: string,
+): Promise<AgentModelEntry[]> {
+  const res = await fetchAiProviderBytes(
+    "anthropic",
+    `${baseUrl}/models?limit=1000`,
+    {
+      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      maxBytes: MAX_MODELS_RESPONSE_BYTES,
+    },
+  );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const body = JSON.parse(res.bytes.toString("utf8")) as {
     data?: Array<{ id: string; display_name?: string }>;
@@ -259,7 +269,12 @@ async function withMultipliers(
   models: AgentModelEntry[],
   limit: ModelPlanLimit | null,
   useOpenRouterPricing = true,
-): Promise<Pick<AgentModelsCatalog, "models" | "maxMultiplier" | "planId" | "recommended">> {
+): Promise<
+  Pick<
+    AgentModelsCatalog,
+    "models" | "maxMultiplier" | "planId" | "recommended"
+  >
+> {
   const recommended = await resolveRecommended(models, useOpenRouterPricing);
   if (!limit?.baseline) return { models, maxMultiplier: null, recommended };
   return {
@@ -285,7 +300,9 @@ async function attachMultipliers(
 ): Promise<AgentModelEntry[]> {
   if (!baseline) return models;
   const index = await listOpenRouterIndex();
-  const pricing = new Map<string, ModelPricing | null>(index.map((m) => [m.id, m.pricing]));
+  const pricing = new Map<string, ModelPricing | null>(
+    index.map((m) => [m.id, m.pricing]),
+  );
   return models.map((m) => {
     const multiplier = modelCostMultiplier(pricing.get(m.id), baseline);
     return multiplier == null ? m : { ...m, multiplier };
@@ -333,14 +350,15 @@ async function resolveRecommended(
   if (!useOpenRouterPricing) return applicable;
   const index = await listOpenRouterIndex();
   const price = new Map(
-    index.map((m) => [m.id, m.pricing ? averageUsdPerMTok(m.pricing) : null] as const),
+    index.map(
+      (m) => [m.id, m.pricing ? averageUsdPerMTok(m.pricing) : null] as const,
+    ),
   );
   // Unknown price maps to `Infinity`, so it sorts last. `localeCompare` is the
   // second criterion: otherwise models at the same price would preserve an
   // `app_config` order that is not meant to carry any meaning.
   const cost = (id: string) => price.get(id) ?? Infinity;
-  return applicable
-    .sort((a, b) => cost(a) - cost(b) || a.localeCompare(b));
+  return applicable.sort((a, b) => cost(a) - cost(b) || a.localeCompare(b));
 }
 
 /**
@@ -369,7 +387,9 @@ export async function getAgentModelsForUser(
     // This read never probes a local endpoint (`listStrategy: none`); it only
     // returns the correct provider and keeps the picker in the local run's
     // namespace.
-    const endpoint = await resolveAgentApiKey(userId, surface, { allowLocal: true });
+    const endpoint = await resolveAgentApiKey(userId, surface, {
+      allowLocal: true,
+    });
     provider = endpoint.provider;
     baseUrl = normalizeBaseUrl(endpoint.baseUrl);
     apiKey = endpoint.apiKey;
@@ -382,22 +402,30 @@ export async function getAgentModelsForUser(
   // Assistant calls retain provider feature defaults. Code-worker catalogs
   // expose only the explicit provider-bound account preference: there is no
   // provider or platform fallback that a new delegation could silently use.
-  const byok = surface === "assistant" ? await getUserByok(userId, surface) : null;
+  const byok =
+    surface === "assistant" ? await getUserByok(userId, surface) : null;
   const featureDefault = byok?.featureModels[modelKey]?.trim();
-  const providerDefault = surface === "assistant"
-    ? featureDefault || await resolveByokFeatureDefaultModel(provider, modelKey)
-    : null;
-  const accountDefault = surface === "agent" ? await getUserDefaultModel(userId) : null;
-  const defaultModel = surface === "assistant"
-    ? providerDefault ?? null
-    : accountDefault?.provider === provider
-      ? accountDefault.model
+  const providerDefault =
+    surface === "assistant"
+      ? featureDefault ||
+        (await resolveByokFeatureDefaultModel(provider, modelKey))
       : null;
+  const accountDefault =
+    surface === "agent" ? await getUserDefaultModel(userId) : null;
+  const defaultModel =
+    surface === "assistant"
+      ? (providerDefault ?? null)
+      : accountDefault?.provider === provider
+        ? accountDefault.model
+        : null;
 
   const limit = mode === "platform" ? await getModelPlanLimit(userId) : null;
   const localEndpoint = isLocalAgentProvider(provider)
     ? {
-        provider: provider as Extract<AgentProviderId, "local_openai" | "ollama">,
+        provider: provider as Extract<
+          AgentProviderId,
+          "local_openai" | "ollama"
+        >,
         baseUrl,
       }
     : undefined;
@@ -411,11 +439,18 @@ export async function getAgentModelsForUser(
     return { ...header, models: [], recommended: [], maxMultiplier: null };
   }
 
-  const cacheKey = mode === "byok"
-    ? credentialVersion
-      ? byokCatalogCacheKey(userId, provider, baseUrl, credentialVersion, "text")
-      : null
-    : `${provider}|${baseUrl}|text`;
+  const cacheKey =
+    mode === "byok"
+      ? credentialVersion
+        ? byokCatalogCacheKey(
+            userId,
+            provider,
+            baseUrl,
+            credentialVersion,
+            "text",
+          )
+        : null
+      : `${provider}|${baseUrl}|text`;
   const hit = cacheKey ? cache.get(cacheKey) : undefined;
   if (hit && Date.now() - hit.at < TTL_MS) {
     return {
@@ -433,13 +468,19 @@ export async function getAgentModelsForUser(
   } catch {
     return {
       ...header,
-      ...(await withMultipliers(hit?.models ?? [], limit, provider === "openrouter")),
+      ...(await withMultipliers(
+        hit?.models ?? [],
+        limit,
+        provider === "openrouter",
+      )),
     };
   }
 }
 
 /** Catalog for Numo conversations, using the assistant BYOK surface. */
-export function getAssistantModelsForUser(userId: string): Promise<AgentModelsCatalog> {
+export function getAssistantModelsForUser(
+  userId: string,
+): Promise<AgentModelsCatalog> {
   return getAgentModelsForUser(userId, "assistant");
 }
 
@@ -448,7 +489,7 @@ export async function getActiveByokModelCatalog(
   userId: string,
   capability: ModelCatalogCapability,
 ): Promise<AgentModelsCatalog> {
-  const byok = await getUserByok(userId);
+  const byok = await getUserByok(userId, undefined, capability);
   if (!byok) {
     return {
       provider: DEFAULT_AGENT_PROVIDER,
@@ -475,9 +516,15 @@ export async function getActiveByokModelCatalog(
     capability,
   );
   const hit = cache.get(cacheKey);
-  if (hit && Date.now() - hit.at < TTL_MS) return { ...header, models: hit.models };
+  if (hit && Date.now() - hit.at < TTL_MS)
+    return { ...header, models: hit.models };
   try {
-    const models = await loadModels(byok.provider, byok.baseUrl, byok.apiKey, capability);
+    const models = await loadModels(
+      byok.provider,
+      byok.baseUrl,
+      byok.apiKey,
+      capability,
+    );
     cache.set(cacheKey, { at: Date.now(), models });
     return { ...header, models };
   } catch {
@@ -533,7 +580,9 @@ export async function getPlatformModelCatalog(
   capability: ModelCatalogCapability = "text",
 ): Promise<AgentModelEntry[]> {
   if (!isManagedAiEnabled()) return [];
-  const baseUrl = normalizeBaseUrl(resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!);
+  const baseUrl = normalizeBaseUrl(
+    resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!,
+  );
   const apiKey = process.env.OPENROUTER_API_KEY;
 
   const cacheKey = `platform|${baseUrl}|${capability}`;

@@ -14,6 +14,15 @@ const h = vi.hoisted(() => ({
     enabled_surfaces: string[];
     feature_models: Record<string, string>;
   } | null,
+  providerByok: null as {
+    provider: string;
+    key_encrypted: string;
+    base_url: string | null;
+    validated_at: string;
+    updated_at?: string;
+    enabled_surfaces: string[];
+    feature_models: Record<string, string>;
+  } | null,
 }));
 
 vi.mock("@/lib/supabase-service", () => ({
@@ -25,7 +34,14 @@ vi.mock("@/lib/supabase-service", () => ({
         order: () => query,
         limit: () => query,
         maybeSingle: async () => ({
-          data: table === "user_agent_preferences" ? h.preference : h.byok,
+          data:
+            table === "user_agent_preferences"
+              ? h.preference
+              : table === "user_ai_capability_assignments"
+                ? h.byok
+                  ? { ai_key_id: "key-1" }
+                  : null
+                : h.providerByok ?? h.byok,
         }),
       };
       return query;
@@ -63,6 +79,7 @@ beforeEach(() => {
     default_reasoning_level: "high",
   };
   h.byok = null;
+  h.providerByok = null;
   process.env.OPENROUTER_API_KEY = "platform-key";
 });
 
@@ -173,5 +190,36 @@ describe("account worker model resolution", () => {
         provider: "anthropic",
       }),
     ).rejects.toMatchObject({ code: "byokCredentialUnavailable" });
+  });
+
+  it("resumes a frozen BYOK run with its original stored provider", async () => {
+    h.byok = {
+      provider: "openai",
+      key_encrypted: "new-provider-key",
+      base_url: null,
+      validated_at: "2026-09-02T00:00:00.000Z",
+      enabled_surfaces: ["agent"],
+      feature_models: {},
+    };
+    h.providerByok = {
+      provider: "anthropic",
+      key_encrypted: "original-provider-key",
+      base_url: null,
+      validated_at: "2026-09-01T00:00:00.000Z",
+      updated_at: "2026-09-01T00:00:00.000Z",
+      enabled_surfaces: ["agent"],
+      feature_models: {},
+    };
+
+    await expect(
+      resolveAgentApiKeyForRun("user-1", "agent", {
+        keyMode: "byok",
+        provider: "anthropic",
+      }),
+    ).resolves.toMatchObject({
+      mode: "byok",
+      provider: "anthropic",
+      credentialVersion: "2026-09-01T00:00:00.000Z",
+    });
   });
 });
