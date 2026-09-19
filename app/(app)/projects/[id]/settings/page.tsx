@@ -15,7 +15,6 @@ import {
   Settings2,
   Tags,
   Users,
-  WandSparkles,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -40,6 +39,7 @@ import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { SettingsShell, type SettingsTab } from "@/components/settings-shell";
 import { SettingsPageSkeleton } from "@/components/route-skeletons";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
+import { SmartAssignIcon } from "@/components/smart-icons";
 
 export default function ProjectSettingsPage() {
   const t = useTranslations("Settings");
@@ -151,7 +151,7 @@ export default function ProjectSettingsPage() {
     {
       value: "smart-assign",
       label: t("smartAssignTab"),
-      icon: WandSparkles,
+      icon: SmartAssignIcon,
       indicator: smartAssignIncomplete
         ? t("smartAssignIncompleteTab")
         : undefined,

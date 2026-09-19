@@ -32,12 +32,12 @@ import {
   User,
   Upload,
   Users,
-  WandSparkles,
   Workflow,
   type LucideIcon,
 } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { SmartAssignIcon } from "@/components/smart-icons";
 
 /**
  * The catalog of settings sections — the table that the ⌘K palette reads and
@@ -576,7 +576,7 @@ export function useSettingsSections(): SettingsSection[] {
       project({
         id: SETTINGS_SECTIONS.projectSmartAssign,
         tab: "smart-assign",
-        icon: WandSparkles,
+        icon: SmartAssignIcon,
         title: tSettings("smartAssignTab"),
         keywords: [
           "smart assign", "assignation", "assignment", "assigné", "assigne",
