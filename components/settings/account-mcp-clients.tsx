@@ -487,9 +487,20 @@ export function AccountMcpClients() {
                       edit(existing ?? "new", registryPreset(server));
                     }}
                     variant="outline"
-                    className="h-auto justify-start gap-3 whitespace-normal p-3 text-left"
+                    className="h-auto justify-start gap-3 whitespace-normal rounded-lg p-3 text-left"
                   >
-                    <McpServiceLogo className="size-5" />
+                    {server.icon ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={server.icon}
+                        alt=""
+                        aria-hidden
+                        loading="lazy"
+                        className="size-5 shrink-0 object-contain"
+                      />
+                    ) : (
+                      <McpServiceLogo className="size-5" />
+                    )}
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">
                         {server.name}

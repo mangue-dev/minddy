@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   MCP_REGISTRY_URL,
   normalizeMcpRegistryPayload,
+  pickRegistryIcon,
 } from "@/lib/mcp-registry";
 
 function entry(overrides: Record<string, unknown> = {}) {
@@ -138,5 +139,69 @@ describe("normalizeMcpRegistryPayload", () => {
     expect(MCP_REGISTRY_URL).toBe(
       "https://registry.modelcontextprotocol.io/v0/servers",
     );
+  });
+});
+
+describe("pickRegistryIcon", () => {
+  it("carries the icon of an entry onto the normalized server", () => {
+    const servers = normalizeMcpRegistryPayload(
+      {
+        servers: [
+          entry({
+            icons: [
+              { src: "https://acme.dev/icon.png", mimeType: "image/png", sizes: ["128x128"] },
+            ],
+          }),
+        ],
+      },
+      12,
+    );
+    expect(servers[0].icon).toBe("https://acme.dev/icon.png");
+  });
+
+  it("an entry without icons stays icon-less", () => {
+    const servers = normalizeMcpRegistryPayload({ servers: [entry()] }, 12);
+    expect(servers[0].icon).toBeUndefined();
+  });
+
+  it("prefers the raster closest to the display size", () => {
+    expect(
+      pickRegistryIcon([
+        { src: "https://a.dev/1024.png", sizes: ["1024x1024"] },
+        { src: "https://a.dev/64.png", sizes: ["64x64"] },
+        { src: "https://a.dev/icon.svg", mimeType: "image/svg+xml", sizes: ["any"] },
+      ]),
+    ).toBe("https://a.dev/64.png");
+  });
+
+  it("falls back to the scalable SVG when no raster fits", () => {
+    expect(
+      pickRegistryIcon([
+        { src: "https://a.dev/1024.png", sizes: ["1024x1024"] },
+        { src: "https://a.dev/icon.svg", mimeType: "image/svg+xml", sizes: ["any"] },
+      ]),
+    ).toBe("https://a.dev/icon.svg");
+  });
+
+  it("resolves the MIME type from the extension when undeclared", () => {
+    expect(pickRegistryIcon([{ src: "https://a.dev/favicon.svg" }])).toBe(
+      "https://a.dev/favicon.svg",
+    );
+  });
+
+  it("keeps a non-https or non-image src out", () => {
+    expect(
+      pickRegistryIcon([
+        { src: "http://a.dev/icon.png", sizes: ["64x64"] },
+        { src: "https://a.dev/malware.exe" },
+        { src: "https://a.dev/page.html", mimeType: "text/html" },
+      ]),
+    ).toBeUndefined();
+  });
+
+  it("survives garbage icon lists", () => {
+    expect(pickRegistryIcon(undefined)).toBeUndefined();
+    expect(pickRegistryIcon([42, "x", {}, { src: "" }])).toBeUndefined();
+    expect(pickRegistryIcon([{ src: "not a url" }])).toBeUndefined();
   });
 });
