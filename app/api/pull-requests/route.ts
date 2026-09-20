@@ -208,13 +208,26 @@ export async function GET(request: NextRequest) {
   }
 
   // ── Rattrapage ────────────────────────────────────────────────────────────
-  const syncs = await readRepoSyncStates(repos);
+  // The sync states and the PR rows are independent reads, so they run
+  // together. A repository that was NEVER swept forces a blocking forge scan
+  // that must precede the row read for its PRs to exist yet — in that case the
+  // rows are read again after the sweep. Already-swept repositories (the
+  // steady state) pay no second read, and stale repositories keep sweeping
+  // out of band through `after()`.
+  const [syncs, rowsBeforeSweep] = await Promise.all([
+    readRepoSyncStates(repos),
+    listPullRequestsForUser(auth.supabase, repos, {
+      limit: limit + 1,
+      states: states ?? undefined,
+    }).catch((err: unknown) => err as Error),
+  ]);
   const seen = new Set<string>();
   // Cut seen by a BLOCKING scan of this request: `syncs` has been read
   // BEFORE him and still said “never swept” for this deposit. Without this postponement, the
   // very first display of a deposit of more than MAX_PR_PAGES × 100 PR se
   // would be silent about the cut — precisely the lie by omission that is being corrected.
   let sweptTruncated = false;
+  let blockingSweep = false;
   for (const repo of repos) {
     const key = repoSyncKey(repo.provider, repo.repoFullName);
     if (seen.has(key)) continue;
@@ -222,19 +235,28 @@ export async function GET(request: NextRequest) {
     const state = syncs.get(key);
     if (!needsRepoSync(state)) continue;
     if (state) after(() => sweepRepo(auth.user.id, repo));
-    else if (await sweepRepo(auth.user.id, repo)) sweptTruncated = true;
+    else {
+      blockingSweep = true;
+      if (await sweepRepo(auth.user.id, repo)) sweptTruncated = true;
+    }
   }
-
   // ── PR ──────────────────────────────── ────────────────────────────────
   let rows: PullRequestWithIssue[];
-  try {
-    // +1 for knowing if there are any left, not including the entire table.
-    rows = await listPullRequestsForUser(auth.supabase, repos, {
-      limit: limit + 1,
-      states: states ?? undefined,
-    });
-  } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+  if (blockingSweep) {
+    try {
+      // A never-scanned repository just received its first sweep: its pull
+      // requests exist now, and this first display must show them.
+      rows = await listPullRequestsForUser(auth.supabase, repos, {
+        limit: limit + 1,
+        states: states ?? undefined,
+      });
+    } catch (err) {
+      return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    }
+  } else if (rowsBeforeSweep instanceof Error) {
+    return NextResponse.json({ error: rowsBeforeSweep.message }, { status: 500 });
+  } else {
+    rows = rowsBeforeSweep;
   }
   const hasMore = rows.length > limit;
   const page = hasMore ? rows.slice(0, limit) : rows;

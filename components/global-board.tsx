@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useQuery } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button, Skeleton, toast } from "mangue-ui";
@@ -15,11 +16,12 @@ import { useBoardViews } from "@/lib/use-board-views";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { useAppTabLocalState } from "@/lib/app-tab-local-state";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
-import { useOptionalAppTabs } from "@/lib/app-tabs-context";
+import { useGeneratingViews } from "@/lib/use-generating-views";
+import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { buildViewHref } from "@/lib/saved-view-href";
 import { boardViewTabHref } from "@/lib/board-view-tab";
 import { filterIssues, visibleStatuses } from "@/lib/view-filter";
-import { STATUSES } from "@/lib/issue-constants";
+import { STATUSES, type IssueStatus } from "@/lib/issue-constants";
 import { trackEvent } from "@/lib/analytics";
 import { smartTriageApi } from "@/lib/issues-api";
 import {
@@ -34,7 +36,7 @@ import type { ObjectiveStatus } from "@/lib/objective-constants";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import {
   useAssistantContext,
-  useAssistantPanel,
+  useAssistantPanelActions,
 } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { EmptyScene } from "@/components/empty-scene";
@@ -98,10 +100,9 @@ function GlobalBoardInner() {
   const myUserId = user?.id ?? null;
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const { openCreateIssue } = useCreate();
-  const { open: openAssistant, openIntent } = useAssistantPanel();
+  const { open: openAssistant, openIntent } = useAssistantPanelActions();
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const { pathname, searchParams } = useAppTabRoute();
   const rawViewParam = searchParams.get("view");
   // "cycle" is OUR one-shot instruction (the project boards' ↗ tab lands
   // here with it) — never let useBoardViews consume it, or the remembered
@@ -139,7 +140,7 @@ function GlobalBoardInner() {
 
   // Cycle mode (MIN-32) — a MODE of this board, not a saved view. Restored
   // from its own localStorage slot after mount (SSR renders view mode).
-  const appTabs = useOptionalAppTabs();
+  const appTabs = useOptionalAppTabSession();
   const [cycleMode, setCycleMode] = useAppTabLocalState("global-cycle-mode", false);
   // null = the current cycle; a past/upcoming id when browsing the selector.
   const [selectedCycleId, setSelectedCycleId] = useAppTabLocalState<string | null>("global-selected-cycle", null);
@@ -197,14 +198,7 @@ function GlobalBoardInner() {
   // Views Numo is currently filling in (id → the updated_at at hand-off). Same
   // mechanism as the project board: the pill spins until Numo bumps the view's
   // updated_at (realtime) or the safety timeout fires.
-  const [generatingViews, setGeneratingViews] = useState<Record<string, string>>(
-    {}
-  );
-  const genTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const generatingViewIds = useMemo(
-    () => new Set(Object.keys(generatingViews)),
-    [generatingViews]
-  );
+  const { generatingViewIds, beginGenerating } = useGeneratingViews(views, NUMO_GENERATION_TIMEOUT_MS);
 
   const handleCreateView = async (name: string, description?: string) => {
     const view = await createViewAndSelect(name);
@@ -213,17 +207,7 @@ function GlobalBoardInner() {
       // Hand the fresh GLOBAL view to Numo (global mode, projectId null): its id
       // rides along in pageContext so Numo edits this exact view; the board
       // adopts the new filters live once realtime brings the row back.
-      setGeneratingViews((prev) => ({ ...prev, [view.id]: view.updated_at }));
-      const timer = setTimeout(() => {
-        setGeneratingViews((prev) => {
-          if (!(view.id in prev)) return prev;
-          const next = { ...prev };
-          delete next[view.id];
-          return next;
-        });
-        genTimers.current.delete(view.id);
-      }, NUMO_GENERATION_TIMEOUT_MS);
-      genTimers.current.set(view.id, timer);
+      beginGenerating(view);
       openAssistant({
         projectId: null,
         prompt: tBoard("numoBuildViewPrompt", { name, description: wish }),
@@ -244,33 +228,6 @@ function GlobalBoardInner() {
         : undefined,
     });
   };
-
-  // Clear a view's spinner once Numo touched it (updated_at bumped) or it's gone.
-  useEffect(() => {
-    setGeneratingViews((prev) => {
-      const ids = Object.keys(prev);
-      if (ids.length === 0) return prev;
-      let changed = false;
-      const next = { ...prev };
-      for (const id of ids) {
-        const v = views.find((x) => x.id === id);
-        if (!v || v.updated_at !== prev[id]) {
-          delete next[id];
-          changed = true;
-          const timer = genTimers.current.get(id);
-          if (timer) clearTimeout(timer);
-          genTimers.current.delete(id);
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [views]);
-
-  // Drop any pending generation timers on unmount.
-  useEffect(() => {
-    const timers = genTimers.current;
-    return () => timers.forEach((timer) => clearTimeout(timer));
-  }, []);
 
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
   useAppTabChange(() => setOpenIssueId(null));
@@ -349,7 +306,7 @@ function GlobalBoardInner() {
     () => filterIssues(scopedIssues, config, { myUserId }),
     [scopedIssues, config, myUserId]
   );
-  const statuses = visibleStatuses(config);
+  const statuses = useMemo(() => visibleStatuses(config), [config]);
 
   // ── Cycle mode derivations ──────────────────────────────────────────────
   const cyclesEnabled = cycles?.enabled === true;
@@ -558,17 +515,9 @@ function GlobalBoardInner() {
   const openPid = openIssue?.project_id ?? "";
   const openProject = openIssue ? projectMap.get(openPid) : undefined;
 
-  if (loading || viewsLoading || projectsLoading) {
-    return (
-      <BoardLoadingSkeleton
-        position={boardScrollPosition}
-        specialView={cycleMode}
-        showCreateIssue={!cycleMode}
-      />
-    );
-  }
-
-  const boardHandlers = {
+  // Panel state is local to this component. Keep board actions stable so opening
+  // or closing a panel does not replay every card and its inline controls.
+  const boardHandlers = useMemo(() => ({
     onOpenIssue: (issue: Issue) => {
       setOpenIssueId(issue.id);
       setOpenIssueTab("description");
@@ -597,9 +546,22 @@ function GlobalBoardInner() {
       }),
     }),
     onMove: moveIssue,
-    allIssues: scopedIssues,
-    relations,
-  };
+  }), [updateIssue, setCategories, deleteIssue, openIntent, projectMap, moveIssue]);
+  const handleCreateIssue = useCallback(
+    (status: IssueStatus) => openCreateIssue({ status }),
+    [openCreateIssue],
+  );
+
+  if (loading || viewsLoading || projectsLoading) {
+    return (
+      <BoardLoadingSkeleton
+        position={boardScrollPosition}
+        specialView={cycleMode}
+        showCreateIssue={!cycleMode}
+      />
+    );
+  }
+
 
   /**
    * Nothing to show ANYWHERE — not “nothing in this view.” No project, or
@@ -708,6 +670,8 @@ function GlobalBoardInner() {
                 memberMapByProject={memberMapByProject}
                 categoryMapByProject={categoryMapByProject}
                 objectiveMapByProject={objectiveMapByProject}
+                allIssues={scopedIssues}
+                relations={relations}
                 {...boardHandlers}
                 horizontalScroll={boardScrollPosition}
               />
@@ -764,8 +728,10 @@ function GlobalBoardInner() {
             buildMenuActions={buildCycleMenuActions}
             currentCycleId={cycles?.enabled ? (cycles.current?.id ?? null) : null}
             onSetCycle={onSetIssueCycle}
-            onCreateIssue={(status) => openCreateIssue({ status })}
+            onCreateIssue={handleCreateIssue}
             onAddRelation={handleAddRelation}
+            allIssues={scopedIssues}
+            relations={relations}
             {...boardHandlers}
             horizontalScroll={boardScrollPosition}
           />
@@ -824,7 +790,7 @@ export function GlobalBoard() {
         </div>
       }
     >
-      <GlobalBoardInner />
+      <AppTabRouteBoundary><GlobalBoardInner /></AppTabRouteBoundary>
     </Suspense>
   );
 }

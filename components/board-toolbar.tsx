@@ -89,7 +89,7 @@ import {
 import { ME_ASSIGNEE, activeFilterCount } from "@/lib/view-filter";
 import { CYCLE_TAB_KEY, mergeTabOrder } from "@/lib/tab-order";
 import { useTabOrderQuery } from "@/lib/use-tab-order-query";
-import { useOptionalAppTabs } from "@/lib/app-tabs-context";
+import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { displayName } from "@/lib/display-name";
 import { useSubmitShortcut } from "@/lib/keyboard/use-submit-shortcut";
 import type {
@@ -719,7 +719,7 @@ export function BoardToolbar({
   const tSort = useTranslations("Sort");
   const tApi = useTranslations("ApiErrors");
   const tActions = useTranslations("CommandPaletteActions");
-  const appTabs = useOptionalAppTabs();
+  const appTabs = useOptionalAppTabSession();
   // The "Mes tickets" pill wears MY avatar, not a generic person glyph.
   const myAvatarSource = useMyAvatarSource();
 
@@ -731,7 +731,7 @@ export function BoardToolbar({
     (view: View | null) => {
       const href = viewHref(view);
       if (appTabs) {
-        void appTabs.session.create(href);
+        void appTabs.create(href);
         return;
       }
       window.open(href, "_blank", "noopener,noreferrer");

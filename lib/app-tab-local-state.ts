@@ -1,10 +1,10 @@
 "use client";
 import { useCallback, useEffect, useState, type SetStateAction } from "react";
-import { useOptionalAppTabs } from "./app-tabs-context";
+import { useOptionalAppTabNavigation } from "./app-tabs-context";
 
 /** Lightweight UI restoration owned by a tab, without mounting inactive pages. */
 export function useAppTabLocalState<T>(scope: string, initial: T): [T, (next: SetStateAction<T>) => void] {
-  const tabs = useOptionalAppTabs();
+  const tabs = useOptionalAppTabNavigation();
   const session = tabs?.session;
   const key = `${tabs?.activeId ?? "initial"}:${scope}`;
   const [state, setState] = useState(() => ({ key, value: session?.getLocalState<T>(key) ?? initial }));

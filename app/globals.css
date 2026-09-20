@@ -409,7 +409,7 @@ a.markdown-link::before {
 }
 /* Keep content slightly lighter than both sidebar levels, including floating
    navigation. The shared surface scale below also covers cards and popovers. */
-.dark:has(.app-shell) {
+.dark[data-app-shell] {
   --background: #0f0f0f;
   --sidebar: oklch(0.165 0.004 264);
 }
@@ -471,12 +471,15 @@ a.markdown-link::before {
     border: 1px solid var(--border);
   }
 
-  /* With navigation hidden, the histogram width collapses to 0 and the panel
-     would sit flush against the window edge: keep the same gutter on the left
-     as on the right, and follow the sidebar's own exit animation. */
-  .app-shell:has([data-sidebar-hidden="true"]) > div.flex.min-h-0.min-w-0.flex-1.flex-col {
+  /* Hidden navigation keeps the same gutter on both sides. Apply the final
+     geometry once; only the sidebar surface slides, avoiding repeated page
+     layout and editor resize work throughout its exit animation. The state
+     rides a lifecycle attribute synced onto the shell main and <body> by
+     SidebarNavOverlay: a `:has()` anchored that high would attach
+     descendant-watching invalidation sets to it and broaden every unrelated
+     style change into a full-document recalculation. */
+  .app-shell[data-sidebar-hidden="true"] > div.flex.min-h-0.min-w-0.flex-1.flex-col {
     margin-left: 12px;
-    transition: margin-left 220ms cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   /* Pane-mirroring modals (scratchpad notebook, project-creation wizard,
@@ -510,8 +513,8 @@ a.markdown-link::before {
     transition: left 220ms cubic-bezier(0.32, 0.72, 0, 1);
   }
 
-  body:has([data-sidebar-hidden="true"]) .scratchpad-shell-dialog,
-  body:has([data-sidebar-hidden="true"]) .dialog-pane-mirror {
+  body[data-sidebar-hidden="true"] .scratchpad-shell-dialog,
+  body[data-sidebar-hidden="true"] .dialog-pane-mirror {
     left: 12px !important;
   }
 }
@@ -1269,58 +1272,60 @@ nav[aria-label="Navigation"]
   }
 }
 
-/* Disable app boundary bounce at the viewport and on each scrolling axis.
+/* The shell sets a lifecycle attribute on the document. A root :has() selector
+   would make inserting any menu or dialog recheck the full workspace subtree.
+   Disable app boundary bounce at the viewport and on each scrolling axis.
    The document scope also covers menus and dialogs portaled outside the shell.
    Extend overflow utilities so responsive variants and library components share
    the policy. Do not apply it to every element: an overflow-hidden wrapper or
    the unused axis of a horizontal table would trap normal parent scrolling.
    Public pages retain their browser behavior. */
-html:has(.app-shell) {
+html[data-app-shell] {
   --app-overscroll: none;
   overscroll-behavior: none;
 }
 
-html:has(.app-shell) body,
-html:has(.app-shell) textarea {
+html[data-app-shell] body,
+html[data-app-shell] textarea {
   overscroll-behavior: none;
 }
 
 @utility overflow-auto {
-  &:where(html:has(.app-shell) *) {
+  &:where(html[data-app-shell] *) {
     overscroll-behavior: none !important;
   }
 }
 @utility overflow-scroll {
-  &:where(html:has(.app-shell) *) {
+  &:where(html[data-app-shell] *) {
     overscroll-behavior: none !important;
   }
 }
 @utility overflow-x-auto {
-  &:where(html:has(.app-shell) *) {
+  &:where(html[data-app-shell] *) {
     overscroll-behavior-x: none !important;
   }
 }
 @utility overflow-x-scroll {
-  &:where(html:has(.app-shell) *) {
+  &:where(html[data-app-shell] *) {
     overscroll-behavior-x: none !important;
   }
 }
 @utility overflow-y-auto {
-  &:where(html:has(.app-shell) *) {
+  &:where(html[data-app-shell] *) {
     overscroll-behavior-y: none !important;
   }
 }
 @utility overflow-y-scroll {
-  &:where(html:has(.app-shell) *) {
+  &:where(html[data-app-shell] *) {
     overscroll-behavior-y: none !important;
   }
 }
 
 /* Radix enables each ScrollArea axis with an inline overflow declaration. */
-html:has(.app-shell) [data-radix-scroll-area-viewport][style*="overflow-x: scroll"] {
+html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-x: scroll"] {
   overscroll-behavior-x: none;
 }
-html:has(.app-shell) [data-radix-scroll-area-viewport][style*="overflow-y: scroll"] {
+html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scroll"] {
   overscroll-behavior-y: none;
 }
 

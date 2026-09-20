@@ -1,3 +1,4 @@
+import type { CommentDelivery } from "./comment-delivery";
 import type {
   IssueStatus,
   IssuePriority,
@@ -126,6 +127,7 @@ export function isPageResource(
 }
 
 export interface Comment {
+  delivery?: CommentDelivery;
   id: string;
   /** Exactly one of issue_id / objective_id / feedback_post_id is the parent. */
   issue_id: string | null;

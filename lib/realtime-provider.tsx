@@ -39,7 +39,7 @@ import {
   INITIAL_CATCH_UP_COALESCE_MS,
   type CatchUpQueue,
 } from "./realtime-catch-up";
-import { refreshGlobalIssueSnapshot } from "./global-issues-api";
+import { refreshGlobalIssueSnapshot, shouldRefreshGlobalIssueSnapshot } from "./global-issues-api";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 import { trace } from "./desktop/trace";
 import { getDesktopBridge } from "./desktop/bridge";
@@ -232,7 +232,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         queryKey: GLOBAL_BOARD_KEY,
         exact: true,
       });
-      if (coversGlobalBoard && (globalBoard?.getObserversCount() ?? 0) > 0) {
+      if (coversGlobalBoard && shouldRefreshGlobalIssueSnapshot(globalBoard)) {
         void refreshGlobalIssueSnapshot(queryClient).catch(() => {
           // The normal aggregate refetch remains the fallback.
         });

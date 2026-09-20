@@ -55,6 +55,34 @@ describe("board drag overlay", () => {
     expect(html).not.toContain("tabindex");
   });
 
+  it("keeps duplicate retained issue IDs and destination columns outside the active board", () => {
+    const hidden = document.createElement("div");
+    const active = document.createElement("div");
+    for (const [board, title, size] of [[hidden, "Hidden card", 900], [active, "Active card", 60]] as const) {
+      const card = document.createElement("article");
+      card.dataset.issueId = "issue";
+      card.textContent = title;
+      card.getBoundingClientRect = () => rect({ height: size, left: 20, top: 100, width: 280 });
+      const column = document.createElement("div");
+      column.dataset.boardColumnScroller = "";
+      column.dataset.boardColumnStatus = "done";
+      column.style.rowGap = "8px";
+      column.getBoundingClientRect = () => rect({ height: 500, left: 350, top: 70, width: 300 });
+      const marker = document.createElement("div");
+      marker.dataset.boardDropIndicator = "";
+      column.append(marker);
+      board.append(card, column);
+    }
+    hidden.style.display = "none";
+    document.body.append(hidden, active);
+    expect(captureBoardDragPreview("issue", active)).toContain("Active card");
+    expect(captureBoardDragPreview("issue", active)).not.toContain("Hidden card");
+    expect(measureBoardDropBundleHeight({ root: active, activeIds: ["issue"], status: "done" })).toBe(60);
+    expect(measureBoardDropVisualTarget({ root: active, activeId: "issue", activeIds: ["issue"], status: "done", bounds: null }))
+      .toEqual({ height: 60, left: 350, top: 70, width: 300 });
+    expect(captureBoardDragPreview("issue", null)).toBeNull();
+  });
+
   it("measures the card viewport below column headers", () => {
     const board = document.createElement("div");
     const column = document.createElement("div");

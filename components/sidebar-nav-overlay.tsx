@@ -10,7 +10,8 @@ const HOTZONE = 12;
 
 /**
  * Keep one navigation tree mounted across docked, rail, and hidden modes.
- * Animate its reserved width with the sidebars so page content resizes smoothly.
+ * Commit the reserved width once; only the floating panel's transform animates.
+ * Tweening layout width reflows every card and editor on every animation frame.
  * Hidden navigation can be recalled by pointer, keyboard focus, or a portaled layer.
  */
 export function SidebarNavOverlay({
@@ -51,6 +52,25 @@ export function SidebarNavOverlay({
     setOpen(false);
     setFocusWithin(false);
   }, [hidden]);
+
+  // The shell-level rules key off a direct attribute instead of `:has()`.
+  // A `:has()` anchored on <body> or the shell main attaches descendant-watching
+  // invalidation sets to those ancestors: any style-relevant change under them
+  // then re-evaluates the whole workspace, and every sidebar toggle, dialog
+  // open, or scroll ran one full-document style recalculation (measured ~27.6k
+  // nodes per pass). Same selectors, same specificity, no relational scan.
+  // Client-side only, like the visibility preference itself: hydration paints
+  // the docked snapshot, then the stored choice lands with React's resync.
+  const shellHiddenAttribute = hidden ? "true" : "false";
+  useEffect(() => {
+    document.body.setAttribute("data-sidebar-hidden", shellHiddenAttribute);
+    const shell = panel.current?.closest(".app-shell");
+    shell?.setAttribute("data-sidebar-hidden", shellHiddenAttribute);
+    return () => {
+      document.body.removeAttribute("data-sidebar-hidden");
+      shell?.removeAttribute("data-sidebar-hidden");
+    };
+  }, [shellHiddenAttribute]);
 
   const openPanel = useCallback((e?: { clientX: number; clientY: number }) => {
     if (e) {
@@ -173,12 +193,10 @@ export function SidebarNavOverlay({
   }, []);
 
   return (
-    <motion.div
+    <div
       className="relative h-full shrink-0"
       data-sidebar-hidden={hidden}
-      initial={{ width: flowWidth }}
-      animate={{ width: flowWidth }}
-      transition={shellTransition}
+      style={{ width: flowWidth }}
     >
       {/* The edge recalls hidden navigation without intercepting its controls. */}
       {hidden && (
@@ -202,12 +220,13 @@ export function SidebarNavOverlay({
         className="sidebar-nav-panel absolute inset-y-0 left-0 z-[38] flex h-full overflow-hidden rounded-r-[var(--app-pane-radius)] bg-sidebar transition-shadow duration-200 data-[floating=false]:rounded-r-none data-[floating=true]:shadow-[16px_0_40px_-24px_rgba(0,0,0,0.35)]"
         data-open={shown}
         data-floating={hidden && shown}
-        initial={{ width: panelWidth, x: shown ? 0 : -width }}
-        animate={{ width: panelWidth, x: shown ? 0 : -width }}
+        style={{ width: panelWidth }}
+        initial={{ x: shown ? 0 : -width }}
+        animate={{ x: shown ? 0 : -width }}
         transition={shellTransition}
       >
         {children}
       </motion.div>
-    </motion.div>
+    </div>
   );
 }

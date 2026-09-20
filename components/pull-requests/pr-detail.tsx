@@ -142,7 +142,7 @@ import {
   type PrDeploymentReport,
   type PrDeploymentStory,
 } from "@/lib/pr-deployment-story";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useAssistantChatContext } from "@/lib/assistant-chat-context";
 import type { AssistantPageContext } from "@/lib/assistant-types";
 import { parseForgeLogin, prIdentifier } from "@/lib/repo-providers";
@@ -603,7 +603,7 @@ export function PrDetail({
   const t = useTranslations("PullRequests");
   const tAgent = useTranslations("Agent");
   const agentErrorMessage = useAgentErrorMessage();
-  const { openIntent, open: openAssistant } = useAssistantPanel();
+  const { openIntent, open: openAssistant } = useAssistantPanelActions();
   const { loadConversation } = useAssistantChatContext();
   const isSend = useIsSendShortcut();
   const format = useFormatter();

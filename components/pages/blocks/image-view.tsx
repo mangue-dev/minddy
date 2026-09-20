@@ -133,6 +133,10 @@ export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewPr
           <img
             src={displayed}
             alt={alt}
+            // Signed-URL blocks decode off the critical path: a page with
+            // many images must not fetch and decode them all on open.
+            loading="lazy"
+            decoding="async"
             /**
  * Dragging does not start from the IMAGE, it starts from the block (MIN-282).
  *

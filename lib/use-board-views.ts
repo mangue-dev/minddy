@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useOptionalAppTabs } from "./app-tabs-context";
+import { useOptionalAppTabNavigation } from "./app-tabs-context";
 import { useTranslations } from "next-intl";
 import { toast } from "mangue-ui";
 import {
@@ -81,7 +81,7 @@ export function useBoardViews(
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [rawConfig, setRawConfig] = useState<ViewConfig>(DEFAULT_CONFIG);
   const storageKey = storageKeyOf(scope);
-  const appTabs = useOptionalAppTabs();
+  const appTabs = useOptionalAppTabNavigation();
   const localKey = appTabs?.activeId ? `${appTabs.activeId}:${storageKey}` : null;
   const restoreKey = localKey ?? storageKey;
   const remembered = localKey ? appTabs?.session.getLocalState<{ id: string | null; config: ViewConfig }>(localKey) : undefined;

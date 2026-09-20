@@ -55,19 +55,14 @@ import {
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
-import {
-  useAgentActive,
-  useAgentHasSession,
-  useIssueConversation,
-  useIssuePr,
-} from "@/components/agent/agent-activity-context";
+import { useIssueActivity } from "@/components/agent/agent-activity-context";
 import {
   handOffIssueApi,
   isPrWorthShowing,
   type IssuePr,
 } from "@/lib/agent-api";
 import type { NumoIntentAction } from "@/lib/assistant-types";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import {
   agentLaunchPromptVariant,
   agentPlanPromptVariant,
@@ -997,16 +992,14 @@ const IssueCardContent = memo(function IssueCardContent({
   const tCommon = useTranslations("Common");
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { openIntent, open: openAssistant } = useAssistantPanel();
-  const agentActive = useAgentActive(issue.id);
-  // A prior session exists → the menu carries “Open agent” (it reopens the
-  // conversation in the FAB); new voluntary work enters Numo below.
-  const agentHasSession = useAgentHasSession(issue.id);
-  // The ticket's PR → chip on the card (if it still calls for action) and
-  // “View pull request” in the menu (whatever its state).
-  // `?pr=` rather than `?run=`: the link must also work for a PR that no run
-  // has opened — a human PR, or a PR linked manually (MIN-163).
-  const pr = useIssuePr(issue.id);
+  const { openIntent, open: openAssistant } = useAssistantPanelActions();
+  // One issue-scoped subscription drives the halo, resumable session, and PR.
+  const {
+    working: agentActive,
+    session: agentHasSession,
+    conversation: issueConversation,
+    pr,
+  } = useIssueActivity(issue.id);
   const router = useRouter();
 
   // Card bindings are made HERE rather than by the column (MIN-316).
@@ -1014,6 +1007,15 @@ const IssueCardContent = memo(function IssueCardContent({
   // between renders; these callbacks close over `issue` without breaking the
   // card's memoization.
   const openIssue = useCallback(() => onOpenIssue(issue), [onOpenIssue, issue]);
+
+  const updateCard = useCallback(
+    (patch: IssueUpdateInput) => onUpdateIssue(issue.id, patch),
+    [onUpdateIssue, issue.id],
+  );
+  const setCardCategories = useCallback(
+    (ids: string[]) => onSetCategories(issue.id, ids),
+    [onSetCategories, issue.id],
+  );
 
   // Apply the same memoization to the shortcut menu (MIN-316).
   const cardMemberList = useMemo(() => [...memberMap.values()], [memberMap]);
@@ -1033,9 +1035,10 @@ const IssueCardContent = memo(function IssueCardContent({
     () => (onOpenPlan ? () => onOpenPlan(issue) : undefined),
     [onOpenPlan, issue],
   );
-  const openPr = pr
-    ? () => router.push(`/pull-requests?pr=${pr.prId}`)
-    : undefined;
+  const openPr = useMemo(
+    () => pr ? () => router.push(`/pull-requests?pr=${pr.prId}`) : undefined,
+    [pr, router],
+  );
 
   // Drop files from the OS directly onto the card (MIN-24) — each file is
   // recorded on the issue once its upload completes. Distinct from dnd-kit
@@ -1077,7 +1080,6 @@ const IssueCardContent = memo(function IssueCardContent({
   // Reopening a prior session happens in the FAB, the only surface a Numo
   // conversation lives in now: the card opens the conversation the newest run
   // was delegated from. New work goes through Numo itself.
-  const issueConversation = useIssueConversation(issue.id);
   const openAgentSession = () => {
     openAssistant({
       conversationId: issueConversation,
@@ -1550,8 +1552,8 @@ const IssueCardContent = memo(function IssueCardContent({
             onOpenPlan={openPlan}
             pr={pr}
             onOpenPr={openPr}
-            onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
-            onSetCategories={(ids) => onSetCategories(issue.id, ids)}
+            onUpdate={updateCard}
+            onSetCategories={setCardCategories}
             inCurrentCycle={inCurrentCycle}
             selected={selected}
           />
@@ -1624,8 +1626,8 @@ const IssueCardContent = memo(function IssueCardContent({
         members={cardMemberList}
         categories={cardCategoryList}
         objectives={cardObjectiveList}
-        onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
-        onSetCategories={(ids) => onSetCategories(issue.id, ids)}
+        onUpdate={updateCard}
+        onSetCategories={setCardCategories}
       />
     </div>
   );

@@ -323,7 +323,9 @@ export const KanbanBoard = memo(function KanbanBoard({
   });
   // The dragged bundle, drop marker, and persisted move all come from the same
   // calculation (see lib/use-board-drop.ts).
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const drop = useBoardDrop({
+    root: scrollerRef,
     columns,
     makeComparator,
     manual: sort === "manual",
@@ -363,10 +365,9 @@ export const KanbanBoard = memo(function KanbanBoard({
   } = useScrollFade<HTMLDivElement>("x");
 
   // Mobile: track which column is snapped into view to drive the dot indicator.
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const localHorizontalScroll = useRef(0);
   const preservedHorizontalScroll = horizontalScroll ?? localHorizontalScroll;
-  const dropAnimation = useMemo(() => createBoardDropAnimation(), []);
+  const dropAnimation = useMemo(() => createBoardDropAnimation(() => scrollerRef.current), []);
   const landingGenerationRef = useRef(0);
   const setScrollerRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -442,6 +443,7 @@ export const KanbanBoard = memo(function KanbanBoard({
     setLandingPreview(null);
     dragPreviewHtmlRef.current = captureBoardDragPreview(
       String(event.active.id),
+      scrollerRef.current,
     );
     dragBoundsRef.current = measureBoardDragBounds(scrollerRef.current);
     drop.start(event);
@@ -484,12 +486,14 @@ export const KanbanBoard = memo(function KanbanBoard({
       const destinationStatus =
         activeMove.patch.status ?? activeMove.issue.status;
       const visualTarget = measureBoardDropVisualTarget({
+        root: scrollerRef.current,
         activeId: draggedId,
         activeIds: draggingIds,
         bounds: dragBoundsRef.current,
         status: destinationStatus,
       });
       const bundleHeight = measureBoardDropBundleHeight({
+        root: scrollerRef.current,
         activeIds: draggingIds,
         status: destinationStatus,
       });

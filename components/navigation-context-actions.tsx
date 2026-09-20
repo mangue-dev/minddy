@@ -5,11 +5,11 @@ import { toast } from "mangue-ui";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";
-import { useOptionalAppTabs } from "@/lib/app-tabs-context";
+import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
 export function useNavigationContextActions(href: string | null | undefined): ContextMenuAction[] {
-  const session = useOptionalAppTabs()?.session;
+  const session = useOptionalAppTabSession();
   const t = useTranslations("CommandPaletteActions");
   return useMemo(() => {
     const destination = normalizeAppTabLocation(href);

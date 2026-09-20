@@ -237,7 +237,7 @@ describe("les autres pièges du tactile", () => {
     const css = read(GLOBALS);
     // Scope the viewport policy to the app, including its portaled surfaces.
     expect(css).toMatch(
-      /html:has\(\.app-shell\) \{\s*--app-overscroll: none;\s*overscroll-behavior: none;/,
+      /html\[data-app-shell\] \{\s*--app-overscroll: none;\s*overscroll-behavior: none;/,
     );
     expect(css).not.toMatch(/^(html|body)\s*\{[^}]*overscroll-behavior/m);
   });

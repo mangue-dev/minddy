@@ -25,8 +25,8 @@ export type ViewScope = { kind: "project"; projectId: string } | { kind: "global
 const viewsUrl = (scope: ViewScope) =>
   scope.kind === "project" ? `/api/projects/${scope.projectId}/views` : "/api/me/views";
 
-export async function fetchViewsApi(scope: ViewScope): Promise<View[]> {
-  return parseJson<View[]>(await fetch(viewsUrl(scope)));
+export async function fetchViewsApi(scope: ViewScope, signal?: AbortSignal): Promise<View[]> {
+  return parseJson<View[]>(await fetch(viewsUrl(scope), { signal }));
 }
 
 export async function createViewApi(

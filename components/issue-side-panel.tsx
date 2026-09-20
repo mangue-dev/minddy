@@ -1,5 +1,6 @@
 "use client";
 import { useAppTabDeparture } from "@/lib/app-tabs-context";
+import { useIssuePanelTab } from "@/lib/use-issue-panel-tab";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -68,7 +69,7 @@ import {
   isAgentRunWorking,
 } from "@/lib/agent-api";
 import type { NumoIntentAction } from "@/lib/assistant-types";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import {
   agentLaunchPromptVariant,
@@ -97,7 +98,7 @@ import { IssuePlan } from "@/components/issue-plan";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the board routes that mount
 // this panel — see markdown-editor-lazy.tsx. Warmed from idle time below.
 import {
-  MarkdownEditor,
+  DeferredMarkdownEditor,
   useIdleMarkdownEditorPreload,
 } from "@/components/markdown-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
@@ -191,13 +192,13 @@ export function IssueSidePanel({
   const tPlan = useTranslations("Plan");
   const tAgent = useTranslations("Agent");
   const { openIssue: openGlobalIssue } = useIssuePanelActions();
-  const { openIntent } = useAssistantPanel();
+  const { openIntent } = useAssistantPanelActions();
   // The panel mounts with its board: warm the editor chunk once the page has
   // painted, so opening a ticket never shows the loading fallback.
   useIdleMarkdownEditorPreload();
   const [title, setTitle] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [tab, setTab] = useState<"description" | "plan">(initialTab);
+  const [tab, setTab] = useIssuePanelTab(issue?.id ?? null, initialTab);
   // Remount the description editor when the description is rewritten under it
   // (dictation, or distant writing) — it only reads `value` during editing and
   // ne commite qu'au blur.
@@ -270,7 +271,8 @@ export function IssueSidePanel({
             createdBy: issue.created_by,
             integrationId: issue.integration_id ?? null,
           }
-        : null
+        : null,
+      issue?.project_id ?? null,
     );
 
   // Code agent of this ticket. Same derivations as maps (lib/server/
@@ -305,11 +307,6 @@ export function IssueSidePanel({
     nextCycle?.id ?? null,
     onSetIssueCycle
   );
-
-  // Land on the tab the opener asked for (plan indicator → plan tab).
-  useEffect(() => {
-    setTab(initialTab);
-  }, [issue?.id, initialTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Title and description: sown when the ticket is opened, then kept up to date on
   // remote writes (see refs above).
@@ -1099,7 +1096,7 @@ export function IssueSidePanel({
                     setEditorKey((k) => k + 1);
                   }}
                 >
-                  <MarkdownEditor
+                  <DeferredMarkdownEditor
                     key={`${issue.id}:${editorKey}`}
                     mentions={mentions}
                     value={issue.description ?? ""}

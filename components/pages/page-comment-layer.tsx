@@ -63,7 +63,14 @@ export function PageCommentLayer({
   );
   useEffect(() => {
     if (!editor) return;
-    const sync = () => setBlockIds(documentBlockIds(editor));
+    const sync = () => {
+      const next = documentBlockIds(editor);
+      setBlockIds((current) =>
+        current.size === next.size && [...next].every((id) => current.has(id))
+          ? current
+          : next,
+      );
+    };
     sync();
     editor.on("update", sync);
     return () => {
@@ -108,9 +115,9 @@ export function PageCommentLayer({
   // The decorations, sent back to the editor. They follow REAL TIME
   // without anything more: the list changes, the effect replays.
   //
-  // The guardrail is not a micro-optimization: `blockIds` is remanufactured at
-  // each keystroke, so without it each letter typed would send a transaction
-  // decoration — that the decorations already follow on their own (`set.map`).
+  // Block changes can leave the same annotations. Avoid dispatching another
+  // decoration transaction when the existing decorations already follow the
+  // document through ProseMirror's mapping.
   const painted = useRef("");
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;

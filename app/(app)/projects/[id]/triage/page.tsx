@@ -62,7 +62,7 @@ import { useBulkSelectionActions } from "@/lib/use-bulk-selection-actions";
 import { issueIdentifier } from "@/lib/issue-constants";
 import {
   useAssistantContext,
-  useAssistantPanel,
+  useAssistantPanelActions,
 } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { useScrollFade } from "@/lib/use-scroll-fade";
@@ -96,7 +96,7 @@ export default function TriagePage() {
   const { objectives } = useObjectivesQuery(projectId);
   const { relations, addRelation } = useIssueRelationsQuery(projectId);
   const mentions = useDescriptionMentions(projectId, members);
-  const { openIntent } = useAssistantPanel();
+  const { openIntent } = useAssistantPanelActions();
 
   const triageIssues = useMemo(
     () =>
@@ -391,20 +391,24 @@ export default function TriagePage() {
 
   // Candidate canonical issues: anything except the triaged issue itself and
   // issues that are themselves duplicates.
-  const duplicateOptions: PickerOption[] = selected
-    ? issues
-        .filter((i) => i.id !== selected.id && i.status !== "duplicate")
-        .map((i) => ({
-          value: i.id,
-          label: i.title,
-          keywords: [issueIdentifier(project.key, i.number)],
-          icon: (
-            <span className="font-mono text-xs text-muted-foreground">
-              {issueIdentifier(project.key, i.number)}
-            </span>
-          ),
-        }))
-    : [];
+  // Memoized: the picker options used to be rebuilt for EVERY issue on EVERY
+  // render (each title keystroke, each selection change), mapping the whole
+  // project into JSX-bearing options with the picker closed.
+  const duplicateOptions: PickerOption[] = useMemo(() => {
+    if (!selected) return [];
+    return issues
+      .filter((i) => i.id !== selected.id && i.status !== "duplicate")
+      .map((i) => ({
+        value: i.id,
+        label: i.title,
+        keywords: [issueIdentifier(project.key, i.number)],
+        icon: (
+          <span className="font-mono text-xs text-muted-foreground">
+            {issueIdentifier(project.key, i.number)}
+          </span>
+        ),
+      }));
+  }, [selected, issues, project.key]);
 
   const fmtDay = (at: string): string =>
     format.dateTime(new Date(at), { day: "numeric", month: "short" });

@@ -89,8 +89,8 @@ export type BoardDropAnimationCoordinator = {
   ) => void;
 };
 
-function findIssueNode(activeId: string) {
-  return Array.from(document.querySelectorAll<HTMLElement>(CARD_SELECTOR)).find(
+function findIssueNode(activeId: string, root: ParentNode | null = document) {
+  return Array.from(root?.querySelectorAll<HTMLElement>(CARD_SELECTOR) ?? []).find(
     (node) => node.dataset.issueId === activeId,
   );
 }
@@ -111,8 +111,8 @@ function stripInteractiveIdentity(root: HTMLElement) {
 }
 
 /** Capture the already-painted card instead of mounting its interactive tree again. */
-export function captureBoardDragPreview(activeId: string) {
-  const source = findIssueNode(activeId);
+export function captureBoardDragPreview(activeId: string, root: ParentNode | null = document) {
+  const source = findIssueNode(activeId, root);
   if (!source) return null;
   const preview = source.cloneNode(true) as HTMLElement;
   stripInteractiveIdentity(preview);
@@ -154,6 +154,7 @@ export function measureBoardDragBounds(
  * publishes the optimistic cache update.
  */
 export function measureBoardDropVisualTarget({
+  root = document,
   activeId,
   activeIds,
   bounds,
@@ -161,12 +162,13 @@ export function measureBoardDropVisualTarget({
 }: {
   activeId: string;
   activeIds: Iterable<string>;
+  root?: ParentNode | null;
   bounds: BoardDragBounds | null;
   status: string;
 }): BoardDropVisualTarget | null {
-  const source = findIssueNode(activeId);
+  const source = findIssueNode(activeId, root);
   const column = Array.from(
-    document.querySelectorAll<HTMLElement>(COLUMN_SCROLLER_SELECTOR),
+    root?.querySelectorAll<HTMLElement>(COLUMN_SCROLLER_SELECTOR) ?? [],
   ).find((node) => node.dataset.boardColumnStatus === status);
   const marker = column?.querySelector<HTMLElement>(
     "[data-board-drop-indicator]",
@@ -193,7 +195,7 @@ export function measureBoardDropVisualTarget({
   // Cards from the target column that sit before the marker leave their old
   // slots before the bundle is inserted, so remove that occupied height.
   for (const issueId of orderedIds) {
-    const node = findIssueNode(issueId);
+    const node = findIssueNode(issueId, root);
     if (!node || node.closest(COLUMN_SCROLLER_SELECTOR) !== column) continue;
     const rect = node.getBoundingClientRect();
     if (rect.top < slotTop) top -= rect.height + gap;
@@ -203,7 +205,7 @@ export function measureBoardDropVisualTarget({
   // multi-card bundle. Add the preceding bundle cards back at the new slot.
   const activeIndex = Math.max(0, orderedIds.indexOf(activeId));
   for (const issueId of orderedIds.slice(0, activeIndex)) {
-    const rect = findIssueNode(issueId)?.getBoundingClientRect();
+    const rect = findIssueNode(issueId, root)?.getBoundingClientRect();
     top += (rect?.height ?? sourceRect.height) + gap;
   }
 
@@ -230,19 +232,21 @@ export function measureBoardDropVisualTarget({
 
 /** Measure the exact space occupied by a dragged bundle in its target stack. */
 export function measureBoardDropBundleHeight({
+  root = document,
   activeIds,
   status,
 }: {
   activeIds: Iterable<string>;
+  root?: ParentNode | null;
   status: string;
 }): number | null {
   const column = Array.from(
-    document.querySelectorAll<HTMLElement>(COLUMN_SCROLLER_SELECTOR),
+    root?.querySelectorAll<HTMLElement>(COLUMN_SCROLLER_SELECTOR) ?? [],
   ).find((node) => node.dataset.boardColumnStatus === status);
   if (!column) return null;
   const heights = Array.from(
     activeIds,
-    (id) => findIssueNode(id)?.getBoundingClientRect().height,
+    (id) => findIssueNode(id, root)?.getBoundingClientRect().height,
   ).filter((height): height is number => height != null && height > 0);
   if (heights.length === 0) return null;
   const gap = Number.parseFloat(getComputedStyle(column).rowGap) || 0;
@@ -283,7 +287,9 @@ export function createBoardBoundsModifier(bounds: {
  * load. The board explicitly signals the layout effect that measured the
  * destination instead.
  */
-export function createBoardDropAnimation(): BoardDropAnimationCoordinator {
+export function createBoardDropAnimation(
+  getRoot: () => ParentNode | null = () => document,
+): BoardDropAnimationCoordinator {
   let pending: PendingDrop | null = null;
 
   const settle = (entry: PendingDrop | null, committed: boolean) => {
@@ -384,7 +390,7 @@ export function createBoardDropAnimation(): BoardDropAnimationCoordinator {
     ) {
       return;
     }
-    entry.hideCommittedTarget?.(findIssueNode(entry.activeId));
+    entry.hideCommittedTarget?.(findIssueNode(entry.activeId, getRoot()));
     settle(entry, true);
   };
 
@@ -405,13 +411,13 @@ export function createBoardDropAnimation(): BoardDropAnimationCoordinator {
     };
     entry.hideCommittedTarget = hide;
 
-    hide(findIssueNode(activeId));
+    hide(findIssueNode(activeId, getRoot()));
     try {
       const overlayRect = dragOverlay.node.getBoundingClientRect();
       let targetRect = entry.visualTarget;
       if (!targetRect) {
         if (!(await entry.committed)) return;
-        const target = findIssueNode(activeId);
+        const target = findIssueNode(activeId, getRoot());
         hide(target);
         if (!target) return;
         const previousTransform = target.style.transform;

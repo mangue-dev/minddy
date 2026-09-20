@@ -28,7 +28,7 @@ import {
   useIntegrationsQuery,
 } from "@/lib/use-integrations-query";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import { integrationKeyEnvLine } from "@/lib/feedback/integration-contract";
 
@@ -91,7 +91,7 @@ export function FeedbackSetupWizard({
 }) {
   const t = useTranslations("Settings");
   const tCommon = useTranslations("Common");
-  const { openIntent } = useAssistantPanel();
+  const { openIntent } = useAssistantPanelActions();
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<Mode>("board");
   const [sso, setSso] = useState(true);

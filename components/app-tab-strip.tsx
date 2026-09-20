@@ -20,7 +20,6 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Ellipsis, Loader2, AlertCircle, Home, Plus } from "lucide-react";
-import { useQueries, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -40,19 +39,10 @@ import {
 import { useAppTabs } from "@/lib/app-tabs-context";
 import { useProjects } from "@/lib/projects-context";
 import { appTabRoute } from "@/lib/app-tab-location";
-import { objectivesQueryFn } from "@/lib/objectives-api";
 import { APP_TAB_MAX_NAME, type AppTab } from "@/lib/app-tabs";
 import { useOpenPullRequestCountQuery } from "@/lib/use-agent-runs";
-import {
-  fetchPullRequestApi,
-  type PullRequestRef,
-} from "@/lib/agent-api";
 import { usePlanGates } from "@/lib/use-billing-query";
-import { fetchPagesApi } from "@/lib/pages-api";
-import { pagesKey } from "@/lib/use-pages-query";
-import type { PageSummary } from "@/lib/pages-api";
-import { routinesQueryKey } from "@/lib/use-routines-query";
-import { fetchRoutinesApi, type Routine } from "@/lib/routines-api";
+import { useAppTabMetadata } from "@/lib/use-app-tab-metadata";
 import { AppTabIcon } from "./app-tab-icon";
 import { AppTabItem } from "./app-tab-item";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -74,99 +64,8 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   const t = useTranslations("AppTabs");
   const nav = useTranslations("Nav");
   const common = useTranslations("Common");
-  // Objective tabs name THEIR objective, not "Tickets - Project": the tickets
-  // of an objective load in the board URL (`?objective=`), so the tab resolves
-  // the objective from the projects it references. Same query key/fn as the
-  // objectives page, so the cache is shared and nothing is fetched twice.
-  const objectiveProjectIds = useMemo(
-    () => [...new Set(tabs.map((tab) => appTabRoute(tab.href)).filter((route) => route.objectiveId).map((route) => route.projectId!).filter((id) => !!id))],
-    [tabs]
-  );
-  const objectiveQueries = useQueries({
-    queries: objectiveProjectIds.map((projectId) => ({
-      queryKey: ["objectives", projectId] as const,
-      queryFn: objectivesQueryFn(projectId),
-    })),
-  });
-  // Keyed on the project ids, not the per-render queries array: useQueries
-  // returns a fresh array each render, and the map only changes with the data.
-  const objectiveQueriesKey = objectiveProjectIds.join(" ") + ":" + objectiveQueries.map((result) => result.dataUpdatedAt).join(",");
-  const objectiveById = useMemo(() => {
-    const map = new Map<string, { name: string; color: string | null }>();
-    for (const result of objectiveQueries) {
-      for (const objective of (result.data ?? []) as { id: string; name: string; color: string | null }[]) {
-        map.set(objective.id, { name: objective.name, color: objective.color });
-      }
-    }
-    return map;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [objectiveQueriesKey]);
-  // Tab titles follow the CONTENT (a pinned page, a selected PR or routine):
-  // the same caches the target screens already keep — pages per project, the
-  // PR detail, the global routine list — so renaming a page or a PR updates
-  // every tab through the shared cache without new requests.
-  const tabRoutes = useMemo(
-    () => [...new Set(tabs.map((tab) => appTabRoute(tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href)))],
-    [tabs, activeId, session]
-  );
-  const pageProjectIds = useMemo(
-    () => [...new Set(tabRoutes.filter((route) => route.pageId).map((route) => route.projectId!).filter((id) => !!id))],
-    [tabRoutes]
-  );
-  const pageQueries = useQueries({
-    queries: pageProjectIds.map((projectId) => ({
-      queryKey: pagesKey(projectId),
-      queryFn: () => fetchPagesApi(projectId),
-      enabled: !!projectId,
-    })),
-  });
-  const pageQueriesKey = pageProjectIds.join(" ") + ":" + pageQueries.map((result) => result.dataUpdatedAt).join(",");
-  const pageById = useMemo(() => {
-    const map = new Map<string, PageSummary>();
-    for (const result of pageQueries) {
-      for (const page of (result.data ?? []) as PageSummary[]) map.set(page.id, page);
-    }
-    return map;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageQueriesKey]);
-  const selectedPrIds = useMemo(
-    () => [...new Set(tabRoutes.map((route) => route.prId).filter((id) => !!id))] as string[],
-    [tabRoutes]
-  );
-  // Same query key as the review screen, so the tab reuses whatever is cached
-  // (and its title follows live retitling); no polling here — a title that
-  // arrives one turn late is harmless.
-  const prQueries = useQueries({
-    queries: selectedPrIds.map((prId) => ({
-      queryKey: ["pull-request", prId] as const,
-      queryFn: () => fetchPullRequestApi(prId),
-      enabled: !!prId,
-    })),
-  });
-  const prQueriesKey = selectedPrIds.join(" ") + ":" + prQueries.map((result) => result.dataUpdatedAt).join(",");
-  const prById = useMemo(() => {
-    const map = new Map<string, PullRequestRef>();
-    for (let i = 0; i < selectedPrIds.length; i++) {
-      const ref = (prQueries[i]?.data as { pr?: PullRequestRef | null } | undefined)?.pr;
-      if (ref) map.set(selectedPrIds[i], ref);
-    }
-    return map;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prQueriesKey]);
-  const routineIds = useMemo(
-    () => [...new Set(tabRoutes.map((route) => route.routineId).filter((id) => !!id))] as string[],
-    [tabRoutes]
-  );
-  const { data: routinesData } = useQuery({
-    queryKey: routinesQueryKey(),
-    queryFn: fetchRoutinesApi,
-    enabled: routineIds.length > 0,
-  });
-  const routineById = useMemo(() => {
-    const map = new Map<string, Routine>();
-    for (const routine of routinesData?.routines ?? []) map.set(routine.id, routine);
-    return map;
-  }, [routinesData]);
+  const hrefs = tabs.map((tab) => tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href);
+  const { pageById, objectiveById, prById, routineById } = useAppTabMetadata(hrefs);
 
   // Notification badges on the tabs follow the same rules as the sidebar (same
   // counters, same caching): open PRs on the PR tab. They sit ON the tab icon's
@@ -352,6 +251,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
             badge={sectionBadges(section)} busy={busy} last={tabs.length <= 1}
             compositeIcon={composite} width={tab.pinned ? undefined : regularWidth}
             onActivate={() => { if (!busy) void session.activate(tab.id); }} onClose={() => close(tab.id)}
+            onWarm={() => { if (tab.id !== activeId) session.prefetch(tab.href); }}
             onPin={() => { void session.update(tab.id, { pinned: !tab.pinned }); }}
             onRename={() => { setName(tab.custom_name ?? ""); setRenaming(tab); }} onFocus={() => setFocused(tab.id)} />
           </SortableAppTab>;
@@ -389,7 +289,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {hidden.map(({ tab, view }) => (
-              <DropdownMenuItem key={tab.id} onSelect={() => { if (!busy) void session.activate(tab.id); }}>
+              <DropdownMenuItem key={tab.id} onPointerEnter={() => session.prefetch(tab.href)} onFocus={() => session.prefetch(tab.href)} onSelect={() => { if (!busy) void session.activate(tab.id); }}>
                 <AppTabIcon section={view.section} project={view.project} projectId={view.projectId}
                   objectiveColor={view.objectiveId ? view.objective?.color ?? null : undefined} />
                 <span className="truncate">{view.label}</span>

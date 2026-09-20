@@ -1,11 +1,14 @@
 "use client";
 
+import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
+
 import {
   createContext,
   startTransition,
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -126,6 +129,12 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const { projects } = useProjects();
   const { user } = useAuth();
+  const targetInputs = useRef({ pathname, projects });
+  // Creation actions resolve the committed route when invoked. Publishing a
+  // new action on every navigation wakes all closed card pickers, even inside
+  // an Activity-hidden board. Layout synchronization avoids abandoned renders
+  // changing the target used by an event on the still-visible route.
+  useLayoutEffect(() => { targetInputs.current = { pathname, projects }; }, [pathname, projects]);
   // Local undo history (MIN-35): creations from the global dialog record too.
   const { record } = useUndoHistory();
 
@@ -232,14 +241,14 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   const resolveTarget = useCallback(
     (projectId?: string) => {
       if (projectId) return projectId;
-      const fromPath = projectIdFromPath(pathname);
+      const { pathname: currentPath, projects: currentProjects } = targetInputs.current;
+      const fromPath = projectIdFromPath(currentPath);
       if (fromPath) return fromPath;
-      // Outside of the project (reception, aggregate board, palette): the last project where a
-      // ticket was created, not the first in the list — this one is just one
-      // artefact du tri.
-      return defaultCreateProjectId(projects, lastCreateProjectId());
+      // Outside a project, prefer the last creation target when it is still
+      // accessible, then fall back to the current project's display order.
+      return defaultCreateProjectId(currentProjects, lastCreateProjectId());
     },
-    [pathname, projects]
+    []
   );
 
   const warmCreateIssue = useCallback(() => {
@@ -269,7 +278,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
       const objectiveId =
         opts?.objectiveId !== undefined
           ? opts.objectiveId
-          : pid === projectIdFromPath(pathname)
+          : pid === projectIdFromPath(targetInputs.current.pathname)
             ? activeObjectiveIdFromUrl()
             : null;
       setTarget(pid);
@@ -282,7 +291,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
       setIssueMounted(true);
       setIssueOpen(true);
     },
-    [resolveTarget, pathname]
+    [resolveTarget]
   );
 
   const openCreateObjective = useCallback(
@@ -320,7 +329,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
       )
         return;
       // A dialog / side panel (both Radix dialogs) owns the keyboard while open.
-      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+      if (hasVisibleOpenDialog()) return;
       e.preventDefault();
       if (key === "c") openCreateIssue();
       else openCreateObjective();
@@ -346,7 +355,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
       if (e.defaultPrevented) return;
       // An open dialog/side panel holds the keyboard (same guard as
       // `C` and `O` just above): we do not stack a form.
-      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+      if (hasVisibleOpenDialog()) return;
       e.preventDefault();
       openCreateIssue({ dictate: true });
     };
@@ -354,22 +363,23 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [projects.length, openCreateIssue]);
 
-  // Value stored (MIN-315): this provider is crossed by the cascade which leaves
-  // of `AuthProvider`, and its consumers go down to the cards on the board.
+  // Only availability changes are render state; every action reads current
+  // inputs when invoked, without broadcasting route changes to card pickers.
+  const canCreate = projects.length > 0;
   const value = useMemo(
     () => ({
       openCreateIssue,
       openCreateObjective,
       warmCreateIssue,
       warmCreateObjective,
-      canCreate: projects.length > 0,
+      canCreate,
     }),
     [
       openCreateIssue,
       openCreateObjective,
       warmCreateIssue,
       warmCreateObjective,
-      projects.length,
+      canCreate,
     ]
   );
 

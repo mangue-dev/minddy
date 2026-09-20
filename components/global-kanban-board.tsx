@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -80,7 +81,7 @@ import {
  * (cross-project) column items; the touched issue's project id rides along so
  * the write targets the right project cache. No relations/create here.
  */
-export function GlobalKanbanBoard({
+export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
   issues,
   allIssues,
   relations,
@@ -375,7 +376,9 @@ export function GlobalKanbanBoard({
   });
   // The dragged bundle, drop marker, and persisted move share the same
   // calculation as the project board (see lib/use-board-drop.ts).
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const drop = useBoardDrop({
+    root: scrollerRef,
     columns,
     makeComparator,
     manual: sort === "manual",
@@ -422,10 +425,9 @@ export function GlobalKanbanBoard({
   } = useScrollFade<HTMLDivElement>("x");
 
   // The edge fade and marquee selection share one stable callback ref.
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const localHorizontalScroll = useRef(0);
   const preservedHorizontalScroll = horizontalScroll ?? localHorizontalScroll;
-  const dropAnimation = useMemo(() => createBoardDropAnimation(), []);
+  const dropAnimation = useMemo(() => createBoardDropAnimation(() => scrollerRef.current), []);
   const landingGenerationRef = useRef(0);
   const setScrollerRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -466,6 +468,7 @@ export function GlobalKanbanBoard({
     setLandingPreview(null);
     dragPreviewHtmlRef.current = captureBoardDragPreview(
       String(event.active.id),
+      scrollerRef.current,
     );
     dragBoundsRef.current = measureBoardDragBounds(scrollerRef.current);
     drop.start(event);
@@ -508,12 +511,14 @@ export function GlobalKanbanBoard({
       const destinationStatus =
         activeMove.patch.status ?? activeMove.issue.status;
       const visualTarget = measureBoardDropVisualTarget({
+        root: scrollerRef.current,
         activeId: draggedId,
         activeIds: draggingIds,
         bounds: dragBoundsRef.current,
         status: destinationStatus,
       });
       const bundleHeight = measureBoardDropBundleHeight({
+        root: scrollerRef.current,
         activeIds: draggingIds,
         status: destinationStatus,
       });
@@ -677,4 +682,4 @@ export function GlobalKanbanBoard({
       </AskNumoProvider>
     </AgentActivityProvider>
   );
-}
+});

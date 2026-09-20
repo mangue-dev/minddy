@@ -70,6 +70,7 @@ import { useSecondarySidebar, sidebarPanelForRoute } from "@/lib/secondary-sideb
 import { projectIdFromPath, projectTabHref } from "@/lib/project-id-from-path";
 import { usePrefetchProject } from "@/lib/use-prefetch-project";
 import { usePrefetchPages } from "@/lib/use-pages-query";
+import { SidebarPanelTransition } from "@/components/sidebar-panel-transition";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { NewMenu } from "@/components/new-menu";
 import { UsageIndicator } from "@/components/usage-indicator";
@@ -999,16 +1000,15 @@ export function AppSidebar({
    * The panel stays mounted across sibling routes (pull requests →
    * routines); only the back row swaps.
    */
-  const level2 = back && (
+  const level2 = (
     <>
-      <AnimatePresence mode="wait" initial={false}>
+      <div className="relative h-[calc((var(--app-content-header-height)-2.25rem)/2+2.25rem+0.5rem)] shrink-0">
+      <AnimatePresence mode="sync" initial={false}>
         {back && (
-          <motion.div
+          <SidebarPanelTransition
             key={`back:${back.href}:${back.label}`}
-            className="shrink-0 pt-[calc((var(--app-content-header-height)-2.25rem)/2)] pb-2"
-            initial={{ opacity: 0, x: 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 16 }}
+            className="absolute inset-x-0 top-0 pt-[calc((var(--app-content-header-height)-2.25rem)/2)] pb-2"
+            offset={16}
             transition={shellTransition}
           >
             {/* Same geometry as a nav row — gutter, 36 px height, rounded
@@ -1036,9 +1036,10 @@ export function AppSidebar({
                 </span>
               </button>
             </div>
-          </motion.div>
+          </SidebarPanelTransition>
         )}
       </AnimatePresence>
+      </div>
       {/* Same horizontal gutter as the level-1 rows: whatever the level or
           the page, the options start and end at the same width. */}
       <div ref={setSlot} className={cn("flex min-h-0 flex-1 flex-col", GUTTER)} />
@@ -1055,11 +1056,9 @@ export function AppSidebar({
   }, [onLayerOpenChange]);
 
   return (
-    <motion.aside
+    <aside
       id={railId}
-      initial={{ width: EXPANDED_WIDTH }}
-      animate={{ width: EXPANDED_WIDTH }}
-      transition={shellTransition}
+      style={{ width: EXPANDED_WIDTH }}
       className={cn(
         "flex h-full flex-col overflow-hidden bg-sidebar text-sidebar-foreground",
       )}
@@ -1095,40 +1094,39 @@ export function AppSidebar({
       {/* All levels live in the same flex-1 area, stacked absolutely so a
           swap animates over a stable layout instead of resizing anything. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <AnimatePresence mode="wait" initial={false}>
-          {showSecondary ? (
-            <motion.div
-              key="secondary-level"
-              className="absolute inset-0 flex min-h-0 flex-col pr-0"
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 16 }}
-              transition={shellTransition}
-            >
-              {level2}
-            </motion.div>
-          ) : panel === "home" ? (
-            <motion.div
+        {/* Keep the portal destination mounted: changing navigation levels
+            must not reparent or remount a page's list during the animation. */}
+        <motion.div
+          data-sidebar-panel="secondary"
+          className="absolute inset-0 flex min-h-0 flex-col pr-0"
+          inert={!showSecondary}
+          aria-hidden={!showSecondary}
+          initial={false}
+          animate={{ opacity: showSecondary ? 1 : 0, x: showSecondary ? 0 : 16 }}
+          transition={shellTransition}
+          style={{ pointerEvents: showSecondary ? "auto" : "none" }}
+        >
+          {level2}
+        </motion.div>
+        <AnimatePresence mode="sync" initial={false}>
+          {showSecondary ? null : panel === "home" ? (
+            <SidebarPanelTransition
               key="home"
               className="absolute inset-0 flex min-h-0 flex-col"
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
+              offset={-16}
               transition={reduce ? { duration: 0 } : transitions.fade}
             >
               {homeLevel}
-            </motion.div>
+            </SidebarPanelTransition>
           ) : (
-            <motion.div
+            <SidebarPanelTransition
               key={modeKey}
               className="absolute inset-0 flex min-h-0 flex-col"
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 16 }}
+              offset={16}
               transition={reduce ? { duration: 0 } : transitions.fade}
             >
               {level1}
-            </motion.div>
+            </SidebarPanelTransition>
           )}
         </AnimatePresence>
         {/* Fades: scrolling options dissolve into the panel instead of being
@@ -1161,6 +1159,6 @@ export function AppSidebar({
           onMenuOpenChange={handleMenuOpenChange}
         />
       </div>
-    </motion.aside>
+    </aside>
   );
 }

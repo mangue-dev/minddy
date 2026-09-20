@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import {
   Button,
@@ -85,6 +85,7 @@ import {
  * avoided a fourth copy of the thread.
  */
 export interface ThreadMessage {
+  delivery?: Comment["delivery"];
   id: string;
   author_id: string | null;
   body: string;
@@ -458,6 +459,7 @@ export function CommentBlock({
   const tCommon = useTranslations("Common");
   const tAssistant = useTranslations("Assistant");
   const tToolCall = useTranslations("ToolCall");
+  const tConnection = useTranslations("ServerUnavailable");
   const viaNumo = !!comment.via_assistant;
   const viaMcp = !viaNumo && !!comment.via_mcp;
   const github = comment.github ?? null;
@@ -539,7 +541,7 @@ export function CommentBlock({
   };
 
   return (
-    <div className="group/comment flex flex-col gap-1.5">
+    <div className="group/comment flex flex-col gap-1.5" data-comment-id={comment.id} data-comment-state={comment.delivery?.state ?? "confirmed"} aria-busy={comment.delivery?.state === "sending"}>
       <div className="flex items-center gap-2">
         {viaNumo ? (
           <NumoAvatar />
@@ -570,6 +572,7 @@ export function CommentBlock({
         <span className="shrink-0 text-xs text-muted-foreground/80">
           {timeAgo(comment.created_at, t)}
         </span>
+        {comment.delivery?.state === "sending" && <Spinner className="size-3" aria-label={tCommon("loading")} />}
         {edited && !viaNumo && !visitor && (
           <span className="shrink-0 text-xs text-muted-foreground/60">{t("edited")}</span>
         )}
@@ -579,7 +582,7 @@ export function CommentBlock({
             only). Numo's comments remain read-only until
             that they are internal; published, they withdraw like the rest — it
             Someone has to be able to unpublish what an agent has published. */}
-        {(canEdit || canDelete) && !editing && !working && (
+        {(canEdit || canDelete) && !editing && !working && !comment.delivery && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -697,7 +700,7 @@ export function CommentBlock({
         <ResourcePills
           resources={comment.attachments}
           onRemove={
-            mine
+            mine && !comment.delivery
               ? (a) => {
                   if (a.id) {
                     onDeleteAttachment(a.id).catch((e) =>
@@ -708,6 +711,17 @@ export function CommentBlock({
               : undefined
           }
         />
+      )}
+      {comment.delivery?.state === "error" && (
+        <div className="flex items-center gap-2 text-xs text-destructive" role="alert">
+          <span className="min-w-0 flex-1">{comment.delivery.error}</span>
+          <Button variant="ghost" size="sm" onClick={comment.delivery.retry}>
+            {tConnection("retry")}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(true)}>
+            {tCommon("delete")}
+          </Button>
+        </div>
       )}
       <ConfirmDeleteDialog
         open={confirmDelete}
@@ -729,7 +743,8 @@ export function CommentBlock({
         cancelLabel={tCommon("cancel")}
         onConfirm={async () => {
           try {
-            await onDelete(comment.id);
+            if (comment.delivery?.state === "error") await comment.delivery.discard();
+            else await onDelete(comment.id);
           } catch (e) {
             toast.error((e as Error).message);
           }
@@ -981,7 +996,7 @@ function CommentCard({
           />
         </div>
       ))}
-      <div className="border-t border-border/60">
+      {!item.comment.delivery && <div className="border-t border-border/60">
         <ReplyComposer
           members={ctx.members}
           mentions={mentions}
@@ -992,7 +1007,7 @@ function CommentCard({
           allowAttachments={allowAttachments}
           onReply={onReply}
         />
-      </div>
+      </div>}
     </li>
   );
 }
@@ -1104,7 +1119,11 @@ export function IssueActivity({
 }) {
   const t = useTranslations("Timeline");
   const mentions = useDescriptionMentions(projectId, ctx.members);
-  const rows = groupRows(items);
+  // Memoized: grouping walks the whole feed on every render, and an issue
+  // with hundreds of comments re-renders on each timeline patch or poll.
+  // A long feed used to regroup per render; the array identity only changes
+  // with the items themselves.
+  const rows = useMemo(() => groupRows(items), [items]);
 
   return (
     <div className="flex flex-col">

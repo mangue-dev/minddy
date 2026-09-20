@@ -10,7 +10,7 @@ import {
 } from "mangue-ui";
 import { Plus } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useCreateActions } from "@/components/new-menu";
 
 /**
@@ -22,7 +22,7 @@ import { useCreateActions } from "@/components/new-menu";
 export function MobileNavActions() {
   const tk = useTranslations("Keyboard.shortcuts");
   const tn = useTranslations("Nav");
-  const { toggle } = useAssistantPanel();
+  const { toggle } = useAssistantPanelActions();
   const actions = useCreateActions();
 
   return (

@@ -1,5 +1,7 @@
 "use client";
 
+import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
+
 // An open PAGE (MIN-270): its header, its body, and what links them to the
 // base.
 //
@@ -63,6 +65,7 @@ import {
   isPreparedPageData,
   PAGE_NAVIGATION_FRESH_MS,
   pageKey,
+  usePageSurfaceReady,
   usePagesQuery,
 } from "@/lib/use-pages-query";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -344,8 +347,11 @@ function PageSurface({
     refetchOnMount: (query) =>
       isPreparedPageData(pageId, query.state.dataUpdatedAt) ? false : "always",
   });
-  const readyForThisSurface =
-    isFetchedAfterMount || isPreparedPageData(pageId, dataUpdatedAt);
+  const readyForThisSurface = usePageSurfaceReady(
+    pageId,
+    dataUpdatedAt,
+    isFetchedAfterMount,
+  );
 
   const warmPageActivity = useCallback(() => {
     void queryClient.prefetchQuery({
@@ -829,7 +835,7 @@ function PageSurface({
       // A dialog already open takes up the screen - this one included: without this
       // guard, the shortcut while writing the instruction would reopen the
       // dialog and would erase what was just typed.
-      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+      if (hasVisibleOpenDialog()) return;
       event.preventDefault();
       openAgentCopyRef.current();
     };

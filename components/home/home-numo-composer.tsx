@@ -5,7 +5,7 @@ import { ChatInput } from "@/components/assistant/chat-input";
 import { ConversationSettings } from "@/components/assistant/conversation-settings";
 import { useSlashCommands } from "@/components/assistant/slash-menu";
 import {
-  useAssistantPanel,
+  useAssistantPanelActions,
   useSuppressAssistantFab,
 } from "@/lib/assistant-panel-context";
 import { useResumableConversation } from "@/lib/assistant-chat-context";
@@ -52,7 +52,7 @@ import { useNumoMentionables } from "@/lib/use-numo-mentionables";
  */
 export function HomeNumoComposer() {
   const t = useTranslations("Home");
-  const { openIntent } = useAssistantPanel();
+  const { openIntent } = useAssistantPanelActions();
   const { mentionables, onMentionQuery } = useNumoMentionables(null);
   const commands = useSlashCommands();
   const resumable = useResumableConversation();

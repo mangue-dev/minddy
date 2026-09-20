@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -92,6 +92,23 @@ export function RoutinesPanel({
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
+
+  // The detail and wizard live in their own chunks, fetched at the first
+  // selection (or first "+"). An idle tab is the cheapest moment to pull
+  // them: the first routine click then paints without a chunk wait.
+  useEffect(() => {
+    if (selectedId) return;
+    const warm = () => {
+      void import("@/components/routines/routine-detail");
+      void import("@/components/routines/create-routine-wizard");
+    };
+    if (typeof requestIdleCallback === "function") {
+      const id = requestIdleCallback(warm, { timeout: 4000 });
+      return () => cancelIdleCallback(id);
+    }
+    const timer = setTimeout(warm, 2000);
+    return () => clearTimeout(timer);
+  }, [selectedId]);
 
   const projectById = useMemo(
     () => new Map(projects.map((p) => [p.id, p])),

@@ -89,7 +89,7 @@ import { useFeedbackTimeline } from "@/lib/use-feedback-timeline";
 import { useAuth } from "@/lib/auth-context";
 import {
   useAssistantContext,
-  useAssistantPanel,
+  useAssistantPanelActions,
 } from "@/lib/assistant-panel-context";
 import {
   AskNumoFeedbackProvider,
@@ -951,7 +951,7 @@ export function FeedbackTeamPage() {
    * here prevails over the ambient published just above - otherwise the shortcut
    * would only ever talk about the already selected return.
    */
-  const { open: openAssistant } = useAssistantPanel();
+  const { open: openAssistant } = useAssistantPanelActions();
   const handleAskNumo = useCallback(
     (post: AskNumoFeedback) => {
       openAssistant({

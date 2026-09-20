@@ -125,6 +125,14 @@ const AssistantPanelContext = createContext<AssistantPanelContextValue | null>(
   null,
 );
 
+export type AssistantPanelActions = Pick<
+  AssistantPanelContextValue,
+  "setAmbientContext" | "setFabSuppressed" | "open" | "openIntent" |
+  "close" | "toggle" | "clearPendingOptions"
+>;
+
+const AssistantPanelActionsContext = createContext<AssistantPanelActions | null>(null);
+
 export function AssistantPanelProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const routeProjectId = useMemo(
@@ -233,6 +241,16 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
     setPendingOptions(null);
   }, []);
 
+  const actions = useMemo<AssistantPanelActions>(() => ({
+    setAmbientContext,
+    setFabSuppressed,
+    open,
+    openIntent,
+    close,
+    toggle,
+    clearPendingOptions,
+  }), [setAmbientContext, setFabSuppressed, open, openIntent, close, toggle, clearPendingOptions]);
+
   const value = useMemo<AssistantPanelContextValue>(
     () => ({
       isOpen,
@@ -267,10 +285,21 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <AssistantPanelContext.Provider value={value}>
-      {children}
-    </AssistantPanelContext.Provider>
+    <AssistantPanelActionsContext.Provider value={actions}>
+      <AssistantPanelContext.Provider value={value}>
+        {children}
+      </AssistantPanelContext.Provider>
+    </AssistantPanelActionsContext.Provider>
   );
+}
+
+/** Card and menu actions do not subscribe to the current issue or conversation. */
+export function useAssistantPanelActions(): AssistantPanelActions {
+  const actions = useContext(AssistantPanelActionsContext);
+  if (!actions) {
+    throw new Error("useAssistantPanelActions must be used within an AssistantPanelProvider");
+  }
+  return actions;
 }
 
 export function useAssistantPanel(): AssistantPanelContextValue {
@@ -294,7 +323,7 @@ export function useAssistantPanel(): AssistantPanelContextValue {
 export function useAssistantContext(
   context: AssistantPageContext | null,
 ): void {
-  const { setAmbientContext } = useAssistantPanel();
+  const { setAmbientContext } = useAssistantPanelActions();
   const ownerId = useId();
   // Serialize to a stable key so the effect re-publishes only on a real change
   // (the caller passes a fresh object each render). The object is rebuilt from
@@ -327,7 +356,7 @@ export function useAssistantContext(
  * Routines tab, at the same URL.
  */
 export function useSuppressAssistantFab(active = true): void {
-  const { setFabSuppressed } = useAssistantPanel();
+  const { setFabSuppressed } = useAssistantPanelActions();
   const ownerId = useId();
 
   useEffect(() => {
