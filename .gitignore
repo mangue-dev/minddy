@@ -40,6 +40,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .playwright-cli/
+/output/playwright/
 
 # env files
 .env*

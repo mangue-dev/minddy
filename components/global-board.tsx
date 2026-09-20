@@ -15,7 +15,7 @@ import { useBoardViews } from "@/lib/use-board-views";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { useAppTabLocalState } from "@/lib/app-tab-local-state";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
-import { useOptionalAppTabs } from "@/lib/app-tabs-context";
+import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { buildViewHref } from "@/lib/saved-view-href";
 import { boardViewTabHref } from "@/lib/board-view-tab";
 import { filterIssues, visibleStatuses } from "@/lib/view-filter";
@@ -34,7 +34,7 @@ import type { ObjectiveStatus } from "@/lib/objective-constants";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import {
   useAssistantContext,
-  useAssistantPanel,
+  useAssistantPanelActions,
 } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { EmptyScene } from "@/components/empty-scene";
@@ -98,7 +98,7 @@ function GlobalBoardInner() {
   const myUserId = user?.id ?? null;
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const { openCreateIssue } = useCreate();
-  const { open: openAssistant, openIntent } = useAssistantPanel();
+  const { open: openAssistant, openIntent } = useAssistantPanelActions();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -139,7 +139,7 @@ function GlobalBoardInner() {
 
   // Cycle mode (MIN-32) — a MODE of this board, not a saved view. Restored
   // from its own localStorage slot after mount (SSR renders view mode).
-  const appTabs = useOptionalAppTabs();
+  const appTabs = useOptionalAppTabSession();
   const [cycleMode, setCycleMode] = useAppTabLocalState("global-cycle-mode", false);
   // null = the current cycle; a past/upcoming id when browsing the selector.
   const [selectedCycleId, setSelectedCycleId] = useAppTabLocalState<string | null>("global-selected-cycle", null);

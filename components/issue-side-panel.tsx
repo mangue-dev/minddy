@@ -68,7 +68,7 @@ import {
   isAgentRunWorking,
 } from "@/lib/agent-api";
 import type { NumoIntentAction } from "@/lib/assistant-types";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import {
   agentLaunchPromptVariant,
@@ -191,7 +191,7 @@ export function IssueSidePanel({
   const tPlan = useTranslations("Plan");
   const tAgent = useTranslations("Agent");
   const { openIssue: openGlobalIssue } = useIssuePanelActions();
-  const { openIntent } = useAssistantPanel();
+  const { openIntent } = useAssistantPanelActions();
   // The panel mounts with its board: warm the editor chunk once the page has
   // painted, so opening a ticket never shows the loading fallback.
   useIdleMarkdownEditorPreload();

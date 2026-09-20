@@ -54,7 +54,7 @@ import {
 } from "@/lib/issue-constants";
 import {
   useAssistantContext,
-  useAssistantPanel,
+  useAssistantPanelActions,
 } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { NumoIcon } from "@/components/numo-icon";
@@ -160,7 +160,7 @@ function ProjectBoard() {
   // Smart triage mode (MIN-566) — read once so the toolbar prop narrows off
   // cleanly (`off` renders no button at all).
   const smartTriageMode = project?.smart_triage_mode ?? "rules";
-  const { open: openAssistant, openIntent } = useAssistantPanel();
+  const { open: openAssistant, openIntent } = useAssistantPanelActions();
   const appTabs = useOptionalAppTabs();
 
   // Right-click "Add to cycle" (MIN-32) — the cycle is canonical on /all, but

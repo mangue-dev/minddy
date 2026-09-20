@@ -23,7 +23,7 @@ import { ListFilter, Plus, Target } from "lucide-react";
 import { useProjects } from "@/lib/projects-context";
 import {
   useAssistantContext,
-  useAssistantPanel,
+  useAssistantPanelActions,
 } from "@/lib/assistant-panel-context";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { buildViewHref } from "@/lib/saved-view-href";
@@ -286,7 +286,7 @@ function ObjectivesInner() {
     useObjectivesQuery(projectId);
   const { issues } = useIssuesQuery(projectId);
   const { members } = useMembersQuery(projectId, !!project);
-  const { open: openAssistant } = useAssistantPanel();
+  const { open: openAssistant } = useAssistantPanelActions();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMounted, setDialogMounted] = useState(false);

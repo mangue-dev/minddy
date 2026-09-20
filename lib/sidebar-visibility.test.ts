@@ -10,7 +10,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarVisibilityProvider, useSidebarVisibility } from "./sidebar-visibility-context";
 import en from "@/messages/en.json";
 
-const viewport = vi.hoisted(() => ({ compact: false }));
+const viewport = vi.hoisted(() => ({ compact: false, reducedMotion: false }));
+vi.mock("framer-motion", async (importOriginal) => ({
+  ...await importOriginal<typeof import("framer-motion")>(),
+  useReducedMotion: () => viewport.reducedMotion,
+}));
 vi.mock("mangue-ui", () => ({
   cn: (...classes: Array<string | false | undefined>) => classes.filter(Boolean).join(" "),
   useMediaQuery: () => viewport.compact,
@@ -46,6 +50,7 @@ beforeEach(() => {
     addEventListener: vi.fn(), removeEventListener: vi.fn(),
   });
   viewport.compact = false;
+  viewport.reducedMotion = false;
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
@@ -178,6 +183,28 @@ describe("sidebar visibility", () => {
     expect(panel()).toBe(navigationPanel);
     expect(button()).toBe(control);
     expect(document.activeElement).toBe(control);
+  });
+
+  it("commits content space once while preserving the mounted sliding surface", () => {
+    render();
+    const reserve = container.querySelector<HTMLElement>("[data-sidebar-hidden]")!;
+    const navigationPanel = panel();
+    expect(reserve.style.width).toBe("256px");
+    act(() => button().click());
+    expect(reserve.style.width).toBe("0px");
+    expect(panel()).toBe(navigationPanel);
+    expect(panel()?.style.width).toBe("256px");
+    act(() => button().click());
+    expect(reserve.style.width).toBe("256px");
+  });
+
+  it("finishes hide and show without a slide when reduced motion is enabled", async () => {
+    viewport.reducedMotion = true;
+    render();
+    act(() => button().click());
+    await vi.waitFor(() => expect(panel()?.style.transform).toContain("-256px"));
+    act(() => button().click());
+    await vi.waitFor(() => expect(panel()?.style.transform).toBe("none"));
   });
 
   it("keeps the rail control named and usable without its visible label", () => {

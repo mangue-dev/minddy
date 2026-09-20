@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => h.searchParams,
 }));
 vi.mock("@/lib/assistant-panel-context", () => ({
-  useAssistantPanel: () => ({ open: h.open }),
+  useAssistantPanelActions: () => ({ open: h.open }),
 }));
 
 import { NumoCompatRedirect } from "@/components/assistant/numo-compat-redirect";

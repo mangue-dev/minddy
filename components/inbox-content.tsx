@@ -47,7 +47,7 @@ import {
 } from "@/components/ui/tooltip";
 import { notificationActor, notificationTitle } from "@/lib/notification-line";
 import { useNotifications } from "@/lib/use-notifications";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useInvitationResponder } from "@/lib/use-invitations-query";
 import {
   notificationLineKey,
@@ -173,7 +173,7 @@ function ActionTooltip({
 
 export default function InboxContent({ onNavigate }: { onNavigate: () => void }) {
   const router = useRouter();
-  const openAssistant = useAssistantPanel().open;
+  const openAssistant = useAssistantPanelActions().open;
   const t = useTranslations("Inbox");
   const tCommon = useTranslations("Common");
   const tIssue = useTranslations("Issue");

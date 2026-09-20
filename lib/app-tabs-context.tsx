@@ -16,6 +16,10 @@ interface AppTabsValue extends AppTabsSnapshot {
   reload: () => void;
 }
 const Context = createContext<AppTabsValue | null>(null);
+// Persistence and tab-list changes belong to the strip. Pages only need the
+// active tab, and action handlers need the stable account session.
+const NavigationContext = createContext<Pick<AppTabsValue, "session" | "activeId"> | null>(null);
+const SessionContext = createContext<AppTabsSession | null>(null);
 
 export function AppTabsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -90,13 +94,16 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
   }, [session]);
   const value = useMemo(() => ({ ...snapshot, session, loading: query.isPending,
     loadError: query.isError, reload: () => { void query.refetch(); } }), [snapshot, session, query.isPending, query.isError, query.refetch]);
-  return <Context.Provider value={value}>
+  const navigation = useMemo(() => ({ session, activeId: snapshot.activeId }), [session, snapshot.activeId]);
+  return <SessionContext.Provider value={session}><NavigationContext.Provider value={navigation}><Context.Provider value={value}>
     <Suspense fallback={null}><AppTabRouteSync /></Suspense>
     {children}
-  </Context.Provider>;
+  </Context.Provider></NavigationContext.Provider></SessionContext.Provider>;
 }
 
 export const useOptionalAppTabs = () => useContext(Context);
+export const useOptionalAppTabNavigation = () => useContext(NavigationContext);
+export const useOptionalAppTabSession = () => useContext(SessionContext);
 export function useAppTabs() {
   const value = useOptionalAppTabs();
   if (!value) throw new Error("useAppTabs requires AppTabsProvider");
@@ -105,6 +112,6 @@ export function useAppTabs() {
 
 /** Every mounted editor, including database previews, participates in departure. */
 export function useAppTabDeparture(guard: () => Promise<boolean>) {
-  const session = useOptionalAppTabs()?.session;
+  const session = useOptionalAppTabSession();
   useEffect(() => session?.registerDeparture(guard), [session, guard]);
 }

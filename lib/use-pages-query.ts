@@ -18,7 +18,7 @@ import { createUuid } from "@/lib/create-uuid";
 // 409 (lib/pages.ts, `wouldCreateCycle`), and you must then put the tree back
 // exactly where he was.
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 
 import {
@@ -94,6 +94,23 @@ export function isPreparedPageData(
     return false;
   }
   return isRecentPageData(updatedAt, now);
+}
+
+/**
+ * A prepared document remains a valid editing basis for this mounted surface.
+ * The navigation TTL only decides whether a new surface may trust the cache;
+ * expiring it must not unmount an editor during an unrelated menu interaction.
+ * PageView is keyed by pageId, so each document gets its own initial decision.
+ */
+export function usePageSurfaceReady(
+  pageId: string,
+  dataUpdatedAt: number,
+  isFetchedAfterMount: boolean,
+): boolean {
+  const [preparedOnMount] = useState(() =>
+    isPreparedPageData(pageId, dataUpdatedAt),
+  );
+  return preparedOnMount || isFetchedAfterMount;
 }
 
 /** Warm the lightweight page tree before the Pages route mounts. */

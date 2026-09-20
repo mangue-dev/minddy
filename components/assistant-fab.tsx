@@ -7,7 +7,7 @@ import { Kbd, KbdSequence } from "@/components/ui/kbd";
 import { NumoIcon } from "@/components/numo-icon";
 import { AgentBeam } from "@/components/agent-beam";
 import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useAssistantBusy } from "@/lib/assistant-chat-context";
 import { useAgentSessionsQuery } from "@/lib/use-agent-runs";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
@@ -38,7 +38,7 @@ import {
  */
 
 export function AssistantFab() {
-  const { toggle } = useAssistantPanel();
+  const { toggle } = useAssistantPanelActions();
   // The boolean alone, not the entire conversation context (MIN-323): `state`
   // changes with each SSE token, and the button returns at this rate
   // to read a value that only moves twice per revolution.

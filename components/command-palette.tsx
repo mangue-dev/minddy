@@ -88,7 +88,7 @@ import {
   shouldAutoStartOnPromptCopy,
 } from "@/lib/prompt-copy-auto-start";
 import { useAuth } from "@/lib/auth-context";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useCreate } from "@/lib/create-context";
 import { useCurrentView } from "@/lib/current-view-context";
 import { useSavedViewsQuery } from "@/lib/use-saved-views-query";
@@ -114,7 +114,7 @@ import { moveIssueGroupsToEnd } from "@/lib/command-palette/group-order";
 import type { PaletteStrings } from "@/lib/command-palette/i18n";
 import { createMinddyEntityActionsProvider } from "@/lib/command-palette/registry/providers/MinddyEntityActionsProvider";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";
-import { useOptionalAppTabs } from "@/lib/app-tabs-context";
+import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import type {
   Issue,
   Member,
@@ -256,11 +256,11 @@ export function CommandPalette({
   const tAction = useTranslations("CommandPaletteActions");
   const pathname = usePathname();
   const router = useRouter();
-  const appTabs = useOptionalAppTabs();
+  const appTabs = useOptionalAppTabSession();
   const queryClient = useQueryClient();
   const { user, updateUserMetadata } = useAuth();
   const { projects } = useProjects();
-  const assistant = useAssistantPanel();
+  const assistant = useAssistantPanelActions();
   const { openCreateIssue, openCreateObjective } = useCreate();
   // The account theme: the choice is persisted to user_metadata so it
   // follows the account to every device (lib/use-account-theme.ts).
@@ -831,7 +831,7 @@ export function CommandPalette({
           openLinkedObjective: tAction("openLinkedObjective"),
         },
         navigate: (href) => router.push(href),
-        openInNewTab: (href) => { void appTabs?.session.create(href); },
+        openInNewTab: (href) => { void appTabs?.create(href); },
         copyText: async (value, confirmation, resolveHref) => {
           const text = resolveHref
             ? new URL(value, window.location.origin).href

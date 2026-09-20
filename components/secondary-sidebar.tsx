@@ -114,11 +114,15 @@ export function SecondarySidebar({
     setMounted(true);
     return register();
   }, [register]);
+  useEffect(() => {
+    // The menu portals to body, outside the hidden panel's inert subtree.
+    if (!isMobileLayout && !hosting) setNavigationMenu(null);
+  }, [hosting, isMobileLayout]);
 
   if (!mounted) return null;
 
   const hoisted =
-    !isMobileLayout && hosting && slot !== null && headerSlot !== null;
+    !isMobileLayout && slot !== null && headerSlot !== null;
 
   /**
    * The title line COMMANDS the column, it does not name it: the filter
@@ -172,7 +176,7 @@ export function SecondarySidebar({
           <>
             {body}
             <IssueContextMenu
-              position={navigationMenu}
+              position={hosting ? navigationMenu : null}
               onClose={() => setNavigationMenu(null)}
               actions={[...itemActions, ...navigationActions]}
               searchable={false}
@@ -184,10 +188,8 @@ export function SecondarySidebar({
     );
   }
 
-  // The back row's browse has docked the bar away: the sidebar shows an upper
-  // level while the page keeps its place. Render NOTHING here — falling back
-  // to the inline column would reflow the content the user did not leave.
-  // (Mobile keeps its own inline column whatever the sidebar does.)
+  // The stable desktop portal remains mounted while browsing upper levels.
+  // Before its destination exists, keep the bar out of the page's layout.
   if (!isMobileLayout && !hosting) return null;
 
   return (

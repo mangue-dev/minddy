@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 
 /** Only a UUID can name a conversation; anything else is junk the panel would
  * try to load and then report as an error. Same shape as the server-side
@@ -25,7 +25,7 @@ export function NumoCompatRedirect({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const open = useAssistantPanel().open;
+  const open = useAssistantPanelActions().open;
   // One-shot: `open` and `searchParams` may change identity while the async
   // body runs; the redirect must not replay itself because of that.
   const consumed = useRef(false);

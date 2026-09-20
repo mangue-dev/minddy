@@ -4,6 +4,7 @@ import {
   startTransition,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -19,6 +20,7 @@ import {
   MobileNav,
   cn,
   toast,
+  useMediaQuery,
 } from "mangue-ui";
 import {
   Home,
@@ -45,7 +47,7 @@ import {
 } from "lucide-react";
 import { InboxPopover } from "@/components/inbox-popover";
 import { openInbox } from "@/lib/inbox-launcher";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
@@ -78,7 +80,7 @@ import { usePlanGates } from "@/lib/use-billing-query";
 import { MobileNavActions } from "@/components/mobile-nav-actions";
 import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
 import { AppTopBar } from "@/components/app-top-bar";
-import { useOptionalAppTabs } from "@/lib/app-tabs-context";
+import { useOptionalAppTabNavigation } from "@/lib/app-tabs-context";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 import { HeaderWindowButtonsSlot } from "@/components/desktop-window-buttons";
 import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
@@ -282,8 +284,19 @@ function identifierBadge(id: string) {
 }
 
 export function AppShellChrome({ children }: { children: React.ReactNode }) {
+  // A root marker keeps application typography scoped without repeatedly
+  // matching relational :has() selectors against the entire workspace DOM.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const previous = root.getAttribute("data-app-shell");
+    root.setAttribute("data-app-shell", "true");
+    return () => {
+      if (previous === null) root.removeAttribute("data-app-shell");
+      else root.setAttribute("data-app-shell", previous);
+    };
+  }, []);
   const t = useTranslations("Nav");
-  const openAssistant = useAssistantPanel().open;
+  const openAssistant = useAssistantPanelActions().open;
   const ti = useTranslations("Issue");
   const tk = useTranslations("Keyboard");
   const tScratch = useTranslations("Scratchpad");
@@ -295,7 +308,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const tPages = useTranslations("Pages");
   const { agentsAllowed, projectLimitReached } = usePlanGates();
   const pathname = usePathname();
-  const appTabs = useOptionalAppTabs();
+  const appTabs = useOptionalAppTabNavigation();
   const activeAppTabId = appTabs?.activeId;
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -338,6 +351,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   );
   const { setOpen: setCheatsheetOpen } = useCheatsheet();
   const { hidden: sidebarHidden } = useSidebarVisibility();
+  const mobileLayout = useMediaQuery("(max-width: 767px)");
 
   // Command palette open state — shared by the header search pill and the
   // lightweight global shortcut launcher. The full palette mounts on demand.
@@ -1206,12 +1220,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     [projectById, navigateToWikiPage, openIssuePanel, t, ti, tPages]
   );
 
-  // Desktop: the full list, built only while the palette is open — closed, it
-  // renders nothing, so building thousands of rows on every shell re-render
-  // (notification polls, agent sessions…) would be pure waste.
+  // Prepare the full model during the palette's idle warmup and retain it
+  // between openings. Opening the menu should not map thousands of rows.
   const desktopDataGroups = useMemo(
     () =>
-      paletteOpen
+      paletteMounted && !mobileLayout
         ? buildDataGroups(
             paletteIssues,
             paletteObjectives,
@@ -1220,7 +1233,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           )
         : [],
     [
-      paletteOpen,
+      paletteMounted,
+      mobileLayout,
       buildDataGroups,
       paletteIssues,
       paletteObjectives,
@@ -1229,20 +1243,22 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     ]
   );
 
-  // Mobile: bounded, always ready (MobileNav's search sheet opens on its own).
+  // MobileNav opens its own sheet. Prepare its bounded model only on mobile;
+  // a CSS-hidden mobile navigation must not duplicate this work on desktop.
   const mobileDataGroups = useMemo(
     () =>
-      buildDataGroups(
+      mobileLayout ? buildDataGroups(
         capForMobile(paletteIssues, currentProjectId),
         capForMobile(paletteObjectives, currentProjectId),
         capForMobile(palettePages, currentProjectId)
-      ),
+      ) : [],
     [
       buildDataGroups,
       paletteIssues,
       paletteObjectives,
       palettePages,
       currentProjectId,
+      mobileLayout,
     ]
   );
 

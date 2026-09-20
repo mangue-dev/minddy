@@ -1,14 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useAppTabs } from "@/lib/app-tabs-context";
+import { useOptionalAppTabNavigation } from "@/lib/app-tabs-context";
 import { useCurrentViewSnapshot } from "@/lib/current-view-context";
 
 export function AppTabRouteSync() {
   const path = usePathname();
   const search = useSearchParams();
   const view = useCurrentViewSnapshot();
-  const { session, activeId } = useAppTabs();
+  const { session, activeId } = useOptionalAppTabNavigation()!;
   // In-page anchors move the URL without touching path or search: without
   // tracking them, the remembered destination misses the hash and a reload
   // reads the URL as an unmatched deep link — which used to grind the first

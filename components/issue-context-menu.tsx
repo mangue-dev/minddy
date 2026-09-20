@@ -237,7 +237,11 @@ export function IssueContextMenu({
  entries (view pills), where it would only make noise. */
   searchable?: boolean;
 }) {
-  if (typeof document === "undefined") return null;
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  // Portals have no server markup. Keep the first client render identical
+  // before attaching the pointer anchor, including when the menu is closed.
+  if (!mounted) return null;
   // The whole menu — trigger included — is portaled to <body>. The invisible
   // trigger carries the anchor coordinates; inside any transformed or
   // clipped ancestor (drag-and-drop items, overflow-hidden strips) a `fixed`

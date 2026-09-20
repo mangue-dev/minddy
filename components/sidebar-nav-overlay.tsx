@@ -10,7 +10,8 @@ const HOTZONE = 12;
 
 /**
  * Keep one navigation tree mounted across docked, rail, and hidden modes.
- * Animate its reserved width with the sidebars so page content resizes smoothly.
+ * Commit the reserved width once; only the floating panel's transform animates.
+ * Tweening layout width reflows every card and editor on every animation frame.
  * Hidden navigation can be recalled by pointer, keyboard focus, or a portaled layer.
  */
 export function SidebarNavOverlay({
@@ -173,12 +174,10 @@ export function SidebarNavOverlay({
   }, []);
 
   return (
-    <motion.div
+    <div
       className="relative h-full shrink-0"
       data-sidebar-hidden={hidden}
-      initial={{ width: flowWidth }}
-      animate={{ width: flowWidth }}
-      transition={shellTransition}
+      style={{ width: flowWidth }}
     >
       {/* The edge recalls hidden navigation without intercepting its controls. */}
       {hidden && (
@@ -202,12 +201,13 @@ export function SidebarNavOverlay({
         className="sidebar-nav-panel absolute inset-y-0 left-0 z-[38] flex h-full overflow-hidden rounded-r-[var(--app-pane-radius)] bg-sidebar transition-shadow duration-200 data-[floating=false]:rounded-r-none data-[floating=true]:shadow-[16px_0_40px_-24px_rgba(0,0,0,0.35)]"
         data-open={shown}
         data-floating={hidden && shown}
-        initial={{ width: panelWidth, x: shown ? 0 : -width }}
-        animate={{ width: panelWidth, x: shown ? 0 : -width }}
+        style={{ width: panelWidth }}
+        initial={{ x: shown ? 0 : -width }}
+        animate={{ x: shown ? 0 : -width }}
         transition={shellTransition}
       >
         {children}
       </motion.div>
-    </motion.div>
+    </div>
   );
 }

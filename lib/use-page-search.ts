@@ -30,6 +30,7 @@ const MIN_QUERY = 2;
 /** The delay on typing. Enough so as not to draw at each letter, enough few
  * so that the result arrives while reading the list of titles. */
 const DEBOUNCE_MS = 220;
+const EMPTY_HITS: PageSearchHit[] = [];
 
 async function fetchPageSearch(query: string): Promise<PageSearchHit[]> {
   const response = await fetch(`/api/me/pages/search?q=${encodeURIComponent(query)}`);
@@ -44,9 +45,8 @@ async function fetchPageSearch(query: string): Promise<PageSearchHit[]> {
  * request would have no one to serve.
  */
 export function usePageContentSearch(enabled: boolean): PageSearchHit[] {
-  // The palette has the strike (its blind); we subscribe to it rather than
-  // dupliquer, sinon deux champs diraient deux choses.
-  const query = usePaletteStore((s) => s.query);
+  // Closed palettes do not need to notify the application shell about typing.
+  const query = usePaletteStore((s) => enabled ? s.query : "");
   const [debounced, setDebounced] = useState("");
 
   useEffect(() => {
@@ -70,5 +70,5 @@ export function usePageContentSearch(enabled: boolean): PageSearchHit[] {
     staleTime: 30_000,
   });
 
-  return data ?? [];
+  return data ?? EMPTY_HITS;
 }

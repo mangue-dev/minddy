@@ -62,7 +62,7 @@ import { useBulkSelectionActions } from "@/lib/use-bulk-selection-actions";
 import { issueIdentifier } from "@/lib/issue-constants";
 import {
   useAssistantContext,
-  useAssistantPanel,
+  useAssistantPanelActions,
 } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { useScrollFade } from "@/lib/use-scroll-fade";
@@ -96,7 +96,7 @@ export default function TriagePage() {
   const { objectives } = useObjectivesQuery(projectId);
   const { relations, addRelation } = useIssueRelationsQuery(projectId);
   const mentions = useDescriptionMentions(projectId, members);
-  const { openIntent } = useAssistantPanel();
+  const { openIntent } = useAssistantPanelActions();
 
   const triageIssues = useMemo(
     () =>

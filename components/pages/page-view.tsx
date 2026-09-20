@@ -63,6 +63,7 @@ import {
   isPreparedPageData,
   PAGE_NAVIGATION_FRESH_MS,
   pageKey,
+  usePageSurfaceReady,
   usePagesQuery,
 } from "@/lib/use-pages-query";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -344,8 +345,11 @@ function PageSurface({
     refetchOnMount: (query) =>
       isPreparedPageData(pageId, query.state.dataUpdatedAt) ? false : "always",
   });
-  const readyForThisSurface =
-    isFetchedAfterMount || isPreparedPageData(pageId, dataUpdatedAt);
+  const readyForThisSurface = usePageSurfaceReady(
+    pageId,
+    dataUpdatedAt,
+    isFetchedAfterMount,
+  );
 
   const warmPageActivity = useCallback(() => {
     void queryClient.prefetchQuery({

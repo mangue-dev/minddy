@@ -15,6 +15,7 @@
 
 import { useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { mergeComment, publishCommentWrite, removeCommentThread } from "./comment-cache";
 
 import {
   addPageCommentApi,
@@ -77,30 +78,29 @@ export function usePageComments({
     () => arrangeThreads(comments, blockIds),
     [comments, blockIds]
   );
-  const refresh = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: pageCommentsKey(pageId) });
-  }, [queryClient, pageId]);
-
   const add = useCallback<PageCommentsHandle["add"]>(
     async (input) => {
-      await addPageCommentApi(projectId, pageId, input);
-      refresh();
+      const saved = await addPageCommentApi(projectId, pageId, input);
+      await publishCommentWrite<PageComment>(queryClient, pageCommentsKey(pageId),
+        (comments) => mergeComment(comments, saved));
     },
-    [projectId, pageId, refresh]
+    [projectId, pageId, queryClient]
   );
   const edit = useCallback<PageCommentsHandle["edit"]>(
     async (commentId, body) => {
-      await updatePageCommentApi(projectId, pageId, commentId, body);
-      refresh();
+      const saved = await updatePageCommentApi(projectId, pageId, commentId, body);
+      await publishCommentWrite<PageComment>(queryClient, pageCommentsKey(pageId),
+        (comments) => mergeComment(comments, saved, false));
     },
-    [projectId, pageId, refresh]
+    [projectId, pageId, queryClient]
   );
   const remove = useCallback<PageCommentsHandle["remove"]>(
     async (commentId) => {
       await deletePageCommentApi(projectId, pageId, commentId);
-      refresh();
+      await publishCommentWrite<PageComment>(queryClient, pageCommentsKey(pageId),
+        (comments) => removeCommentThread(comments, commentId));
     },
-    [projectId, pageId, refresh]
+    [projectId, pageId, queryClient]
   );
   return {
     comments,

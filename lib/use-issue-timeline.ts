@@ -2,6 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
+import { mergeComment, publishCommentWrite, removeCommentThread } from "./comment-cache";
 import {
   addCommentApi,
   deleteResourceApi,
@@ -167,29 +168,36 @@ export function useIssueTimeline(issueId: string | null, birth?: IssueBirth | nu
       parentId: string | null = null,
       attachments: ResourceInput[] = []
     ) => {
-      await addCommentApi(issueId as string, body, mentionedUserIds, parentId, attachments);
-      void queryClient.invalidateQueries({ queryKey: commentsKey(issueId as string) });
+      const saved = await addCommentApi(issueId as string, body, mentionedUserIds, parentId, attachments);
+      await publishCommentWrite<Comment>(queryClient, commentsKey(issueId as string),
+        (comments) => mergeComment(comments, saved));
     },
     [issueId, queryClient]
   );
   const updateComment = useCallback(
     async (commentId: string, body: string) => {
-      await updateCommentApi(commentId, body);
-      void queryClient.invalidateQueries({ queryKey: commentsKey(issueId as string) });
+      const saved = await updateCommentApi(commentId, body);
+      await publishCommentWrite<Comment>(queryClient, commentsKey(issueId as string),
+        (comments) => mergeComment(comments, saved, false));
     },
     [issueId, queryClient]
   );
   const deleteComment = useCallback(
     async (commentId: string) => {
       await deleteCommentApi(commentId);
-      void queryClient.invalidateQueries({ queryKey: commentsKey(issueId as string) });
+      await publishCommentWrite<Comment>(queryClient, commentsKey(issueId as string),
+        (comments) => removeCommentThread(comments, commentId));
     },
     [issueId, queryClient]
   );
   const deleteAttachment = useCallback(
     async (attachmentId: string) => {
       await deleteResourceApi(attachmentId);
-      void queryClient.invalidateQueries({ queryKey: commentsKey(issueId as string) });
+      await publishCommentWrite<Comment>(queryClient, commentsKey(issueId as string),
+        (comments) => comments?.map((comment) => {
+          if (!comment.attachments?.some((attachment) => attachment.id === attachmentId)) return comment;
+          return { ...comment, attachments: comment.attachments.filter((attachment) => attachment.id !== attachmentId) };
+        }));
     },
     [issueId, queryClient]
   );

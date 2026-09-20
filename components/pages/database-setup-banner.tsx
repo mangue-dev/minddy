@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, toast } from "mangue-ui";
 import { Sparkles, Upload, X } from "lucide-react";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import {
   dismissDatabaseSetup,
   isDatabaseSetupPending,
@@ -21,7 +21,7 @@ export function DatabaseSetupBanner({
   page: PageSummary;
 }) {
   const t = useTranslations("PageDatabase");
-  const assistant = useAssistantPanel();
+  const assistant = useAssistantPanelActions();
   const [visible, setVisible] = useState(() => isDatabaseSetupPending(page.id));
   const [importing, setImporting] = useState(false);
   const [opening, setOpening] = useState(false);

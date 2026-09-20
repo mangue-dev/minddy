@@ -34,7 +34,7 @@ import {
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useSidebarVisibility } from "@/lib/sidebar-visibility-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
@@ -89,7 +89,7 @@ function isDialogOpen(): boolean {
 export function KeyboardProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { toggle: toggleAssistant } = useAssistantPanel();
+  const { toggle: toggleAssistant } = useAssistantPanelActions();
   const { open: openScratchpad } = useScratchpad();
   const { toggle: toggleSidebarVisibility } = useSidebarVisibility();
   const { present: secondaryPresent } = useSecondarySidebar();

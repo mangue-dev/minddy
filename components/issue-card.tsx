@@ -67,7 +67,7 @@ import {
   type IssuePr,
 } from "@/lib/agent-api";
 import type { NumoIntentAction } from "@/lib/assistant-types";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import {
   agentLaunchPromptVariant,
   agentPlanPromptVariant,
@@ -997,7 +997,7 @@ const IssueCardContent = memo(function IssueCardContent({
   const tCommon = useTranslations("Common");
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { openIntent, open: openAssistant } = useAssistantPanel();
+  const { openIntent, open: openAssistant } = useAssistantPanelActions();
   const agentActive = useAgentActive(issue.id);
   // A prior session exists → the menu carries “Open agent” (it reopens the
   // conversation in the FAB); new voluntary work enters Numo below.
