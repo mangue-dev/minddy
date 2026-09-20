@@ -38,6 +38,8 @@ export interface ResultsListProps {
   onOpenActions: (item: PaletteItem) => void;
   /** Check if an item has actions available. */
   hasActions: (item: PaletteItem) => boolean;
+  /** Called when the mouse hovers a row (host-side destination prefetch). */
+  onHoverPrefetch?: (item: PaletteItem) => void;
   /** Whether the list is loading. */
   isLoading?: boolean;
   /** Empty state component. */
@@ -184,6 +186,7 @@ interface RowData {
   onSelect: (item: PaletteItem) => void;
   onOpenActions: (item: PaletteItem) => void;
   hasActions: (item: PaletteItem) => boolean;
+  onHoverPrefetch?: (item: PaletteItem) => void;
   isMobile: boolean;
   getTouchHandlers?: ResultsListProps["getTouchHandlers"];
 }
@@ -196,6 +199,7 @@ function Row({
   onSelect,
   onOpenActions,
   hasActions,
+  onHoverPrefetch,
   isMobile,
   getTouchHandlers,
 }: RowComponentProps<RowData>): ReactElement {
@@ -230,6 +234,7 @@ function Row({
         onSelect={() => onSelect(row.item)}
         onOpenActions={() => onOpenActions(row.item)}
         hasActions={hasActions(row.item)}
+        onHoverPrefetch={onHoverPrefetch}
         isMobile={isMobile}
         touchHandlers={getTouchHandlers?.(row.item)}
       />
@@ -297,6 +302,7 @@ export function ResultsList({
   onSelect,
   onOpenActions,
   hasActions,
+  onHoverPrefetch,
   isLoading = false,
   emptyState,
   height,
@@ -396,6 +402,7 @@ export function ResultsList({
           onSelect,
           onOpenActions,
           hasActions,
+          onHoverPrefetch,
           isMobile,
           getTouchHandlers,
         }}

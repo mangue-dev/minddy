@@ -68,6 +68,7 @@ import {
   type ContextualAction,
   type FormSelectOption,
   type PaletteItem as CpPaletteItem,
+  type PaletteItem,
 } from "@/lib/command-palette";
 import { NumoIcon } from "@/components/numo-icon";
 import { projectOrbIcon } from "@/components/project-orb";
@@ -234,6 +235,9 @@ export interface CommandPaletteProps {
   searchIndex?: SearchIndexResponse | null;
   destinationOnly?: boolean;
   onDestinationSelect?: (href: string) => void;
+  /** Prefetch the destination behind a hovered/highlighted row (new tab or
+   *  navigation): the palette row is the browsing intent (fourth pass MIN-540). */
+  onPrefetchDestination?: (href: string) => void;
 }
 
 export function CommandPalette({
@@ -243,6 +247,7 @@ export function CommandPalette({
   searchIndex,
   destinationOnly = false,
   onDestinationSelect,
+  onPrefetchDestination,
 }: CommandPaletteProps) {
   const { track } = useAnalytics();
   const locale = useLocale();
@@ -292,6 +297,21 @@ export function CommandPalette({
   useEffect(() => {
     favoritesRef.current = favorites;
   }, [favorites]);
+
+  // One warmup attempt per destination while the palette stays mounted:
+  // repeated hovers and keyboard passes over the same row cost nothing.
+  const prefetchAttempted = useRef(new Set<string>());
+  const handleHoverPrefetch = useCallback((item: PaletteItem) => {
+    if (!onPrefetchDestination) return;
+    // Issue rows open a panel, not a tab: their href would prefetch a
+    // project route per row while scrolling the list. Destinations, saved
+    // views and pages carry the real navigation.
+    if (item.entityType === "issue") return;
+    const destination = paletteDestinationHref(item.href);
+    if (!destination || prefetchAttempted.current.has(destination)) return;
+    prefetchAttempted.current.add(destination);
+    onPrefetchDestination(destination);
+  }, [onPrefetchDestination]);
   // Re-sync when the account metadata changes (another tab/device, or after a
   // write settles). Keyed on the serialized value to avoid an identity-churn loop.
   const serverFavoritesKey = serverFavorites.join(" ");
@@ -1422,6 +1442,7 @@ export function CommandPalette({
         else if (type === "success") toast.success(message);
         else toast(message);
       }}
+      onHoverPrefetch={handleHoverPrefetch}
 quickAi={destinationOnly ? undefined : {
         icon: <NumoActionIcon className="size-4" />,
         onSelect: (query) => {

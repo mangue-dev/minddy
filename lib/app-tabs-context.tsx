@@ -8,8 +8,7 @@ import { AppTabsSession, type AppTabsSnapshot } from "./app-tabs-session";
 import { appTabsQueryKey, useAppTabsQuery } from "./use-app-tabs-query";
 import { AppTabRouteSync } from "@/components/app-tab-route-sync";
 import { appTabsStorageKey } from "./app-tabs-storage";
-import { appTabRoute } from "./app-tab-location";
-import { prefetchPageNavigation } from "./use-pages-query";
+import { prefetchAppTabDestination } from "./prefetch-tab-destination";
 
 interface AppTabsValue extends AppTabsSnapshot {
   session: AppTabsSession;
@@ -62,10 +61,12 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
     };
   }, [session]);
   useEffect(() => {
+    // One warmup attempt per href (tab label, palette row): prefetchQuery
+    // itself respects staleTime, so a fresh cache costs nothing anyway.
+    const attempted = new Set<string>();
     session.prefetch = (href) => {
       router.prefetch(href);
-      const route = appTabRoute(href);
-      if (route.projectId && route.pageId) prefetchPageNavigation(client, route.projectId, route.pageId);
+      prefetchAppTabDestination(client, href, attempted);
     };
     session.navigate = (href) => {
       const current = window.location.pathname;

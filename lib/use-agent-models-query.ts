@@ -86,7 +86,7 @@ interface AgentModelsResult {
   };
 }
 
-async function fetchAgentModels(
+export async function fetchAgentModels(
   scope: AgentModelsScope,
   capability: ModelCatalogCapability,
 ): Promise<AgentModelsResult> {

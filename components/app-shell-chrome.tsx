@@ -1581,6 +1581,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     setPaletteMode("default");
     void appTabs?.session.create(href);
   }, [appTabs?.session]);
+  // Hovering a destination row is the intent to open it: the same prefetch
+  // an existing tab label already gets (fourth pass MIN-540).
+  const handleDestinationPrefetch = useCallback((href: string) => {
+    appTabs?.session.prefetch(href);
+  }, [appTabs?.session]);
 
   return (
     <div className="app-workspace flex h-dvh w-full min-w-0 flex-col overflow-hidden">
@@ -1654,6 +1659,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           searchIndex={searchIndex}
           destinationOnly={paletteMode === "destination"}
           onDestinationSelect={handleDestinationSelect}
+          onPrefetchDestination={handleDestinationPrefetch}
         />
       ) : null}
       <InboxPopover open={inboxOpen} onOpenChange={setInboxOpen} />

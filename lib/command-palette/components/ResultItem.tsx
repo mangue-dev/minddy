@@ -33,6 +33,9 @@ export interface ResultItemProps {
   onOpenActions?: () => void;
   /** Whether this item has contextual actions. */
   hasActions: boolean;
+  /** Called when the pointer (mouse) hovers the row — the host may prefetch
+   *  the destination behind it. */
+  onHoverPrefetch?: (item: PaletteItem) => void;
   /** Whether we're on mobile (hides shortcuts/type labels). */
   isMobile?: boolean;
   /** Touch event handlers for mobile gestures. */
@@ -81,6 +84,7 @@ export const ResultItem = memo(function ResultItem({
   onSelect,
   onOpenActions,
   hasActions,
+  onHoverPrefetch,
   isMobile = false,
   touchHandlers,
 }: ResultItemProps) {
@@ -93,6 +97,15 @@ export const ResultItem = memo(function ResultItem({
       onSelect();
     },
     [onSelect]
+  );
+
+  // Only the mouse hovers "in passing": a touch pointer enters right before
+  // the tap that already selects, so prefetching there would duplicate work.
+  const handlePointerEnter = useCallback(
+    (e: React.PointerEvent) => {
+      if (e.pointerType === "mouse") onHoverPrefetch?.(item);
+    },
+    [item, onHoverPrefetch]
   );
 
   const handleKeyDown = useCallback(
@@ -114,6 +127,7 @@ export const ResultItem = memo(function ResultItem({
       aria-selected={isActive}
       tabIndex={isActive ? 0 : -1}
       onClick={handleClick}
+      onPointerEnter={handlePointerEnter}
       onKeyDown={handleKeyDown}
       className={`${styles.item} ${isActive ? styles.active : ""}`}
       data-testid="result-item"
