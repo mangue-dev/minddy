@@ -12,6 +12,7 @@ import type {
   IssueUpdateInput,
   RecurringIssue,
 } from "./types";
+import type { SmartTriageMode, SmartTriageMove } from "./smart-triage";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -221,4 +222,35 @@ export async function deleteIssueApi(
     );
   }
   trackEvent("issue_deleted", { surface: meta?.surface ?? "unknown" });
+}
+
+/**
+ * The board's Smart ordering (MIN-566, MIN-576): the server scores the
+ * project's open columns per its mode and returns the result. With
+ * `persist: false` (the Smart view sort's automatic scoring), NOTHING is
+ * written — the returned `scores` drive the view sort and the manual drag
+ * order stays untouched. With `persist: true`, the writes are already
+ * persisted when this resolves — the caller applies the moves to its
+ * caches, it must NOT re-PATCH each issue.
+ */
+export async function smartTriageApi(
+  projectId: string,
+  options: { statuses?: string[]; persist?: boolean } = {}
+): Promise<{
+  mode: SmartTriageMode;
+  moves: SmartTriageMove[];
+  columns: number;
+  scored: boolean;
+  scores: Record<string, number> | null;
+}> {
+  return parseJson(
+    await fetch(`/api/projects/${projectId}/smart-triage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...(options.statuses ? { statuses: options.statuses } : {}),
+        ...(options.persist !== undefined ? { persist: options.persist } : {}),
+      }),
+    })
+  );
 }

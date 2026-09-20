@@ -31,3 +31,27 @@ describe("providers BYOK locaux", () => {
     );
   });
 });
+
+describe("OpenCode BYOK providers (MIN-544)", () => {
+  it("exposes the Go subscription and the Zen gateway as first-class cloud providers", () => {
+    expect(getAgentProvider("opencode-go")?.baseUrl).toBe("https://opencode.ai/zen/go/v1");
+    expect(getAgentProvider("opencode-zen")?.baseUrl).toBe("https://opencode.ai/zen/v1");
+    // The public `/models` listing feeds the picker, exactly like OpenAI and Google.
+    expect(getAgentProvider("opencode-go")?.listStrategy).toBe("openai");
+    expect(getAgentProvider("opencode-zen")?.listStrategy).toBe("openai");
+    expect(isLocalAgentProvider("opencode-go")).toBe(false);
+    expect(isLocalAgentProvider("opencode-zen")).toBe(false);
+    expect(getAgentProvider("opencode-go")?.keysUrl).toBe("https://opencode.ai/auth");
+  });
+
+  it("keeps a conservative wire profile: no reasoning field, OpenAI max_tokens alias", () => {
+    const profile = getAgentProvider("opencode-go")?.requestProfile;
+    expect(profile).toEqual({ streamUsage: true, outputTokenField: "max_tokens" });
+    expect(getAgentProvider("opencode-zen")?.requestProfile).toEqual(profile);
+  });
+
+  it("defaults both gateways to the cheapest strong coder they share", () => {
+    expect(getAgentProvider("opencode-go")?.defaultModel).toBe("glm-5.3-flash");
+    expect(getAgentProvider("opencode-zen")?.defaultModel).toBe("glm-5.3-flash");
+  });
+});

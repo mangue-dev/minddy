@@ -33,12 +33,23 @@ export type ByokProbeVerdict = "valid" | "invalid" | "unknown" | "rate_limited";
 
 /** Beyond that, we don't know — and we don't make you wait for the settings screen. */
 const PROBE_TIMEOUT_MS = 8000;
+
+/**
+ * Cheapest model listed on BOTH OpenCode gateways (Go and Zen publish it at
+ * $0.15/$0.50 per 1M tokens): a one-token probe costs a fraction of a cent
+ * of the subscription. If OpenCode retires the id, the probe degrades to an
+ * `unknown` verdict and the key is revalidated on first use instead.
+ */
+const OPENCODE_PROBE_MODEL = "glm-5.3-flash";
 const PROBE_RATE_LIMIT = { limit: 10, windowMs: 60 * 60 * 1000 } as const;
 export const BYOK_PROBE_RETRY_AFTER_SECONDS = PROBE_RATE_LIMIT.windowMs / 1000;
 
 interface ProbeRequest {
   url: string;
   headers: Record<string, string>;
+  method?: "POST";
+  /** POST body. The response is discarded (`maxBytes: 1`): only the status counts. */
+  body?: string;
 }
 
 /**
@@ -47,6 +58,12 @@ interface ProbeRequest {
  * OpenRouter has better than a `/models` — which is PUBLIC at home, and would respond
  * 200 to a bogus key: `/key` describes the key presented, so only exists for
  * a key that exists. The others go through their listing, which requires the key.
+ *
+ * The OpenCode gateways (Go and Zen) are the opposite trap: their `/models`
+ * is public too, so the probe must be an authenticated call. A one-token
+ * completion on the cheapest model works because the gateway checks the key
+ * BEFORE the body: an invalid key is refused 401 without spending anything,
+ * a valid one answers 200 at the cost of a single output token.
  */
 function probeRequestFor(
   provider: AgentProviderId,
@@ -60,6 +77,21 @@ function probeRequestFor(
       return {
         url: `${baseUrl}/models?limit=1`,
         headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      };
+    case "opencode-go":
+    case "opencode-zen":
+      return {
+        url: `${baseUrl}/chat/completions`,
+        method: "POST",
+        body: JSON.stringify({
+          model: OPENCODE_PROBE_MODEL,
+          messages: [{ role: "user", content: "ping" }],
+          max_tokens: 1,
+        }),
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "content-type": "application/json",
+        },
       };
     default:
       // OpenAI, Google and any OpenAI-compatible server: `/models` authenticated.
@@ -95,10 +127,16 @@ export async function probeByokKey(params: {
     return "rate_limited";
   }
 
-  const { url, headers } = probeRequestFor(provider, baseUrl.replace(/\/+$/, ""), apiKey);
+  const { url, headers, method, body } = probeRequestFor(
+    provider,
+    baseUrl.replace(/\/+$/, ""),
+    apiKey,
+  );
   try {
     const res = await fetchAiProviderBytes(provider, url, {
       headers,
+      ...(method ? { method } : {}),
+      ...(body !== undefined ? { body } : {}),
       maxBytes: 1,
       onOverflow: "truncate",
       timeoutMs: PROBE_TIMEOUT_MS,

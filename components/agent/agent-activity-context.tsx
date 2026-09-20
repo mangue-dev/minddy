@@ -1,44 +1,30 @@
 "use client";
 
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { IssuePr } from "@/lib/agent-api";
+import {
+  createAgentActivityStore,
+  type AgentActivityPayload,
+  type AgentActivityStore,
+} from "@/lib/agent-activity-store";
 
 /**
- * Context “agent state by issue” (MIN-46). Only one poll per board exposed
- * deux ensembles d'issue_ids :
- * • working — the agent is WORKING (queued/running) → animated halo on the map;
- * • session — a CONVERSATION exists (at least one non `failed` run, at work
- * or at rest) → the card entry suggests “Open agent”
- * rather than “Launch an agent”.
- * …plus the PULL REQUEST of each ticket, which is NOT an agent matter (a
- * Human PR is one too) but travel here because it's the same poll.
- *
- * Adaptive polling: fast as long as an agent is working, slow otherwise (sessions
- * at rest do not change by themselves).
- *
- * Two modes: `projectId` provided → a project; `projectId` absent → GLOBAL (board
- * “All tickets”, cross-project — the RLS limits to accessible projects).
+ * One scoped poll supplies board halos, resumable conversations, and linked PRs.
+ * Each card subscribes only to its own issue, so one active run does not replay
+ * the other cards. Realtime handles idle transitions; polling backs up active work.
  */
-
-interface AgentActivity {
-  working: Set<string>;
-  session: Set<string>;
-  prs: Map<string, IssuePr>;
-}
-
-const EMPTY: AgentActivity = {
-  working: new Set(),
-  session: new Set(),
-  prs: new Map(),
-};
-const AgentActivityContext = createContext<AgentActivity>(EMPTY);
-
-type ActivityPayload = {
-  workingIssueIds?: string[];
-  sessionIssueIds?: string[];
-  pullRequests?: Record<string, IssuePr>;
-};
+const EMPTY_STORE = createAgentActivityStore();
+const AgentActivityContext = createContext<AgentActivityStore>(EMPTY_STORE);
+type ActivityPayload = AgentActivityPayload;
 
 /**
  * The key to the survey. Exported because it is a CONTRACT with the filter of
@@ -95,6 +81,7 @@ export async function fetchAgentActivity(
   return {
     workingIssueIds: data.workingIssueIds ?? [],
     sessionIssueIds: data.sessionIssueIds ?? [],
+    sessionConversations: data.sessionConversations ?? {},
     pullRequests: data.pullRequests ?? {},
   };
 }
@@ -117,42 +104,61 @@ export function AgentActivityProvider({
       agentActivityPollInterval(query.state.data?.workingIssueIds),
   });
 
-  const working = data?.workingIssueIds ?? [];
-  const session = data?.sessionIssueIds ?? [];
-  const prs = data?.pullRequests ?? {};
-  const workingKey = working.slice().sort().join(",");
-  const sessionKey = session.slice().sort().join(",");
-  const prsKey = Object.entries(prs)
-    .map(([k, v]) => `${k}:${v.prId}:${v.state}`)
-    .sort()
-    .join(",");
-  // Sets/Map stable as long as the lists do not change (avoids re-rendering all
-  // the cards at each poll).
-  const value = useMemo(
-    () => ({
-      working: new Set(working),
-      session: new Set(session),
-      prs: new Map(Object.entries(prs)),
-    }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workingKey, sessionKey, prsKey],
-  );
+  const scope = JSON.stringify(agentActivityQueryKey(projectId, projectIds));
+  // Replacing a scope must never expose the previous project's activity.
+  const store = useMemo(() => createAgentActivityStore(), [scope]);
+  useLayoutEffect(() => store.update(data), [store, data]);
 
   return (
-    <AgentActivityContext.Provider value={value}>
+    <AgentActivityContext.Provider value={store}>
       {children}
     </AgentActivityContext.Provider>
   );
 }
 
+/** Stable per-issue snapshot for cards that display all four activity fields. */
+export function useIssueActivity(issueId: string) {
+  const store = useContext(AgentActivityContext);
+  const subscribe = useCallback(
+    (listener: () => void) => store.subscribe(issueId, listener),
+    [store, issueId],
+  );
+  const getSnapshot = useCallback(() => store.get(issueId), [store, issueId]);
+  return useSyncExternalStore(subscribe, getSnapshot, () => EMPTY_STORE.get(issueId));
+}
+
+function useIssueActivityValue<K extends keyof ReturnType<AgentActivityStore["get"]>>(
+  issueId: string,
+  field: K,
+) {
+  const store = useContext(AgentActivityContext);
+  const subscribe = useCallback(
+    (listener: () => void) => store.subscribe(issueId, listener),
+    [store, issueId],
+  );
+  const getSnapshot = useCallback(
+    () => store.get(issueId)[field],
+    [store, issueId, field],
+  );
+  return useSyncExternalStore(subscribe, getSnapshot, () => EMPTY_STORE.get(issueId)[field]);
+}
+
 /** True if an agent is currently WORKING on this issue (drives the halo). */
 export function useAgentActive(issueId: string): boolean {
-  return useContext(AgentActivityContext).working.has(issueId);
+  return useIssueActivityValue(issueId, "working");
 }
 
 /** True if a resumeable agent session exists on this issue (work or rest). */
 export function useAgentHasSession(issueId: string): boolean {
-  return useContext(AgentActivityContext).session.has(issueId);
+  return useIssueActivityValue(issueId, "session");
+}
+
+/**
+ * The common conversation to reopen for this issue, or null. Only the newest
+ * run that carries one speaks; older sessions predate the shared identity.
+ */
+export function useIssueConversation(issueId: string): string | null {
+  return useIssueActivityValue(issueId, "conversation");
 }
 
 /**
@@ -164,5 +170,5 @@ export function useAgentHasSession(issueId: string): boolean {
  * action (`isPrWorthShowing`).
  */
 export function useIssuePr(issueId: string): IssuePr | null {
-  return useContext(AgentActivityContext).prs.get(issueId) ?? null;
+  return useIssueActivityValue(issueId, "pr");
 }

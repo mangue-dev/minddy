@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { BorderBeam, type BorderBeamSize } from "border-beam";
 import { useTheme } from "mangue-ui";
 
@@ -48,6 +48,13 @@ export function AgentBeam({
   children: ReactNode;
 }) {
   const { resolvedTheme } = useTheme();
+  if (keepMounted && size === "pulse-inner") {
+    return (
+      <PersistentAgentBeam active={active} className={className}>
+        {children}
+      </PersistentAgentBeam>
+    );
+  }
   if (!active && !keepMounted) return <>{children}</>;
   return (
     <BorderBeam
@@ -59,6 +66,28 @@ export function AgentBeam({
     >
       {children}
     </BorderBeam>
+  );
+}
+
+/**
+ * Hundreds of idle cards need a stable wrapper, not hundreds of generated
+ * stylesheets and native observers. Keep the content mounted independently of
+ * the decoration; the existing beam still owns its full active animation.
+ */
+function PersistentAgentBeam({
+  active,
+  className,
+  children,
+}: {
+  active: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={className} style={{ position: "relative", overflow: "hidden", isolation: "isolate" }}>
+      {children}
+      <AgentBeamOverlay active={active} />
+    </div>
   );
 }
 
@@ -84,9 +113,47 @@ export function AgentBeam({
 export function AgentBeamOverlay({
   active,
   size = "pulse-inner",
+  onDeactivate,
 }: {
   active: boolean;
   size?: BorderBeamSize;
+  onDeactivate?: () => void;
+}) {
+  const [visible, setVisible] = useState(active);
+  const finished = useRef(!active);
+  const finish = useCallback(() => {
+    if (active || finished.current) return;
+    finished.current = true;
+    setVisible(false);
+    onDeactivate?.();
+  }, [active, onDeactivate]);
+  useEffect(() => {
+    if (active) {
+      finished.current = false;
+      setVisible(true);
+      return;
+    }
+    if (!visible) return;
+    // The library fades out over 500 ms. Animation events are not guaranteed
+    // under reduced motion or when the surface is hidden, so release it too.
+    const timeout = setTimeout(finish, 700);
+    return () => clearTimeout(timeout);
+  }, [active, visible, finish]);
+
+  // Keep inactive panels free of generated styles and native observers. The
+  // surface's own content remains mounted independently of this decoration.
+  if (!active && !visible) return null;
+  return <MountedAgentBeamOverlay active={active} size={size} onDeactivate={finish} />;
+}
+
+function MountedAgentBeamOverlay({
+  active,
+  size,
+  onDeactivate,
+}: {
+  active: boolean;
+  size: BorderBeamSize;
+  onDeactivate: () => void;
 }) {
   const { resolvedTheme } = useTheme();
   const [radius, setRadius] = useState<number>();
@@ -102,8 +169,7 @@ export function AgentBeamOverlay({
     const r = Number.parseFloat(getComputedStyle(box).borderTopLeftRadius);
     setRadius(Number.isFinite(r) ? r : undefined);
   }, []);
-  // Always mounted: this is what gives the border its EXIT fade when
-  // `active` falls. When turned off, it does not paint anything (the halo is in `display: none`).
+  // The outer component retains this instance until its exit fade completes.
   return (
     <BorderBeam
       {...BEAM_TUNING}
@@ -112,6 +178,7 @@ export function AgentBeamOverlay({
       size={size}
       theme={resolvedTheme}
       borderRadius={radius}
+      onDeactivate={onDeactivate}
       aria-hidden
       style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
     >

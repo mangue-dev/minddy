@@ -3,14 +3,13 @@ import "server-only";
 import { afterOrNow } from "@/lib/server/after-safe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
-import { getAppConfigValues } from "@/lib/server/app-config";
-import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { canUseSmartAssign } from "@/lib/server/entitlements";
 import { insertEvents } from "@/lib/server/issue-events";
 import { insertNotifications } from "@/lib/server/notifications";
-import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
-import { displayName } from "@/lib/display-name";
-import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
+import { fetchAuthUsersById } from "@/lib/server/auth-users";
+import { runDecision } from "@/lib/server/decisions/runner";
+import { prepareSmartAssign } from "@/lib/server/decisions/prepare";
+import type { DecisionOutcome } from "@/lib/server/decisions/types";
 import { isStatus } from "@/lib/issue-validation";
 import { hasAnyRule, userIdsWithoutRule } from "@/lib/smart-assign-config";
 import type { SmartAssignConfigWarning } from "@/lib/types";
@@ -22,13 +21,15 @@ import type { SmartAssignConfigWarning } from "@/lib/types";
  *
  * - Single-member project (owner only): deterministic, no AI.
  * - Multi-member with no rule written for anyone: deterministic too, the owner —
- * with no rule the model has nothing but names to compare.
- * - Multi-member with rules: one forced tool call to the model in app_config
- * (`smart_assign_model`), fed the issue and the per-member rules; any
- * failure falls back to the owner so the run always assigns someone.
+ *   with no rule the model has nothing but names to compare.
+ * - Multi-member with rules: one structured decision through the decision
+ *   layer (`lib/server/decisions/runner.ts`, MIN-563) — Jev answers on the
+ *   structured state first, the existing `choose_assignee` LLM pass is
+ *   replayed verbatim as the fallback, and any failure of both falls back to
+ *   the owner so the run always assigns someone.
  *
  * The written event carries `smart_assign_ai`: only the third case sets it to
- * true, and only if the model responded a valid member. This is what
+ * true, and only if the decision layer answered a valid member. This is what
  * the ticket activity distinguishes — otherwise the three would read the same.
  *
  * The run re-checks EVERYTHING at the moment it executes: an expired trigger
@@ -47,7 +48,9 @@ import type { SmartAssignConfigWarning } from "@/lib/types";
  * Hence the cut:
  * - the DETERMINIST case (single member, or no rule) written before the response.
  * This is an update; waiting for it costs less than losing it;
- * - only the call to the MODEL remains deferred — several seconds of latency have nothing to do in a POST — and it is HIM alone that the budget keeps;
+ * - only the DECISION (Jev, and the LLM pass behind it) remains deferred —
+ *   several seconds of latency have nothing to do in a POST — and it is that
+ *   alone that the budget keeps;
  * - `sweepUnassignedIssues` (cron) catches up with what the latter `after()` loses.
  */
 
@@ -76,8 +79,9 @@ export interface SmartAssignParams {
   /** Who created / transitioned the issue — suppresses their own notification
       when Smart Assign picks them. NULL for integration-created issues. */
   triggerActorId: string | null;
-  /** `sweep` = cron catch-up. He has no response to give, so he
- WAITS for the call to the model instead of deferring it — deferring is precisely what caused the assignment he is repairing to be lost. */
+  /** `sweep` = cron catch-up. It has no response to give, so it
+      WAITS for the decision instead of deferring it — deferring is precisely
+      what caused the assignment it is repairing to be lost. */
   trigger: "create" | "triage_exit" | "sweep";
 }
 
@@ -86,7 +90,7 @@ export interface SmartAssignParams {
  * ticket): to WAIT, and without a net to place — it never raises.
  *
  * What we wait for is the decision and, in the deterministic case, writing.
- * Not the call to the model: this one goes to `after()` from `runSmartAssign`.
+ * Not the decision call itself: that one goes to `after()` from `runSmartAssign`.
  *
  * Returns the written assignment, so the caller can return an up-to-date ticket
  * rather than a line it already knows expired.
@@ -104,7 +108,7 @@ export async function applySmartAssign(
 
 /**
  * The run itself. Returns the assignee that THIS run wrote — so `null` if there
- * had nothing to do, but also when the call to the model was deferred: at that
+ * had nothing to do, but also when the decision was deferred: at that
  * moment nothing is written yet, and to pretend otherwise would lie to
  * the caller as well as to the sweeper who account.
  */
@@ -113,9 +117,9 @@ export async function runSmartAssign(
 ): Promise<string | null> {
   const service = getServiceClient();
 
-  // The three readings IN PARALLEL: they do not depend on each other
-  // others, and it is the length of this prelude which decides whether the assignment
-  // survit. Un aller-retour de temps d'horloge, pas trois.
+  // The three readings IN PARALLEL: they do not depend on each other, and it
+  // is the length of this prelude that decides whether the assignment
+  // survives. One clock round trip, not three.
   const [{ data: project }, { data: issue }, { data: memberRows }] =
     await Promise.all([
       service
@@ -153,9 +157,10 @@ export async function runSmartAssign(
 
   const rules = (project.smart_assign_rules ?? {}) as Record<string, string>;
   // A rule written for SOMEONE on the team is what makes the choice
-  // possible: without any, the model only has names to compare, and the prompt
-  // already tells him to fall back on the owner in this case. Might as well not pay
-  // the call — the result is the same, cheaper and without latency.
+  // possible: without any, the engines only have names to compare, and the
+  // prompt already tells the model to fall back on the owner in this case.
+  // Might as well not pay the call — the result is the same, cheaper and
+  // without latency.
   if (memberIds.length === 1 || !hasAnyRule(memberIds, rules)) {
     // Only member, or no rules: no ambiguity to remove, no AI — therefore
     // nothing to charge, nothing to keep, and no reason to wait for a response
@@ -164,39 +169,84 @@ export async function runSmartAssign(
   }
 
   // Remains the only piece that costs: a few seconds of latency and a line
-  // of use. He leaves after the answer — except for the sweeper, who doesn't have one.
-  const askTheModel = async () => {
-    // The budget ONLY keeps the expense. Putting him at the head of the run amounted to
-    // also suspend deterministic assignments, which cost nothing; And
-    // dry budget or silent model, the contract remains the same — we assign
-    // someone, failing that the owner.
-    const picked = (await canUseSmartAssign(ownerId))
-      ? await chooseAssigneeViaAI({
-          service,
-          projectId: params.projectId,
-          projectName: (project.name as string) ?? "",
-          issue,
-          memberIds,
-          ownerId,
-          rules,
-        })
-      : null;
-    // Did the model REALLY choose? The ticket activity says so, and the
-    // two modes are not equal: falling back on the owner — fault
-    // call, or exploitable response error — remains an assignment
-    // automatique.
-    return await claimForSmartAssign(
-      service,
-      params,
-      picked ?? ownerId,
-      picked !== null
-    );
+  // of use. It leaves after the answer — except for the sweeper, who has no
+  // response to give.
+  const askTheLayer = async (): Promise<string | null> => {
+    try {
+      // The budget ONLY keeps the expense. Putting it at the head of the run
+      // would also suspend deterministic assignments, which cost nothing; and
+      // a dry budget or a silent layer, the contract stays the same — we
+      // assign someone, failing that the owner.
+      if (!(await canUseSmartAssign(ownerId))) return null;
+      const [authUsers, { data: categoryRows }] = await Promise.all([
+        fetchAuthUsersById(service, memberIds),
+        service
+          .from("issue_categories")
+          .select("categories(name)")
+          .eq("issue_id", params.issueId),
+      ]);
+      const spec = prepareSmartAssign({
+        projectName: (project.name as string) ?? "",
+        issue: {
+          title: issue.title as string,
+          description: typeof issue.description === "string" ? issue.description : null,
+          priority: (issue.priority as string) ?? null,
+          effort: (issue.effort as string) ?? null,
+        },
+        memberIds,
+        ownerId,
+        rules,
+        authUsers,
+        categoryNames: (categoryRows ?? [])
+          .map((r) => (r.categories as { name?: string } | null)?.name)
+          .filter((name): name is string => !!name),
+      });
+      // One decision, two engines: Jev first on the structured state, the
+      // `choose_assignee` LLM pass replayed verbatim as the fallback, one
+      // ledger run across both — billed to the project owner, like the pass
+      // it replaces.
+      const outcome = await runDecision(spec, {
+        billTo: { projectOwner: params.projectId },
+        projectId: params.projectId,
+        // The shadow comparison (MIN-567) traces its sample back to the
+        // issue it judged.
+        subjectId: params.issueId,
+      });
+      return smartAssignPickFrom(outcome, memberIds);
+    } catch (err) {
+      console.error("[smart-assign] AI choice failed:", (err as Error).message);
+      return null;
+    }
   };
-  if (params.trigger === "sweep") return await askTheModel();
+  const claim = async (): Promise<string | null> => {
+    const picked = await askTheLayer();
+    // Did the layer REALLY choose? The ticket activity says so, and the
+    // two modes are not equal: falling back on the owner — a failed call, or
+    // an unusable answer — remains an automatic assignment.
+    return await claimForSmartAssign(service, params, picked ?? ownerId, picked !== null);
+  };
+  if (params.trigger === "sweep") return await claim();
   afterOrNow(async () => {
-    await askTheModel();
+    await claim();
   });
   return null;
+}
+
+/**
+ * The runner's outcome, replayed as the assignee `claimForSmartAssign` was
+ * built on. Pure, and deliberately boring: it copies the `user_id` answer
+ * when it is one of the REAL member ids, and `null` otherwise — whichever
+ * engine produced the outcome, and whatever else it may have answered. Both
+ * adapters already validate against the spec's options; this re-checks
+ * against the team the run will actually claim with, and stays the last
+ * door before the write.
+ */
+export function smartAssignPickFrom(
+  outcome: DecisionOutcome | null,
+  memberIds: string[]
+): string | null {
+  const value = outcome?.answers.user_id?.value;
+  return typeof value === "string" && memberIds.includes(value) ? value : null;
 }
 
 /**
@@ -244,7 +294,7 @@ async function claimForSmartAssign(
         type: "assigned",
         issue_id: params.issueId,
         actor_id: null,
-        // Without this flag the inbox reads a null actor and displays “Someone” —
+        // Without this flag the inbox reads a null actor and displays "Someone" —
         // the timeline already names Smart Assign on the same gesture.
         via_smart_assign: true,
       },
@@ -253,14 +303,86 @@ async function claimForSmartAssign(
   return chosen;
 }
 
+/** One team member as the AI pass sees them: resolved name, owner mark and
+ * the owner-written rule (raw — the builders trim it). The pure prompt
+ * builders below and the decision layer (`lib/server/decisions/prepare.ts`)
+ * both consume this shape. */
+export interface SmartAssignMember {
+  id: string;
+  name: string;
+  owner: boolean;
+  rule: string | null;
+}
+
+/** The member block of the prompt: one line per member, rule included. */
+export function buildSmartAssignMemberLines(members: SmartAssignMember[]): string {
+  return members
+    .map((member) => {
+      const owner = member.owner ? " [owner]" : "";
+      const rule = member.rule?.trim();
+      return `- ${member.name} (user_id: ${member.id})${owner}\n  Rule: ${rule || "(no rule)"}`;
+    })
+    .join("\n");
+}
+
+/** The system prompt. Rules first: the per-member written rules are what
+ * makes the choice possible, names only break ties. */
+export function buildSmartAssignSystemPrompt(projectName: string): string {
+  return `You are Smart Assign, minddy's automatic issue router for the project "${projectName}".
+A new issue needs an owner. Choose the ONE team member best suited to handle it and call choose_assignee.
+
+Rules:
+- You MUST call choose_assignee with exactly one user_id from the member list. Never refuse, never reply in plain text.
+- Each member may have an assignment rule: free text written by the project owner describing the kind of tasks they should get (any language). Match the issue against these rules first.
+- Use the issue's title, description and categories to identify the type of work; priority and effort are tiebreakers only.
+- A member without a rule can still be chosen if nothing else matches better.
+- If nothing clearly matches, pick the project owner.`;
+}
+
+/** The user message: the issue to route, then the members it can route to. */
+export function buildSmartAssignUserMessage(
+  issue: {
+    title: string;
+    description: string | null;
+    categories: string;
+    priority: string | null;
+    effort: string | null;
+  },
+  memberLines: string
+): string {
+  const description =
+    issue.description && issue.description.trim()
+      ? issue.description.slice(0, MAX_DESCRIPTION_CHARS)
+      : "(none)";
+  return `## Issue
+Title: ${issue.title}
+Description: ${description}
+Categories: ${issue.categories || "None"}
+Priority: ${issue.priority ?? "none"}
+Effort: ${issue.effort ?? "—"}
+
+## Members
+${memberLines}`;
+}
+
+/** The tool schema: the model MUST pick a user_id from the enum. */
+export function smartAssignParameters(memberIds: string[]): Record<string, unknown> {
+  return {
+    type: "object",
+    properties: { user_id: { type: "string", enum: memberIds } },
+    required: ["user_id"],
+    additionalProperties: false,
+  };
+}
+
 /**
  * CATCH-UP (cron `/api/cron/smart-assign`): tickets that a
  * trigger should have assigned and which remained without anyone.
  *
- * It exists because there is no guarantee that a `after()` will complete — this is
+ * It exists because there is no guarantee that an `after()` will complete — this is
  * exactly how a ticket created by the MCP remained orphaned, without
- * error, without trace, without retrying. The deterministic case no longer depends on it
- *; the call to the model, if.
+ * error, without trace, without retrying. The deterministic case no longer
+ * depends on it; the decision does.
  *
  * Two bounds, which say what this scan is and is not:
  *
@@ -308,9 +430,9 @@ export async function sweepUnassignedIssues(
   for (const candidate of candidates) {
     if (everAssigned.has(candidate.id)) continue;
     try {
-      // `trigger: "sweep"` → the call to the model is expected, not deferred, and
-      // the actor is zero: no one did anything, the notification therefore goes away
-      // even to the person who created the ticket.
+      // `trigger: "sweep"` → the decision is expected, not deferred, and
+      // the actor is null: no one did anything, so the notification goes away
+      // even for the person who created the ticket.
       const chosen = await runSmartAssign({
         issueId: candidate.id,
         projectId: candidate.project_id,
@@ -388,105 +510,5 @@ export async function loadSmartAssignConfigWarnings(
   } catch (err) {
     console.error("[smart-assign] warnings failed:", (err as Error).message);
     return [];
-  }
-}
-
-/** One forced tool call: the model MUST pick a user_id from the enum. Returns
-    the validated id, or null on any failure (no key, HTTP error, bad output). */
-async function chooseAssigneeViaAI({
-  service,
-  projectId,
-  projectName,
-  issue,
-  memberIds,
-  ownerId,
-  rules,
-}: {
-  service: SupabaseClient;
-  projectId: string;
-  projectName: string;
-  issue: Record<string, unknown>;
-  memberIds: string[];
-  ownerId: string;
-  rules: Record<string, string>;
-}): Promise<string | null> {
-  try {
-    const [modelCfg, authUsers, { data: categoryRows }] = await Promise.all([
-      getAppConfigValues(modelConfigKeys("smart_assign_model")),
-      fetchAuthUsersById(service, memberIds),
-      service
-        .from("issue_categories")
-        .select("categories(name)")
-        .eq("issue_id", issue.id as string),
-    ]);
-    const model = resolveFromValues("smart_assign_model", modelCfg).model;
-
-    const memberLines = memberIds
-      .map((id) => {
-        const name = displayName(toNamed(authUsers.get(id)));
-        const owner = id === ownerId ? " [owner]" : "";
-        const rule = rules[id]?.trim();
-        return `- ${name} (user_id: ${id})${owner}\n  Rule: ${rule || "(no rule)"}`;
-      })
-      .join("\n");
-    const categories = (categoryRows ?? [])
-      .map((r) => (r.categories as { name?: string } | null)?.name)
-      .filter(Boolean)
-      .join(", ");
-
-    const systemPrompt = `You are Smart Assign, minddy's automatic issue router for the project "${projectName}".
-A new issue needs an owner. Choose the ONE team member best suited to handle it and call choose_assignee.
-
-Rules:
-- You MUST call choose_assignee with exactly one user_id from the member list. Never refuse, never reply in plain text.
-- Each member may have an assignment rule: free text written by the project owner describing the kind of tasks they should get (any language). Match the issue against these rules first.
-- Use the issue's title, description and categories to identify the type of work; priority and effort are tiebreakers only.
-- A member without a rule can still be chosen if nothing else matches better.
-- If nothing clearly matches, pick the project owner.`;
-
-    const description =
-      typeof issue.description === "string" && issue.description.trim()
-        ? issue.description.slice(0, MAX_DESCRIPTION_CHARS)
-        : "(none)";
-    const userMessage = `## Issue
-Title: ${issue.title as string}
-Description: ${description}
-Categories: ${categories || "None"}
-Priority: ${(issue.priority as string) ?? "none"}
-Effort: ${(issue.effort as string) ?? "—"}
-
-## Members
-${memberLines}`;
-
-    const args = await forcedToolCall(
-      model,
-      systemPrompt,
-      userMessage,
-      "choose_assignee",
-      {
-        type: "object",
-        properties: { user_id: { type: "string", enum: memberIds } },
-        required: ["user_id"],
-        additionalProperties: false,
-      },
-      {
-        xTitle: "Smart Assign (minddy)",
-        logPrefix: "[smart-assign]",
-        modelKey: "smart_assign_model",
-        maxTokens: 256,
-        record: {
-          feature: "smart_assign",
-          billTo: { projectOwner: projectId },
-          projectId,
-        },
-      },
-    );
-    // Never trust the enum — re-validate against the real member list.
-    return typeof args?.user_id === "string" && memberIds.includes(args.user_id)
-      ? args.user_id
-      : null;
-  } catch (err) {
-    console.error("[smart-assign] AI choice failed:", (err as Error).message);
-    return null;
   }
 }

@@ -6,6 +6,10 @@ const sql = canonicalSql(
   readMigration("20270106680000_durable_numo_turns.sql"),
 );
 
+const reasoningDeltaSql = canonicalSql(
+  readMigration("20270106920000_numo_turn_events_reasoning_delta.sql"),
+);
+
 describe("durable Numo turns migration", () => {
   it("defines explicit execution, suspension, stop, retry, and reconciliation states", () => {
     expect(sql).toContain("'queued', 'running', 'waiting_work', 'waiting_input', 'stopping'");
@@ -79,5 +83,13 @@ describe("durable Numo turns migration", () => {
     expect(sql).toContain("grant select on public.numo_assistant_turns to authenticated");
     expect(sql).toContain("grant select on public.numo_turn_events to authenticated");
     expect(sql).toContain("revoke all on public.numo_tool_operations from public, anon, authenticated");
+  });
+
+  it("allows persisting reasoning snapshots in the activity journal", () => {
+    expect(reasoningDeltaSql).toContain("drop constraint numo_turn_events_type_check");
+    expect(reasoningDeltaSql).toContain(
+      "'reasoning_start', 'reasoning_delta', 'reasoning_end'",
+    );
+    expect(reasoningDeltaSql).toContain("'conversation_id', 'content_delta'");
   });
 });

@@ -120,7 +120,12 @@ export function useAgentRunQuery(runId: string | null) {
     refetchInterval: (query) => {
       const run = query.state.data?.run;
       if (run && isAgentRunWorking(run.status)) return 3000;
-      return run ? 12000 : false;
+      if (run) return 12000;
+      // No data yet (first fetch pending, failed, or errored): keep polling.
+      // Returning `false` here wedged the UI on a single failed fetch — the
+      // card showed “starting” forever until a remount, because `run` stayed
+      // null and no interval ever restarted the query.
+      return 5000;
     },
   });
   return { run: data?.run ?? null, loading: enabled && isPending };
@@ -162,7 +167,7 @@ export function useAgentRunEventsQuery(runId: string | null, active: boolean) {
  * precisely when the user is looking.
  */
 export function usePullRequestQuery(prId: string, enabled: boolean) {
-  const { data, isPending, refetch } = useQuery({
+  const { data, isPending, refetch, dataUpdatedAt } = useQuery({
     queryKey: ["pull-request", prId],
     queryFn: () => fetchPullRequestApi(prId),
     enabled,
@@ -170,10 +175,16 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
   });
   return {
     pr: data?.pr ?? null,
+    /** When the forge GET powering `pr` was RECEIVED — what orders it against
+        the panel's own writes (see `pullRequestStateToPropagate` callers). */
+    prFetchedAt: dataUpdatedAt,
     files: data?.files ?? [],
     checks: data?.checks ?? null,
     checksError: data?.checksError ?? null,
     deploymentUrl: data?.deploymentUrl ?? null,
+    deploymentStatus: data?.deploymentStatus ?? null,
+    deploymentStartedAt: data?.deploymentStartedAt ?? null,
+    deploymentDurationMs: data?.deploymentDurationMs ?? null,
     reviews: data?.reviews ?? null,
     // Who I am for this PR (MIN-144). `null` as long as the GET has not
     // answered: the UI then does not offer any writing gesture, rather than
@@ -419,10 +430,10 @@ export function useOpenPullRequestCountQuery() {
 }
 
 /**
- * Global list of agent sessions (Agents page). Polling ~5 sec as a
+ * Global list of agent sessions (the FAB's activity signals). Polling ~5 sec as a
  * WORK session (Numo is running), otherwise no polling — modeled on
  * `useAllPullRequestsQuery`. `refetchOnMount: always` for the same reason as the
- * events: at rest the list no longer polls, so return to /agents after having
+ * events: at rest the list no longer polls, so reopening the FAB after having
  * left the tab would redisplay outdated/unread statuses (“fresh” cache 5 min)
  * until fully recharged.
  */

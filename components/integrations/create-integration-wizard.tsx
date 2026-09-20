@@ -32,7 +32,7 @@ import {
 } from "@/lib/integrations-api";
 import { integrationKeyEnvLine } from "@/lib/feedback/integration-contract";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import type { IntegrationKind } from "@/lib/types";
 
 /**
@@ -78,7 +78,7 @@ export function CreateIntegrationWizard({
 }) {
   const t = useTranslations("Settings");
   const tCommon = useTranslations("Common");
-  const { openIntent } = useAssistantPanel();
+  const { openIntent } = useAssistantPanelActions();
 
   const [kind, setKind] = useState<IntegrationKind>("issues");
   const [name, setName] = useState("");
@@ -295,6 +295,7 @@ export function CreateIntegrationWizard({
             className="min-h-32 resize-none pb-12"
           />
           <DictateButton
+            context="form_field"
             floating
             disabled={creating}
             onTranscription={(text) =>

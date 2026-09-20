@@ -1,5 +1,8 @@
 "use client";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
+import { useGeneratingViews } from "@/lib/use-generating-views";
+import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
+import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 
 import {
   Suspense,
@@ -11,13 +14,8 @@ import {
   useState,
 } from "react";
 import dynamic from "next/dynamic";
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  useParams,
-  usePathname,
-  useRouter,
-  useSearchParams,
-} from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Button,
@@ -27,7 +25,7 @@ import {
   toast,
 } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
-import { FileUp, LayoutGrid, Plus } from "lucide-react";
+import { ExternalLink, FileUp, LayoutGrid, Network, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -43,11 +41,17 @@ import { cycleCompletionPercent } from "@/lib/cycle";
 import { useBoardViews } from "@/lib/use-board-views";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { buildViewHref } from "@/lib/saved-view-href";
+import { boardViewTabHref } from "@/lib/board-view-tab";
 import { ME_ASSIGNEE, filterIssues, visibleStatuses } from "@/lib/view-filter";
-import { STATUSES, issueIdentifier, type IssueStatus } from "@/lib/issue-constants";
+import {
+  STATUSES,
+  isClosedStatus,
+  issueIdentifier,
+  type IssueStatus,
+} from "@/lib/issue-constants";
 import {
   useAssistantContext,
-  useAssistantPanel,
+  useAssistantPanelActions,
 } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { NumoIcon } from "@/components/numo-icon";
@@ -56,6 +60,8 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { ObjectiveBoardHeader } from "@/components/objective-banner";
+import { IssueFamilyBoardHeader } from "@/components/issue-family-banner";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { BoardLoadingSkeleton } from "@/components/board-loading-skeleton";
 // Deferred: the import wizard (and its papaparse CSV machinery) only runs from
 // ?setup=import — a one-time gesture that must not tax every board navigation.
@@ -75,17 +81,25 @@ const IssueSidePanel = dynamic(
   { ssr: false },
 );
 import { takeSeedHandoff } from "@/lib/project-seed-handoff";
-import { createIssueApi } from "@/lib/issues-api";
+import { createIssueApi, smartTriageApi } from "@/lib/issues-api";
 import {
   insertIssueEverywhere,
   issueWrites,
   mergeServerIssue,
   removeIssueEverywhere,
 } from "@/lib/optimistic/issue-writes";
+import { trackEvent } from "@/lib/analytics";
 import { createIssueDeferred } from "@/lib/create-issue-deferred";
 import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
+import {
+  familyBoardStatuses,
+  issueFamilyBoardHref,
+  issueFamilyParentId,
+  issueParentIds,
+  resolveIssueFamily,
+} from "@/lib/issue-family-board";
 import {
   loadCreateIssueDialog,
   loadIssueSidePanel,
@@ -95,19 +109,20 @@ import type {
   CreateIssueInput,
   Issue,
   IssueRelationType,
+  RelationEndpointType,
   IssueUpdateInput,
 } from "@/lib/types";
 
 function ProjectBoard() {
   const t = useTranslations("Board");
+  const tFamily = useTranslations("IssueFamily");
   const tSeed = useTranslations("Seed");
   const tProjects = useTranslations("Projects");
-  const params = useParams<{ id: string }>();
-  const projectId = params.id;
+  const { pathname, searchParams, projectId: routeProjectId } = useAppTabRoute();
+  const projectId = routeProjectId!;
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const objectiveParam = searchParams.get("objective");
+  const familyParam = searchParams.get("family");
   const issueParam = searchParams.get("issue");
   const newParam = searchParams.get("new");
   const viewParam = searchParams.get("view");
@@ -137,7 +152,11 @@ function ProjectBoard() {
   // Import and priming by Numo are reserved for the owner (the API
   // reserve): the empty board only shows what is actually within range.
   const isOwner = !!project && project.owner_id === myUserId;
-  const { open: openAssistant, openIntent } = useAssistantPanel();
+  // Smart triage mode (MIN-566) — read once so the toolbar prop narrows off
+  // cleanly (`off` renders no button at all).
+  const smartTriageMode = project?.smart_triage_mode ?? "rules";
+  const { open: openAssistant, openIntent } = useAssistantPanelActions();
+  const appTabs = useOptionalAppTabSession();
 
   // Right-click "Add to cycle" (MIN-32) — the cycle is canonical on /all, but
   // picking work into your week from a project board must work too. The patch
@@ -157,6 +176,51 @@ function ProjectBoard() {
     currentCycle?.id ?? null,
     nextCycle?.id ?? null,
     onSetIssueCycle
+  );
+  const familyParentIds = useMemo(() => issueParentIds(issues), [issues]);
+  const buildFamilyMenuActions = useCallback(
+    (issue: Issue): ContextMenuAction[] => {
+      const parentId = issueFamilyParentId(issue, familyParentIds);
+      if (!parentId) return [];
+      const href = issueFamilyBoardHref(
+        projectId,
+        parentId,
+        searchParams,
+      );
+      return [
+        {
+          id: "issue-family-board",
+          label: tFamily("menuLabel"),
+          keywords: ["family", "parent", "children", "famille", "sous-ticket"],
+          icon: <Network className="size-4" />,
+          children: [
+            {
+              id: "issue-family-board-current",
+              label: tFamily("openHere"),
+              icon: <LayoutGrid className="size-4" />,
+              onSelect: () => window.history.pushState(null, "", href),
+            },
+            {
+              id: "issue-family-board-new-tab",
+              label: tFamily("openNewTab"),
+              icon: <ExternalLink className="size-4" />,
+              onSelect: () => {
+                if (appTabs) void appTabs.create(href);
+                else window.open(href, "_blank", "noopener,noreferrer");
+              },
+            },
+          ],
+        },
+      ];
+    },
+    [appTabs, familyParentIds, projectId, searchParams, tFamily],
+  );
+  const buildIssueMenuActions = useCallback(
+    (issue: Issue): ContextMenuAction[] => [
+      ...buildFamilyMenuActions(issue),
+      ...buildCycleMenuActions(issue),
+    ],
+    [buildCycleMenuActions, buildFamilyMenuActions],
   );
   const currentCycleCompletionPercent = useMemo(() => {
     const currentCycleId = currentCycle?.id;
@@ -217,10 +281,7 @@ function ProjectBoard() {
   // spinner). Maps view id → the view's updated_at when generation started;
   // cleared when the view's stored config changes (Numo applied filters) or
   // after a safety timeout.
-  const [generatingViews, setGeneratingViews] = useState<Record<string, string>>(
-    {}
-  );
-  const genTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const { generatingViewIds, beginGenerating } = useGeneratingViews(views);
 
   useEffect(() => {
     if (createMounted) return;
@@ -325,6 +386,13 @@ function ProjectBoard() {
     setOpenIssueId(id);
     setOpenIssueTab("description");
   }, []);
+
+  // Smart triage (MIN-566): the toolbar button. The server rewrites the
+  // open columns' positions per the project's mode and returns the moves —
+  // they are ALREADY persisted, the client only applies them to the caches
+  // (no per-issue PATCH) and refetches to stay authoritative. The manual
+  // drag order remains editable: this is one gesture among others, not a
+  // lock-in.
   const handleOpenIssue = useCallback((issue: Issue) => {
     setOpenIssueId(issue.id);
     setOpenIssueTab("description");
@@ -334,8 +402,13 @@ function ProjectBoard() {
     setOpenIssueTab("plan");
   }, []);
   const handleAddRelation = useCallback(
-    (sourceId: string, type: IssueRelationType, targetId: string) => {
-      void addRelation(sourceId, type, targetId).catch((err) =>
+    (
+      sourceId: string,
+      type: IssueRelationType,
+      targetId: string,
+      kinds?: { sourceType?: RelationEndpointType; targetType?: RelationEndpointType }
+    ) => {
+      void addRelation(sourceId, type, targetId, kinds).catch((err) =>
         toast.error((err as Error).message)
       );
     },
@@ -350,13 +423,13 @@ function ProjectBoard() {
     [removeRelation]
   );
 
-  const generatingViewIds = useMemo(
-    () => new Set(Object.keys(generatingViews)),
-    [generatingViews]
+  // Family mode takes precedence over the objective and saved-view filters.
+  // Its URL keeps the current view so leaving the family restores it intact.
+  const activeFamily = useMemo(
+    () => resolveIssueFamily(issues, familyParam),
+    [issues, familyParam],
   );
-
-  // Objective mode: the board is filtered to a single objective (plan §6).
-  const activeObjective = objectiveParam
+  const activeObjective = !activeFamily && objectiveParam
     ? objectives.find((o) => o.id === objectiveParam) ?? null
     : null;
 
@@ -372,16 +445,85 @@ function ProjectBoard() {
     [issues, activeObjective]
   );
 
-  const boardIssues = activeObjective ? objectiveIssues : normalIssues;
+  const boardIssues = activeFamily
+    ? activeFamily.issues
+    : activeObjective
+      ? objectiveIssues
+      : normalIssues;
   const statuses = useMemo(
-    () => (activeObjective ? STATUSES : visibleStatuses(config)),
-    [activeObjective, config],
+    () =>
+      // Family mode shows the FULL status sweep (see familyBoardStatuses):
+      // the family keeps its members whatever their status, so every member
+      // always finds its column, even when the saved view would hide it.
+      activeFamily
+        ? familyBoardStatuses()
+        : activeObjective
+          ? STATUSES
+          : visibleStatuses(config),
+    [activeFamily, activeObjective, config],
   );
   // Objective mode no longer forces a manual order (MIN-510): it follows the
   // board's sort, with "smart" — the app-wide default — standing in for the
   // old manual default, whose positions mean nothing in this filtered scope.
   const sort =
-    activeObjective && config.sort === "manual" ? "smart" : config.sort;
+    (activeFamily || activeObjective) && config.sort === "manual"
+      ? "smart"
+      : config.sort;
+  // The scoring INPUTS (created, edited, deleted tickets) age the scores:
+  // a fingerprint over the board's rows rides the refetch decision below —
+  // NOT the query key (a new key would bill a pass on every keystroke).
+  const scoringFingerprint = useMemo(() => {
+    let latest = "";
+    for (const issue of issues) {
+      if (issue.updated_at > latest) latest = issue.updated_at;
+    }
+    return `${issues.length}:${latest}`;
+  }, [issues]);
+  const fetchedFingerprintRef = useRef<string | null>(null);
+  const lastFetchAtRef = useRef(0);
+  const smartScoresQuery = useQuery({
+    queryKey: ["smart-triage-scores", project?.id ?? null],
+    queryFn: async () => {
+      if (!project) return null;
+      const result = await smartTriageApi(project.id, { persist: false });
+      fetchedFingerprintRef.current = scoringFingerprint;
+      lastFetchAtRef.current = Date.now();
+      trackEvent("smart_triage_ran", {
+        mode: result.mode,
+        scored: result.scored,
+        columns: result.columns,
+        issues: Object.keys(result.scores ?? {}).length,
+        scope: "project",
+      });
+      return result.scores;
+    },
+    enabled: !!project && sort === "smart" && smartTriageMode === "jev",
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+  // A changed fingerprint (tickets created, edited, deleted) refetches the
+  // scores — throttled to one pass a minute so an editing burst cannot
+  // churn billed passes; a continuously mounted board never keeps scores
+  // that predate its tickets.
+  useEffect(() => {
+    if (sort !== "smart" || smartTriageMode !== "jev") return;
+    if (fetchedFingerprintRef.current === scoringFingerprint) return;
+    if (Date.now() - lastFetchAtRef.current < 60_000) return;
+    if (smartScoresQuery.isFetching) return;
+    void smartScoresQuery.refetch();
+  }, [scoringFingerprint, sort, smartTriageMode, smartScoresQuery]);
+  const smartScores = useMemo(() => {
+    // Gated on the MODE, not just the query's enabled flag: a cached score
+    // map must not outlive the project's switch back to rules (the query
+    // keeps its data while disabled). A FAILED refresh is dropped too —
+    // expired scores must not pose as current evidence; the rules order
+    // stands until a pass succeeds again.
+    if (smartTriageMode !== "jev" || smartScoresQuery.isError) return null;
+    const scores = smartScoresQuery.data;
+    if (!scores) return null;
+    return new Map(Object.entries(scores));
+  }, [smartScoresQuery.data, smartScoresQuery.isError, smartTriageMode]);
 
   const handleAskNumoForIssues = useCallback(
     (selectedIssues: Issue[]) => {
@@ -425,17 +567,7 @@ function ProjectBoard() {
       // its filters/sort from the description. It edits this exact view (the id
       // rides along in pageContext), and the board reflects the change live once
       // realtime brings the updated view back (see the config-sync effect).
-      setGeneratingViews((prev) => ({ ...prev, [view.id]: view.updated_at }));
-      const timer = setTimeout(() => {
-        setGeneratingViews((prev) => {
-          if (!(view.id in prev)) return prev;
-          const next = { ...prev };
-          delete next[view.id];
-          return next;
-        });
-        genTimers.current.delete(view.id);
-      }, 120_000);
-      genTimers.current.set(view.id, timer);
+      beginGenerating(view);
       openAssistant({
         projectId,
         prompt: t("numoBuildViewPrompt", { name, description: wish }),
@@ -506,35 +638,6 @@ function ProjectBoard() {
           : { projectId, ...viewCtx }
       : null
   );
-
-  // Clear a view's "generating" spinner once Numo has touched it (its stored
-  // config bumps updated_at) or it disappears. The safety timeout in
-  // handleCreateView covers the case where Numo makes no change.
-  useEffect(() => {
-    setGeneratingViews((prev) => {
-      const ids = Object.keys(prev);
-      if (ids.length === 0) return prev;
-      let changed = false;
-      const next = { ...prev };
-      for (const id of ids) {
-        const v = views.find((x) => x.id === id);
-        if (!v || v.updated_at !== prev[id]) {
-          delete next[id];
-          changed = true;
-          const timer = genTimers.current.get(id);
-          if (timer) clearTimeout(timer);
-          genTimers.current.delete(id);
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [views]);
-
-  // Drop any pending generation timers on unmount.
-  useEffect(() => {
-    const timers = genTimers.current;
-    return () => timers.forEach((timer) => clearTimeout(timer));
-  }, []);
 
   // Deep-link from the Inbox: /projects/[id]?issue=<id> opens that issue.
   useEffect(() => {
@@ -682,7 +785,16 @@ function ProjectBoard() {
         </div>
       ) : (
         <>
-          {activeObjective ? (
+          {activeFamily ? (
+            <IssueFamilyBoardHeader
+              parent={activeFamily.parent}
+              projectKey={project.key}
+              childCount={activeFamily.issues.length - 1}
+              completedChildCount={activeFamily.issues
+                .slice(1)
+                .filter((issue) => isClosedStatus(issue.status)).length}
+            />
+          ) : activeObjective ? (
             <ObjectiveBoardHeader
               objective={activeObjective}
               objectives={objectives}
@@ -698,6 +810,11 @@ function ProjectBoard() {
           ) : (
             <BoardToolbar
               tabOrderScope={project.id}
+              viewHref={(view) =>
+                view
+                  ? boardViewTabHref(pathname, searchParams, view)
+                  : boardViewTabHref("/all", "", "cycle")
+              }
               views={views}
               activeViewId={activeViewId}
               generatingViewIds={generatingViewIds}
@@ -732,7 +849,10 @@ function ProjectBoard() {
               relations={relations}
               statuses={statuses}
               sort={sort}
-              buildMenuActions={buildCycleMenuActions}
+              // The Smart sort's AI scores (project mode jev, MIN-576): the
+              // comparator orders by urgency when the view sort is "smart".
+              smartScores={smartScores}
+              buildMenuActions={buildIssueMenuActions}
               currentCycleId={currentCycle?.id ?? null}
               onSetCycle={onSetIssueCycle}
               projectId={project.id}
@@ -768,6 +888,10 @@ function ProjectBoard() {
           onCreate={createIssue}
           onCreateInProject={createIssueInProject}
           initialStatus={createStatus}
+          // Family mode: a new issue created from this scoped board lands IN
+          // the family — without the preset it would be born top-level and
+          // instantly vanish from the board it was created on.
+          initialParentId={activeFamily?.parent.id ?? null}
           // The project board opens its own dialog (column presets) —
           // distinguished from the global dialog in the stats.
           analyticsSource={activeObjective ? "objective" : "board"}
@@ -828,7 +952,7 @@ function ProjectBoard() {
 export default function ProjectPage() {
   return (
     <Suspense fallback={<div className="px-6 py-10"><Skeleton className="h-8 w-64" /></div>}>
-      <ProjectBoard />
+      <AppTabRouteBoundary><ProjectBoard /></AppTabRouteBoundary>
     </Suspense>
   );
 }

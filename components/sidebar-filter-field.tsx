@@ -1,5 +1,7 @@
 "use client";
 
+import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
+
 import { useEffect, useRef } from "react";
 import { Search, X } from "lucide-react";
 import { cn } from "mangue-ui";
@@ -47,7 +49,7 @@ export function SidebarFilterField({
       // the cheat sheet shortcut therefore remains intact.
       if (eventKey(e) !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
       if (isTypingTarget(e.target)) return;
-      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+      if (hasVisibleOpenDialog()) return;
       const input = ref.current;
       if (!input || input.offsetParent === null) return;
       e.preventDefault();

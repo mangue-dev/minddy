@@ -54,18 +54,15 @@ import {
 } from "@/components/issue-indicators";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
-import {
-  useAgentActive,
-  useAgentHasSession,
-  useIssuePr,
-} from "@/components/agent/agent-activity-context";
+import type { RelationKinds } from "@/lib/use-issue-relations-query";
+import { useIssueActivity } from "@/components/agent/agent-activity-context";
 import {
   handOffIssueApi,
   isPrWorthShowing,
   type IssuePr,
 } from "@/lib/agent-api";
 import type { NumoIntentAction } from "@/lib/assistant-types";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import {
   agentLaunchPromptVariant,
   agentPlanPromptVariant,
@@ -963,6 +960,7 @@ const IssueCardContent = memo(function IssueCardContent({
     sourceId: string,
     type: IssueRelationType,
     targetId: string,
+    kinds?: RelationKinds,
   ) => void;
   onOpenPlan?: (issue: Issue) => void;
   /** Opens the ticket panel. **Takes the ticket as an argument**, as
@@ -994,16 +992,14 @@ const IssueCardContent = memo(function IssueCardContent({
   const tCommon = useTranslations("Common");
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { openIntent } = useAssistantPanel();
-  const agentActive = useAgentActive(issue.id);
-  // Historical worker activity remains available as a read-only navigation
-  // target; new voluntary work enters Numo below.
-  const agentHasSession = useAgentHasSession(issue.id);
-  // The ticket's PR → chip on the card (if it still calls for action) and
-  // “View pull request” in the menu (whatever its state).
-  // `?pr=` rather than `?run=`: the link must also work for a PR that no run
-  // has opened — a human PR, or a PR linked manually (MIN-163).
-  const pr = useIssuePr(issue.id);
+  const { openIntent, open: openAssistant } = useAssistantPanelActions();
+  // One issue-scoped subscription drives the halo, resumable session, and PR.
+  const {
+    working: agentActive,
+    session: agentHasSession,
+    conversation: issueConversation,
+    pr,
+  } = useIssueActivity(issue.id);
   const router = useRouter();
 
   // Card bindings are made HERE rather than by the column (MIN-316).
@@ -1011,6 +1007,15 @@ const IssueCardContent = memo(function IssueCardContent({
   // between renders; these callbacks close over `issue` without breaking the
   // card's memoization.
   const openIssue = useCallback(() => onOpenIssue(issue), [onOpenIssue, issue]);
+
+  const updateCard = useCallback(
+    (patch: IssueUpdateInput) => onUpdateIssue(issue.id, patch),
+    [onUpdateIssue, issue.id],
+  );
+  const setCardCategories = useCallback(
+    (ids: string[]) => onSetCategories(issue.id, ids),
+    [onSetCategories, issue.id],
+  );
 
   // Apply the same memoization to the shortcut menu (MIN-316).
   const cardMemberList = useMemo(() => [...memberMap.values()], [memberMap]);
@@ -1030,9 +1035,10 @@ const IssueCardContent = memo(function IssueCardContent({
     () => (onOpenPlan ? () => onOpenPlan(issue) : undefined),
     [onOpenPlan, issue],
   );
-  const openPr = pr
-    ? () => router.push(`/pull-requests?pr=${pr.prId}`)
-    : undefined;
+  const openPr = useMemo(
+    () => pr ? () => router.push(`/pull-requests?pr=${pr.prId}`) : undefined,
+    [pr, router],
+  );
 
   // Drop files from the OS directly onto the card (MIN-24) — each file is
   // recorded on the issue once its upload completes. Distinct from dnd-kit
@@ -1071,10 +1077,14 @@ const IssueCardContent = memo(function IssueCardContent({
   const [customTarget, setCustomTarget] = useState<CustomPromptTarget | null>(
     null,
   );
-  // Historical worker navigation remains separate from new work. Opening a
-  // prior session is read-only navigation; every new request uses Numo.
+  // Reopening a prior session happens in the FAB, the only surface a Numo
+  // conversation lives in now: the card opens the conversation the newest run
+  // was delegated from. New work goes through Numo itself.
   const openAgentSession = () => {
-    router.push(`/agents?issue=${issue.id}`);
+    openAssistant({
+      conversationId: issueConversation,
+      projectId: issue.project_id,
+    });
   };
   const entrustToNumo = (
     prompt: string,
@@ -1127,18 +1137,34 @@ const IssueCardContent = memo(function IssueCardContent({
     startNewAgentSession();
   };
 
-  // Picker candidates: the other OPEN issues of the project, excluding those
-  // already linked — linking to completed/canceled work makes no sense (a blocker
-  // clos ne bloque plus).
   const relationCandidates = useMemo(() => {
     const candidateIssues = relationType ? getCandidateIssues?.() : undefined;
     if (!candidateIssues) return [];
-    const linked = new Set((relations ?? []).map((r) => r.otherId));
+    const linked = new Set(
+      (relations ?? [])
+        .filter((r) => r.relation === relationType && r.otherType !== "objective")
+        .map((r) => r.otherId),
+    );
     return candidateIssues.filter(
       (i) =>
+        i.project_id === issue.project_id &&
         i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status),
     );
-  }, [getCandidateIssues, relationType, relations, issue.id]);
+  }, [getCandidateIssues, relationType, relations, issue.id, issue.project_id]);
+  const relationObjectiveCandidates = useMemo(() => {
+    if (!relationType || !objectiveMap) return [];
+    const linked = new Set(
+      (relations ?? [])
+        .filter((r) => r.relation === relationType && r.otherType === "objective")
+        .map((r) => r.otherId),
+    );
+    return [...objectiveMap.values()].filter(
+      (objective) =>
+        objective.project_id === issue.project_id &&
+        !linked.has(objective.id) &&
+        objective.status !== "done" && objective.status !== "canceled",
+    );
+  }, [objectiveMap, relationType, relations, issue.project_id]);
   // Context common to the two copyable prompts (implement the ticket, write
   // its plan): relations and categories, resolved into readable names.
   const promptContext = () => {
@@ -1151,8 +1177,15 @@ const IssueCardContent = memo(function IssueCardContent({
     return {
       relations: (relations ?? []).map((r) => ({
         type: r.relation,
-        identifier: issueIdentifier(projectKey, r.otherNumber),
-        title: titleById.get(r.otherId) ?? "",
+        objective: r.otherType === "objective",
+        identifier:
+          r.otherType === "objective"
+            ? ""
+            : issueIdentifier(projectKey, r.otherNumber ?? 0),
+        title:
+          r.otherType === "objective"
+            ? (objectiveMap?.get(r.otherId)?.name ?? r.otherName ?? "")
+            : (titleById.get(r.otherId) ?? ""),
       })),
       // Category names (IDs live on the issue, names in categoryMap).
       categories: issue.category_ids
@@ -1271,7 +1304,11 @@ const IssueCardContent = memo(function IssueCardContent({
   // `useStableCallback` freezes their identity without freezing what they do.
   const agentActions = useAgentMenuActions({
     agentsEnabled: true,
-    hasSession: agentHasSession,
+    // A session is only worth its menu entry when it can actually reopen:
+    // the card opens the conversation in the FAB, and runs that predate the
+    // shared identity name none — opening the live thread instead would be
+    // a lie about what the entry does.
+    hasSession: agentHasSession && issueConversation !== null,
     hasPlan: issueHasPlan,
     onCopyPrompt: useStableCallback(() => void copyPrompt()),
     onCopyPlanPrompt: useStableCallback(() => void copyPlanPrompt()),
@@ -1487,7 +1524,7 @@ const IssueCardContent = memo(function IssueCardContent({
       {...drop.handlers}
       // No touch-action override: drag-and-drop is mouse-only (MouseSensor), so
       // touch is free to scroll the board/columns natively.
-      className={cn("relative cursor-pointer rounded-xl")}
+      className={cn("relative cursor-grab rounded-xl")}
     >
       <DropOverlay
         show={drop.dragging}
@@ -1515,8 +1552,8 @@ const IssueCardContent = memo(function IssueCardContent({
             onOpenPlan={openPlan}
             pr={pr}
             onOpenPr={openPr}
-            onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
-            onSetCategories={(ids) => onSetCategories(issue.id, ids)}
+            onUpdate={updateCard}
+            onSetCategories={setCardCategories}
             inCurrentCycle={inCurrentCycle}
             selected={selected}
           />
@@ -1551,10 +1588,11 @@ const IssueCardContent = memo(function IssueCardContent({
         position={relationType ? pointerRef.current : null}
         relation={relationType}
         issues={relationCandidates}
+        objectives={relationObjectiveCandidates}
         projectKey={projectKey}
         onClose={() => setRelationType(null)}
-        onSelect={(targetId) => {
-          if (relationType) onAddRelation?.(issue.id, relationType, targetId);
+        onSelect={(targetId, targetType) => {
+          if (relationType) onAddRelation?.(issue.id, relationType, targetId, { targetType });
           setRelationType(null);
         }}
       />
@@ -1588,8 +1626,8 @@ const IssueCardContent = memo(function IssueCardContent({
         members={cardMemberList}
         categories={cardCategoryList}
         objectives={cardObjectiveList}
-        onUpdate={(patch) => onUpdateIssue(issue.id, patch)}
-        onSetCategories={(ids) => onSetCategories(issue.id, ids)}
+        onUpdate={updateCard}
+        onSetCategories={setCardCategories}
       />
     </div>
   );

@@ -152,9 +152,18 @@ function slotOption(el: HTMLElement): MentionOption | null {
   const id = el.dataset.mentionId;
   const label = el.dataset.mentionLabel;
   if (!id || !label || !type || !SLOT_TYPES.has(type)) return null;
-  if (type === "numo" || type === "forge") {
+  if (type === "numo") {
     return {
-      type,
+      type: "numo",
+      id,
+      label,
+      avatarSeed: el.dataset.mentionSeed ?? null,
+      avatarUrl: el.dataset.mentionAvatar ?? null,
+    };
+  }
+  if (type === "forge") {
+    return {
+      type: "forge",
       id,
       label,
       avatarSeed: el.dataset.mentionSeed ?? null,
@@ -322,6 +331,9 @@ function collectAssistantMentions(
     }
   }
   for (const { node, option } of nodes) {
+    // A forge account or Numo quotes a WRITER: the server recognizes the
+    // "@login" / "@Numo" text itself, and neither travels as an entity.
+    if (option.type === "forge" || option.type === "numo") continue;
     const key = `${option.type}:${option.id}`;
     if (!preserveOccurrences && seen.has(key)) continue;
     seen.add(key);
@@ -953,7 +965,7 @@ export function MentionTextarea({
               <ForgeUserAvatar
                 user={{
                   login: option.avatarSeed ?? option.id,
-                  avatar_url: option.avatarUrl ?? null,
+                  avatar_url: ("avatarUrl" in option ? option.avatarUrl : null) ?? null,
                 }}
                 className="size-5"
               />

@@ -261,6 +261,7 @@ export function keysForProjectEvent(
         ? [{ key: SEARCH_INDEX_KEY, refetch: "none" }]
         : [
             active(["objectives", projectId]),
+            active(["app-tab-metadata"]),
             active(GLOBAL_BOARD_KEY),
             { key: SEARCH_INDEX_KEY, refetch: "none" },
           ];
@@ -289,6 +290,7 @@ export function keysForProjectEvent(
         const openPage = typeof pageId === "string" ? [active(["page", pageId])] : [];
       return [
         active(["pages", projectId]),
+        active(["app-tab-metadata"]),
         ...openPage,
         // The title of a page is in the palette index
         // (app/api/me/search-index/route.ts): stale, not reloaded — it's a
@@ -423,7 +425,7 @@ export function keysForProjectEvent(
     // broadcast deliberately carries identifiers only, so refetch the shared
     // list that feeds both the sidebar and the open routine detail.
     case "agent_routines":
-      return [active(["routines"])];
+      return [active(["routines"]), active(["app-tab-metadata"])];
     // Automation chains (MIN-147). This is the only surface of the product where
     // the expiration is CERTAIN: a chain advances on its own during
     // several minutes, without anyone touching anything — without this
@@ -454,6 +456,7 @@ export function keysForProjectEvent(
         active(AGENT_ACTIVITY_KEY),
         active(ALL_PULL_REQUESTS_KEY),
         active(OPEN_PULL_REQUEST_COUNT_KEY),
+        active(["app-tab-metadata"]),
         active(["pull-request-readiness"]),
         ...(prId ? [active(["pull-request", prId])] : []),
         ...(issueId ? [active(["agent-runs", "issue", issueId])] : []),
@@ -502,6 +505,7 @@ export const USER_SCOPE_KEYS: QueryKey[] = [
 ];
 
 export const projectScopeKeys = (projectId: string): QueryKey[] => [
+  ["app-tab-metadata"],
   ["issues", projectId],
   ["issue-relations", projectId],
   ["objectives", projectId],

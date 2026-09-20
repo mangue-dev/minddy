@@ -15,6 +15,7 @@ import {
   KeyRound,
   Languages,
   ListPlus,
+  ListOrdered,
   Lock,
   LogOut,
   MessagesSquare,
@@ -31,12 +32,12 @@ import {
   User,
   Upload,
   Users,
-  WandSparkles,
   Workflow,
   type LucideIcon,
 } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { SmartAssignIcon } from "@/components/smart-icons";
 
 /**
  * The catalog of settings sections — the table that the ⌘K palette reads and
@@ -78,6 +79,7 @@ export type ProjectSettingsTab =
   | "members"
   | "recurrences"
   | "smart-assign"
+  | "smart-triage"
   | "feedback"
   | "git"
   | "import"
@@ -121,6 +123,7 @@ export const SETTINGS_SECTIONS = {
   projectMembers: "project-members",
   projectRecurrences: "project-recurrences",
   projectSmartAssign: "project-smart-assign",
+  projectSmartTriage: "project-smart-triage",
   projectFeedbackBoard: "project-feedback-board",
   projectFeedbackApi: "project-feedback-api",
   projectFeedbackReview: "project-feedback-review",
@@ -218,6 +221,7 @@ export function useSettingsSections(): SettingsSection[] {
       members: tSettings("membersTab"),
       recurrences: tSettings("recurrencesTab"),
       "smart-assign": tSettings("smartAssignTab"),
+      "smart-triage": tSettings("smartTriageTab"),
       feedback: tSettings("feedbackTab"),
       git: tSettings("gitTab"),
       import: tSettings("importTab"),
@@ -383,7 +387,7 @@ export function useSettingsSections(): SettingsSection[] {
         icon: Plug,
         title: tAccount("mcpSectionTitle"),
         keywords: [
-          "mcp", "agent", "claude", "cursor", "windsurf", "codex",
+          "mcp", "agent", "claude", "cursor", "windsurf", "codex", "opencode",
           "connecter", "connect", "serveur", "server", "oauth",
         ],
       }),
@@ -572,12 +576,25 @@ export function useSettingsSections(): SettingsSection[] {
       project({
         id: SETTINGS_SECTIONS.projectSmartAssign,
         tab: "smart-assign",
-        icon: WandSparkles,
+        icon: SmartAssignIcon,
         title: tSettings("smartAssignTab"),
         keywords: [
           "smart assign", "assignation", "assignment", "assigné", "assigne",
           "assignee", "règles", "regles", "rules", "répartition",
           "repartition", "automatique", "automatic",
+        ],
+      }),
+      project({
+        id: SETTINGS_SECTIONS.projectSmartTriage,
+        tab: "smart-triage",
+        icon: ListOrdered,
+        title: tSettings("smartTriageTab"),
+        audience: "owner",
+        keywords: [
+          "tri", "trier", "triage", "smart triage", "trier", "order", "ordre",
+          "réordonner", "reordonner", "reorder", "prioriser", "prioritize",
+          "quick wins", "priorité", "priorite", "priority", "effort",
+          "blocants", "blockers", "colonnes", "columns", "board", "jev",
         ],
       }),
       project({

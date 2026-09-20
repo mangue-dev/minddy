@@ -3,6 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { insertEvents } from "@/lib/server/issue-events";
 import { insertNotifications } from "@/lib/server/notifications";
+import { normalizeForgeInstant } from "@/lib/forge-time";
 import {
   collapsesInBurst,
   forgeActorValue,
@@ -28,6 +29,19 @@ interface ForgeAccountRow {
   user_id?: string | null;
   provider_account_id: string | null;
   account_login: string | null;
+}
+
+/**
+ * THE TIME OF THE GESTURE, when the webhook payload carries one (review
+ * submitted at, comment created at, MR merged at…). The insert time only
+ * coincides with it for a delivery that arrives within the second — a
+ * replayed, retried or backfilled delivery must not show a 3-hour-old commit
+ * as “just now”. Zone-less values count as UTC and future skew is clamped
+ * (`normalizeForgeInstant`); absent → null → the row keeps its capture time,
+ * which remains exact for Numo and in-app gestures.
+ */
+function occurredAtOf(value: string | null | undefined): string | null {
+  return normalizeForgeInstant(value)?.toISOString() ?? null;
 }
 
 /** The actor of a hook, such as the forge book. */
@@ -186,6 +200,13 @@ export async function isPrActionEcho(opts: {
  * may then end up with a few extra lines — never a lost line, and never one
  * attributed to the wrong actor.
  *
+ * The window is centered on the GESTURE (`at`), not on the wall clock when a
+ * forge timestamp is known: eight comments of one review share the same
+ * submitted-at, and a replayed delivery carries the SAME instant as the row it
+ * duplicates — both must collapse, even when the hook arrives minutes (or a
+ * redelivery, hours) late. Without `at` the window is "now", the historical
+ * behavior for gestures minddy itself dates.
+ *
  * Two modes, depending on where the gesture came from: in-app (`actorId`, the
  * minddy member) or forge (`actor_id` null, with the actor encoded in
  * `from_value`).
@@ -196,15 +217,21 @@ export async function hasRecentPrEvent(opts: {
   prNumber: number;
   actorId?: string | null;
   fromValue?: string | null;
+  /** Forge instant of the incoming gesture — centers the window on it. */
+  at?: string | null;
 }): Promise<boolean> {
   if (opts.issueIds.length === 0) return false;
+  const center = occurredAtOf(opts.at) ?? new Date().toISOString();
+  const from = new Date(Date.parse(center) - PR_EVENT_BURST_MS).toISOString();
+  const to = new Date(Date.parse(center) + PR_EVENT_BURST_MS).toISOString();
   let query = getServiceClient()
     .from("issue_events")
     .select("id")
     .in("issue_id", opts.issueIds)
     .eq("type", opts.type)
     .eq("to_value", String(opts.prNumber))
-    .gte("created_at", new Date(Date.now() - PR_EVENT_BURST_MS).toISOString())
+    .gte("created_at", from)
+    .lte("created_at", to)
     .limit(1);
   if (opts.actorId) {
     query = query.eq("actor_id", opts.actorId);
@@ -224,6 +251,8 @@ async function withoutBurstDuplicates(opts: {
   type: PrActionEventType;
   prNumber: number;
   fromValue: string | null;
+  /** Forge instant of the incoming gesture — centers the burst window on it. */
+  at?: string | null;
 }): Promise<string[]> {
   if (!collapsesInBurst(opts.type)) return opts.issueIds;
   const kept: string[] = [];
@@ -233,6 +262,7 @@ async function withoutBurstDuplicates(opts: {
       type: opts.type,
       prNumber: opts.prNumber,
       fromValue: opts.fromValue,
+      at: opts.at,
     });
     if (!recent) kept.push(issueId);
   }
@@ -254,6 +284,8 @@ export async function recordForgePrActionEvents(opts: {
   prNumber: number;
   provider: ForgeProvider;
   login: string | null;
+  /** Forge instant of the gesture (see `occurredAtOf`) — null keeps capture time. */
+  occurredAt?: string | null;
 }): Promise<void> {
   // CARNET runs (MIN-84) have no issue, so there is nothing to record for them.
   const issueIds = [
@@ -266,8 +298,10 @@ export async function recordForgePrActionEvents(opts: {
     type: opts.type,
     prNumber: opts.prNumber,
     fromValue,
+    at: opts.occurredAt,
   });
   if (targets.length === 0) return;
+  const occurredAt = occurredAtOf(opts.occurredAt);
   await insertEvents(
     getServiceClient(),
     targets.map((issueId) => ({
@@ -276,6 +310,8 @@ export async function recordForgePrActionEvents(opts: {
       type: opts.type,
       from_value: fromValue,
       to_value: String(opts.prNumber),
+      // THE TIME OF THE GESTURE, when the forge said it (see `occurredAtOf`).
+      ...(occurredAt ? { created_at: occurredAt } : {}),
     })),
   );
 }
@@ -402,6 +438,8 @@ export async function applyForgePrToIssue(opts: {
   accountId: string | null;
   /** Forge login of the actor — it serves as the actor in the timeline. */
   login: string | null;
+  /** Forge instant of the gesture (see `occurredAtOf`) — null keeps capture time. */
+  occurredAt?: string | null;
 }): Promise<void> {
   if (!opts.prState && !opts.actionType) return;
 
@@ -452,8 +490,10 @@ export async function applyForgePrToIssue(opts: {
       type: opts.actionType,
       prNumber: opts.prNumber,
       fromValue,
+      at: opts.occurredAt,
     });
     if (targets.length === 0) return;
+    const occurredAt = occurredAtOf(opts.occurredAt);
     await insertEvents(getServiceClient(), [
       {
         issue_id: issueId,
@@ -461,6 +501,8 @@ export async function applyForgePrToIssue(opts: {
         type: opts.actionType,
         from_value: fromValue,
         to_value: String(opts.prNumber),
+        // THE TIME OF THE GESTURE, when the forge said it (see `occurredAtOf`).
+        ...(occurredAt ? { created_at: occurredAt } : {}),
       },
     ]);
   }
@@ -489,6 +531,8 @@ export async function recordForgePrGesture(opts: {
   accountId: string | null;
   /** Forge login of the actor — it serves as the actor in the timeline. */
   login: string | null;
+  /** Forge instant of the gesture (see `occurredAtOf`) — null keeps capture time. */
+  occurredAt?: string | null;
 }): Promise<void> {
   const runs = await findRunsForPr({
     repoFullName: opts.repoFullName,
@@ -514,6 +558,7 @@ export async function recordForgePrGesture(opts: {
     prNumber: opts.prNumber,
     provider: opts.provider,
     login: opts.login,
+    occurredAt: opts.occurredAt,
   });
   // Inbox: without an associated notification type (comments), this is a no-op.
   await notifyForgePrAction({ runs, type: opts.type, actorLogin: opts.login });

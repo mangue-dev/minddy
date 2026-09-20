@@ -1,5 +1,6 @@
 "use client";
 
+import { mergeComment, publishCommentWrite, removeCommentThread } from "./comment-cache";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import {
@@ -77,22 +78,25 @@ export function useObjectiveTimeline(objectiveId: string | null) {
       parentId: string | null = null,
       attachments: ResourceInput[] = []
     ) => {
-      await addObjectiveCommentApi(objectiveId as string, body, mentionedUserIds, parentId, attachments);
-      void queryClient.invalidateQueries({ queryKey: commentsKey(objectiveId as string) });
+      const saved = await addObjectiveCommentApi(objectiveId as string, body, mentionedUserIds, parentId, attachments);
+      await publishCommentWrite<Comment>(queryClient, commentsKey(objectiveId as string),
+        (comments) => mergeComment(comments, saved));
     },
     [objectiveId, queryClient]
   );
   const updateComment = useCallback(
     async (commentId: string, body: string) => {
-      await updateCommentApi(commentId, body);
-      void queryClient.invalidateQueries({ queryKey: commentsKey(objectiveId as string) });
+      const saved = await updateCommentApi(commentId, body);
+      await publishCommentWrite<Comment>(queryClient, commentsKey(objectiveId as string),
+        (comments) => mergeComment(comments, saved, false));
     },
     [objectiveId, queryClient]
   );
   const deleteComment = useCallback(
     async (commentId: string) => {
       await deleteCommentApi(commentId);
-      void queryClient.invalidateQueries({ queryKey: commentsKey(objectiveId as string) });
+      await publishCommentWrite<Comment>(queryClient, commentsKey(objectiveId as string),
+        (comments) => removeCommentThread(comments, commentId));
     },
     [objectiveId, queryClient]
   );

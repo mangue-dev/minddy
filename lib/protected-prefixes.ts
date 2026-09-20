@@ -25,12 +25,15 @@ export const PROTECTED_PREFIXES = [
   "/settings",
   "/billing",
   "/admin",
-  "/agents",
-  "/numo",
   "/routines",
   "/pull-requests",
   "/statistics",
   "/trash",
+  // Retired pages kept as compat surfaces (components/assistant/
+  // numo-compat-redirect.tsx): their links are already in circulation and
+  // open the Numo panel instead of 404ing. Still authenticated-only.
+  "/agents",
+  "/numo",
   // Forge-relay claim interstitial (`app/(app)/connect/github/`): polls the
   // authenticated claim endpoint, so it requires a session like the settings
   // pages that lead to it.

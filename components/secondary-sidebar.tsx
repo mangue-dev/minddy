@@ -3,6 +3,7 @@
 import {
   useEffect,
   useLayoutEffect,
+  useMemo,
   useState,
   type MouseEvent,
   type ReactNode,
@@ -12,7 +13,7 @@ import { cn, useMediaQuery } from "mangue-ui";
 import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { SidebarFilterField } from "@/components/sidebar-filter-field";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";
-import { IssueContextMenu } from "@/components/issue-context-menu";
+import { IssueContextMenu, type ContextMenuAction } from "@/components/issue-context-menu";
 import { useNavigationContextActions } from "@/components/navigation-context-actions";
 
 /**
@@ -49,6 +50,7 @@ export function SecondarySidebar({
   filter,
   actions,
   hiddenOnMobile,
+  itemContextActions,
   children,
 }: {
   /**
@@ -82,9 +84,15 @@ export function SecondarySidebar({
    * the “detail is open” state of the page. No effect above `md`.
    */
   hiddenOnMobile?: boolean;
+  /**
+   * Row-level actions for the right-click menu, built from the row the
+   * pointer landed on. Merged ABOVE the shared “open in a new tab / copy
+   * link” entries, which always close the menu.
+   */
+  itemContextActions?: (target: Element) => ContextMenuAction[];
   children: ReactNode;
 }) {
-  const { headerSlot, slot, register } = useSecondarySidebar();
+  const { headerSlot, slot, register, hosting } = useSecondarySidebar();
   const isMobileLayout = useMediaQuery("(max-width: 767px)");
   // Nothing in the server rendering: the space is reserved by the primary
   // sidebar's route-level panel anyway (routeHasSecondaryNav), and
@@ -94,17 +102,27 @@ export function SecondarySidebar({
     x: number;
     y: number;
     href: string;
+    target: Element | null;
   } | null>(null);
   const navigationActions = useNavigationContextActions(navigationMenu?.href);
+  const itemActions = useMemo(
+    () => (navigationMenu?.target ? itemContextActions?.(navigationMenu.target) ?? [] : []),
+    [navigationMenu, itemContextActions],
+  );
 
   useIsoLayoutEffect(() => {
     setMounted(true);
     return register();
   }, [register]);
+  useEffect(() => {
+    // The menu portals to body, outside the hidden panel's inert subtree.
+    if (!isMobileLayout && !hosting) setNavigationMenu(null);
+  }, [hosting, isMobileLayout]);
 
   if (!mounted) return null;
 
-  const hoisted = !isMobileLayout && slot !== null && headerSlot !== null;
+  const hoisted =
+    !isMobileLayout && slot !== null && headerSlot !== null;
 
   /**
    * The title line COMMANDS the column, it does not name it: the filter
@@ -141,7 +159,7 @@ export function SecondarySidebar({
         const destination = normalizeAppTabLocation(href);
         if (!destination) return;
         event.preventDefault();
-        setNavigationMenu({ x: event.clientX, y: event.clientY, href: destination });
+        setNavigationMenu({ x: event.clientX, y: event.clientY, href: destination, target });
       }}
     >
       <div className="scrollbar-quiet flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -158,9 +176,9 @@ export function SecondarySidebar({
           <>
             {body}
             <IssueContextMenu
-              position={navigationMenu}
+              position={hosting ? navigationMenu : null}
               onClose={() => setNavigationMenu(null)}
-              actions={navigationActions}
+              actions={[...itemActions, ...navigationActions]}
               searchable={false}
             />
           </>,
@@ -169,6 +187,10 @@ export function SecondarySidebar({
       </>
     );
   }
+
+  // The stable desktop portal remains mounted while browsing upper levels.
+  // Before its destination exists, keep the bar out of the page's layout.
+  if (!isMobileLayout && !hosting) return null;
 
   return (
     <aside
@@ -188,7 +210,7 @@ export function SecondarySidebar({
         const destination = normalizeAppTabLocation(href);
         if (!destination) return;
         event.preventDefault();
-        setNavigationMenu({ x: event.clientX, y: event.clientY, href: destination });
+        setNavigationMenu({ x: event.clientX, y: event.clientY, href: destination, target });
       }}
     >
       {header}
@@ -198,7 +220,7 @@ export function SecondarySidebar({
       <IssueContextMenu
         position={navigationMenu}
         onClose={() => setNavigationMenu(null)}
-        actions={navigationActions}
+        actions={[...itemActions, ...navigationActions]}
         searchable={false}
       />
     </aside>

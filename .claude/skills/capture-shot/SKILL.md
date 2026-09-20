@@ -77,7 +77,7 @@ await browser.close();
 ```
 
 Préfère toujours les locators sémantiques de Playwright — `getByRole`,
-`getByLabel`, `getByText` — aux classes utilitaires. `div.relative.cursor-pointer.rounded-xl`
+`getByLabel`, `getByText` — aux classes utilitaires. `div.relative.cursor-grab.rounded-xl`
 casse au premier restyle, en silence.
 
 ### 4. Écrire le script

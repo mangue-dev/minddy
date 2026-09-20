@@ -1,11 +1,11 @@
 /** Persist only authenticated destinations and repeatable selection state. */
 const ROUTES = new Set([
-  "home", "all", "inbox", "numo", "agents", "routines", "pull-requests",
+  "home", "all", "inbox", "routines", "pull-requests",
   "statistics", "trash", "settings", "billing", "admin",
 ]);
 const PROJECT_SECTIONS = new Set(["feedback", "objectives", "pages", "settings", "triage"]);
 const SELECTION_PARAMS = new Set([
-  "view", "objective", "tab", "open", "post", "run", "routine", "pr", "conversation", "entry",
+  "view", "objective", "family", "tab", "open", "post", "routine", "pr", "entry",
 ]);
 export const APP_TAB_MAX_HREF = 2000;
 

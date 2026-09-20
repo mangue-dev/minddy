@@ -1040,7 +1040,7 @@ const PROJECT_PR_TOOLS: AgentToolDef[] = [
     function: {
       name: "read_pull_request",
       description:
-        "Open ONE pull request of this project by its number: title, description, state, draft, author, branches, dates, its CI checks (aggregate state, how many pass, the failing ones by name), its approval counts, the files it touches with their +/− counts, its review threads (each with file, line, side, whether it is resolved or outdated, and every message) and its conversation. 'checks: null' means they could not be read, not that they pass; 'mergeable: null' means the forge has not computed it yet, not 'no'.\n\nThe DIFF is not included by default — pass include_diff: true to get each file's patch. Reading fifteen pull requests to report on the week does not need fifteen diffs; reviewing one does.",
+        "Open ONE pull request of this project by its number: title, description, state, draft, author, branches, dates, its CI checks (aggregate state, how many pass, the failing ones by name), its approval counts, the files it touches with their +/− counts, its review threads (each with the root comment `id` that reply_pull_request_thread and resolve_pull_request_thread target, plus file, line, side, whether it is resolved or outdated, and every message) and its conversation. 'checks: null' means they could not be read, not that they pass; 'mergeable: null' means the forge has not computed it yet, not 'no'.\n\nThe DIFF is not included by default — pass include_diff: true to get each file's patch. Reading fifteen pull requests to report on the week does not need fifteen diffs; reviewing one does.",
       parameters: {
         type: "object",
         properties: {
@@ -1137,6 +1137,34 @@ const PROJECT_PR_TOOLS: AgentToolDef[] = [
           body: { type: "string", description: "The reply, in markdown." },
         },
         required: ["pull_request", "comment_id", "body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "resolve_pull_request_thread",
+      description:
+        "Mark a review conversation of a pull request as RESOLVED at the forge once its request has actually been addressed — the fix is on the branch (your own commits or the harness's), or the request needed no code and you answered it in the thread. Reopen an already-resolved conversation with resolved: false. 'comment_id' is the ROOT comment id read_pull_request lists for that thread — the same id reply_pull_request_thread takes; not a reply id and not a line number. Resolve only what is genuinely addressed, one conversation at a time as you finish them: an unresolved conversation is how a reviewer tracks what is still open, and resolving one whose request is still open hides work. Posted under minddy's account, like every gesture here.",
+      parameters: {
+        type: "object",
+        properties: {
+          pull_request: {
+            type: "number",
+            description: "Number of the pull request.",
+          },
+          comment_id: {
+            type: "number",
+            description:
+              "Root comment id of the thread, exactly as read_pull_request lists it. A thread the forge no longer knows comes back as an error, not a guess.",
+          },
+          resolved: {
+            type: "boolean",
+            description:
+              "true (default) to resolve the thread, false to reopen a resolved one.",
+          },
+        },
+        required: ["pull_request", "comment_id"],
       },
     },
   },

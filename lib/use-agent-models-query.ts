@@ -21,16 +21,19 @@ import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
  * BYOK or the platform key): what ITS agent can launch;
  * - `assistant` → `/api/assistant/models`, the assistant BYOK surface and its
  * Numo reasoning default;
+ * - `byok` → `/api/account/byok-models`, the active BYOK provider filtered by
+ *   runtime capability for account settings;
  * - `platform` → `/api/admin/models-catalog`, the OpenRouter platform key
  * filtered by the requested runtime capability for the config admin (MIN-90).
  * The admin's BYOK has nothing to do there: `app_config` runs on the platform;
  */
 
-export type AgentModelsScope = "user" | "assistant" | "platform";
+export type AgentModelsScope = "user" | "assistant" | "byok" | "platform";
 
 const SCOPE_ENDPOINTS: Record<AgentModelsScope, string> = {
   user: "/api/agent/models",
   assistant: "/api/assistant/models",
+  byok: "/api/account/byok-models",
   platform: "/api/admin/models-catalog",
 };
 
@@ -83,7 +86,7 @@ interface AgentModelsResult {
   };
 }
 
-async function fetchAgentModels(
+export async function fetchAgentModels(
   scope: AgentModelsScope,
   capability: ModelCatalogCapability,
 ): Promise<AgentModelsResult> {
@@ -100,7 +103,7 @@ async function fetchAgentModels(
     defaultReasoning: undefined,
   };
   const endpoint =
-    scope === "platform"
+    scope === "platform" || scope === "byok"
       ? `${SCOPE_ENDPOINTS[scope]}?capability=${encodeURIComponent(capability)}`
       : SCOPE_ENDPOINTS[scope];
   const res = await fetch(endpoint);

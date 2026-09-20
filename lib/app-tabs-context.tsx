@@ -8,6 +8,7 @@ import { AppTabsSession, type AppTabsSnapshot } from "./app-tabs-session";
 import { appTabsQueryKey, useAppTabsQuery } from "./use-app-tabs-query";
 import { AppTabRouteSync } from "@/components/app-tab-route-sync";
 import { appTabsStorageKey } from "./app-tabs-storage";
+import { prefetchAppTabDestination } from "./prefetch-tab-destination";
 
 interface AppTabsValue extends AppTabsSnapshot {
   session: AppTabsSession;
@@ -16,6 +17,10 @@ interface AppTabsValue extends AppTabsSnapshot {
   reload: () => void;
 }
 const Context = createContext<AppTabsValue | null>(null);
+// Persistence and tab-list changes belong to the strip. Pages only need the
+// active tab, and action handlers need the stable account session.
+const NavigationContext = createContext<Pick<AppTabsValue, "session" | "activeId"> | null>(null);
+const SessionContext = createContext<AppTabsSession | null>(null);
 
 export function AppTabsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -56,6 +61,13 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
     };
   }, [session]);
   useEffect(() => {
+    // One warmup attempt per href (tab label, palette row): prefetchQuery
+    // itself respects staleTime, so a fresh cache costs nothing anyway.
+    const attempted = new Set<string>();
+    session.prefetch = (href) => {
+      router.prefetch(href);
+      prefetchAppTabDestination(client, href, attempted);
+    };
     session.navigate = (href) => {
       const current = window.location.pathname;
       const next = href.split(/[?#]/)[0];
@@ -66,7 +78,7 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
     session.remember = (id, href) => {
       try { sessionStorage.setItem(storageKey, JSON.stringify({ id, href })); } catch { /* Storage is optional. */ }
     };
-  }, [router, session, storageKey]);
+  }, [router, session, storageKey, client]);
   useEffect(() => {
     if (!query.data) return;
     session.receive(query.data);
@@ -74,15 +86,39 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
     try { restored = JSON.parse(sessionStorage.getItem(storageKey) ?? "null") ?? undefined; } catch { /* Ignore a malformed snapshot. */ }
     void session.initialize(window.location.pathname + window.location.search + window.location.hash, restored);
   }, [query.data, session, storageKey]);
+  // A refresh hides the page first: push the pending location write out
+  // immediately, or the next load restores a destination the session outgrew.
+  useEffect(() => {
+    const onHide = () => session.onPageHide();
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") onHide();
+    };
+    window.addEventListener("pagehide", onHide);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [session]);
   const value = useMemo(() => ({ ...snapshot, session, loading: query.isPending,
     loadError: query.isError, reload: () => { void query.refetch(); } }), [snapshot, session, query.isPending, query.isError, query.refetch]);
-  return <Context.Provider value={value}>
+  const navigation = useMemo(() => ({ session, activeId: snapshot.activeId }), [session, snapshot.activeId]);
+  return <SessionContext.Provider value={session}><NavigationContext.Provider value={navigation}><Context.Provider value={value}>
     <Suspense fallback={null}><AppTabRouteSync /></Suspense>
     {children}
-  </Context.Provider>;
+  </Context.Provider></NavigationContext.Provider></SessionContext.Provider>;
 }
 
 export const useOptionalAppTabs = () => useContext(Context);
+export const useOptionalAppTabNavigation = () => useContext(NavigationContext);
+export const useOptionalAppTabSession = () => useContext(SessionContext);
+
+/** A retained board keeps its tab's local filters while another tab is active. */
+export function AppTabNavigationScope({ activeId, children }: { activeId: string | null; children: ReactNode }) {
+  const session = useOptionalAppTabSession();
+  const value = useMemo(() => session ? { session, activeId } : null, [session, activeId]);
+  return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
+}
 export function useAppTabs() {
   const value = useOptionalAppTabs();
   if (!value) throw new Error("useAppTabs requires AppTabsProvider");
@@ -91,6 +127,6 @@ export function useAppTabs() {
 
 /** Every mounted editor, including database previews, participates in departure. */
 export function useAppTabDeparture(guard: () => Promise<boolean>) {
-  const session = useOptionalAppTabs()?.session;
+  const session = useOptionalAppTabSession();
   useEffect(() => session?.registerDeparture(guard), [session, guard]);
 }

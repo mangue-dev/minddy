@@ -332,6 +332,10 @@ export function createDurableNumoEmitter(
   live?: SafeEmitter,
 ): DurableEmitter {
   let pendingContent = "";
+  // Reasoning deltas are snapshots of the trace so far, not increments: only
+  // the LATEST one is worth persisting, and the journal replays it before
+  // `reasoning_end` re-states the final text.
+  let pendingReasoning: string | null = null;
   let chain = Promise.resolve();
   let closed = false;
   const enqueue = (operation: () => Promise<void>) => {
@@ -369,6 +373,21 @@ export function createDurableNumoEmitter(
     });
   };
 
+  const flushReasoning = () => {
+    if (pendingReasoning === null) return;
+    const text = pendingReasoning;
+    pendingReasoning = null;
+    enqueue(async () => {
+      const { error } = await service.rpc("append_numo_turn_event", {
+        p_turn_id: turnId,
+        p_event_id: randomUUID(),
+        p_type: "reasoning_delta",
+        p_payload: { text },
+      });
+      if (error) throw new Error(`Numo activity append failed: ${error.message}`);
+    });
+  };
+
   return {
     emit(event, data) {
       live?.emit(event, data);
@@ -377,8 +396,14 @@ export function createDurableNumoEmitter(
         if (typeof delta === "string") pendingContent += delta;
         return;
       }
+      if (event === "reasoning_delta") {
+        const text = (data as { text?: unknown } | null)?.text;
+        if (typeof text === "string") pendingReasoning = text;
+        return;
+      }
       if (event === "reasoning_tick" || event === "tool_result") return;
       flushContent();
+      flushReasoning();
       append(event, data);
     },
     close() {
@@ -391,6 +416,7 @@ export function createDurableNumoEmitter(
     },
     async flush() {
       flushContent();
+      flushReasoning();
       await chain;
     },
   };
@@ -1238,8 +1264,8 @@ export async function drainNumoTurns(options?: { limit?: number }) {
   const { error: recoveryError } = await service.rpc("recover_stale_numo_turns");
   if (recoveryError) throw new Error(recoveryError.message);
   const { data, error } = await service.from("numo_assistant_turns")
-    .select("id, checkpoint")
-    .eq("status", "queued")
+    .select("id, status")
+    .in("status", ["queued", "retryable"])
     .lte("not_before", new Date().toISOString())
     .order("not_before", { ascending: true })
     .order("created_at", { ascending: true })
@@ -1247,7 +1273,20 @@ export async function drainNumoTurns(options?: { limit?: number }) {
   if (error) throw new Error(error.message);
   let claimed = 0;
   for (const row of data ?? []) {
-    const result = await executeNumoTurn({ turnId: row.id as string });
+    // A `retryable` turn carries a checkpoint and waits on nobody: for a turn
+    // started server-side (PR review, routine, automation) there is no
+    // interactive client to press "Retry", so the drain is the only thing
+    // that can resume it. The service client is passed as the read client on
+    // purpose: without it, `executeNumoTurnCore` treats any non-worker-result
+    // resume as an interrupted request and flips the turn straight back to
+    // `retryable` without ever running it, leaving the claim to churn every
+    // tick with `attempts` unbounded. The attempt ceiling still bounds a
+    // poisoned turn once the real execution path records its failures.
+    const result = await executeNumoTurn({
+      turnId: row.id as string,
+      readClient: service,
+      ...(row.status === "retryable" ? { allowRetryable: true } : {}),
+    });
     if (result.status !== "not_claimed") claimed++;
   }
   return { claimed };

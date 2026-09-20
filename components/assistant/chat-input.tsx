@@ -9,6 +9,7 @@ import {
   useEffect,
   useImperativeHandle,
   forwardRef,
+  useId,
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
@@ -18,6 +19,12 @@ import {
   CommandItem,
   CommandSeparator,
   CommandShortcut,
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
   SendButtonWithCost,
   cn,
 } from "mangue-ui";
@@ -148,6 +155,9 @@ function mentionFromNode(node: HTMLElement): MentionOption | null {
         : { iconUrl: node.dataset.mentionIcon }
       : {}),
     ...(node.dataset.mentionColor ? { color: node.dataset.mentionColor } : {}),
+    ...(node.dataset.mentionStatus
+      ? { status: node.dataset.mentionStatus as MentionOption["status"] }
+      : {}),
   };
 }
 
@@ -162,6 +172,7 @@ function createMentionNode(option: MentionOption): HTMLSpanElement {
   const iconAttr = option.iconUrl ?? option.icon;
   if (iconAttr) pill.dataset.mentionIcon = iconAttr;
   if (option.color) pill.dataset.mentionColor = option.color;
+  if (option.status) pill.dataset.mentionStatus = option.status;
   pill.className = MENTION_SLOT_CLASS;
   return pill;
 }
@@ -358,9 +369,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     ref
   ) {
     const t = useTranslations("Assistant");
+    const tCommon = useTranslations("Common");
     const isSend = useIsSendShortcut();
     const modKey = useModKey();
     const tAttach = useTranslations("Resources");
+    const stopConfirmationId = useId();
+    const stopConfirmationTitleId = `${stopConfirmationId}-title`;
+    const stopConfirmationDescriptionId = `${stopConfirmationId}-description`;
+    const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
     const effectivePlaceholder = placeholder ?? t("inputPlaceholder");
     const editorRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -696,6 +712,17 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     const addContextOption = useCallback(
       (option: MentionOption) => {
+        // A forge account or Numo quotes a WRITER, not an entity to
+        // attach: they never land in the context of a conversation.
+        if (
+          option.type !== "member" &&
+          option.type !== "project" &&
+          option.type !== "issue" &&
+          option.type !== "objective" &&
+          option.type !== "page"
+        ) {
+          return;
+        }
         if (onAddContext) {
           onAddContext({
             kind: option.type,
@@ -816,6 +843,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       for (const node of el.querySelectorAll<HTMLElement>("[data-mention-id]")) {
         const option = mentionFromNode(node);
         if (!option) continue;
+        // A forge account or Numo quotes a WRITER, not an entity the
+        // conversation carries: they never serialize as context.
+        if (option.type === "forge" || option.type === "numo") continue;
         const key = `${option.type}:${option.id}`;
         if (seen.has(key)) continue;
         seen.add(key);
@@ -827,6 +857,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           ...(option.avatarSeed ? { avatarSeed: option.avatarSeed } : {}),
           ...(option.color ? { color: option.color } : {}),
           ...(option.icon ? { icon: option.icon } : {}),
+          ...(option.status ? { status: option.status } : {}),
         });
       }
       return out;
@@ -1319,6 +1350,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               iconUrl={option.iconUrl}
               icon={option.icon}
               color={option.color}
+              status={option.status}
             />,
             el,
             // Two mentions of the SAME person in a message: the key takes
@@ -1607,24 +1639,78 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               {isStreaming && (isEmpty || !sendWhileStreaming) ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="icon-sm"
-                      variant="default"
-                      onClick={onAbort}
-                      aria-label={t("stop")}
-                      className="h-8 w-8 shrink-0 rounded-full bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
-                    >
-                      <Square className="h-3 w-3 fill-white text-white dark:fill-black dark:text-black" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">{t("stop")}</TooltipContent>
-                </Tooltip>
+                <Popover
+                  open={stopConfirmOpen}
+                  onOpenChange={setStopConfirmOpen}
+                >
+                  <PopoverAnchor asChild>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon-sm"
+                          variant="default"
+                          onClick={() => setStopConfirmOpen(true)}
+                          aria-label={t("stop")}
+                          aria-haspopup="dialog"
+                          aria-controls={stopConfirmationId}
+                          aria-expanded={stopConfirmOpen}
+                          className="h-8 w-8 shrink-0 rounded-full bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                        >
+                          <Square className="h-3 w-3 fill-white text-white dark:fill-black dark:text-black" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">{t("stop")}</TooltipContent>
+                    </Tooltip>
+                  </PopoverAnchor>
+                  {/* Same confirmation gesture as the update action: a
+                      destructive stop deserves one click to reconsider, not
+                      an immediate abort. */}
+                  <PopoverContent
+                    id={stopConfirmationId}
+                    role="dialog"
+                    aria-labelledby={stopConfirmationTitleId}
+                    aria-describedby={stopConfirmationDescriptionId}
+                    side="top"
+                    align="end"
+                    sideOffset={8}
+                    collisionPadding={10}
+                    className="w-72 gap-3 rounded-xl p-3"
+                  >
+                    <PopoverHeader>
+                      <PopoverTitle id={stopConfirmationTitleId}>
+                        {t("stopConfirmTitle")}
+                      </PopoverTitle>
+                      <PopoverDescription id={stopConfirmationDescriptionId}>
+                        {t("stopConfirmDescription")}
+                      </PopoverDescription>
+                    </PopoverHeader>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setStopConfirmOpen(false)}
+                      >
+                        {tCommon("cancel")}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          setStopConfirmOpen(false);
+                          onAbort?.();
+                        }}
+                      >
+                        {t("stop")}
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               ) : (
                 <>
                   {!isStreaming && (
                     <DictateButton
+                      context="assistant_message"
                       onTranscription={appendDictated}
                       disabled={disabled}
                       className={canAttach ? "-ml-0.5" : undefined}

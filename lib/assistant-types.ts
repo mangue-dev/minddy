@@ -1,5 +1,6 @@
 import type { ReasoningLevel } from "./agent-reasoning";
 import type { ResourceInput } from "./types";
+import type { IssueStatus } from "./issue-constants";
 
 // ── Numo (AI assistant) shared types ─────────────────────────────────
 
@@ -50,7 +51,6 @@ export interface NumoConversation extends Omit<Conversation, "user_id"> {
   archived_at: string | null;
   pinned_at: string | null;
   last_read_at: string | null;
-  detail_href: string | null;
   latest_work_id: string | null;
   /** Explicit conversation choice; null preserves the account default. */
   model?: string | null;
@@ -90,7 +90,6 @@ export interface NumoWorkReference {
   visibility: "private" | "project";
   pinned_at: string | null;
   last_read_at: string | null;
-  detail_href: string;
 }
 
 export interface NumoConversationDetail {
@@ -171,6 +170,7 @@ export type AssistantSSEEvent =
   | { type: "content_delta"; data: { delta: string } }
   | { type: "reasoning_start"; data: { started_at: string } }
   | { type: "reasoning_tick"; data: { duration_ms: number } }
+  | { type: "reasoning_delta"; data: { text: string } }
   | { type: "reasoning_end"; data: { duration_ms: number; text: string } }
   | { type: "tool_call_start"; data: { id: string; name: string } }
   | {
@@ -246,6 +246,8 @@ export interface AssistantMention {
   color?: string | null;
   /** Wiki pages: their emoji (MIN-273). */
   icon?: string | null;
+  /** Issues: workflow state captured for immediate rendering; live sources win. */
+  status?: IssueStatus;
 }
 
 /** A repository skill explicitly attached to one Numo message. */

@@ -388,13 +388,13 @@ export const TIMELINE = [
 /**
  * The list item, such as /api/pull-requests would return it. `prId` is
  * now the key: it is he who the page selects and he who addresses
- * all detailed readings. `title`, `author` and `head_branch` are
- * arrived with human PRs — without `author`, the list would no longer be able to say
- * that a PR comes from Numo.
+ * all detailed readings. `author` is the forge's own — `numoOpened`
+ * is what says “Numo” took the author seat (this PR was opened by a run).
  */
 export const LIST_ITEM = {
   prId: PR_ID,
   runId: RUN_ID,
+  numoOpened: true,
   pr_number: PR_NUMBER,
   pr_url: PR_URL,
   pr_state: "open",

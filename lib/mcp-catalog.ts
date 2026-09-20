@@ -1,4 +1,6 @@
-/** Provider-owned remote endpoints, checked against the linked docs on 2026-09-04. */
+/** Provider-owned remote endpoints, checked against the linked docs on 2026-09-04 (Notion
+ * through Stripe) and 2026-09-20 (everything after; each endpoint probed with an MCP
+ * initialize handshake, each docs link resolved). */
 export interface McpPreset {
   id: string;
   name: string;
@@ -6,6 +8,7 @@ export interface McpPreset {
   auth: "oauth" | "bearer" | "none";
   setup:
     | "standard"
+    | "apiKey"
     | "oauthApp"
     | "googlePreview"
     | "approvedClient"
@@ -72,7 +75,7 @@ export const MCP_PRESETS: McpPreset[] = [
     name: "GitHub",
     url: "https://api.githubcopilot.com/mcp/",
     auth: "bearer",
-    setup: "standard",
+    setup: "apiKey",
     docs: "https://docs.github.com/en/copilot/how-tos/provide-context/use-mcp/use-the-github-mcp-server",
   },
   {
@@ -106,6 +109,14 @@ export const MCP_PRESETS: McpPreset[] = [
     auth: "oauth",
     setup: "oauthApp",
     docs: "https://developers.asana.com/docs/integrating-with-asanas-mcp-server",
+  },
+  {
+    id: "posthog",
+    name: "PostHog",
+    url: "https://mcp.posthog.com/mcp",
+    auth: "oauth",
+    setup: "standard",
+    docs: "https://posthog.com/docs/model-context-protocol",
   },
   {
     id: "canva",
@@ -146,5 +157,157 @@ export const MCP_PRESETS: McpPreset[] = [
     auth: "oauth",
     setup: "standard",
     docs: "https://docs.stripe.com/mcp",
+  },
+  {
+    id: "hubspot",
+    name: "HubSpot",
+    url: "https://mcp.hubspot.com/",
+    auth: "oauth",
+    setup: "standard",
+    docs: "https://developers.hubspot.com/mcp",
+  },
+  {
+    id: "zapier",
+    name: "Zapier",
+    url: "https://mcp.zapier.com/api/v1/connect",
+    auth: "bearer",
+    setup: "apiKey",
+    docs: "https://help.zapier.com/hc/en-us/articles/48308034391821-What-is-Zapier-MCP",
+  },
+  {
+    id: "monday",
+    name: "monday.com",
+    url: "https://mcp.monday.com/mcp",
+    auth: "oauth",
+    setup: "standard",
+    docs: "https://developer.monday.com/docs/mcp",
+  },
+  {
+    id: "paypal",
+    name: "PayPal",
+    url: "https://mcp.paypal.com/mcp",
+    auth: "oauth",
+    setup: "standard",
+    docs: "https://developer.paypal.com/ai-tools/mcp-server",
+  },
+  {
+    id: "airtable",
+    name: "Airtable",
+    url: "https://mcp.airtable.com/mcp",
+    auth: "oauth",
+    setup: "standard",
+    docs: "https://support.airtable.com/articles/9897799762-using-the-airtable-mcp-server",
+  },
+  {
+    id: "webflow",
+    name: "Webflow",
+    url: "https://mcp.webflow.com/mcp",
+    auth: "oauth",
+    setup: "standard",
+    docs: "https://developers.webflow.com/mcp",
+  },
+  {
+    id: "wix",
+    name: "Wix",
+    url: "https://mcp.wix.com/mcp",
+    auth: "oauth",
+    setup: "standard",
+    docs: "https://dev.wix.com/docs/build-apps/develop-your-app/build-with-ai/wix-mcp",
+  },
+  {
+    id: "gitlab",
+    name: "GitLab",
+    url: "https://gitlab.com/api/v4/mcp",
+    auth: "bearer",
+    setup: "apiKey",
+    docs: "https://docs.gitlab.com/user/gitlab_mcp_server/",
+  },
+  {
+    id: "grafana",
+    name: "Grafana",
+    url: "https://mcp.grafana.com/mcp",
+    auth: "bearer",
+    setup: "apiKey",
+    docs: "https://github.com/grafana/mcp-grafana",
+  },
+  {
+    id: "huggingface",
+    name: "Hugging Face",
+    url: "https://huggingface.co/mcp",
+    auth: "oauth",
+    setup: "standard",
+    docs: "https://huggingface.co/docs/hub/en/mcp",
+  },
+  {
+    id: "cloudflare-docs",
+    name: "Cloudflare Docs",
+    url: "https://docs.mcp.cloudflare.com/mcp",
+    auth: "none",
+    setup: "standard",
+    docs: "https://developers.cloudflare.com/agents/model-context-protocol/",
+  },
+  {
+    id: "cloudflare-bindings",
+    name: "Cloudflare Bindings",
+    url: "https://bindings.mcp.cloudflare.com/mcp",
+    auth: "oauth",
+    setup: "standard",
+    docs: "https://developers.cloudflare.com/agents/model-context-protocol/",
+  },
+  {
+    id: "exa",
+    name: "Exa",
+    url: "https://mcp.exa.ai/mcp",
+    auth: "none",
+    setup: "standard",
+    docs: "https://docs.exa.ai/reference/mcp",
+  },
+  {
+    id: "dropbox",
+    name: "Dropbox",
+    url: "https://mcp.dropbox.com/mcp",
+    auth: "bearer",
+    setup: "apiKey",
+    docs: "https://developer.dropbox.com/docs/mcp",
+  },
+  {
+    id: "intercom",
+    name: "Intercom",
+    url: "https://mcp.intercom.com/mcp",
+    auth: "oauth",
+    setup: "standard",
+    docs: "https://developers.intercom.com/docs/guides/mcp",
+  },
+  {
+    id: "box",
+    name: "Box",
+    url: "https://mcp.box.com/mcp",
+    auth: "oauth",
+    setup: "standard",
+    docs: "https://developer.box.com/guides/box-mcp/",
+  },
+  {
+    id: "clickup",
+    name: "ClickUp",
+    url: "https://mcp.clickup.com/mcp",
+    auth: "oauth",
+    setup: "standard",
+    docs: "https://developer.clickup.com/docs/connect-an-ai-assistant-to-clickups-mcp-server",
+  },
+  {
+    id: "square",
+    name: "Square",
+    url: "https://mcp.squareup.com/mcp",
+    auth: "oauth",
+    setup: "standard",
+    docs: "https://developer.squareup.com/docs/mcp",
+  },
+  {
+    id: "ramp",
+    name: "Ramp",
+    url: "https://mcp.ramp.com/mcp",
+    auth: "oauth",
+    setup: "standard",
+    docs: "https://docs.ramp.com/agent/mcp",
   },
 ];

@@ -314,7 +314,7 @@ function ThreadPanel({
           />
         </div>
       ))}
-      <div className="border-t border-border/60">
+      {!root.delivery && <div className="border-t border-border/60">
         <ReplyComposer
           members={members}
           mentions={mentions}
@@ -326,7 +326,7 @@ function ThreadPanel({
             onAdd({ body, mentionedUserIds, parentId })
           }
         />
-      </div>
+      </div>}
     </div>
   );
 }

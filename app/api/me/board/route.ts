@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       // the rows to my projects).
       auth.supabase
         .from("issue_relations")
-        .select("id, source_id, target_id, type"),
+        .select("id, source_id, target_id, type, source_type, target_type"),
     ]);
 
   const firstError =
@@ -108,19 +108,23 @@ export async function GET(request: NextRequest) {
     id: string;
     owner_id: string;
   }[];
-  const { members, projectIds } = await buildMembersByProject(service, projectRows);
-
   // Integrations across my projects — feeds the cross-project integration
   // filter (issues carry integration_id). Read via the service client like
   // members, then bucketed by project. Kind and revocation state let the client
   // hide integrations that cannot match a living board ticket.
-  const { data: integrationRows } = projectIds.length
-    ? await service
-        .from("integrations")
-        .select("id, name, project_id, kind, revoked_at")
-        .in("project_id", projectIds)
-        .order("name", { ascending: true })
-    : { data: [] as IntegrationRef[] };
+  // These reads share the authorized project IDs, but integrations do not
+  // depend on member or avatar resolution. Start both branches together.
+  const projectIds = projectRows.map((project) => project.id);
+  const [{ members }, { data: integrationRows }] = await Promise.all([
+    buildMembersByProject(service, projectRows),
+    projectIds.length
+      ? service
+          .from("integrations")
+          .select("id, name, project_id, kind, revoked_at")
+          .in("project_id", projectIds)
+          .order("name", { ascending: true })
+      : Promise.resolve({ data: [] as IntegrationRef[] }),
+  ]);
 
   const integrations: Record<string, IntegrationRef[]> = {};
   for (const row of (integrationRows ?? []) as IntegrationRef[]) {

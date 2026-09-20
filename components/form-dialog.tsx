@@ -12,6 +12,7 @@ import {
 } from "mangue-ui";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
+import type { DictationContext } from "@/lib/dictation-context";
 
 /**
  * The base of small modal forms: same native closure (cross,
@@ -60,6 +61,7 @@ export function FormDialog({
   /** Direct connection: the transcript is delivered to the state which controls the input. */
   dictation?: {
     onTranscription: (text: string) => void;
+    context: DictationContext;
     feature?: "feedback_voice";
     disabled?: boolean;
     onProcessingChange?: (processing: boolean) => void;
@@ -119,6 +121,7 @@ export function FormDialogActions({
   onCancel?: () => void;
   dictation?: {
     onTranscription: (text: string) => void;
+    context: DictationContext;
     feature?: "feedback_voice";
     disabled?: boolean;
     onProcessingChange?: (processing: boolean) => void;
@@ -131,6 +134,7 @@ export function FormDialogActions({
       {dictation ? (
         <DictateButton
           onTranscription={dictation.onTranscription}
+          context={dictation.context}
           feature={dictation.feature}
           disabled={dictation.disabled || submitting}
           onProcessingChange={dictation.onProcessingChange}

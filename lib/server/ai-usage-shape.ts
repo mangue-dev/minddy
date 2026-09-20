@@ -47,15 +47,15 @@ export type AiFeature =
  */
   | "brief_split"
   /**
- * Landing dictation demo (MIN-150): its TWO calls (transcription
- * then storage) are written under this single feature, under a common run_id
+   * Landing dictation demo (MIN-150): transcription, cleanup, and form
+   * formatting are written under this single feature, under a common run_id
  *. One line = one demo played, its average cost per run = the price of one
  * passage. Putting them under 'transcription'/'dictation' mixed them with the dictation of the real accounts, and made the two questions insoluble.
  */
   | "landing_demo"
   /**
- * Dictate feedback — on the public board as well as in the dashboard. Its TWO calls
- * (listening then storage by Numo) are written under this single feature,
+   * Dictate feedback — on the public board as well as in the dashboard. Its three calls
+   * (listening, cleanup, then storage by Numo) are written under this single feature,
  * under a common run_id: a line = a socket, its average cost per run = the
  * price of a dictated return. On the user side it joins the segment
  * “Returns” (`USAGE_SEGMENTS`): it is feedback, not dictation of
@@ -73,7 +73,33 @@ export type AiFeature =
  * “Agents”. The subagents of a routine run bill themselves with their mother.
  */
   | "routine_code"
-  | "routine_compute";
+  | "routine_compute"
+  /**
+    * A Jev decision (MIN-561): one call to the System One model that answers
+    * typed questions over a structured state, priced on input tokens only
+    * (output is free). Its own feature because the decision layer (MIN-562)
+    * will back several automations, and their Jev share must stay readable.
+    * The usage bar files it under “Automations” (`USAGE_SEGMENTS`), as its
+    * callers are the same gestures.
+    */
+  | "jev_decision"
+  /**
+   * The shadow replay of a sampled decision (MIN-567): the LLM pass run
+   * again in the background after a confident Jev decision, to measure the
+   * agreement. Its own feature — NOT the use case's pass feature, or the
+   * finance view would read phantom LLM decisions into the real ones; the
+   * sampling delta stays readable as one line. Same segment as
+   * `jev_decision` ("Automations"), same gesture.
+   */
+  | "jev_shadow"
+  /**
+   * Smart Triage (MIN-566): the LLM scoring pass of a column reorder — ONE
+   * call per column, answering every ticket id on the 1–5 urgency scale. Its
+   * own feature next to `jev_decision` (which carries the System One half of
+   * the same decision): one line per engine, both filed under “Automations”.
+   * The rules mode costs nothing — it is pure code.
+   */
+  | "smart_triage";
 
 /** Form of the `usage` object returned by OpenRouter (chat / embeddings / audio). */
 export interface OpenRouterUsage {

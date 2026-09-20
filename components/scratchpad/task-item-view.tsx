@@ -70,6 +70,7 @@ import { useTaskSurface } from "@/components/scratchpad/task-surface";
 import { eventKey } from "@/lib/keyboard/event-key";
 import { pointerIsStale, useHoverKeys } from "@/lib/keyboard/hover-keys";
 import { isTypingTarget } from "@/lib/keyboard/keyboard-context";
+import { selectionKeysActive } from "@/lib/keyboard/selection-keys";
 
 /** The four states of a task, in lifecycle order. */
 const STATE_CHOICES = [
@@ -274,6 +275,9 @@ export function TaskItemView({
       if (!e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
       const key = eventKey(e);
       if (key !== "a" && key !== "p") return;
+      // A ticket selection owns ⇧P/⇧A while the pill is up (MIN-539): stand
+      // down like the card handlers do — “@” already prefers the selection.
+      if (selectionKeysActive()) return;
       // We type in a field outside the surface (the search for ⋯, a dialog
       // on top): the key is his, the task hovered over has nothing to do with it.
       const target = e.target as HTMLElement | null;
@@ -324,13 +328,21 @@ export function TaskItemView({
         as="div"
         className={cn(
           "min-w-0 flex-1 leading-relaxed",
+          // A struck task grays its text — but the checkboxes of nested
+          // subtasks must stay untouched: the blanket `*` descendant variant
+          // reaches THROUGH the nested task items into their checkbox, down to
+          // the check glyph's own `<path>` (whose stroke is `currentColor`) —
+          // no color set on the button or the svg can beat a rule that targets
+          // the path itself, and the check came out gray under a checked
+          // parent. The checkbox subtree is excluded from the cascade instead
+          // (marked on its wrapper below).
           struck &&
-            "text-muted-foreground line-through [&_*]:text-muted-foreground"
+            "text-muted-foreground line-through [&_*:not(:is([data-task-checkbox],[data-task-checkbox] *))]:text-muted-foreground"
         )}
       />
 
       {surface && (
-        <span contentEditable={false} className={TASK_LINE}>
+        <span contentEditable={false} className={TASK_LINE} data-task-checkbox>
           <SearchMenu
             open={menuOpen}
             onOpenChange={(next) => {

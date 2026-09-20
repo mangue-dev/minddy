@@ -134,7 +134,7 @@ export function PageActivity({
         replies: thread.replies as ThreadMessage[],
       })),
     ];
-    merged.sort((a, b) => a.at.localeCompare(b.at));
+    merged.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
     return merged;
   }, [events.data, shown]);
 

@@ -33,7 +33,12 @@ import type {
   ViewSort,
 } from "@/lib/types";
 import { resolveRelationsByIssue } from "@/lib/relation-constants";
-import { issueComparator } from "@/lib/view-filter";
+import { cycleBlockingRelations } from "@/lib/cycle";
+import { issueIdentifier } from "@/lib/issue-constants";
+import { promptRelations } from "@/lib/issue-prompt";
+import { useBulkSelectionActions } from "@/lib/use-bulk-selection-actions";
+import type { RelationKinds } from "@/lib/use-issue-relations-query";
+import { boardComparatorFactory } from "@/lib/smart-triage";
 import { createBoardColumnsBuilder } from "@/lib/board-columns";
 import {
   BOARD_MOUSE_ACTIVATION_DISTANCE,
@@ -74,6 +79,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   relations,
   statuses,
   sort,
+  smartScores,
   projectId,
   projectKey,
   members,
@@ -101,6 +107,12 @@ export const KanbanBoard = memo(function KanbanBoard({
   relations: IssueRelation[];
   statuses: StatusMeta[];
   sort: ViewSort;
+  /**
+   * The project's AI urgency scores (project mode `jev`, MIN-576): when
+   * present, the "smart" sort orders by score. `null` = rules mode, a
+   * pending/failed scoring pass — the rules order stands.
+   */
+  smartScores?: Map<string, number | null> | null;
   projectId: string;
   projectKey: string;
   members: Member[];
@@ -118,6 +130,7 @@ export const KanbanBoard = memo(function KanbanBoard({
     sourceId: string,
     type: IssueRelationType,
     targetId: string,
+    kinds?: RelationKinds,
   ) => void;
   onMove: (
     issueId: string,
@@ -168,7 +181,8 @@ export const KanbanBoard = memo(function KanbanBoard({
     const resolvedByIssue = resolveRelationsByIssue(relations, statusById);
     for (const issue of issues) {
       const resolved = (resolvedByIssue.get(issue.id) ?? [])
-        .map((r) => {
+        .map((r): ChipRelation | null => {
+          if (r.otherType === "objective") return r;
           const other = allIssueMap.get(r.otherId);
           return other ? { ...r, otherNumber: other.number } : null;
         })
@@ -179,17 +193,51 @@ export const KanbanBoard = memo(function KanbanBoard({
   }, [issues, relations, allIssueMap]);
 
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
-  // Smart sort reads relations + statuses (a done blocker no longer lifts its
-  // target), resolved against ALL issues — a filter may hide the other end.
-  const comparator = useMemo(() => {
+  // The smart sort's relations resolve against ALL issues (a filter may
+  // hide the other end) and fold objective-ended "blocks" edges onto the
+  // objective's open tickets — the same preparation the server reorder
+  // applies, so a ticket blocked through its objective still sinks (MIN-576
+  // review). An edge whose end is unknown here is not a dependency: the end
+  // is trashed or foreign — the rules ignore it rather than act on a
+  // guessed "open".
+  const triageContext = useMemo(() => {
     const statusById = new Map(
       Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
     );
-    return issueComparator(sort, { relations, statusById });
-  }, [sort, relations, allIssueMap]);
+    const issuesByObjective = new Map<string, string[]>();
+    for (const issue of allIssues) {
+      if (!issue.objective_id) continue;
+      const list = issuesByObjective.get(issue.objective_id);
+      if (list) list.push(issue.id);
+      else issuesByObjective.set(issue.objective_id, [issue.id]);
+    }
+    const { relations: folded, objectiveStatuses } = cycleBlockingRelations(
+      relations,
+      issuesByObjective,
+      new Map(objectives.map((o) => [o.id, o.status])),
+    );
+    for (const [id, status] of objectiveStatuses) statusById.set(id, status);
+    return {
+      relations: folded.filter(
+        (r) =>
+          r.type !== "blocks" ||
+          (statusById.has(r.source_id) && statusById.has(r.target_id)),
+      ),
+      statusById,
+    };
+  }, [relations, allIssues, objectives, allIssueMap]);
+  const makeComparator = useMemo(
+    () =>
+      boardComparatorFactory(sort, {
+        relations: triageContext.relations,
+        statusById: triageContext.statusById,
+        jevScores: smartScores ?? undefined,
+      }),
+    [sort, triageContext, smartScores],
+  );
   const columns = useMemo(
-    () => buildColumns(statuses, issues, comparator),
-    [buildColumns, issues, statuses, comparator],
+    () => buildColumns(statuses, issues, makeComparator),
+    [buildColumns, issues, statuses, makeComparator],
   );
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -249,11 +297,37 @@ export const KanbanBoard = memo(function KanbanBoard({
       clearSelection();
     };
   }, [selectedIssues, onAddRelation, clearSelection]);
+  // ⇧P/⇧A on the selection (MIN-539): ONE combined prompt for all the checked
+  // tickets, copied to the clipboard or handed to Numo. The selection
+  // outranks the hovered card — the same precedence “@” follows.
+  const bulkPromptActions = useBulkSelectionActions({
+    selectedIssues,
+    projectId,
+    identifierOf: (issue) => issueIdentifier(projectKey, issue.number),
+    buildInput: (issue) => ({
+      issue,
+      projectId,
+      projectKey,
+      resourceCount: issue.resource_count,
+      categories: issue.category_ids
+        .map((cid) => categoryMap.get(cid)?.name)
+        .filter((name): name is string => !!name),
+      relations: promptRelations(relationsByIssue.get(issue.id), {
+        identifierOf: (otherId) =>
+          issueIdentifier(projectKey, allIssueMap.get(otherId)?.number ?? 0),
+        titleOf: (otherId) =>
+          objectiveMap.get(otherId)?.name ?? allIssueMap.get(otherId)?.title ?? "",
+      }),
+    }),
+    onUpdateIssue: (issue, patch) => onUpdateIssue(issue.id, patch),
+  });
   // The dragged bundle, drop marker, and persisted move all come from the same
   // calculation (see lib/use-board-drop.ts).
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const drop = useBoardDrop({
+    root: scrollerRef,
     columns,
-    comparator,
+    makeComparator,
     manual: sort === "manual",
     issueMap,
     selectedIds,
@@ -291,10 +365,9 @@ export const KanbanBoard = memo(function KanbanBoard({
   } = useScrollFade<HTMLDivElement>("x");
 
   // Mobile: track which column is snapped into view to drive the dot indicator.
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const localHorizontalScroll = useRef(0);
   const preservedHorizontalScroll = horizontalScroll ?? localHorizontalScroll;
-  const dropAnimation = useMemo(() => createBoardDropAnimation(), []);
+  const dropAnimation = useMemo(() => createBoardDropAnimation(() => scrollerRef.current), []);
   const landingGenerationRef = useRef(0);
   const setScrollerRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -370,6 +443,7 @@ export const KanbanBoard = memo(function KanbanBoard({
     setLandingPreview(null);
     dragPreviewHtmlRef.current = captureBoardDragPreview(
       String(event.active.id),
+      scrollerRef.current,
     );
     dragBoundsRef.current = measureBoardDragBounds(scrollerRef.current);
     drop.start(event);
@@ -412,12 +486,14 @@ export const KanbanBoard = memo(function KanbanBoard({
       const destinationStatus =
         activeMove.patch.status ?? activeMove.issue.status;
       const visualTarget = measureBoardDropVisualTarget({
+        root: scrollerRef.current,
         activeId: draggedId,
         activeIds: draggingIds,
         bounds: dragBoundsRef.current,
         status: destinationStatus,
       });
       const bundleHeight = measureBoardDropBundleHeight({
+        root: scrollerRef.current,
         activeIds: draggingIds,
         status: destinationStatus,
       });
@@ -499,6 +575,8 @@ export const KanbanBoard = memo(function KanbanBoard({
                 }
                 onClear={clearSelection}
                 onAskNumo={() => onAskNumo(selectedIssues)}
+                onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
+                onLaunchAgent={bulkPromptActions.launchAgent}
                 cycle={bulkCycle}
                 // A project-board selection always belongs to one project, so
                 // all of that project's objectives are available.

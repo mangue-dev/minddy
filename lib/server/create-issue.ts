@@ -20,7 +20,7 @@ import {
   type EventRow,
 } from "@/lib/server/issue-events";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
-import { runSmartFill } from "@/lib/server/smart-fill";
+import { resolveSmartFillPayer, runSmartFill } from "@/lib/server/smart-fill";
 import { insertNotifications } from "@/lib/server/notifications";
 import { notificationActorSource } from "@/lib/notification-actor";
 import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
@@ -119,6 +119,7 @@ export async function createIssueForProject({
   integrationId = null,
   remote = null,
   recurrenceSeriesId = null,
+  smartFillOwnerTriage = false,
   rowId = null,
 }: {
   projectId: string;
@@ -140,6 +141,8 @@ export async function createIssueForProject({
       lib/server/recurrence.ts on the occurrence it creates, never by a
       client payload. Null = this ticket opens its own series (see seriesIdOf). */
   recurrenceSeriesId?: string | null;
+  /** Treat this creation as owner-billed triage (feedback promotion). */
+  smartFillOwnerTriage?: boolean;
   /** ID that the customer has ALREADY given to his optimistic card: the line is born with,
       so that the real-time broadcast of this creation is recognized as the
       its own rather than adopted in duplicate (lib/optimistic-issue.ts). Asked by the
@@ -308,16 +311,36 @@ export async function createIssueForProject({
    * above. It is an input aid, not a corrector.
    */
   let smartFillCategoryIds: string[] = [];
+  let smartFillCategoriesApplied = false;
   // The fields that Smart-fill ACTUALLY asked — not the ones it suggested.
   // It is this list that goes into the activity: say “met the priority”
   // of a ticket whose author had already put “urgent” would be a lie, and
   // it's precisely the kind of line that makes you stop believing in the timeline.
   const smartFilled: string[] = [];
-  if (input.smart_fill === true) {
+  const hasMissingSmartFillField =
+    row.priority == null ||
+    row.priority === "none" ||
+    row.effort == null ||
+    row.objective_id == null ||
+    (!Array.isArray(input.category_ids) || input.category_ids.length === 0) &&
+      (!Array.isArray(input.category_names) || input.category_names.length === 0);
+  const smartFillPayer = hasMissingSmartFillField
+    ? await resolveSmartFillPayer({
+        projectId,
+        actorId,
+        integrationId,
+        mcpKeyId,
+        status: row.status,
+        explicit: input.smart_fill,
+        ownerBilledTriage: smartFillOwnerTriage,
+        excluded: remote !== null || recurrenceSeriesId !== null,
+      })
+    : null;
+  if (smartFillPayer) {
     const patch = await runSmartFill({
       projectId,
       projectName: projectName ?? "this project",
-      actorId,
+      billToUserId: smartFillPayer.userId,
       title: row.title as string,
       description: (row.description as string | null) ?? null,
     });
@@ -420,34 +443,52 @@ export async function createIssueForProject({
         .filter((v): v is string => typeof v === "string")
         .slice(0, MAX_CATEGORY_REFS)
     : [];
-  // Smart-fill only stores the ticket if NOBODY has stored it — neither by id nor
-  // by name. Hand-picked categories are a choice, and adding the
-  // would undo half.
+  // Smart-fill supplies categories only when none were explicitly selected
+  // by ID or name. Preserve the author's selection.
   const requestedIds =
     pickedIds.length === 0 && requestedNames.length === 0 ? smartFillCategoryIds : pickedIds;
   if (requestedIds.length > 0 || requestedNames.length > 0) {
     const resolved = new Set<string>();
     if (requestedIds.length > 0) {
-      const { data: cats } = await service
+      const { data: cats, error } = await service
         .from("categories")
         .select("id")
         .eq("project_id", projectId)
         .in("id", requestedIds);
-      (cats ?? []).forEach((c) => resolved.add(c.id as string));
+      if (error) {
+        console.error("[create-issue] category ID lookup failed:", error.message);
+      } else {
+        (cats ?? []).forEach((c) => resolved.add(c.id as string));
+      }
     }
     if (requestedNames.length > 0) {
-      const { data: cats } = await service
+      const { data: cats, error } = await service
         .from("categories")
         .select("id")
         .eq("project_id", projectId)
         .in("name", requestedNames);
-      (cats ?? []).forEach((c) => resolved.add(c.id as string));
+      if (error) {
+        console.error("[create-issue] category name lookup failed:", error.message);
+      } else {
+        (cats ?? []).forEach((c) => resolved.add(c.id as string));
+      }
     }
-    categoryIds = [...resolved];
-    if (categoryIds.length > 0) {
-      await service
+    const resolvedIds = [...resolved];
+    if (resolvedIds.length > 0) {
+      const { error } = await service
         .from("issue_categories")
-        .insert(categoryIds.map((category_id) => ({ issue_id: data.id, category_id })));
+        .insert(resolvedIds.map((category_id) => ({ issue_id: data.id, category_id })));
+      if (error) {
+        // The issue already exists. Report only persisted links so callers do
+        // not retry creation or display categories that will vanish on reload.
+        console.error("[create-issue] category links failed:", error.message);
+      } else {
+        categoryIds = resolvedIds;
+        smartFillCategoriesApplied =
+          pickedIds.length === 0 &&
+          requestedNames.length === 0 &&
+          smartFillCategoryIds.length > 0;
+      }
     }
   }
 
@@ -499,9 +540,9 @@ export async function createIssueForProject({
    * Nothing filled, nothing to say: a “Smart-fill found nothing” event
    * doesn't learn anything and would repeat itself on all tickets in a line.
    */
-  if (smartFilled.length > 0 || smartFillCategoryIds.length > 0) {
+  if (smartFilled.length > 0 || smartFillCategoriesApplied) {
     const filled = [...smartFilled];
-    if (smartFillCategoryIds.length > 0) filled.push("category_ids");
+    if (smartFillCategoriesApplied) filled.push("category_ids");
     birthEvents.push({
       issue_id: data.id,
       actor_id: actorId,

@@ -9,7 +9,7 @@ import { buildOptimisticPage } from './optimistic-page';
 
 const { open, reportError } = vi.hoisted(() => ({ open: vi.fn(), reportError: vi.fn() }));
 vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
-vi.mock('@/lib/assistant-panel-context', () => ({ useAssistantPanel: () => ({ open }) }));
+vi.mock('@/lib/assistant-panel-context', () => ({ useAssistantPanelActions: () => ({ open }) }));
 vi.mock('@/components/pages/database-import-dialog', () => ({ DatabaseImportDialog: () => createElement('div', { 'data-import-wizard': true }) }));
 vi.mock('mangue-ui', () => ({
   Button: ({ variant: _variant, size: _size, ...props }: ComponentProps<'button'> & { variant?: string; size?: string }) => createElement('button', props),

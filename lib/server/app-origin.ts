@@ -1,6 +1,7 @@
 import "server-only";
 
 import { SITE_URL } from "@/lib/site";
+import { DESKTOP_PREVIEW_ORIGIN } from "@/lib/desktop/config";
 
 /**
  * The CANONICAL origin of the app, derived from the environment — never from a
@@ -44,4 +45,35 @@ export function resolveCanonicalAppOrigin(
 
 export function canonicalAppOrigin(): string {
   return resolveCanonicalAppOrigin(process.env, SITE_URL);
+}
+
+/**
+ * The STABLE origin every OAuth round trip must be anchored to.
+ *
+ * OAuth is registered, not discovered: a DCR client (Notion, PostHog…) binds
+ * its `redirect_uris` at registration, a hand-configured provider app lists
+ * our callback once, and our own issuer/resource metadata is cached by
+ * clients. All of that breaks when the origin moves — and
+ * `resolveCanonicalAppOrigin` deliberately moves on every Vercel preview
+ * deployment so that a preview stays on itself (invitation links). So OAuth
+ * does not follow it: production keeps the canonical domain, and the main
+ * preview keeps `preview.minddy.app` — the fixed alias the desktop preview
+ * channel already loads — whatever deployment currently serves it. A PR
+ * preview (or a dev station) falls back to its own origin, which stays
+ * self-consistent within one deployment: registration and authorization
+ * always agree, only the persistence across deployments is best-effort.
+ */
+export function resolveOauthAppOrigin(
+  env: AppOriginEnvironment & { VERCEL_GIT_COMMIT_REF?: string },
+  siteUrl: string,
+): string {
+  const vercelEnv = env.VERCEL_ENV?.trim();
+  if (vercelEnv && vercelEnv !== "production" &&
+      env.VERCEL_GIT_COMMIT_REF?.trim() === "main")
+    return DESKTOP_PREVIEW_ORIGIN;
+  return resolveCanonicalAppOrigin(env, siteUrl);
+}
+
+export function oauthAppOrigin(): string {
+  return resolveOauthAppOrigin(process.env, SITE_URL);
 }

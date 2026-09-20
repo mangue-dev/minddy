@@ -1,3 +1,5 @@
+import { hasVisibleOverlay } from "./visible-overlays";
+
 // Radix portals popper content (dropdown / select / popover) OUTSIDE a Dialog or
 // SidePanel's DOM. So the pointer-down that opens or dismisses a nested popper
 // can read as "outside" to the overlay and close it too — closing the dropdown
@@ -24,7 +26,6 @@ export function keepOverlayOpenForPopper(event: {
 }) {
   const target = event.detail.originalEvent.target;
   const onPopper = target instanceof Element && !!target.closest(POPPER_CONTENT);
-  const popperOpen =
-    typeof document !== "undefined" && !!document.querySelector(OPEN_POPPER);
+  const popperOpen = hasVisibleOverlay(OPEN_POPPER);
   if (onPopper || popperOpen) event.preventDefault();
 }

@@ -10,7 +10,7 @@ const h = vi.hoisted(() => ({
   send: vi.fn(), fill: vi.fn(), load: vi.fn(), reset: vi.fn(), abort: vi.fn(),
   router: { push: vi.fn(), refresh: vi.fn() },
   theme: { setTheme: vi.fn() }, auth: { refreshUser: vi.fn() },
-  state: { conversationId: null, conversationProjectId: null, messages: [], status: "idle" },
+  state: { conversationId: null as string | null, conversationProjectId: null, messages: [], status: "idle" },
   projects: [],
 }));
 vi.mock("./assistant-panel-context", () => ({ useAssistantPanel: () => ({
@@ -24,6 +24,8 @@ vi.mock("./assistant-api", () => ({
   fetchActiveConversation: h.active, setActiveConversation: h.pointer,
   updateConversation: async () => true,
 }));
+vi.mock("./use-agent-runs", () => ({ allAgentSessionsQueryKey: ["agent-sessions", "all"] as const }));
+vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }));
 vi.mock("./auth-context", () => ({ useAuth: () => h.auth }));
 vi.mock("./projects-context", () => ({ useProjects: () => ({ projects: h.projects }) }));
 vi.mock("next-intl", () => ({ useLocale: () => "en", useTranslations: () => (key: string) => key }));
@@ -37,9 +39,14 @@ vi.mock("mangue-ui", () => ({
   SheetTitle: ({ children }: { children: ReactNode }) => children,
 }));
 vi.mock("@/components/assistant/assistant-shell", async () => {
-  const { forwardRef, useImperativeHandle, useState, createElement: element } = await import("react");
+  const { forwardRef, useImperativeHandle, useState, useEffect, createElement: element } = await import("react");
+  const { useAssistantChatContext } = await import("./assistant-chat-context");
   return { AssistantShell: forwardRef(function Shell(_props, ref) {
     const [draft, setDraft] = useState("");
+    const { requestRestore } = useAssistantChatContext();
+    // The real shell asks for the lazy restore on mount — the provider no
+    // longer restores as a side effect of the panel opening.
+    useEffect(() => { requestRestore(); }, [requestRestore]);
     useImperativeHandle(ref, () => ({
       sendMessage: h.send,
       fill: (text: string) => { h.fill(text); setDraft(text); },
@@ -62,12 +69,17 @@ beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   h.pending = null;
   h.clear.mockImplementation(() => { h.pending = null; });
+  // Loading a conversation installs it as the live thread (the real
+  // LOAD_HISTORY dispatch): the pointer mirror then sees it as already read.
+  h.load.mockImplementation(async (conversationId: string) => {
+    h.state = { ...h.state, conversationId };
+  });
   container = document.createElement("div");
   root = createRoot(container);
 });
 afterEach(() => act(() => root.unmount()));
 
-const work = { conversationId: "work", projectId: "a", detailHref: "/agents/work" };
+const work = { conversationId: "work", projectId: "a" };
 describe("contextual openings while restoring work", () => {
   it.each([
     { kind: "prompt", late: false }, { kind: "draft", late: false },
@@ -88,7 +100,9 @@ describe("contextual openings while restoring work", () => {
     await render();
     expect(h.close).not.toHaveBeenCalled();
     expect(h.router.push).not.toHaveBeenCalled();
-    expect(h.load).not.toHaveBeenCalled();
+    // The resume loads the remembered thread first (a queued prompt or draft
+    // continues it); the opening dispatches once, after the restore settles.
+    expect(h.load).toHaveBeenCalledExactlyOnceWith(work.conversationId, work.projectId);
     expect(h.pointer).not.toHaveBeenCalled();
     expect(h.clear).toHaveBeenCalledTimes(1);
     expect(h.pending).toBeNull();
@@ -102,11 +116,12 @@ describe("contextual openings while restoring work", () => {
     }
   });
 
-  it("still follows the work detail for a plain resume", async () => {
+  it("reopens the remembered conversation in the panel on a plain resume", async () => {
     h.active.mockResolvedValue(work);
     await render();
-    expect(h.close).toHaveBeenCalledTimes(1);
-    expect(h.router.push).toHaveBeenCalledExactlyOnceWith(work.detailHref);
+    expect(h.close).not.toHaveBeenCalled();
+    expect(h.router.push).not.toHaveBeenCalled();
+    expect(h.load).toHaveBeenCalledExactlyOnceWith(work.conversationId, work.projectId);
     expect(h.pointer).not.toHaveBeenCalled();
     expect(h.send).not.toHaveBeenCalled();
   });

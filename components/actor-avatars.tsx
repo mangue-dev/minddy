@@ -1,7 +1,8 @@
 import { cn } from "mangue-ui";
-import { Sparkles, WandSparkles, Workflow } from "lucide-react";
+import { Workflow } from "lucide-react";
 import { NumoFace } from "@/components/numo-face";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";
+import { SmartAssignIcon, SmartFillIcon } from "@/components/smart-icons";
 
 /**
  * Portraits of actors WHO ARE NOT PEOPLE: Numo, an agent
@@ -82,9 +83,7 @@ export function AutomationAvatar({
 
 /** Ticket filled by Smart-fill (MIN-260) — functionality takes place
  of actor, never the person who wrote the ticket: she did not set these
- properties. `Sparkles` and not `WandSparkles`: Smart Assign is just
- below with the wand, and the two intersect in the same timeline —
- two neighboring automations must remain distinguishable at a glance. */
+ properties. */
 export function SmartFillAvatar({
   className,
   iconClassName,
@@ -94,7 +93,7 @@ export function SmartFillAvatar({
 }) {
   return (
     <span aria-hidden className={disc(className)}>
-      <Sparkles className={cn("size-3", iconClassName)} />
+      <SmartFillIcon className={cn("size-3", iconClassName)} />
     </span>
   );
 }
@@ -110,7 +109,7 @@ export function SmartAssignAvatar({
 }) {
   return (
     <span aria-hidden className={disc(className)}>
-      <WandSparkles className={cn("size-3", iconClassName)} />
+      <SmartAssignIcon className={cn("size-3", iconClassName)} />
     </span>
   );
 }

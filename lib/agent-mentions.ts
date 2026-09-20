@@ -4,6 +4,7 @@ import {
   MENTION_TOKEN_END_PATTERN,
   MENTION_TOKEN_START_PATTERN,
 } from "@/lib/mention-token";
+import { ALL_STATUSES, type IssueStatus } from "@/lib/issue-constants";
 
 const DEFAULT_MAX_AGENT_MENTIONS = 20;
 export const MAX_ROUTINE_PROMPT_MENTIONS = 10_000;
@@ -52,6 +53,10 @@ export function parseAgentMentions(
         : {}),
       ...(typeof v.icon === "string" && v.icon.length <= 32
         ? { icon: v.icon }
+        : {}),
+      ...(typeof v.status === "string" &&
+      ALL_STATUSES.some((status) => status.value === v.status)
+        ? { status: v.status as IssueStatus }
         : {}),
     }));
 }

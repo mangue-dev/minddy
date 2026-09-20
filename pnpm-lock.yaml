@@ -237,6 +237,9 @@ importers:
       simple-icons:
         specifier: 16.30.0
         version: 16.30.0
+      sonner:
+        specifier: ^2.0.7
+        version: 2.0.7(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       streamdown:
         specifier: ^2.6.0
         version: 2.6.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)

@@ -69,7 +69,7 @@ export function useAgentMenuActions({
   onVerifyWithAgent: () => void;
   /** Open the free locker dialog, then launch Numo on it. */
   onCustomWithAgent: () => void;
-  /** Reopens the existing conversation (modal on panel side, page on card side). */
+  /** Reopens the existing conversation (modal on panel side, Numo panel on card side). */
   onOpenSession: () => void;
 }): ContextMenuAction[] {
   const t = useTranslations("IssueUI");

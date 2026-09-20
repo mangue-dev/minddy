@@ -1,6 +1,6 @@
 "use client";
 
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { cn } from "mangue-ui";
 import type { MarkdownEditorMentions } from "@/components/markdown-editor";
 
@@ -36,6 +36,9 @@ export type MarkdownEditorProps = {
       editor: onCommit only fires on blur, callers track typing through this. */
   onEmptyChange?: (empty: boolean) => void;
   onEdit?: () => void;
+  /** Live markdown on every edit — lets a caller commit what is on screen
+      without a blur (close, tab switch, window blur). */
+  onChange?: (markdown: string) => void;
   mentions?: MarkdownEditorMentions;
   placeholder?: string;
   className?: string;
@@ -72,6 +75,43 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
       <MarkdownEditorImpl {...props} />
     </Suspense>
   );
+}
+
+/**
+ * Mount the rich editor one paint after the surface that hosts it.
+ *
+ * Constructing the Tiptap/ProseMirror view is a long synchronous task (hundreds
+ * of DOM nodes plus the extension set). Mounting it inside the same commit as
+ * the hosting dialog turns the opening gesture into one long blocking task —
+ * measured as the bulk of a warm issue-panel open. This wrapper paints the
+ * hosting surface first with the exact same fallback the Suspense boundary
+ * already uses (the committed markdown as plain text, same typography), then
+ * swaps in the rich editor two frames later. The visual contract is unchanged:
+ * the fallback exists precisely to mirror the committed value, so the
+ * description never flashes empty or restyles — only the moment the editor
+ * becomes editable shifts by a couple of frames.
+ *
+ * The swap is keyed by the host (the parent remounts this wrapper through its
+ * own key), and drafts are safe: the wrapper holds no state; the editor only
+ * mounts once its props are final for this instance.
+ */
+export function DeferredMarkdownEditor(props: MarkdownEditorProps) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (ready) return;
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => setReady(true));
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      if (second) cancelAnimationFrame(second);
+    };
+  }, [ready]);
+  if (!ready) {
+    return <EditorFallback value={props.value} className={props.className} />;
+  }
+  return <MarkdownEditor {...props} />;
 }
 
 let preloadStarted = false;

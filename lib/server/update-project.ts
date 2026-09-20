@@ -3,9 +3,11 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { canUseAutomations, canUseSmartAssign } from "@/lib/server/entitlements";
+import { hasUsageBudget } from "@/lib/server/usage";
 import { parseAutomations } from "@/lib/automations";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
 import { normalizeLanguage, type FeedbackLanguage } from "@/lib/feedback/languages";
+import { parseSmartTriageMode } from "@/lib/smart-triage";
 import type { Project } from "@/lib/types";
 
 /**
@@ -19,7 +21,10 @@ import type { Project } from "@/lib/types";
  * A unique-violation on `key` (23505) surfaces as `projectKeyAlreadyUsed`.
  * `smart_assign_enabled` is gated by the billing stub (`canUseSmartAssign`) on
  * enable; `smart_assign_rules` replaces the whole map, keys whitelisted to
- * the current team.
+ * the current team. `smart_triage_mode` accepts only the two known values
+ * (rules | jev — there is no "off" since MIN-575); arming `jev` additionally
+ * requires the owner's usage budget — the rules
+ * mode costs nothing and stays un-gated.
  */
 export type UpdateProjectResult =
   | { ok: true; project: Project }
@@ -35,6 +40,8 @@ export type UpdateProjectResult =
         | "ownerOnly"
         | "smartAssignNotAllowed"
         | "automationsNotAllowed"
+        | "invalidSmartTriageMode"
+        | "smartTriageNotAllowed"
         | "databaseError";
     };
 
@@ -112,6 +119,24 @@ export async function updateProjectSettings({
       return { ok: false, status: 403, errorKey: "smartAssignNotAllowed" };
     }
     updates.smart_assign_enabled = input.smart_assign_enabled;
+  }
+  // Smart Triage (MIN-566). The mode is a per-project choice, never a boolean:
+  // an unknown value is a client bug, refused rather than coerced. Arming
+  // `jev` costs usage (the scoring passes bill the ACTOR in Automations), so
+  // the owner's budget gates the switch — the same "arming" logic as the
+  // neighbors. The check reads the AUTOMATIONS surface, like the run-time
+  // preflight does: an owner whose BYOK key covers Automations can arm Jev
+  // even with their managed budget dry. `rules` and `off` cost nothing and
+  // pass freely.
+  if ("smart_triage_mode" in input) {
+    const mode = parseSmartTriageMode(input.smart_triage_mode);
+    if (!mode) {
+      return { ok: false, status: 400, errorKey: "invalidSmartTriageMode" };
+    }
+    if (mode === "jev" && !(await hasUsageBudget(access.project.owner_id, "automations"))) {
+      return { ok: false, status: 403, errorKey: "smartTriageNotAllowed" };
+    }
+    updates.smart_triage_mode = mode;
   }
   // Automations (MIN-147). Same shape as the neighbor, different gate:
   // `canUseAutomations` ALSO requires `allowAgents`, since a rule throws

@@ -6,6 +6,7 @@ import {
   Activity,
   Bot,
   CircleDollarSign,
+  Crosshair,
   Gauge,
   KeyRound,
   LayoutDashboard,
@@ -35,6 +36,7 @@ export const ADMIN_SECTIONS = {
   overviewOnboarding: "overview-onboarding",
   overviewPlans: "overview-plans",
   overviewContent: "overview-content",
+  overviewDecisions: "overview-decisions",
   usersAccounts: "users-accounts",
   financeSummary: "finance-summary",
   financeChart: "finance-chart",
@@ -209,6 +211,25 @@ export function useAdminSections(): AdminSection[] {
           "projets",
           "issues",
           "tickets",
+        ],
+      }),
+      section({
+        id: ADMIN_SECTIONS.overviewDecisions,
+        tab: "overview",
+        icon: Crosshair,
+        title: t("decisions.title"),
+        keywords: [
+          // Searchable as-is: the section TITLE is already translated (the
+          // filter matches it too), so no locale-specific aliases live here.
+          t("decisions.floor"),
+          t("decisions.shadowRate"),
+          t("decisions.agreement"),
+          "AI decisions",
+          "jev",
+          "shadow",
+          "agreement",
+          "calibration",
+          "llm-first",
         ],
       }),
       section({

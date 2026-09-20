@@ -165,6 +165,9 @@ export function useBoardCardAnimations(
 ) {
   const previousCards = useRef(new Map<string, CardSnapshot>());
   const skippedOnce = useRef(new Map<string, number>());
+  // A resumed view must measure its current viewport before animating later
+  // writes; pre-suspension geometry can belong to a different sidebar/scroll.
+  useLayoutEffect(() => () => previousCards.current.clear(), []);
   const running = useRef(new Map<string, RunningAnimation>());
   const reducedMotion = useRef(false);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
-import type { Editor } from "@tiptap/core";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Extension, type Editor } from "@tiptap/core";
 import type { EditorProps } from "@tiptap/pm/view";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "tiptap-markdown";
@@ -31,6 +33,7 @@ import {
 import { MarkdownLinkMenu } from "@/components/markdown-link-menu";
 import type { MentionOption } from "@/components/mention-suggest";
 import type { MentionScan } from "@/lib/mention-scan";
+import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 
 /**
  * What a description can quote. Absent = surface without mentions (the public feedback board
@@ -91,11 +94,66 @@ const EDITOR_PROPS: EditorProps = {
  * Remount per issue with `key={issue.id}` so state resets cleanly; commits the
  * current markdown on blur.
  */
+/**
+ * The placeholder as a ProseMirror widget INSIDE the first paragraph (the
+ * same trick as @tiptap/extension-placeholder, without the package): an
+ * inline widget at the caret position follows every padding, every
+ * indentation, every scroll — a React overlay pinned to a box corner can
+ * never promise that (MIN-548).
+ */
+function placeholderExtension(text: string) {
+  return Extension.create({
+    name: "editor-placeholder",
+    addProseMirrorPlugins: () => [
+      new Plugin({
+        key: new PluginKey("editor-placeholder"),
+        props: {
+          decorations: (state) => {
+            // Empty means ONE empty paragraph: anything else (an image
+            // alone, an attachment card) has real content to read.
+            const first = state.doc.firstChild;
+            if (state.doc.textContent.trim().length > 0) return DecorationSet.empty;
+            if (!first || !first.isTextblock || first.content.size !== 0)
+              return DecorationSet.empty;
+            const widget = document.createElement("span");
+            widget.dataset.placeholder = "";
+            widget.className =
+              "pointer-events-none select-none text-sm text-muted-foreground/70";
+            widget.textContent = text;
+            // Position 1 = INSIDE the empty first paragraph, before its
+            // close — the exact line the caret and the typed text land on.
+            // Pos 0 would sit BEFORE the block and float one line above.
+            return DecorationSet.create(state.doc, [
+              Decoration.widget(1, widget, { side: 1 }),
+            ]);
+          },
+        },
+      }),
+    ],
+  });
+}
+
+/** What a COMPOSER drives from outside the editor: quote, dictate and
+    uploads write INTO the surface, and the send shortcut goes through it. */
+export interface MarkdownEditorApi {
+  getMarkdown(): string;
+  /** Replace the whole content (external write: quote). */
+  setMarkdown(markdown: string): void;
+  /** Insert AT the caret (dictation, pasted uploads). */
+  insertMarkdown(markdown: string): void;
+  focus(): void;
+}
+
 export function MarkdownEditor({
   value,
   onCommit,
   onEmptyChange,
   onEdit,
+  onChange,
+  onSubmit,
+  autoFocus,
+  apiRef,
+  contentClassName,
   mentions,
   placeholder = "Ajoute une description…",
   className,
@@ -109,13 +167,26 @@ export function MarkdownEditor({
  Tells the caller that what is on the screen is no longer what he loaded:
  so as not to replace the text under the fingers, nor recommit an expired reflection to the blur. */
   onEdit?: () => void;
-  /** Opens the “@” on this surface. Absent = no mentions at all. */
+  /** Live markdown, on every edit — a composer reads it to arm its send
+      button, a description editor may not need it. */
+  onChange?: (markdown: string) => void;
+  /** Send shortcut (⌘/Ctrl+Enter, or plain Enter when the account chose
+      that): the composer submits through it. Shift+Enter stays a newline,
+      and a mention menu open consumes the key before this fires. */
+  onSubmit?: () => void;
+  autoFocus?: boolean;
+  /** One call, as soon as the surface exists: the caller keeps the handles
+      and writes into the editor without owning its state. */
+  apiRef?: (api: MarkdownEditorApi) => void;
+  /** Styling of the content box ONLY — the placeholder is a ProseMirror
+      widget and follows whatever paddings land here. */
+  contentClassName?: string;
   mentions?: MarkdownEditorMentions;
   placeholder?: string;
   className?: string;
 }) {
   const tCommon = useTranslations("Common");
-  const [empty, setEmpty] = useState(value.trim() === "");
+  const [, setEmpty] = useState(value.trim() === "");
   const syncEmpty = (next: boolean) => {
     setEmpty(next);
     onEmptyChange?.(next);
@@ -132,12 +203,21 @@ export function MarkdownEditor({
   // a REFERENCE, never a capture.
   const mentionsRef = useRef(mentions);
   mentionsRef.current = mentions;
+  // Live callbacks pass through REFERENCE for the same reason: handlers may
+  // close over a draft that moves.
+  const changeRef = useRef(onChange);
+  changeRef.current = onChange;
+  const submitRef = useRef(onSubmit);
+  submitRef.current = onSubmit;
+  const isSend = useIsSendShortcut();
   // Fixed during editing: switch a surface from “without mentions” to “with”
   // would ask to rebuild the schema, which no caller does.
   const [hasMentions] = useState(!!mentions);
 
+  const [placeholderText] = useState(placeholder);
   const extensions = useMemo(
     () => [
+      placeholderExtension(placeholderText),
       // The stock code block is swapped for the lowlight one (same node, same
       // attributes — only rendering changes): a fenced block in a description
       // highlights as it does once committed (components/code-block-lowlight).
@@ -210,6 +290,7 @@ export function MarkdownEditor({
     },
     onUpdate: ({ editor, transaction }) => {
       syncEmpty(editor.isEmpty);
+      changeRef.current?.(markdownOf(editor));
       // Placing the pills on an already written text is not a typing: without
       // this guard, open a ticket whose description cites someone
       // would mark "modified", and the panel would then refuse any writing
@@ -218,15 +299,64 @@ export function MarkdownEditor({
       onEdit?.();
     },
     // tiptap-markdown adds `markdown` storage but doesn't augment TipTap's type.
-    onBlur: ({ editor }) =>
-      onCommit(
-        (
-          editor.storage as unknown as {
-            markdown: { getMarkdown(): string };
-          }
-        ).markdown.getMarkdown(),
-      ),
+    onBlur: ({ editor }) => onCommit(markdownOf(editor)),
   });
+
+  // ── The composer surface ────────────────────────────────────────────────
+  // The markdown of an editor, read the same way on every road.
+  const markdownOf = (editor: Editor): string =>
+    (
+      editor.storage as unknown as {
+        markdown: { getMarkdown(): string };
+      }
+    ).markdown.getMarkdown();
+
+  useEffect(() => {
+    if (!editor) return;
+    apiRef?.({
+      getMarkdown: () => markdownOf(editor),
+      setMarkdown: (markdown) => {
+        editor.commands.clearContent();
+        editor.commands.insertContent(markdown);
+        // Pills rest outside the commit phase, and only when the surface is
+        // not being written into — an external rewrite while typing is
+        // a caller bug, and the caret must not move for it.
+        queueMicrotask(() => {
+          if (editor.isDestroyed || editor.isFocused) return;
+          const scan = mentionsRef.current?.scan;
+          if (scan) hydrateMentions(editor, scan);
+        });
+      },
+      insertMarkdown: (markdown) => {
+        editor.commands.insertContent(markdown);
+      },
+      focus: () => {
+        editor.commands.focus("end");
+      },
+    });
+    if (autoFocus) {
+      queueMicrotask(() => {
+        if (!editor.isDestroyed) editor.commands.focus("end");
+      });
+    }
+  }, [editor, apiRef, autoFocus]);
+
+  // The send shortcut, on the DOM in the BUBBLE phase: ProseMirror and the
+  // mention menu have already had the key — a menu that picks a mention
+  // prevents the event, and this listener lets it go without submitting.
+  useEffect(() => {
+    if (!editor) return;
+    const dom = editor.view.dom;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Enter" || event.defaultPrevented || event.shiftKey)
+        return;
+      if (!isSend(event)) return;
+      event.preventDefault();
+      submitRef.current?.();
+    };
+    dom.addEventListener("keydown", onKeyDown);
+    return () => dom.removeEventListener("keydown", onKeyDown);
+  }, [editor, isSend]);
 
   // The pills of an already written text rest upon opening — and again
   // when the quotable list arrives afterwards. NEVER under the caret: a
@@ -255,16 +385,11 @@ export function MarkdownEditor({
         if (e.target === e.currentTarget) editor?.commands.focus("end");
       }}
     >
-      {empty && (
-        <p className="pointer-events-none absolute top-0 left-0 text-sm text-muted-foreground/70">
-          {placeholder}
-        </p>
-      )}
       {/* The pills are rendered by node views, mounted as portals
  UNDER `EditorContent`: the context set here therefore reaches them, and
  is what gives them their destination without crossing anything manually. Same layout as the lookup of the subpages of a page. */}
       <MentionLinksProvider value={mentions?.links ?? null}>
-        <EditorContent editor={editor} />
+        <EditorContent editor={editor} className={contentClassName} />
         <MarkdownLinkMenu editor={editor} />
       </MentionLinksProvider>
     </div>

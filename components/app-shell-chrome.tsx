@@ -4,6 +4,7 @@ import {
   startTransition,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -17,9 +18,9 @@ import { useTranslations } from "next-intl";
 import {
   AppShell,
   MobileNav,
-  Spinner,
   cn,
   toast,
+  useMediaQuery,
 } from "mangue-ui";
 import {
   Home,
@@ -46,6 +47,7 @@ import {
 } from "lucide-react";
 import { InboxPopover } from "@/components/inbox-popover";
 import { openInbox } from "@/lib/inbox-launcher";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
@@ -65,13 +67,10 @@ import {
   replacePagesHistory,
 } from "@/lib/pages-navigation";
 import {
-  useAgentSessionsQuery,
   useOpenPullRequestCountQuery,
 } from "@/lib/use-agent-runs";
 import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";
 import { useTriageCountsQuery, triageCountTotal } from "@/lib/use-triage-counts-query";
-import { useAgentReads } from "@/lib/use-agent-reads";
-import { isAgentSessionUnread } from "@/lib/agent-api";
 import { issueIdentifier } from "@/lib/issue-constants";
 import {
   type PaletteGroup,
@@ -81,7 +80,8 @@ import { usePlanGates } from "@/lib/use-billing-query";
 import { MobileNavActions } from "@/components/mobile-nav-actions";
 import { MobileMenuFooter, useAccountActions } from "@/components/mobile-account";
 import { AppTopBar } from "@/components/app-top-bar";
-import { useOptionalAppTabs } from "@/lib/app-tabs-context";
+import { AppTabViewHost } from "@/components/app-tab-view-host";
+import { useOptionalAppTabNavigation } from "@/lib/app-tabs-context";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 import { HeaderWindowButtonsSlot } from "@/components/desktop-window-buttons";
 import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
@@ -285,7 +285,19 @@ function identifierBadge(id: string) {
 }
 
 export function AppShellChrome({ children }: { children: React.ReactNode }) {
+  // A root marker keeps application typography scoped without repeatedly
+  // matching relational :has() selectors against the entire workspace DOM.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const previous = root.getAttribute("data-app-shell");
+    root.setAttribute("data-app-shell", "true");
+    return () => {
+      if (previous === null) root.removeAttribute("data-app-shell");
+      else root.setAttribute("data-app-shell", previous);
+    };
+  }, []);
   const t = useTranslations("Nav");
+  const openAssistant = useAssistantPanelActions().open;
   const ti = useTranslations("Issue");
   const tk = useTranslations("Keyboard");
   const tScratch = useTranslations("Scratchpad");
@@ -297,7 +309,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const tPages = useTranslations("Pages");
   const { agentsAllowed, projectLimitReached } = usePlanGates();
   const pathname = usePathname();
-  const appTabs = useOptionalAppTabs();
+  const appTabs = useOptionalAppTabNavigation();
   const activeAppTabId = appTabs?.activeId;
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -340,6 +352,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   );
   const { setOpen: setCheatsheetOpen } = useCheatsheet();
   const { hidden: sidebarHidden } = useSidebarVisibility();
+  const mobileLayout = useMediaQuery("(max-width: 767px)");
 
   // Command palette open state — shared by the header search pill and the
   // lightweight global shortcut launcher. The full palette mounts on demand.
@@ -417,8 +430,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     setExportOpen(true);
   }, []);
 
-  const isAgents = pathname.startsWith("/agents");
-  const isNumo = pathname.startsWith("/numo");
   const isRoutines = pathname.startsWith("/routines");
   const { counts: triageCounts } = useTriageCountsQuery();
 
@@ -622,19 +633,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       </span>
     ) : undefined;
 
-  // Agents: a spinner on the tab as soon as a session is WORKING (generation in
-  // course), all projects combined; otherwise a blue bubble if at least one session has
-  // FINISHED without having been consulted (work in progress takes precedence over unread work).
-  const { sessions: agentSessions } = useAgentSessionsQuery();
-  const { reads: agentReads } = useAgentReads();
-  const anyAgentWorking = agentSessions.some((s) => s.working);
-  const anyAgentUnread = agentSessions.some((s) => isAgentSessionUnread(s, agentReads));
-  // A session is waiting for a response (ask_user) and is not read → YELLOW dot
-  // priority on the blue “finished, unread”.
-  const anyAgentAwaiting = agentSessions.some(
-    (s) => s.awaitingInput && isAgentSessionUnread(s, agentReads),
-  );
-
   const commandGroups = useMemo<PaletteGroup[]>(() => {
     const groups: PaletteGroup[] = [];
     const createKw = ["create", "créer", "new", "nouveau"];
@@ -749,7 +747,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       key: "goto",
       heading: t("goTo"),
       items: [
-        { key: "go-home", label: t("home"), icon: Home, href: "/home", keys: ["G", "H"], onSelect: () => router.push("/home") },
+        { key: "go-home", label: t("home"), icon: Home, href: "/home", keys: ["G", "H"], entityType: "navigation", onSelect: () => router.push("/home") },
         { key: "go-inbox", label: t("inbox"), icon: Inbox, keys: ["G", "I"], onSelect: openInbox },
         {
           key: "open-notes",
@@ -767,15 +765,18 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 icon: GitPullRequest,
                 href: "/pull-requests",
                 keys: ["G", "R"],
+                entityType: "navigation",
                 onSelect: () => router.push("/pull-requests"),
               },
               {
+                // Numo has no page of its own any more (the FAB hosts the whole
+                // conversation): the entry, like its chord, OPENS the panel.
                 key: "go-agents",
                 label: t("agents"),
                 icon: NumoNavIcon,
-                href: "/numo",
                 keys: ["G", "J"],
-                onSelect: () => router.push("/numo"),
+                keywords: ["numo", "chat", "assistant", "conversation"],
+                onSelect: () => openAssistant(),
               },
               {
                 // ROUTINES (MIN-185) have their own page and their own
@@ -785,6 +786,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 icon: CalendarClock,
                 href: "/routines",
                 keys: ["G", "U"],
+                entityType: "navigation",
                 keywords: [
                   "routine",
                   "routines",
@@ -799,12 +801,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               },
             ]
           : []),
-        {
+         {
           key: "go-all-global",
           label: t("allIssues"),
           icon: LayoutGrid,
           href: "/all",
           keys: ["G", "B"],
+          entityType: "navigation",
           onSelect: () => router.push("/all"),
         },
         {
@@ -815,6 +818,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           label: t("cycle"),
           icon: IterationCw,
           href: "/all?view=cycle",
+          entityType: "navigation",
           keywords: [
             "cycle",
             "sprint",
@@ -832,6 +836,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           label: t("accountSettings"),
           icon: Settings,
           href: "/settings",
+          entityType: "navigation",
           onSelect: () => router.push("/settings"),
         },
         {
@@ -906,6 +911,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             metaText,
             href: base,
             contextId,
+            entityType: "navigation",
             onSelect: () => router.push(base),
           },
           {
@@ -917,6 +923,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             metaText,
             href: `${base}/objectives`,
             contextId,
+            entityType: "navigation",
             onSelect: () => router.push(`${base}/objectives`),
           },
           // Between Objectives and Triage, as in the sidebar: the palette says
@@ -930,6 +937,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             metaText,
             href: `${base}/pages`,
             contextId,
+            entityType: "navigation",
             onSelect: () => router.push(`${base}/pages`),
           },
           {
@@ -941,6 +949,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             metaText,
             href: `${base}/triage`,
             contextId,
+            entityType: "navigation",
             onSelect: () => router.push(`${base}/triage`),
           },
           {
@@ -952,6 +961,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             metaText,
             href: `${base}/feedback`,
             contextId,
+            entityType: "navigation",
             onSelect: () => router.push(`${base}/feedback`),
           },
           {
@@ -963,6 +973,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             metaText,
             href: `${base}/settings`,
             contextId,
+            entityType: "navigation",
             onSelect: () => router.push(`${base}/settings`),
           },
         );
@@ -1006,7 +1017,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     }
 
     return groups;
-  }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
+  }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, openAssistant, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
 
   // ── Settings: one line per CARD, not per tab ───────────────────────
   // A settings tab is a column of cards; “Cadence”, “Zone
@@ -1037,6 +1048,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       // search keywords), and the project orb comes from `contextId`.
       contextId: project?.id,
       href: settingsSectionHref(s, project?.id),
+      entityType: "navigation",
       onSelect: () => router.push(settingsSectionHref(s, project?.id)),
     });
 
@@ -1209,12 +1221,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     [projectById, navigateToWikiPage, openIssuePanel, t, ti, tPages]
   );
 
-  // Desktop: the full list, built only while the palette is open — closed, it
-  // renders nothing, so building thousands of rows on every shell re-render
-  // (notification polls, agent sessions…) would be pure waste.
+  // Prepare the full model during the palette's idle warmup and retain it
+  // between openings. Opening the menu should not map thousands of rows.
   const desktopDataGroups = useMemo(
     () =>
-      paletteOpen
+      paletteMounted && !mobileLayout
         ? buildDataGroups(
             paletteIssues,
             paletteObjectives,
@@ -1223,7 +1234,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           )
         : [],
     [
-      paletteOpen,
+      paletteMounted,
+      mobileLayout,
       buildDataGroups,
       paletteIssues,
       paletteObjectives,
@@ -1232,20 +1244,22 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     ]
   );
 
-  // Mobile: bounded, always ready (MobileNav's search sheet opens on its own).
+  // MobileNav opens its own sheet. Prepare its bounded model only on mobile;
+  // a CSS-hidden mobile navigation must not duplicate this work on desktop.
   const mobileDataGroups = useMemo(
     () =>
-      buildDataGroups(
+      mobileLayout ? buildDataGroups(
         capForMobile(paletteIssues, currentProjectId),
         capForMobile(paletteObjectives, currentProjectId),
         capForMobile(palettePages, currentProjectId)
-      ),
+      ) : [],
     [
       buildDataGroups,
       paletteIssues,
       paletteObjectives,
       palettePages,
       currentProjectId,
+      mobileLayout,
     ]
   );
 
@@ -1276,32 +1290,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       t("pullRequestsBadge", { count: openPrCount })
     ),
   };
-  const agentsItem: AppNavItem = {
-    key: "agents",
-    label: t("agents"),
-    icon: NumoNavIcon,
-    href: "/numo",
-    active: (isNumo || isAgents) && !isRoutines,
-    shortcut: "J",
-    descends: true,
-    disabled: !agentsAllowed,
-    tooltip: agentsAllowed ? undefined : tBilling("agentsGateTitle"),
-    badge:
-      agentsAllowed && anyAgentWorking ? (
-        <Spinner className="size-3.5 text-muted-foreground" />
-      ) : agentsAllowed && anyAgentAwaiting ? (
-        // A session is waiting for a response from the user → YELLOW point.
-        <span
-          className="size-2 rounded-full bg-yellow-500"
-          aria-label={t("agentsAwaiting")}
-        />
-      ) : agentsAllowed && anyAgentUnread ? (
-        <span
-          className="size-2 rounded-full bg-blue-500"
-          aria-label={t("agentsUnread")}
-        />
-      ) : undefined,
-  };
+  // Numo has no sidebar item any more: the conversation is only reachable from
+  // the FAB, whose animated border carries the “working” signal. The finished /
+  // awaiting / unread dots of the former item live in the inbox rows and in the
+  // conversation history of the panel. The palette entry and G J open it.
   const routinesItem: AppNavItem = {
     key: "routines",
     label: t("routines"),
@@ -1314,10 +1306,101 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     tooltip: agentsAllowed ? undefined : tBilling("agentsGateTitle"),
   };
 
+  /**
+   * The HOME panel — the sidebar's top level. It is shown as-is when no
+   * project is open, and it is also what the back rows lift to FROM a
+   * project (the browse keeps the page while the panel goes up): one variant
+   * for both, since none of its rows depend on the page underneath.
+   */
+  const homeSections = useMemo<AppNavSection[]>(
+    () => [
+      {
+        items: [
+          inboxItem,
+          pullRequestsItem,
+          routinesItem,
+          {
+            key: "all-global",
+            label: t("allIssues"),
+            icon: LayoutGrid,
+            href: "/all",
+            active: pathname === "/all",
+            shortcut: "B",
+          },
+          {
+            key: "home",
+            label: t("home"),
+            icon: Home,
+            href: "/home",
+            active: pathname.startsWith("/home"),
+            shortcut: "H",
+            badge: smartAssignBadge,
+          },
+        ],
+      },
+      {
+        items: [
+          ...projects.map((p) => {
+            // A single number for both halves of the line: enter the
+            // project breaks it down into its Triage and Feedback tabs, and the
+            // total must land there exactly.
+            const toTriage = triageCountTotal(triageCounts[p.id]);
+            return {
+              key: `project-${p.id}`,
+              label: p.name,
+              icon: projectOrbIcon(projectOrbSeed(p), p.icon_url),
+              href: `/projects/${p.id}`,
+              // Entering a project swaps the whole sidebar the same way a
+              // level-2 page does: the row says so with its chevron.
+              descends: true,
+              ...countBadges(toTriage, t("triageBadge", { count: toTriage })),
+            };
+          }),
+          // The drafts, following the projects and in the same list: this is
+          // the same thing up to one state, and relegating them elsewhere would require
+          // to go get them. The line is that of a project — orb, name —
+          // except its mark, and clicking reopens the wizard where we left it.
+          ...projectDrafts.map(
+            (d): AppNavItem => ({
+              key: `project-draft-${d.id}`,
+              label: d.name,
+              icon: projectOrbIcon(draftOrbSeed(d), draftIconUrl(d)),
+              onClick: () => openProjectDraft(d),
+              badge: draftBadge(tProjects("draftBadge")),
+              tooltip: tProjects("draftResume", { name: d.name }),
+              contextActions: [
+                {
+                  id: "delete-project-draft",
+                  label: tProjects("draftDelete"),
+                  icon: <Trash2 className="size-4" />,
+                  variant: "destructive",
+                  onSelect: () => {
+                    void deleteProjectDraft(d.id).catch((err: Error) =>
+                      toast.error(err.message),
+                    );
+                  },
+                },
+              ],
+            }),
+          ),
+          {
+            key: "new-project",
+            label: t("newProject"),
+            icon: Plus,
+            onClick: openCreateProject,
+            disabled: projectLimitReached,
+          },
+        ],
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pathname, inboxCount, openPrCount, projects, projectDrafts, openProjectDraft, deleteProjectDraft, triageCounts, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, t, tProjects]
+  );
+
   const sections = useMemo<AppNavSection[]>(() => {
-    if (currentProject) {
-      const base = `/projects/${currentProject.id}`;
-      return [
+    if (!currentProject) return homeSections;
+    const base = `/projects/${currentProject.id}`;
+    return [
         {
           // Project mode keeps ONLY the project context: back home, the
           // project switcher, and the project's own items (MIN-546 review).
@@ -1404,90 +1487,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           ],
         },
       ];
-    }
-    return [
-      {
-        items: [
-          inboxItem,
-          pullRequestsItem,
-          agentsItem,
-          routinesItem,
-          {
-            key: "all-global",
-            label: t("allIssues"),
-            icon: LayoutGrid,
-            href: "/all",
-            active: pathname === "/all",
-            shortcut: "B",
-          },
-          {
-            key: "home",
-            label: t("home"),
-            icon: Home,
-            href: "/home",
-            active: pathname.startsWith("/home"),
-            shortcut: "H",
-            badge: smartAssignBadge,
-          },
-        ],
-      },
-      {
-        items: [
-          ...projects.map((p) => {
-            // A single number for both halves of the line: enter the
-            // project breaks it down into its Triage and Feedback tabs, and the
-            // total must land there exactly.
-            const toTriage = triageCountTotal(triageCounts[p.id]);
-            return {
-              key: `project-${p.id}`,
-              label: p.name,
-              icon: projectOrbIcon(projectOrbSeed(p), p.icon_url),
-              href: `/projects/${p.id}`,
-              // Entering a project swaps the whole sidebar the same way a
-              // level-2 page does: the row says so with its chevron.
-              descends: true,
-              ...countBadges(toTriage, t("triageBadge", { count: toTriage })),
-            };
-          }),
-          // The drafts, following the projects and in the same list: this is
-          // the same thing up to one state, and relegating them elsewhere would require
-          // to go get them. The line is that of a project — orb, name —
-          // except its mark, and clicking reopens the wizard where we left it.
-          ...projectDrafts.map(
-            (d): AppNavItem => ({
-              key: `project-draft-${d.id}`,
-              label: d.name,
-              icon: projectOrbIcon(draftOrbSeed(d), draftIconUrl(d)),
-              onClick: () => openProjectDraft(d),
-              badge: draftBadge(tProjects("draftBadge")),
-              tooltip: tProjects("draftResume", { name: d.name }),
-              contextActions: [
-                {
-                  id: "delete-project-draft",
-                  label: tProjects("draftDelete"),
-                  icon: <Trash2 className="size-4" />,
-                  variant: "destructive",
-                  onSelect: () => {
-                    void deleteProjectDraft(d.id).catch((err: Error) =>
-                      toast.error(err.message),
-                    );
-                  },
-                },
-              ],
-            }),
-          ),
-          {
-            key: "new-project",
-            label: t("newProject"),
-            icon: Plus,
-            onClick: openCreateProject,
-            disabled: projectLimitReached,
-          },
-        ],
-      },
-    ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, pathname, objectiveBoardId, projects, projectDrafts, openProjectDraft, deleteProjectDraft, inboxCount, triageCount, feedbackCount, triageCounts, openPrCount, anyAgentWorking, anyAgentUnread, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, homeBadge, t, tProjects]);
+  }, [currentProject, homeSections, pathname, objectiveBoardId, triageCount, feedbackCount, homeBadge, t]);
 
   // Inbox is a compact top control on desktop. Mobile keeps the regular row,
   // where there is no primary sidebar to host that control.
@@ -1498,6 +1499,15 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         items: section.items.filter((item) => item.key !== "inbox"),
       })),
     [sections],
+  );
+  // The home panel the back rows lift to, same desktop filter.
+  const homeDesktopSections = useMemo(
+    () =>
+      homeSections.map((section) => ({
+        ...section,
+        items: section.items.filter((item) => item.key !== "inbox"),
+      })),
+    [homeSections],
   );
 
   // Drives the sidebar's home ↔ project swap animation (stable within a project).
@@ -1571,6 +1581,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     setPaletteMode("default");
     void appTabs?.session.create(href);
   }, [appTabs?.session]);
+  // Hovering a destination row is the intent to open it: the same prefetch
+  // an existing tab label already gets (fourth pass MIN-540).
+  const handleDestinationPrefetch = useCallback((href: string) => {
+    appTabs?.session.prefetch(href);
+  }, [appTabs?.session]);
 
   return (
     <div className="app-workspace flex h-dvh w-full min-w-0 flex-col overflow-hidden">
@@ -1602,6 +1617,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         >
           <AppSidebar
             sections={desktopSections}
+            homeSections={homeDesktopSections}
             modeKey={modeKey}
             currentProject={currentProject}
             projects={projects}
@@ -1629,7 +1645,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         />
       }
     >
-      <div id="app-tab-content" role={appTabs ? "tabpanel" : undefined} aria-labelledby={activeAppTabId ? `app-tab-${activeAppTabId}` : undefined} className="h-full min-h-0">{children}</div>
+      <div id="app-tab-content" role={appTabs ? "tabpanel" : undefined} aria-labelledby={activeAppTabId ? `app-tab-${activeAppTabId}` : undefined} className="h-full min-h-0">{appTabs ? <AppTabViewHost>{children}</AppTabViewHost> : children}</div>
       {/* Command palette (⌘K / ⌘P / F, sidebar search) — same groups as
  mobile nav search, tickets enriched with actions (⌘;). The cross-project
  index also serves these actions: members and categories of the project
@@ -1643,6 +1659,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           searchIndex={searchIndex}
           destinationOnly={paletteMode === "destination"}
           onDestinationSelect={handleDestinationSelect}
+          onPrefetchDestination={handleDestinationPrefetch}
         />
       ) : null}
       <InboxPopover open={inboxOpen} onOpenChange={setInboxOpen} />

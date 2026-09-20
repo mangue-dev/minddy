@@ -83,3 +83,51 @@ export function turnSubagents(events: AgentRunEvent[]): TurnSubagent[] {
 
   return [...collected.values()].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
 }
+
+/**
+ * The sub-agents of the WHOLE SESSION, oldest first — running ones included,
+ * the ones of past rounds too.
+ *
+ * `turnSubagents` deliberately forgets past rounds: the thread's folded blocks
+ * already tell the rest, and the pill would grow forever. The delegated-work
+ * card has the opposite constraint: it is the ONE place a reader watches a run
+ * they did not open, so "what did it spawn, and is anything still going" must
+ * cover the session, not the last round only. Same end-of-life rules as the
+ * turn aggregation (summary, error, or the parent's `subagent_report` for a
+ * cut girl).
+ */
+export function sessionSubagents(events: AgentRunEvent[]): TurnSubagent[] {
+  const collected = new Map<string, TurnSubagent>();
+
+  for (const e of [...events].sort((a, b) => a.seq - b.seq)) {
+    const p = e.payload ?? {};
+    const id = typeof p.subagent_id === "string" ? p.subagent_id : "";
+
+    if (id) {
+      let block = collected.get(id);
+      if (!block) {
+        block = {
+          id,
+          mode:
+            p.subagent_mode === "implement"
+              ? "implement"
+              : p.subagent_mode === "explore"
+                ? "explore"
+                : null,
+          startedAt: e.created_at,
+          endedAt: null,
+        };
+        collected.set(id, block);
+      }
+      if (e.type === "summary" || e.type === "error") block.endedAt ??= e.created_at;
+      continue;
+    }
+
+    if (e.type === "status" && p.phase === "subagent_report" && typeof p.id === "string") {
+      const block = collected.get(p.id);
+      if (block) block.endedAt ??= e.created_at;
+    }
+  }
+
+  return [...collected.values()].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+}

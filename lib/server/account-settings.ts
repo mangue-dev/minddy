@@ -10,7 +10,13 @@ import {
   PROMPT_COPY_AUTO_START_META_KEY,
   resolvePromptCopyAutoStart,
 } from "@/lib/prompt-copy-auto-start";
-import { SMART_FILL_META_KEY, resolveSmartFill } from "@/lib/smart-fill";
+import {
+  SMART_FILL_CREATED_META_KEY,
+  SMART_FILL_META_KEY,
+  SMART_FILL_TRIAGE_META_KEY,
+  resolveSmartFill,
+  resolveSmartFillScope,
+} from "@/lib/smart-fill";
 import {
   AUTO_ASSIGN_ON_START_META_KEY,
   resolveAutoAssignOnStart,
@@ -74,6 +80,8 @@ export interface AccountSettings {
   auto_assign_on_start: boolean;
   prompt_copy_auto_start: boolean;
   smart_fill: boolean;
+  smart_fill_created: boolean;
+  smart_fill_triage: boolean;
   /** Cycles (MIN-32) — Account → Cycles, one key per knob in user_metadata. */
   cycles: CyclePrefs;
   /** Automation preset (MIN-147): Numo loop applied to ALL
@@ -163,6 +171,8 @@ function toSettings(
     auto_assign_on_start: resolveAutoAssignOnStart(meta),
     prompt_copy_auto_start: resolvePromptCopyAutoStart(meta),
     smart_fill: resolveSmartFill(meta),
+    smart_fill_created: resolveSmartFillScope(meta, "created"),
+    smart_fill_triage: resolveSmartFillScope(meta, "triage"),
     cycles: resolveCyclePrefs(meta),
     automation_preset: resolveAutomationPreset(meta),
     notifications: resolveNotificationPrefs(meta),
@@ -278,6 +288,14 @@ export async function updateAccountSettings({
     }
     next[SMART_FILL_META_KEY] = input[SMART_FILL_META_KEY];
   }
+  for (const key of [SMART_FILL_CREATED_META_KEY, SMART_FILL_TRIAGE_META_KEY]) {
+    if (key in input) {
+      if (typeof input[key] !== "boolean") {
+        return { ok: false, error: `${key} must be a boolean.` };
+      }
+      next[key] = input[key];
+    }
+  }
 
   // Automation preset (MIN-147). `null` erases it — that's the way to
   // say “no more loops”, without having to turn off each project.
@@ -366,6 +384,8 @@ export async function updateAccountSettings({
     "auto_assign_on_start",
     "prompt_copy_auto_start",
     SMART_FILL_META_KEY,
+    SMART_FILL_CREATED_META_KEY,
+    SMART_FILL_TRIAGE_META_KEY,
     // Without it, a call carrying ONLY the preset came out here as “nothing to
     // change” — even though the block that wrote it had just placed it.
     AUTOMATION_PRESET_META_KEY,

@@ -116,6 +116,7 @@ export function useMentionSources(
           project_id: row.project_id,
           identifier: issueIdentifier(key, row.number),
           title: row.title,
+          status: row.status,
         },
       ];
     });
@@ -190,8 +191,10 @@ export function useMentionLinksFor(
   return useMemo<MentionLinks>(() => {
     const href: MentionLinks["href"] = (type, id) =>
       mentionTargetPath(type, id, projectOf(type, id));
+    const statusByIssueId = new Map(issues.map((issue) => [issue.id, issue.status]));
     return {
       href,
+      issueStatus: (id) => statusByIssueId.get(id) ?? null,
       navigate: (type, id) => {
         const target = mentionNavigationTarget(type, id, projectOf(type, id));
         if (!target) return;
@@ -257,6 +260,7 @@ export function useDescriptionMentions(
         id: i.id,
         label: i.identifier,
         detail: i.title,
+        status: i.status,
         keywords: [i.title],
       })),
       ...objectives.map((o) => ({

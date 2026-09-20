@@ -210,7 +210,7 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
       disabled={!live}
       onClick={onClick}
       className={cn(
-        "flex w-full cursor-pointer items-start gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors",
+        "flex w-full items-start gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors",
         selected
           ? "bg-accent text-foreground"
           : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
@@ -334,7 +334,7 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
                 type="button"
                 onClick={() => goTo(i)}
                 className={cn(
-                  "cursor-pointer rounded-full border px-2 py-0.5 text-xs transition-colors",
+                  "rounded-full border px-2 py-0.5 text-xs transition-colors",
                   active
                     ? "border-border bg-accent text-foreground"
                     : "border-transparent text-muted-foreground hover:bg-accent/50 hover:text-foreground"

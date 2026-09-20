@@ -104,7 +104,13 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     ]
   );
 
-  if (isBackendUnavailableError(projects.error)) {
+  // The unavailable screen answers ONE question: can this app work at all?
+  // It is the INITIAL load that has no list to show. A refetch that fails
+  // while the cache holds one — the burst of refetches a merge fires in
+  // realtime, a Supabase hiccup of eight seconds — must not blank the whole
+  // app: the stale list is perfectly usable, the query refetches on the next
+  // trigger, and the screens that need the backend surface their own errors.
+  if (isBackendUnavailableError(projects.error) && !projects.hasData) {
     return (
       <ServerUnavailableState
         title={tUnavailable("title")}

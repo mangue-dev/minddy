@@ -265,6 +265,8 @@ export function UndoProvider({ children }: { children: ReactNode }) {
         source_id: resolveAliased(alias, relation.source_id),
         target_id: resolveAliased(alias, relation.target_id),
         type: relation.type,
+        source_type: relation.source_type,
+        target_type: relation.target_type,
       });
     },
     []

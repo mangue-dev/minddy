@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ASSISTANT_TOOLS,
+  AUTOMATION_ASSISTANT_TOOLS,
   GLOBAL_ASSISTANT_TOOLS,
   PROJECT_ASSISTANT_TOOLS,
   PROJECT_SCOPED_TOOLS,
@@ -33,6 +34,13 @@ describe("Numo tool contracts", () => {
 
     expect(status?.description).toMatch(/account setting/i);
     expect(status?.description).not.toContain("triage");
+  });
+
+  it("advertises independent Smart Fill monitoring controls", () => {
+    const settings = tool("update_account_settings")?.function.parameters.properties;
+    expect(settings).toHaveProperty("smart_fill");
+    expect(settings).toHaveProperty("smart_fill_created");
+    expect(settings).toHaveProperty("smart_fill_triage");
   });
 
   it("advertises the internal feedback comment tool", () => {
@@ -143,6 +151,60 @@ describe("Numo tool contracts", () => {
     );
   });
 
+  it("advertises direct PR management tools that never touch the code (MIN-550)", () => {
+    for (const name of [
+      "merge_pull_request",
+      "update_pull_request",
+      "post_pull_request_comment",
+      "edit_own_pull_request_comment",
+      "resolve_pull_request_threads",
+    ]) {
+      const pr = tool(name);
+      expect(pr, name).toBeDefined();
+      // One target, exactly: the same resolution as read_pull_request.
+      expect(pr?.function.parameters.properties).toHaveProperty("issue_id");
+      expect(pr?.function.parameters.properties).toHaveProperty(
+        "pull_request_id",
+      );
+      // Delegation stays the path for anything that changes the branch.
+      expect(pr?.function.description).toMatch(/launch_code_agent/);
+    }
+  });
+
+  it("lets Numo close review conversations itself, keyed on the read threads", () => {
+    const resolve = tool("resolve_pull_request_threads");
+
+    // The thread identity is the one read_pull_request lists — the root
+    // comment id — never an opaque forge id the model would have to guess.
+    expect(resolve?.function.parameters.required).toEqual(["comment_ids"]);
+    const ids = resolve?.function.parameters.properties.comment_ids as {
+      description?: string;
+    };
+    expect(ids.description).toMatch(/root comment ids/i);
+    expect(ids.description).toMatch(/read_pull_request/);
+
+    // The discipline: only addressed conversations get closed, never a
+    // wholesale tidy-up.
+    expect(resolve?.function.description).toMatch(/FULLY addressed/);
+    expect(resolve?.function.description).toMatch(/without any delegation/);
+  });
+
+  it("keeps the merge guardrail explicit: irreversible, confirmed, never against a red CI", () => {
+    const merge = tool("merge_pull_request");
+
+    expect(merge?.function.description).toMatch(/IRREVERSIBLE/i);
+    expect(merge?.function.description).toMatch(/confirm the intent with the user/i);
+    expect(merge?.function.description).toMatch(/red or running CI/i);
+    expect(merge?.function.description).toMatch(/merged → done/i);
+  });
+
+  it("scopes the comment edit to comments Numo posted itself", () => {
+    const edit = tool("edit_own_pull_request_comment");
+
+    expect(edit?.function.description).toMatch(/never a comment written by a human/i);
+    expect(edit?.function.parameters.required).toEqual(["comment_id", "body"]);
+  });
+
   it("keeps feedback comment guidance aligned with the comment service", () => {
     const comment = tool("add_feedback_comment");
 
@@ -239,6 +301,48 @@ describe("Numo tool contracts", () => {
     });
     expect(move?.function.description).toMatch(/never changes status/i);
     expect(move?.function.description).toMatch(/assignment changes per item/i);
+  });
+
+  it("lets Numo set up MCP connections without a project (MIN-541)", () => {
+    for (const name of ["list_mcp_presets", "configure_mcp_connection"]) {
+      const setup = tool(name);
+      expect(setup, name).toBeDefined();
+
+      const global = GLOBAL_ASSISTANT_TOOLS.find(
+        (candidate) => candidate.function.name === name,
+      );
+      expect(global?.function.parameters.properties).not.toHaveProperty(
+        "project_id",
+      );
+    }
+
+    // The research-before-create discipline is part of the contract: the tool
+    // must send the model to the provider's prerequisites BEFORE creating.
+    const configure = tool("configure_mcp_connection");
+    expect(configure?.function.description).toMatch(/RESEARCH FIRST/);
+    expect(configure?.function.description).toMatch(/web_search/);
+    expect(configure?.function.description).toMatch(
+      /enabled and left waiting for authentication/,
+    );
+    expect(configure?.function.parameters.properties).toHaveProperty("preset_id");
+    expect(configure?.function.parameters.properties).toHaveProperty(
+      "connection_id",
+    );
+    expect(configure?.function.parameters.properties).toHaveProperty("token");
+    expect(configure?.function.parameters.properties).toHaveProperty(
+      "oauth_client_secret",
+    );
+  });
+
+  it("keeps connection setup out of unattended automation runs", () => {
+    const automation = AUTOMATION_ASSISTANT_TOOLS.map(
+      (candidate) => candidate.function.name,
+    );
+    // An automation has no user to open the expiring OAuth link, and an
+    // injected instruction must not be able to add MCP endpoints to the
+    // account. The read-only catalog stays available.
+    expect(automation).not.toContain("configure_mcp_connection");
+    expect(automation).toContain("list_mcp_presets");
   });
 });
 

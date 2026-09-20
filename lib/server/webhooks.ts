@@ -264,9 +264,9 @@ export function dispatchWebhooksForEvents(
   };
 
   try {
-    after(run());
+    after(run);
   } catch {
-    // Excluding query (script, cron): best-effort without after().
+    // Outside a request (script, cron), start the best-effort dispatch once.
     void run();
   }
 }

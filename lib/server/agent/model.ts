@@ -3,7 +3,10 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAppConfigValue } from "@/lib/server/app-config";
 import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
-import { AGENT_MODEL_CONFIG_KEY, AGENT_ROOT_MODEL_FALLBACK } from "@/lib/agent-models";
+import {
+  AGENT_MODEL_CONFIG_KEY,
+  AGENT_ROOT_MODEL_FALLBACK,
+} from "@/lib/agent-models";
 import {
   DEFAULT_AGENT_PROVIDER,
   isLocalAgentProvider,
@@ -27,6 +30,7 @@ import {
   type ByokFeatureModels,
 } from "@/lib/ai-surfaces";
 import { isManagedAiEnabled } from "@/lib/managed-services";
+import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
 
 /**
  * Resolved code agent model and endpoint (MIN-46).
@@ -37,14 +41,17 @@ import { isManagedAiEnabled } from "@/lib/managed-services";
  * the saved model belongs to another provider, the user must deliberately
  * choose a compatible model in Account settings.
  *
- * ENDPOINT — only one active BYOK per account: provider + base URL + user key
+ * ENDPOINT — the BYOK credential assigned to the requested model capability,
  * if present (unlimited use, at own expense), otherwise the OpenRouter platform key
  * OPENROUTER_API_KEY (capped monthly, see quota.ts).
  */
 
 /** Root pricing baseline (admin), never a code-worker selection fallback. */
 export async function getRootDefaultModel(): Promise<string> {
-  return (await getAppConfigValue(AGENT_MODEL_CONFIG_KEY))?.trim() || AGENT_ROOT_MODEL_FALLBACK;
+  return (
+    (await getAppConfigValue(AGENT_MODEL_CONFIG_KEY))?.trim() ||
+    AGENT_ROOT_MODEL_FALLBACK
+  );
 }
 
 interface StoredAgentModelPreference {
@@ -82,7 +89,8 @@ export async function getUserDefaultReasoningLevel(
     .select("default_reasoning_level")
     .eq("user_id", userId)
     .maybeSingle();
-  const raw = (data as { default_reasoning_level: string | null } | null)?.default_reasoning_level;
+  const raw = (data as { default_reasoning_level: string | null } | null)
+    ?.default_reasoning_level;
   return isReasoningLevel(raw) ? raw : null;
 }
 
@@ -95,15 +103,21 @@ export async function getUserDefaultReasoningLevel(
  * itself (`checkAgentQuota` at launch, and stopping mid-run when it
  * is exhausted), not a restriction on the level.
  */
-export async function resolveReasoningLevel(userId: string): Promise<ReasoningLevel> {
-  return (await getUserDefaultReasoningLevel(userId)) ?? DEFAULT_REASONING_LEVEL;
+export async function resolveReasoningLevel(
+  userId: string,
+): Promise<ReasoningLevel> {
+  return (
+    (await getUserDefaultReasoningLevel(userId)) ?? DEFAULT_REASONING_LEVEL
+  );
 }
 
 /** Raised when the account has no model valid for its active worker provider. */
 export class AgentModelRequiredError extends Error {
   code = "noModelForProvider" as const;
   constructor(public provider: string) {
-    super(`No account code-worker model is configured for provider ${provider}`);
+    super(
+      `No account code-worker model is configured for provider ${provider}`,
+    );
     this.name = "AgentModelRequiredError";
   }
 }
@@ -123,7 +137,9 @@ export interface ResolvedAgentModel {
  * from Account settings. We never replace it with a cheaper platform or
  * provider default.
  */
-export async function resolveAgentModel(userId: string): Promise<ResolvedAgentModel> {
+export async function resolveAgentModel(
+  userId: string,
+): Promise<ResolvedAgentModel> {
   const [preference, byok] = await Promise.all([
     getUserDefaultModel(userId),
     getUserByok(userId, "agent"),
@@ -140,6 +156,8 @@ export async function resolveAgentModel(userId: string): Promise<ResolvedAgentMo
 export interface UserByok {
   provider: AgentProviderId;
   apiKey: string;
+  /** Non-secret row version used to invalidate credential-bound caches. */
+  credentialVersion: string;
   /** Effective URL base (register, or custom for 'generic'). */
   baseUrl: string;
   enabledSurfaces: AiSurface[];
@@ -191,16 +209,21 @@ async function confirmsUnvalidatedKey(params: {
   apiKey: string;
   baseUrl: string;
 }): Promise<boolean> {
-  const lastFailure = unvalidatedProbes.get(params.userId);
-  if (lastFailure && Date.now() - lastFailure < UNVALIDATED_TTL_MS) return false;
+  const probeKey = `${params.userId}:${params.provider}`;
+  const lastFailure = unvalidatedProbes.get(probeKey);
+  if (lastFailure && Date.now() - lastFailure < UNVALIDATED_TTL_MS)
+    return false;
 
   const { probeByokKey } = await import("./byok-validate");
-  const verdict = await probeByokKey({ ...params, rateLimitKey: params.userId });
+  const verdict = await probeByokKey({
+    ...params,
+    rateLimitKey: params.userId,
+  });
   if (verdict !== "valid") {
-    unvalidatedProbes.set(params.userId, Date.now());
+    unvalidatedProbes.set(probeKey, Date.now());
     return false;
   }
-  unvalidatedProbes.delete(params.userId);
+  unvalidatedProbes.delete(probeKey);
   await getServiceClient()
     .from("user_ai_keys")
     .update({ validated_at: new Date().toISOString() })
@@ -210,8 +233,8 @@ async function confirmsUnvalidatedKey(params: {
 }
 
 /**
- * Active BYOK of the user (only one), decrypted and resolved at endpoint, or
- * null. Ignores a line whose URL base is not resolvable (generic without URL)
+ * BYOK assigned to a model capability, decrypted and resolved at endpoint, or
+ * null. Ignores a row whose URL base is not resolvable (generic without URL)
  * or whose key no longer decrypts (secret turned → “reconfigure your key”).
  *
  * Also ignores — since MIN-344 — a key that the provider has never recognized.
@@ -219,23 +242,41 @@ async function confirmsUnvalidatedKey(params: {
  * run anything; an unvalidated line is therefore no longer worth anything, neither
  * here nor in `checkAgentQuota`.
  */
-export async function getUserByok(
+async function resolveUserByok(
   userId: string,
   surface?: AiSurface,
+  target: { capability: ModelCatalogCapability } | { provider: AgentProviderId } = {
+    capability: "text",
+  },
 ): Promise<UserByok | null> {
   const supabase = getServiceClient();
-  const { data } = await supabase
+  let aiKeyId: string | null = null;
+  if ("capability" in target) {
+    const { data: assignment } = await supabase
+      .from("user_ai_capability_assignments")
+      .select("ai_key_id")
+      .eq("user_id", userId)
+      .eq("capability", target.capability)
+      .maybeSingle();
+    aiKeyId = (assignment as { ai_key_id?: string } | null)?.ai_key_id ?? null;
+    if (!aiKeyId) return null;
+  }
+  let keyQuery = supabase
     .from("user_ai_keys")
-    .select("provider, key_encrypted, base_url, validated_at, enabled_surfaces, feature_models")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .select(
+      "provider, key_encrypted, base_url, validated_at, updated_at, enabled_surfaces, feature_models",
+    )
+    .eq("user_id", userId);
+  keyQuery = "provider" in target
+    ? keyQuery.eq("provider", target.provider)
+    : keyQuery.eq("id", aiKeyId!);
+  const { data } = await keyQuery.maybeSingle();
   const row = data as {
     provider: string;
     key_encrypted: string | null;
     base_url: string | null;
     validated_at: string | null;
+    updated_at: string;
     enabled_surfaces: AiSurface[] | null;
     feature_models: ByokFeatureModels | null;
   } | null;
@@ -277,17 +318,40 @@ export async function getUserByok(
   if (
     !row.validated_at &&
     !localProvider &&
-    !(await confirmsUnvalidatedKey({ userId, provider, apiKey: apiKey!, baseUrl }))
+    !(await confirmsUnvalidatedKey({
+      userId,
+      provider,
+      apiKey: apiKey!,
+      baseUrl,
+    }))
   ) {
     return null;
   }
   return {
     provider,
     apiKey: apiKey ?? "",
+    credentialVersion: row.updated_at,
     baseUrl,
     enabledSurfaces,
     featureModels: row.feature_models ?? {},
   };
+}
+
+export async function getUserByok(
+  userId: string,
+  surface?: AiSurface,
+  capability: ModelCatalogCapability = "text",
+): Promise<UserByok | null> {
+  return resolveUserByok(userId, surface, { capability });
+}
+
+/** Resolve a frozen run from the provider recorded on that run, not current routing. */
+async function getUserByokForProvider(
+  userId: string,
+  surface: AiSurface,
+  provider: AgentProviderId,
+): Promise<UserByok | null> {
+  return resolveUserByok(userId, surface, { provider });
 }
 
 /** True if the user has a usable BYOK (→ unlimited use). */
@@ -333,7 +397,10 @@ export async function getModelInputPrice(
   apiKey: string,
 ): Promise<number | null> {
   if (provider !== "openrouter") return null;
-  return (await getOpenRouterModelInfo(model, apiKey))?.pricing?.inputUsdPerMTok ?? null;
+  return (
+    (await getOpenRouterModelInfo(model, apiKey))?.pricing?.inputUsdPerMTok ??
+    null
+  );
 }
 
 /**
@@ -388,13 +455,17 @@ export type AgentKeyMode = "platform" | "byok";
 
 export class ManagedAgentServiceUnavailableError extends Error {
   constructor() {
-    super("Managed AI is not configured. Configure BYOK or enable MINDDY_MANAGED_AI.");
+    super(
+      "Managed AI is not configured. Configure BYOK or enable MINDDY_MANAGED_AI.",
+    );
     this.name = "ManagedAgentServiceUnavailableError";
   }
 }
 
 export interface ResolvedAgentEndpoint {
   apiKey: string;
+  /** Present only for BYOK and changes when its stored credential is updated. */
+  credentialVersion: string | null;
   mode: AgentKeyMode;
   provider: AgentProviderId;
   /** Base URL OpenAI-compatible (sans /chat/completions). */
@@ -408,6 +479,7 @@ function resolvePlatformAgentEndpoint(): ResolvedAgentEndpoint {
   const baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER);
   return {
     apiKey: platform,
+    credentialVersion: null,
     mode: "platform",
     provider: DEFAULT_AGENT_PROVIDER,
     baseUrl: baseUrl!,
@@ -428,7 +500,13 @@ export async function resolveAgentApiKey(
     if (isLocalAgentProvider(byok.provider) && !options.allowLocal) {
       throw new LocalEndpointRequiresLocalRunError();
     }
-    return { apiKey: byok.apiKey, mode: "byok", provider: byok.provider, baseUrl: byok.baseUrl };
+    return {
+      apiKey: byok.apiKey,
+      credentialVersion: byok.credentialVersion,
+      mode: "byok",
+      provider: byok.provider,
+      baseUrl: byok.baseUrl,
+    };
   }
   if (options.requireByok) throw new ByokCredentialUnavailableError();
   return resolvePlatformAgentEndpoint();
@@ -453,7 +531,9 @@ export async function resolveAgentApiKeyForRun(
     return resolvePlatformAgentEndpoint();
   }
 
-  const byok = await getUserByok(userId, surface);
+  const byok = options.provider
+    ? await getUserByokForProvider(userId, surface, options.provider)
+    : await getUserByok(userId, surface);
   if (!byok || (options.provider && byok.provider !== options.provider)) {
     throw new ByokCredentialUnavailableError();
   }
@@ -462,6 +542,7 @@ export async function resolveAgentApiKeyForRun(
   }
   return {
     apiKey: byok.apiKey,
+    credentialVersion: byok.credentialVersion,
     mode: "byok",
     provider: byok.provider,
     baseUrl: byok.baseUrl,

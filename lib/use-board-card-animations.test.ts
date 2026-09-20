@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, createElement, useRef } from "react";
+import { Activity, act, createElement, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BoardColumn } from "./board-columns";
@@ -140,6 +140,16 @@ describe("useBoardCardAnimations", () => {
     delete (HTMLElement.prototype as Partial<HTMLElement>).animate;
     delete (window as typeof window & { IS_REACT_ACT_ENVIRONMENT?: boolean })
       .IS_REACT_ACT_ENVIRONMENT;
+  });
+
+  it("measures a resumed viewport afresh without animating from hidden geometry", () => {
+    const original = { id: "issue", title: "Original", position: 0 } as Issue;
+    const render = (mode: "visible" | "hidden", left: number) =>
+      root.render(createElement(Activity, { mode, children: createElement(Harness, { boardColumns: columns(original), cardLeft: left }) }));
+    act(() => render("visible", 0));
+    act(() => render("hidden", 0));
+    act(() => render("visible", 200));
+    expect(animations).toHaveLength(0);
   });
 
   it("keeps an optimistic move running through an identical server echo", () => {

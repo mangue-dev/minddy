@@ -8,7 +8,7 @@
 import { useMemo, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "mangue-ui";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { buildPageTaskPrompt } from "@/lib/pages-prompt";
 import {
   TaskSurfaceProvider,
@@ -33,7 +33,7 @@ export function PageTaskSurface({
   children: ReactNode;
 }) {
   const t = useTranslations("Pages");
-  const { openIntent } = useAssistantPanel();
+  const { openIntent } = useAssistantPanelActions();
 
   const surface = useMemo<TaskSurface>(
     () => ({

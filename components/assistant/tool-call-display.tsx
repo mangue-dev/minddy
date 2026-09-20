@@ -19,6 +19,7 @@ import {
   BookText,
   Bot,
   CalendarClock,
+  CheckCheck,
   ChevronRight,
   ClipboardCheck,
   FilePen,
@@ -294,6 +295,13 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingMembers");
       return t("foundMembers", { count: resultCount(result, "members") });
+    },
+  },
+  get_objective: {
+    icon: Target,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("loadingObjectives");
+      return t("foundObjectives", { count: success && result?.objective ? 1 : 0 });
     },
   },
   list_objectives: {
@@ -778,6 +786,73 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("pullRequestLinked") : t("linkPullRequestFailed");
     },
   },
+  // ── PR management without touching the code (MIN-550) ─────────────────
+  merge_pull_request: {
+    icon: GitMerge,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("mergingPullRequest");
+      if (!success) return t("mergePullRequestFailed");
+      // A PR already merged (the pre-check caught it) is a nothing-to-do,
+      // not a merge: say it.
+      if (result?.note) return t("pullRequestAlreadyMerged");
+      return t("pullRequestMerged");
+    },
+  },
+  update_pull_request: {
+    icon: FilePen,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("updatingPullRequest");
+      return success ? t("pullRequestUpdated") : t("updatePullRequestFailed");
+    },
+  },
+  post_pull_request_comment: {
+    icon: MessageSquare,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("postingPrComment");
+      return success ? t("prCommentPosted") : t("prCommentFailed");
+    },
+  },
+  edit_own_pull_request_comment: {
+    icon: MessagesSquare,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("editingPrComment");
+      return success ? t("prCommentEdited") : t("editPrCommentFailed");
+    },
+  },
+  resolve_pull_request_threads: {
+    icon: CheckCheck,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("resolvingPrConversations");
+      if (!success) return t("resolvePrConversationsFailed");
+      // The result sorts the conversations: moved, already in place, the rest.
+      const changed = Array.isArray(result?.changed) ? result.changed.length : 0;
+      const unchanged = Array.isArray(result?.unchanged)
+        ? result.unchanged.length
+        : 0;
+      const failed = Array.isArray(result?.failed) ? result.failed.length : 0;
+      if (failed > 0) {
+        if (changed > 0) {
+          return t("prConversationsPartiallyResolved", { changed, failed });
+        }
+        return t("resolvePrConversationsFailed");
+      }
+      if (changed > 0) return t("prConversationsResolved", { count: changed });
+      if (unchanged > 0) {
+        return t("prConversationsAlreadyResolved", { count: unchanged });
+      }
+      return t("resolvePrConversationsFailed");
+    },
+  },
+  resolve_pull_request_thread: {
+    icon: CheckCheck,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("resolvingPrConversation");
+      if (!success) return t("resolvePrConversationFailed");
+      return result?.resolved === false
+        ? t("prConversationReopened")
+        : t("prConversationResolved");
+    },
+  },
   // ── Corbeille (MIN-133) ──────────────────────────────────────────────
   list_trash: {
     icon: Trash2,
@@ -919,11 +994,50 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("mcpToolsListed") : t("listMcpToolsFailed");
     },
   },
-  call_mcp_tool: {
+  list_mcp_presets: {
     icon: Plug,
     getLabel: (_args, _result, success, status, t) => {
-      if (status === "running") return t("callingMcpTool");
-      return success ? t("mcpToolCalled") : t("callMcpToolFailed");
+      if (status === "running") return t("listingMcpPresets");
+      return success ? t("mcpPresetsListed") : t("listMcpPresetsFailed");
+    },
+  },
+  configure_mcp_connection: {
+    icon: Plug,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("configuringMcpConnection");
+      return success
+        ? t("mcpConnectionConfigured")
+        : t("configureMcpConnectionFailed");
+    },
+  },
+  call_mcp_tool: {
+    icon: Plug,
+    getLabel: (args, _result, success, status, t) => {
+      // The wrapper tool carries the REAL MCP tool in its arguments
+      // (`lib/mcp-client-tools.ts`): naming it is the whole point of the
+      // line — “MCP tool completed” says nothing about WHAT ran.
+      const tool = typeof args.tool === "string" && args.tool.trim() ? args.tool.trim() : null;
+      // The arguments travel with it: a compact single-line JSON preview,
+      // truncated here because the row truncates again with CSS — this bound
+      // only keeps a 4 KB payload out of the label string.
+      let preview = "";
+      if (tool && args.arguments != null) {
+        try {
+          const json = JSON.stringify(args.arguments);
+          preview = json.length > 80 ? `${json.slice(0, 80)}…` : json;
+        } catch { /* Non-serializable payload: the name alone still says it. */ }
+      }
+      const withArgs = (label: string) => (preview ? `${label} ${preview}` : label);
+      if (!tool) {
+        // Absent arguments (running label without context, replay): the
+        // generic wording still reads.
+        if (status === "running") return t("callingMcpTool");
+        return success ? t("mcpToolCalled") : t("callMcpToolFailed");
+      }
+      if (status === "running") return withArgs(t("callingMcpToolNamed", { tool }));
+      return withArgs(
+        success ? t("mcpToolCalledNamed", { tool }) : t("callMcpToolFailedNamed", { tool }),
+      );
     },
   },
   web_search: {

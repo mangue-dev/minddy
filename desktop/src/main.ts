@@ -463,11 +463,12 @@ function applyAboutPanel(): void {
 /**
  * The macOS buttons: what the PAGE asks for, and what they REALLY do.
  *
- * Two entries, only one of which is known to the page. The sidebar asks for
- * (it hosts them, and rail mode doesn't have room to hold them); the full
- * screen removes them without warning anyone — it's macOS that decides. The
- * layout therefore cannot follow the request: it follows the result, and
- * it is this file which tells it so. Without that, going full screen left a 78 px hole in place of the buttons.
+ * The page no longer asks to hide them — dialogs, palettes and drawers leave
+ * the buttons in place, so `wantsWindowButtons` stays true for the whole
+ * session. What remains is FULL SCREEN, which removes them without warning
+ * anyone — it's macOS that decides. The layout cannot follow the request: it
+ * follows the result, and it is this file which tells it so. Without that,
+ * going full screen left a 78 px hole in place of the buttons.
  */
 let wantsWindowButtons = true;
 let windowButtonsVisible = true;
@@ -478,10 +479,7 @@ let windowButtonsVisible = true;
  * `setWindowButtonVisibility` and `setWindowButtonPosition` are not
  * status writes: Electron responds to each with one `RedrawTrafficLights()` —
  * the three `NSButton` placed back in their view and the title bar re-put in
- * page, of the synchronous AppKit on the UI thread of the browser process. However, the page
- * often calls: `useHoldWindowButtons("rail", …)` switches each time you hover over
- * the sidebar, and `"modal"` each time you open and close a dialog,
- * palette or drawer.
+ * page, of the synchronous AppKit on the UI thread of the browser process.
  *
  * ⚠ Deduplication CANNOT live on the page side: the renderer refuses
  * voluntarily to deduplicate because `useWindowButtonsSlot` needs the
@@ -1455,20 +1453,25 @@ if (!app.requestSingleInstanceLock()) {
       app.getVersion()
     );
 
-    // `minddy://`. Apart from packaged apps (dev), macOS needs binary and
-    // project path to know what to restart.
+    // `minddy://`. Apart from packaged apps (dev), Windows and Linux need the
+    // binary and project path to know what to restart — and both pass them on
+    // the command line, so the dev app really opens.
     //
-    // ⚠ The scheme is GLOBAL to the system, and the last registered wins: a
-    // dev session takes control of the `minddy://` of the installed app, including
-    // including its return of payment. This is the price to pay to be able to test
-    // a deep link in dev — but if a link opens the wrong window afterwards
-    // suddenly, this is where you have to look, not in the link.
-    // AppX/MSIX owns protocol registration through AppxManifest.xml. Writing a
-    // parallel registry association from inside the Store sandbox would create
-    // a competing owner and is unnecessary.
+    // ⚠ macOS is different, and claiming the scheme in dev there is pure
+    // harm: Electron marks `path`/`args` as Windows-only, so LaunchServices
+    // registers the bare `Electron.app` binary — a bounce later opens a NAKED
+    // Electron shell (no app, no session) and the installed app loses its
+    // deep-link return. So a dev shell only claims the scheme when explicitly
+    // asked to (`MINDDY_DESKTOP_CLAIM_PROTOCOL=1`), and the installed app
+    // reclaims the scheme on its next launch either way: the last registered
+    // wins.
     if (app.isPackaged && !process.windowsStore) {
       app.setAsDefaultProtocolClient(DESKTOP_PROTOCOL);
-    } else if (!app.isPackaged) {
+    } else if (
+      !app.isPackaged &&
+      (process.platform !== "darwin" ||
+        process.env.MINDDY_DESKTOP_CLAIM_PROTOCOL?.trim() === "1")
+    ) {
       app.setAsDefaultProtocolClient(DESKTOP_PROTOCOL, process.execPath, [
         path.resolve(process.argv[1] ?? ""),
       ]);

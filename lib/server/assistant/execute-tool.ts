@@ -1,7 +1,8 @@
 import "server-only";
 
-import { MCP_CLIENT_TOOL_NAMES } from "@/lib/mcp-client-tools";
+import { MCP_CLIENT_TOOL_NAMES, MCP_SETUP_TOOL_NAMES } from "@/lib/mcp-client-tools";
 import { executeMcpTool } from "@/lib/server/mcp-client";
+import { executeMcpSetupTool } from "@/lib/server/mcp-setup";
 
 import { resolveApplicationLocale } from "@/lib/locale-language";
 
@@ -131,9 +132,11 @@ import {
 } from "@/lib/plan";
 import {
   assertIssueInProject,
+  assertObjectiveInProject,
   getIssue,
   listIssues,
   listMembers,
+  resolveEntityRelations,
   searchIssues,
   type ReadContext,
 } from "@/lib/server/issue-reads";
@@ -162,13 +165,14 @@ import {
 import { issueIdentifier } from "@/lib/issue-constants";
 import { isStatus, type IssueStatusValue } from "@/lib/issue-validation";
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
+import { relaunchNumoWorkerRun } from "@/lib/server/numo/worker-mediation";
 import {
   AGENT_DELEGATION_AUTHORIZATIONS,
   AGENT_DELEGATION_SOURCE_KINDS,
   type AgentDelegationAuthorization,
   type AgentDelegationSourceReference,
 } from "@/lib/server/agent/agent-contract";
-import type { AttachmentInput } from "@/lib/types";
+import type { AttachmentInput, RelationEndpointType } from "@/lib/types";
 import {
   buildAgentLaunchMessage,
   intentForLaunchMode,
@@ -177,15 +181,18 @@ import {
 } from "@/lib/server/agent/launch-message";
 import { getAgentModelsForUser } from "@/lib/server/agent/models-catalog";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
-import { forgeFor } from "@/lib/server/agent/forge";
 import {
   linkPullRequestToIssue,
   resolveProjectPullRequest,
   type PrLinkRefusal,
 } from "@/lib/server/agent/pr-link";
 import {
+  executePullRequestWriteTool,
+  resolvePullRequest,
+  type PullRequestWriteToolName,
+} from "@/lib/server/assistant/pull-request-writes";
+import {
   findPullRequest,
-  findPullRequestForIssue,
   rowProvider,
 } from "@/lib/server/agent/pull-requests";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
@@ -218,6 +225,8 @@ export interface ToolContext {
   /** Conversation tools must name their own target, independent of page navigation. */
   requireExplicitProjectTarget?: boolean;
   userId: string;
+  /** Model of the current generation — Numo's PR comments carry it in their signature. */
+  model?: string;
   /** The feedback post a @Numo feedback comment is on — the feedback tools
       default to it when the model omits feedback_post_id. Null otherwise. */
   feedbackPostId?: string | null;
@@ -823,6 +832,9 @@ export async function executeTool(
     if (MCP_CLIENT_TOOL_NAMES.has(toolName)) {
       return executeMcpTool(ctx.userId, toolName, args);
     }
+    if (MCP_SETUP_TOOL_NAMES.has(toolName)) {
+      return executeMcpSetupTool(ctx.userId, toolName, args);
+    }
     if (toolName === "get_help") {
       const topic = typeof args.topic === "string" ? args.topic : "";
       const article = getKnowledgeArticle(topic);
@@ -1183,6 +1195,47 @@ export async function executeTool(
           : [];
         return {
           result: { ...r, pending_invitations },
+          success: true,
+        };
+      }
+      case "get_objective": {
+        const objectiveId = typeof args.objective_id === "string" ? args.objective_id.trim() : "";
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(objectiveId)) {
+          return toolError("objective_id must be an objective UUID from list_objectives.");
+        }
+        const { data: objective, error } = await ctx.supabase
+          .from("objectives")
+          .select("id, name, description, status, lead_user_id, target_date")
+          .is("deleted_at", null)
+          .eq("project_id", projectId)
+          .eq("id", objectiveId)
+          .maybeSingle();
+        if (error) return toolError(error.message);
+        if (!objective) return toolError("Objective not found in this project.");
+        const relations = await resolveEntityRelations(
+          ctx.supabase,
+          { projectId, projectKey: access.project.key },
+          objective.id,
+        );
+        return {
+          result: {
+            objective,
+            relations: relations.map((r) => r.kind === "objective"
+              ? {
+                  relation: r.relation,
+                  objective_id: r.other.id,
+                  name: r.other.name,
+                  status: r.other.status,
+                  lead_user_id: r.other.lead_user_id,
+                }
+              : {
+                  relation: r.relation,
+                  issue_id: r.other.id,
+                  identifier: r.other.identifier,
+                  title: r.other.title,
+                  status: r.other.status,
+                }),
+          },
           success: true,
         };
       }
@@ -1628,38 +1681,86 @@ export async function executeTool(
         return { result: { category_ids: result.categoryIds }, success: true };
       }
 
-      // Relationships between tickets (MIN-25) — same core as HTTP routes and
-      // tool MCP. BOTH ends are checked in the draft
-      // conversation: the heart controls access to the project, not the fact that the
-      // target in itself (an inter-project relationship does not exist).
+      // Relationships between tickets — and now across tickets and objectives
+      // (MIN-513) — same core as HTTP routes and the MCP tool. BOTH ends are
+      // checked in the draft conversation: the heart controls access to the
+      // project, not the fact that the target in itself (an inter-project
+      // relationship does not exist).
       case "link_issues": {
-        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const targetId =
-          typeof args.target_issue_id === "string" ? args.target_issue_id : "";
         const relation = isRelationType(args.relation) ? args.relation : null;
         if (!relation) {
           return toolError(
             `relation must be one of: ${RELATION_TYPE_VALUES.join(", ")}.`,
           );
         }
-        if (issueId === targetId) {
-          return toolError("An issue cannot be related to itself.");
-        }
-        for (const id of [issueId, targetId]) {
-          const scoped = await assertIssueInProject(
-            ctx.supabase,
-            id,
-            projectId,
+        const sourceObjectiveId =
+          typeof args.source_objective_id === "string"
+            ? args.source_objective_id
+            : "";
+        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
+        const targetObjectiveId =
+          typeof args.target_objective_id === "string"
+            ? args.target_objective_id
+            : "";
+        const targetIssueId =
+          typeof args.target_issue_id === "string" ? args.target_issue_id : "";
+
+        const sourceKind: RelationEndpointType = sourceObjectiveId
+          ? "objective"
+          : "issue";
+        const targetKind: RelationEndpointType = targetObjectiveId
+          ? "objective"
+          : "issue";
+        const sourceId = sourceObjectiveId || issueId;
+        const targetId = targetObjectiveId || targetIssueId;
+        if (!sourceId) {
+          return toolError(
+            "Pass issue_id (or source_objective_id) — the relation needs a source.",
           );
+        }
+        if (!targetId) {
+          return toolError(
+            "Pass target_issue_id or target_objective_id — the relation needs a target.",
+          );
+        }
+        if (Boolean(issueId) === Boolean(sourceObjectiveId)) {
+          return toolError(
+            "Pass exactly one of issue_id / source_objective_id.",
+          );
+        }
+        if (Boolean(targetIssueId) === Boolean(targetObjectiveId)) {
+          return toolError(
+            "Pass exactly one of target_issue_id / target_objective_id.",
+          );
+        }
+        if (sourceKind === targetKind && sourceId === targetId) {
+          return toolError("An entity cannot be related to itself.");
+        }
+        for (const [id, kind] of [
+          [sourceId, sourceKind],
+          [targetId, targetKind],
+        ] as const) {
+          const scoped =
+            kind === "objective"
+              ? await assertObjectiveInProject(
+                  ctx.supabase,
+                  id,
+                  projectId,
+                )
+              : await assertIssueInProject(
+                  ctx.supabase,
+                  id,
+                  projectId,
+                );
           if (!scoped.ok) return toolError(scoped.error);
         }
 
         if (args.remove === true) {
           const existing = await findIssueRelation(
             projectId,
-            issueId,
+            { id: sourceId, type: sourceKind },
             relation,
-            targetId,
+            { id: targetId, type: targetKind },
           );
           // Idempotent, like the MCP tool: removing what is not there is not
           // not an error, this is already the requested state.
@@ -1678,9 +1779,11 @@ export async function executeTool(
         const added = await addIssueRelation({
           projectId,
           actorId: ctx.userId,
-          sourceId: issueId,
+          sourceId,
           targetId,
           type: relation,
+          sourceType: sourceKind,
+          targetType: targetKind,
           viaAssistant: true,
         });
         if (!added.ok) return libError(added);
@@ -1972,6 +2075,42 @@ export async function executeTool(
 
         // A fresh delegation opens a code conversation and branch. Explicit
         // follow-up lineage reuses the selected conversation and branch/PR.
+        // HOT RESTART: when the continuation targets one of THIS
+        // conversation's own delegated workers at rest, we resume that run in
+        // place instead of cold-launching a superseding one — same code
+        // conversation, same branch, same sandbox snapshot. Refusals fall
+        // through to the cold launch below, whose guards know how to answer
+        // merged PRs and non-lineage targets.
+        const continuationRunId =
+          typeof args.continuation_run_id === "string"
+            ? args.continuation_run_id.trim()
+            : "";
+        if (durableDelegation && continuationRunId && objective) {
+          const relaunch = await relaunchNumoWorkerRun({
+            conversationId: ctx.conversationId!,
+            userId: ctx.userId,
+            runId: continuationRunId,
+            message: objective,
+            parentTurnId: ctx.turnId!,
+            parentToolCallId: ctx.toolCallId!,
+          });
+          if (relaunch.ok) {
+            return {
+              result: {
+                launched: true,
+                resumed: true,
+                run_id: relaunch.run.id,
+                conversation_id: relaunch.run.conversation_id,
+                status: relaunch.run.status,
+                model: relaunch.run.model,
+                reasoning_level: relaunch.run.reasoning_level,
+                parent_turn_id: ctx.turnId,
+                contract_version: 1,
+              },
+              success: true,
+            };
+          }
+        }
         const result = await launchAgentRun({
           ...(pullRequestMode === "review"
             ? { pullRequestId }
@@ -2126,101 +2265,61 @@ export async function executeTool(
       }
 
       case "read_pull_request": {
-        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const pullRequestId =
-          typeof args.pull_request_id === "string" ? args.pull_request_id : "";
-        if ((!issueId && !pullRequestId) || (issueId && pullRequestId)) {
-          return toolError(
-            "Pass exactly one of issue_id or pull_request_id.",
-          );
-        }
-        if (issueId) {
-          const scoped = await assertIssueInProject(
-            ctx.supabase,
-            issueId,
+        // Resolution shared with the PR write tools (MIN-550): the row from
+        // `pull_requests` (source of truth since MIN-143) with the
+        // `agent_runs` fallback for the rows older than the table, then the
+        // project's repo target.
+        const resolved = await resolvePullRequest(
+          {
             projectId,
-          );
-          if (!scoped.ok) return toolError(scoped.error);
-        }
+            userId: ctx.userId,
+            model: ctx.model ?? "",
+            locale: ctx.locale,
+            supabase: ctx.supabase,
+          },
+          args,
+        );
+        if ("error" in resolved) return toolError(resolved.error);
+        const { forge, target, number: prNumber } = resolved;
 
-        // The PR of the ticket comes from `pull_requests`, source of truth since
-        // MIN-143: a human PR, or attached by convention (identifier
-        // in the branch, “Fixes KEY-42”), or attached afterwards by
-        // link_pull_request, has NO run — look for it in `agent_runs`
-        // caused the tool to fail on a PR that the user had under
-        // eyes. The fallback on the run covers the rows before the table.
-        const linkedPr = pullRequestId
-          ? await findPullRequest(pullRequestId)
-          : await findPullRequestForIssue(issueId);
-        const target = await resolveRepoCloneTarget(projectId);
-        if (!target) return toolError("This project has no linked repository.");
-        if (
-          linkedPr &&
-          (target.provider !== rowProvider(linkedPr) ||
-            target.repoFullName !== linkedPr.repo_full_name)
-        ) {
-          return toolError(
-            "The selected pull request is not available in this project.",
-          );
-        }
-        let prNumber = linkedPr?.number ?? null;
-        if (prNumber == null && issueId) {
-          // Fallback aligned with findPullRequestForIssue: LIVE PR first,
-          // otherwise the most recent. A pre-table ticket may carry
-          // several runs at PR (successive repeats) — take the most
-          // old would read a PR closed for weeks for
-          // that another is open.
-          const { data: runs } = await ctx.supabase
-            .from("agent_runs")
-            .select("pr_number, pr_state")
-            .eq("issue_id", issueId)
-            .not("pr_number", "is", null)
-            .order("created_at", { ascending: false });
-          const rows = (runs ?? []) as {
-            pr_number: number;
-            pr_state: string | null;
-          }[];
-          const live = rows.find(
-            (r) => r.pr_state === "draft" || r.pr_state === "open",
-          );
-          prNumber = (live ?? rows[0])?.pr_number ?? null;
-        }
-        if (prNumber == null) {
-          return toolError(
-            pullRequestId
-              ? "The selected pull request is unavailable."
-              : "This issue has no pull request attached yet.",
-          );
-        }
-        const forge = forgeFor(target.provider);
-
-        const [pr, diff, reviewComments, reviewThreads] = await Promise.all([
-          forge.getPullRequest({
-            token: target.token,
-            repoFullName: target.repoFullName,
-            number: prNumber,
-          }),
-          forge.listPullRequestFiles({
-            token: target.token,
-            repoFullName: target.repoFullName,
-            number: prNumber,
-          }),
-          forge
-            .listPullRequestReviewComments({
+        const [pr, diff, reviewComments, reviewThreads, conversationComments] =
+          await Promise.all([
+            forge.getPullRequest({
               token: target.token,
               repoFullName: target.repoFullName,
               number: prNumber,
-            })
-            .catch(() => []),
-          // Thread resolution (MIN-139), best-effort as above.
-          forge
-            .listReviewThreads({
+            }),
+            forge.listPullRequestFiles({
               token: target.token,
               repoFullName: target.repoFullName,
               number: prNumber,
-            })
-            .catch(() => []),
-        ]);
+            }),
+            forge
+              .listPullRequestReviewComments({
+                token: target.token,
+                repoFullName: target.repoFullName,
+                number: prNumber,
+              })
+              .catch(() => []),
+            // Thread resolution (MIN-139), best-effort as above.
+            forge
+              .listReviewThreads({
+                token: target.token,
+                repoFullName: target.repoFullName,
+                number: prNumber,
+              })
+              .catch(() => []),
+            // Conversation comments (MIN-550): the thread Numo's own comments
+            // live in — their ids are what edit_own_pull_request_comment
+            // targets. Best-effort like the two lists above.
+            forge
+              .listPullRequestComments({
+                token: target.token,
+                repoFullName: target.repoFullName,
+                number: prNumber,
+              })
+              .catch(() => []),
+          ]);
 
         // Checks CI (MIN-138): request changes to a red CI that has not
         // of interest only if the agent sees WHAT breaks. `null` = unreadable
@@ -2239,6 +2338,10 @@ export async function executeTool(
 
         // Cap patch size so a huge diff doesn't blow the context window.
         const PATCH_CAP = 4000;
+        // Conversation comments: the same ceilings as the code agent's read
+        // (30 posts, 2,000 characters each).
+        const MAX_CONVERSATION_COMMENTS = 30;
+        const MAX_COMMENT_BODY_CHARS = 2_000;
         return {
           result: {
             number: pr.number,
@@ -2272,13 +2375,16 @@ export async function executeTool(
             // The pagination of the forge cut the list: say it rather than
             // let conclude on what has been seen.
             files_truncated: diff.truncated,
-            // Comments anchored to the code, grouped into threads. `line: null` = the
-            // target code has changed since: the anchor is no longer worth, only the hunk says
-            // what the discussion was about.
+            // Comments anchored to the code, grouped into threads. `id` is the
+            // ROOT comment of the thread — what resolve_pull_request_threads
+            // targets. `line: null` = the target code has changed since: the
+            // anchor is no longer worth, only the hunk says what the
+            // discussion was about.
             review_comments: groupReviewThreads(
               reviewComments,
               reviewThreads,
             ).map((thread) => ({
+              id: thread.id,
               path: thread.root.path,
               line: thread.root.line,
               original_line: thread.root.original_line,
@@ -2297,6 +2403,21 @@ export async function executeTool(
                 created_at: c.created_at,
               })),
             })),
+            // The conversation thread, most recent last — the same slice the
+            // PR page renders. `id` is what edit_own_pull_request_comment
+            // targets; `body` is capped so a long thread stays readable.
+            conversation_comments: conversationComments
+              .slice(-MAX_CONVERSATION_COMMENTS)
+              .map((c) => ({
+                id: c.id,
+                author: c.user?.login ?? null,
+                body:
+                  c.body && c.body.length > MAX_COMMENT_BODY_CHARS
+                    ? c.body.slice(0, MAX_COMMENT_BODY_CHARS) +
+                      "\n… (comment truncated)"
+                    : c.body,
+                created_at: c.created_at,
+              })),
           },
           success: true,
         };
@@ -2353,6 +2474,31 @@ export async function executeTool(
           },
           success: true,
         };
+      }
+
+      /**
+       * PR management without touching the code (MIN-550): merge, rename /
+       * re-describe, comment, edit a comment Numo posted itself, resolve
+       * review conversations. The rules and the forge plumbing live in
+       * `pull-request-writes.ts`, shared with `read_pull_request` above; here
+       * we only gatekeep the identity of the call and relay.
+       */
+      case "merge_pull_request":
+      case "update_pull_request":
+      case "post_pull_request_comment":
+      case "edit_own_pull_request_comment":
+      case "resolve_pull_request_threads": {
+        return await executePullRequestWriteTool(
+          {
+            projectId,
+            userId: ctx.userId,
+            model: ctx.model ?? "Numo",
+            locale: ctx.locale,
+            supabase: ctx.supabase,
+          },
+          toolName as PullRequestWriteToolName,
+          args,
+        );
       }
 
       case "create_objective": {

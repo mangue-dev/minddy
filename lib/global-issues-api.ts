@@ -156,6 +156,27 @@ export async function refreshGlobalIssueSnapshot(
   return snapshot;
 }
 
+/**
+ * Whether the catch-up should fire the issue snapshot for the aggregate board.
+ *
+ * The snapshot re-reads every issue (~1.3 MB on a rich account). Its job is to
+ * close a missed-broadcast gap FAST for the issue slice only. When the board
+ * query has no data at all, its own read is already in flight and will carry
+ * the same rows: firing the snapshot then duplicates that whole read without
+ * closing any gap the board response doesn't close. Reconnect/resume paths see
+ * a board WITH data and keep the snapshot, exactly as before.
+ */
+export function shouldRefreshGlobalIssueSnapshot(
+  board: { getObserversCount(): number; state: { data?: unknown } } | null | undefined
+): boolean {
+  return (
+    !!board &&
+    board.getObserversCount() > 0 &&
+    board.state.data !== undefined &&
+    board.state.data !== null
+  );
+}
+
 /** A snapshot completed after a slow board request started wins its issue slice. */
 export function fresherGlobalIssueSnapshot(
   queryClient: QueryClient | undefined,

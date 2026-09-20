@@ -174,6 +174,7 @@ export function useDictation({
       // Language hint = the UI locale (Whisper's auto-detect is unreliable on
       // short clips).
       formData.append("lang", locale);
+      formData.append("context", "task_notebook");
       try {
         const res = await fetch("/api/transcribe", {
           method: "POST",

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isInlineSafeMimeType, resolveUploadedMimeType } from "@/lib/inline-safe";
 import { getProjectAccess } from "@/lib/server/project-access";
@@ -466,17 +468,30 @@ async function assertUploadedByActor(
     (exactly one — the attachments_parent_ck constraint). */
 export async function insertAttachments(
   service: SupabaseClient,
-  args: AttachmentParent & { resources: ResourceInput[] }
+  args: AttachmentParent & { resources: ResourceInput[]; idempotencyKey?: string }
 ): Promise<Attachment[]> {
   if (args.resources.length === 0) return [];
   await assertPagesInProject(service, args.projectId, args.resources);
   await assertUploadedByActor(service, args.createdBy, args.resources);
-  const { data, error } = await service
-    .from("attachments")
-    .insert(args.resources.map((a) => attachmentRow(args, a)))
-    .select("*");
+  const rows = args.resources.map((resource, index) => ({
+    ...attachmentRow(args, resource),
+    ...(args.idempotencyKey ? { id: commentResourceId(args.idempotencyKey, index) } : {}),
+  }));
+  const table = service.from("attachments");
+  // Only explicit comment retries use deterministic IDs. A lost response can
+  // then retry the atomic resource batch without duplicating successful rows.
+  const insert = args.idempotencyKey
+    ? table.upsert(rows, { onConflict: "id", ignoreDuplicates: true })
+    : table.insert(rows);
+  const { data, error } = await insert.select("*");
   if (error) throw new Error(`resources insert failed: ${error.message}`);
   return (data ?? []) as Attachment[];
+}
+
+/** Stable per-comment slot IDs keep concurrent attachment retries idempotent. */
+export function commentResourceId(commentId: string, index: number): string {
+  const hex = createHash("sha256").update(`comment-resource:${commentId.toLowerCase()}:${index}`).digest("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
 
 /**

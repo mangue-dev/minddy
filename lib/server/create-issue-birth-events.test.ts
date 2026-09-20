@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * THE BIRTH OF A TICKET IS WRITTEN BEFORE THE RESPONSE.
@@ -20,6 +20,9 @@ interface Row extends Record<string, unknown> {}
 
 let eventRows: Row[] = [];
 let categoryLinkRows: Row[] = [];
+let knownCategoryRows: Row[] = [];
+let categoryLookupErrors: Record<string, { message: string }> = {};
+let categoryLinkError: { message: string } | null = null;
 /** The order of writes, as they end up in the timeline. */
 let writeLog: string[] = [];
 /** Reminders scheduled by `after()` — captured, never played. */
@@ -44,10 +47,14 @@ const insertedIssue = (row: Row): Row => ({
 function table(name: string) {
   const query: Record<string, unknown> = {};
   let inserted: Row[] = [];
+  let categoryFilter = "";
   query.select = () => query;
   query.eq = () => query;
   query.is = () => query;
-  query.in = () => query;
+  query.in = (column: string) => {
+    categoryFilter = column;
+    return query;
+  };
   query.insert = (rows: Row | Row[]) => {
     inserted = Array.isArray(rows) ? rows : [rows];
     if (name === "issues") {
@@ -55,7 +62,7 @@ function table(name: string) {
     } else if (name === "issue_events") {
       writeLog.push(...inserted.map((r) => `event:${r.type}${r.field ? `/${r.field}` : ""}`));
       eventRows.push(...inserted);
-    } else if (name === "issue_categories") {
+    } else if (name === "issue_categories" && !categoryLinkError) {
       categoryLinkRows.push(...inserted);
     }
     return query;
@@ -70,7 +77,14 @@ function table(name: string) {
   });
   query.single = async () => ({ data: inserted[0] ?? null, error: null });
   query.then = (onFulfilled: (value: unknown) => unknown) =>
-    Promise.resolve({ data: [], error: null }).then(onFulfilled);
+    Promise.resolve({
+      data: name === "categories" ? knownCategoryRows : [],
+      error: name === "categories"
+        ? categoryLookupErrors[categoryFilter] ?? null
+        : name === "issue_categories" ? categoryLinkError : null,
+    }).then(
+      onFulfilled,
+    );
   return query;
 }
 
@@ -93,7 +107,11 @@ vi.mock("@/lib/server/attachments", () => ({
 }));
 /** What Smart-fill responds to, when a test calls it. */
 let smartFillPatch: Record<string, unknown> = {};
-vi.mock("@/lib/server/smart-fill", () => ({ runSmartFill: async () => smartFillPatch }));
+let smartFillPayer: { userId: string; scope: "created" | "triage" } | null = null;
+vi.mock("@/lib/server/smart-fill", () => ({
+  resolveSmartFillPayer: async () => smartFillPayer,
+  runSmartFill: async () => smartFillPatch,
+}));
 vi.mock("@/lib/server/notifications", () => ({ insertNotifications: async () => {} }));
 vi.mock("@/lib/server/stat-events", () => ({ insertStatEvents: async () => {} }));
 vi.mock("@/lib/server/description-mentions", () => ({
@@ -120,19 +138,25 @@ const create = (input: Record<string, unknown> = {}) =>
   createIssueForProject({
     projectId: "project-1",
     actorId: "member-1",
-    input: { title: "Un ticket", ...input },
+    input: { title: "A ticket", ...input },
   });
 
 beforeEach(() => {
   eventRows = [];
   categoryLinkRows = [];
+  knownCategoryRows = [];
+  categoryLookupErrors = {};
+  categoryLinkError = null;
   writeLog = [];
   afterCallbacks = [];
   smartFillPatch = {};
+  smartFillPayer = null;
 });
 
-describe("createIssueForProject — activité de naissance", () => {
-  it("écrit l'événement `created` avant de rendre la main", async () => {
+afterEach(() => vi.restoreAllMocks());
+
+describe("createIssueForProject birth activity", () => {
+  it("writes the created event before returning", async () => {
     const result = await create();
 
     expect(result.ok).toBe(true);
@@ -146,13 +170,13 @@ describe("createIssueForProject — activité de naissance", () => {
     });
   });
 
-  it("écrit `created` AVANT l'affectation de Smart Assign", async () => {
+  it("writes the created event before Smart Assign runs", async () => {
     await create();
 
     expect(writeLog).toEqual(["event:created", "smart-assign"]);
   });
 
-  it("annonce le sous-ticket au parent, dans le même geste", async () => {
+  it("records the child creation and parent activity together", async () => {
     await create({ parent_id: "parent-1" });
 
     expect(eventRows.map((r) => [r.issue_id, r.type])).toEqual([
@@ -161,15 +185,95 @@ describe("createIssueForProject — activité de naissance", () => {
     ]);
   });
 
-  it("dit ce que Smart-fill a posé, après la création", async () => {
+  it("records Smart-fill changes after the creation event", async () => {
     // Smart-fill fills a field left empty — the event follows the `created`.
     smartFillPatch = { priority: "high" };
 
-    await create({ smart_fill: true });
+    smartFillPayer = { userId: "member-1", scope: "created" };
+    await create();
 
     expect(eventRows.map((r) => [r.type, r.field, r.via_smart_fill ?? false])).toEqual([
       ["created", undefined, false],
       ["updated", "smart_fill", true],
     ]);
+  });
+
+  it("preserves supplied values and reports only fields it actually filled", async () => {
+    smartFillPayer = { userId: "member-1", scope: "created" };
+    smartFillPatch = {
+      priority: "high",
+      effort: "m",
+      objective_id: "objective-1",
+      category_ids: ["category-smart"],
+    };
+
+    await create({ priority: "urgent", category_ids: ["category-manual"] });
+
+    expect(eventRows[1]).toMatchObject({
+      field: "smart_fill",
+      to_value: "effort,objective_id",
+      via_smart_fill: true,
+    });
+  });
+
+  it("reports Smart Fill categories only when they were actually linked", async () => {
+    smartFillPayer = { userId: "member-1", scope: "created" };
+    smartFillPatch = { category_ids: ["category-smart"] };
+    knownCategoryRows = [{ id: "category-smart" }];
+
+    await create();
+
+    expect(categoryLinkRows).toEqual([
+      { issue_id: "issue-1", category_id: "category-smart" },
+    ]);
+    expect(eventRows[1]).toMatchObject({
+      field: "smart_fill",
+      to_value: "category_ids",
+      via_smart_fill: true,
+    });
+  });
+
+  it.each([{}, { priority: "high" }])("does not claim failed category links were applied with scalar changes %j", async (scalars) => {
+    smartFillPayer = { userId: "member-1", scope: "created" };
+    smartFillPatch = { ...scalars, category_ids: ["category-smart"] };
+    knownCategoryRows = [{ id: "category-smart" }];
+    categoryLinkError = { message: "category link constraint failed" };
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await create();
+
+    expect(result).toMatchObject({ ok: true, issue: { category_ids: [] } });
+    expect(categoryLinkRows).toEqual([]);
+    expect(eventRows[0]).toMatchObject({ type: "created" });
+    expect(eventRows.filter((row) => row.field === "smart_fill").map((row) => row.to_value))
+      .toEqual("priority" in scalars ? ["priority"] : []);
+    expect(log).toHaveBeenCalledWith("[create-issue] category links failed:", "category link constraint failed");
+  });
+
+  it.each([
+    ["id", "category_ids", "ID"],
+    ["name", "category_names", "name"],
+  ])("reports failed category %s lookups without claiming associations", async (column, inputKey, label) => {
+    categoryLookupErrors[column] = { message: "category lookup failed" };
+    knownCategoryRows = [{ id: "category-stale" }];
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await create({ [inputKey]: ["category-request"] });
+
+    expect(result).toMatchObject({ ok: true, issue: { category_ids: [] } });
+    expect(categoryLinkRows).toEqual([]);
+    expect(eventRows).toHaveLength(1);
+    expect(log).toHaveBeenCalledWith(`[create-issue] category ${label} lookup failed:`, "category lookup failed");
+  });
+
+  it("retains successfully resolved names when the independent ID lookup fails", async () => {
+    categoryLookupErrors.id = { message: "invalid category ID" };
+    knownCategoryRows = [{ id: "category-by-name" }];
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await create({ category_ids: ["undefined"], category_names: ["Bug"] });
+
+    expect(result).toMatchObject({ ok: true, issue: { category_ids: ["category-by-name"] } });
+    expect(categoryLinkRows).toEqual([{ issue_id: "issue-1", category_id: "category-by-name" }]);
   });
 });

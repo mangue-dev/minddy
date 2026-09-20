@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
   const requestedProjects = [...new Set(request.nextUrl.searchParams.getAll("projectId"))].slice(0, 100);
   let runsQuery = auth.supabase
       .from("agent_runs")
-      .select("issue_id, status, id, pr_number, pr_state, created_at")
+      .select("issue_id, status, id, pr_number, pr_state, created_at, parent_numo_conversation_id")
       .neq("status", "failed")
       .order("created_at", { ascending: false });
   let linksQuery = auth.supabase

@@ -1137,12 +1137,14 @@ export const AssistantShell = forwardRef<
               </div>
             )}
 
+            {/* The composer never moves: sticky keeps it pinned to the
+            visible bottom even when a host lets the column scroll, and the
+            fixed bottom padding keeps it off the edge of the content zone. */}
             <div
               className={cn(
                 `mx-auto w-full min-w-0 ${convoMaxW} shrink-0`,
-                compact ? "px-4 pb-4" : "px-2 md:px-0",
-                // Empty states retain a small bottom cushion outside compact mode.
-                !hasMessages && !compact && "pb-2",
+                compact ? "px-4" : "px-2 md:px-0",
+                "sticky bottom-0 pb-4",
               )}
             >
               {/* Active question: the card takes the PLACE of the composer. THE

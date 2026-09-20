@@ -28,9 +28,10 @@ import { consumeFeedbackVoiceLimit } from "@/lib/server/feedback/voice-limits";
  * visitor session is path-scoped on the board (`/f/<token>`, or `/` on
  * custom domain), and the browser would therefore never send it to `/api/…`.
  *
- * What she does: transcribe, and nothing else. Storage by Numo is the
- * server action `dictateFeedbackAction`, which takes the `runId` rendered here — the
- * two calls from a socket thus share a line at the ledger.
+ * What it does: transcribe, then apply the same destination-aware cleanup as
+ * authenticated dictation. Storage by Numo is the server action
+ * `dictateFeedbackAction`, which takes the `runId` returned here so all three
+ * calls from one take share an action in the ledger.
  */
 
 export const runtime = "nodejs";
@@ -84,8 +85,13 @@ export async function POST(
     );
   }
 
-  // The owner pays: without a budget, the microphone stays silent rather than digging.
-  if (!(await ownerHasUsageBudget(ctx.project.id, "feedback"))) {
+  // The owner pays: without room for both stages, the microphone stays silent
+  // rather than returning a knowingly incomplete experience at their expense.
+  const [canTranscribe, canPolish] = await Promise.all([
+    ownerHasUsageBudget(ctx.project.id, "feedback", "transcription_model"),
+    ownerHasUsageBudget(ctx.project.id, "feedback", "dictate_model"),
+  ]);
+  if (!canTranscribe || !canPolish) {
     return NextResponse.json({ error: "unavailable" }, { status: 503 });
   }
 
@@ -106,7 +112,7 @@ export async function POST(
   const runId = newRunId();
   const locale = await getLocale();
   try {
-    const { text, usage } = await transcribeFeedbackAudio({
+    const { text, polished, usage } = await transcribeFeedbackAudio({
       audio,
       locale,
       runId,
@@ -118,7 +124,7 @@ export async function POST(
     after(() => recordAiUsage(usage));
     if (!text) return NextResponse.json({ error: "empty" }, { status: 422 });
     return NextResponse.json(
-      { runId, text },
+      { runId, text, polished },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (err) {

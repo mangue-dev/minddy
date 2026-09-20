@@ -5,8 +5,8 @@ import {
   findReplayedCode,
 } from "@/lib/server/oauth/codes";
 import {
-  handleRefreshReuse,
   issueTokens,
+  revokeGrantForReuse,
   rotateRefreshToken,
   type TokenPair,
 } from "@/lib/server/oauth/grants";
@@ -24,7 +24,10 @@ import { captureServerEvent } from "@/lib/server/posthog";
  * never cached. It supports two grants:
  * - authorization_code + PKCE: atomic claim of the code (a replay revokes the
  *   grant because interception is possible);
- * - refresh_token: atomic rotation, with N-1 replay revoking the grant.
+ * - refresh_token: atomic rotation to a DETERMINISTIC successor — concurrent
+ *   refreshes of the same token converge on the same pair (MIN-558), and only
+ *   an N-1 replay outside the grace window revokes the grant (RFC 9700
+ *   §4.14.2).
  * Errors follow RFC 6749 section 5.2 in plain English.
  */
 
@@ -203,11 +206,18 @@ async function handleRefreshToken(
     return tokenError("invalid_request", "client_id is required.");
   }
 
-  const pair = await rotateRefreshToken(refresh_token, client_id);
-  if (pair) return tokenSuccess(pair);
+  const result = await rotateRefreshToken(refresh_token, client_id);
+  if (result.ok) return tokenSuccess(result.pair);
 
-  // Missed rotation: replay of an N-1 token ⇒ revocation of the entire grant.
-  await handleRefreshReuse(refresh_token, client_id);
+  // Replay of an N-1 token OUTSIDE the grace window ⇒ revocation of the
+  // entire grant. Any other miss is a plain refusal: garbage proves nothing
+  // and must never become a revocation weapon (MIN-558).
+  if (result.reason === "reuse") {
+    console.warn(
+      `[oauth/token] refresh token replay outside the grace window — revoking grant ${result.grant.id}`
+    );
+    await revokeGrantForReuse({ id: result.grant.id, apiKeyId: result.grant.apiKeyId });
+  }
   return tokenError("invalid_grant", "Invalid, expired or rotated refresh token.");
 }
 

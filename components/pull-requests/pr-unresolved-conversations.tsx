@@ -25,17 +25,12 @@ import {
 } from "mangue-ui";
 import { CheckCheck, ChevronDown, Copy, ListFilter } from "lucide-react";
 
-import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { NumoIcon } from "@/components/numo-icon";
-import {
-  PrActivityItem,
-  PrActivityTimeline,
-} from "@/components/pull-requests/pr-activity-timeline";
 import {
   useReviewReplies,
   useThreadResolution,
 } from "@/components/pull-requests/pr-review-comments";
-import { ReviewConversationCard } from "@/components/pull-requests/pr-timeline";
+import { ReviewConversationStack } from "@/components/pull-requests/pr-timeline";
 import type { PrEndpoint } from "@/lib/agent-api";
 import {
   buildPullRequestFeedbackPrompt,
@@ -55,6 +50,7 @@ export function PrUnresolvedConversations({
   onLaunch,
   onThreadChanged,
   onResolutionChanged,
+  showBar = true,
 }: {
   endpoint: PrEndpoint;
   context: PullRequestFeedbackContext;
@@ -67,10 +63,14 @@ export function PrUnresolvedConversations({
   onLaunch: (prompt: string) => void;
   onThreadChanged: () => unknown;
   onResolutionChanged: () => unknown;
+  /** Inline workspace bar — hidden when the status cards carry the count. */
+  showBar?: boolean;
 }) {
   const t = useTranslations("PullRequests");
   const [confirmOutdated, setConfirmOutdated] = useState(false);
   const [resolvingOutdated, setResolvingOutdated] = useState(false);
+  const [confirmResolveAll, setConfirmResolveAll] = useState(false);
+  const [resolvingAll, setResolvingAll] = useState(false);
   const replies = useReviewReplies(endpoint, onThreadChanged);
   const resolution = useThreadResolution(endpoint, onResolutionChanged);
   const outdated = useMemo(
@@ -116,30 +116,52 @@ export function PrUnresolvedConversations({
     threads.length,
   ]);
 
+  // Resolve EVERY open conversation at once — the gesture of a review
+  // someone chose to settle by hand rather than fix in code. It asks for
+  // confirmation first: resolving silences the threads without touching
+  // the code, and doing it by accident would hide real feedback.
+  const resolveAll = useCallback(async () => {
+    if (resolvingAll) return;
+    setResolvingAll(true);
+    const results = await Promise.all(
+      threads.map((thread) => resolution.setResolved(thread, true, false)),
+    );
+    const resolved = results.filter(Boolean).length;
+    setConfirmResolveAll(false);
+    setResolvingAll(false);
+    if (resolved > 0) {
+      if (resolved === threads.length) onOpenChange(false);
+      toast.success(t("allResolvedToast", { count: resolved }));
+      await onResolutionChanged();
+    }
+  }, [onOpenChange, onResolutionChanged, resolution, resolvingAll, t, threads]);
+
   if (threads.length === 0) return null;
 
   return (
     <>
-      <div
-        data-testid="pr-unresolved-workspace"
-        className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-2"
-      >
-        <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-          <ListFilter className="size-3" />
-        </span>
-        <span className="min-w-0 flex-1 text-sm font-medium">
-          {t("unresolvedWorkspaceTitle", { count: threads.length })}
-        </span>
-        <Button
-          data-testid="pr-unresolved-list-trigger"
-          variant="ghost"
-          size="sm"
-          className="shrink-0"
-          onClick={() => onOpenChange(true)}
+      {showBar ? (
+        <div
+          data-testid="pr-unresolved-workspace"
+          className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-2"
         >
-          {t("unresolvedViewList", { count: threads.length })}
-        </Button>
-      </div>
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+            <ListFilter className="size-3" />
+          </span>
+          <span className="min-w-0 flex-1 text-sm font-medium">
+            {t("unresolvedWorkspaceTitle", { count: threads.length })}
+          </span>
+          <Button
+            data-testid="pr-unresolved-list-trigger"
+            variant="ghost"
+            size="sm"
+            className="shrink-0"
+            onClick={() => onOpenChange(true)}
+          >
+            {t("unresolvedViewList", { count: threads.length })}
+          </Button>
+        </div>
+      ) : null}
 
       <SidePanel open={open} onOpenChange={onOpenChange}>
         <SidePanelContent
@@ -188,34 +210,31 @@ export function PrUnresolvedConversations({
                       {t("launchNumoUnresolved")}
                     </DropdownMenuItem>
                   ) : null}
+                  {canResolve ? (
+                    <DropdownMenuItem
+                      data-testid="pr-fix-all-resolve"
+                      onSelect={() => setConfirmResolveAll(true)}
+                    >
+                      <CheckCheck />
+                      {t("resolveAll")}
+                    </DropdownMenuItem>
+                  ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </SidePanelHeader>
 
           <SidePanelBody className="min-h-0 bg-background px-4 py-4">
-            <PrActivityTimeline>
-              {threads.map((thread) => (
-                <PrActivityItem
-                  key={thread.id}
-                  marker={
-                    <ForgeUserAvatar
-                      user={thread.root.user}
-                      className="size-8 ring-2 ring-background"
-                    />
-                  }
-                >
-                  <div data-testid="pr-unresolved-conversation">
-                    <ReviewConversationCard
-                      thread={thread}
-                      replies={replies}
-                      resolution={canResolve ? resolution : undefined}
-                      readOnly={!canComment}
-                    />
-                  </div>
-                </PrActivityItem>
-              ))}
-            </PrActivityTimeline>
+            {/* The same conversation stack as the Activity tab, without the
+                rail: each card stands alone, its own file header locates it. */}
+            <ReviewConversationStack
+              listTestId="pr-unresolved-conversations-list"
+              itemTestId="pr-unresolved-conversation"
+              threads={threads}
+              replies={replies}
+              resolution={canResolve ? resolution : undefined}
+              readOnly={!canComment}
+            />
           </SidePanelBody>
         </SidePanelContent>
       </SidePanel>
@@ -246,6 +265,36 @@ export function PrUnresolvedConversations({
             >
               {resolvingOutdated ? <Spinner /> : <CheckCheck />}
               {t("resolveOutdatedConfirm", { count: outdated.length })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={confirmResolveAll}
+        onOpenChange={(next) => !resolvingAll && setConfirmResolveAll(next)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("resolveAllDialogTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("resolveAllDialogDescription", { count: threads.length })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={resolvingAll}
+              onClick={() => setConfirmResolveAll(false)}
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              data-testid="pr-resolve-all-confirm"
+              disabled={resolvingAll}
+              onClick={() => void resolveAll()}
+            >
+              {resolvingAll ? <Spinner /> : <CheckCheck />}
+              {t("resolveAllConfirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

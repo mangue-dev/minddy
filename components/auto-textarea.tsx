@@ -23,7 +23,7 @@ export function AutoTextarea({
       }}
       value={value}
       rows={1}
-      className={cn("resize-none", className)}
+      className={cn("resize-none [field-sizing:content]", className)}
       {...props}
     />
   );

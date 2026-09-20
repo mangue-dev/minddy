@@ -8,13 +8,13 @@ import { Button, ConfirmDeleteDialog, toast } from "mangue-ui";
 import {
   GitBranch,
   Import as ImportIcon,
+  ListOrdered,
   MessagesSquare,
   Plug,
   Repeat,
   Settings2,
   Tags,
   Users,
-  WandSparkles,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -29,6 +29,7 @@ import { ProjectGitSection } from "@/components/settings/project-git-section";
 import { ProjectImportSection } from "@/components/settings/project-import-section";
 import { ProjectRecurrencesSection } from "@/components/settings/project-recurrences-section";
 import { SmartAssignSection } from "@/components/settings/smart-assign-section";
+import { SmartTriageSection } from "@/components/settings/smart-triage-section";
 import { SettingsGroup } from "@/components/settings/settings-ui";
 import {
   PROJECT_SETTINGS_DEFAULT_TAB,
@@ -38,6 +39,7 @@ import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { SettingsShell, type SettingsTab } from "@/components/settings-shell";
 import { SettingsPageSkeleton } from "@/components/route-skeletons";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
+import { SmartAssignIcon } from "@/components/smart-icons";
 
 export default function ProjectSettingsPage() {
   const t = useTranslations("Settings");
@@ -149,11 +151,17 @@ export default function ProjectSettingsPage() {
     {
       value: "smart-assign",
       label: t("smartAssignTab"),
-      icon: WandSparkles,
+      icon: SmartAssignIcon,
       indicator: smartAssignIncomplete
         ? t("smartAssignIncompleteTab")
         : undefined,
       content: <SmartAssignSection project={project} isOwner={isOwner} />,
+    },
+    {
+      value: "smart-triage",
+      label: t("smartTriageTab"),
+      icon: ListOrdered,
+      content: <SmartTriageSection project={project} isOwner={isOwner} />,
     },
     {
       value: "feedback",

@@ -103,7 +103,7 @@ export function ProjectCard({ project }: { project: Project }) {
           open();
         }
       }}
-      className="group flex h-full min-h-[160px] cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-4 text-card-foreground outline-none transition-shadow hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] focus-visible:ring-2 focus-visible:ring-ring/50"
+      className="group flex h-full min-h-[160px] flex-col gap-3 rounded-xl border border-border bg-card p-4 text-card-foreground outline-none transition-shadow hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] focus-visible:ring-2 focus-visible:ring-ring/50"
     >
       {/* Top row: orb + name + more-options menu */}
       <div className="flex items-start justify-between gap-2">
@@ -215,7 +215,7 @@ export function NewProjectCard({
         "flex h-full min-h-[160px] w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border outline-none transition-colors",
         disabled
           ? "opacity-50"
-          : "cursor-pointer hover:border-foreground/25 hover:bg-muted/30 focus-visible:border-foreground/25 focus-visible:bg-muted/30"
+          : "hover:border-foreground/25 hover:bg-muted/30 focus-visible:border-foreground/25 focus-visible:bg-muted/30"
       )}
     >
       <div className="flex size-9 items-center justify-center rounded-xl bg-muted text-muted-foreground">

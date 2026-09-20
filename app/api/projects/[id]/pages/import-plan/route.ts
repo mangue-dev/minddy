@@ -60,7 +60,7 @@ export async function POST(
     if (!incoming.ok)
       return NextResponse.json({ types: null }, { status: 413 });
     const input = inputSchema.parse(JSON.parse(incoming.body));
-    if (!(await hasUsageBudget(auth.user.id, "automations")))
+    if (!(await hasUsageBudget(auth.user.id, "automations", "import_map_model")))
       return NextResponse.json({ types: null });
     const config = await getAppConfigValues([
       ...modelConfigKeys(IMPORT_MAP_MODEL_KEY),

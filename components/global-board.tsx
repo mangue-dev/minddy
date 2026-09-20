@@ -1,7 +1,9 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
+import { useQuery } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button, Skeleton, toast } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
@@ -14,18 +16,27 @@ import { useBoardViews } from "@/lib/use-board-views";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { useAppTabLocalState } from "@/lib/app-tab-local-state";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
-import { useOptionalAppTabs } from "@/lib/app-tabs-context";
+import { useGeneratingViews } from "@/lib/use-generating-views";
+import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { buildViewHref } from "@/lib/saved-view-href";
+import { boardViewTabHref } from "@/lib/board-view-tab";
 import { filterIssues, visibleStatuses } from "@/lib/view-filter";
-import { STATUSES } from "@/lib/issue-constants";
+import { STATUSES, type IssueStatus } from "@/lib/issue-constants";
+import { trackEvent } from "@/lib/analytics";
+import { smartTriageApi } from "@/lib/issues-api";
 import {
+} from "@/lib/optimistic/issue-writes";
+import {
+  cycleBlockingRelations,
   cycleCompletionPercent,
   cycleFilledPoints,
   recoComparator,
 } from "@/lib/cycle";
+import type { ObjectiveStatus } from "@/lib/objective-constants";
+import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import {
   useAssistantContext,
-  useAssistantPanel,
+  useAssistantPanelActions,
 } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { EmptyScene } from "@/components/empty-scene";
@@ -89,10 +100,9 @@ function GlobalBoardInner() {
   const myUserId = user?.id ?? null;
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const { openCreateIssue } = useCreate();
-  const { open: openAssistant, openIntent } = useAssistantPanel();
+  const { open: openAssistant, openIntent } = useAssistantPanelActions();
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const { pathname, searchParams } = useAppTabRoute();
   const rawViewParam = searchParams.get("view");
   // "cycle" is OUR one-shot instruction (the project boards' ↗ tab lands
   // here with it) — never let useBoardViews consume it, or the remembered
@@ -130,7 +140,7 @@ function GlobalBoardInner() {
 
   // Cycle mode (MIN-32) — a MODE of this board, not a saved view. Restored
   // from its own localStorage slot after mount (SSR renders view mode).
-  const appTabs = useOptionalAppTabs();
+  const appTabs = useOptionalAppTabSession();
   const [cycleMode, setCycleMode] = useAppTabLocalState("global-cycle-mode", false);
   // null = the current cycle; a past/upcoming id when browsing the selector.
   const [selectedCycleId, setSelectedCycleId] = useAppTabLocalState<string | null>("global-selected-cycle", null);
@@ -188,14 +198,7 @@ function GlobalBoardInner() {
   // Views Numo is currently filling in (id → the updated_at at hand-off). Same
   // mechanism as the project board: the pill spins until Numo bumps the view's
   // updated_at (realtime) or the safety timeout fires.
-  const [generatingViews, setGeneratingViews] = useState<Record<string, string>>(
-    {}
-  );
-  const genTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const generatingViewIds = useMemo(
-    () => new Set(Object.keys(generatingViews)),
-    [generatingViews]
-  );
+  const { generatingViewIds, beginGenerating } = useGeneratingViews(views, NUMO_GENERATION_TIMEOUT_MS);
 
   const handleCreateView = async (name: string, description?: string) => {
     const view = await createViewAndSelect(name);
@@ -204,17 +207,7 @@ function GlobalBoardInner() {
       // Hand the fresh GLOBAL view to Numo (global mode, projectId null): its id
       // rides along in pageContext so Numo edits this exact view; the board
       // adopts the new filters live once realtime brings the row back.
-      setGeneratingViews((prev) => ({ ...prev, [view.id]: view.updated_at }));
-      const timer = setTimeout(() => {
-        setGeneratingViews((prev) => {
-          if (!(view.id in prev)) return prev;
-          const next = { ...prev };
-          delete next[view.id];
-          return next;
-        });
-        genTimers.current.delete(view.id);
-      }, NUMO_GENERATION_TIMEOUT_MS);
-      genTimers.current.set(view.id, timer);
+      beginGenerating(view);
       openAssistant({
         projectId: null,
         prompt: tBoard("numoBuildViewPrompt", { name, description: wish }),
@@ -235,33 +228,6 @@ function GlobalBoardInner() {
         : undefined,
     });
   };
-
-  // Clear a view's spinner once Numo touched it (updated_at bumped) or it's gone.
-  useEffect(() => {
-    setGeneratingViews((prev) => {
-      const ids = Object.keys(prev);
-      if (ids.length === 0) return prev;
-      let changed = false;
-      const next = { ...prev };
-      for (const id of ids) {
-        const v = views.find((x) => x.id === id);
-        if (!v || v.updated_at !== prev[id]) {
-          delete next[id];
-          changed = true;
-          const timer = genTimers.current.get(id);
-          if (timer) clearTimeout(timer);
-          genTimers.current.delete(id);
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [views]);
-
-  // Drop any pending generation timers on unmount.
-  useEffect(() => {
-    const timers = genTimers.current;
-    return () => timers.forEach((timer) => clearTimeout(timer));
-  }, []);
 
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
   useAppTabChange(() => setOpenIssueId(null));
@@ -340,7 +306,7 @@ function GlobalBoardInner() {
     () => filterIssues(scopedIssues, config, { myUserId }),
     [scopedIssues, config, myUserId]
   );
-  const statuses = visibleStatuses(config);
+  const statuses = useMemo(() => visibleStatuses(config), [config]);
 
   // ── Cycle mode derivations ──────────────────────────────────────────────
   const cyclesEnabled = cycles?.enabled === true;
@@ -374,11 +340,29 @@ function GlobalBoardInner() {
     );
   }, [cycles?.current?.id, issues]);
   // Reco ordering: blockers may live outside the cycle, so the status map
-  // covers the whole board.
+  // covers the whole board. Relations can also block through an OBJECTIVE
+  // (MIN-513): objective-ended edges are folded down onto their issues before
+  // scoring, and an objective blocker's open/closed state rides its mapped
+  // issue status.
   const cycleComparator = useMemo(() => {
     const statusById = new Map(scopedIssues.map((i) => [i.id, i.status]));
-    return recoComparator(relations, statusById);
-  }, [scopedIssues, relations]);
+    const issuesByObjective = new Map<string, string[]>();
+    for (const i of scopedIssues) {
+      if (!i.objective_id) continue;
+      const list = issuesByObjective.get(i.objective_id);
+      if (list) list.push(i.id);
+      else issuesByObjective.set(i.objective_id, [i.id]);
+    }
+    const objectiveStatusById = new Map<string, ObjectiveStatus>();
+    for (const o of allObjectives) objectiveStatusById.set(o.id, o.status);
+    const { relations: expanded, objectiveStatuses } = cycleBlockingRelations(
+      relations,
+      issuesByObjective,
+      objectiveStatusById
+    );
+    for (const [id, status] of objectiveStatuses) statusById.set(id, status);
+    return recoComparator(expanded, statusById);
+  }, [scopedIssues, relations, allObjectives]);
   const cycleLabel = selectedCycle ? formatCycleRange(format, selectedCycle) : null;
   // Every issue of the cycle closed → the "completed" banner offers a refill.
   const cycleFullyCompleted =
@@ -430,11 +414,96 @@ function GlobalBoardInner() {
     return map;
   }, [scopedIssues]);
 
+  // ── Smart sort scoring (MIN-566, MIN-576) ───────────────────────────────
+  // The AI urgency scores ride the view sort: every project whose triage
+  // mode is the AI one (and that has tickets here) is scored automatically
+  // when the board reads its "smart" order — nothing written (the manual
+  // drag order stays untouched), a short cache bounds the cost, and a
+  // failed or unauthorized pass leaves that project's tickets on the rules
+  // order. Rules-mode projects score nothing: the client-side comparator
+  // already covers them for free. Cycle mode is excluded: the cycle view
+  // carries its own comparator, and a visit must not bill scoring passes
+  // it never reads.
+  // Only the projects the VIEW actually shows: a filtered view must not
+  // bill scoring passes for work it does not display (MIN-576 review).
+  const jevProjectIds = useMemo(
+    () =>
+      projects
+        .filter((p) => p.smart_triage_mode === "jev" && filtered.some((i) => i.project_id === p.id))
+        .map((p) => p.id),
+    [projects, filtered]
+  );
+  // The scoring INPUTS age the scores: a fingerprint over the displayed
+  // rows rides the refetch decision below — NOT the query key (a new key
+  // would bill a pass on every keystroke).
+  const scoringFingerprint = useMemo(() => {
+    let latest = "";
+    for (const issue of filtered) {
+      if (issue.updated_at > latest) latest = issue.updated_at;
+    }
+    return `${filtered.length}:${latest}`;
+  }, [filtered]);
+  const fetchedFingerprintRef = useRef<string | null>(null);
+  const lastFetchAtRef = useRef(0);
+  const smartScoresQuery = useQuery({
+    queryKey: ["smart-triage-scores", "global", jevProjectIds],
+    queryFn: async () => {
+      const results = await Promise.allSettled(
+        jevProjectIds.map((id) => smartTriageApi(id, { persist: false }))
+      );
+      fetchedFingerprintRef.current = scoringFingerprint;
+      lastFetchAtRef.current = Date.now();
+      const merged: Record<string, number> = {};
+      results.forEach((result) => {
+        if (result.status === "rejected") return; // silent rules fallback
+        const { mode, scored, columns, scores } = result.value;
+        trackEvent("smart_triage_ran", {
+          mode,
+          scored,
+          columns,
+          issues: Object.keys(scores ?? {}).length,
+          scope: "global",
+        });
+        for (const [issueId, score] of Object.entries(scores ?? {})) {
+          merged[issueId] = score;
+        }
+      });
+      return merged;
+    },
+    enabled: !cycleMode && config.sort === "smart" && jevProjectIds.length > 0,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+  // A changed fingerprint refetches the scores — throttled to one pass a
+  // minute; a mounted board never keeps scores that predate its tickets.
+  useEffect(() => {
+    if (cycleMode || config.sort !== "smart" || jevProjectIds.length === 0) return;
+    if (fetchedFingerprintRef.current === scoringFingerprint) return;
+    if (Date.now() - lastFetchAtRef.current < 60_000) return;
+    if (smartScoresQuery.isFetching) return;
+    void smartScoresQuery.refetch();
+  }, [scoringFingerprint, cycleMode, config.sort, jevProjectIds.length, smartScoresQuery]);
+  const smartScores = useMemo(() => {
+    if (!smartScoresQuery.data) return null;
+    // An EMPTY merge (every pass rejected) means nothing was ranked: null
+    // keeps the whole board on the rules ranking instead of a score map
+    // that would read every ticket as neutral.
+    if (Object.keys(smartScoresQuery.data).length === 0) return null;
+    return new Map(Object.entries(smartScoresQuery.data));
+  }, [smartScoresQuery.data]);
+
   // Relations (MIN-25) from any card of this board — the write goes through
   // the card's own project route (relations are same-project by construction).
   const handleAddRelation = useCallback(
-    (sourceId: string, type: IssueRelationType, targetId: string, projectId: string) =>
-      void addRelation(projectId, sourceId, type, targetId).catch((err) =>
+    (
+      sourceId: string,
+      type: IssueRelationType,
+      targetId: string,
+      projectId: string,
+      kinds?: RelationKinds
+    ) =>
+      void addRelation(projectId, sourceId, type, targetId, kinds).catch((err) =>
         toast.error((err as Error).message)
       ),
     [addRelation]
@@ -446,17 +515,9 @@ function GlobalBoardInner() {
   const openPid = openIssue?.project_id ?? "";
   const openProject = openIssue ? projectMap.get(openPid) : undefined;
 
-  if (loading || viewsLoading || projectsLoading) {
-    return (
-      <BoardLoadingSkeleton
-        position={boardScrollPosition}
-        specialView={cycleMode}
-        showCreateIssue={!cycleMode}
-      />
-    );
-  }
-
-  const boardHandlers = {
+  // Panel state is local to this component. Keep board actions stable so opening
+  // or closing a panel does not replay every card and its inline controls.
+  const boardHandlers = useMemo(() => ({
     onOpenIssue: (issue: Issue) => {
       setOpenIssueId(issue.id);
       setOpenIssueTab("description");
@@ -485,9 +546,22 @@ function GlobalBoardInner() {
       }),
     }),
     onMove: moveIssue,
-    allIssues: scopedIssues,
-    relations,
-  };
+  }), [updateIssue, setCategories, deleteIssue, openIntent, projectMap, moveIssue]);
+  const handleCreateIssue = useCallback(
+    (status: IssueStatus) => openCreateIssue({ status }),
+    [openCreateIssue],
+  );
+
+  if (loading || viewsLoading || projectsLoading) {
+    return (
+      <BoardLoadingSkeleton
+        position={boardScrollPosition}
+        specialView={cycleMode}
+        showCreateIssue={!cycleMode}
+      />
+    );
+  }
+
 
   /**
    * Nothing to show ANYWHERE — not “nothing in this view.” No project, or
@@ -504,6 +578,9 @@ function GlobalBoardInner() {
       {!nothingAnywhere && (
         <BoardToolbar
           tabOrderScope="global"
+          viewHref={(view) =>
+            boardViewTabHref(pathname, searchParams, view ?? "cycle")
+          }
           views={views}
           activeViewId={cycleMode ? null : activeViewId}
           generatingViewIds={generatingViewIds}
@@ -593,6 +670,8 @@ function GlobalBoardInner() {
                 memberMapByProject={memberMapByProject}
                 categoryMapByProject={categoryMapByProject}
                 objectiveMapByProject={objectiveMapByProject}
+                allIssues={scopedIssues}
+                relations={relations}
                 {...boardHandlers}
                 horizontalScroll={boardScrollPosition}
               />
@@ -640,6 +719,8 @@ function GlobalBoardInner() {
             issues={filtered}
             statuses={statuses}
             sort={config.sort}
+            // The Smart sort's AI scores (jev-mode projects, MIN-576).
+            smartScores={smartScores}
             projectMap={projectMap}
             memberMapByProject={memberMapByProject}
             categoryMapByProject={categoryMapByProject}
@@ -647,8 +728,10 @@ function GlobalBoardInner() {
             buildMenuActions={buildCycleMenuActions}
             currentCycleId={cycles?.enabled ? (cycles.current?.id ?? null) : null}
             onSetCycle={onSetIssueCycle}
-            onCreateIssue={(status) => openCreateIssue({ status })}
+            onCreateIssue={handleCreateIssue}
             onAddRelation={handleAddRelation}
+            allIssues={scopedIssues}
+            relations={relations}
             {...boardHandlers}
             horizontalScroll={boardScrollPosition}
           />
@@ -679,8 +762,8 @@ function GlobalBoardInner() {
           setOpenIssueId(id);
           setOpenIssueTab("description");
         }}
-        onAddRelation={(sourceId, type, targetId) =>
-          handleAddRelation(sourceId, type, targetId, openPid)
+        onAddRelation={(sourceId, type, targetId, kinds) =>
+          handleAddRelation(sourceId, type, targetId, openPid, kinds)
         }
         onRemoveRelation={(relationId) =>
           void removeRelation(openPid, relationId).catch((err) =>
@@ -707,7 +790,7 @@ export function GlobalBoard() {
         </div>
       }
     >
-      <GlobalBoardInner />
+      <AppTabRouteBoundary><GlobalBoardInner /></AppTabRouteBoundary>
     </Suspense>
   );
 }

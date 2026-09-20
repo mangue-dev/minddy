@@ -4,6 +4,7 @@ import {
   authorizePrRequest,
   createPrCommentResponse,
   prCommentsResponse,
+  updatePrCommentResponse,
 } from "@/lib/server/agent/pr-actions";
 
 /**
@@ -11,7 +12,8 @@ import {
  * through a fresh token.
  * GET → PR comments.
  * POST → { body } add a comment (author = the GitHub App minddy, or the
- * GitLab account connected).
+ * GitLab account connected); { commentId, body } edit an existing comment
+ * under the connected account, snapshotting its previous body first (MIN-548).
  */
 
 type RouteContext = { params: Promise<{ prId: string }> };
@@ -28,9 +30,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { prId } = await params;
 
-  let payload: { body?: string };
+  let payload: { body?: string; commentId?: number };
   try {
-    payload = (await request.json()) as { body?: string };
+    payload = (await request.json()) as { body?: string; commentId?: number };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -40,5 +42,20 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   const auth = await authorizePrRequest(request, prId);
   if (!auth.ok) return auth.response;
+
+  if (payload?.commentId != null) {
+    if (
+      typeof payload.commentId !== "number" ||
+      !Number.isSafeInteger(payload.commentId) ||
+      payload.commentId < 1
+    ) {
+      return NextResponse.json({ error: "Invalid commentId" }, { status: 400 });
+    }
+    return updatePrCommentResponse(auth.scope, {
+      commentId: payload.commentId,
+      body,
+    });
+  }
+
   return createPrCommentResponse(auth.scope, body, auth.userId, auth.supabase);
 }

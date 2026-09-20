@@ -25,7 +25,7 @@
   background: var(--cp-bg);
   border: 1px solid var(--cp-border);
   font: inherit;
-  cursor: pointer;
+  cursor: default;
   z-index: 5;
 }
 

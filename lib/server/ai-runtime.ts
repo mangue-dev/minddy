@@ -31,13 +31,17 @@ import {
 import { fetchOpenRouterWithSuffixFallback } from "@/lib/server/model-config";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { fetchAiProvider } from "@/lib/server/ai-provider-request";
+import { providerSupportsModelKey } from "@/lib/model-catalog-capability";
+import { modelCatalogCapabilityForKey } from "@/lib/model-catalog-capability";
 
 export type AiKeyMode = "platform" | "byok";
 
 /** No platform fallback outside AI service explicitly operated by minddy. */
 export class ManagedAiUnavailableError extends Error {
   constructor() {
-    super("Managed AI is not configured. Configure BYOK or enable MINDDY_MANAGED_AI.");
+    super(
+      "Managed AI is not configured. Configure BYOK or enable MINDDY_MANAGED_AI.",
+    );
     this.name = "ManagedAiUnavailableError";
   }
 }
@@ -61,6 +65,7 @@ async function providerDefaultModel(
   provider: AgentProviderId,
   modelKey: ByokModelKey,
 ): Promise<string | null> {
+  if (!providerSupportsModelKey(provider, modelKey)) return null;
   const featureKey = byokFeatureDefaultModelKey(provider, modelKey);
   const values = await getAppConfigValues([featureKey]);
   const configured = values[featureKey]?.trim();
@@ -68,10 +73,6 @@ async function providerDefaultModel(
 
   const registryFallback = aiModelFallback(featureKey).trim();
   if (registryFallback) return registryFallback;
-  // No equivalent native endpoint at Anthropic; without explicit admin choice,
-  // these calls stay on Minddy instead of sending an obviously false model.
-  if (modelKey === "transcription_model" && provider !== "openai") return null;
-  if (modelKey === "feedback_embedding_model" && provider === "anthropic") return null;
   if (provider === "generic") return null;
   if (modelKey === "feedback_embedding_model" && provider === "google") {
     return "gemini-embedding-001";
@@ -106,11 +107,15 @@ export async function resolveAiRuntime(params: {
   const surface = params.surface ?? surfaceForModelKey(params.modelKey);
   const modelOverride = params.modelOverride?.trim() || null;
   const [byok, rootModel] = await Promise.all([
-    getUserByok(params.userId, surface),
+    getUserByok(
+      params.userId,
+      surface,
+      modelCatalogCapabilityForKey(params.modelKey),
+    ),
     platformModel(params.modelKey),
   ]);
 
-  if (byok) {
+  if (byok && providerSupportsModelKey(byok.provider, params.modelKey)) {
     if (isLocalAgentProvider(byok.provider)) {
       throw new LocalEndpointRequiresLocalRunError();
     }
@@ -130,8 +135,9 @@ export async function resolveAiRuntime(params: {
         provider: byok.provider,
         baseUrl: byok.baseUrl,
         model,
-        requestProfile:
-          getAgentProvider(byok.provider)?.requestProfile ?? { outputTokenField: "max_tokens" },
+        requestProfile: getAgentProvider(byok.provider)?.requestProfile ?? {
+          outputTokenField: "max_tokens",
+        },
       };
     }
   }
@@ -147,15 +153,34 @@ export async function resolveAiRuntime(params: {
     provider: DEFAULT_AGENT_PROVIDER,
     baseUrl,
     model: modelOverride || rootModel || aiModelFallback(params.modelKey),
-    requestProfile:
-      getAgentProvider(DEFAULT_AGENT_PROVIDER)?.requestProfile ?? {
-        outputTokenField: "max_completion_tokens",
-      },
+    requestProfile: getAgentProvider(DEFAULT_AGENT_PROVIDER)
+      ?.requestProfile ?? {
+      outputTokenField: "max_completion_tokens",
+    },
   };
 }
 
-export async function usesByokForSurface(userId: string, surface: AiSurface): Promise<boolean> {
-  return (await getUserByok(userId, surface)) !== null;
+export async function usesByokForSurface(
+  userId: string,
+  surface: AiSurface,
+  modelKeys?: ByokModelKey | readonly ByokModelKey[],
+): Promise<boolean> {
+  const required = modelKeys
+    ? Array.isArray(modelKeys)
+      ? modelKeys
+      : [modelKeys]
+    : [];
+  if (required.length === 0)
+    return (await getUserByok(userId, surface, "text")) !== null;
+  const credentials = await Promise.all(
+    required.map((modelKey) =>
+      getUserByok(userId, surface, modelCatalogCapabilityForKey(modelKey)),
+    ),
+  );
+  return credentials.every(
+    (byok, index) =>
+      !!byok && providerSupportsModelKey(byok.provider, required[index]!),
+  );
 }
 
 async function retryRejectedChatRequest(
@@ -224,7 +249,12 @@ export async function fetchAiChat(
   const firstRequest = request(model);
   const firstResponse = await http(endpoint, firstRequest);
   return {
-    response: await retryRejectedChatRequest(endpoint, firstResponse, firstRequest, http),
+    response: await retryRejectedChatRequest(
+      endpoint,
+      firstResponse,
+      firstRequest,
+      http,
+    ),
     model,
   };
 }

@@ -21,6 +21,7 @@ import type {
   ReviewSubmission,
   ReviewThreadState,
   ReviewVerdict,
+  DeploymentOutcome,
 } from "./pr";
 import type { PrTimelineEvent } from "@/lib/pr-timeline";
 import type { ChecksSummary } from "./checks-core";
@@ -74,13 +75,20 @@ export type MergeMethod = "merge" | "squash" | "rebase";
  * | Numo review comments (pr-tools.ts) | agent | run token |
  * | `mergePullRequest`, `closePullRequest`, `markReadyForReview` | human | `actorCall` |
  * | `submitReview` (the person's verdict) | human | `actorCall` |
- * | `createPullRequestComment`, `createPullRequestReviewComment`, `replyToPullRequestReviewComment` from UI PR | human | `actorCall` |
- * | `setReviewThreadResolved` | human | `actorCall` |
+ * | `createPullRequestComment`, `updatePullRequestComment`, `createPullRequestReviewComment`, `replyToPullRequestReviewComment` from UI PR | human | `actorCall` |
+ * | `setReviewThreadResolved` | human or agent | `actorCall` from the PR page; installation token from Numo and the code agent |
  * | `setReviewCommentReaction`, `setConversationReaction` | human | `actorCall` + `login` |
  *
  * The three comment methods serve BOTH identities: it is the gesture
  * that decides, not the method. Numo rereads under the bot; the same method, called
  * from the PR panel, starts from the person's account.
+ *
+ * `setReviewThreadResolved` is two-faced the same way: resolving from the
+ * PR page is the human's gesture and carries their name, while Numo and the
+ * code agent close a conversation they addressed themselves under minddy's
+ * account (`pull-request-writes.ts`, `project-pr-tools.ts`) — a reader must
+ * be able to tell a machine's closure from a person's, exactly as for
+ * comments. The forge does not care: it writes under the token it is given.
  *
  * READS all remain on the installation token: any member
  * of the minddy project must see the PR without a connected git account. The only exception
@@ -239,6 +247,13 @@ export interface Forge {
     number: number;
     title: string;
   }): Promise<PullRequestRef>;
+  /** Rewrite the PR description (the body of the thread card). */
+  updatePullRequestBody(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    body: string;
+  }): Promise<PullRequestRef>;
   enablePullRequestMergeFlow(opts: {
     token: string;
     repoFullName: string;
@@ -247,6 +262,14 @@ export interface Forge {
     method?: MergeMethod;
     queue: boolean;
     headSha?: string;
+  }): Promise<void>;
+  /** Withdraw the auto-merge (or the merge queue entry) of the PR. */
+  disablePullRequestMergeFlow(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    nodeId?: string;
+    queue: boolean;
   }): Promise<void>;
   /**
  * Submits a formal review. `published: "comment"` in return = the forge has
@@ -345,18 +368,34 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<PrTimelineEvent[]>;
-  /** Public URL of the latest successful deployment of the PR branch, then its head. */
-  getLatestSuccessfulDeploymentUrl(opts: {
+  /** Deployment lifecycle of the PR head: settled (with its URL and
+      duration), still running, or nothing usable to show. */
+  getPullRequestDeployment(opts: {
     token: string;
     repoFullName: string;
     number: number;
     branch?: string;
     sha: string;
-  }): Promise<string | null>;
+  }): Promise<DeploymentOutcome>;
   createPullRequestComment(opts: {
     token: string;
     repoFullName: string;
     number: number;
+    body: string;
+  }): Promise<PullRequestComment>;
+  /**
+   * Rewrites the body of a conversation comment. HUMAN gesture (see the
+   * identity table below): it starts from the person's git account, like the
+   * create. GitHub ignores `number` (the comment is addressed by its own id),
+   * GitLab requires the MR iid — same arrangement as `createPullRequestComment`.
+   * Returns the updated comment; its `updated_at`, when the forge carries one,
+   * powers the "(edited)" marker.
+   */
+  updatePullRequestComment(opts: {
+    token: string;
+    repoFullName: string;
+    number: number;
+    commentId: number;
     body: string;
   }): Promise<PullRequestComment>;
   /**
@@ -526,7 +565,9 @@ const githubForge: Forge = {
   mergePullRequest: github.mergePullRequest,
   updatePullRequestBranch: github.updatePullRequestBranch,
   rerunPullRequestCheck: github.rerunPullRequestCheck,
+  updatePullRequestBody: github.updatePullRequestBody,
   updatePullRequestTitle: github.updatePullRequestTitle,
+  disablePullRequestMergeFlow: github.disablePullRequestMergeFlow,
   enablePullRequestMergeFlow: github.enablePullRequestMergeFlow,
   submitReview: github.submitPullRequestReview,
   listReviews: github.listPullRequestReviews,
@@ -551,8 +592,9 @@ const githubForge: Forge = {
   reopenPullRequest: github.reopenPullRequest,
   listPullRequestComments: github.listPullRequestComments,
   listTimeline: github.listPullRequestTimeline,
-  getLatestSuccessfulDeploymentUrl: github.getLatestSuccessfulDeploymentUrl,
+  getPullRequestDeployment: github.getPullRequestDeployment,
   createPullRequestComment: github.createPullRequestComment,
+  updatePullRequestComment: github.updatePullRequestComment,
   listImageAssets: github.listPullRequestImageAssets,
   listPullRequestReviewComments: github.listPullRequestReviewComments,
   // GitHub requires `commit_id` = the HEAD of the PR, read on the spot with each sending
@@ -618,7 +660,9 @@ const gitlabForge: Forge = {
   mergePullRequest: gitlab.mergeMergeRequest,
   updatePullRequestBranch: gitlab.rebaseMergeRequest,
   rerunPullRequestCheck: gitlab.rerunMergeRequestCheck,
+  updatePullRequestBody: gitlab.updateMergeRequestBody,
   updatePullRequestTitle: gitlab.updateMergeRequestTitle,
+  disablePullRequestMergeFlow: gitlab.disableMergeRequestAutoMerge,
   enablePullRequestMergeFlow: gitlab.enableMergeRequestAutoMerge,
   submitReview: gitlab.submitMergeRequestReview,
   listReviews: gitlab.listMergeRequestApprovals,
@@ -630,8 +674,9 @@ const gitlabForge: Forge = {
   reopenPullRequest: gitlab.reopenMergeRequest,
   listPullRequestComments: gitlab.listMergeRequestNotes,
   listTimeline: gitlab.listMergeRequestTimeline,
-  getLatestSuccessfulDeploymentUrl: gitlab.getLatestSuccessfulDeploymentUrl,
+  getPullRequestDeployment: gitlab.getPullRequestDeployment,
   createPullRequestComment: gitlab.createMergeRequestNote,
+  updatePullRequestComment: gitlab.updateMergeRequestNote,
   // See the `listImageAssets` doc: the GitLab image mechanism is a
   // path relative to the project, not a signed asset. Nothing measured, therefore nothing
   // invented — the MR returns as before.

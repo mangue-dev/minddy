@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   AlertDialog,
@@ -32,9 +31,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
-import { fetchConversations, deleteConversation, setActiveConversation, updateConversation } from "@/lib/assistant-api";
+import { fetchConversations, deleteConversation, updateConversation } from "@/lib/assistant-api";
 import type { NumoConversation } from "@/lib/assistant-types";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { isNumoConversationUnread } from "@/lib/numo-conversation-unread";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 
@@ -92,8 +90,6 @@ export function ConversationList({
 }: ConversationListProps) {
   const t = useTranslations("Assistant");
   const tc = useTranslations("Common");
-  const router = useRouter();
-  const { close: closePanel } = useAssistantPanel();
   const [conversations, setConversations] = useState<ConversationWithProject[]>(
     []
   );
@@ -268,19 +264,14 @@ export function ConversationList({
         <button
           type="button"
           data-sidebar-filter-result
-          data-navigation-href={conversation.detail_href ?? `/numo?conversation=${encodeURIComponent(conversation.id)}`}
           className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm outline-none"
           onClick={() => {
             void updateConversation(conversation.id, { read: true }).catch(
               () => {},
             );
-            if (conversation.detail_href) {
-              void setActiveConversation(conversation.id);
-              closePanel();
-              router.push(conversation.detail_href);
-            } else {
-              onSelect(conversation.id, conversation.project_id);
-            }
+            // Every conversation lives in the FAB — there is no page to push
+            // to, not even for a row that carries delegated work.
+            onSelect(conversation.id, conversation.project_id);
           }}
         >
           {isPinned && <Pin aria-hidden className="size-3 shrink-0" />}
@@ -294,7 +285,7 @@ export function ConversationList({
             {conversation.title || t("newConversation")}
           </span>
           {conversation.status === "generating" && (
-            <Loader2 className="size-3 shrink-0 animate-spin text-primary group-hover:hidden group-focus-within:hidden" />
+            <Loader2 className="size-3 shrink-0 animate-spin text-primary" />
           )}
           {unread && (
             <span

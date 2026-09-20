@@ -9,7 +9,7 @@ import { DEFAULT_CONFIG } from "./view-filter";
 import type { View } from "./types";
 
 const context = vi.hoisted(() => ({ activeId: "a" as string | null, values: new Map<string, unknown>(), views: [] as View[] }));
-vi.mock("./app-tabs-context", () => ({ useOptionalAppTabs: () => ({
+vi.mock("./app-tabs-context", () => ({ useOptionalAppTabNavigation: () => ({
   activeId: context.activeId,
   session: { getLocalState: (key: string) => context.values.get(key), setLocalState: (key: string, value: unknown) => context.values.set(key, value) },
 }) }));

@@ -15,6 +15,7 @@ import {
 } from "@/components/assistant/panel-geometry";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useAssistantChatContext } from "@/lib/assistant-chat-context";
+import { updateConversation } from "@/lib/assistant-api";
 import { useProjects } from "@/lib/projects-context";
 
 type DisplayMode = PanelDisplayMode;
@@ -38,7 +39,8 @@ export function AssistantPanel() {
   // fall back to the ambient context of the page the user is on.
   const effectivePageContext = activePageContext ?? ambientContext;
   // The provider resolves the next message context and preserves the live response.
-  const { scopeProjectId, isBusy, restoring } = useAssistantChatContext();
+  const { scopeProjectId, isBusy, restoring, loadConversation } =
+    useAssistantChatContext();
   const { projects } = useProjects();
 
   // Display mode: session-local, defaults to compact. (No persisted user
@@ -92,14 +94,28 @@ export function AssistantPanel() {
       prompt,
       draft,
       projectId,
+      conversationId,
       pageContext,
       mentions,
       command,
       attachments,
       intent,
+      displayMode,
     } = pendingOptions;
     const targetProjectId =
       projectId === undefined ? scopeProjectId : projectId;
+
+    // The opener decides how the session presents itself (home sends open
+    // fullscreen). Absent = the toolbar toggle stays authoritative.
+    if (displayMode) setDisplayMode(displayMode);
+
+    if (conversationId) {
+      // Loading first marks the choice, so the panel's restore can never
+      // override it with the stale pointer it reads in flight; marking read
+      // keeps the unread dot of the history honest.
+      void loadConversation(conversationId, projectId ?? null);
+      void updateConversation(conversationId, { read: true }).catch(() => {});
+    }
 
     if (prompt) {
       // Pass the context explicitly: the state set above only reaches the shell
@@ -128,6 +144,7 @@ export function AssistantPanel() {
     isBusy,
     restoring,
     clearPendingOptions,
+    loadConversation,
   ]);
 
   return (

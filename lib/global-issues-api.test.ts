@@ -5,6 +5,7 @@ import {
   mergeIssueSnapshot,
   reconcileGlobalIssueSnapshot,
   reconcileProjectIssuesInGlobalCache,
+  shouldRefreshGlobalIssueSnapshot,
 } from "./global-issues-api";
 import type { GlobalBoardResponse, Issue } from "./types";
 
@@ -127,5 +128,31 @@ describe("Kanban cache reconciliation", () => {
     expect(client.getQueryData(["issues", "p1"])).toEqual(snapshot);
     expect(client.getQueryData(["issues", "p2"])).toEqual([]);
     expect(client.getQueryState(GLOBAL_BOARD_KEY)?.isInvalidated).toBe(true);
+  });
+});
+
+describe("shouldRefreshGlobalIssueSnapshot", () => {
+  // The snapshot re-reads every issue; on a cold start it must not duplicate
+  // the aggregate board read that is still in flight.
+  const boardQuery = (observers: number, data?: unknown) => ({
+    getObserversCount: () => observers,
+    state: { data },
+  });
+
+  it("does not fire while the board query has no data yet", () => {
+    const client = new QueryClient();
+    const pending = client.getQueryCache().build(client, { queryKey: GLOBAL_BOARD_KEY, queryFn: () => Promise.resolve(board([])) });
+    expect(shouldRefreshGlobalIssueSnapshot(pending)).toBe(false);
+    expect(shouldRefreshGlobalIssueSnapshot(boardQuery(1))).toBe(false);
+  });
+
+  it("fires for a mounted board that already carries data", () => {
+    expect(shouldRefreshGlobalIssueSnapshot(boardQuery(1, board([])))).toBe(true);
+  });
+
+  it("ignores an unmounted board and absent queries", () => {
+    expect(shouldRefreshGlobalIssueSnapshot(boardQuery(0, board([])))).toBe(false);
+    expect(shouldRefreshGlobalIssueSnapshot(null)).toBe(false);
+    expect(shouldRefreshGlobalIssueSnapshot(undefined)).toBe(false);
   });
 });

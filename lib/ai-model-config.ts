@@ -21,6 +21,7 @@ import { DEFAULT_RECOMMENDED_MODELS } from "@/lib/recommended-models";
 import { DEFAULT_REASONING_LEVEL } from "@/lib/agent-reasoning";
 import {
   modelCatalogCapabilityForKey,
+  providerSupportsModelKey,
   type ModelCatalogCapability,
 } from "@/lib/model-catalog-capability";
 
@@ -106,6 +107,12 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // cuts it everywhere at once, and the form falls back to hand entry.
   { key: "smart_fill_enabled", kind: "flag", fallback: "true", group: "automations" },
   { key: "smart_fill_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
+  // Smart Triage (lib/server/smart-triage.ts, MIN-566): the LLM scoring pass
+  // of a column reorder — ONE call per column, answering every ticket id on
+  // the 1–5 urgency scale (the Jev half rides `jev_model` above). Someone
+  // waits in front of their board: a fast model, like smart-fill's. The rules
+  // mode costs nothing; only this fallback pass reads the key.
+  { key: "smart_triage_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
   // Title of a Numo conversation (lib/server/assistant/title.ts): a call from
   // a few dozen tokens per new conversation — a small model is enough,
   // and that's exactly the kind of call where a big guy doesn't justify himself.
@@ -124,6 +131,22 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // the start of a new project then falls on import and manual entry.
   { key: "brief_enabled", kind: "flag", fallback: "true", group: "automations" },
   { key: "brief_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
+  // AI decision layer (MIN-557): Jev, the System One model that answers typed
+  // questions over a structured state, reached through OpenRouter's decisions
+  // endpoint (see docs/plans/min-561-jev-prerequisites.md for the verified
+  // access path). The flag is an incident kill-switch, NOT a product setting —
+  // per MIN-557 there is no “fast/normal” switch in the UI; the callers fall
+  // back to their LLM pass when it is off. No suffix (MIN-263): the chat
+  // routing shortcuts mean nothing on the decisions endpoint, and a failed
+  // decision replays as a NEW call, never as a variant id.
+  { key: "jev_decisions_enabled", kind: "flag", fallback: "true", group: "automations" },
+  {
+    key: "jev_model",
+    kind: "model",
+    fallback: "typesafe/jev-1.13",
+    group: "automations",
+    noSuffix: true,
+  },
   // Web search (tool `web_search` from Numo and agents): the model that reads
   // the results of the OpenRouter plugin. The flag cuts her everywhere at once.
   { key: "web_search_enabled", kind: "flag", fallback: "true", group: "assistant" },
@@ -142,6 +165,12 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
     group: "agent",
     noSuffix: true,
   },
+  // Commit message of a merge generated with "Numo" (MIN-548): ONE call per
+  // merge prepared, on the diff of the PR + its commits, and which returns
+  // the title and the message in a single forced call. The admin model is
+  // the only lever — the gesture merges AS SOON AS the generation lands, so
+  // a clever model is not needed; a fast, cheap one is.
+  { key: "merge_message_model", kind: "model", fallback: "z-ai/glm-5.3", group: "agent" },
   // Favorites served at parent prompt for `spawn_agent` (MIN-112).
   {
     key: "agent_subagent_favorites",
@@ -160,7 +189,7 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
     fallback: JSON.stringify(DEFAULT_RECOMMENDED_MODELS),
     group: "agent",
   },
-  // Voice (dictation → ticket)
+  // Voice (speech-to-text → destination-aware cleanup and structured drafts)
   { key: "dictate_model", kind: "model", fallback: "google/gemini-3.1-flash-lite", group: "voice" },
   {
     key: "transcription_model",
@@ -198,6 +227,7 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
  */
 for (const provider of AGENT_PROVIDERS.filter((entry) => entry.id !== "openrouter")) {
   for (const modelKey of BYOK_MODEL_KEYS) {
+    if (!providerSupportsModelKey(provider.id, modelKey)) continue;
     let fallback = provider.defaultModel ?? "";
     if (modelKey === "transcription_model") {
       fallback = provider.id === "openai" ? "gpt-4o-mini-transcribe" : "";

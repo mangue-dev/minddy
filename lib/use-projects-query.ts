@@ -15,6 +15,12 @@ const PROJECTS_KEY = ["projects"] as const;
 
 export interface UseProjectsResult {
   projects: Project[];
+  /**
+   * The cache holds a list — even a stale one. A refetch that fails must not
+   * read as "no projects"; the provider uses it to keep the app running on
+   * its cached list instead of swapping it for the unavailable screen.
+   */
+  hasData: boolean;
   loading: boolean;
   error: Error | null;
   createProject: (input: CreateProjectInput) => Promise<Project>;
@@ -78,6 +84,7 @@ export function useProjectsQuery(): UseProjectsResult {
   return useMemo(
     () => ({
       projects: data ?? EMPTY,
+      hasData: data !== undefined,
       loading: enabled && isPending,
       error: error as Error | null,
       createProject,

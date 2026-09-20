@@ -53,7 +53,11 @@ export async function embedTexts(
   // Dry budget → null (like a network failure): the post lives without embedding,
   // the time pass will catch up when the budget returns.
   if (opts?.record?.projectId) {
-    if (!(await ownerHasUsageBudget(opts.record.projectId, "feedback"))) {
+    if (!(await ownerHasUsageBudget(
+      opts.record.projectId,
+      "feedback",
+      "feedback_embedding_model",
+    ))) {
       return texts.map(() => null);
     }
   }

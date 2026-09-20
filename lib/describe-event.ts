@@ -83,6 +83,9 @@ function issueRef(ctx: EventContext, tr: EventTranslators, id: string | null): s
   const i = ctx.issues.find((x) => x.id === id);
   return i ? issueIdentifier(ctx.projectKey, i.number) : tr.t("issueSome");
 }
+function relationRef(ctx: EventContext, tr: EventTranslators, id: string | null): string {
+  return ctx.objectives.find((o) => o.id === id)?.name ?? issueRef(ctx, tr, id);
+}
 /**
  * Activity key for a pull request gesture, according to the forge: GitLab says
  * "merge request!123" where GitHub says "pull request #123".
@@ -155,15 +158,13 @@ export function describeEvent(
     return t("subIssueAdded", { ref: issueRef(ctx, tr, e.to_value) });
   if (e.type === "sub_issue_removed")
     return t("subIssueRemoved", { ref: issueRef(ctx, tr, e.to_value) });
-  // Relations (MIN-25): `field` carries the perspective type (blocks /
-  // blocked_by / related), `to_value` the other issue.
   if (e.type === "relation_added")
     return t(`relationAdded_${e.field ?? "related"}`, {
-      ref: issueRef(ctx, tr, e.to_value),
+      ref: relationRef(ctx, tr, e.to_value),
     });
   if (e.type === "relation_removed")
     return t(`relationRemoved_${e.field ?? "related"}`, {
-      ref: issueRef(ctx, tr, e.to_value),
+      ref: relationRef(ctx, tr, e.to_value),
     });
   // Plan task transitions: to_value carries the task text.
   if (e.type === "agent_launched")
@@ -292,6 +293,8 @@ export function describeObjectiveEvent(
   const { t, formatDue } = tr;
   const objStatus = (v: string) => tr.tObjectiveStatus?.(v) ?? v;
   if (e.type === "created") return t("objectiveCreated");
+  if (e.type === "relation_added" || e.type === "relation_removed")
+    return describeEvent(e, ctx, tr);
 
   if (e.type === "updated") {
     switch (e.field) {

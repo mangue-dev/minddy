@@ -6,6 +6,7 @@ import { getProjectAccess, type ProjectAccess } from "@/lib/server/project-acces
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import {
   resolveIssueRef as resolveIssueRefCore,
+  resolveObjectiveRef as resolveObjectiveRefCore,
   type ResolvedIssueRef,
 } from "@/lib/server/issue-reads";
 
@@ -142,4 +143,31 @@ export async function resolveIssueRef(
     return { error: fail(resolved.code, resolved.error) };
   }
   return { issue: resolved.issue };
+}
+
+export interface ResolvedObjective {
+  id: string;
+  name: string;
+  status: string;
+  lead_user_id: string | null;
+}
+
+/**
+ * Resolves an objective reference — UUID, or "obj:<name>" for an exact name —
+ * to its id, pinned to the project (MIN-513). Same wrapper pattern as
+ * resolveIssueRef: renders the shared resolver's error into MCP codes.
+ */
+export async function resolveObjectiveRef(
+  access: ProjectAccess,
+  ref: unknown
+): Promise<{ objective: ResolvedObjective } | { error: ToolResult }> {
+  const resolved = await resolveObjectiveRefCore(
+    getServiceClient(),
+    { projectId: access.project.id },
+    ref
+  );
+  if ("error" in resolved) {
+    return { error: fail(resolved.code, resolved.error) };
+  }
+  return { objective: resolved.objective };
 }

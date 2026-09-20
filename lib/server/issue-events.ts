@@ -233,7 +233,11 @@ export async function insertEvents(
   rows: EventRow[]
 ): Promise<void> {
   if (rows.length === 0) return;
-  const { error } = await service.from("issue_events").insert(rows);
+  // Mixed batches omit attribution flags on ordinary events. PostgREST must
+  // use column defaults for those missing keys instead of inserting NULL.
+  const { error } = await service
+    .from("issue_events")
+    .insert(rows, { defaultToNull: false });
   if (error) {
     console.error("[issue-events] insert failed:", error.message);
     return;

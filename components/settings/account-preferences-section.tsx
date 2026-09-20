@@ -17,7 +17,13 @@ import {NUMO_DEFAULT_STATUS_OPTIONS, resolveNumoDefaultStatus} from "@/lib/numo-
 import type {NumoDefaultStatus} from "@/lib/numo-default-status";
 import {PROMPT_COPY_AUTO_START_META_KEY, resolvePromptCopyAutoStart} from "@/lib/prompt-copy-auto-start";
 import {AUTO_ASSIGN_ON_START_META_KEY, resolveAutoAssignOnStart} from "@/lib/auto-assign-on-start";
-import {resolveSmartFill, SMART_FILL_META_KEY} from "@/lib/smart-fill";
+import {
+  resolveSmartFill,
+  resolveSmartFillScope,
+  SMART_FILL_CREATED_META_KEY,
+  SMART_FILL_META_KEY,
+  SMART_FILL_TRIAGE_META_KEY,
+} from "@/lib/smart-fill";
 import {SEND_MODE_META_KEY, resolveSendMode} from "@/lib/keyboard/send-shortcut";
 import type {SendMode} from "@/lib/keyboard/send-shortcut";
 import {useModKey} from "@/lib/keyboard/use-mod-shortcut";
@@ -105,8 +111,16 @@ export function AccountPreferencesSection() {
   // effort, categories and objective. Enabled by default, like both
   // above — hence the passage by `resolveSmartFill` rather than a `=== true`.
   const [smartFill, setSmartFill] = useState(resolveSmartFill(user?.user_metadata));
+  const [smartFillCreated, setSmartFillCreated] = useState(
+    resolveSmartFillScope(user?.user_metadata, "created"),
+  );
+  const [smartFillTriage, setSmartFillTriage] = useState(
+    resolveSmartFillScope(user?.user_metadata, "triage"),
+  );
   useEffect(() => {
     setSmartFill(resolveSmartFill(user?.user_metadata));
+    setSmartFillCreated(resolveSmartFillScope(user?.user_metadata, "created"));
+    setSmartFillTriage(resolveSmartFillScope(user?.user_metadata, "triage"));
   }, [user]);
 
   const toggleSmartFill = async (next: boolean) => {
@@ -116,6 +130,21 @@ export function AccountPreferencesSection() {
       await updateUserMetadata({ [SMART_FILL_META_KEY]: next });
     } catch (e) {
       setSmartFill(!next);
+      toast.error((e as Error).message);
+    }
+  };
+
+  const toggleSmartFillScope = async (
+    key: typeof SMART_FILL_CREATED_META_KEY | typeof SMART_FILL_TRIAGE_META_KEY,
+    next: boolean,
+  ) => {
+    if (!user) return;
+    const setter = key === SMART_FILL_CREATED_META_KEY ? setSmartFillCreated : setSmartFillTriage;
+    setter(next);
+    try {
+      await updateUserMetadata({ [key]: next });
+    } catch (e) {
+      setter(!next);
       toast.error((e as Error).message);
     }
   };
@@ -315,6 +344,38 @@ export function AccountPreferencesSection() {
               checked={smartFill}
               onCheckedChange={(v) => void toggleSmartFill(v)}
               disabled={!user}
+            />
+          }
+        />
+
+        <SettingsRow
+          htmlFor="account-smart-fill-created"
+          label={ta("smartFillCreatedLabel")}
+          hint={ta("smartFillCreatedDesc")}
+          control={
+            <Switch
+              id="account-smart-fill-created"
+              checked={smartFillCreated}
+              onCheckedChange={(v) =>
+                void toggleSmartFillScope(SMART_FILL_CREATED_META_KEY, v)
+              }
+              disabled={!user || !smartFill}
+            />
+          }
+        />
+
+        <SettingsRow
+          htmlFor="account-smart-fill-triage"
+          label={ta("smartFillTriageLabel")}
+          hint={ta("smartFillTriageDesc")}
+          control={
+            <Switch
+              id="account-smart-fill-triage"
+              checked={smartFillTriage}
+              onCheckedChange={(v) =>
+                void toggleSmartFillScope(SMART_FILL_TRIAGE_META_KEY, v)
+              }
+              disabled={!user || !smartFill}
             />
           }
         />

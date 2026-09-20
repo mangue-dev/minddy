@@ -74,11 +74,18 @@ describe("Numo chat reasoning stream", () => {
 
     expect(result.fullContent).toBe("Done.");
     expect(result.finalReasoning).toMatchObject({ text: "Check the context." });
-    expect(events.map((event) => event.type)).toEqual([
+    expect(events.filter((event) => event.type !== "reasoning_delta").map(
+      (event) => event.type,
+    )).toEqual([
       "reasoning_start",
       "reasoning_end",
       "content_delta",
     ]);
+    // The live trace streams before content arrives, as snapshots of the
+    // accumulated text.
+    expect(events.filter((event) => event.type === "reasoning_delta").map(
+      (event) => event.data.text,
+    )).toEqual(["Check ", "Check the context."]);
     expect(events.find((event) => event.type === "reasoning_end")?.data.text).toBe(
       "Check the context.",
     );

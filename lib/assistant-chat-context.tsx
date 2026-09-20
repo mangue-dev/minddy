@@ -14,9 +14,10 @@ import {
 } from "react";
 import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "mangue-ui/components/theme-provider";
 import { useAssistantChat } from "@/lib/use-assistant-chat";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanel, type OpenAssistantOptions } from "@/lib/assistant-panel-context";
 import { resolveAssistantScope } from "@/lib/assistant-scope";
 import { hasResumableConversation } from "@/lib/assistant-resumable";
 import {
@@ -24,6 +25,7 @@ import {
   setActiveConversation,
   updateConversation,
 } from "@/lib/assistant-api";
+import { allAgentSessionsQueryKey } from "@/lib/use-agent-runs";
 import { useAuth } from "@/lib/auth-context";
 import { setLocaleCookie } from "@/lib/set-locale";
 import { isAccountTheme } from "@/lib/account-theme";
@@ -67,7 +69,7 @@ function purgeLegacyStorage(): void {
 
 /** Keep the conversation and pinned context alive across panel and route changes. */
 export function AssistantChatProvider({ children }: { children: ReactNode }) {
-  const { isOpen, pendingOptions, routeProjectId, close: closePanel } = useAssistantPanel();
+  const { pendingOptions, routeProjectId } = useAssistantPanel();
   const { refreshUser } = useAuth();
   const currentLocale = useLocale();
   const router = useRouter();
@@ -77,9 +79,18 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
   // account, and if it changed the language (a cookie, not user_metadata),
   // apply that change too.
   const { setTheme } = useTheme();
+  const queryClient = useQueryClient();
   const handleToolResult = useCallback(
     (name: string, success: boolean, result: unknown) => {
-      if (!success || name !== "update_account_settings") return;
+      if (!success) return;
+      // A delegation launched mid-turn must light the FAB border at once: the
+      // sessions list rests (no poll) and only an invalidation sees a run that
+      // just started.
+      if (name === "launch_code_agent") {
+        queryClient.invalidateQueries({ queryKey: allAgentSessionsQueryKey });
+        return;
+      }
+      if (name !== "update_account_settings") return;
       void refreshUser();
       const nextLocale = (result as { settings?: { locale?: string } })
         ?.settings?.locale;
@@ -93,7 +104,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
         ?.settings?.theme;
       if (isAccountTheme(nextTheme)) setTheme(nextTheme);
     },
-    [refreshUser, currentLocale, router, setTheme],
+    [refreshUser, currentLocale, router, setTheme, queryClient],
   );
 
   const {
@@ -174,19 +185,18 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
   const [restored, setRestored] = useState(false);
   const [restoreRequested, setRestoreRequested] = useState(false);
   const requestRestore = useCallback(() => setRestoreRequested(true), []);
-  // Read at lookup completion too: an action can arrive while restoration is pending.
-  const pendingActionRef = useRef(false);
-  pendingActionRef.current = Boolean(pendingOptions?.prompt || pendingOptions?.draft);
-  useEffect(() => {
-    if (isOpen) requestRestore();
-  }, [isOpen, requestRestore]);
   /**
- * What the server carries, as far as we know. `undefined` = we don't know
+  * What the server carries, as far as we know. `undefined` = we don't know
  * yet. It is HE who avoids the two parasitic writes of the recovery:
  * re-write the pointer that we have just read, and above all DELETE the pointer at
  * first rendering, when `conversationId` is still `null`.
  */
   const serverPointerRef = useRef<string | null | undefined>(undefined);
+  // Read at lookup completion too: a contextual opening can arrive while the
+  // pointer GET is flying. Its prompt, draft or conversation owns the next
+  // turn — loading the remembered thread first would only flash it.
+  const pendingOptionsRef = useRef<OpenAssistantOptions | null>(null);
+  pendingOptionsRef.current = pendingOptions;
 
   useEffect(() => {
     if (!restoreRequested) return;
@@ -196,21 +206,20 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     setRestoring(true);
     void (async () => {
       try {
-        const { conversationId, projectId, detailHref } = await fetchActiveConversation();
+        const { conversationId, projectId } = await fetchActiveConversation();
         serverPointerRef.current = conversationId;
         // The user was able to choose while this GET was flying — selection in
         // history, “new conversation”, immediate sending. His choice
         // wins: we never recover it. `loadConversationRaw`, otherwise the
-        // resume would declare itself as a choice.
+        // resume would declare itself as a choice. A pending prompt or draft
+        // does NOT supersede: it continues the remembered thread, so the
+        // resume loads it first and the panel dispatches once restored.
+        const pending = pendingOptionsRef.current;
         if (!cancelled && conversationId && !userPickedRef.current) {
-          if (detailHref) {
-            // Keep the durable work pointer until a new message replaces it.
+          if (pending?.conversationId) {
+            // The opening loads its own conversation: loading the remembered
+            // one too would only flash the wrong thread.
             serverPointerRef.current = null;
-            if (!pendingActionRef.current) {
-              void updateConversation(conversationId, { read: true }).catch(() => {});
-              closePanel();
-              router.push(detailHref);
-            }
           } else {
             void updateConversation(conversationId, { read: true }).catch(() => {});
             await loadConversationRaw(conversationId, projectId);
@@ -230,7 +239,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [restoreRequested, loadConversationRaw, router, closePanel]);
+  }, [restoreRequested, loadConversationRaw]);
 
   // Mirror the pointer to the server: open a conversation in writing,
   // starting a new one erases it. `restored` is in the dependencies so that

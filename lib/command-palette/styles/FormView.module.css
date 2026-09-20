@@ -63,7 +63,7 @@
   border-radius: 6px;
   background: transparent;
   color: var(--cp-muted);
-  cursor: pointer;
+  cursor: default;
   transition: background-color 150ms ease, color 150ms ease;
 }
 
@@ -182,7 +182,7 @@ textarea.input {
 }
 
 select.input {
-  cursor: pointer;
+  cursor: default;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
@@ -209,7 +209,7 @@ select.input {
   font-size: 14px;
   font-weight: 500;
   border-radius: 8px;
-  cursor: pointer;
+  cursor: default;
   transition: background-color 150ms ease, color 150ms ease;
 }
 

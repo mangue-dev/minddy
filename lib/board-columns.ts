@@ -6,17 +6,24 @@ export interface BoardColumn {
   items: Issue[];
 }
 
+/** A comparator built per column — the smart sort needs the column's own
+ * issue set (the triage rules group objectives over it), the other sorts
+ * ignore it. */
+export type ColumnComparatorFactory = (
+  columnIssues: Issue[]
+) => (a: Issue, b: Issue) => number;
+
 /** Group issues in one pass, then sort only the populated board columns. */
 export function buildBoardColumns(
   statuses: StatusMeta[],
   issues: Issue[],
-  comparator: (a: Issue, b: Issue) => number
+  makeComparator: ColumnComparatorFactory
 ): BoardColumn[] {
   const itemsByStatus = new Map(statuses.map((status) => [status.value, [] as Issue[]]));
   for (const issue of issues) itemsByStatus.get(issue.status)?.push(issue);
   return statuses.map((status) => {
     const items = itemsByStatus.get(status.value) ?? [];
-    if (items.length > 1) items.sort(comparator);
+    if (items.length > 1) items.sort(makeComparator(items));
     return { status, items };
   });
 }
@@ -34,9 +41,9 @@ export function createBoardColumnsBuilder() {
   return (
     statuses: StatusMeta[],
     issues: Issue[],
-    comparator: (a: Issue, b: Issue) => number
+    makeComparator: ColumnComparatorFactory
   ) => {
-    const next = buildBoardColumns(statuses, issues, comparator).map((column) => {
+    const next = buildBoardColumns(statuses, issues, makeComparator).map((column) => {
       const before = previous.get(column.status.value);
       return before &&
         before.status === column.status &&

@@ -352,6 +352,11 @@ function UserText({
                 }
                 icon={mention.icon}
                 color={mention.color}
+                status={
+                  mention.type === "issue"
+                    ? links?.issueStatus(mention.id) ?? mention.status
+                    : undefined
+                }
                 href={links?.href(mention.type, mention.id) ?? null}
                 onNavigate={() => links?.navigate(mention.type, mention.id)}
               />

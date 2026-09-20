@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -31,8 +32,14 @@ import type {
   Project,
   ViewSort,
 } from "@/lib/types";
-import { issueComparator } from "@/lib/view-filter";
+import { boardComparatorFactory } from "@/lib/smart-triage";
+import { cycleBlockingRelations } from "@/lib/cycle";
+import type { ObjectiveStatus } from "@/lib/objective-constants";
 import { resolveRelationsByIssue } from "@/lib/relation-constants";
+import { issueIdentifier } from "@/lib/issue-constants";
+import { promptRelations } from "@/lib/issue-prompt";
+import { useBulkSelectionActions } from "@/lib/use-bulk-selection-actions";
+import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import { createBoardColumnsBuilder } from "@/lib/board-columns";
 import {
   BOARD_MOUSE_ACTIVATION_DISTANCE,
@@ -74,7 +81,7 @@ import {
  * (cross-project) column items; the touched issue's project id rides along so
  * the write targets the right project cache. No relations/create here.
  */
-export function GlobalKanbanBoard({
+export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
   issues,
   allIssues,
   relations,
@@ -95,6 +102,7 @@ export function GlobalKanbanBoard({
   onCreateIssue,
   onAddRelation,
   comparator,
+  smartScores,
   buildMenuActions,
   currentCycleId,
   bulkCycleId,
@@ -141,10 +149,17 @@ export function GlobalKanbanBoard({
     type: IssueRelationType,
     targetId: string,
     projectId: string,
+    kinds?: RelationKinds,
   ) => void;
   /** Cycle mode (MIN-32): the reco order replaces `sort` — the ONLY order, so
       same-column reordering is disabled; cross-column drag still moves status. */
   comparator?: (a: Issue, b: Issue) => number;
+  /**
+   * Merged AI urgency scores of the board's jev-mode projects (MIN-576):
+   * when present, the "smart" sort orders by score. `null` = no AI mode
+   * armed or a pending/failed pass — the rules order stands.
+   */
+  smartScores?: Map<string, number | null> | null;
   /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
   /** My current cycle's id — cards in it show the blue cycle icon. Unset in
@@ -198,7 +213,8 @@ export function GlobalKanbanBoard({
     const resolvedByIssue = resolveRelationsByIssue(relations, statusById);
     for (const issue of issues) {
       const resolved = (resolvedByIssue.get(issue.id) ?? [])
-        .map((r) => {
+        .map((r): ChipRelation | null => {
+          if (r.otherType === "objective") return r;
           const other = allIssueMap.get(r.otherId);
           return other ? { ...r, otherNumber: other.number } : null;
         })
@@ -208,20 +224,51 @@ export function GlobalKanbanBoard({
     return map;
   }, [issues, relations, allIssueMap]);
 
-  // Cycle mode passes its own comparator; otherwise the view sort rules —
-  // and "smart" reads relations + statuses (a done blocker no longer lifts
-  // its target), resolved against ALL issues (the other end may be hidden).
-  const displayComparator = useMemo(() => {
-    if (comparator) return comparator;
+  // Cycle mode pins ONE comparator for every column (the reco order);
+  // otherwise the view sort builds its comparator per column (MIN-576).
+  // The smart sort's relations resolve against ALL issues and fold
+  // objective-ended "blocks" edges onto the objective's open tickets — the
+  // same preparation the server reorder applies (MIN-576 review).
+  const makeComparator = useMemo(() => {
+    if (comparator) return () => comparator;
     const statusById = new Map(
       Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
     );
-    return issueComparator(sort, { relations, statusById });
-  }, [comparator, sort, relations, allIssueMap]);
+    const rows = allIssues ?? issues;
+    const issuesByObjective = new Map<string, string[]>();
+    for (const issue of rows) {
+      if (!issue.objective_id) continue;
+      const list = issuesByObjective.get(issue.objective_id);
+      if (list) list.push(issue.id);
+      else issuesByObjective.set(issue.objective_id, [issue.id]);
+    }
+    const objectiveStatusById = new Map<string, ObjectiveStatus>();
+    for (const byProject of objectiveMapByProject.values()) {
+      for (const objective of byProject.values()) {
+        objectiveStatusById.set(objective.id, objective.status);
+      }
+    }
+    const { relations: folded, objectiveStatuses } = cycleBlockingRelations(
+      relations ?? [],
+      issuesByObjective,
+      objectiveStatusById,
+    );
+    for (const [id, status] of objectiveStatuses) statusById.set(id, status);
+    const known = folded.filter(
+      (r) =>
+        r.type !== "blocks" ||
+        (statusById.has(r.source_id) && statusById.has(r.target_id)),
+    );
+    return boardComparatorFactory(sort, {
+      relations: known,
+      statusById,
+      jevScores: smartScores ?? undefined,
+    });
+  }, [comparator, sort, relations, allIssueMap, smartScores, allIssues, issues, objectiveMapByProject]);
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
   const columns = useMemo(
-    () => buildColumns(statuses, issues, displayComparator),
-    [buildColumns, issues, statuses, displayComparator],
+    () => buildColumns(statuses, issues, makeComparator),
+    [buildColumns, issues, statuses, makeComparator],
   );
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -293,11 +340,47 @@ export function GlobalKanbanBoard({
       clearSelection();
     };
   }, [selectedIssues, selectionProjectId, onAddRelation, clearSelection]);
+  // ⇧P/⇧A on the selection (MIN-539): ONE combined prompt for all the checked
+  // tickets. A mixed selection spans projects: the prompt resolves each
+  // issue's key in its own project, and the Numo intent stays projectless
+  // (the composer asks, like the existing bulk “Ask Numo”).
+  const bulkPromptActions = useBulkSelectionActions({
+    selectedIssues,
+    projectId: selectionProjectId,
+    identifierOf: (issue) => {
+      const key = projectMap.get(issue.project_id)?.key;
+      return key ? issueIdentifier(key, issue.number) : String(issue.number);
+    },
+    buildInput: (issue) => {
+      const objectives = objectiveMapByProject.get(issue.project_id);
+      return {
+        issue,
+        projectId: issue.project_id,
+        projectKey: projectMap.get(issue.project_id)?.key ?? "",
+        resourceCount: issue.resource_count,
+        categories: issue.category_ids
+          .map((cid) => categoryMapByProject.get(issue.project_id)?.get(cid)?.name)
+          .filter((name): name is string => !!name),
+        relations: promptRelations(relationsByIssue.get(issue.id), {
+          identifierOf: (otherId) => {
+            const other = allIssueMap.get(otherId);
+            const key = other ? projectMap.get(other.project_id)?.key : undefined;
+            return other && key ? issueIdentifier(key, other.number) : "";
+          },
+          titleOf: (otherId) =>
+            objectives?.get(otherId)?.name ?? allIssueMap.get(otherId)?.title ?? "",
+        }),
+      };
+    },
+    onUpdateIssue: (issue, patch) => onUpdateIssue(issue.id, patch, issue.project_id),
+  });
   // The dragged bundle, drop marker, and persisted move share the same
   // calculation as the project board (see lib/use-board-drop.ts).
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const drop = useBoardDrop({
+    root: scrollerRef,
     columns,
-    comparator: displayComparator,
+    makeComparator,
     manual: sort === "manual",
     issueMap,
     selectedIds,
@@ -342,10 +425,9 @@ export function GlobalKanbanBoard({
   } = useScrollFade<HTMLDivElement>("x");
 
   // The edge fade and marquee selection share one stable callback ref.
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const localHorizontalScroll = useRef(0);
   const preservedHorizontalScroll = horizontalScroll ?? localHorizontalScroll;
-  const dropAnimation = useMemo(() => createBoardDropAnimation(), []);
+  const dropAnimation = useMemo(() => createBoardDropAnimation(() => scrollerRef.current), []);
   const landingGenerationRef = useRef(0);
   const setScrollerRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -386,6 +468,7 @@ export function GlobalKanbanBoard({
     setLandingPreview(null);
     dragPreviewHtmlRef.current = captureBoardDragPreview(
       String(event.active.id),
+      scrollerRef.current,
     );
     dragBoundsRef.current = measureBoardDragBounds(scrollerRef.current);
     drop.start(event);
@@ -428,12 +511,14 @@ export function GlobalKanbanBoard({
       const destinationStatus =
         activeMove.patch.status ?? activeMove.issue.status;
       const visualTarget = measureBoardDropVisualTarget({
+        root: scrollerRef.current,
         activeId: draggedId,
         activeIds: draggingIds,
         bounds: dragBoundsRef.current,
         status: destinationStatus,
       });
       const bundleHeight = measureBoardDropBundleHeight({
+        root: scrollerRef.current,
         activeIds: draggingIds,
         status: destinationStatus,
       });
@@ -513,6 +598,8 @@ export function GlobalKanbanBoard({
               }}
               onClear={clearSelection}
               onAskNumo={() => onAskNumo(selectedIssues)}
+              onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
+              onLaunchAgent={bulkPromptActions.launchAgent}
               cycle={bulkCycle}
               objectives={bulkObjectives}
               onLink={bulkLink}
@@ -595,4 +682,4 @@ export function GlobalKanbanBoard({
       </AskNumoProvider>
     </AgentActivityProvider>
   );
-}
+});

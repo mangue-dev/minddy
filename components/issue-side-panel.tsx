@@ -1,5 +1,6 @@
 "use client";
 import { useAppTabDeparture } from "@/lib/app-tabs-context";
+import { useIssuePanelTab } from "@/lib/use-issue-panel-tab";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -68,7 +69,7 @@ import {
   isAgentRunWorking,
 } from "@/lib/agent-api";
 import type { NumoIntentAction } from "@/lib/assistant-types";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import {
   agentLaunchPromptVariant,
@@ -97,7 +98,7 @@ import { IssuePlan } from "@/components/issue-plan";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the board routes that mount
 // this panel — see markdown-editor-lazy.tsx. Warmed from idle time below.
 import {
-  MarkdownEditor,
+  DeferredMarkdownEditor,
   useIdleMarkdownEditorPreload,
 } from "@/components/markdown-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
@@ -127,6 +128,7 @@ import type {
   IssueUpdateInput,
   Member,
   Objective,
+  RelationEndpointType,
 } from "@/lib/types";
 import {
   Tooltip,
@@ -171,7 +173,11 @@ export function IssueSidePanel({
   onAddRelation: (
     sourceId: string,
     type: IssueRelationType,
-    targetId: string
+    targetId: string,
+    kinds?: {
+      sourceType?: RelationEndpointType;
+      targetType?: RelationEndpointType;
+    }
   ) => void;
   onRemoveRelation: (relationId: string) => void;
   /** Tab to show when the panel (re)opens on a new issue. */
@@ -186,13 +192,13 @@ export function IssueSidePanel({
   const tPlan = useTranslations("Plan");
   const tAgent = useTranslations("Agent");
   const { openIssue: openGlobalIssue } = useIssuePanelActions();
-  const { openIntent } = useAssistantPanel();
+  const { openIntent } = useAssistantPanelActions();
   // The panel mounts with its board: warm the editor chunk once the page has
   // painted, so opening a ticket never shows the loading fallback.
   useIdleMarkdownEditorPreload();
   const [title, setTitle] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [tab, setTab] = useState<"description" | "plan">(initialTab);
+  const [tab, setTab] = useIssuePanelTab(issue?.id ?? null, initialTab);
   // Remount the description editor when the description is rewritten under it
   // (dictation, or distant writing) — it only reads `value` during editing and
   // ne commite qu'au blur.
@@ -236,9 +242,19 @@ export function IssueSidePanel({
       i.e. would undo the edit the agent just wrote. */
   const titleEdited = useRef(false);
   const descriptionEdited = useRef(false);
+  /** Live markdown of the description editor, kept current on every edit (and
+      re-seeded on each mount/remount of the surface). Lets a close, a tab
+      switch or a window blur commit what is on screen even though the
+      editor's own blur never ran. */
+  const latestDescription = useRef("");
+  /** Raised when a description commit just went out: the container's blur —
+      which always follows the editor's in the same event — must not remount
+      the surface with the stale reflection the prop still carries. One-shot:
+      consumed by the very next container blur. */
+  const justCommitted = useRef(false);
   // Agent conversation, in modal ABOVE the panel: hot restart
   // must not cost the context of the ticket (the card has nothing to lose
-  // and navigate to /agents).
+  // and leaves its page).
   const [chatOpen, setChatOpen] = useState(false);
   // “Personalized”: the free instructions dialog, opened either to copy the
   // prompt, or to launch the agent (`null` = closed).
@@ -255,7 +271,8 @@ export function IssueSidePanel({
             createdBy: issue.created_by,
             integrationId: issue.integration_id ?? null,
           }
-        : null
+        : null,
+      issue?.project_id ?? null,
     );
 
   // Code agent of this ticket. Same derivations as maps (lib/server/
@@ -291,11 +308,6 @@ export function IssueSidePanel({
     onSetIssueCycle
   );
 
-  // Land on the tab the opener asked for (plan indicator → plan tab).
-  useEffect(() => {
-    setTab(initialTab);
-  }, [issue?.id, initialTab]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Title and description: sown when the ticket is opened, then kept up to date on
   // remote writes (see refs above).
   useEffect(() => {
@@ -308,6 +320,8 @@ export function IssueSidePanel({
       shownFor.current = issue.id;
       shownTitle.current = issue.title;
       shownDescription.current = description;
+      latestDescription.current = description;
+      justCommitted.current = false;
       titleEdited.current = false;
       descriptionEdited.current = false;
       setTitle(issue.title);
@@ -334,6 +348,7 @@ export function IssueSidePanel({
       !descriptionRef.current?.contains(document.activeElement)
     ) {
       shownDescription.current = description;
+      latestDescription.current = description;
       setEditorKey((k) => k + 1);
     }
   }, [issue?.id, issue?.title, issue?.description]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -345,18 +360,27 @@ export function IssueSidePanel({
 
   // This issue's relations, resolved to the display shape (with the other
   // issue's number) and priority-sorted. Numbers come from allIssues so a
-  // filtered-out target still resolves.
+  // filtered-out target still resolves; OBJECTIVE ends (MIN-513) carry their
+  // name instead — they have no ticket number.
   const resolvedRelations = useMemo<ChipRelation[]>(() => {
     if (!issue) return [];
     const byId = new Map(allIssues.map((i) => [i.id, i]));
+    const objectiveById = new Map(objectives.map((o) => [o.id, o]));
     const statusById = new Map(allIssues.map((i) => [i.id, i.status]));
-    return resolveRelations(issue.id, relations, statusById)
-      .map((r) => {
+    const objectiveStatusById = new Map(objectives.map((o) => [o.id, o.status]));
+    return resolveRelations(issue.id, relations, statusById, objectiveStatusById)
+      .map((r): ChipRelation | null => {
+        if (r.otherType === "objective") {
+          const objective = objectiveById.get(r.otherId);
+          return objective
+            ? { ...r, otherType: "objective" as const, otherName: objective.name }
+            : null;
+        }
         const other = byId.get(r.otherId);
         return other ? { ...r, otherNumber: other.number } : null;
       })
       .filter((r): r is ChipRelation => r !== null);
-  }, [issue?.id, relations, allIssues]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [issue?.id, relations, allIssues, objectives]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // New work enters the common Numo conversation. Historical worker sessions
   // remain available only as navigation to existing execution details.
@@ -430,11 +454,21 @@ export function IssueSidePanel({
     if (!issue) return null;
     const titleById = new Map(allIssues.map((i) => [i.id, i.title]));
     return {
-      relations: resolvedRelations.map((r) => ({
-        type: r.relation,
-        identifier: issueIdentifier(projectKey, r.otherNumber),
-        title: titleById.get(r.otherId) ?? "",
-      })),
+      relations: resolvedRelations.map((r) =>
+        r.otherType === "objective"
+          ? {
+              type: r.relation,
+              objective: true,
+              identifier: "",
+              title: r.otherName ?? "",
+            }
+          : {
+              type: r.relation,
+              objective: false,
+              identifier: issueIdentifier(projectKey, r.otherNumber ?? 0),
+              title: titleById.get(r.otherId) ?? "",
+            }
+      ),
       // Category names (IDs live on the issue, names in `categories`).
       categories: issue.category_ids
         .map((cid) => categories.find((c) => c.id === cid)?.name)
@@ -624,6 +658,7 @@ export function IssueSidePanel({
     }
     if (fields.description !== undefined) {
       shownDescription.current = fields.description.trim();
+      latestDescription.current = fields.description.trim();
       descriptionEdited.current = false;
       setEditorKey((k) => k + 1);
     }
@@ -690,8 +725,10 @@ export function IssueSidePanel({
       toast.info(t("dictationInFlight"), { id: "dictation-in-flight" });
       return false;
     }
-    // A remote close must not discard a focused field that has not blurred yet.
-    if (titleEdited.current || descriptionEdited.current) return false;
+    // A field that has not blurred yet still holds uncommitted text: flush it
+    // rather than refuse the departure — the text is the user's, committing
+    // it is what they intend (refusing used to wedge the tab switch instead).
+    commitPendingEditsRef.current();
     const saved = await Promise.all(pendingWrites.current);
     return saved.every(Boolean) && !titleEdited.current && !descriptionEdited.current;
   });
@@ -703,12 +740,20 @@ export function IssueSidePanel({
       toast.info(t("dictationInFlight"), { id: "dictation-in-flight" });
       return;
     }
+    // Closing must not discard what is on screen: Escape, ✕ and Radix's
+    // outside dismissal can all run without the editor's blur ever firing.
+    // Commit first — the flags clear, so remote adoption resumes cleanly.
+    if (!next) commitPendingEditsRef.current();
     onOpenChange(next);
   };
 
-  if (!issue) return null;
+  // ── Editable fields: write + commit ─────────────────────────────────────
+  // Defined unconditionally (before the panel's early return) so the close
+  // handler and the window-blur listener below can always reach them; every
+  // one of them no-ops without an open ticket.
 
   const patch = async (updates: IssueUpdateInput) => {
+    if (!issue) return false;
     const write = onUpdate(issue.id, updates).then(() => true, (err) => {
       // Keep failed text edits recoverable instead of accepting a tab departure.
       if (updates.title !== undefined) titleEdited.current = true;
@@ -721,12 +766,8 @@ export function IssueSidePanel({
     finally { pendingWrites.current.delete(write); }
   };
 
-  const isChild = !!issue.parent_id;
-  const parent = issue.parent_id
-    ? allIssues.find((i) => i.id === issue.parent_id) ?? null
-    : null;
-
   const commitTitle = () => {
+    if (!issue) return;
     const trimmed = title.trim();
     // The field only lost focus, without a strike. If an agent has
     // renamed the ticket in the meantime, it is HIS title that is valid: ours is not
@@ -744,13 +785,52 @@ export function IssueSidePanel({
 
   const commitDescription = (markdown: string) => {
     // Same caveat as for the title: a blur without typing does not rewrite anything.
-    if (!descriptionEdited.current) return;
+    if (!issue || !descriptionEdited.current) return;
     descriptionEdited.current = false;
     const next = markdown.trim() || null;
     if (next === (issue.description ?? null)) return;
     shownDescription.current = next ?? "";
+    justCommitted.current = true;
     void patch({ description: next });
   };
+
+  /** Commit the description that is on screen, whether or not the editor ever
+      blurred (Escape, ✕, tab switch, window blur all skip its blur). */
+  const commitDescriptionNow = () => {
+    commitDescription(latestDescription.current);
+  };
+
+  /** Flush both editable fields. Clears the edited flags, so remote adoption
+      (MIN-89) resumes immediately after. */
+  const commitPendingEdits = () => {
+    commitTitle();
+    commitDescriptionNow();
+  };
+  const commitPendingEditsRef = useRef(commitPendingEdits);
+  commitPendingEditsRef.current = commitPendingEdits;
+
+  // Leaving the window (⌘-tab, another application, a native menu) blurs
+  // nothing inside the page: an in-progress edit would linger uncommitted, and
+  // worse, keep the edited flags raised — which suppresses remote adoption
+  // (MIN-89), so Numo's or a teammate's rewrite stayed invisible until the
+  // panel was reopened. Commit on the way out; real time then flows again.
+  const dictationInFlightRef = useRef(false);
+  dictationInFlightRef.current = transcribing || numoBusy;
+  useEffect(() => {
+    const commitOnWindowBlur = () => {
+      if (dictationInFlightRef.current) return;
+      commitPendingEditsRef.current();
+    };
+    window.addEventListener("blur", commitOnWindowBlur);
+    return () => window.removeEventListener("blur", commitOnWindowBlur);
+  }, []);
+
+  if (!issue) return null;
+
+  const isChild = !!issue.parent_id;
+  const parent = issue.parent_id
+    ? allIssues.find((i) => i.id === issue.parent_id) ?? null
+    : null;
 
   const handleDelete = async () => {
     await onDelete(issue.id);
@@ -883,6 +963,7 @@ export function IssueSidePanel({
                 </>
               ) : (
                 <DictateButton
+                  context="issue_form"
                   onTranscription={onTranscript}
                   tooltipLabel={t("dictateEditTooltip")}
                   shortcutKey="mod+shift+d"
@@ -947,7 +1028,13 @@ export function IssueSidePanel({
 
             <Tabs
               value={tab}
-              onValueChange={(v) => setTab(v as "description" | "plan")}
+              onValueChange={(v) => {
+                // Radix activates a tab on mousedown — BEFORE the browser moves
+                // focus, so the description editor unmounts without its blur
+                // ever firing. Commit what is on screen first.
+                if (v !== tab) commitDescriptionNow();
+                setTab(v as "description" | "plan");
+              }}
             >
               <TabsList variant="line" className={TAB_LIST_DENSE}>
                 <TabsTrigger value="description" className={TAB_TRIGGER_DENSE}>
@@ -988,6 +1075,15 @@ export function IssueSidePanel({
                 <div
                   ref={descriptionRef}
                   onBlur={() => {
+                    // A commit just went out in this same event (the editor's
+                    // blur fires before this container's): the prop still
+                    // carries the pre-edit reflection, and remounting with it
+                    // would wipe what the user just wrote. Skip exactly one
+                    // adoption — the next blur re-arms it.
+                    if (justCommitted.current) {
+                      justCommitted.current = false;
+                      return;
+                    }
                     const description = issue.description ?? "";
                     if (
                       descriptionEdited.current ||
@@ -996,14 +1092,21 @@ export function IssueSidePanel({
                       return;
                     }
                     shownDescription.current = description;
+                    latestDescription.current = description;
                     setEditorKey((k) => k + 1);
                   }}
                 >
-                  <MarkdownEditor
+                  <DeferredMarkdownEditor
                     key={`${issue.id}:${editorKey}`}
                     mentions={mentions}
                     value={issue.description ?? ""}
                     onCommit={commitDescription}
+                    // Live markdown on every edit: a close (Escape, ✕, outside
+                    // click), a tab switch or a window blur can all skip the
+                    // editor's blur — the flush reads this instead.
+                    onChange={(markdown) => {
+                      latestDescription.current = markdown;
+                    }}
                     onEdit={() => {
                       descriptionEdited.current = true;
                     }}
@@ -1075,6 +1178,7 @@ export function IssueSidePanel({
                     issue={issue}
                     relations={resolvedRelations}
                     allIssues={allIssues}
+                    objectives={objectives}
                     projectKey={projectKey}
                     onOpenIssue={onOpenIssue}
                     onAddRelation={onAddRelation}
@@ -1123,7 +1227,7 @@ export function IssueSidePanel({
                         )}
                       </dl>
                       <details className="mt-3">
-                        <summary className="cursor-pointer text-xs text-muted-foreground">
+                        <summary className="text-xs text-muted-foreground">
                           {t("githubRawMetadata")}
                         </summary>
                         <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted p-2 text-xs">

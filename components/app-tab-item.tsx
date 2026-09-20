@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { IssueContextMenu } from "@/components/issue-context-menu";
 import type { AppTab } from "@/lib/app-tabs";
 
-export function AppTabItem({ tab, label, icon, active, focusable, busy, last, compositeIcon, width, badge, onActivate, onClose, onPin, onRename, onFocus }: {
+export function AppTabItem({ tab, label, icon, active, focusable, busy, last, compositeIcon, width, badge, onActivate, onClose, onPin, onRename, onFocus, onWarm }: {
   tab: AppTab; label: string; icon: ReactNode; active: boolean; focusable: boolean; busy: boolean; last: boolean;
   /** Two icons in the slot (project orb + screen icon): a pinned tab keeps
    *  the same side padding as the square one. EXPERIMENT (to revert). */
@@ -19,6 +19,7 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
    *  the tab's page (open PRs, unread agent sessions…). Zero renders nothing. */
   badge?: ReactNode;
   onActivate: () => void; onClose: () => void; onPin: () => void; onRename: () => void; onFocus: () => void;
+  onWarm?: () => void;
 }) {
   const t = useTranslations("AppTabs");
   const ref = useRef<HTMLButtonElement>(null);
@@ -53,15 +54,19 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
       <TooltipTrigger asChild>
         <button ref={ref} type="button" role="tab" id={`app-tab-${tab.id}`} data-app-tab-id={tab.id}
           aria-keyshortcuts="Alt+Shift+ArrowLeft Alt+Shift+ArrowRight"
-          onPointerEnter={() => { const element = labelRef.current; if (element) setTruncated(element.scrollWidth > element.clientWidth); }}
+          onPointerEnter={() => { onWarm?.(); const element = labelRef.current; if (element) setTruncated(element.scrollWidth > element.clientWidth); }}
           aria-label={label} aria-selected={active} aria-controls="app-tab-content" tabIndex={focusable ? 0 : -1}
-          onFocus={onFocus} onClick={onActivate} aria-disabled={busy || undefined}
+          onFocus={() => { onFocus(); onWarm?.(); }} onClick={onActivate} aria-disabled={busy || undefined}
           onKeyDown={(event) => {
             if ((event.shiftKey && event.key === "F10") || event.key === "ContextMenu") {
               event.preventDefault(); const box = event.currentTarget.getBoundingClientRect(); setMenu({ x: box.left, y: box.bottom });
             }
           }}
-          className={cn("flex h-full min-w-0 flex-1 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring", tab.pinned ? "justify-center" : "pl-2.5 pr-6")}>
+          // No focus ring on a tab: a bare keydown (Shift, Space…) on a
+          // mouse-focused tab would light one, and the active tab already
+          // stands out on its own background — see the tabs rule in
+          // globals.css for the panel tabs' side of the same call.
+          className={cn("flex h-full min-w-0 flex-1 items-center gap-2 rounded-md outline-none", tab.pinned ? "justify-center" : "pl-2.5 pr-6")}>
           {/* The badge sits ON the icon's top-right corner (half over the
               icon glyphs), so it works on the square pinned tabs too. Its
               backing is exactly the tab's own background, muted so only the

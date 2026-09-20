@@ -259,11 +259,15 @@ export function useIssuesQuery(projectId: string | null) {
                 childIds: (issues ?? [])
                   .filter((i) => i.parent_id === issueId)
                   .map((i) => i.id),
-                relations: relations.map(({ source_id, target_id, type }) => ({
-                  source_id,
-                  target_id,
-                  type,
-                })),
+                relations: relations.map(
+                  ({ source_id, target_id, type, source_type, target_type }) => ({
+                    source_id,
+                    target_id,
+                    type,
+                    source_type,
+                    target_type,
+                  })
+                ),
               },
               request.then(
                 () => undefined,

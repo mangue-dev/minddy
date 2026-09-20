@@ -67,6 +67,8 @@ export interface CommandPaletteProps {
   onToast?: (message: string, type: "success" | "error" | "info") => void;
   /** Override item selection entirely (skips the action registry). */
   onSelectItem?: (item: PaletteItem) => void;
+  /** Called for the highlighted/hovered item (host-side destination prefetch). */
+  onHoverPrefetch?: (item: PaletteItem) => void;
 
   // === Configuration ===
   /** Locale ("en", "fr", "fr-FR"…). Default "en". */
@@ -127,6 +129,7 @@ export function CommandPalette({
   onNavigate,
   onToast,
   onSelectItem,
+  onHoverPrefetch,
   locale = "en",
   strings,
   categories = [],
@@ -311,6 +314,7 @@ export function CommandPalette({
         onHistoryNavigate={history ? queryHistory.navigate : undefined}
         onHistoryReset={history ? queryHistory.reset : undefined}
         onQuerySubmit={history ? queryHistory.submit : undefined}
+        onHoverPrefetch={onHoverPrefetch}
       />
     );
   };

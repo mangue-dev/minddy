@@ -72,7 +72,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   // Budget exhausted: no error, no proposal. The user keeps his
   // import and its correspondence table, he fills it in by hand.
-  if (!(await hasUsageBudget(auth.user.id, "automations"))) {
+  if (!(await hasUsageBudget(auth.user.id, "automations", "import_map_model"))) {
     return NextResponse.json({ mapping: null });
   }
 

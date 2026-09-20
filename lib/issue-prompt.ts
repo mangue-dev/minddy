@@ -1,12 +1,15 @@
-import { hasPlanTasks, parsePlan } from "@/lib/plan";
+import { hasPlanTasks, parsePlan, type PlanProgress } from "@/lib/plan";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { Issue, IssueRelationType } from "@/lib/types";
 
-/** One relation to another issue, resolved from this issue's perspective:
- *  the relation type (`blocks`/`blocked_by`/`related`), the linked issue's
- *  identifier (e.g. MIN-10) and its title. */
+/** One relation to another issue — or, since MIN-513, to an objective —
+ *  resolved from this issue's perspective: the relation type
+ *  (`blocks`/`blocked_by`/`related`), the linked end's identifier (e.g. MIN-10;
+ *  empty for an objective) and its title (the objective's name). */
 export interface PromptRelation {
   type: IssueRelationType;
+  /** True when the other end is an OBJECTIVE (its `title` is its name). */
+  objective?: boolean;
   identifier: string;
   title: string;
 }
@@ -25,6 +28,11 @@ export interface IssuePromptInput {
       agent knows files or links are attached (read them via the MCP if
       needed). */
   resourceCount?: number;
+  /** The issue's plan progress (done/total), when it has a real one — rendered
+      as a <plan_progress> line inside the block. The single-issue builders
+      keep the plan status OUTSIDE the block instead (their prose reads
+      better); the multi-issue prompt uses the line to say it per issue. */
+  planProgress?: PlanProgress;
 }
 
 /**
@@ -38,6 +46,7 @@ function issueBlock({
   categories,
   relations,
   resourceCount,
+  planProgress,
 }: IssuePromptInput): string {
   const identifier = issueIdentifier(projectKey, issue.number);
 
@@ -56,7 +65,9 @@ function issueBlock({
           `  <relations>`,
           ...relations.map(
             (r) =>
-              `    <relation type="${r.type}">\n      <identifier>${r.identifier}</identifier>\n      <title>${r.title}</title>\n    </relation>`
+              `    <relation type="${r.type}"${
+                r.objective ? ' target="objective"' : ""
+              }>\n      <identifier>${r.identifier}</identifier>\n      <title>${r.title}</title>\n    </relation>`
           ),
           `  </relations>`,
         ]
@@ -67,6 +78,10 @@ function issueBlock({
       ? [`  <resources count="${resourceCount}" />`]
       : [];
 
+  const planProgressBlock = planProgress
+    ? [`  <plan_progress>${planProgress.done}/${planProgress.total} tasks done</plan_progress>`]
+    : [];
+
   const fields = [
     `  <identifier>${identifier}</identifier>`,
     `  <title>${issue.title}</title>`,
@@ -74,6 +89,7 @@ function issueBlock({
     `  <priority>${issue.priority}</priority>`,
     ...(issue.effort ? [`  <effort>${issue.effort}</effort>`] : []),
     ...(issue.due_date ? [`  <due_date>${issue.due_date}</due_date>`] : []),
+    ...planProgressBlock,
     ...categoriesBlock,
     ...(issue.description
       ? [`  <description>\n${issue.description}\n  </description>`]
@@ -277,4 +293,89 @@ Optionally, if minddy MCP tools are available in your environment (parameters fo
 If the minddy MCP tools are not available, ask me to paste the current plan before reviewing it — don't guess at what it contains.
 
 Report what you changed and why, then stop: don't start implementing until I ask.`;
+}
+
+/**
+ * “Copy prompt” on a SELECTION (MIN-539): ONE prompt that carries every
+ * selected issue — not one prompt per ticket. The agent works them one by
+ * one, in list order; the plan of each issue stays out of the copy (it is
+ * announced by its <plan_progress> line and read via the MCP), like the
+ * single-issue prompt does. ALWAYS in English, whatever the UI locale.
+ */
+export function buildMultiIssuePrompt(inputs: IssuePromptInput[]): string {
+  if (inputs.length === 0) return "";
+
+  const blocks = inputs.map((input) => {
+    const plan = input.issue.plan ? parsePlan(input.issue.plan) : null;
+    const planProgress = plan && plan.tasks.length > 0 ? plan.progress : undefined;
+    return issueBlock({ ...input, planProgress });
+  });
+
+  // MCP parameters: one project covers the whole selection with a compact
+  // pair; a mixed selection lists each issue with its own project —
+  // `minddy_get_issue` needs both, and they no longer share a default.
+  const sameProject = inputs.every((i) => i.projectId === inputs[0].projectId);
+  const mcpParams = sameProject
+    ? `project_id "${inputs[0].projectId}", issues "${inputs
+        .map((i) => issueIdentifier(i.projectKey, i.issue.number))
+        .join(", ")}"`
+    : inputs
+        .map(
+          (i) =>
+            `${issueIdentifier(i.projectKey, i.issue.number)} (project_id "${i.projectId}")`
+        )
+        .join(", ");
+
+  return `Work on these minddy issues.
+
+<issues>
+
+${blocks.join("\n\n")}
+
+</issues>
+
+The issues above are independent pieces of work: handle them one by one, in the order listed, and keep each one's scope separate.
+
+Optionally, if minddy MCP tools are available in your environment (parameters for these issues: ${mcpParams}):
+- Fetch each full issue and its implementation plan with \`minddy_get_issue\` (one call per issue), and keep task states updated with \`minddy_update_plan_task\` as you work (mark a task '- [~]' when you start it, '- [x]' when done).
+- An issue that already has a plan: follow it. An issue without one: write it first (short context, ordered checkbox tasks naming the actual files/components/functions to change, a final verification step) and save it to the issue's \`plan\` field with \`minddy_update_issues\` — then follow it.
+- When you are done with an issue, report the outcome on it with \`minddy_add_comment\` and update the issue status with \`minddy_update_issues\`.
+
+If the minddy MCP tools are not available, that's fine — just work on the issues as described above and skip the MCP steps.`;
+}
+
+/** One relation end, as the callers resolve it: `ResolvedRelation`
+ *  (lib/relation-constants.ts) and the cards' `ChipRelation` both satisfy
+ *  this shape. */
+export interface PromptRelationSource {
+  relation: IssueRelationType;
+  otherId: string;
+  otherType?: "issue" | "objective" | null;
+}
+
+/**
+ * The relations of ONE issue, in the prompt's form: each end resolved to a
+ * readable identifier ("MIN-7") and title (issue title, or the objective's
+ * name). The title resolver sees every end; it decides per id — an objective
+ * id is never an issue id, so trying both maps is safe.
+ */
+export function promptRelations(
+  relations: readonly PromptRelationSource[] | undefined,
+  resolve: {
+    /** Readable identifier of an issue end; an unresolved end reads as "". */
+    identifierOf?: (otherId: string) => string;
+    /** Display title of any end (issue title or objective name). */
+    titleOf: (otherId: string) => string;
+  }
+): PromptRelation[] {
+  if (!relations || relations.length === 0) return [];
+  return relations.map((r) => ({
+    type: r.relation,
+    objective: r.otherType === "objective",
+    identifier:
+      r.otherType === "objective"
+        ? ""
+        : (resolve.identifierOf?.(r.otherId) ?? ""),
+    title: resolve.titleOf(r.otherId),
+  }));
 }

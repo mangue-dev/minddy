@@ -1,5 +1,7 @@
 "use client";
 
+import { actionMenuItems } from "@/lib/visible-overlays";
+
 // Ticket actions menu: a real Radix dropdown (the same as dropdowns
 // classics of the app), available in two anchors which share the same body —
 // • IssueContextMenu — anchored to the pointer position (right click on a card,
@@ -15,6 +17,7 @@
 // Close escape.
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import {
   DropdownMenu,
@@ -149,14 +152,9 @@ function ActionMenuBody({
   const q = searchable ? query.trim().toLowerCase() : "";
   const visible = actions.filter((a) => actionMatches(a, q));
 
-  // The content is portaled to <body>; we retrieve the focusable items to
-  // route the keyboard from the search field to the list.
-  const items = () =>
-    Array.from(
-      document.querySelectorAll<HTMLElement>(
-        '[data-slot="dropdown-menu-content"] [data-slot="dropdown-menu-item"]:not([data-disabled]),[data-slot="dropdown-menu-content"] [data-slot="dropdown-menu-sub-trigger"]:not([data-disabled])'
-      )
-    );
+  // Search remains inside this menu, even if an inactive board retains another
+  // open portaled menu earlier in the document.
+  const items = () => actionMenuItems(inputRef.current);
 
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") return; // let Radix close the menu
@@ -221,6 +219,7 @@ function ActionMenuBody({
   );
 }
 
+/** Pointer-anchored actions menu (right click on a card, tab, sidebar row…). */
 export function IssueContextMenu({
   position,
   onClose,
@@ -235,7 +234,18 @@ export function IssueContextMenu({
  entries (view pills), where it would only make noise. */
   searchable?: boolean;
 }) {
-  return (
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  // Portals have no server markup. Keep the first client render identical
+  // before attaching the pointer anchor, including when the menu is closed.
+  if (!mounted) return null;
+  // The whole menu — trigger included — is portaled to <body>. The invisible
+  // trigger carries the anchor coordinates; inside any transformed or
+  // clipped ancestor (drag-and-drop items, overflow-hidden strips) a `fixed`
+  // element stops behaving like one and the anchor drifts away: the menu
+  // then lands beside the tab or card instead of under it. Mounted at <body>,
+  // the viewport coordinates hold in every container.
+  return createPortal(
     <DropdownMenu open={!!position} onOpenChange={(open) => !open && onClose()}>
       <DropdownMenuTrigger asChild>
         <span
@@ -254,10 +264,6 @@ export function IssueContextMenu({
         // The trigger is invisible and out of flow: do not return the focus to it
         // closing (avoids a scroll jump to the point of the click).
         onCloseAutoFocus={(e) => e.preventDefault()}
-        // The menu is portalized but rendered, in the React tree, inside
-        // the clickable card (onClick = open the ticket). React events
-        // go up the component tree despite the portal: we therefore stop the
-        // spread here so that clicking on an option does not open the map.
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.stopPropagation()}
       >
@@ -275,7 +281,8 @@ export function IssueContextMenu({
           }}
         />
       </DropdownMenuContent>
-    </DropdownMenu>
+    </DropdownMenu>,
+    document.body,
   );
 }
 

@@ -6,7 +6,7 @@ import { toast } from "mangue-ui";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { useProjects } from "@/lib/projects-context";
 import { useIssuesQuery } from "@/lib/use-issues-query";
-import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
+import { useIssueRelationsQuery, type RelationKinds } from "@/lib/use-issue-relations-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
@@ -44,8 +44,13 @@ export function PrIssuePanel({
   const issue: Issue | null = issues.find((i) => i.id === openId) ?? null;
 
   const handleAddRelation = useCallback(
-    (sourceId: string, type: IssueRelationType, targetId: string) => {
-      void addRelation(sourceId, type, targetId).catch((err) =>
+    (
+      sourceId: string,
+      type: IssueRelationType,
+      targetId: string,
+      kinds?: RelationKinds
+    ) => {
+      void addRelation(sourceId, type, targetId, kinds).catch((err) =>
         toast.error((err as Error).message),
       );
     },

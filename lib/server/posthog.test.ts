@@ -23,7 +23,7 @@ vi.mock("posthog-node", () => ({
   },
 }));
 
-describe("PostHog serveur", () => {
+describe("server PostHog", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
@@ -33,7 +33,7 @@ describe("PostHog serveur", () => {
     vi.stubEnv("POSTHOG_HOST", "https://analytics.example.test");
   });
 
-  it("n'initialise aucun client sans paire clé/hôte complète", async () => {
+  it("initializes no client without a complete key/host pair", async () => {
     vi.stubEnv("POSTHOG_HOST", "");
     const { getServerPostHog } = await import("./posthog");
 
@@ -45,7 +45,7 @@ describe("PostHog serveur", () => {
     { serverKey: "server-key", serverHost: "" },
     { serverKey: "", serverHost: "https://server.example.test" },
   ])(
-    "ne masque pas une demi-configuration serveur avec la paire publique",
+    "does not mask a half server configuration with the public pair",
     async ({ serverKey, serverHost }) => {
       vi.stubEnv("POSTHOG_API_KEY", serverKey);
       vi.stubEnv("POSTHOG_HOST", serverHost);
@@ -58,7 +58,7 @@ describe("PostHog serveur", () => {
     },
   );
 
-  it("réutilise la paire publique quand la paire serveur est entièrement absente", async () => {
+  it("reuses the public pair when the server pair is entirely absent", async () => {
     vi.stubEnv("POSTHOG_API_KEY", "");
     vi.stubEnv("POSTHOG_HOST", "");
     vi.stubEnv("MINDDY_PUBLIC_POSTHOG_KEY", "public-key");
@@ -70,10 +70,24 @@ describe("PostHog serveur", () => {
       host: "https://public.example.test",
       flushAt: 5,
       flushInterval: 10_000,
+      enableExceptionAutocapture: false,
     });
   });
 
-  it("rejette les événements hors catalogue et sanitise ceux autorisés", async () => {
+  it("keeps process-level exception capture off unless the flag opts in", async () => {
+    vi.stubEnv("MINDDY_PUBLIC_ERROR_TRACKING", "1");
+    const { getServerPostHog } = await import("./posthog");
+
+    expect(getServerPostHog()).not.toBeNull();
+    expect(posthogMock.constructor).toHaveBeenCalledWith("server-key", {
+      host: "https://analytics.example.test",
+      flushAt: 5,
+      flushInterval: 10_000,
+      enableExceptionAutocapture: true,
+    });
+  });
+
+  it("rejects out-of-catalog events and sanitizes the allowed ones", async () => {
     const { captureServerEvent } = await import("./posthog");
 
     captureServerEvent({
@@ -82,7 +96,7 @@ describe("PostHog serveur", () => {
       properties: {
         status: "todo\nsecret",
         count: 2,
-        nested: { title: "ne doit pas sortir" },
+        nested: { title: "must not leave" },
         $dangerous: "reserved",
         $process_person_profile: false,
       },
@@ -106,7 +120,7 @@ describe("PostHog serveur", () => {
     });
   });
 
-  it("sanitise aussi les propriétés de personne", async () => {
+  it("sanitizes person properties too", async () => {
     const { identifyServerUser } = await import("./posthog");
 
     identifyServerUser("user-1", {

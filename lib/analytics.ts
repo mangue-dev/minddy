@@ -85,6 +85,7 @@ export function markAnalyticsReady(): void {
   }
   // After the identity, never before: see the header.
   flushPendingEvents();
+  flushPendingExceptions();
 }
 
 /**
@@ -153,4 +154,47 @@ export function trackEvent<E extends AnalyticsEventName>(
     return;
   }
   posthog.capture(safeEvent, safeProps);
+}
+
+/**
+ * Report an exception caught by a React error boundary (MIN-542).
+ *
+ * Unhandled errors and promise rejections reach PostHog through the exception
+ * autocapture enabled in `components/posthog-init.tsx`. Errors caught by an
+ * `error.tsx` boundary, however, never reach `window.onerror` — React swallows
+ * them — so the boundary must report explicitly, and this is the entry point.
+ *
+ * Exceptions use the raw `posthog.captureException` channel: no catalog
+ * allowlist applies (there is no event name to vet), but the client only
+ * exists when the operator opted into PostHog, and the consent contract
+ * (`components/posthog-init.tsx`) still governs everything it emits.
+ *
+ * As for `trackEvent`, a client not yet initialized (idle callback pending,
+ * chunk downloading) does not lose the error: it is queued — a smaller bound
+ * than events, an error page rarely throws more than a handful of exceptions —
+ * and replayed once `markAnalyticsReady` fires.
+ */
+const MAX_PENDING_EXCEPTIONS = 5;
+const pendingExceptions: unknown[] = [];
+
+function flushPendingExceptions(): void {
+  const queued = pendingExceptions.splice(0, pendingExceptions.length);
+  const posthog = getAnalyticsClient();
+  // No client (no key, local host): the queue empties without leaving.
+  if (!posthog?.__loaded) return;
+  for (const error of queued) {
+    posthog.captureException(error);
+  }
+}
+
+export function captureClientException(error: unknown): void {
+  if (typeof window === "undefined") return;
+  const posthog = getAnalyticsClient();
+  if (posthog?.__loaded) {
+    posthog.captureException(error);
+    return;
+  }
+  if (pendingExceptions.length < MAX_PENDING_EXCEPTIONS) {
+    pendingExceptions.push(error);
+  }
 }

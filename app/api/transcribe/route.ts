@@ -21,6 +21,11 @@ import {
   releaseProviderOperation,
   reserveProviderOperation,
 } from "@/lib/server/provider-operation-guard";
+import {
+  resolveDictationContext,
+  resolvePolishedDictation,
+} from "@/lib/dictation-context";
+import { polishDictationTranscript } from "@/lib/server/dictation-polish";
 
 // A long dictation takes longer to come back than a short one: the road
 // takes the maximum budget of the platform, under which the timeout of
@@ -92,6 +97,7 @@ export async function POST(request: NextRequest) {
   const langRaw = formData.get("lang");
   const language =
     typeof langRaw === "string" && langRaw.trim() ? langRaw.trim() : undefined;
+  const context = resolveDictationContext(formData.get("context"));
 
   // Model is DB-configured (app_config), like the assistant model.
   const cfg = await getAppConfigValues([
@@ -121,9 +127,9 @@ export async function POST(request: NextRequest) {
   const arrayBuffer = await audio.arrayBuffer();
   const audioBase64 = Buffer.from(arrayBuffer).toString("base64");
 
-  // One run per take. It is RENDERED to the client: the next step in a dictation
-  // (the storage by Numo) returns it to its route, and the two calls read
-  // then as a single line in the ledger.
+  // One run per take. It is returned to callers that perform an additional
+  // structured-field pass so transcription, cleanup, and formatting remain a
+  // single action in the usage ledger.
   const runId = newRunId();
   const feature = resolveFeature(formData.get("feature"));
 
@@ -131,7 +137,7 @@ export async function POST(request: NextRequest) {
   // only one managed transcription per account until its usage row is written,
   // so concurrent requests cannot all spend against the same stale remainder.
   try {
-    await ensureUsageBudget(user.id, "voice");
+    await ensureUsageBudget(user.id, "voice", "transcription_model");
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
     throw err;
@@ -143,6 +149,7 @@ export async function POST(request: NextRequest) {
     operation: "transcription",
     resourceKey: `transcription:${user.id}`,
   };
+  let leaseHeld = false;
   if (runtime.mode === "platform") {
     const reservation = await reserveProviderOperation({
       ...lease,
@@ -162,6 +169,7 @@ export async function POST(request: NextRequest) {
         },
       );
     }
+    leaseHeld = true;
   }
 
   try {
@@ -171,6 +179,7 @@ export async function POST(request: NextRequest) {
         usedModel = m;
         return transcribeAudio(m, audioBase64, format, runtime.apiKey, {
           language,
+          temperature: 0,
           provider: runtime.provider === "openrouter" ? provider : undefined,
           title: "minddy Dictate",
           providerId: runtime.provider,
@@ -196,8 +205,49 @@ export async function POST(request: NextRequest) {
       billTo: { userId: user.id },
     });
 
+    // The expensive audio operation is complete and accounted for. Release its
+    // shared admission lease before the lightweight editorial pass so another
+    // take does not wait behind text cleanup.
+    if (leaseHeld) {
+      await releaseProviderOperation(lease);
+      leaseHeld = false;
+    }
+
+    const rawText = result.text.trim();
+    let cleanedText: string | null = null;
+    if (/[\p{L}\p{N}]/u.test(rawText)) {
+      try {
+        // A dictation is useful only when both halves fit the account budget.
+        // If the budget closes between the two calls, the recognized words are
+        // still returned instead of throwing away the take.
+        const cleanupSurface =
+          feature === "feedback_voice" ? "feedback" : "voice";
+        await ensureUsageBudget(user.id, cleanupSurface, "dictate_model");
+        cleanedText = await polishDictationTranscript({
+          transcript: rawText,
+          context,
+          record: {
+            runId,
+            seq: 1,
+            feature: feature === "feedback_voice" ? "feedback_voice" : "dictation",
+            billTo: { userId: user.id },
+          },
+          surface: cleanupSurface,
+        });
+      } catch (err) {
+        // Speech recognition succeeded. Cleanup is deliberately fail-open so a
+        // provider incident or a newly exhausted budget never loses the take.
+        console.error(
+          "[/api/transcribe] cleanup failed, returning raw transcript:",
+          err instanceof Error ? err.message : err,
+        );
+      }
+    }
+    const { text, polished } = resolvePolishedDictation(rawText, cleanedText);
+
     return Response.json({
-      text: result.text,
+      text,
+      polished,
       model,
       runId,
       durationSeconds: result.seconds,
@@ -207,6 +257,6 @@ export async function POST(request: NextRequest) {
     console.error("[/api/transcribe]", message);
     return Response.json({ error: message }, { status: 500 });
   } finally {
-    if (runtime.mode === "platform") await releaseProviderOperation(lease);
+    if (leaseHeld) await releaseProviderOperation(lease);
   }
 }

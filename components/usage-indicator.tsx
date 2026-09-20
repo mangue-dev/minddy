@@ -12,7 +12,6 @@ import {
   Loader2,
   Megaphone,
   Mic,
-  WandSparkles,
 } from "lucide-react";
 import {
   Button,
@@ -33,6 +32,7 @@ import {
 } from "@/lib/use-billing-query";
 import { createCheckoutApi, createPortalApi } from "@/lib/billing-api";
 import { NumoIcon } from "@/components/numo-icon";
+import { SmartAssignIcon } from "@/components/smart-icons";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 
 /**
@@ -71,10 +71,8 @@ export const SEGMENT_UI: Record<
   dictation: { icon: Mic, text: "text-amber-600 dark:text-amber-400", labelKey: "segmentDictation" },
   feedback: { icon: Megaphone, text: "text-emerald-600 dark:text-emerald-400", labelKey: "segmentFeedback" },
   // What minddy fills out for you when the ticket is born: who takes it
-  // (Smart Assign) and what it is (Smart-fill). WandSparkles — the Smart icon
-  // Assign in the project settings, and that of Smart-fill in the
-  // create form.
-  automations: { icon: WandSparkles, text: "text-fuchsia-600 dark:text-fuchsia-400", labelKey: "segmentAutomations" },
+  // (Smart Assign) and what it is (Smart-fill).
+  automations: { icon: SmartAssignIcon, text: "text-fuchsia-600 dark:text-fuchsia-400", labelKey: "segmentAutomations" },
 };
 
 const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> = {

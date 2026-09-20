@@ -1,9 +1,9 @@
 "use client";
 
-import { QueryClient, type Query } from "@tanstack/react-query";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
-import { useState, type ReactNode } from "react";
+import { IsRestoringProvider, QueryClient, QueryClientProvider, type Query } from "@tanstack/react-query";
+import { persistQueryClientRestore } from "@tanstack/react-query-persist-client";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createQueryStorage, subscribeToQueryPersistence } from "./query-persistence";
 
 /**
  * The cache is PERSISTED in localStorage (MIN-89).
@@ -50,6 +50,9 @@ const GC_TIME_MS = PERSIST_MAX_AGE_MS;
  */
 const PERSIST_BUSTER = "v1";
 
+/** Includes providers that are still restoring when logout occurs. */
+const persistenceStops = new Set<() => void>();
+
 /**
  * What DOES NOT go to disk.
  *
@@ -88,6 +91,7 @@ const PERSIST_BUSTER = "v1";
 const NON_PERSISTED_KEY_PREFIXES: string[][] = [
   ["app-tabs"], // Unbounded account collection; only local activation uses sessionStorage.
   ["me", "search-index"],
+  ["me", "pages", "search"], // Per-keystroke snippets are bounded in memory, never restored from disk.
   ["me", "board-issues"], // short-lived resume snapshot; duplicates full issue rows
   ["agent-run"], // ["agent-run", runId]
   ["agent-runs"], // ["agent-runs", "issue", issueId]
@@ -114,6 +118,10 @@ export function isPersistableKey(key: readonly unknown[]): boolean {
 function isPersistable(query: Query): boolean {
   // A query in error must not freeze its failure on disk.
   if (query.state.status !== "success") return false;
+  // Pending/failed comments retain recovery callbacks and unconfirmed content.
+  // Reopen from authoritative data after a reload; never restore a false success.
+  if ((query.queryKey[0] === "comments" || query.queryKey[0] === "page-comments") &&
+      Array.isArray(query.state.data) && query.state.data.some((comment) => comment?.delivery)) return false;
   return isPersistableKey(query.queryKey);
 }
 
@@ -135,6 +143,10 @@ export function wasRestoredBeforeMount(
  * account which is leaving, and the machine can be shared.
  */
 export function clearPersistedQueryCache() {
+  // Cancel queued snapshots before removing storage. Otherwise a delayed write
+  // or pagehide flush could restore the departing account's data after logout.
+  for (const stop of persistenceStops) stop();
+  persistenceStops.clear();
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(QUERY_CACHE_STORAGE_KEY);
@@ -145,6 +157,8 @@ export function clearPersistedQueryCache() {
 
 export function AppQueryProvider({ children }: { children: ReactNode }) {
   const [mountedAt] = useState(() => Date.now());
+  const [isRestoring, setIsRestoring] = useState(true);
+  const restorePromise = useRef<Promise<void> | null>(null);
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -161,26 +175,35 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
       })
   );
 
-  // Persist it touches localStorage: it can only be built at the first
-  // rendered client. useState(fn) guarantees this.
-  const [persistOptions] = useState(() => ({
-    persister: createSyncStoragePersister({
-      storage: typeof window === "undefined" ? undefined : window.localStorage,
-      key: QUERY_CACHE_STORAGE_KEY,
-      // The persister swallows its own write errors (quota exceeded): the
-      // disk cache is a bonus, never a critical path.
-      throttleTime: 1_000,
-    }),
-    maxAge: PERSIST_MAX_AGE_MS,
-    buster: PERSIST_BUSTER,
-    dehydrateOptions: { shouldDehydrateQuery: isPersistable },
-  }));
+  const [persistOptions] = useState(() => {
+    let storage: Storage | undefined;
+    try {
+      if (typeof window !== "undefined") storage = window.localStorage;
+    } catch {
+      // Storage can be inaccessible in private or embedded browsing contexts.
+    }
+    return {
+      queryClient,
+      persister: createQueryStorage(storage, QUERY_CACHE_STORAGE_KEY),
+      maxAge: PERSIST_MAX_AGE_MS,
+      buster: PERSIST_BUSTER,
+      dehydrateOptions: { shouldDehydrateQuery: isPersistable },
+    };
+  });
 
-  return (
-    <PersistQueryClientProvider
-      client={queryClient}
-      persistOptions={persistOptions}
-      onSuccess={() => {
+  useEffect(() => {
+    let stopped = false;
+    let persistence: ReturnType<typeof subscribeToQueryPersistence> | undefined;
+    const stop = () => {
+      stopped = true;
+      persistence?.stop();
+    };
+    persistenceStops.add(stop);
+    if (!restorePromise.current) {
+      restorePromise.current = persistQueryClientRestore(persistOptions);
+    }
+    void restorePromise.current
+      .then(() => {
         // Disk snapshots need one refresh because realtime events are not
         // replayed while the tab is closed. The cache also contains queries
         // that finished during this startup, however. Invalidating the entire
@@ -190,13 +213,38 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
         // Refresh only entries whose timestamp proves they came from before
         // this provider mount. `invalidateQueries` deduplicates observers and
         // starts one request per active restored query.
+        if (stopped) return;
         void queryClient.invalidateQueries({
           predicate: (query) => wasRestoredBeforeMount(query, mountedAt),
           refetchType: "active",
         });
-      }}
-    >
-      {children}
-    </PersistQueryClientProvider>
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (stopped) return;
+        persistence = subscribeToQueryPersistence({
+          ...persistOptions,
+          shouldPersistQuery: isPersistable,
+        });
+        setIsRestoring(false);
+      });
+    const flush = () => persistence?.flush();
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      persistenceStops.delete(stop);
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [mountedAt, persistOptions, queryClient]);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <IsRestoringProvider value={isRestoring}>{children}</IsRestoringProvider>
+    </QueryClientProvider>
   );
 }

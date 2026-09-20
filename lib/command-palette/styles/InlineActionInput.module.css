@@ -41,7 +41,7 @@
   border-radius: var(--cp-radius-sm);
   background: transparent;
   color: var(--cp-muted);
-  cursor: pointer;
+  cursor: default;
   touch-action: manipulation;
   transition: background-color 120ms ease-out, color 120ms ease-out;
   align-self: flex-start;
@@ -140,7 +140,7 @@
   font-family: var(--cp-font-sans);
   font-size: 0.95rem;
   font-weight: 500;
-  cursor: pointer;
+  cursor: default;
   touch-action: manipulation;
   white-space: nowrap;
   max-width: 200px;
@@ -366,7 +366,7 @@
   font: inherit;
   font-weight: 500;
   font-size: 0.95rem;
-  cursor: pointer;
+  cursor: default;
   touch-action: manipulation;
   text-align: left;
   transition: background 120ms ease-out, color 120ms ease-out;

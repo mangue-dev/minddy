@@ -203,6 +203,10 @@ export interface PullRequestComment {
   body: string;
   user: { login: string; avatar_url: string | null } | null;
   created_at: string;
+  /** Last edit AT THE FORGE — the "(edited)" marker. `null` when GitHub has
+      never carried it (or the comment was never edited): compare against
+      `created_at` to decide. */
+  updated_at?: string | null;
   html_url: string;
 }
 
@@ -1173,6 +1177,25 @@ export async function updatePullRequestTitle(opts: {
   return toRef(pr, opts.repoFullName);
 }
 
+export async function updatePullRequestBody(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  body: string;
+}): Promise<PullRequestRef> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const pr = await ghJson<RawPull>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}`,
+    opts.token,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: opts.body }),
+    },
+  );
+  return toRef(pr, opts.repoFullName);
+}
+
 export async function enablePullRequestMergeFlow(opts: {
   token: string;
   repoFullName: string;
@@ -1197,6 +1220,25 @@ export async function enablePullRequestMergeFlow(opts: {
     "mutation($id:ID!,$method:PullRequestMergeMethod!){enablePullRequestAutoMerge(" +
       "input:{pullRequestId:$id,mergeMethod:$method}){pullRequest{id}}}",
     { id: opts.nodeId, method },
+  );
+}
+
+export async function disablePullRequestMergeFlow(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  nodeId?: string;
+  queue: boolean;
+}): Promise<void> {
+  if (!opts.nodeId) throw new GithubApiError("Pull request has no GraphQL id", 409);
+  // The merge queue and the auto-merge are two different registrations:
+  // leaving one must not silently leave the other.
+  await ghGraphql<unknown>(
+    opts.token,
+    opts.queue
+      ? "mutation($id:ID!){dequeuePullRequest(input:{pullRequestId:$id}){pullRequest{id}}}"
+      : "mutation($id:ID!){disablePullRequestAutoMerge(input:{pullRequestId:$id}){pullRequest{id}}}",
+    { id: opts.nodeId },
   );
 }
 
@@ -1508,6 +1550,7 @@ interface RawComment {
   body?: string;
   user?: { login?: string; avatar_url?: string; type?: string } | null;
   created_at: string;
+  updated_at?: string | null;
   html_url: string;
 }
 
@@ -1517,6 +1560,7 @@ function toComment(c: RawComment): PullRequestComment {
     body: c.body ?? "",
     user: c.user ? { login: c.user.login ?? "", avatar_url: c.user.avatar_url ?? null } : null,
     created_at: c.created_at,
+    updated_at: c.updated_at ?? null,
     html_url: c.html_url,
   };
 }
@@ -1630,6 +1674,40 @@ interface RawGithubDeploymentStatus {
   state?: string | null;
   environment_url?: string | null;
   target_url?: string | null;
+  created_at?: string | null;
+}
+
+/** The head commit, read only for its dates: the build clock starts at the
+    PUSH, not at the deployment object — several providers (Vercel first)
+    stamp that object only once the environment is already served, which
+    would date a build in 0 or 1 second. */
+interface RawGithubCommit {
+  commit?: {
+    committer?: { date?: string | null } | null;
+    author?: { date?: string | null } | null;
+  } | null;
+}
+
+/** Commit status payload of a deployment provider (checks-core keeps the
+    shared one without dates; the card needs them to tick). */
+interface RawDeploymentSignal {
+  context?: string | null;
+  state?: string | null;
+  target_url?: string | null;
+  created_at?: string | null;
+}
+
+/** A commit status that BUILDS an environment rather than testing code:
+    Vercel, Netlify, Render, Amplify… providers publish their build as a
+    commit status instead of a GitHub Deployment (which they only stamp once
+    the environment is served). */
+function isDeploymentSignal(status: RawDeploymentSignal): boolean {
+  if (/^(vercel|netlify|deploy\b|deployment\b)/i.test(status.context ?? "")) {
+    return true;
+  }
+  return /(^|\.)(vercel\.app|vercel\.com|netlify\.app|netlify\.com|onrender\.com|amplifyapp\.com)/i.test(
+    status.target_url ?? "",
+  );
 }
 
 /** Only browser-safe deployment destinations cross the API boundary. */
@@ -1653,7 +1731,7 @@ async function getVercelBranchPreviewUrl(opts: {
   token: string;
   repoFullName: string;
   number: number;
-}): Promise<string | null> {
+}): Promise<DeploymentOutcome | null> {
   const { owner, repo } = splitRepo(opts.repoFullName);
   try {
     const comments = await ghJson<RawComment[]>(
@@ -1666,7 +1744,9 @@ async function getVercelBranchPreviewUrl(opts: {
         if (!/!\[Ready\]\([^)]+\)\s+\[Ready\]\([^)]+\)/u.test(line)) continue;
         const preview = line.match(/\[Preview\]\((https?:\/\/[^)\s]+)\)/u)?.[1];
         const url = httpDeploymentUrl(preview);
-        if (url) return url;
+        if (url) {
+          return { status: "success", url, startedAt: null, durationMs: null };
+        }
       }
     }
   } catch {
@@ -1676,26 +1756,146 @@ async function getVercelBranchPreviewUrl(opts: {
 }
 
 /**
- * Latest successful GitHub deployment of a PR branch, with its immutable head
- * as a fallback.
+ * Deployment lifecycle of a PR branch, from branch to immutable head:
+ * the newest deployment tells WHERE the environment stands (settled or
+ * still running) and the walk finds the newest SETTLED deployment for the
+ * action — a redeploy running on top of a live environment keeps its
+ * button pointing at what serves now (MIN-548).
  *
  * A deployment object does not carry the public environment URL. GitHub puts
- * that URL on its latest status, so resolving the header action takes one list
- * request and one bounded batch of status requests. The newest deployment with
- * a usable URL wins; older environments remain a fallback when the latest
- * deployment has not published a destination.
+ * that URL on its latest status, so resolving the card takes one list
+ * request and one bounded batch of status requests.
  */
-export async function getLatestSuccessfulDeploymentUrl(opts: {
+export async function getPullRequestDeployment(opts: {
   token: string;
   repoFullName: string;
   number: number;
   branch?: string;
   sha: string;
-}): Promise<string | null> {
+}): Promise<DeploymentOutcome> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  const vercelBranchUrl = opts.branch ? await getVercelBranchPreviewUrl(opts) : null;
-  if (vercelBranchUrl) return vercelBranchUrl;
+  const vercelBranchOutcome = opts.branch
+    ? await getVercelBranchPreviewUrl(opts)
+    : null;
+  // The push that produced the head is fetched ON DEMAND and at most once:
+  // only a story worth dating (running or settled) ever pays for it.
+  let pushAt: Promise<string | null> | null = null;
+  const resolvePushAt = () =>
+    (pushAt ??= headPushStartedAt(opts, owner, repo));
+  const walked = await walkGithubDeployments(opts, owner, repo, resolvePushAt);
 
+  // The stable Vercel branch URL stays the destination — but the walk, not
+  // the ready comment, tells the lifecycle and dates the settle: without it
+  // the successful card would never carry the time the environment took.
+  if (vercelBranchOutcome?.status === "success") {
+    if (walked.status === "success" && walked.durationMs != null) {
+      return { ...vercelBranchOutcome, durationMs: walked.durationMs };
+    }
+    if (walked.status === "in_progress") {
+      // A rebuild is in flight over the branch: the stable URL still
+      // serves while the clock restarts from the new deployment.
+      return {
+        status: "in_progress",
+        url: vercelBranchOutcome.url ?? walked.url,
+        startedAt: walked.startedAt,
+        durationMs: null,
+      };
+    }
+    return vercelBranchOutcome;
+  }
+  if (walked.status !== "none") return walked;
+
+  // GitHub stamps its Deployment object only when the environment is DONE:
+  // the whole build of a Vercel-style provider happens WITHOUT any
+  // deployment to look at. Their commit STATUS is the live signal — a
+  // "Vercel · pending" exists from the first second — and it is what keeps
+  // the card from vanishing exactly while the environment is being built
+  // (MIN-548).
+  try {
+    const commitStatus = await ghJson<{ statuses?: RawDeploymentSignal[] }>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/status/${encodeURIComponent(opts.sha)}`,
+      opts.token,
+    );
+    const building = (commitStatus.statuses ?? []).find(
+      (status) => status.state === "pending" && isDeploymentSignal(status),
+    );
+    if (building) {
+      // The button, when an older deployment already serves, needs its
+      // destination: the walk over the LAST COMMITS of the PR finds the
+      // newest sha whose environment settled.
+      let servingUrl: string | null = null;
+      try {
+        // The endpoint is oldest-first and NOT sortable: page it wide and
+        // keep the tail — the recent shas are the end of the list.
+        const commits = await ghJson<{ sha?: string }[]>(
+          `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/commits?per_page=100`,
+          opts.token,
+        );
+        // The list is oldest-first: the RECENT shas sit at the end, the
+        // head itself is the build in flight.
+        for (const commit of commits.slice(-3).reverse().slice(1)) {
+          if (!commit.sha) continue;
+          const deployments = await ghJson<RawGithubDeployment[]>(
+            `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments` +
+              `?sha=${encodeURIComponent(commit.sha)}&per_page=10`,
+            opts.token,
+          );
+          const settled = deployments
+            .sort(
+              (a, b) =>
+                Date.parse(b.created_at ?? "") - Date.parse(a.created_at ?? ""),
+            )
+            .filter((deployment): deployment is RawGithubDeployment & { id: number } =>
+              Number.isInteger(deployment.id),
+            );
+          if (settled.length === 0) continue;
+          const [latest] = await ghJson<RawGithubDeploymentStatus[]>(
+            `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments/${settled[0].id}/statuses?per_page=1`,
+            opts.token,
+          );
+          const url =
+            httpDeploymentUrl(latest?.environment_url) ??
+            httpDeploymentUrl(latest?.target_url);
+          if (latest?.state === "success" && url) {
+            servingUrl = url;
+            break;
+          }
+        }
+      } catch {
+        // The button is an extra: without it, the card still says "running".
+      }
+      return {
+        status: "in_progress",
+        url: servingUrl,
+        startedAt: building.created_at ?? null,
+        durationMs: null,
+      };
+    }
+  } catch {
+    // The commit status read is an extra: deployments remain the main story.
+  }
+  return { status: "none", url: null, startedAt: null, durationMs: null };
+}
+
+/**
+ * The deployment walk over branch ref then immutable head: the newest
+ * deployment tells WHERE the environment stands (settled or still running)
+ * and the walk finds the newest SETTLED deployment for the action — a
+ * redeploy running on top of a live environment keeps its button pointing
+ * at what serves now (MIN-548). Nothing found = "none"; the caller falls
+ * back to the commit-status signal.
+ *
+ * The duration is measured from the PUSH, not from the deployment object:
+ * some providers stamp that object only when the environment is already
+ * served, which would date a real build in 0 or 1 second. `resolvePushAt`
+ * answers lazily — only a story worth dating ever reads the commit.
+ */
+async function walkGithubDeployments(
+  opts: { token: string; branch?: string; sha: string },
+  owner: string,
+  repo: string,
+  resolvePushAt: () => Promise<string | null>,
+): Promise<DeploymentOutcome> {
   const references = [
     ...(opts.branch ? [{ parameter: "ref", value: opts.branch }] : []),
     { parameter: "sha", value: opts.sha },
@@ -1715,6 +1915,7 @@ export async function getLatestSuccessfulDeploymentUrl(opts: {
         const byDate = Date.parse(b.created_at ?? "") - Date.parse(a.created_at ?? "");
         return Number.isFinite(byDate) && byDate !== 0 ? byDate : b.id - a.id;
       });
+    if (newest.length === 0) continue;
 
     const statuses = await Promise.all(
       newest.map(async (deployment) => {
@@ -1723,18 +1924,117 @@ export async function getLatestSuccessfulDeploymentUrl(opts: {
             `${GITHUB_API_BASE}/repos/${owner}/${repo}/deployments/${deployment.id}/statuses?per_page=1`,
             opts.token,
           );
-          if (latest?.state !== "success") return null;
-          return httpDeploymentUrl(latest.environment_url) ?? httpDeploymentUrl(latest.target_url);
+          if (!latest) return null;
+          const url =
+            httpDeploymentUrl(latest.environment_url) ??
+            httpDeploymentUrl(latest.target_url);
+          // The time the environment took to settle: the status that declared
+          // success, dated from the PUSH that asked for it — the deployment
+          // object itself can be stamped late (Vercel), long after the build
+          // began. A deployment older than the push keeps its own date: it
+          // belongs to a previous build, not this push.
+          const to = Date.parse(latest.created_at ?? "");
+          const pushed = Date.parse((await resolvePushAt()) ?? "");
+          const from = Date.parse(deployment.created_at ?? "");
+          const start =
+            Number.isFinite(pushed) && (!Number.isFinite(from) || pushed <= from)
+              ? pushed
+              : from;
+          return {
+            state: latest.state ?? null,
+            url,
+            durationMs:
+              Number.isFinite(start) && Number.isFinite(to) && to >= start
+                ? to - start
+                : null,
+          };
         } catch {
           // A stale deployment can disappear while its siblings remain readable.
           return null;
         }
       }),
     );
-    const url = statuses.find((candidate): candidate is string => candidate !== null);
-    if (url) return url;
+
+    const firstSuccess = statuses.find(
+      (status) => status?.state === "success" && status.url,
+    );
+    const head = statuses[0];
+    // No status at all means the environment was JUST registered: nothing
+    // has settled yet, it is running like everything else.
+    const headRunning =
+      !head ||
+      head.state === "pending" ||
+      head.state === "in_progress" ||
+      head.state === "queued";
+    if (headRunning) {
+      return {
+        status: "in_progress",
+        // The button points at the deployment that already SERVES — the
+        // newest success — not at the one still building.
+        url: firstSuccess?.url ?? null,
+        // The clock starts at the push, not at a possibly-late stamp: the
+        // running timer must measure the build, not the paperwork.
+        startedAt: (await resolvePushAt()) ?? newest[0]?.created_at ?? null,
+        durationMs: null,
+      };
+    }
+    if (head?.state === "success" && head.url) {
+      return {
+        status: "success",
+        url: head.url,
+        startedAt: null,
+        durationMs: head.durationMs ?? null,
+      };
+    }
+    if (firstSuccess) {
+      // The newest deployment failed or went silent; the last settled one
+      // still serves, and the card stays truthful about it.
+      return {
+        status: "success",
+        url: firstSuccess.url,
+        startedAt: null,
+        durationMs: firstSuccess.durationMs ?? null,
+      };
+    }
   }
-  return null;
+
+  return { status: "none", url: null, startedAt: null, durationMs: null };
+}
+
+/** When the head was pushed: the committer date (the push), falling back to
+    the author date. `null` = unreadable, the card keeps the deployment
+    object's own dates. */
+async function headPushStartedAt(
+  opts: { token: string; sha: string },
+  owner: string,
+  repo: string,
+): Promise<string | null> {
+  try {
+    const commit = await ghJson<RawGithubCommit>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits/${encodeURIComponent(opts.sha)}`,
+      opts.token,
+    );
+    return (
+      commit.commit?.committer?.date ?? commit.commit?.author?.date ?? null
+    );
+  } catch {
+    // The push date is an extra: the deployment object remains the fallback.
+    return null;
+  }
+}
+
+/** The deployment story of a PR head, as the card tells it. */
+export interface DeploymentOutcome {
+  /** success = the newest deployment settled; in_progress = a newer one is
+      running; none = nothing usable to show. */
+  status: "success" | "in_progress" | "none";
+  /** Where the environment serves — while a new one runs, that is the last
+      successful deployment, never a promise. */
+  url: string | null;
+  /** Created date of the deployment in flight — the card ticks from it. */
+  startedAt: string | null;
+  /** Time the settled environment took, when the forge dates both ends. */
+  durationMs: number | null;
 }
 
 interface RawReviewComment extends RawComment {
@@ -2341,4 +2641,32 @@ export async function createPullRequestComment(opts: {
     },
   );
   return toComment(created);
+}
+
+/**
+ * Rewrite the body of a thread comment. On GitHub a PR IS an issue, so a
+ * conversation comment is addressed by its own id under
+ * `issues/comments/{id}` — the PR number plays no part there, and `number`
+ * is ignored (same arrangement as `commentIds` on the reactions surface).
+ * Returns the updated comment, whose `updated_at` now differs from
+ * `created_at` — the "(edited)" marker reads it.
+ */
+export async function updatePullRequestComment(opts: {
+  token: string;
+  repoFullName: string;
+  number: number;
+  commentId: number;
+  body: string;
+}): Promise<PullRequestComment> {
+  const { owner, repo } = splitRepo(opts.repoFullName);
+  const updated = await ghJson<RawComment>(
+    `${GITHUB_API_BASE}/repos/${owner}/${repo}/issues/comments/${opts.commentId}`,
+    opts.token,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: opts.body }),
+    },
+  );
+  return toComment(updated);
 }

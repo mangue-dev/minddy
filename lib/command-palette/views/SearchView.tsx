@@ -90,6 +90,9 @@ export interface SearchViewProps {
   onHistoryReset?: () => void;
   /** Record a query when the user selects an item. */
   onQuerySubmit?: (query: string) => void;
+  /** Called for the highlighted item and on mouse hover — the host may
+   *  prefetch the destination behind the item. */
+  onHoverPrefetch?: (item: PaletteItem) => void;
 }
 
 // =============================================================================
@@ -110,6 +113,7 @@ export function SearchView({
   onHistoryNavigate,
   onHistoryReset,
   onQuerySubmit,
+  onHoverPrefetch,
 }: SearchViewProps) {
   const { t, registry, categories, categoryOrder, shortcuts } =
     usePaletteConfig();
@@ -342,6 +346,14 @@ export function SearchView({
     return indices;
   }, [groups]);
 
+  // The highlighted row is the row Enter will open: give the host a chance
+  // to prefetch its destination while the user keeps navigating (the same
+  // trade as hovering, for the keyboard). Mount fires it for the first row.
+  useEffect(() => {
+    const item = orderedItems[activeIndex];
+    if (item) onHoverPrefetch?.(item);
+  }, [activeIndex, orderedItems, onHoverPrefetch]);
+
   // Compact mode: only show results when there's a query or manual expand
   const isExpanded = !compactMode || query.trim().length > 0 || isManuallyExpanded;
 
@@ -509,6 +521,7 @@ export function SearchView({
               onSelect={handleSelect}
               onOpenActions={handleOpenActions}
               hasActions={hasActions}
+              onHoverPrefetch={onHoverPrefetch}
               isMobile={isTouchDevice}
               getTouchHandlers={isTouchDevice ? getTouchHandlers : undefined}
             />

@@ -83,7 +83,6 @@ export interface StartNumoIntentInput {
 export interface StartedNumoIntent {
   conversationId: string;
   turnId: string;
-  detailHref: string;
 }
 
 export async function numoIntentErrorResponse(
@@ -149,7 +148,7 @@ export async function startNumoIntent(
   }
   const projectId = validated.context?.projectId ?? input.projectId ?? null;
 
-  const admittedUsage = await ensureUsageBudget(input.userId, "assistant");
+  const admittedUsage = await ensureUsageBudget(input.userId, "assistant", "assistant_model");
   const configuration = await resolveNumoTurnConfiguration({
     userId: input.userId,
   });
@@ -266,6 +265,5 @@ export async function startNumoIntent(
   return {
     conversationId: conversation.id,
     turnId: turn.id,
-    detailHref: `/numo?conversation=${encodeURIComponent(conversation.id)}`,
   };
 }

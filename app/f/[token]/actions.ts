@@ -287,10 +287,10 @@ export type DictateFeedbackState =
  * becomes a composer patch. A server action is enough here — it's JSON,
  * and the session cookie travels with it.
  *
- * `runId` comes from the listening stage: the two calls from the same socket are
- * thus stored under a single line of the ledger. We accept it from the customer because
- * that it doesn't open anything — it's a grouping key, revalidated to UUID, and
- * the imputation is not deduced from it (it comes from the board, like here).
+ * `runId` comes from the listening stage: transcription, cleanup, and form
+ * formatting are stored under one ledger action. We accept it from the client
+ * because it grants no access: it is only a grouping key, is revalidated as a
+ * UUID, and never determines billing attribution.
  */
 export async function dictateFeedbackAction(
   token: string,
@@ -310,7 +310,7 @@ export async function dictateFeedbackAction(
   });
   if (!rate.allowed) return { ok: false, error: "rateLimited" };
 
-  if (!(await ownerHasUsageBudget(ctx.project.id, "feedback"))) {
+  if (!(await ownerHasUsageBudget(ctx.project.id, "feedback", "dictate_model"))) {
     return { ok: false, error: "unavailable" };
   }
 
@@ -327,8 +327,8 @@ export async function dictateFeedbackAction(
       projectName: ctx.project.name,
       surface: "board",
       runId: isUuid(input.runId) ? input.runId : newRunId(),
-      // 1 when listening has taken place: the next line, in the same run.
-      seq: isUuid(input.runId) ? 1 : 0,
+      // Transcription and cleanup occupy seq 0 and 1 on a complete take.
+      seq: isUuid(input.runId) ? 2 : 0,
       billTo: { projectOwner: ctx.project.id },
       projectId: ctx.project.id,
     });
@@ -375,7 +375,11 @@ export async function findSimilarPostsAction(
   });
   if (!rate.allowed) return [];
 
-  if (!(await ownerHasUsageBudget(ctx.project.id, "feedback"))) return [];
+  if (!(await ownerHasUsageBudget(
+    ctx.project.id,
+    "feedback",
+    "feedback_embedding_model",
+  ))) return [];
 
   // 5 s: the first cold call (config + OpenRouter) can exceed 3 s,
   // and failure here is silent to the visitor.

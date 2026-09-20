@@ -7,8 +7,8 @@ import { fetchAgentReadsApi, markAgentSessionReadApi } from "./agent-api";
 
 /**
  * “Read” status of agent sessions (“completed, unread” blue bubble). A card
- * { conversationId → last_read_at } shared by all surfaces (list /agents, badge
- * sidebar, runs selector). `markRead` stamps NOW, optimistically,
+ * { conversationId → last_read_at } shared by all surfaces (Numo history, badge,
+ * runs selector). `markRead` stamps NOW, optimistically,
  * to empty the bubble without waiting for the server round-trip.
  */
 

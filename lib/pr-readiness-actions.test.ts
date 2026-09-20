@@ -9,6 +9,7 @@ import {
   pullRequestReadinessBatchRefetchInterval,
   pullRequestReadinessRefetchInterval,
   pullRequestRefetchInterval,
+  settleMergeFlowOverride,
 } from "./pr-readiness-actions";
 
 function check(
@@ -92,6 +93,19 @@ describe("pull request readiness interactions", () => {
     );
   });
 
+  it("stands by an optimistic merge-flow override until the data agrees", () => {
+    // The forge's read-back can lag the registration the POST confirmed,
+    // and a settled PR is not re-polled: the override must stand through a
+    // lagging read, and clear once the data catches up.
+    expect(settleMergeFlowOverride(true, false)).toBe(true);
+    expect(settleMergeFlowOverride(false, true)).toBe(false);
+    expect(settleMergeFlowOverride(true, true)).toBeNull();
+    expect(settleMergeFlowOverride(false, false)).toBeNull();
+    // An unreadable PR keeps the override; no override, nothing to settle.
+    expect(settleMergeFlowOverride(true, null)).toBe(true);
+    expect(settleMergeFlowOverride(null, true)).toBeNull();
+  });
+
   it("keeps polling while provider mergeability is unavailable", () => {
     expect(
       pullRequestRefetchInterval({
@@ -114,6 +128,24 @@ describe("pull request readiness interactions", () => {
           methods: ["squash"],
           preferredMethod: "squash",
         },
+      }),
+    ).toBe(PULL_REQUEST_POLL_MS);
+  });
+
+  it("keeps polling while the deployment is in progress", () => {
+    expect(
+      pullRequestRefetchInterval({
+        pr: null,
+        files: [],
+        readiness: {
+          state: "ready",
+          blockers: [],
+          passed: [],
+          mergeAllowed: true,
+          methods: ["squash"],
+          preferredMethod: "squash",
+        },
+        deploymentStatus: "in_progress",
       }),
     ).toBe(PULL_REQUEST_POLL_MS);
   });

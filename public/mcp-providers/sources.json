@@ -128,5 +128,125 @@
     "asset": "https://brand.github.com/GitHub_Logos.zip",
     "archiveMember": "GitHub Logos/SVG/GitHub_Invertocat_White.svg",
     "verified": "2026-09-04"
+  },
+  {
+    "file": "posthog.svg",
+    "source": "https://posthog.com",
+    "asset": "https://posthog.com/favicon.svg",
+    "verified": "2026-09-18"
+  },
+  {
+    "file": "hubspot.png",
+    "source": "https://www.hubspot.com",
+    "asset": "https://www.hubspot.com/favicon.ico",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "zapier.ico",
+    "source": "https://zapier.com",
+    "asset": "https://zapier.com/favicon.ico",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "monday.png",
+    "source": "https://monday.com",
+    "asset": "https://cdn.prod.website-files.com/656da6fea306219773d04208/65af6bd6e742d497b5f23f69_645898132bbaac20f1963919_256x256.png",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "paypal.ico",
+    "source": "https://www.paypal.com",
+    "asset": "https://www.paypal.com/favicon.ico",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "airtable.ico",
+    "source": "https://airtable.com",
+    "asset": "https://airtable.com/favicon.ico",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "webflow.ico",
+    "source": "https://webflow.com",
+    "asset": "https://webflow.com/favicon.ico",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "wix.png",
+    "source": "https://www.wix.com",
+    "asset": "https://www.wix.com/favicon.ico",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "gitlab.png",
+    "source": "https://gitlab.com",
+    "asset": "https://gitlab.com/favicon.ico",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "grafana.ico",
+    "source": "https://grafana.com",
+    "asset": "https://grafana.com/favicon.ico",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "huggingface.ico",
+    "source": "https://huggingface.co",
+    "asset": "https://huggingface.co/favicon.ico",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "cloudflare-docs.png",
+    "source": "https://www.cloudflare.com",
+    "asset": "https://www.cloudflare.com/favicon.ico",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "cloudflare-bindings.png",
+    "source": "https://www.cloudflare.com",
+    "asset": "https://www.cloudflare.com/favicon.ico",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "exa.ico",
+    "source": "https://exa.ai",
+    "asset": "https://exa.ai/favicon.ico",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "dropbox.ico",
+    "source": "https://www.dropbox.com",
+    "asset": "https://www.dropbox.com/static/images/favicon.ico",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "intercom.png",
+    "source": "https://www.intercom.com",
+    "asset": "https://www.intercom.com/intercom-marketing-site/favicons/favicon-32x32.png",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "box.ico",
+    "source": "https://www.box.com",
+    "asset": "https://www.box.com/favicon.ico",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "clickup.png",
+    "source": "https://clickup.com",
+    "asset": "https://clickup.com/favicons/favicon-32x32.png",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "square.ico",
+    "source": "https://developer.squareup.com",
+    "asset": "https://squareup.com/favicon.ico",
+    "verified": "2026-09-20"
+  },
+  {
+    "file": "ramp.ico",
+    "source": "https://ramp.com",
+    "asset": "https://ramp.com/favicon.ico",
+    "verified": "2026-09-20"
   }
 ]

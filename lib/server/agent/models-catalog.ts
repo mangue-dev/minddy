@@ -1,11 +1,11 @@
 import "server-only";
 
+import { getUserByok, getUserDefaultModel, resolveAgentApiKey } from "./model";
 import {
-  getUserByok,
-  getUserDefaultModel,
-  resolveAgentApiKey,
-} from "./model";
-import { getBaselinePricing, getModelPlanLimit, type ModelPlanLimit } from "./model-plan";
+  getBaselinePricing,
+  getModelPlanLimit,
+  type ModelPlanLimit,
+} from "./model-plan";
 import { listOpenRouterIndex } from "./openrouter-index";
 import {
   averageUsdPerMTok,
@@ -29,6 +29,7 @@ import type { AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
 import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
+import { providerSupportsModelCapability } from "@/lib/model-catalog-capability";
 import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
 
 /**
@@ -54,18 +55,18 @@ export interface AgentModelEntry {
   id: string;
   name: string;
   /**
- * The reasoning levels that this model accepts (MIN-122, refined), such as
- * that it publishes. Absent outside OpenRouter: the other endpoints do not have
- * a capacity index, and the selector then falls back to the generic
- * levels — the same conservative fallback as for the image.
- */
+   * The reasoning levels that this model accepts (MIN-122, refined), such as
+   * that it publishes. Absent outside OpenRouter: the other endpoints do not have
+   * a capacity index, and the selector then falls back to the generic
+   * levels — the same conservative fallback as for the image.
+   */
   reasoning?: ModelReasoning | null;
   /**
- * Usage cost relating to the default minddy model (cf.
- * lib/model-multiplier.ts). Absent when it means nothing: provider BYOK
- * (prices unknown to us, and paid by the user anyway), model
- * outside the OpenRouter catalog, or free baseline.
- */
+   * Usage cost relating to the default minddy model (cf.
+   * lib/model-multiplier.ts). Absent when it means nothing: provider BYOK
+   * (prices unknown to us, and paid by the user anyway), model
+   * outside the OpenRouter catalog, or free baseline.
+   */
   multiplier?: number;
 }
 
@@ -77,25 +78,25 @@ export interface AgentModelsCatalog {
   /**
    * Plan multiplier cap, or `null` when none applies (BYOK and the admin
    * catalog). `null` = the picker does not display a multiplier or gray out a model.
- */
+   */
   maxMultiplier?: number | null;
   /** Account Plan — to name the limit in the UI (“your Go plan”). */
   planId?: string;
   /**
- * RECOMMENDED ids, in the order desired by the admin, and restricted to those that
- * this catalog really contains. This is what the picker shows when opening,
- * before any keystroke (see lib/recommended-models.ts).
- *
- * Absent in the ADMIN catalog: there we set `app_config`, including
- * transcription or embedding models that we do not advise anyone — a
- * list of advice would hide precisely what we came to look for.
- */
+   * RECOMMENDED ids, in the order desired by the admin, and restricted to those that
+   * this catalog really contains. This is what the picker shows when opening,
+   * before any keystroke (see lib/recommended-models.ts).
+   *
+   * Absent in the ADMIN catalog: there we set `app_config`, including
+   * transcription or embedding models that we do not advise anyone — a
+   * list of advice would hide precisely what we came to look for.
+   */
   recommended?: string[];
   /**
- * Non-secret address that only the desktop application uses to discover
- * the local catalog. The server never joins it: `models` remains empty here
- * and the Electron bridge makes the call on loopback.
- */
+   * Non-secret address that only the desktop application uses to discover
+   * the local catalog. The server never joins it: `models` remains empty here
+   * and the Electron bridge makes the call on loopback.
+   */
   localEndpoint?: {
     provider: Extract<AgentProviderId, "local_openai" | "ollama">;
     baseUrl: string;
@@ -106,8 +107,19 @@ const TTL_MS = 60 * 60 * 1000;
 const MAX_MODELS_RESPONSE_BYTES = 5 * 1024 * 1024;
 const cache = new Map<string, { at: number; models: AgentModelEntry[] }>();
 
+function byokCatalogCacheKey(
+  userId: string,
+  provider: AgentProviderId,
+  baseUrl: string,
+  credentialVersion: string,
+  capability: ModelCatalogCapability,
+): string {
+  return `byok|${userId}|${provider}|${baseUrl}|${capability}|${credentialVersion}`;
+}
+
 /** Discard non-conversational models (embeddings, audio, image, etc.). */
-const NON_CHAT_RE = /(embed(?:ding)?|whisper|tts|dall-e|moderation|audio|image|imagen|veo|realtime|transcribe|rerank)/i;
+const NON_CHAT_RE =
+  /(embed(?:ding)?|whisper|tts|dall-e|moderation|audio|image|imagen|veo|realtime|transcribe|rerank)/i;
 
 /**
  * The list as PROPOSED: without its version duplicates, and row.
@@ -173,26 +185,41 @@ async function listOpenAICompat(
   provider: AgentProviderId,
   baseUrl: string,
   apiKey: string,
+  capability: ModelCatalogCapability,
 ): Promise<AgentModelEntry[]> {
   const res = await fetchAiProviderBytes(provider, `${baseUrl}/models`, {
     headers: { Authorization: `Bearer ${apiKey}` },
     maxBytes: MAX_MODELS_RESPONSE_BYTES,
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const body = JSON.parse(res.bytes.toString("utf8")) as { data?: Array<{ id: string }> };
+  const body = JSON.parse(res.bytes.toString("utf8")) as {
+    data?: Array<{ id: string }>;
+  };
   const models = (body.data ?? [])
     .map((m) => m.id?.replace(/^models\//, "")) // Gemini prefix `models/…`
-    .filter((id): id is string => !!id && !NON_CHAT_RE.test(id))
+    .filter((id): id is string => {
+      if (!id) return false;
+      if (capability === "transcription") return /(transcri|whisper)/i.test(id);
+      if (capability === "embedding") return /embed/i.test(id);
+      return !NON_CHAT_RE.test(id);
+    })
     .map((id) => ({ id, name: id }));
   return sortById(models);
 }
 
 /** Native Anthropic `/v1/models` endpoint (`x-api-key` + `anthropic-version`). */
-async function listAnthropic(baseUrl: string, apiKey: string): Promise<AgentModelEntry[]> {
-  const res = await fetchAiProviderBytes("anthropic", `${baseUrl}/models?limit=1000`, {
-    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-    maxBytes: MAX_MODELS_RESPONSE_BYTES,
-  });
+async function listAnthropic(
+  baseUrl: string,
+  apiKey: string,
+): Promise<AgentModelEntry[]> {
+  const res = await fetchAiProviderBytes(
+    "anthropic",
+    `${baseUrl}/models?limit=1000`,
+    {
+      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      maxBytes: MAX_MODELS_RESPONSE_BYTES,
+    },
+  );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const body = JSON.parse(res.bytes.toString("utf8")) as {
     data?: Array<{ id: string; display_name?: string }>;
@@ -207,18 +234,20 @@ async function loadModels(
   provider: AgentProviderId,
   baseUrl: string,
   apiKey: string,
+  capability: ModelCatalogCapability = "text",
 ): Promise<AgentModelEntry[]> {
+  if (!providerSupportsModelCapability(provider, capability)) return [];
   const strategy = getAgentProvider(provider)?.listStrategy ?? "openrouter";
   switch (strategy) {
     case "openrouter":
-      return listOpenRouter(apiKey);
+      return listOpenRouter(apiKey, capability);
     case "anthropic":
       return listAnthropic(baseUrl, apiKey);
     case "openai":
-      return listOpenAICompat(provider, baseUrl, apiKey);
+      return listOpenAICompat(provider, baseUrl, apiKey, capability);
     case "generic":
       // Arbitrary endpoint: may not expose /models → failure is tolerated.
-      return listOpenAICompat(provider, baseUrl, apiKey);
+      return listOpenAICompat(provider, baseUrl, apiKey, capability);
     case "none":
       // Local endpoints are never reached from the cloud. The field of
       // model remains free in the picker: the user enters the id exposed by
@@ -240,7 +269,12 @@ async function withMultipliers(
   models: AgentModelEntry[],
   limit: ModelPlanLimit | null,
   useOpenRouterPricing = true,
-): Promise<Pick<AgentModelsCatalog, "models" | "maxMultiplier" | "planId" | "recommended">> {
+): Promise<
+  Pick<
+    AgentModelsCatalog,
+    "models" | "maxMultiplier" | "planId" | "recommended"
+  >
+> {
   const recommended = await resolveRecommended(models, useOpenRouterPricing);
   if (!limit?.baseline) return { models, maxMultiplier: null, recommended };
   return {
@@ -266,7 +300,9 @@ async function attachMultipliers(
 ): Promise<AgentModelEntry[]> {
   if (!baseline) return models;
   const index = await listOpenRouterIndex();
-  const pricing = new Map<string, ModelPricing | null>(index.map((m) => [m.id, m.pricing]));
+  const pricing = new Map<string, ModelPricing | null>(
+    index.map((m) => [m.id, m.pricing]),
+  );
   return models.map((m) => {
     const multiplier = modelCostMultiplier(pricing.get(m.id), baseline);
     return multiplier == null ? m : { ...m, multiplier };
@@ -314,14 +350,15 @@ async function resolveRecommended(
   if (!useOpenRouterPricing) return applicable;
   const index = await listOpenRouterIndex();
   const price = new Map(
-    index.map((m) => [m.id, m.pricing ? averageUsdPerMTok(m.pricing) : null] as const),
+    index.map(
+      (m) => [m.id, m.pricing ? averageUsdPerMTok(m.pricing) : null] as const,
+    ),
   );
   // Unknown price maps to `Infinity`, so it sorts last. `localeCompare` is the
   // second criterion: otherwise models at the same price would preserve an
   // `app_config` order that is not meant to carry any meaning.
   const cost = (id: string) => price.get(id) ?? Infinity;
-  return applicable
-    .sort((a, b) => cost(a) - cost(b) || a.localeCompare(b));
+  return applicable.sort((a, b) => cost(a) - cost(b) || a.localeCompare(b));
 }
 
 /**
@@ -343,16 +380,20 @@ export async function getAgentModelsForUser(
   let provider: AgentProviderId = DEFAULT_AGENT_PROVIDER;
   let baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!;
   let apiKey = "";
+  let credentialVersion: string | null = null;
   let mode: "platform" | "byok" = "platform";
   let endpointConfigured = true;
   try {
     // This read never probes a local endpoint (`listStrategy: none`); it only
     // returns the correct provider and keeps the picker in the local run's
     // namespace.
-    const endpoint = await resolveAgentApiKey(userId, surface, { allowLocal: true });
+    const endpoint = await resolveAgentApiKey(userId, surface, {
+      allowLocal: true,
+    });
     provider = endpoint.provider;
     baseUrl = normalizeBaseUrl(endpoint.baseUrl);
     apiKey = endpoint.apiKey;
+    credentialVersion = endpoint.credentialVersion;
     mode = endpoint.mode;
   } catch {
     endpointConfigured = false;
@@ -361,22 +402,30 @@ export async function getAgentModelsForUser(
   // Assistant calls retain provider feature defaults. Code-worker catalogs
   // expose only the explicit provider-bound account preference: there is no
   // provider or platform fallback that a new delegation could silently use.
-  const byok = surface === "assistant" ? await getUserByok(userId, surface) : null;
+  const byok =
+    surface === "assistant" ? await getUserByok(userId, surface) : null;
   const featureDefault = byok?.featureModels[modelKey]?.trim();
-  const providerDefault = surface === "assistant"
-    ? featureDefault || await resolveByokFeatureDefaultModel(provider, modelKey)
-    : null;
-  const accountDefault = surface === "agent" ? await getUserDefaultModel(userId) : null;
-  const defaultModel = surface === "assistant"
-    ? providerDefault ?? null
-    : accountDefault?.provider === provider
-      ? accountDefault.model
+  const providerDefault =
+    surface === "assistant"
+      ? featureDefault ||
+        (await resolveByokFeatureDefaultModel(provider, modelKey))
       : null;
+  const accountDefault =
+    surface === "agent" ? await getUserDefaultModel(userId) : null;
+  const defaultModel =
+    surface === "assistant"
+      ? (providerDefault ?? null)
+      : accountDefault?.provider === provider
+        ? accountDefault.model
+        : null;
 
   const limit = mode === "platform" ? await getModelPlanLimit(userId) : null;
   const localEndpoint = isLocalAgentProvider(provider)
     ? {
-        provider: provider as Extract<AgentProviderId, "local_openai" | "ollama">,
+        provider: provider as Extract<
+          AgentProviderId,
+          "local_openai" | "ollama"
+        >,
         baseUrl,
       }
     : undefined;
@@ -390,8 +439,19 @@ export async function getAgentModelsForUser(
     return { ...header, models: [], recommended: [], maxMultiplier: null };
   }
 
-  const cacheKey = `${provider}|${baseUrl}`;
-  const hit = cache.get(cacheKey);
+  const cacheKey =
+    mode === "byok"
+      ? credentialVersion
+        ? byokCatalogCacheKey(
+            userId,
+            provider,
+            baseUrl,
+            credentialVersion,
+            "text",
+          )
+        : null
+      : `${provider}|${baseUrl}|text`;
+  const hit = cacheKey ? cache.get(cacheKey) : undefined;
   if (hit && Date.now() - hit.at < TTL_MS) {
     return {
       ...header,
@@ -400,7 +460,7 @@ export async function getAgentModelsForUser(
   }
   try {
     const models = await loadModels(provider, baseUrl, apiKey);
-    cache.set(cacheKey, { at: Date.now(), models });
+    if (cacheKey) cache.set(cacheKey, { at: Date.now(), models });
     return {
       ...header,
       ...(await withMultipliers(models, limit, provider === "openrouter")),
@@ -408,14 +468,68 @@ export async function getAgentModelsForUser(
   } catch {
     return {
       ...header,
-      ...(await withMultipliers(hit?.models ?? [], limit, provider === "openrouter")),
+      ...(await withMultipliers(
+        hit?.models ?? [],
+        limit,
+        provider === "openrouter",
+      )),
     };
   }
 }
 
 /** Catalog for Numo conversations, using the assistant BYOK surface. */
-export function getAssistantModelsForUser(userId: string): Promise<AgentModelsCatalog> {
+export function getAssistantModelsForUser(
+  userId: string,
+): Promise<AgentModelsCatalog> {
   return getAgentModelsForUser(userId, "assistant");
+}
+
+/** Capability-aware catalog for the active BYOK settings screen. */
+export async function getActiveByokModelCatalog(
+  userId: string,
+  capability: ModelCatalogCapability,
+): Promise<AgentModelsCatalog> {
+  const byok = await getUserByok(userId, undefined, capability);
+  if (!byok) {
+    return {
+      provider: DEFAULT_AGENT_PROVIDER,
+      defaultModel: null,
+      models: [],
+      recommended: [],
+      maxMultiplier: null,
+    };
+  }
+  const header = {
+    provider: byok.provider,
+    defaultModel: null,
+    recommended: [] as string[],
+    maxMultiplier: null,
+  };
+  if (!providerSupportsModelCapability(byok.provider, capability)) {
+    return { ...header, models: [] };
+  }
+  const cacheKey = byokCatalogCacheKey(
+    userId,
+    byok.provider,
+    byok.baseUrl,
+    byok.credentialVersion,
+    capability,
+  );
+  const hit = cache.get(cacheKey);
+  if (hit && Date.now() - hit.at < TTL_MS)
+    return { ...header, models: hit.models };
+  try {
+    const models = await loadModels(
+      byok.provider,
+      byok.baseUrl,
+      byok.apiKey,
+      capability,
+    );
+    cache.set(cacheKey, { at: Date.now(), models });
+    return { ...header, models };
+  } catch {
+    return { ...header, models: hit?.models ?? [] };
+  }
 }
 
 /**
@@ -466,7 +580,9 @@ export async function getPlatformModelCatalog(
   capability: ModelCatalogCapability = "text",
 ): Promise<AgentModelEntry[]> {
   if (!isManagedAiEnabled()) return [];
-  const baseUrl = normalizeBaseUrl(resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!);
+  const baseUrl = normalizeBaseUrl(
+    resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!,
+  );
   const apiKey = process.env.OPENROUTER_API_KEY;
 
   const cacheKey = `platform|${baseUrl}|${capability}`;

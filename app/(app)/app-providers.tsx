@@ -25,11 +25,11 @@ import { AppTabsProvider } from "@/lib/app-tabs-context";
 import { IssuePanelProvider } from "@/lib/issue-panel-context";
 import { AppShellChrome } from "@/components/app-shell-chrome";
 import { AssistantFab } from "@/components/assistant-fab";
+import { StatusLineFloating } from "@/components/status-line";
 import { AnalyticsProjectGroup } from "@/components/analytics-project-group";
 import { PushServiceWorker } from "@/components/push-service-worker";
 import { DesktopNotifications } from "@/components/desktop-notifications";
 import { DesktopAnalyticsPrompt } from "@/components/desktop-analytics-prompt";
-import { DesktopWindowButtons } from "@/components/desktop-window-buttons";
 import { PushNotificationDismiss } from "@/components/push-notification-dismiss";
 import { ProjectDraftResume } from "@/components/project-draft-resume";
 import { ThemeAccountSync } from "@/components/theme-account-sync";
@@ -99,8 +99,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                               <BulkActionsProvider>
                                 {/* “Save current view” (⌘K) starts from
  address; surfaces whose selection
- does not live there (a conversation of /agents, the open
- PR, the active view of a board) the
+ does not live there (the PR
+ open, the active view of a board) the
  publish here. Above the shell, therefore:
  it is the palette which reads. */}
                                 <CurrentViewProvider>
@@ -112,6 +112,10 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                             </CreateProvider>
                             <AssistantPanel />
                             <AssistantFab />
+                            {/* The mobile projection of the status line (MIN-555):
+  the desktop pill lives in the FAB band itself, but the nav pill
+  has no room for a text line — this one floats just above it. */}
+                            <StatusLineFloating />
                             <ScratchpadModal />
                             <DeferredKeyboardCheatsheet />
                             <AnalyticsProjectGroup />
@@ -124,9 +128,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
  times in the desktop app — the site banner
  does not go there (MIN-291). */}
                             <DesktopAnalyticsPrompt />
-                            {/* Stable renderer-owned macOS controls are used in
- the authenticated shell and yield to native controls in full screen. */}
-                            <DesktopWindowButtons />
                             {/* Obligatory suspense: it reads `useSearchParams`,
  because the target of a notification lives in the
  query (`?issue=…`). */}

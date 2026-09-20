@@ -68,6 +68,7 @@ import {
   type ContextualAction,
   type FormSelectOption,
   type PaletteItem as CpPaletteItem,
+  type PaletteItem,
 } from "@/lib/command-palette";
 import { NumoIcon } from "@/components/numo-icon";
 import { projectOrbIcon } from "@/components/project-orb";
@@ -88,7 +89,7 @@ import {
   shouldAutoStartOnPromptCopy,
 } from "@/lib/prompt-copy-auto-start";
 import { useAuth } from "@/lib/auth-context";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useCreate } from "@/lib/create-context";
 import { useCurrentView } from "@/lib/current-view-context";
 import { useSavedViewsQuery } from "@/lib/use-saved-views-query";
@@ -114,7 +115,7 @@ import { moveIssueGroupsToEnd } from "@/lib/command-palette/group-order";
 import type { PaletteStrings } from "@/lib/command-palette/i18n";
 import { createMinddyEntityActionsProvider } from "@/lib/command-palette/registry/providers/MinddyEntityActionsProvider";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";
-import { useOptionalAppTabs } from "@/lib/app-tabs-context";
+import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import type {
   Issue,
   Member,
@@ -234,6 +235,9 @@ export interface CommandPaletteProps {
   searchIndex?: SearchIndexResponse | null;
   destinationOnly?: boolean;
   onDestinationSelect?: (href: string) => void;
+  /** Prefetch the destination behind a hovered/highlighted row (new tab or
+   *  navigation): the palette row is the browsing intent (fourth pass MIN-540). */
+  onPrefetchDestination?: (href: string) => void;
 }
 
 export function CommandPalette({
@@ -243,6 +247,7 @@ export function CommandPalette({
   searchIndex,
   destinationOnly = false,
   onDestinationSelect,
+  onPrefetchDestination,
 }: CommandPaletteProps) {
   const { track } = useAnalytics();
   const locale = useLocale();
@@ -256,11 +261,11 @@ export function CommandPalette({
   const tAction = useTranslations("CommandPaletteActions");
   const pathname = usePathname();
   const router = useRouter();
-  const appTabs = useOptionalAppTabs();
+  const appTabs = useOptionalAppTabSession();
   const queryClient = useQueryClient();
   const { user, updateUserMetadata } = useAuth();
   const { projects } = useProjects();
-  const assistant = useAssistantPanel();
+  const assistant = useAssistantPanelActions();
   const { openCreateIssue, openCreateObjective } = useCreate();
   // The account theme: the choice is persisted to user_metadata so it
   // follows the account to every device (lib/use-account-theme.ts).
@@ -292,6 +297,21 @@ export function CommandPalette({
   useEffect(() => {
     favoritesRef.current = favorites;
   }, [favorites]);
+
+  // One warmup attempt per destination while the palette stays mounted:
+  // repeated hovers and keyboard passes over the same row cost nothing.
+  const prefetchAttempted = useRef(new Set<string>());
+  const handleHoverPrefetch = useCallback((item: PaletteItem) => {
+    if (!onPrefetchDestination) return;
+    // Issue rows open a panel, not a tab: their href would prefetch a
+    // project route per row while scrolling the list. Destinations, saved
+    // views and pages carry the real navigation.
+    if (item.entityType === "issue") return;
+    const destination = paletteDestinationHref(item.href);
+    if (!destination || prefetchAttempted.current.has(destination)) return;
+    prefetchAttempted.current.add(destination);
+    onPrefetchDestination(destination);
+  }, [onPrefetchDestination]);
   // Re-sync when the account metadata changes (another tab/device, or after a
   // write settles). Keyed on the serialized value to avoid an identity-churn loop.
   const serverFavoritesKey = serverFavorites.join(" ");
@@ -831,7 +851,7 @@ export function CommandPalette({
           openLinkedObjective: tAction("openLinkedObjective"),
         },
         navigate: (href) => router.push(href),
-        openInNewTab: (href) => { void appTabs?.session.create(href); },
+        openInNewTab: (href) => { void appTabs?.create(href); },
         copyText: async (value, confirmation, resolveHref) => {
           const text = resolveHref
             ? new URL(value, window.location.origin).href
@@ -1012,8 +1032,16 @@ export function CommandPalette({
   // `bulkFieldProvider`.
   const bulkItems = useMemo<CpPaletteItem[]>(() => {
     if (!bulkRequest) return [];
-    const { count, onDelete, onAskNumo, cycle, objectives, onLink } =
-      bulkRequest;
+    const {
+      count,
+      onDelete,
+      onAskNumo,
+      onCopyPrompt,
+      onLaunchAgent,
+      cycle,
+      objectives,
+      onLink,
+    } = bulkRequest;
     const field = (f: string): Partial<CpPaletteItem> => ({
       filterCategory: "bulk",
       entityType: "bulk-field",
@@ -1033,6 +1061,41 @@ export function CommandPalette({
           onAskNumo();
         },
       },
+      // ⇧P on the selection (MIN-539): one combined prompt, copied as a whole.
+      ...(onCopyPrompt
+        ? [
+            {
+              id: "bulk-copy-prompt",
+              title: tBulk("copyPrompt"),
+              icon: <ClipboardCopy className="size-4" />,
+              keywords: ["prompt", "copy", "copier", "agent", "code"],
+              shortcut: ["⇧", "P"],
+              filterCategory: "bulk",
+              favoritable: false,
+              execute: () => {
+                onCopyPrompt();
+              },
+            } as CpPaletteItem,
+          ]
+        : []),
+      // ⇧A on the selection (MIN-539): Numo takes the whole selection in one
+      // combined request.
+      ...(onLaunchAgent
+        ? [
+            {
+              id: "bulk-launch-agent",
+              title: tBulk("launchAgent"),
+              icon: <NumoActionIcon className="size-4" />,
+              keywords: ["numo", "agent", "implement", "launch", "lancer"],
+              shortcut: ["⇧", "A"],
+              filterCategory: "bulk",
+              favoritable: false,
+              execute: () => {
+                onLaunchAgent();
+              },
+            } as CpPaletteItem,
+          ]
+        : []),
       {
         id: "bulk-status",
         title: tIssueUI("changeStatusAria"),
@@ -1379,6 +1442,7 @@ export function CommandPalette({
         else if (type === "success") toast.success(message);
         else toast(message);
       }}
+      onHoverPrefetch={handleHoverPrefetch}
 quickAi={destinationOnly ? undefined : {
         icon: <NumoActionIcon className="size-4" />,
         onSelect: (query) => {

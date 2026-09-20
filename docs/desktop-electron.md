@@ -183,8 +183,10 @@ is shown; no capability is inferred from the origin or app version.
 
 Login, signup, and the server-unavailable screen have minimal native-control
 clearance and a drag surface, without application tabs. Interactive controls,
-menus, dialogs, and tooltips are non-draggable. On macOS, the traffic lights stay native, and a modal asks the main process
-to hide them while it covers the app; nothing is hidden in full screen. The old root drag band is disabled
+menus, dialogs, and tooltips are non-draggable. On macOS, the traffic lights stay native
+and never leave for a page reason: dialogs, palettes and drawers leave them in
+place, and the window stays manipulable behind whatever covers it; nothing is
+hidden in full screen either, macOS manages them there. The old root drag band is disabled
 when the authenticated desktop bar owns that region.
 
 Before releasing a new desktop build, verify native controls, fullscreen, zoom,
@@ -235,11 +237,14 @@ or a choice. As long as no response is given, consent is worth `null`
 and PostHog remains cookie- and identity-free — nothing is surreptitiously measured.
 
 **On macOS, the buttons stay native.** Native traffic lights cannot sit
-below a renderer dialog because no CSS `z-index` can cover them: while a
-modal covers the authenticated app, the page asks the main process to hide
-them, and their slot stays reserved so the layout does not jump. The MIN-536
-experiment with renderer-owned HTML controls was removed in MIN-545 — those
-fake controls ended up permanently on screen outside dialogs too.
+below a renderer dialog because no CSS `z-index` can cover them — so the
+opposite choice was made: nothing on the page asks to hide them. A dialog, a
+palette or a drawer leaves them in place, drawn over its veil; the window
+stays closable behind whatever covers it. Their slot stays reserved so the
+layout does not jump. The MIN-536 experiment with renderer-owned HTML controls
+was removed in MIN-545 — those fake controls ended up permanently on screen
+outside dialogs too — and the modal hold of MIN-291 was dropped with it: the
+buttons simply never leave anymore.
 
 Their geometry is **noted on a pixel-decoded system screenshot by
 pixel**, and not deducted: left edges at 19, 42 and 65, top at 22, **14 px from
@@ -251,7 +256,8 @@ of the three values which was correct was the origin, and the shift could be see
 screen under its own care; hiding them there removes the mouse's standard exit.
 The page learns that state so it releases their reserved slot
 through a round trip over the bridge
-([lib/use-window-buttons.ts](../lib/use-window-buttons.ts)).
+([lib/use-window-buttons.ts](../lib/use-window-buttons.ts)); it is the only
+state, besides the initial replay, that the page listens to.
 
 **The only real pitfall is authentication.** minddy suggests Google and GitHub
 ([login-form.tsx](../components/auth/login-form.tsx)), and Google policy

@@ -6,10 +6,12 @@ import {
   gitlabMrStateForAction,
   isPullRequestComment,
   isServiceAccountGesture,
+  mrEventOccurredAt,
   prActionForMergeRequest,
   prActionForNote,
   prActionForPullRequest,
   prActionForReview,
+  prEventOccurredAt,
 } from "./pr-webhook-core";
 
 /**
@@ -229,5 +231,89 @@ describe("isServiceAccountGesture (GitLab)", () => {
     expect(isServiceAccountGesture("pr_commented")).toBe(false);
     expect(isServiceAccountGesture("pr_code_commented")).toBe(false);
     expect(isServiceAccountGesture("pr_approved")).toBe(false);
+  });
+});
+
+describe("prEventOccurredAt (GitHub)", () => {
+  it("prefers the specific timestamp of each transition", () => {
+    // An opening is dated by the creation of the PR, not by the delivery
+    // of the hook: a repository linked hours later must not say "just now".
+    expect(
+      prEventOccurredAt("opened", {
+        created_at: "2026-09-18T09:00:00Z",
+        updated_at: "2026-09-18T12:00:00Z",
+      }),
+    ).toBe("2026-09-18T09:00:00Z");
+    // A merge carries `merged_at`; a plain close falls back to `closed_at`.
+    expect(
+      prEventOccurredAt("closed", {
+        merged: true,
+        merged_at: "2026-09-18T10:00:00Z",
+        closed_at: "2026-09-18T10:00:00Z",
+        updated_at: "2026-09-18T10:00:01Z",
+      }),
+    ).toBe("2026-09-18T10:00:00Z");
+    expect(
+      prEventOccurredAt("closed", {
+        merged: false,
+        closed_at: "2026-09-18T10:00:00Z",
+        updated_at: "2026-09-18T10:00:01Z",
+      }),
+    ).toBe("2026-09-18T10:00:00Z");
+  });
+
+  it("falls back to `updated_at` for gestures the payload does not date", () => {
+    // A push and a reopen carry no dedicated instant: `updated_at` is the
+    // field the forge touches for both — still the gesture, not the capture.
+    expect(prEventOccurredAt("synchronize", { updated_at: "2026-09-18T10:00:00Z" })).toBe(
+      "2026-09-18T10:00:00Z",
+    );
+    expect(prEventOccurredAt("reopened", { updated_at: "2026-09-18T10:00:00Z" })).toBe(
+      "2026-09-18T10:00:00Z",
+    );
+  });
+
+  it("keeps the capture time (null) for untraced or unknown actions", () => {
+    expect(prEventOccurredAt("edited", { updated_at: "2026-09-18T10:00:00Z" })).toBeNull();
+    expect(prEventOccurredAt("labeled", undefined)).toBeNull();
+  });
+});
+
+describe("mrEventOccurredAt (GitLab)", () => {
+  it("prefers the specific timestamp of each transition", () => {
+    expect(
+      mrEventOccurredAt({
+        action: "open",
+        created_at: "2026-09-18T09:00:00Z",
+        updated_at: "2026-09-18T12:00:00Z",
+      }),
+    ).toBe("2026-09-18T09:00:00Z");
+    expect(
+      mrEventOccurredAt({
+        action: "merge",
+        merged_at: "2026-09-18T10:00:00Z",
+        updated_at: "2026-09-18T10:00:01Z",
+      }),
+    ).toBe("2026-09-18T10:00:00Z");
+    expect(
+      mrEventOccurredAt({
+        action: "close",
+        closed_at: "2026-09-18T10:00:00Z",
+        updated_at: "2026-09-18T10:00:01Z",
+      }),
+    ).toBe("2026-09-18T10:00:00Z");
+  });
+
+  it("only dates the `update` that carries a push", () => {
+    // A push is the traced `update`: `updated_at` moves with it. A title or
+    // description retouch is not traced at all — null, capture time, no line.
+    expect(mrEventOccurredAt({ action: "update", oldrev: "abc", updated_at: "2026-09-18T10:00:00Z" })).toBe(
+      "2026-09-18T10:00:00Z",
+    );
+    expect(mrEventOccurredAt({ action: "update", updated_at: "2026-09-18T10:00:00Z" })).toBeNull();
+  });
+
+  it("keeps the capture time (null) for unknown actions", () => {
+    expect(mrEventOccurredAt({ action: "approved", updated_at: "2026-09-18T10:00:00Z" })).toBeNull();
   });
 });

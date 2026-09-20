@@ -71,7 +71,7 @@ import type {
   IssuePriority,
   IssueEffort,
 } from "@/lib/issue-constants";
-import { resolveSmartFill } from "@/lib/smart-fill";
+import { resolveSmartFill, resolveSmartFillScope } from "@/lib/smart-fill";
 import type { RecurrenceCadence } from "@/lib/recurrence";
 import type {
   Category,
@@ -88,6 +88,7 @@ const DEFAULTS = {
   effort: null as IssueEffort | null,
   assignee_id: null as string | null,
   objective_id: null as string | null,
+  parent_id: null as string | null,
   due_date: null as string | null,
   recurrence: null as RecurrenceCadence | null,
 };
@@ -105,6 +106,7 @@ export function CreateIssueDialog({
   initialStatus,
   initialObjectiveId,
   initialAssigneeId,
+  initialParentId,
   initialTitle,
   initialDescription,
   initialCategoryIds,
@@ -129,6 +131,9 @@ export function CreateIssueDialog({
   initialStatus?: IssueStatus;
   /** Preset the objective (when creating from an objective-filtered board). */
   initialObjectiveId?: string | null;
+  /** Preset the parent (when creating from a family-scoped board, so the new
+      issue lands IN the family instead of silently next to it). */
+  initialParentId?: string | null;
   /** Preset the assignee (when creating from an assignee-filtered board, so
       the new issue doesn't instantly vanish from it). */
   initialAssigneeId?: string | null;
@@ -221,10 +226,27 @@ export function CreateIssueDialog({
    * where something is going to fill it, reads like an oversight.
    */
   const smartFillAvailable = resolveSmartFill(user?.user_metadata);
-  const [smartFill, setSmartFill] = useState(smartFillAvailable);
+  const smartFillDefault = resolveSmartFillScope(
+    user?.user_metadata,
+    (initialStatus ?? DEFAULTS.status) === "triage" ? "triage" : "created",
+  );
+  const smartFillTouchedRef = useRef(false);
+  const [smartFill, setSmartFill] = useState(smartFillDefault);
   useEffect(() => {
-    if (open) setSmartFill(smartFillAvailable);
-  }, [open, smartFillAvailable]);
+    if (open) {
+      smartFillTouchedRef.current = false;
+      setSmartFill(smartFillDefault);
+    }
+  }, [open, smartFillDefault]);
+  useEffect(() => {
+    if (!open || smartFillTouchedRef.current) return;
+    setSmartFill(
+      resolveSmartFillScope(
+        user?.user_metadata,
+        fields.status === "triage" ? "triage" : "created",
+      ),
+    );
+  }, [open, fields.status, user]);
 
   // Account preference (Preferences → auto-assign): pre-fill the assignee
   // with the creator. Guarded on membership — the assignee picker only lists
@@ -242,12 +264,14 @@ export function CreateIssueDialog({
     ...DEFAULTS,
     status: initialStatus ?? DEFAULTS.status,
     objective_id: initialObjectiveId ?? DEFAULTS.objective_id,
+    parent_id: initialParentId ?? DEFAULTS.parent_id,
     assignee_id: initialAssigneeId ?? defaultAssigneeId,
   });
 
   // Apply the presets each time the dialog opens (a column's "+" reopens it with
   // that column's status; objective mode reopens it with the objective set;
-  // the auto-assign preference seeds the assignee). Re-seeding on
+  // family mode reopens it under the active parent; the auto-assign
+  // preference seeds the assignee). Re-seeding on
   // defaultAssigneeId also covers members loading in after the dialog opens.
   useEffect(() => {
     if (!open) return;
@@ -255,9 +279,10 @@ export function CreateIssueDialog({
       ...f,
       status: initialStatus ?? DEFAULTS.status,
       objective_id: initialObjectiveId ?? DEFAULTS.objective_id,
+      parent_id: initialParentId ?? DEFAULTS.parent_id,
       assignee_id: initialAssigneeId ?? defaultAssigneeId,
     }));
-  }, [open, initialStatus, initialObjectiveId, initialAssigneeId, defaultAssigneeId]);
+  }, [open, initialStatus, initialObjectiveId, initialParentId, initialAssigneeId, defaultAssigneeId]);
 
   // The starting content, placed ONCE per opening. The flag is a ref and
   // not an effect dependency: `initialCategoryIds` is an array, therefore a
@@ -448,6 +473,9 @@ export function CreateIssueDialog({
       effort: draft.effort,
       assignee_id: draft.assignee_id,
       objective_id: draft.objective_id,
+      // Drafts never recorded a parent: the dialog's own preset reasserts
+      // itself, so a draft recovered on a family board still lands there.
+      parent_id: initialParentId ?? DEFAULTS.parent_id,
       due_date: draft.due_date,
       recurrence: draft.recurrence ?? null,
     });
@@ -752,7 +780,13 @@ export function CreateIssueDialog({
                 />
               )}
               {smartFillAvailable && (
-                <SmartFillCompact value={smartFill} onChange={setSmartFill} />
+                <SmartFillCompact
+                  value={smartFill}
+                  onChange={(value) => {
+                    smartFillTouchedRef.current = true;
+                    setSmartFill(value);
+                  }}
+                />
               )}
             </div>
 
@@ -773,6 +807,7 @@ export function CreateIssueDialog({
                 </span>
               ) : (
                 <DictateButton
+                  context="issue_form"
                   onTranscription={(text) => {
                     track("issue_dictation_used", { surface: "create_dialog" });
                     onTranscript(text);
@@ -804,7 +839,7 @@ export function CreateIssueDialog({
               <div className="ml-auto flex items-center gap-4">
                 <label
                   htmlFor={createMoreId}
-                  className="cursor-pointer text-sm text-foreground"
+                  className="text-sm text-foreground"
                 >
                   {t("createMore")}
                 </label>

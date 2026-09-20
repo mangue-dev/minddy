@@ -58,6 +58,9 @@ export const FEATURE_LABEL_KEYS: Record<UsageHistoryFeature, MessageKey<"Billing
   routine_compute: "historyFeatureRoutineCompute",
   import_map: "historyFeatureImportMap",
   brief_split: "historyFeatureBriefSplit",
+  jev_decision: "historyFeatureJevDecision",
+  jev_shadow: "historyFeatureJevShadow",
+  smart_triage: "historyFeatureSmartTriage",
 };
 
 /**

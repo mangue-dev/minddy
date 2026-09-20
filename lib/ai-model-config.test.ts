@@ -69,4 +69,12 @@ describe("registre des réglages IA × catalogues i18n", () => {
       "embedding",
     );
   });
+
+  it("omits provider-specific fields for unsupported model families", () => {
+    const keys = new Set(AI_MODEL_CONFIG_FIELDS.map((field) => field.key));
+    expect(keys.has("byok_default_anthropic_assistant_model")).toBe(true);
+    expect(keys.has("byok_default_anthropic_transcription_model")).toBe(false);
+    expect(keys.has("byok_default_anthropic_feedback_embedding_model")).toBe(false);
+    expect(keys.has("byok_default_google_feedback_embedding_model")).toBe(true);
+  });
 });

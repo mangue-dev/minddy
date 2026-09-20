@@ -46,7 +46,25 @@ describe("application content header", () => {
     expect(source).toContain("h-[var(--app-content-header-height)] shrink-0");
     expect(source).toContain("overflow-x-auto overflow-y-hidden");
     expect(source).toContain("overscroll-x-contain");
-    expect(source).toContain("items-center px-3");
+    expect(source).toContain("items-center px-[var(--app-content-header-pad-x)]");
+  });
+
+  it("keeps the pane radius low while clearing its corner pills", () => {
+    // The radius is a tuned value, not derived: 26px would be the exact
+    // concentric radius (arc center on the pills' cap center), and it read as
+    // too round. 20px stays above the ~16px floor where the arc would cross a
+    // 32px pill, and curves away from the pills on the diagonal.
+    expect(styles).toContain("--app-pane-radius: 20px;");
+  });
+
+  it("gives its pills the same visible margin on the top and both sides", () => {
+    // Half the strip minus the 16px radius of a 32px pill = the pills'
+    // vertical centering margin, so with the 1px pane border the visible
+    // margin is 10px on the top and both sides, on every page.
+    expect(styles).toContain(
+      "--app-content-header-pad-x: calc(\n    (var(--app-content-header-height) - 32px) / 2\n  );",
+    );
+    expect(source).toContain("px-[var(--app-content-header-pad-x)]");
   });
 
   it("owns equal edge padding instead of letting pages widen it", () => {
@@ -69,6 +87,9 @@ describe("application content header", () => {
     );
     expect(styles).toMatch(
       /html\[data-desktop-platform="darwin"\] \.app-content-header[\s\S]*?:is\([\s\S]*?button,[\s\S]*?\)\s*\{\s*-webkit-app-region:\s*no-drag;/,
+    );
+    expect(styles).toMatch(
+      /html\[data-desktop-app\] \.sidebar-nav-panel\s*\{\s*-webkit-app-region:\s*no-drag;/,
     );
   });
 

@@ -57,12 +57,16 @@ export async function setIssueCategories({
 
   const service = getServiceClient();
 
-  const { data: issue } = await service
+  const { data: issue, error: issueError } = await service
     .from("issues")
     .select("id, project_id")
     .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();
+  if (issueError) {
+    console.error("[set-issue-categories] issue lookup failed:", issueError.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
   if (!issue) {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
   }
@@ -74,19 +78,27 @@ export async function setIssueCategories({
   // Keep only categories that actually belong to this issue's project.
   let valid: string[] = [];
   if (requested.length > 0) {
-    const { data: cats } = await service
+    const { data: cats, error: categoryError } = await service
       .from("categories")
       .select("id")
       .eq("project_id", issue.project_id)
       .in("id", requested);
+    if (categoryError) {
+      console.error("[set-issue-categories] category lookup failed:", categoryError.message);
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
     valid = (cats ?? []).map((c) => c.id as string);
   }
 
   // Snapshot the current set so we can log which categories were added/removed.
-  const { data: currentRows } = await service
+  const { data: currentRows, error: snapshotError } = await service
     .from("issue_categories")
     .select("category_id")
     .eq("issue_id", issueId);
+  if (snapshotError) {
+    console.error("[set-issue-categories] current categories lookup failed:", snapshotError.message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
   const current = new Set((currentRows ?? []).map((r) => r.category_id as string));
 
   const { error: delError } = await service

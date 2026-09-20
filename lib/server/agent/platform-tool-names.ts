@@ -85,6 +85,7 @@ export const PROJECT_PR_TOOL_NAMES = new Set([
   "comment_pull_request",
   "comment_pull_request_line",
   "reply_pull_request_thread",
+  "resolve_pull_request_thread",
   "review_pull_request",
   "set_pull_request_state",
 ]);

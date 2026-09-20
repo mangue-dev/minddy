@@ -1,7 +1,7 @@
 import "server-only";
 import { DATABASE_TOOL_PARAMETERS, databaseToolDescription } from "@/lib/server/database-tool-schema";
 
-import { MCP_CLIENT_TOOLS } from "@/lib/mcp-client-tools";
+import { MCP_CLIENT_TOOLS, MCP_SETUP_TOOLS } from "@/lib/mcp-client-tools";
 
 import {
   ISSUE_STATUSES,
@@ -204,6 +204,7 @@ const VIEW_PROJECT_FILTER_PROPERTY = {
 
 export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   ...MCP_CLIENT_TOOLS,
+  ...MCP_SETUP_TOOLS,
   // ── Read tools ────────────────────────────────────────────────────────
   {
     type: "function",
@@ -348,9 +349,27 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "get_objective",
+      description:
+        "Read an objective's id, name, description, status, lead_user_id and target_date, plus its relations to issues and objectives (blocks, blocked_by, related). Use list_objectives to find its UUID, then read its dependencies before linking or declaring it ready.",
+      parameters: {
+        type: "object",
+        properties: {
+          objective_id: {
+            type: "string",
+            description: "Objective UUID from list_objectives, in the selected project.",
+          },
+        },
+        required: ["objective_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "list_objectives",
       description:
-        "List the project's objectives (issue groups): id, name, status, lead_user_id, target_date, plus their resources when they carry any — files, links AND pages of the project's wiki (kind, then file name/type/size, url, or page_id + live title). Attach one with add_resource.",
+        "List the project's objectives (issue groups): id, name, status, lead_user_id, target_date, plus their resources when they carry any — files, links AND pages of the project's wiki (kind, then file name/type/size, url, or page_id + live title). Read dependencies with get_objective. Attach one with add_resource.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -787,23 +806,34 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "link_issues",
       description:
-        "Create or remove a relation between two issues (MIN-25) — the same links the user adds from an issue's Relations section. From `issue_id`'s point of view: 'blocks' (it blocks the target), 'blocked_by' (it is blocked by the target), 'related' (a soft link). These are NOT sub-issues (that is parent_id) and NOT duplicates (that is status 'duplicate' + duplicate_of_id). Blocking relations are read by the cycle filler, which leaves a blocked issue out until its blocker closes. Pass remove: true to delete the relation instead. Idempotent both ways. Read an issue's current relations with get_issue.",
+        "Create or remove a relation between two issues (MIN-25), or across issues and objectives (MIN-513) — the same links the user adds from a Relations section. From `issue_id`'s (or `source_objective_id`'s) point of view: 'blocks' (it blocks the target), 'blocked_by' (it is blocked by the target), 'related' (a soft link). The target is an issue (`target_issue_id`) or an objective (`target_objective_id`) — pass exactly one of each side. These are NOT sub-issues (that is parent_id) and NOT duplicates (that is status 'duplicate' + duplicate_of_id). Blocking relations are read by the cycle filler, which leaves a blocked issue out until its blocker closes; blocking through an objective cascades to its issues. Pass remove: true to delete the relation instead. Idempotent both ways. Read an issue's current relations with get_issue, an objective's with get_objective.",
       parameters: {
         type: "object",
         properties: {
           issue_id: {
             type: "string",
             description:
-              "The issue the relation is stated FROM (its perspective).",
+              "The issue the relation is stated FROM (its perspective). Required unless source_objective_id is passed.",
+          },
+          source_objective_id: {
+            type: "string",
+            description:
+              "The OBJECTIVE the relation is stated FROM (objective → issue or objective → objective). Required unless issue_id is passed.",
           },
           relation: {
             type: "string",
             enum: [...RELATION_TYPE_VALUES],
-            description: "The relation, from issue_id's perspective.",
+            description: "The relation, from the source's perspective.",
           },
           target_issue_id: {
             type: "string",
-            description: "The other issue. Must be in the same project.",
+            description:
+              "The other issue. Must be in the same project. Required unless target_objective_id is passed.",
+          },
+          target_objective_id: {
+            type: "string",
+            description:
+              "The other objective (a UUID). Must be in the same project. Required unless target_issue_id is passed.",
           },
           remove: {
             type: "boolean",
@@ -811,7 +841,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
               "Remove that relation instead of adding it (default false).",
           },
         },
-        required: ["issue_id", "relation", "target_issue_id"],
+        required: ["relation"],
       },
     },
   },
@@ -1429,7 +1459,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_account_settings",
       description:
-        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, the status Numo-created issues land in, the auto-assign (on create / on start) and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the code agent's default model, reasoning level and branch prefix, and the automation preset. Call this before update_account_settings so you use exact current values.",
+        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, the status Numo-created issues land in, the auto-assign, Smart Fill (master, created issues, triage), and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the code agent's default model, reasoning level and branch prefix, and the automation preset. Call this before update_account_settings so you use exact current values.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -1479,7 +1509,17 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           smart_fill: {
             type: "boolean",
             description:
-              "When creating an issue, let Smart-fill infer its priority, effort, categories and objective from the title and description.",
+              "Master switch for Smart Fill. When enabled, it can infer missing priority, effort, categories and objective from issue title and description.",
+          },
+          smart_fill_created: {
+            type: "boolean",
+            description:
+              "Automatically run Smart Fill on eligible newly created issues that are not in triage.",
+          },
+          smart_fill_triage: {
+            type: "boolean",
+            description:
+              "Automatically run Smart Fill on eligible triage issues and promoted feedback.",
           },
           cycles_enabled: {
             type: "boolean",
@@ -2020,7 +2060,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "launch_code_agent",
       description:
-        "Delegate a complete repository task to the code worker owned by this Numo turn, using the model and reasoning configured by the user in Account settings. First gather the issue, plan, relevant wiki pages and pull request when they exist; resolve important ambiguity; and decide that repository work is actually needed. A ticket is optional context, not the delegation identity. The worker returns here and Numo gives the final answer in this conversation. Reuse `continuation_run_id` for follow-up on the appropriate worker lineage. A pull request is not automatic. Model and reasoning overrides are never accepted.",
+        "Delegate a complete repository task to the code worker owned by this Numo turn, using the model and reasoning configured by the user in Account settings. First gather the issue, plan, relevant wiki pages and pull request when they exist; resolve important ambiguity; and decide that repository work is actually needed — CODE work: writing files, pushing, rebasing, revising a branch, or a line-anchored review. Merging, renaming, commenting on or resolving the review conversations of a pull request is NOT repository work: those gestures go through merge_pull_request, update_pull_request, post_pull_request_comment and resolve_pull_request_threads directly. A ticket is optional context, not the delegation identity. The worker returns here and Numo gives the final answer in this conversation. Reuse `continuation_run_id` for follow-up on the appropriate worker lineage. A pull request is not automatic. Model and reasoning overrides are never accepted.",
       parameters: {
         type: "object",
         properties: {
@@ -2146,7 +2186,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "read_pull_request",
       description:
-        "Read a selected pull request, or the pull request attached to an issue: its title, description, state, branch, CI checks, per-file diffs (patches, capped), and review comments anchored to code. Use pull_request_id when the conversation carries a PR directly, including a human PR with no issue. Otherwise use issue_id to resolve the issue's live or most recently updated PR. To delegate repository work, use launch_code_agent with that exact pull_request_id and mode review or fix.",
+        "Read a selected pull request, or the pull request attached to an issue: its title, description, state, branch, CI checks, per-file diffs (patches, capped), and review comments anchored to code — grouped into conversations, each carrying the root comment `id` that resolve_pull_request_threads targets. Use pull_request_id when the conversation carries a PR directly, including a human PR with no issue. Otherwise use issue_id to resolve the issue's live or most recently updated PR. To delegate repository work, use launch_code_agent with that exact pull_request_id and mode review or fix.",
       parameters: {
         type: "object",
         properties: {
@@ -2190,6 +2230,171 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
       },
     },
   },
+  /**
+   * PR management without touching the code (MIN-550): merge, rename /
+   * re-describe, comment, edit a comment Numo posted itself, resolve (or
+   * reopen) review conversations. Everything CODE (branch changes, pushes,
+   * rebases) stays delegated to the code agent — these tools never modify
+   * the content of the code, only the PR metadata and its thread. The merge
+   * carries the same guardrail prose as the code agent's
+   * `set_pull_request_state`: irreversible, confirmed by the user, never
+   * against a red CI or a conflict — the executor (`pull-request-writes.ts`)
+   * re-checks all three before calling the forge.
+   */
+  {
+    type: "function",
+    function: {
+      name: "merge_pull_request",
+      description:
+        "Merge a pull request of the project's linked repository. MERGING IS IRREVERSIBLE: never merge on your own initiative — confirm the intent with the user first (ask_user), and never merge with red or running CI checks, with merge conflicts, or a pull request still in draft. The tool re-checks all three and refuses, but a refusal is information, not a challenge: report it instead of retrying. Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request). Pass merge_method only when the user named one (merge, squash, rebase — only the methods the forge offers). On success the linked issue's status follows the pull request: merged → done. If the merge is refused for reasons you cannot fix yourself (protection rules, missing approvals), say so — merging is never a reason to delegate to launch_code_agent.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_id: {
+            type: "string",
+            description:
+              "id of the issue whose pull request to merge (resolve via list_issues/search_issues, or use the issue in context).",
+          },
+          pull_request_id: {
+            type: "string",
+            description:
+              "Minddy id of the pull request to merge, as supplied by the pull request context.",
+          },
+          merge_method: {
+            type: "string",
+            description:
+              "Only when the user asked for one: the merge method of the forge.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_pull_request",
+      description:
+        "Rename a pull request and/or rewrite its description — the PR metadata only, NEVER the code (for changes to the branch itself, use launch_code_agent). Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request). Pass at least one of title and body. Use it on an explicit user request ('rename this PR…') or when you opened the PR through the agent and its title no longer describes what the branch carries.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_id: {
+            type: "string",
+            description:
+              "id of the issue whose pull request to edit (resolve via list_issues/search_issues, or use the issue in context).",
+          },
+          pull_request_id: {
+            type: "string",
+            description:
+              "Minddy id of the pull request to edit, as supplied by the pull request context.",
+          },
+          title: {
+            type: "string",
+            description: "New title of the pull request.",
+          },
+          body: {
+            type: "string",
+            description: "New description (the body of the PR thread card).",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "post_pull_request_comment",
+      description:
+        "Post a comment in the conversation thread of a pull request (NOT anchored to code — line remarks stay with launch_code_agent). The comment is signed at the forge as Numo (minddy). Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request); body is the markdown comment. Use it to report a review verdict, answer a question in the thread, or keep the author posted — in the user's language.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_id: {
+            type: "string",
+            description:
+              "id of the issue whose pull request to comment on (resolve via list_issues/search_issues, or use the issue in context).",
+          },
+          pull_request_id: {
+            type: "string",
+            description:
+              "Minddy id of the pull request to comment on, as supplied by the pull request context.",
+          },
+          body: {
+            type: "string",
+            description: "The markdown comment to post.",
+          },
+        },
+        required: ["body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "edit_own_pull_request_comment",
+      description:
+        "Edit the body of a conversation comment YOU posted on a pull request — never a comment written by a human. The executor checks the author (your bot identity, or your Numo signature on the body) and refuses anything else. Get the comment id from the result of post_pull_request_comment or from read_pull_request's conversation_comments; body is the FULL new markdown body (it replaces the old one, it does not append). Like every PR tool here, it never touches the code — branch changes stay with launch_code_agent.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_id: {
+            type: "string",
+            description:
+              "id of the issue whose pull request carries the comment (resolve via list_issues/search_issues, or use the issue in context).",
+          },
+          pull_request_id: {
+            type: "string",
+            description:
+              "Minddy id of the pull request carrying the comment, as supplied by the pull request context.",
+          },
+          comment_id: {
+            type: "number",
+            description: "Numeric id of YOUR comment to rewrite.",
+          },
+          body: {
+            type: "string",
+            description: "The full new markdown body of the comment.",
+          },
+        },
+        required: ["comment_id", "body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "resolve_pull_request_threads",
+      description:
+        "Mark review conversations of a pull request as RESOLVED at the forge (or reopen already-resolved ones with resolved: false), without any delegation — this is PR metadata, not repository work. Each conversation is designated by the root comment id of its thread, the `id` read_pull_request puts on every review_comments entry. Only resolve a conversation whose request is FULLY addressed: the code change is on the branch (your launch_code_agent run came back), or the request needed no code and you answered it in the thread with post_pull_request_comment. Never resolve wholesale to tidy up — an unresolved conversation is how a reviewer tracks what is still open. The conversations are closed under minddy's account, like every PR gesture here.",
+      parameters: {
+        type: "object",
+        properties: {
+          issue_id: {
+            type: "string",
+            description:
+              "id of the issue whose pull request carries the conversations (resolve via list_issues/search_issues, or use the issue in context).",
+          },
+          pull_request_id: {
+            type: "string",
+            description:
+              "Minddy id of the pull request carrying the conversations, as supplied by the pull request context.",
+          },
+          comment_ids: {
+            type: "array",
+            items: { type: "number" },
+            description:
+              "Root comment ids of the conversations to move, exactly as read_pull_request lists them. Unknown or forge-deleted ids come back in `unknown` and change nothing.",
+          },
+          resolved: {
+            type: "boolean",
+            description:
+              "true (default) to resolve the conversations, false to reopen resolved ones.",
+          },
+        },
+        required: ["comment_ids"],
+      },
+    },
+  },
 ];
 
 // Tools that operate on the requesting user's own account, not on a project —
@@ -2222,6 +2427,7 @@ export const ACCOUNT_TOOLS = new Set([
 // tools). web_search looks OUTSIDE minddy — a project_id would be meaningless.
 const NON_PROJECT_TOOLS = new Set([
   ...MCP_CLIENT_TOOLS.map((tool) => tool.function.name),
+  ...MCP_SETUP_TOOLS.map((tool) => tool.function.name),
   "ask_user",
   "web_search",
   "get_help",
@@ -2399,7 +2605,13 @@ const REPORT_AUTOMATION_OUTCOME_TOOL: AssistantToolDef = {
 
 export const AUTOMATION_ASSISTANT_TOOLS = [
   ...CONVERSATION_ASSISTANT_TOOLS.filter(
-    (tool) => tool.function.name !== "ask_user",
+    (tool) =>
+      tool.function.name !== "ask_user" &&
+      // Connection setup is an account-level write with a one-shot OAuth link
+      // that expires in 10 minutes: no user is watching an automated run, and
+      // an injected instruction must not be able to add MCP endpoints to the
+      // account (each one widens what call_mcp_tool can reach).
+      tool.function.name !== "configure_mcp_connection",
   ),
   REPORT_AUTOMATION_OUTCOME_TOOL,
 ];

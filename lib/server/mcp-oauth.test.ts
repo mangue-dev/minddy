@@ -29,6 +29,7 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("./app-origin", () => ({
   canonicalAppOrigin: () => "https://minddy.test",
+  oauthAppOrigin: () => "https://minddy.test",
 }));
 vi.mock("./safe-fetch", () => ({
   assertPublicHttpUrl: async (url: URL) => ({ url, address: "1.1.1.1" }),
@@ -366,6 +367,49 @@ describe("generic MCP OAuth", () => {
       state.requests.some((request) => request.url.endsWith("/register")),
     ).toBe(false);
     expect(configured.oauth_encrypted).not.toContain("custom-secret");
+  });
+  it("re-registers a dynamically registered client bound to another origin", async () => {
+    // The callback moved (preview ↔ production, domain change): the provider
+    // would reject "redirect_uri is not registered for this client". The
+    // stale registration is dropped and discovery registers a fresh client.
+    const stale = {
+      ...connection,
+      oauth_encrypted: encryptMcpToken(JSON.stringify({
+        client: {
+          client_id: "stale-client",
+          redirect_uris: [
+            "https://old.example/api/account/mcp-connections/oauth/callback",
+          ],
+        },
+      })),
+    };
+    const url = new URL(await startMcpOAuth(stale));
+    expect(url.searchParams.get("client_id")).toBe("registered-client");
+    const registration = state.requests.find((request) =>
+      request.url.endsWith("/register"),
+    );
+    expect(registration).toBeTruthy();
+    expect(
+      JSON.parse(String(registration?.body)).redirect_uris,
+    ).toEqual(["https://minddy.test/api/account/mcp-connections/oauth/callback"]);
+  });
+  it("keeps a dynamically registered client bound to the current callback", async () => {
+    const current = {
+      ...connection,
+      oauth_encrypted: encryptMcpToken(JSON.stringify({
+        client: {
+          client_id: "known-client",
+          redirect_uris: [
+            "https://minddy.test/api/account/mcp-connections/oauth/callback",
+          ],
+        },
+      })),
+    };
+    const url = new URL(await startMcpOAuth(current));
+    expect(url.searchParams.get("client_id")).toBe("known-client");
+    expect(
+      state.requests.some((request) => request.url.endsWith("/register")),
+    ).toBe(false);
   });
   it("serializes refreshes and refuses writes after credentials are edited", async () => {
     const oauth = await openMcpOAuth(connection);

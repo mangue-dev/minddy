@@ -1,40 +1,35 @@
 "use client";
 
-// Second step of adding a relation from the card's right-click menu (MIN-25):
-// after the user picks a relation type, this searchable popover — anchored at
-// the same pointer position — lets them choose the target issue.
-
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem } from "mangue-ui";
 import { CommandAnchor } from "@/components/command-anchor";
-import { StatusIndicator } from "@/components/issue-indicators";
+import { ObjectiveStatusIndicator, StatusIndicator } from "@/components/issue-indicators";
 import { issueIdentifier } from "@/lib/issue-constants";
-import type { Issue, IssueRelationType } from "@/lib/types";
+import type { Issue, IssueRelationType, Objective, RelationEndpointType } from "@/lib/types";
 
 export function RelationTargetPicker({
   position,
   relation,
   issues,
+  objectives,
   projectKey,
   onClose,
   onSelect,
 }: {
-  /** Viewport coordinates to anchor to; null = closed. */
   position: { x: number; y: number } | null;
-  /** The relation being added — drives the placeholder/heading label. */
   relation: IssueRelationType | null;
-  /** Candidate issues (self and already-linked issues excluded by the caller). */
   issues: Issue[];
+  objectives: Objective[];
   projectKey: string;
   onClose: () => void;
-  onSelect: (issueId: string) => void;
+  onSelect: (targetId: string, targetType: RelationEndpointType) => void;
 }) {
   const t = useTranslations("Relations");
   if (!position || !relation) return null;
 
   return (
     <CommandAnchor position={position} onClose={onClose}>
-      <CommandGroup heading={t(`pick_${relation}`)}>
+      <CommandGroup heading={t(relation)}>
         {issues.map((issue) => {
           const id = issueIdentifier(projectKey, issue.number);
           return (
@@ -44,7 +39,7 @@ export function RelationTargetPicker({
               keywords={[id, issue.title]}
               onSelect={() => {
                 onClose();
-                onSelect(issue.id);
+                onSelect(issue.id, "issue");
               }}
             >
               <StatusIndicator status={issue.status} className="size-4" />
@@ -56,6 +51,24 @@ export function RelationTargetPicker({
           );
         })}
       </CommandGroup>
+      {objectives.length > 0 && (
+        <CommandGroup heading={t("objectives")}>
+          {objectives.map((objective) => (
+            <CommandItem
+              key={objective.id}
+              value={objective.id}
+              keywords={[objective.name]}
+              onSelect={() => {
+                onClose();
+                onSelect(objective.id, "objective");
+              }}
+            >
+              <ObjectiveStatusIndicator status={objective.status} className="size-4" />
+              <span className="truncate">{objective.name}</span>
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      )}
     </CommandAnchor>
   );
 }

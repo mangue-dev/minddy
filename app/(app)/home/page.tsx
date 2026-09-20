@@ -172,14 +172,15 @@ export default function HomePage() {
             it does not appear at all during onboarding, this branch does not
             displayed only after (MIN-292). */}
         <DesktopInstallBanner />
-        {/* AT THE ENTIRE BOTTOM, stuck at the foot of the page: the tip of the day. She
-            does not belong to the line above — nothing awaits it, nothing is there
-            answers, and that's precisely why she can stay there all the time
-            days without weighing. She learns a gesture from the app to someone who has nothing
-            request ; the only honest place for that is the one we don't look at
-            only after reading the rest. */}
-        <HomeTip />
       </div>
+
+      {/* AT THE ENTIRE BOTTOM, stuck at the foot of the page: the tip of the day. She
+          does not belong to the line above — nothing awaits it, nothing is there
+          answers, and that's precisely why she can stay there all the time
+          days without weighing. She learns a gesture from the app to someone who has nothing
+          request ; the only honest place for that is the one we don't look at
+          only after reading the rest. */}
+      <HomeTip />
     </section>
   );
 }

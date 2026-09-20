@@ -7,10 +7,12 @@ import { Kbd, KbdSequence } from "@/components/ui/kbd";
 import { NumoIcon } from "@/components/numo-icon";
 import { AgentBeam } from "@/components/agent-beam";
 import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useAssistantBusy } from "@/lib/assistant-chat-context";
+import { useAgentSessionsQuery } from "@/lib/use-agent-runs";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
+import { StatusLine } from "@/components/status-line";
 import {
   Tooltip,
   TooltipContent,
@@ -18,22 +20,33 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Chrome-style bottom-right chrome buttons of the band: Numo's opener first,
- * the task-notebook ("chrome" pill) right after. Always visible.
+ * Chrome-style bottom-right chrome buttons of the band: the status line first
+ * (MIN-555, only when something is to show), then Numo's opener, then the
+ * task-notebook ("chrome" pill). Always visible.
  *
  * Closing the panel during a turn no longer stops Numo (the conversation lives in
  * AssistantChatProvider): the Numo button then carries the shared animated border of the app
  * as long as it works, and becomes inert again as soon as it is finished. It's his ONLY
  * signal — no context badge: what Numo is looking at can be read in the
  * panel, above the composer, not on the button that opens it.
+ *
+ * The border must survive navigation and delegation alike: a Numo answer OR a
+ * delegated code run keeps it on. The sessions list is the global, cached signal
+ * for runs — the same query the sidebar spinner reads — so navigation and a
+ * full reload (refetchOnMount: always) re-light the border from real state
+ * instead of losing it with the in-memory chat flag.
  */
 
 export function AssistantFab() {
-  const { toggle } = useAssistantPanel();
+  const { toggle } = useAssistantPanelActions();
   // The boolean alone, not the entire conversation context (MIN-323): `state`
   // changes with each SSE token, and the button returns at this rate
   // to read a value that only moves twice per revolution.
-  const isBusy = useAssistantBusy();
+  const chatBusy = useAssistantBusy();
+  // Same cache as the sidebar: no extra request, and the 5 s poll of a
+  // working session keeps the border honest for the whole run.
+  const { sessions } = useAgentSessionsQuery();
+  const isBusy = chatBusy || sessions.some((session) => session.working);
   const chordArmed = useChordPrefix() === CHORD_PREFIX;
   const t = useTranslations("Assistant");
   const tk = useTranslations("Keyboard");
@@ -62,6 +75,10 @@ export function AssistantFab() {
             "pb-[env(safe-area-inset-bottom)]",
           )}
         >
+          {/* The toast replacement (MIN-555): one status line, the pill just
+  before Numo, plus the error-history bell. Renders nothing until a
+  `toast.*` call fires. */}
+          <StatusLine />
           <div className="relative">
             {/* `keepMounted`: the button must not be raised when the border
  turns on or off — otherwise its entry animation would replay
@@ -87,7 +104,6 @@ export function AssistantFab() {
                       "text-sidebar-foreground/70 hover:text-sidebar-foreground",
                       "hover:bg-sidebar-accent/70",
                       "outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      "cursor-pointer",
                     )}
                   >
                     {/* `animated={false}` (MIN-323): the face animated

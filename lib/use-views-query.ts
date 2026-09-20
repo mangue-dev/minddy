@@ -18,7 +18,7 @@ export function useViewsQuery(scope: ViewScope) {
 
   const { data, isPending } = useQuery({
     queryKey: ["views", scopeId],
-    queryFn: () => fetchViewsApi(scope),
+    queryFn: ({ signal }) => fetchViewsApi(scope, signal),
   });
 
   const invalidate = useCallback(() => {

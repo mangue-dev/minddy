@@ -79,6 +79,12 @@ export type AgentRunStatus =
 export interface AgentRunSummary {
   id: string;
   status: AgentRunStatus;
+  /**
+   * Short conversation title written by the titler at launch
+   * (`agent_runs.title`). Optional: the light lists do not select it, and an
+   * empty title means the display cascade falls back to the issue's title.
+   */
+  title?: string | null;
   /** Server-derived because checkpoints are intentionally never client-visible. */
   resumable?: boolean;
   model: string | null;
@@ -505,6 +511,8 @@ export interface PullRequestRef {
   /** Author and opening date: `body` opens the conversation thread as a comment. */
   user?: { login: string; avatar_url: string | null } | null;
   createdAt?: string;
+  /** Last forge edit of the body — the "(edited)" marker reads it. */
+  updatedAt?: string;
   /** `null`/absent = UNKNOWN fusionability (forges calculate it using
       asynchronous), never display as “blocked” — MIN-138. */
   mergeable?: boolean | null;
@@ -604,6 +612,12 @@ export interface AgentRunPrResponse {
   checks?: ChecksSummary | null;
   checksError?: "forbidden" | "unknown" | null;
   deploymentUrl?: string | null;
+  /** Time the environment took to settle, when the forge dates it. */
+  deploymentDurationMs?: number | null;
+  /** Lifecycle of the head environment as the forge reports it. */
+  deploymentStatus?: "success" | "in_progress" | null;
+  /** Created date of the deployment in flight — the card ticks from it. */
+  deploymentStartedAt?: string | null;
   reviews?: PullRequestReviewSummary | null;
   viewer?: PrViewer;
   mergeMethods?: MergeMethod[];
@@ -742,11 +756,36 @@ export async function actOnPullRequestApi(
   );
 }
 
+/**
+ * "Generate then merge" (MIN-548): the generation runs in the background
+ * and the merge fires the moment it lands. Optimistic by design — the
+ * answer only says the job started; the broadcast carries the outcome.
+ */
+export async function mergeWithNumoApi(
+  prId: string,
+  method: MergeMethod | null,
+): Promise<{ ok: true; started: true }> {
+  return parseJson(
+    await fetch(prEndpoint(prId), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "merge_with_numo", method }),
+    }),
+  );
+}
+
 export async function maintainPullRequestApi(
   prId: string,
-  action: "update_branch" | "rerun_check" | "update_title" | "enable_auto_merge",
+  action:
+    | "update_branch"
+    | "rerun_check"
+    | "update_title"
+    | "update_body"
+    | "enable_auto_merge"
+    | "disable_auto_merge",
   payload: {
     title?: string;
+    body?: string;
     rerunRef?: PullRequestCheck["rerunRef"];
   } = {},
 ): Promise<{ ok: true; title?: string }> {
@@ -815,7 +854,6 @@ export async function submitPullRequestReviewApi(
   published: "review" | "comment" | "none";
   conversation?: { id: string };
   turn?: { id: string };
-  detail_href?: string;
 }> {
   trackEvent("pr_review_submitted", { verdict: input.verdict });
   return parseJson(
@@ -846,7 +884,6 @@ export async function requestPullRequestAiReviewApi(
   ok: true;
   conversation: { id: string };
   turn: { id: string };
-  detail_href: string;
 }> {
   trackEvent("pr_ai_review_requested");
   return parseJson(
@@ -897,6 +934,14 @@ export interface PullRequestListItem {
   } | null;
   /** PR canonical run, or null: a human PR has none. */
   runId: string | null;
+  /**
+   * A Numo run OPENED this PR at the forge — not merely worked on it. It is
+   * what displays “Numo” as the author and feeds the “opened by Numo”
+   * filter: the forge login depends on the installation (app account or
+   * linked account), and a fix session requested on a human PR bears the
+   * number without having opened it.
+   */
+  numoOpened: boolean;
   /** A run WORKS on this PR (queued/running) = “Numo is working again”. */
   activeRunId: string | null;
   /** Un run ACTIF occupe l'issue → « demander des changements » indisponible (MIN-68). */
@@ -910,6 +955,9 @@ export interface PullRequestComment {
   body: string;
   user: { login: string; avatar_url: string | null } | null;
   created_at: string;
+  /** Last edit AT THE FORGE — the "(edited)" marker reads `updated_at` vs
+      `created_at`. `null` when the forge never carried it. */
+  updated_at?: string | null;
   html_url: string;
 }
 
@@ -932,7 +980,7 @@ export interface PullRequestListResponse {
  * `pin` PIN a PR in the answer even if it falls off the page — a
  * deep-link to an old PR should not depend on the depth of the
  * scrolling. `{ pr }` for a direct link, `{ run }` for historical links
- * of the app (the issue sidebar and /agents speak in run).
+ * of the app (the issue sidebar speaks in run).
  */
 export async function fetchAllPullRequestsApi(input: {
   state: PullRequestStateFilter;
@@ -1377,7 +1425,6 @@ export async function postPullRequestCommentApi(
   review?: {
     conversationId: string;
     turnId: string;
-    detailHref: string;
   } | null;
 }> {
   return parseJson(
@@ -1386,5 +1433,44 @@ export async function postPullRequestCommentApi(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ body }),
     }),
+  );
+}
+
+/**
+ * A PREVIOUS version of a thread comment — the snapshot taken when the
+ * message was edited (by minddy, or by its webhook echo when the forge sends
+ * the old body). Served oldest-first.
+ */
+export interface PullRequestCommentEdit {
+  body: string;
+  edited_by: string | null;
+  created_at: string;
+}
+
+/**
+ * Rewrites a thread comment on the forge, under the connected account.
+ * The server snapshots the PREVIOUS body first, so "previous versions" can
+ * list it afterwards.
+ */
+export async function updatePullRequestCommentApi(
+  prId: string,
+  input: { commentId: number; body: string },
+): Promise<{ comment: PullRequestComment }> {
+  return parseJson(
+    await fetch(`${prEndpoint(prId)}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ commentId: input.commentId, body: input.body }),
+    }),
+  );
+}
+
+/** Previous versions of one comment, oldest-first. */
+export async function fetchPullRequestCommentEditsApi(
+  prId: string,
+  commentId: number,
+): Promise<{ edits: PullRequestCommentEdit[] }> {
+  return parseJson(
+    await fetch(`${prEndpoint(prId)}/comment-edits?commentId=${commentId}`),
   );
 }

@@ -21,7 +21,7 @@ export async function FeatureDisclosure({
       {details && <details className={styles.disclosure}>
         <summary
           aria-label={`${t("featureDetails")}: ${title}`}
-          className={cn(styles.toggle, "flex size-12 cursor-pointer items-center justify-center rounded-full border border-current/20 bg-white/20 transition-colors hover:bg-white/40 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current dark:bg-black/10 dark:hover:bg-black/20")}
+          className={cn(styles.toggle, "flex size-12 items-center justify-center rounded-full border border-current/20 bg-white/20 transition-colors hover:bg-white/40 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current dark:bg-black/10 dark:hover:bg-black/20")}
         >
           <Plus className="size-5 transition-transform duration-200 motion-reduce:transition-none" aria-hidden />
         </summary>

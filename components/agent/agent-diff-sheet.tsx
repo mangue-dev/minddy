@@ -84,6 +84,7 @@ export function AgentDiffSheet({
    * re-poll every 7 seconds during the round, and re-jump with each response
    * would take away the sight before the eyes of anyone who is reading elsewhere.
    */
+  const panelRef = useRef<HTMLDivElement>(null);
   const jumped = useRef<string | null>(null);
   useEffect(() => {
     if (!open) {
@@ -91,7 +92,11 @@ export function AgentDiffSheet({
       return;
     }
     if (!focusPath || files.length === 0 || jumped.current === focusPath) return;
-    const node = document.getElementById(fileAnchorId(focusPath));
+    // An inactive board can retain another portaled diff with the same file
+    // anchors. Resolve only inside this panel, including unusual path names.
+    const anchorId = fileAnchorId(focusPath);
+    const node = Array.from(panelRef.current?.querySelectorAll<HTMLElement>("[id]") ?? [])
+      .find((element) => element.id === anchorId);
     // Not in this diff (file just touched, diff not yet refreshed):
     // we don't mark anything and the next answer will try the jump again.
     if (!node) return;
@@ -102,6 +107,7 @@ export function AgentDiffSheet({
   return (
     <SidePanel open={open} onOpenChange={onOpenChange}>
       <SidePanelContent
+        ref={panelRef}
         side="right"
         className="w-[min(880px,calc(100vw-2rem))]"
       >

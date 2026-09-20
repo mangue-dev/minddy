@@ -81,7 +81,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { Markdown } from "@/components/markdown";
 import { displayName } from "@/lib/display-name";
 import { useIssuesQuery } from "@/lib/use-issues-query";
-import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
+import { useIssueRelationsQuery, type RelationKinds } from "@/lib/use-issue-relations-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
@@ -89,7 +89,7 @@ import { useFeedbackTimeline } from "@/lib/use-feedback-timeline";
 import { useAuth } from "@/lib/auth-context";
 import {
   useAssistantContext,
-  useAssistantPanel,
+  useAssistantPanelActions,
 } from "@/lib/assistant-panel-context";
 import {
   AskNumoFeedbackProvider,
@@ -951,7 +951,7 @@ export function FeedbackTeamPage() {
    * here prevails over the ambient published just above - otherwise the shortcut
    * would only ever talk about the already selected return.
    */
-  const { open: openAssistant } = useAssistantPanel();
+  const { open: openAssistant } = useAssistantPanelActions();
   const handleAskNumo = useCallback(
     (post: AskNumoFeedback) => {
       openAssistant({
@@ -969,8 +969,13 @@ export function FeedbackTeamPage() {
   useAppTabChange(() => setOpenIssueId(null));
   const openIssue: Issue | null = issues.find((i) => i.id === openIssueId) ?? null;
   const handleAddRelation = useCallback(
-    (sourceId: string, type: IssueRelationType, targetId: string) => {
-      void addRelation(sourceId, type, targetId).catch((err) =>
+    (
+      sourceId: string,
+      type: IssueRelationType,
+      targetId: string,
+      kinds?: RelationKinds
+    ) => {
+      void addRelation(sourceId, type, targetId, kinds).catch((err) =>
         toast.error((err as Error).message)
       );
     },
@@ -1833,7 +1838,7 @@ function FeedbackDetail({
             could edit. */}
         {rawDiffers && (
           <details className="group rounded-md border border-border/60 px-3 py-2">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+            <summary className="flex list-none items-center gap-1.5 text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
               <ChevronRight className="size-3.5 shrink-0 transition-transform group-open:rotate-90" />
               {t("rawTitle")}
             </summary>
@@ -2783,6 +2788,7 @@ function InternalFeedbackDialog({
       `feedback.${blob.type.includes("ogg") ? "ogg" : "webm"}`
     );
     form.append("lang", locale);
+    form.append("context", "feedback_form");
     form.append("feature", "feedback_voice");
     const res = await fetch("/api/transcribe", { method: "POST", body: form });
     if (!res.ok) {
@@ -2942,7 +2948,7 @@ function InternalFeedbackDialog({
           <div className="mt-3 flex items-center justify-between gap-4 rounded-lg border px-3 py-2.5">
             <label
               htmlFor="internal-feedback-public"
-              className="flex min-w-0 cursor-pointer flex-col"
+              className="flex min-w-0 flex-col"
             >
               <span className="text-sm font-medium">{t("public")}</span>
               <span className="text-xs text-muted-foreground">
@@ -2973,6 +2979,7 @@ function InternalFeedbackDialog({
             </span>
           ) : (
             <DictateButton
+              context="feedback_form"
               onTranscription={onTranscript}
               uploadAudio={uploadAudio}
               onProcessingChange={setTranscribing}

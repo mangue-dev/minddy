@@ -71,4 +71,20 @@ describe("resolveRuntimeConfig", () => {
     expect(config.productFeedbackIntegrationEnabled).toBe(false);
     expect(config.productFeedbackUrl).toBe("https://feedback.example.test/board");
   });
+
+  it("keeps error tracking opt-in and off by default", () => {
+    expect(resolveRuntimeConfig(baseEnvironment).public.posthog.errorTracking).toBe(false);
+    expect(
+      resolveRuntimeConfig({
+        ...baseEnvironment,
+        MINDDY_PUBLIC_ERROR_TRACKING: "0",
+      }).public.posthog.errorTracking,
+    ).toBe(false);
+    expect(
+      resolveRuntimeConfig({
+        ...baseEnvironment,
+        MINDDY_PUBLIC_ERROR_TRACKING: "1",
+      }).public.posthog.errorTracking,
+    ).toBe(true);
+  });
 });

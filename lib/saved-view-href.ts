@@ -4,23 +4,21 @@
  * A saved view does not photograph a screen: it retains the ADDRESS which
  * reconstitutes it. In minddy, the address already says almost everything — the route, the
  * wiki page, the settings tab, the open objective, the view of a board.
- * What it doesn't say (the conversation chosen in /agents, the PR
- * selected), is the page itself which publishes it, via
- * lib/current-view-context.tsx.
+ * What it doesn't say (the PR selected), is the page itself
+ * which publishes it, via lib/current-view-context.tsx.
  *
  * What remains is what needs to be REMOVED. Two families of parameters have nothing to do
  * in a saved view:
  *
  * - those which place an OVERPRINT over the screen — the side panel
- * of a ticket (`?issue=`), the creation wizard (`?new=`, `?setup=`), the
- * draft conversation (`?compose=`). A saved view saves the
- * page, not the open dialog in front of it.
+ * of a ticket (`?issue=`), the creation wizard (`?new=`, `?setup=`). A saved
+ * view saves the page, not the open dialog in front of it.
  * - those which are SINGLE-USE INSTRUCTIONS, which the page consumes and then clears
  * from the URL: returning Checkout (`?billing=success`) would replay its
  * toast each time it is opened of the view.
  *
- * The others remain: `?view=`, `?tab=`, `?open=`, `?post=`, `?run=`,
- * `?routine=`, `?pr=` all designate part of what we have in front of us.
+ * The others remain: `?view=`, `?tab=`, `?open=`, `?post=`, `?routine=`,
+ * `?pr=` all designate part of what we have in front of us.
  *
  * PUR module (no access to the DOM, no server import): the client uses it
  * to create the address, the server to validate it before write.
@@ -34,7 +32,6 @@ export const OVERLAY_PARAMS: readonly string[] = [
   "issue", // side panel of a ticket (project board, /all)
   "new", // creation dialog (?new=1, ?new=issue)
   "setup", // wizard for starting a project (?setup=import|numo)
-  "compose", // brouillon de conversation de l'agent
   "billing", // return from Checkout, consumed then deleted
 ];
 

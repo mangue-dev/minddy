@@ -30,6 +30,7 @@ import {
 } from "@/lib/issue-validation";
 import type { IssueDraftPatch } from "@/lib/types";
 import { responseLanguageInstruction } from "@/lib/locale-language";
+import { normalizeDictationText } from "@/lib/dictation-context";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -335,7 +336,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   // Plan usage budget (MIN-72) — pre-flight before the mini-dictation agent.
   try {
-    await ensureUsageBudget(auth.user.id, "voice");
+    await ensureUsageBudget(auth.user.id, "voice", "dictate_model");
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
     throw err;
@@ -374,7 +375,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const transcript =
     typeof body.transcript === "string"
-      ? sanitizeAssistantMessageContent(body.transcript).slice(0, MAX_TRANSCRIPT_CHARS)
+      ? normalizeDictationText(body.transcript, MAX_TRANSCRIPT_CHARS)
       : "";
   if (!transcript.trim()) {
     return NextResponse.json({ error: "transcript is required" }, { status: 400 });

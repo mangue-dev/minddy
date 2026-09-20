@@ -21,7 +21,8 @@ vi.mock("@/lib/server/agent/model", () => ({
 }));
 vi.mock("@/lib/server/safe-fetch", () => ({ safeFetchResponse }));
 
-const { fetchAiChat, resolveAiRuntime } = await import("@/lib/server/ai-runtime");
+const { fetchAiChat, resolveAiRuntime, usesByokForSurface } =
+  await import("@/lib/server/ai-runtime");
 
 describe("resolveAiRuntime", () => {
   beforeEach(() => {
@@ -44,7 +45,7 @@ describe("resolveAiRuntime", () => {
       apiKey: "platform-key",
       model: "platform/chat",
     });
-    expect(getUserByok).toHaveBeenCalledWith("u1", "assistant");
+    expect(getUserByok).toHaveBeenCalledWith("u1", "assistant", "text");
   });
 
   it("never uses the platform key without managed-service opt-in", async () => {
@@ -65,7 +66,11 @@ describe("resolveAiRuntime", () => {
     });
     await expect(
       resolveAiRuntime({ userId: "u1", modelKey: "assistant_model" }),
-    ).resolves.toMatchObject({ mode: "byok", apiKey: "user-key", model: "platform/chat" });
+    ).resolves.toMatchObject({
+      mode: "byok",
+      apiKey: "user-key",
+      model: "platform/chat",
+    });
   });
 
   it("prefers the account's explicit model for a native provider", async () => {
@@ -118,6 +123,65 @@ describe("resolveAiRuntime", () => {
     ).resolves.toMatchObject({ mode: "byok", model: "whisper-admin" });
   });
 
+  it("routes model families through independently assigned providers", async () => {
+    config.set("byok_default_openai_transcription_model", "whisper-admin");
+    getUserByok.mockImplementation(
+      async (_userId: string, _surface: string, capability: string) =>
+        capability === "transcription"
+          ? {
+              provider: "openai",
+              apiKey: "openai-key",
+              baseUrl: "https://api.openai.com/v1",
+              featureModels: {},
+            }
+          : {
+              provider: "anthropic",
+              apiKey: "anthropic-key",
+              baseUrl: "https://api.anthropic.com/v1",
+              featureModels: { assistant_model: "claude-custom" },
+            },
+    );
+
+    await expect(
+      resolveAiRuntime({ userId: "u1", modelKey: "assistant_model" }),
+    ).resolves.toMatchObject({ provider: "anthropic", model: "claude-custom" });
+    await expect(
+      resolveAiRuntime({ userId: "u1", modelKey: "transcription_model" }),
+    ).resolves.toMatchObject({ provider: "openai", model: "whisper-admin" });
+  });
+
+  it("keeps embeddings on the platform when BYOK has no embedding endpoint (MIN-544)", async () => {
+    getUserByok.mockResolvedValue({
+      provider: "opencode-go",
+      apiKey: "opencode-key",
+      baseUrl: "https://opencode.ai/zen/go/v1",
+      featureModels: {},
+    });
+    // The gateway lists only chat models: sending the chat default as an
+    // embedding id would be a guaranteed 400, so the feature stays on minddy.
+    await expect(
+      resolveAiRuntime({ userId: "u1", modelKey: "feedback_embedding_model" }),
+    ).resolves.toMatchObject({ mode: "platform", provider: "openrouter" });
+  });
+
+  it("ignores an explicit model override for an unsupported provider capability", async () => {
+    getUserByok.mockResolvedValue({
+      provider: "anthropic",
+      apiKey: "anthropic-key",
+      baseUrl: "https://api.anthropic.com/v1",
+      featureModels: { transcription_model: "made-up-transcriber" },
+    });
+    config.set("transcription_model", "openai/whisper-large-v3");
+
+    await expect(
+      resolveAiRuntime({ userId: "u1", modelKey: "transcription_model" }),
+    ).resolves.toMatchObject({
+      mode: "platform",
+      provider: "openrouter",
+      model: "openai/whisper-large-v3",
+    });
+  });
+
   it("rejects a corrupted local-provider assignment on a server surface", async () => {
     getUserByok.mockResolvedValue({
       provider: "local_openai",
@@ -129,6 +193,30 @@ describe("resolveAiRuntime", () => {
     await expect(
       resolveAiRuntime({ userId: "u1", modelKey: "assistant_model" }),
     ).rejects.toMatchObject({ code: "localEndpointRequiresLocalRun" });
+  });
+});
+
+describe("usesByokForSurface", () => {
+  it("requires the provider to cover every requested model family", async () => {
+    getUserByok.mockResolvedValue({
+      provider: "anthropic",
+      apiKey: "anthropic-key",
+      baseUrl: "https://api.anthropic.com/v1",
+      featureModels: {},
+    });
+
+    await expect(
+      usesByokForSurface("u1", "voice", "dictate_model"),
+    ).resolves.toBe(true);
+    await expect(
+      usesByokForSurface("u1", "voice", "transcription_model"),
+    ).resolves.toBe(false);
+    await expect(
+      usesByokForSurface("u1", "feedback", [
+        "feedback_analysis_model",
+        "feedback_embedding_model",
+      ]),
+    ).resolves.toBe(false);
   });
 });
 
@@ -152,7 +240,9 @@ describe("fetchAiChat", () => {
     const fetchMock = safeFetchResponse
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ error: { message: "Unsupported parameter: max_completion_tokens" } }),
+          JSON.stringify({
+            error: { message: "Unsupported parameter: max_completion_tokens" },
+          }),
           { status: 400 },
         ),
       )
@@ -168,20 +258,25 @@ describe("fetchAiChat", () => {
 
     expect(response.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
+    expect(
+      JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)),
+    ).toMatchObject({
       max_completion_tokens: 321,
     });
-    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toMatchObject({
+    expect(
+      JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)),
+    ).toMatchObject({
       max_tokens: 321,
     });
-    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).not.toHaveProperty(
-      "max_completion_tokens",
-    );
+    expect(
+      JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)),
+    ).not.toHaveProperty("max_completion_tokens");
   });
 
   it("does not retry a 400 unrelated to the cap", async () => {
-    const fetchMock = safeFetchResponse
-      .mockResolvedValueOnce(new Response("invalid tool schema", { status: 400 }));
+    const fetchMock = safeFetchResponse.mockResolvedValueOnce(
+      new Response("invalid tool schema", { status: 400 }),
+    );
 
     const { response } = await fetchAiChat(
       runtime,
@@ -231,10 +326,14 @@ describe("fetchAiChat", () => {
 
     expect(response.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
+    expect(
+      JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)),
+    ).toMatchObject({
       reasoning_effort: "medium",
     });
-    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toMatchObject({
+    expect(
+      JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)),
+    ).toMatchObject({
       reasoning_effort: "none",
     });
   });

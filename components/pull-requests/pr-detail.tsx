@@ -1,13 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
-  Badge,
   Button,
-  Checkbox,
-  Dialog,
+  Checkbox,  Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -28,14 +25,18 @@ import {
   toast,
 } from "mangue-ui";
 import {
+  ArrowLeft,
+  ArrowUp,
   Check,
   ChevronDown,
   ChevronLeft,
-  ChevronRight,
+  Copy,
+  Ellipsis,
   Eye,
   ExternalLink,
   GitPullRequest,
   GitPullRequestDraft,
+  History,
   Link2,
   MessageSquare,
   MoreHorizontal,
@@ -44,9 +45,7 @@ import {
   RotateCcw,
   X,
 } from "lucide-react";
-import { Github, Gitlab } from "@/components/git/provider-icons";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
-import Link from "next/link";
 import { AppContentHeader } from "@/components/app-content-header";
 import { BotBadge, GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
@@ -57,24 +56,16 @@ import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { PrCommits } from "@/components/pull-requests/pr-commits";
 import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
-import {
-  PrActivityBubblePointer,
-  PrActivityItem,
-  PrActivityTimeline,
-} from "@/components/pull-requests/pr-activity-timeline";
 import { PrLinkIssue } from "@/components/pull-requests/pr-link-issue";
 import {
   CommentReactionChips,
   useCommentReactions,
   type CommentReactions,
 } from "@/components/pull-requests/pr-review-comments";
-import {
-  PrReviewRequestedCallout,
-  PrReviewCard,
-} from "@/components/pull-requests/pr-review-thread";
 import { PrTimelineReview, PrTimelineRow } from "@/components/pull-requests/pr-timeline";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
 import { PrReadinessBadge, PrReadinessControl } from "@/components/pull-requests/pr-readiness";
+import { PrStatusCards } from "@/components/pull-requests/pr-readiness-cards";
 import { PrUnresolvedConversations } from "@/components/pull-requests/pr-unresolved-conversations";
 import { PrViewerCallout } from "@/components/pull-requests/pr-viewer-callout";
 import { FormDialog } from "@/components/form-dialog";
@@ -91,39 +82,41 @@ import {
   usePrCommentsQuery,
   usePrCommitsQuery,
   usePrReviewCommentsQuery,
+  useAgentRunQuery,
 } from "@/lib/use-agent-runs";
 import {
   actOnPullRequestApi,
+  fetchPullRequestCommentEditsApi,
   maintainPullRequestApi,
+  mergeWithNumoApi,
   postPullRequestCommentApi,
   prEndpoint,
   submitPullRequestReviewApi,
-  type ChecksSummary,
-  type CheckState,
+  updatePullRequestCommentApi,
+  isAgentRunWorking,
   type MergeMethod,
   type PullRequestComment,
+  type PullRequestCommentEdit,
   type PullRequestCommit,
   type PullRequestListItem,
   type PullRequestReviewComment,
+  type PrEndpoint,
   type ReviewVerdict,
 } from "@/lib/agent-api";
 import {
   blockReadinessForRequestedReview,
-  blockerFallbackUrl,
   type ReadinessAction,
   type ReadinessBlocker,
 } from "@/lib/pr-readiness";
 import { viewerReviewIsRequested } from "@/lib/pr-review-request";
-import {
-  findRerunnableChecks,
-  type PullRequestDetailTab,
-} from "@/lib/pr-readiness-actions";
+import { settleMergeFlowOverride, type PullRequestDetailTab } from "@/lib/pr-readiness-actions";
 import { normalizeForgeInstant } from "@/lib/forge-time";
 import { REPO_PROVIDERS } from "@/lib/repo-providers";
 import { PrEndpointProvider } from "@/lib/pr-endpoint-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { usePrReviewSession } from "@/lib/use-pr-review-session";
 import { usePrLive } from "@/lib/use-pr-live";
+import { pullRequestStateToPropagate } from "@/lib/pr-state";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { useForgeUploads } from "@/lib/use-forge-uploads";
 import { PR_BODY_COMMENT_ID } from "@/lib/pr-review-reactions";
@@ -143,10 +136,16 @@ import {
   buildPullRequestFeedbackPrompt,
   unresolvedReviewThreads,
 } from "@/lib/pr-unresolved-conversations";
-import type { MessageKey } from "@/lib/i18n-keys";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { buildPullRequestFixPrompt } from "@/lib/pr-fix-prompt";
+import {
+  mergeDeploymentStory,
+  type PrDeploymentReport,
+  type PrDeploymentStory,
+} from "@/lib/pr-deployment-story";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
+import { useAssistantChatContext } from "@/lib/assistant-chat-context";
 import type { AssistantPageContext } from "@/lib/assistant-types";
-import { parseForgeLogin, prIdentifier, type RepoProviderId } from "@/lib/repo-providers";
+import { parseForgeLogin, prIdentifier } from "@/lib/repo-providers";
 import {
   Tooltip,
   TooltipContent,
@@ -165,203 +164,50 @@ import {
  * “Fix feedback” may start from the current PR head even when Numo did not create it.
  */
 
-/** Status badge of a check. `pending` pulse: this is the only state that moves. */
-function CheckDot({ state, className }: { state: CheckState; className?: string }) {
-  return (
-    <span
-      className={cn(
-        "size-2 shrink-0 rounded-full",
-        state === "success" && "bg-emerald-500",
-        state === "failure" && "bg-destructive",
-        state === "pending" && "animate-pulse bg-amber-500",
-        state === "neutral" && "bg-muted-foreground/50",
-        className,
-      )}
-    />
-  );
-}
-
 /**
- * Logo of the integration that produced the check — GitHub serves the REAL logo of
- * each App (Vercel, Socket Security, GitHub Actions, etc.), this is what we display
- * rather than a generic icon. Fallback is the icon of the forge: at GitLab
- * the CI is GitLab, and there is no other logo to show.
- *
- * Neutral background behind the image: many of these logos are transparent and
- * monochrome — without it, a black logo disappears in a dark theme.
+ * Copy pill for the head branch, next to the branch code: the branch name
+ * is the fastest way to check out the PR locally, and it is never typed
+ * twice by hand. Same feedback loop as the SHA button of the commits tab —
+ * copy, then the icon flips to a check.
  */
-function CheckLogo({ url, provider }: { url: string | null; provider: RepoProviderId }) {
-  if (url) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={url}
-        alt=""
-        className="size-5 shrink-0 rounded-[4px] bg-muted object-cover"
-      />
-    );
-  }
-  const Icon = provider === "gitlab" ? Gitlab : Github;
-  return (
-    <Icon className="size-5 shrink-0 rounded-[4px] bg-muted p-0.5 text-muted-foreground" />
-  );
-}
-
-/** “42 s”, “3 min 7 s”. `null` when the forge does not date the check. */
-function checkDuration(
-  t: ReturnType<typeof useTranslations<"PullRequests">>,
-  durationMs: number | null,
-): string | null {
-  if (durationMs == null || !Number.isFinite(durationMs) || durationMs < 0) return null;
-  const seconds = Math.round(durationMs / 1000);
-  return seconds < 60
-    ? t("checkDurationSeconds", { seconds })
-    : t("checkDurationMinutes", {
-        minutes: Math.floor(seconds / 60),
-        seconds: seconds % 60,
-      });
-}
-
-/** The word of the state, for the checks of which the forge says nothing more. */
-const CHECK_STATE_KEY: Record<CheckState, MessageKey<"PullRequests">> = {
-  success: "checkStateSuccess",
-  failure: "checkStateFailure",
-  pending: "checkStatePending",
-  neutral: "checkStateNeutral",
-};
-
-/**
- * CI check strip. Folded it fits in one line (“3/4 successful”); unfolded
- * it lists each check as GitHub does: the integration logo, the name
- * of the check, what the forge says about the result, its duration, and the link to the forge.
- *
- * Three different “no checks”, and they don’t say the same:
- * `error` = we could not read (permission of the GitHub App not accepted by
- * installation), `total === 0` = this repository has no CI, and the normal case.
- */
-function ChecksBanner({
-  checks,
-  error,
-  provider,
-  loading,
-}: {
-  checks: ChecksSummary | null;
-  error: "forbidden" | "unknown" | null;
-  provider: RepoProviderId;
-  loading: boolean;
-}) {
+function CopyBranchButton({ value }: { value: string }) {
   const t = useTranslations("PullRequests");
-  const [open, setOpen] = useState(false);
-  const now = useNow({ updateInterval: 1_000 });
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  if (loading) return <p className="text-xs text-muted-foreground">{t("checksLoading")}</p>;
-  if (error) {
-    return (
-      <p className="text-xs text-muted-foreground">
-        {t(error === "forbidden" ? "checksForbidden" : "checksUnknown")}
-      </p>
-    );
-  }
-  if (!checks) return <p className="text-xs text-muted-foreground">{t("checksUnknown")}</p>;
-  if (checks.total === 0) {
-    return <p className="text-xs text-muted-foreground">{t("checksNone")}</p>;
-  }
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
 
-  const label =
-    checks.state === "failure"
-      ? t("checksFailing", { passing: checks.passing, total: checks.total })
-      : checks.state === "pending"
-        ? t("checksPending", { passing: checks.passing, total: checks.total })
-        : t("checksPassing", { total: checks.total });
-  const totalDuration = checks.startedAt
-    ? checkDuration(
-        t,
-        Math.max(
-          0,
-          (checks.completedAt ? Date.parse(checks.completedAt) : now.getTime()) -
-            Date.parse(checks.startedAt),
-        ),
-      )
-    : null;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopied(false), 2_000);
+    } catch {
+      toast.error(t("copyFailed"));
+    }
+  };
 
   return (
-    <div data-testid="pr-checks" className="rounded-lg border border-border bg-card">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left outline-none"
-      >
-        <CheckDot state={checks.state ?? "neutral"} />
-        <span className="text-sm font-medium">{label}</span>
-        {totalDuration ? (
-          <span className="ml-auto text-xs tabular-nums text-muted-foreground">{totalDuration}</span>
-        ) : null}
-        {open ? <ChevronDown className="size-4 text-muted-foreground" /> : <ChevronRight className="size-4 text-muted-foreground" />}
-      </button>
-      {open ? (
-        <ul className="flex flex-col divide-y divide-border border-t border-border">
-          {checks.checks.map((c) => {
-            const duration = checkDuration(
-              t,
-              c.state === "pending" && c.startedAt
-                ? Math.max(0, now.getTime() - Date.parse(c.startedAt))
-                : c.durationMs,
-            );
-            // What the forge says about the result, otherwise the status word: “Failed”
-            // only a second empty line under the name remains more useful.
-            const detail = [c.appName, c.description ?? t(CHECK_STATE_KEY[c.state])]
-              .filter(Boolean)
-              .join(" · ");
-            return (
-              <li
-                key={c.name}
-                data-testid="pr-check"
-                data-required={c.required == null ? "unknown" : String(c.required)}
-                className="flex items-center gap-2.5 px-3.5 py-2.5"
-              >
-                <CheckDot state={c.state} />
-                <CheckLogo url={c.appAvatarUrl} provider={provider} />
-                <div className="min-w-0 flex-1">
-                  <p className="flex min-w-0 items-center gap-1.5 text-sm">
-                    <span className="truncate">{c.name}</span>
-                    {c.required !== false ? (
-                      <Badge
-                        data-testid="pr-check-requirement"
-                        variant="secondary"
-                        className="h-4 shrink-0 px-1.5 text-[9px]"
-                      >
-                        {t(
-                          c.required === true
-                            ? "checkRequired"
-                            : "checkRequirednessUnknown",
-                        )}
-                      </Badge>
-                    ) : null}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">{detail}</p>
-                </div>
-                {duration ? (
-                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                    {duration}
-                  </span>
-                ) : null}
-                {c.url ? (
-                  <a
-                    href={c.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex shrink-0 items-center gap-1 text-xs text-brand hover:underline"
-                  >
-                    {t("checkDetails")}
-                    <ExternalLink className="size-3" />
-                  </a>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-    </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          data-testid="pr-copy-head-branch"
+          variant="ghost"
+          size="icon-sm"
+          className="size-6 text-muted-foreground"
+          aria-label={t("copyBranch")}
+          onClick={() => void copy()}
+        >
+          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top">{t("copyBranch")}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -443,22 +289,49 @@ function buildFeed(
   return sortTimelineOlderFirst(entries);
 }
 
-/** A conversation message placed on the shared activity rail. */
+/**
+ * A conversation message, as a self-contained card (MIN-548): no rail, no
+ * bubble pointer — the ticket timeline comment template.
+ *
+ * The header carries ONE hover-revealed more menu (Ellipsis) instead of a
+ * standalone quote button: editing one's own message (MIN-548) added a second
+ * gesture, and two buttons appearing on hover was one too many. The menu
+ * holds Edit (own human message only), Quote, and — when the message was
+ * edited — the list of its previous versions, fetched lazily on menu open.
+ */
 function ThreadComment({
+  endpoint,
   commentId,
   user,
   createdAt,
+  updatedAt,
   body,
+  canEdit,
+  onEdited,
+  onSave,
   onQuoteReply,
   quotingNumo,
   forceBot,
   reactions,
   activity,
 }: {
+  /** Routes of this PR — the edit composer reuses them (mentions, uploads). */
+  endpoint: PrEndpoint;
   commentId: number;
   user: { login: string; avatar_url: string | null } | null;
   createdAt: string | null;
+  /** Last edit at the forge — the "(edited)" marker compares it to `createdAt`. */
+  updatedAt?: string | null;
   body: string;
+  /** The viewer may edit THIS message: own human message with an account on
+      the forge. The PR body is excluded — editing it is out of scope. */
+  canEdit?: boolean;
+  /** Refetch the thread after a saved edit: the card alone does not own the
+      comments query, and the cache must not show the old body. */
+  onEdited?: () => void;
+  /** Where a saved edit goes, when the card is NOT a forge comment — the PR
+      body rewrites itself through the PR, not through a comment id. */
+  onSave?: (body: string) => Promise<void>;
   /** Absent when there is no composition where to cite: to cite without power
       answering leads nowhere (MIN-144). */
   onQuoteReply?: () => void;
@@ -478,54 +351,160 @@ function ThreadComment({
   const format = useFormatter();
   const now = useNow();
   const list = reactions?.byComment.get(commentId) ?? [];
+  const when = normalizeForgeInstant(createdAt, now);
+  const edited = !!updatedAt && updatedAt !== createdAt;
+  // The history only exists when the forge says the message moved: opening the
+  // menu on an unedited message would fire a useless request every hover.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [edits, setEdits] = useState<PullRequestCommentEdit[] | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Lazily on menu open, and only once: previous versions never change —
+  // a snapshot is frozen at the moment it was taken.
+  useEffect(() => {
+    if (!menuOpen || !edited || edits) return;
+    let cancelled = false;
+    fetchPullRequestCommentEditsApi(endpoint, commentId)
+      .then(({ edits: rows }) => {
+        if (!cancelled) setEdits(rows);
+      })
+      .catch(() => {
+        // An unreadable history hides the menu entry rather than failing.
+        if (!cancelled) setEdits([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [menuOpen, edited, edits, endpoint, commentId]);
+
+  const save = async () => {
+    const next = draft.trim();
+    if (!next || saving) return;
+    setSaving(true);
+    try {
+      if (onSave) {
+        await onSave(next);
+      } else {
+        await updatePullRequestCommentApi(endpoint, { commentId, body: next });
+      }
+      setEditing(false);
+      // The history just grew (this save snapshotted the previous body):
+      // forget the list read before the edit, the next menu open refetches.
+      setEdits(null);
+      onEdited?.();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <PrActivityItem
-      marker={
-        <ForgeUserAvatar
-          user={user}
-          forceBot={forceBot}
-          className="mt-2 size-8 ring-4 ring-background"
-        />
-      }
+    <article
+      data-testid="pr-activity-message"
+      // chat-selectable: the global reset of mangue-ui kills text selection;
+      // the message card must read like a text surface, copyable like on the
+      // forge.
+      className="chat-selectable group overflow-clip rounded-lg border border-border bg-card shadow-xs"
     >
-      <article
-        data-testid="pr-activity-message"
-        className="group/comment relative overflow-visible rounded-lg border border-border bg-card shadow-xs [--activity-header:color-mix(in_oklab,var(--muted)_35%,var(--card))]"
-      >
-        <PrActivityBubblePointer />
-        <header className="relative flex min-h-10 items-center gap-2 rounded-t-lg border-b border-border bg-[var(--activity-header)] px-3 py-2">
+      <div className="flex flex-col gap-2 px-3.5 py-3">
+        <header className="flex min-h-5 items-center gap-2">
+          <ForgeUserAvatar
+            user={user}
+            forceBot={forceBot}
+            className="size-5 shrink-0"
+          />
           <GitLogin
             login={user?.login}
             className="text-sm font-medium text-foreground"
           />
-          {normalizeForgeInstant(createdAt, now) ? (
+          {when ? (
             <span className="shrink-0 text-xs text-muted-foreground/80">
-              {format.relativeTime(normalizeForgeInstant(createdAt, now) as Date, now)}
+              {format.relativeTime(when, now)}
             </span>
           ) : null}
+          {edited ? (
+            <span className="shrink-0 text-xs text-muted-foreground/60">{t("edited")}</span>
+          ) : null}
           <span className="min-w-0 flex-1" />
-          {onQuoteReply ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
+          {editing ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-my-1 text-muted-foreground"
+              onClick={() => {
+                setEditing(false);
+                setDraft("");
+              }}
+            >
+              {t("cancel")}
+            </Button>
+          ) : (canEdit || onQuoteReply || edited) ? (
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+              <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
-                  className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100"
-                  onClick={onQuoteReply}
+                  aria-label={t("commentMoreActions")}
+                  className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                 >
-                  <Reply className="size-4" />
+                  <Ellipsis className="size-4" />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
-              </TooltipContent>
-            </Tooltip>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {canEdit ? (
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setDraft(body);
+                      setEditing(true);
+                    }}
+                  >
+                    <Pencil />
+                    {t("editComment")}
+                  </DropdownMenuItem>
+                ) : null}
+                {onQuoteReply ? (
+                  <DropdownMenuItem onClick={onQuoteReply}>
+                    <Reply />
+                    {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
+                  </DropdownMenuItem>
+                ) : null}
+                {/* The history is always offered on an edited message: the
+                    lazy read may fail or return nothing — the dialog says so,
+                    and the menu must never open empty. */}
+                {edited ? (
+                  <DropdownMenuItem onSelect={() => setHistoryOpen(true)}>
+                    <History />
+                    {t("viewPreviousVersions")}
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : null}
         </header>
-        <div className="flex flex-col gap-2 px-3.5 py-3">
-          {activity ? <div>{activity}</div> : null}
+        {activity ? <div>{activity}</div> : null}
+        {editing ? (
+          // Inline edit state: the same composer as the thread — mentions,
+          // uploads, preview — anchored under the message it rewrites. The
+          // original text is the starting draft; Cancel throws it away.
+          <PrCommentComposer
+            endpoint={endpoint}
+            value={draft}
+            onChange={(transform) => setDraft((current) => transform(current))}
+            onSubmit={() => void save()}
+            onCancel={() => {
+              setEditing(false);
+              setDraft("");
+            }}
+            posting={saving}
+            placeholder={t("editCommentPlaceholder")}
+            submitLabel={t("saveChanges")}
+            autoFocus
+          />
+        ) : (
           <Markdown
             allowRawHtml
             linkVariant="plain"
@@ -533,12 +512,70 @@ function ThreadComment({
           >
             {body}
           </Markdown>
-          {reactions && (list.length > 0 || reactions.canReact) ? (
+        )}
+        {reactions && (list.length > 0 || reactions.canReact) ? (
+          <div>
             <CommentReactionChips commentId={commentId} reactions={reactions} list={list} />
-          ) : null}
-        </div>
-      </article>
-    </PrActivityItem>
+          </div>
+        ) : null}
+      </div>
+      {historyOpen ? (
+        <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("previousVersionsTitle")}</DialogTitle>
+            </DialogHeader>
+            <div className="flex max-h-96 min-w-0 flex-col gap-4 overflow-y-auto">
+              {!edits ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Spinner className="size-3.5 shrink-0" />
+                  {t("previousVersionsLoading")}
+                </div>
+              ) : edits.length > 0 ? (
+                edits.map((edit, index) => {
+                  const editedWhen = normalizeForgeInstant(edit.created_at, now);
+                  return (
+                    // Oldest-first, like the timeline of the thread: the
+                    // original at the top, the version the current body
+                    // replaced at the bottom.
+                    <div key={edit.created_at + index} className="flex flex-col gap-1.5">
+                      <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+                        <GitLogin
+                          login={edit.edited_by}
+                          className="font-medium text-foreground"
+                        />
+                        {editedWhen ? format.relativeTime(editedWhen, now) : null}
+                        {index === edits.length - 1 ? (
+                          <span className="text-muted-foreground/60">
+                            {t("previousVersionsLast")}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="rounded-md border border-border bg-background px-3 py-2">
+                        <Markdown
+                          allowRawHtml
+                          linkVariant="plain"
+                          className="text-sm text-foreground [&_code]:bg-primary/10 [&_code]:text-primary"
+                        >
+                          {edit.body}
+                        </Markdown>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-muted-foreground">{t("previousVersionsEmpty")}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" size="sm" onClick={() => setHistoryOpen(false)}>
+                {t("close")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+    </article>
   );
 }
 
@@ -565,18 +602,21 @@ export function PrDetail({
 }) {
   const t = useTranslations("PullRequests");
   const tAgent = useTranslations("Agent");
-  const router = useRouter();
   const agentErrorMessage = useAgentErrorMessage();
-  const { openIntent } = useAssistantPanel();
+  const { openIntent, open: openAssistant } = useAssistantPanelActions();
+  const { loadConversation } = useAssistantChatContext();
   const isSend = useIsSendShortcut();
   const format = useFormatter();
 
   const {
     pr,
+    prFetchedAt,
     files,
     checks,
-    checksError,
     deploymentUrl,
+    deploymentStatus,
+    deploymentStartedAt,
+    deploymentDurationMs,
     viewer,
     mergePolicy,
     readiness,
@@ -615,10 +655,40 @@ export function PrDetail({
   // a resolved wire reaches the open panel without reloading.
   usePrLive(item.prId);
 
+  /**
+   * The panel's state IS the forge's GET (see `isDraft`): when it disagrees
+   * with the list's, the page pushes it into the sidebar in the same
+   * rendering — no extra round trip, no filter moved. `usePrLive` reread
+   * `pr`, but the list cache does not subscribe to this PR's topic; the
+   * monotonic guard (see `pullRequestStateToPropagate`) keeps an old
+   * observation from rolling a fresh state back, and `prFetchedAt` keeps a
+   * GET received before one of the panel's own writes from overriding it.
+   */
+  const lastLocalStateWriteAt = useRef(0);
+  useEffect(() => {
+    if (!pr) return;
+    const state = pullRequestStateToPropagate(pr, item, {
+      fetchedAt: prFetchedAt,
+      notBefore: lastLocalStateWriteAt.current,
+    });
+    if (!state) return;
+    lastLocalStateWriteAt.current = Date.now();
+    onStateChange(item.prId, state);
+  }, [pr, prFetchedAt, item, onStateChange]);
+
   const [acting, setActing] = useState<
     null | "merge" | "close" | "reopen" | "ready_for_review" | "convert_to_draft"
   >(null);
   const [maintenanceAction, setMaintenanceAction] = useState<ReadinessAction | null>(null);
+  // The merge-flow checkbox is optimistic: the forge's read-back can lag the
+  // registration the POST just confirmed, and a settled PR is not re-polled,
+  // so the override stands until the data agrees with it.
+  const [mergeFlowOverride, setMergeFlowOverride] = useState<boolean | null>(null);
+  useEffect(() => {
+    setMergeFlowOverride((current) =>
+      settleMergeFlowOverride(current, pr?.mergeFlowActive),
+    );
+  }, [pr]);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   // The merge is confirmed WITH its method: bring it to the confirmation state
@@ -628,6 +698,12 @@ export function PrDetail({
   >(null);
   const [mergeCommitDraft, setMergeCommitDraft] = useState<MergeCommitMessageDraft | null>(null);
   const [mergeCommitDraftEdited, setMergeCommitDraftEdited] = useState(false);
+  // "Generate then merge" (MIN-548): the generation runs in the
+  // background and the merge fires the moment it lands; the panel marks the
+  // wait until the broadcast settles it one way or the other.
+  const [numoMerging, setNumoMerging] = useState(false);
+  const numoMergeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [mergeTab, setMergeTab] = useState<"numo" | "manual">("numo");
   const [reviewVerdict, setReviewVerdict] = useState<ReviewVerdict | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [reviewFromFiles, setReviewFromFiles] = useState(false);
@@ -654,15 +730,37 @@ export function PrDetail({
   const reviewDrop = useFileDrop(reviewUploads.addFiles);
   // Numo rereads the PR (MIN-141): a SESSION, not a blocking call — it is
   // plays IN the thread, in place of its future verdict message, and survives a
-  // rechargement.
-  const reviewSession = usePrReviewSession(item.prId);
+  // rechargement. The launch timestamp feeds the poll grace window: right
+  // after the AI-review gesture there is no agent run row yet, only the
+  // Numo conversation.
+  const [reviewLaunchedAt, setReviewLaunchedAt] = useState<number | null>(null);
+  const reviewSession = usePrReviewSession(item.prId, true, reviewLaunchedAt);
   const [aiReviewDialog, setAiReviewDialog] = useState(false);
   const [tab, setTab] = useState<PullRequestDetailTab>("activity");
+  /** The Files diff is long: past ~600px scrolled, a floating button offers
+      the way back to the toolbar and the file tree. */
+  const [scrolledDown, setScrolledDown] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [unresolvedSidebarOpen, setUnresolvedSidebarOpen] = useState(false);
+  // The checks popover is ONE surface, shared: the checks card opens it,
+  // and the merge-state popover's "View checks" opens the same list.
+  const [checksPopoverOpen, setChecksPopoverOpen] = useState(false);
   // Soft fade up and down the feed — the same as the agent conversation and
   // than the columns of the board: it only lights up on the side where there REMAINS some
   // something to see, what a fixed border cannot say.
   const feedFade = useScrollFade<HTMLDivElement>();
+  // The scroll host carries BOTH the fade's ref (edge measuring) and the raw
+  // node (the floating back-to-top scrolls it). A stable callback, and not an
+  // inline arrow: an inline identity detaches and reattaches at every render,
+  // which used to schedule one render per render and blow up as React #185
+  // under the merge flow's synchronous burst (MIN-560).
+  const scrollHostRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      feedFade.ref(el);
+      scrollContainerRef.current = el;
+    },
+    [feedFade.ref],
+  );
   // “Cite” written in the draft from outside the composer: this
   // counter tells him to go take the cursor again.
   const [quoteFocus, setQuoteFocus] = useState(0);
@@ -705,6 +803,18 @@ export function PrDetail({
   // comments. Line comments are one of them: Numo can have
   // answered, and a new push changes the rows they anchor to. THE
   // commits too: this is the only time when the list changes before your eyes.
+  useEffect(() => {
+    if (!numoMerging) return;
+    if (pr?.state === "merged" || item.pr_state === "merged") {
+      setNumoMerging(false);
+    }
+  }, [numoMerging, pr?.state, item.pr_state]);
+  useEffect(() => {
+    return () => {
+      if (numoMergeTimer.current) clearTimeout(numoMergeTimer.current);
+    };
+  }, []);
+
   const prevWorking = useRef(isWorking);
   useEffect(() => {
     if (prevWorking.current && !isWorking) {
@@ -745,10 +855,47 @@ export function PrDetail({
   const currentHeadSha = pr?.headSha ?? null;
   const reviewUpToDate =
     !!currentHeadSha && reviewSession.reviewedHeadSha === currentHeadSha;
-  const completedReviewSessionHref =
-    reviewSession.run?.status === "completed"
-      ? `/agents?run=${encodeURIComponent(reviewSession.run.runId)}`
-      : null;
+
+  // The deployment story is STICKY (MIN-548 review): one fetch that comes
+  // back empty — a provider that stamps nothing while the environment
+  // builds, a transient API hiccup — must not tear the card down and put it
+  // back a poll later. The story resets on a new head: the previous
+  // environment belongs to the previous code.
+  const [deploymentStory, setDeploymentStory] = useState<PrDeploymentStory | null>(
+    null,
+  );
+  const prevDeploymentHead = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevDeploymentHead.current === currentHeadSha) return;
+    prevDeploymentHead.current = currentHeadSha;
+    setDeploymentStory(null);
+  }, [currentHeadSha]);
+  const deploymentReport = useMemo<PrDeploymentReport | null>(
+    () =>
+      deploymentStatus
+        ? {
+            status: deploymentStatus,
+            url: deploymentUrl,
+            startedAt: deploymentStartedAt,
+            durationMs: deploymentDurationMs,
+          }
+        : // The forge stayed silent on the lifecycle, but a URL SERVES:
+          // the card tells it as settled.
+          deploymentUrl
+          ? {
+              status: "success",
+              url: deploymentUrl,
+              startedAt: null,
+              durationMs: null,
+            }
+          : null,
+    [deploymentStatus, deploymentUrl, deploymentStartedAt, deploymentDurationMs],
+  );
+  useEffect(() => {
+    setDeploymentStory((prev) =>
+      mergeDeploymentStory(prev, deploymentReport, Date.now()),
+    );
+  }, [deploymentReport]);
 
   const prPageContext = useMemo<AssistantPageContext | null>(
     () =>
@@ -797,11 +944,76 @@ export function PrDetail({
         ? t("numoReviewRerun")
         : t("aiReview");
 
-  // The card reports an active or interrupted review. A completed run has
-  // already posted its outcome into the PR, so the persistent banner disappears;
-  // its session remains available from the PR actions instead.
-  const reviewCard =
-    reviewSession.run?.status === "completed" ? null : reviewSession.run;
+  // The pass lives in a Numo conversation (`parent_numo_conversation_id`):
+  // the FAB opens ON it, no detour through the forge page. Loading first
+  // marks the choice, so the panel's restore can never override it with
+  // the stale pointer it reads in flight.
+  const openReviewConversation = useCallback(() => {
+    const conversationId = reviewSession.run?.conversationId;
+    if (!conversationId) return;
+    void loadConversation(conversationId, item.project?.id ?? null);
+    openAssistant();
+  }, [
+    reviewSession.run?.conversationId,
+    loadConversation,
+    openAssistant,
+    item.project?.id,
+  ]);
+
+  // The review gesture lives in ONE card (MIN-548) — running, up to date, or
+  // waiting for the ask — instead of entries buried in the header menus.
+  // The card only exists where its conversation can open in the FAB: a run
+  // too old to carry its conversation has no destination left at all.
+  const numoReviewCard =
+    !prPageContext || (reviewUpToDate && !reviewSession.run?.conversationId)
+      ? null
+      : aiReviewActive
+        ? {
+            kind: "running" as const,
+            label: aiReviewLabel,
+            onOpen: reviewSession.run?.conversationId
+              ? openReviewConversation
+              : null,
+            startedAt: reviewSession.run?.createdAt ?? null,
+            durationMs: null,
+          }
+        : reviewUpToDate
+          ? {
+              kind: "current" as const,
+              label: aiReviewLabel,
+              onOpen: openReviewConversation,
+              startedAt: null,
+              durationMs:
+                reviewSession.run?.createdAt && reviewSession.run?.completedAt
+                  ? Date.parse(reviewSession.run.completedAt) -
+                    Date.parse(reviewSession.run.createdAt)
+                  : null,
+            }
+          : {
+              kind: "requested" as const,
+              label: aiReviewLabel,
+              onOpen: null,
+              startedAt: null,
+              durationMs: null,
+            };
+
+  // A CORRECTION run — a fix handed to Numo, not a reread — is working on
+  // this pull request right now. The review session's own run is excluded:
+  // it already tells its story from the review card. Its own card says the
+  // fixing is under way and opens the Numo panel, where the work lives.
+  const busyFixRunId =
+    item.busyRunId && item.busyRunId !== reviewSession.run?.runId
+      ? item.busyRunId
+      : null;
+  const busyFixRunQuery = useAgentRunQuery(busyFixRunId);
+  const busyFixRun = busyFixRunQuery.run;
+  const fixRunCard =
+    busyFixRun && isAgentRunWorking(busyFixRun.status)
+      ? {
+          startedAt: busyFixRun.started_at ?? busyFixRun.created_at,
+          onOpen: openAssistant,
+        }
+      : null;
 
   const act = async (
     action: "merge" | "close" | "reopen" | "ready_for_review" | "convert_to_draft",
@@ -824,6 +1036,9 @@ export function PrDetail({
             : pr?.draft
               ? "draft"
               : "open";
+    // The panel's own write starts HERE: any forge GET received before this
+    // instant says nothing about the transition (see the propagation effect).
+    lastLocalStateWriteAt.current = Date.now();
     const rollback = onOptimisticStateChange(item.prId, optimisticState);
     setActing(action);
     setConfirmAction(null);
@@ -855,6 +1070,7 @@ export function PrDetail({
   const openMergeConfirmation = useCallback(
     (method: MergeMethod) => {
       setConfirmAction({ kind: "merge", method });
+    setMergeTab("numo");
       setMergeCommitDraftEdited(false);
       setMergeCommitDraft(
         pr
@@ -903,22 +1119,56 @@ export function PrDetail({
       if (blocker.action === "update_branch") {
         await maintainPullRequestApi(item.prId, "update_branch");
         toast.success(t("branchUpdatedToast"));
-      } else if (blocker.action === "rerun_checks") {
-        const rerunnable = findRerunnableChecks(checks?.checks, blocker);
-        if (rerunnable.length === 0) return;
-        await Promise.all(
-          rerunnable.map((check) =>
-            maintainPullRequestApi(item.prId, "rerun_check", {
-              rerunRef: check.rerunRef,
-            }),
-          ),
-        );
-        toast.success(t("checksRerunToast"));
       } else if (blocker.action === "enable_auto_merge") {
+        setMergeFlowOverride(true);
         await maintainPullRequestApi(item.prId, "enable_auto_merge");
       }
       await refetchPr();
     } catch (error) {
+      setMergeFlowOverride(null);
+      toast.error((error as Error).message);
+    } finally {
+      setMaintenanceAction(null);
+    }
+  };
+
+  const startNumoMerge = async (method?: MergeMethod) => {
+    if (numoMerging || !prPageContext) return;
+    setNumoMerging(true);
+    setConfirmAction(null);
+    setMergeCommitDraft(null);
+    setMergeCommitDraftEdited(false);
+    if (numoMergeTimer.current) clearTimeout(numoMergeTimer.current);
+    try {
+      await mergeWithNumoApi(item.prId, method ?? null);
+      // The answer only says the job started: the wait ends when the
+      // broadcast shows the PR merged — or after a generous timeout, since
+      // a lost background job must not pin the panel forever.
+      numoMergeTimer.current = setTimeout(() => {
+        setNumoMerging(false);
+        toast.error(t("numoMergeFailed"));
+      }, 5 * 60_000);
+    } catch (err) {
+      setNumoMerging(false);
+      toast.error((err as Error).message);
+    }
+  };
+
+  const toggleAutoMerge = async (enable: boolean) => {
+    if (maintenanceAction) return;
+    setMaintenanceAction("enable_auto_merge");
+    setMergeFlowOverride(enable);
+    try {
+      await maintainPullRequestApi(
+        item.prId,
+        enable ? "enable_auto_merge" : "disable_auto_merge",
+      );
+      toast.success(
+        enable ? t("autoMergeEnabledToast") : t("autoMergeDisabledToast"),
+      );
+      await refetchPr();
+    } catch (error) {
+      setMergeFlowOverride(null);
       toast.error((error as Error).message);
     } finally {
       setMaintenanceAction(null);
@@ -946,9 +1196,6 @@ export function PrDetail({
     if (blocker.action === "mark_ready" || blocker.action === "update_branch") return canWrite;
     if (blocker.action === "approve") return canComment;
     if (blocker.action === "resolve_conversations") return unresolvedThreads.length > 0;
-    if (blocker.action === "rerun_checks") {
-      return !!canWrite && findRerunnableChecks(checks?.checks, blocker).length > 0;
-    }
     if (blocker.action === "enable_auto_merge") return !!canWrite;
     return false;
   };
@@ -1107,6 +1354,10 @@ export function PrDetail({
   const startAiReview = () => {
     if (!prPageContext) return;
     setAiReviewDialog(false);
+    // Start the poll grace window NOW: the run row only appears once the
+    // Numo turn delegates, and the card must show "review in progress"
+    // in the meantime.
+    setReviewLaunchedAt(Date.now());
     openIntent({
       source: "pull_request",
       action: "review",
@@ -1170,9 +1421,9 @@ export function PrDetail({
       setCommentBody("");
       await refetchComments();
       // A PR @Numo mention is admitted as a common conversation on the server.
-      // Open that exact durable conversation instead of looking for a worker
-      // review session that no longer owns the user-facing request.
-      if (review) router.push(review.detailHref);
+      // Open that exact durable conversation in the FAB — it has no page any
+      // more, and no URL can express it.
+      if (review) openAssistant({ conversationId: review.conversationId });
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -1202,43 +1453,13 @@ export function PrDetail({
   const author = pr?.user ?? item.author;
 
   /**
-   * “X wants to merge 3 commits into main from routine/audit” — the line that
-   * GitHub poses under the title, and the only one that says BOTH branches: so far
-   * minddy didn't display them anywhere, even though that's what answers "it's leaving
-   * where, where does it come from? » before merging.
-   *
-   * The commit count comes from the forge when it serves it (GitHub puts it in
-   * the GET of a PR); otherwise — GitLab — from the commit list already loaded for
-   * its tab, and only if it is ENTIRE: a truncated list would announce
-   * a false figure, and it is better to keep silent about the sentence than to lie about its figure.
-   *
-   * The subject is the name of the agent on a Numo PR: the forge account there
-   * is the GitHub App bot, which minddy never shows (identity rule).
+   * The merge line reads left to right: the base branch the PR lands in,
+   * the diff it carries, the head branch it comes from. GitHub poses the
+   * same reading under the title; the branches render in code pills so a
+   * `work/min-542-something` never reads like prose.
    */
-  const commitCount =
-    pr?.commitCount ?? (commitsTruncated || commits.length === 0 ? null : commits.length);
-  const mergeSummary: React.ReactNode =
-    pr?.base && pr?.head && commitCount !== null && (item.runId || author)
-      ? t.rich(item.pr_state === "merged" ? "mergedCommits" : "wantsToMerge", {
-          login: item.runId ? t("numoAuthor") : parseForgeLogin(author?.login ?? "").name,
-          count: commitCount,
-          base: pr.base,
-          head: pr.head,
-          author: (chunks) => (
-            <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
-              {chunks}
-              {/* The forge account is a bot, and it's not Numo: the
-                  pellet lands on the NAME, like everywhere else. */}
-              {!item.runId && author && parseForgeLogin(author.login).isBot ? <BotBadge /> : null}
-            </span>
-          ),
-          branch: (chunks) => (
-            <span className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
-              {chunks}
-            </span>
-          ),
-        })
-      : null;
+  const baseBranch = pr?.base ?? null;
+  const headBranch = pr?.head ?? item.head_branch ?? null;
 
   // GitHub body of the PR, without the auto suffix “🤖 Generated by agent numo…”
   // (redundant with the “Generated by Numo” badge).
@@ -1246,9 +1467,9 @@ export function PrDetail({
 
   // The full thread: messages AND activity, in the order everything happened.
   const feed = buildFeed(comments, timeline, reviewComments, commits);
-  // The tab counter counts what is READ — messages and reviews that
-  // say something — not the lines of activity, which are context.
-  const conversationCount = feed.filter((e) => e.kind !== "event").length;
+  // The tab counter counts EVERYTHING that happened (MIN-548): messages,
+  // reviews, and the activity lines that also carry information.
+  const conversationCount = feed.length;
   const feedbackContext = useMemo(
     () => ({
       number: item.pr_number,
@@ -1295,6 +1516,53 @@ export function PrDetail({
       openFeedbackAgent,
     ],
   );
+
+  // The FIX gesture of a failing PR (MIN-548 review): one prompt — identify
+  // what is wrong, fix it — that either lands in the clipboard or wakes
+  // Numo directly. A red card is only half the story; this card is the way
+  // out.
+  const fixPrompt = useMemo(
+    () => buildPullRequestFixPrompt(feedbackContext, checks),
+    [feedbackContext, checks],
+  );
+  const prFailing =
+    checks?.state === "failure" ||
+    !!effectiveReadiness?.blockers.some(
+      (blocker) => blocker.kind === "conflicts",
+    );
+  const fixCard = useMemo(() => {
+    if (!prFailing) return null;
+    return {
+      canLaunch: canRelaunch && !item.busyRunId && !!prPageContext,
+      onLaunch: () => {
+        if (!prPageContext) return;
+        openIntent({
+          source: "pull_request",
+          action: "fix",
+          projectId: item.project?.id ?? null,
+          prompt: fixPrompt,
+          pageContext: prPageContext,
+        });
+      },
+      onCopy: async () => {
+        try {
+          await navigator.clipboard.writeText(fixPrompt);
+          toast.success(t("unresolvedPromptCopied"));
+        } catch {
+          toast.error(t("unresolvedPromptCopyFailed"));
+        }
+      },
+    };
+  }, [
+    prFailing,
+    canRelaunch,
+    item.busyRunId,
+    item.project?.id,
+    prPageContext,
+    fixPrompt,
+    openIntent,
+    t,
+  ]);
 
   return (
     // The envelope tells the WHOLE panel — body, thread, activity, comments of
@@ -1358,7 +1626,7 @@ export function PrDetail({
                   onClick={() => {
                     if (item.issue && item.project) onOpenIssue(item.issue.id, item.project.id);
                   }}
-                  className="flex min-w-0 items-center gap-1 text-muted-foreground outline-none hover:text-foreground hover:underline"
+                  className="flex min-w-0 items-center gap-1 text-muted-foreground outline-none hover:text-foreground"
                 >
                   <Link2
                     data-testid="pr-issue-link-icon"
@@ -1394,16 +1662,10 @@ export function PrDetail({
             </span>
           )}
         </span>
-        {/* As long as the PR is ALIVE, its status is read on the left, against
-            the identifier: the right belongs to the actions, which are what we
-            look for. Completed (merged, closed), it's the opposite — the state BECOMES
-            the news, and it will take the place of the actions, at the end of the
-            line (see the right cluster below). */}
-        {!isTerminal ? <PrStateBadge state={badgeState} icon /> : null}
-        {isWorking ? (
+        {isWorking || numoMerging ? (
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <Spinner />
-            {t("numoWorking")}
+            {t(isWorking ? "numoWorking" : "numoMerging")}
           </span>
         ) : null}
 
@@ -1414,33 +1676,43 @@ export function PrDetail({
           // merged (nothing before it) as closed (the button before it): it is
           // always in the same place that we read what became of her.
           <div className="ml-auto flex items-center gap-1.5">
-            {deploymentUrl ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    data-testid="pr-more-actions"
-                    variant="outline"
-                    size="icon-sm"
-                    aria-label={t("moreActions")}
-                  >
-                    <MoreHorizontal />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  data-testid="pr-more-actions"
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label={t("moreActions")}
+                >
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {forgeUrl ? (
                   <DropdownMenuItem asChild>
                     <a
-                      data-testid="pr-action-view-deployment"
-                      href={deploymentUrl}
+                      href={forgeUrl}
                       target="_blank"
                       rel="noreferrer"
                     >
                       <ExternalLink />
-                      {t("viewDeployment")}
+                      {t(item.provider === "gitlab" ? "openOnGitlab" : "openOnGithub")}
                     </a>
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : null}
+                ) : null}
+                {canWrite ? (
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setTitleDraft(pr?.title ?? item.title ?? "");
+                      setEditingTitle(true);
+                    }}
+                  >
+                    <Pencil />
+                    {t("renamePr")}
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
             {canReopen ? (
               <Button
                 variant="outline"
@@ -1452,7 +1724,7 @@ export function PrDetail({
                 {t("reopen")}
               </Button>
             ) : null}
-            <PrStateBadge state={badgeState} icon />
+            <PrStateBadge state={badgeState} icon className="h-8" />
           </div>
         ) : (
           // Under `lg`, secondary actions move into the overflow menu. The
@@ -1489,53 +1761,9 @@ export function PrDetail({
                       <MessageSquare />
                       {t("reviewComment")}
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      // Keep the entry visible while its label explains why it is disabled.
-                      disabled={
-                        aiReviewActive || reviewUpToDate || !prPageContext
-                      }
-                      onSelect={openAiReviewDialog}
-                    >
-                      <NumoIcon animated={false} />
-                      {aiReviewLabel}
-                    </DropdownMenuItem>
-                    {completedReviewSessionHref ? (
-                      <DropdownMenuItem asChild>
-                        <Link href={completedReviewSessionHref}>
-                          <NumoIcon animated={false} />
-                          {t("numoReviewOpenSession")}
-                        </Link>
-                      </DropdownMenuItem>
-                    ) : null}
                   </DropdownMenuContent>
                 </DropdownMenu>
-              ) : (
-                <>
-                  {!reviewUpToDate || !completedReviewSessionHref ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={
-                        aiReviewActive || reviewUpToDate || !prPageContext
-                      }
-                      onClick={openAiReviewDialog}
-                    >
-                      {aiReviewActive ? <Spinner /> : <NumoIcon animated={false} />}
-                      {/* Use the same status-aware label as the menu entry. */}
-                      {aiReviewLabel}
-                    </Button>
-                  ) : null}
-                  {completedReviewSessionHref ? (
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={completedReviewSessionHref}>
-                        <NumoIcon animated={false} />
-                        {t("numoReviewOpenSession")}
-                      </Link>
-                    </Button>
-                  ) : null}
-                </>
-              )}
+              ) : null}
 
               {canWrite ? (
                 <Button
@@ -1559,33 +1787,36 @@ export function PrDetail({
                   data-testid="pr-more-actions"
                   variant="outline"
                   size="icon-sm"
-                  className={
-                    !deploymentUrl && (isDraft || !canWrite) ? "2xl:hidden" : undefined
-                  }
                   aria-label={t("moreActions")}
                 >
-                  {aiReviewActive ? <Spinner /> : <MoreHorizontal />}
+                  <MoreHorizontal />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {deploymentUrl ? (
+                {forgeUrl ? (
                   <DropdownMenuItem asChild>
                     <a
-                      data-testid="pr-action-view-deployment"
-                      href={deploymentUrl}
+                      href={forgeUrl}
                       target="_blank"
                       rel="noreferrer"
                     >
                       <ExternalLink />
-                      {t("viewDeployment")}
+                      {t(item.provider === "gitlab" ? "openOnGitlab" : "openOnGithub")}
                     </a>
                   </DropdownMenuItem>
                 ) : null}
-                {deploymentUrl ? (
-                  <DropdownMenuSeparator
-                    className={canWrite && !isDraft ? undefined : "2xl:hidden"}
-                  />
+                {canWrite ? (
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setTitleDraft(pr?.title ?? item.title ?? "");
+                      setEditingTitle(true);
+                    }}
+                  >
+                    <Pencil />
+                    {t("renamePr")}
+                  </DropdownMenuItem>
                 ) : null}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   data-testid="pr-action-numo-request"
                   className="2xl:hidden"
@@ -1594,28 +1825,6 @@ export function PrDetail({
                   <NumoIcon animated={false} />
                   {t("reviewRequestChanges")}
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  data-testid="pr-action-numo-review"
-                  className="2xl:hidden"
-                  disabled={
-                    aiReviewActive || reviewUpToDate || !prPageContext
-                  }
-                  onSelect={openAiReviewDialog}
-                >
-                  <NumoIcon animated={false} />
-                  {aiReviewLabel}
-                </DropdownMenuItem>
-                {completedReviewSessionHref ? (
-                  <DropdownMenuItem asChild>
-                    <Link
-                      data-testid="pr-action-numo-session"
-                      href={completedReviewSessionHref}
-                    >
-                      <NumoIcon animated={false} />
-                      {t("numoReviewOpenSession")}
-                    </Link>
-                  </DropdownMenuItem>
-                ) : null}
                 {canComment ? (
                   <>
                     <DropdownMenuSeparator className="2xl:hidden" />
@@ -1657,6 +1866,10 @@ export function PrDetail({
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Open state and merge state read side by side, AFTER the more
+                menu: first what we can do, then what the PR is, then what
+                still stands between it and the merge. */}
+            <PrStateBadge state={badgeState} icon className="h-8" />
             {isDraft && canWrite ? (
               <Button
                 data-testid="pr-ready-for-review"
@@ -1672,15 +1885,18 @@ export function PrDetail({
               <PrReadinessControl
                 readiness={effectiveReadiness}
                 providerName={REPO_PROVIDERS[item.provider].displayName}
-                fallbackUrl={(blocker) =>
-                  pr?.url ? blockerFallbackUrl(item.provider, pr.url, blocker) : null
-                }
                 canAct={canActOnBlocker}
                 acting={maintenanceAction}
                 onAction={(blocker) => void handleReadinessAction(blocker)}
                 canMerge={!!canWrite}
                 merging={acting === "merge" || isWorking}
                 onMerge={openMergeConfirmation}
+                mergeFlowActive={mergeFlowOverride ?? !!pr?.mergeFlowActive}
+                autoMergeAllowed={mergePolicy?.autoMergeAllowed ?? null}
+                autoMerging={maintenanceAction === "enable_auto_merge"}
+                onToggleAutoMerge={(enable) => void toggleAutoMerge(enable)}
+                checks={checks}
+                onOpenChecks={() => setChecksPopoverOpen(true)}
               />
             ) : (
               <PrReadinessBadge readiness={null} />
@@ -1699,131 +1915,86 @@ export function PrDetail({
 
           `onScroll` continues to run: the measure costs nothing and the fade
           just returns, without missed transitions, as soon as you change tabs. */}
-      <div
-        ref={feedFade.ref}
-        onScroll={feedFade.scrollProps.onScroll}
-        style={tab === "files" ? undefined : feedFade.scrollProps.style}
-        // The VERTICAL padding has gone down a notch, on the envelope (MIN-182).
-        // Measured: `position: sticky` fits on the CONTENT of the container
-        // scrolling, not on its edge — a `py-6` here stopped the header from
-        // 24 px file too low, and `scroll-padding-top: 0` changes nothing.
-        // When lowered, it scrolls with the content and the header sticks to the banner.
-        className="min-h-0 flex-1 overflow-y-auto px-4 md:px-6"
-      >
+      {/* The scroll host is wrapped in a relative box so the floating
+          back-to-top of the Files tab can anchor to the viewport of the
+          scroll container instead of the page. */}
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={scrollHostRef}
+          onScroll={(e) => {
+            feedFade.scrollProps.onScroll();
+            setScrolledDown(e.currentTarget.scrollTop > 600);
+          }}
+          style={tab === "files" ? undefined : feedFade.scrollProps.style}
+          // The VERTICAL padding has gone down a notch, on the envelope (MIN-182).
+          // Measured: `position: sticky` fits on the CONTENT of the container
+          // scrolling, not on its edge — a `py-6` here stopped the header from
+          // 24 px file too low, and `scroll-padding-top: 0` changes nothing.
+          // When lowered, it scrolls with the content and the header sticks to the banner.
+          className="h-full overflow-y-auto px-4 md:px-6"
+        >
         <div className="mx-auto flex max-w-3xl flex-col gap-6 py-6">
           {/* PR title + meta. The TITLE of the pull request, not that of the
               ticket: since MIN-143 they no longer come in pairs, and a PR
               human may have none. (Numo names his
               “MIN-42: <titre du ticket>” — the display does not change for them.) */}
           <div className="flex flex-col gap-2">
-            <div className="flex min-w-0 items-start gap-2">
-              <h1 className="min-w-0 flex-1 font-display text-2xl leading-tight font-semibold break-words">
-                {pr?.title ?? item.title ?? item.issue?.title ?? identifier}
-              </h1>
-              {canWrite ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      data-testid="pr-edit-title"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="shrink-0"
-                      aria-label={t("editPrTitle")}
-                      onClick={() => {
-                        setTitleDraft(pr?.title ?? item.title ?? "");
-                        setEditingTitle(true);
-                      }}
-                    >
-                      <Pencil className="size-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">{t("editPrTitle")}</TooltipContent>
-                </Tooltip>
-              ) : pr?.url ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      data-testid="pr-edit-title"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="shrink-0"
-                      asChild
-                    >
-                      <a href={pr.url} target="_blank" rel="noreferrer" aria-label={t("editPrTitle")}>
-                        <ExternalLink className="size-4" />
-                      </a>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">{t("editPrTitle")}</TooltipContent>
-                </Tooltip>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
-              {/* Badge “generated by Numo”: only if a run REALLY carries
-                  this PR. The session is that of the linked ticket (/agents is indexed
-                  by outcome, all successive runs live there) → the badge leads there.
-                  On a human PR, it is the author who takes this place. */}
-              {item.runId ? (
-                item.issue ? (
-                  <Link href={`/agents?issue=${item.issue.id}`}>
-                    <Badge
-                      variant="secondary"
-                      icon={<NumoIcon animated={false} />}
-                      className="h-6 transition-colors hover:bg-muted"
-                    >
-                      {t("generatedByNumo")}
-                    </Badge>
-                  </Link>
-                ) : (
-                  <Badge variant="secondary" icon={<NumoIcon animated={false} />} className="h-6">
-                    {t("generatedByNumo")}
-                  </Badge>
-                )
-              ) : author ? (
+            <h1 className="min-w-0 flex-1 font-display text-2xl leading-tight font-semibold break-words">
+              {pr?.title ?? item.title ?? item.issue?.title ?? identifier}
+            </h1>
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-muted-foreground">
+              {/* Author first — avatar and name, like a comment header. Only a
+                  PR Numo OPENED takes the Numo seat (the forge login depends
+                  on the installation): a human PR Numo merely corrected — a
+                  fix session bears the number without having opened it —
+                  keeps its real author. */}
+              {author ? (
                 <span className="inline-flex items-center gap-1.5">
-                  <ForgeUserAvatar
-                    user={author}
-                    className="size-4"
-                  />
-                  {/* The merger phrase already NAMES the author (“X wants to merge
-                      3 commits in main…”): repeat “Opened by
-                      side would be duplicate. The fallback keeps the name alone, as long as
-                      branches or commit count are missing — the phrase
-                      then ends with the login in both languages, and the
-                      bot pellet lands after it, not in the middle. */}
-                  {mergeSummary ?? (
-                    <>
-                      {t("openedBy", { login: parseForgeLogin(author.login).name })}
-                      {parseForgeLogin(author.login).isBot ? <BotBadge /> : null}
-                    </>
+                  {item.numoOpened ? (
+                    <NumoIcon animated={false} className="size-4" />
+                  ) : (
+                    <ForgeUserAvatar user={author} className="size-4" />
                   )}
+                  <span className="font-medium text-foreground">
+                    {item.numoOpened
+                      ? t("numoAuthor")
+                      : parseForgeLogin(author.login).name}
+                  </span>
+                  {!item.numoOpened && parseForgeLogin(author.login).isBot ? (
+                    <BotBadge />
+                  ) : null}
                 </span>
               ) : null}
-              {/* PR from Numo: the badge took the place of the author, the sentence
-                  so poses next to it - it is she who carries the branches. */}
-              {item.runId && mergeSummary ? <span>{mergeSummary}</span> : null}
-              {item.project ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <ProjectOrb
-                    seed={projectOrbSeed(item.project)}
-                    iconUrl={item.project.icon_url}
-                    className="size-3.5"
-                  />
-                  {item.project.name}
-                </span>
+              {/* The two branches, in code pills: base — head, the merge
+                  direction carried by the arrow between them. */}
+              {baseBranch ? (
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
+                  {baseBranch}
+                </code>
               ) : null}
-              {/* The diff in one number, in the place occupied by “PR #30 ↗” —
-                  the identifier is mounted in the header, where it is
-                  clickable towards the forge. Mute until files have
-                  answered: “+0 −0” would read as an empty PR. */}
+              {/* The diff in one number, between the two branches — the merge
+                  line reads left to right: from base, +adds −dels, toward head.
+                  Mute until files have answered: “+0 −0” would read as an
+                  empty PR. */}
               {files.length > 0 ? (
-                <span className="inline-flex items-center gap-1.5 font-medium tabular-nums">
+                <span className="inline-flex items-center gap-1 font-medium tabular-nums">
                   <span className="text-green-700 dark:text-green-500">
                     +{format.number(additions)}
                   </span>
                   <span className="text-red-700 dark:text-red-500">
                     −{format.number(deletions)}
                   </span>
+                </span>
+              ) : null}
+              {baseBranch && headBranch ? (
+                <ArrowLeft className="size-3.5" aria-hidden />
+              ) : null}
+              {headBranch ? (
+                <span className="inline-flex items-center gap-0.5">
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
+                    {headBranch}
+                  </code>
+                  <CopyBranchButton value={headBranch} />
                 </span>
               ) : null}
             </div>
@@ -1833,10 +2004,10 @@ export function PrDetail({
               It stays silent when everything is configured correctly. */}
           {!loading ? <PrViewerCallout viewer={viewer} repoUrl={pr?.url} /> : null}
 
-          {reviewRequested ? (
-            <PrReviewRequestedCallout onReview={startFileReview} />
-          ) : null}
-
+          {/* Quick-glance cards: every condition that stands between this PR
+              and the merge, each in its own color, each with its own quick
+              fix. The conversations card opens the same side panel that the
+              old workspace bar did. */}
           <PrUnresolvedConversations
             endpoint={prEndpoint(item.prId)}
             context={feedbackContext}
@@ -1849,19 +2020,38 @@ export function PrDetail({
             onLaunch={openFeedbackAgent}
             onThreadChanged={refreshReviewState}
             onResolutionChanged={refetchPr}
+            showBar={false}
           />
 
-          <ChecksBanner
+          <PrStatusCards
+            readiness={effectiveReadiness}
             checks={checks}
-            error={checksError}
             provider={item.provider}
-            loading={loading}
+            deployment={deploymentStory}
+            unresolvedThreads={unresolvedThreads}
+            canAct={canActOnBlocker}
+            acting={maintenanceAction}
+            onAction={(blocker) => void handleReadinessAction(blocker)}
+            onOpenConversations={() => setUnresolvedSidebarOpen(true)}
+            onOpenReviewApprove={() => openReview("approve")}
+            onStartFileReview={startFileReview}
+            numoReview={numoReviewCard}
+            fixRun={fixRunCard}
+            checksOpen={checksPopoverOpen}
+            onChecksOpenChange={setChecksPopoverOpen}
+            onRequestReview={openAiReviewDialog}
+            fix={fixCard}
           />
 
           {/* GitHub style tabs: the thread on one side, the code on the other. */}
           <Tabs
             value={tab}
-            onValueChange={(v) => setTab(v as PullRequestDetailTab)}
+            onValueChange={(v) => {
+              setTab(v as PullRequestDetailTab);
+              // The floating back-to-top follows the scroll position of the
+              // Files tab only; a fresh tab must not inherit a stale flag.
+              setScrolledDown(false);
+            }}
           >
             <TabsList variant="line" className={TAB_LIST_DENSE}>
               <TabsTrigger value="activity" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
@@ -1891,19 +2081,41 @@ export function PrDetail({
             <TabsContent value="activity" className="mt-4 flex flex-col gap-3">
               {loading || commentsLoading ? (
                 <Skeleton className="h-16 rounded-lg" />
-              ) : !prDescription && feed.length === 0 && !reviewCard ? (
+              ) : !prDescription && feed.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t("noComments")}</p>
               ) : (
-                <PrActivityTimeline>
+                // MIN-548: the activity is a plain stack of cards and lines —
+                // no vertical rail, no markers. The one line of an event reads
+                // from left to right, and a card is a card, like the ticket
+                // timeline.
+                <div data-testid="pr-activity-timeline" className="flex flex-col gap-3">
                   {prDescription ? (
                     <ThreadComment
                       // The body of the PR is not a commentary, but it
                       // reacts like one: the server translates this zero into the
                       // subject each forge expects.
+                      endpoint={prEndpoint(item.prId)}
                       commentId={PR_BODY_COMMENT_ID}
                       user={pr?.user ?? null}
                       createdAt={pr?.createdAt ?? null}
+                      updatedAt={pr?.updatedAt ?? null}
                       body={prDescription}
+                      // Like on the forge: the AUTHOR rewrites the
+                      // description — Numo's PRs stay read-only, the agent
+                      // retells them himself.
+                      canEdit={
+                        canComment &&
+                        !!viewer?.login &&
+                        !!pr?.user?.login &&
+                        pr.user.login.toLowerCase() === viewer.login.toLowerCase() &&
+                        !item.runId
+                      }
+                      onSave={async (next) => {
+                        await maintainPullRequestApi(item.prId, "update_body", {
+                          body: next,
+                        });
+                      }}
+                      onEdited={() => void refetchPr()}
                       // Quote feeds the bottom composer: without a git account it
                       // there is none, and the gesture would lead nowhere.
                       onQuoteReply={
@@ -1935,13 +2147,29 @@ export function PrDetail({
                       );
                     }
                     const c = entry.comment;
+                    // Editing stays on the person's OWN message (MIN-548):
+                    // same login at the forge, a connected account, and never
+                    // a bot's — Numo's messages are read-only.
+                    // Forge logins are CASE-INSENSITIVE (GitHub normalizes
+                    // nothing in its payloads): compare lowercased, or an
+                    // author whose login capitalizes differently would lose
+                    // the edit gesture on their own words.
+                    const canEdit =
+                      canComment &&
+                      !!viewer?.login &&
+                      c.user?.login?.toLowerCase() === viewer.login.toLowerCase() &&
+                      !isNumoComment(c.user?.login);
                     return (
                       <ThreadComment
                         key={entry.key}
+                        endpoint={prEndpoint(item.prId)}
                         commentId={c.id}
                         user={c.user}
                         createdAt={c.created_at}
+                        updatedAt={c.updated_at}
                         body={c.body}
+                        canEdit={canEdit}
+                        onEdited={() => void refetchComments()}
                         onQuoteReply={
                           canComment
                             ? () => quoteReply(c.body ?? "", c.user?.login)
@@ -1952,13 +2180,9 @@ export function PrDetail({
                         reactions={threadReactions}
                       />
                     );
-                  })}
-                  {/* The proofreading session, where its verdict falls —
-                      and clickable: this is how we will see what the agent has
-                      read, and answered. */}
-                  {reviewCard ? <PrReviewCard run={reviewCard} /> : null}
-                </PrActivityTimeline>
-              )}
+                   })}
+                 </div>
+               )}
 
               {canComment ? (
                 <div data-testid="pr-comment-composer-region" className="pt-1">
@@ -1995,38 +2219,9 @@ export function PrDetail({
                 </div>
               ) : pr ? (
                 <div className="flex flex-col gap-3">
-                  {canComment ? (
-                    <div
-                      data-testid="pr-file-review-toolbar"
-                      className="flex min-h-14 flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-2.5"
-                    >
-                      <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand/10 text-brand">
-                        <Eye className="size-4" />
-                      </span>
-                      <div className="min-w-48 flex-1">
-                        <p className="text-sm font-medium">
-                          {t(fileReviewActive ? "reviewInProgress" : "reviewFilesTitle")}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {fileReviewActive
-                            ? t("reviewFileProgress", {
-                                reviewed: reviewedCount,
-                                total: files.length,
-                              })
-                            : t("reviewFilesHint")}
-                        </p>
-                      </div>
-                      <Button
-                        data-testid={fileReviewActive ? "pr-finish-review" : "pr-start-review"}
-                        variant={fileReviewActive ? "default" : "outline"}
-                        size="sm"
-                        onClick={fileReviewActive ? finishFileReview : startFileReview}
-                      >
-                        {fileReviewActive ? <Check /> : <Eye />}
-                        {t(fileReviewActive ? "reviewFinish" : "reviewStart")}
-                      </Button>
-                    </div>
-                  ) : null}
+                  {/* MIN-548: the review mode lives INSIDE the diff toolbar —
+                      one single line under the tab, with the file count, the
+                      display switches and the review toggle. */}
                   <PrDiff
                     files={files}
                     endpoint={prEndpoint(item.prId)}
@@ -2047,6 +2242,29 @@ export function PrDetail({
                     reviewReactions={reviewReactions}
                     onCommentPosted={refreshReviewState}
                     onThreadResolved={refetchPr}
+                    reviewControls={
+                      canComment ? (
+                        <div data-testid="pr-file-review-toolbar" className="flex items-center gap-2">
+                          {fileReviewActive ? (
+                            <span className="text-xs text-muted-foreground">
+                              {t("reviewFileProgress", {
+                                reviewed: reviewedCount,
+                                total: files.length,
+                              })}
+                            </span>
+                          ) : null}
+                          <Button
+                            data-testid={fileReviewActive ? "pr-finish-review" : "pr-start-review"}
+                            variant={fileReviewActive ? "default" : "outline"}
+                            size="sm"
+                            onClick={fileReviewActive ? finishFileReview : startFileReview}
+                          >
+                            {fileReviewActive ? <Check /> : <Eye />}
+                            {t(fileReviewActive ? "reviewFinish" : "reviewStart")}
+                          </Button>
+                        </div>
+                      ) : undefined
+                    }
                   />
                   {fileReviewActive && canComment ? (
                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card px-3.5 py-2.5">
@@ -2073,6 +2291,23 @@ export function PrDetail({
             </TabsContent>
           </Tabs>
         </div>
+        </div>
+
+        {/* The diff of a big PR scrolls far: one floating gesture brings back
+            the toolbar and the file tree, without hunting for the wheel. */}
+        {tab === "files" && scrolledDown ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("scrollToTop")}
+            className="absolute bottom-4 right-4 z-20 rounded-full border border-border bg-card text-muted-foreground shadow-md hover:text-foreground md:right-6"
+            onClick={() =>
+              scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" })
+            }
+          >
+            <ArrowUp className="size-4" />
+          </Button>
+        ) : null}
       </div>
 
       <Dialog open={editingTitle} onOpenChange={(open) => !maintenanceAction && setEditingTitle(open)}>
@@ -2113,6 +2348,7 @@ export function PrDetail({
             setConfirmAction(null);
             setMergeCommitDraft(null);
             setMergeCommitDraftEdited(false);
+            setNumoMerging(false);
           }
         }}
       >
@@ -2122,12 +2358,39 @@ export function PrDetail({
               {confirmAction?.kind === "merge" ? t("confirmMergeTitle") : t("confirmCloseTitle")}
             </DialogTitle>
           </DialogHeader>
+          {confirmAction?.kind === "merge" ? (
+            // Two choices, like "request changes" for Numo (MIN-548): the
+            // generated route leads, and writing the commit stays at hand.
+            <Tabs
+              value={mergeTab}
+              onValueChange={(v) => setMergeTab(v as "numo" | "manual")}
+            >
+              <TabsList variant="line" className={TAB_LIST_DENSE}>
+                <TabsTrigger value="numo" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
+                  <NumoIcon animated={false} />
+                  {t("mergeTabNumo")}
+                </TabsTrigger>
+                <TabsTrigger value="manual" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
+                  <Pencil />
+                  {t("mergeTabManual")}
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="numo" className="mt-4 flex flex-col gap-3">
+                <p className="text-sm text-muted-foreground">{t("mergeAutoHint")}</p>
+                <Button
+                  data-testid="pr-merge-with-numo"
+                  disabled={!!acting || numoMerging || !prPageContext}
+                  onClick={() => void startNumoMerge(confirmAction.method)}
+                >
+                  {numoMerging ? <Spinner /> : <NumoIcon animated={false} />}
+                  {t("mergeGenerateThenMerge")}
+                </Button>
+              </TabsContent>
+              <TabsContent value="manual" className="mt-4 flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">
-            {confirmAction?.kind === "merge"
-              ? t("confirmMergeDescription")
-              : t("confirmCloseDescription")}
+            {t("confirmMergeDescription")}
           </p>
-          {confirmAction?.kind === "merge" && mergeCommitDraft ? (
+          {mergeCommitDraft ? (
             <div className="grid gap-3">
               <label className="grid gap-1.5 text-sm font-medium">
                 {t("mergeCommitTitle")}
@@ -2157,7 +2420,7 @@ export function PrDetail({
                       current ? { ...current, message: event.target.value } : current,
                     );
                   }}
-                  className="min-h-28 resize-y font-mono text-xs font-normal"
+                  className="max-h-44 min-h-28 resize-y overflow-y-auto font-mono text-xs font-normal"
                 />
               </label>
               <p className="text-xs text-muted-foreground">
@@ -2167,46 +2430,58 @@ export function PrDetail({
               </p>
             </div>
           ) : null}
+                <DialogFooter>
+                  <Button variant="outline" disabled={!!acting} onClick={() => setConfirmAction(null)}>
+                    {t("cancel")}
+                  </Button>
+                  <Button
+                    disabled={!!acting || !mergeCommitDraft || !mergeCommitDraft.title.trim()}
+                    onClick={() => {
+                      const customMergeMessage =
+                        mergeCommitDraft &&
+                        shouldSubmitCustomMergeMessage(
+                          item.provider,
+                          mergeCommitDraftEdited,
+                        )
+                          ? mergeCommitDraft
+                          : null;
+                      void act("merge", {
+                        method: confirmAction.method,
+                        ...(customMergeMessage
+                          ? {
+                              commitTitle: customMergeMessage.title.trim(),
+                              commitMessage: customMergeMessage.message.trim(),
+                            }
+                          : {}),
+                      });
+                    }}
+                  >
+                    {acting ? <Spinner /> : null}
+                    {t("merge")}
+                  </Button>
+                </DialogFooter>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <>
+          <p className="text-sm text-muted-foreground">
+            {t("confirmCloseDescription")}
+          </p>
           <DialogFooter>
             <Button variant="outline" disabled={!!acting} onClick={() => setConfirmAction(null)}>
               {t("cancel")}
             </Button>
             <Button
-              variant={confirmAction?.kind === "close" ? "destructive" : "default"}
-              disabled={
-                !!acting ||
-                (confirmAction?.kind === "merge" &&
-                  !!mergeCommitDraft &&
-                  !mergeCommitDraft.title.trim())
-              }
-              onClick={() => {
-                if (!confirmAction) return;
-                if (confirmAction.kind === "merge") {
-                  const customMergeMessage =
-                    mergeCommitDraft &&
-                    shouldSubmitCustomMergeMessage(
-                      item.provider,
-                      mergeCommitDraftEdited,
-                    )
-                      ? mergeCommitDraft
-                      : null;
-                  void act("merge", {
-                    method: confirmAction.method,
-                    ...(customMergeMessage
-                      ? {
-                          commitTitle: customMergeMessage.title.trim(),
-                          commitMessage: customMergeMessage.message.trim(),
-                        }
-                      : {}),
-                  });
-                }
-                else void act("close");
-              }}
+              variant="destructive"
+              disabled={!!acting}
+              onClick={() => void act("close")}
             >
               {acting ? <Spinner /> : null}
-              {confirmAction?.kind === "merge" ? t("merge") : t("close")}
+              {t("close")}
             </Button>
           </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -2265,6 +2540,7 @@ export function PrDetail({
         }}
         onSubmit={() => void submitReview()}
         dictation={{
+          context: "pull_request_comment",
           onTranscription: (text) =>
             setReviewMessage((value) => `${value}${value ? " " : ""}${text}`),
           disabled: submitting,
@@ -2302,7 +2578,7 @@ export function PrDetail({
                   <label
                     key={choice.verdict}
                     className={cn(
-                      "flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+                      "flex items-start gap-3 rounded-md border px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
                       selected ? "border-brand bg-brand/5" : "border-border",
                     )}
                   >
@@ -2402,7 +2678,11 @@ export function PrDetail({
               )}
               rows={reviewMode === "findings" ? 5 : 4}
               autoFocus
-              className="min-w-0 w-full max-w-full resize-none whitespace-pre-wrap [overflow-wrap:anywhere] rounded-none border-0 bg-card pb-10 focus-visible:border-0 focus-visible:ring-0"
+              // Height-capped like the merge dialog's commit message: the
+              // base `field-sizing-content` would grow the box with the
+              // message until it dwarfed the dialog — past the cap the box
+              // scrolls instead, and the handle still lets it be pulled.
+              className="min-w-0 w-full max-w-full max-h-44 resize-y overflow-y-auto whitespace-pre-wrap [overflow-wrap:anywhere] rounded-none border-0 bg-card pb-10 focus-visible:border-0 focus-visible:ring-0"
             />
             <div className="absolute bottom-1.5 left-1.5 z-10">
               <AttachButton

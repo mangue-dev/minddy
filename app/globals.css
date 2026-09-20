@@ -18,6 +18,39 @@
   --breakpoint-wide: 1200px;
 }
 
+/* One hover cursor for the whole app (MIN-587): buttons and every other
+   interactive element show the default arrow, never the pointer hand. The
+   adapted cursor still wins where it carries meaning — text fields, drag
+   handles, zoom, disabled controls — through the `:not()` exemptions: an
+   element carrying one of those utilities is simply left alone.
+   Unlayered on purpose: cascade layers place Tailwind utilities below this
+   rule, so a stray `cursor-pointer` can never reintroduce the hand. */
+:where(
+    button:not(:disabled),
+    a,
+    summary,
+    label,
+    [role="button"],
+    [role="option"],
+    [role="menuitem"],
+    [role="menuitemradio"],
+    [role="menuitemcheckbox"],
+    [role="radio"],
+    [role="checkbox"],
+    [role="switch"],
+    [role="tab"],
+    [role="treeitem"]
+  ):not(
+    .cursor-grab,
+    .cursor-grabbing,
+    .cursor-text,
+    .cursor-zoom-in,
+    .cursor-zoom-out,
+    .cursor-not-allowed
+  ) {
+  cursor: default;
+}
+
 /* `mangue-ui` is also compiled by Turbopack as a dependency: according to the
    development cache, its `desktop:` utilities can keep the
    published threshold (1200 px) while those in the application have already read the theme
@@ -409,7 +442,7 @@ a.markdown-link::before {
 }
 /* Keep content slightly lighter than both sidebar levels, including floating
    navigation. The shared surface scale below also covers cards and popovers. */
-.dark:has(.app-shell) {
+.dark[data-app-shell] {
   --background: #0f0f0f;
   --sidebar: oklch(0.165 0.004 264);
 }
@@ -448,9 +481,27 @@ a.markdown-link::before {
    `--app-pane-radius` is the single source of the pane's corner rounding: the
    content column and every pane-mirror modal (scratchpad notebook, wizard,
    what's-new, skill preview, Numo/agent shells in expanded mode) read it, so
+   they all follow the same curve.
+
+   The radius is a tuned aesthetic value (MIN-584): round enough to echo the
+   pill-shaped header controls, low enough not to balloon the card corners.
+   Its floor is geometric — below ~16px the corner arc would cross a 32px
+   header pill (a 20px radius keeps a ~12px diagonal gap where the arc curves
+   away). The header pills are kept regular against it through the padding
+   token below.
+   `--app-pane-radius` is the single source of the pane's corner rounding: the
+   content column and every pane-mirror modal (scratchpad notebook, wizard,
+   what's-new, skill preview, Numo/agent shells in expanded mode) read it, so
    they all follow the same curve. */
 :root {
-  --app-pane-radius: 16px;
+  --app-pane-radius: 20px;
+  /* Half the 50px header strip minus the 16px radius of a 32px pill: the App
+     Content Header's side inset. It matches the pills' vertical centering
+     margin, so the visible margin from the pane edge is the same 10px on the
+     top and both sides, on every page. */
+  --app-content-header-pad-x: calc(
+    (var(--app-content-header-height) - 32px) / 2
+  );
 }
 
 @media (min-width: 768px) {
@@ -471,12 +522,15 @@ a.markdown-link::before {
     border: 1px solid var(--border);
   }
 
-  /* With navigation hidden, the histogram width collapses to 0 and the panel
-     would sit flush against the window edge: keep the same gutter on the left
-     as on the right, and follow the sidebar's own exit animation. */
-  .app-shell:has([data-sidebar-hidden="true"]) > div.flex.min-h-0.min-w-0.flex-1.flex-col {
+  /* Hidden navigation keeps the same gutter on both sides. Apply the final
+     geometry once; only the sidebar surface slides, avoiding repeated page
+     layout and editor resize work throughout its exit animation. The state
+     rides a lifecycle attribute synced onto the shell main and <body> by
+     SidebarNavOverlay: a `:has()` anchored that high would attach
+     descendant-watching invalidation sets to it and broaden every unrelated
+     style change into a full-document recalculation. */
+  .app-shell[data-sidebar-hidden="true"] > div.flex.min-h-0.min-w-0.flex-1.flex-col {
     margin-left: 12px;
-    transition: margin-left 220ms cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   /* Pane-mirroring modals (scratchpad notebook, project-creation wizard,
@@ -510,8 +564,8 @@ a.markdown-link::before {
     transition: left 220ms cubic-bezier(0.32, 0.72, 0, 1);
   }
 
-  body:has([data-sidebar-hidden="true"]) .scratchpad-shell-dialog,
-  body:has([data-sidebar-hidden="true"]) .dialog-pane-mirror {
+  body[data-sidebar-hidden="true"] .scratchpad-shell-dialog,
+  body[data-sidebar-hidden="true"] .dialog-pane-mirror {
     left: 12px !important;
   }
 }
@@ -597,6 +651,24 @@ a.markdown-link::before {
   }
 }
 
+/* ─── Tabs: no focus ring ───────────────────────────────────────────── */
+
+/* The same Chromium behavior the base rule above mutes for the UA outline
+   also re-lights the focus RINGS of the tab triggers: click a tab (mouse
+   focus — nothing shows), then press Shift, Space or any other key for its
+   own sake, and Chromium re-evaluates `:focus-visible` on that keydown —
+   the trigger lights its blue ring although the keyboard never navigated.
+   A tab already shows its selection; it must not grow a second state just
+   because a key was pressed. Drop the ring and the border tint on the
+   panel tabs (mangue-ui `TabsTrigger`). Declared out of any layer on
+   purpose: the trigger's ring utilities live in the utilities layer, and an
+   out-of-layer rule beats them regardless of specificity — the same trick
+   as the finger-target rules below. */
+[data-slot="tabs-trigger"]:focus-visible {
+  --tw-ring-shadow: 0 0 0 #0000;
+  border-color: transparent;
+}
+
 /* ─── Numo (assistant) ──────────────────────────────────────────────── */
 
 /* Numo compact ⇄ expanded morph. The panel keeps right/bottom anchoring
@@ -615,11 +687,16 @@ a.markdown-link::before {
 
   /* On ultrawide (≥2200px) the shell becomes a centered map (mango-ui
      AppShell places `.ultrawide-canvas` on the body), so we re-anchor the FAB
-     Numo and its compact panel — both in `fixed` — at the bottom right corner of the
-     shell rather than at the edge of the viewport. Offset = shell centering margin
+     Numo and its compact panel — both in `fixed` — at the bottom right corner of
+     the shell rather than at the edge of the viewport. Offset = shell centering margin
      + 8px: for the FAB of 44px, this 8px keeps its radius of 22px concentric
      at 30px corner of shell (30 − 8 = 22); the panel shares exactly the
      same corner to open where the FAB is.
+
+     Web only: in the desktop app (hiddenInset window) the shell fills the
+     viewport at every size — the canvas maths would pull the buttons toward
+     the window's centre, parking them inside the content pane. The plain
+     `right-3 bottom-1` anchoring is the correct one there at any width.
 
      Why @layer utilities + !important: the panel is positioned with
      !important Tailwind utilities (md:!right-4 …) that live in this layer.
@@ -627,8 +704,8 @@ a.markdown-link::before {
      a layered !important beats a non-layered one regardless of specificity —
      an off-layer rule would silently lose. Declared in @layer
      utilities, it's the specificity that decides (0,2,0 beats the 0,1,0 of md:). */
-  .ultrawide-canvas .assistant-fab-anchor,
-  .ultrawide-canvas .assistant-panel-anchor {
+  html:not([data-desktop-app]) .ultrawide-canvas .assistant-fab-anchor,
+  html:not([data-desktop-app]) .ultrawide-canvas .assistant-panel-anchor {
     right: calc((100dvw - var(--spacing-app-max-w)) / 2 + 8px) !important;
     bottom: calc(max(0px, (100dvh - var(--spacing-app-max-h)) / 2) + 8px) !important;
   }
@@ -636,7 +713,7 @@ a.markdown-link::before {
   /* Same re-anchoring for the “new version” headband (MIN-157), which lives at
      same corner: same `right`, and a `bottom` shifted by 4.5rem to remain
      stacked ABOVE the FAB rather than on top of it. */
-  .ultrawide-canvas .new-version-anchor {
+  html:not([data-desktop-app]) .ultrawide-canvas .new-version-anchor {
     right: calc((100dvw - var(--spacing-app-max-w)) / 2 + 8px) !important;
     bottom: calc(
       max(0px, (100dvh - var(--spacing-app-max-h)) / 2) + 8px + 4.5rem
@@ -1246,58 +1323,60 @@ nav[aria-label="Navigation"]
   }
 }
 
-/* Disable app boundary bounce at the viewport and on each scrolling axis.
+/* The shell sets a lifecycle attribute on the document. A root :has() selector
+   would make inserting any menu or dialog recheck the full workspace subtree.
+   Disable app boundary bounce at the viewport and on each scrolling axis.
    The document scope also covers menus and dialogs portaled outside the shell.
    Extend overflow utilities so responsive variants and library components share
    the policy. Do not apply it to every element: an overflow-hidden wrapper or
    the unused axis of a horizontal table would trap normal parent scrolling.
    Public pages retain their browser behavior. */
-html:has(.app-shell) {
+html[data-app-shell] {
   --app-overscroll: none;
   overscroll-behavior: none;
 }
 
-html:has(.app-shell) body,
-html:has(.app-shell) textarea {
+html[data-app-shell] body,
+html[data-app-shell] textarea {
   overscroll-behavior: none;
 }
 
 @utility overflow-auto {
-  &:where(html:has(.app-shell) *) {
+  &:where(html[data-app-shell] *) {
     overscroll-behavior: none !important;
   }
 }
 @utility overflow-scroll {
-  &:where(html:has(.app-shell) *) {
+  &:where(html[data-app-shell] *) {
     overscroll-behavior: none !important;
   }
 }
 @utility overflow-x-auto {
-  &:where(html:has(.app-shell) *) {
+  &:where(html[data-app-shell] *) {
     overscroll-behavior-x: none !important;
   }
 }
 @utility overflow-x-scroll {
-  &:where(html:has(.app-shell) *) {
+  &:where(html[data-app-shell] *) {
     overscroll-behavior-x: none !important;
   }
 }
 @utility overflow-y-auto {
-  &:where(html:has(.app-shell) *) {
+  &:where(html[data-app-shell] *) {
     overscroll-behavior-y: none !important;
   }
 }
 @utility overflow-y-scroll {
-  &:where(html:has(.app-shell) *) {
+  &:where(html[data-app-shell] *) {
     overscroll-behavior-y: none !important;
   }
 }
 
 /* Radix enables each ScrollArea axis with an inline overflow declaration. */
-html:has(.app-shell) [data-radix-scroll-area-viewport][style*="overflow-x: scroll"] {
+html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-x: scroll"] {
   overscroll-behavior-x: none;
 }
-html:has(.app-shell) [data-radix-scroll-area-viewport][style*="overflow-y: scroll"] {
+html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scroll"] {
   overscroll-behavior-y: none;
 }
 
@@ -1482,7 +1561,7 @@ html:has(.app-shell) [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   background: color-mix(in oklab, var(--background) 80%, transparent);
   opacity: 0;
   transition: opacity 0.12s, color 0.12s;
-  cursor: pointer;
+  cursor: default;
 }
 /* “Launch an agent” on the section (MIN-84) — to the left of the copy button. */
 .scratchpad-editor .ProseMirror .scratchpad-section-launch {
@@ -1989,7 +2068,7 @@ html:has(.app-shell) [data-radix-scroll-area-viewport][style*="overflow-y: scrol
 }
 
 .page-editor .page-callout-icon-button {
-  cursor: pointer;
+  cursor: default;
   color: inherit;
 }
 
@@ -2085,7 +2164,7 @@ html:has(.app-shell) [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   height: 1.75rem;
   border-radius: 0.25rem;
   color: var(--muted-foreground);
-  cursor: pointer;
+  cursor: default;
   transition: background-color 0.12s, transform 0.15s;
 }
 .page-editor .page-details-toggle:hover {
@@ -2227,7 +2306,7 @@ html:has(.app-shell) [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   color: color-mix(in oklab, var(--page-color-teal) 85%, var(--foreground));
   background-color: transparent;
   transition: background-color 120ms ease;
-  cursor: pointer;
+  cursor: default;
   user-select: none;
 }
 
@@ -2418,6 +2497,13 @@ html[data-desktop-platform="darwin"]
    out clickable no-drag areas while every empty part still moves the window. */
 html[data-desktop-platform="darwin"] .app-content-header {
   -webkit-app-region: drag;
+}
+
+/* A recalled navigation panel overlaps content headers. Chromium's native
+   draggable-region hit testing can otherwise keep the covered header active,
+   making the sidebar rows under that band visible but unclickable. */
+html[data-desktop-app] .sidebar-nav-panel {
+  -webkit-app-region: no-drag;
 }
 
 html[data-desktop-platform="darwin"] .app-content-header

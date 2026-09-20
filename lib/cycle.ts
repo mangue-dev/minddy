@@ -1,6 +1,8 @@
 import type { IssueEffort, IssuePriority, IssueStatus } from "./issue-constants";
+import type { ObjectiveStatus } from "./objective-constants";
 import type { IssueRelation } from "./types";
 import type { CycleIntensity } from "./cycle-prefs";
+import { endpointType } from "./relation-validation";
 
 // The deterministic Cycles engine (MIN-32) — dates, capacity points and the
 // fill/reco scoring, in one pure module (the lib/plan.ts pattern): no React,
@@ -275,6 +277,9 @@ export type RecoIssue = {
   priority: IssuePriority;
   effort: IssueEffort | null;
   category_ids: string[];
+  /** The objective the issue belongs to, when any (MIN-513): relations
+      blocking that objective cascade onto the issue in the fill. */
+  objective_id?: string | null;
 };
 
 const PRIORITY_RANK: Record<IssuePriority, number> = {
@@ -284,6 +289,64 @@ const PRIORITY_RANK: Record<IssuePriority, number> = {
   low: 1,
   none: 0,
 };
+
+/** The status an objective reads as in the issue-status arithmetic: an open
+ *  objective (planned / in_progress) maps to an open issue status, a closed one
+ *  (done / canceled) to the matching closed status. */
+export function objectiveStatusAsIssueStatus(
+  status: ObjectiveStatus
+): IssueStatus {
+  return status === "planned"
+    ? "todo"
+    : status === "in_progress"
+      ? "in_progress"
+      : status;
+}
+
+/**
+ * Fold the relation rows down to what the cycle engine must see (MIN-513).
+ * Relations can now touch objectives, and an objective endpoint does not mean
+ * what an issue endpoint means for blocking:
+ *   - an edge whose TARGET is objective O blocks every issue attached to O —
+ *     it fans out to one `blocks` edge per issue of O;
+ *   - an edge whose SOURCE is an objective stays as-is: the blocker id is the
+ *     objective itself, and its open/closed state rides the returned
+ *     `objectiveStatuses` (planned→todo, in_progress→in_progress, done→done,
+ *     canceled→canceled) so `isBlockedIn` reads it unchanged;
+ *   - an edge between two objectives only matters for the target's issues;
+ *     when the target has no issues in scope, the edge simply drops.
+ *
+ * `related` rows pass through untouched — they never block. Issue↔issue
+ * `blocks` edges pass through unchanged.
+ */
+export function cycleBlockingRelations(
+  relations: IssueRelation[],
+  issuesByObjective: Map<string, string[]>,
+  objectiveStatusById: Map<string, ObjectiveStatus>
+): { relations: IssueRelation[]; objectiveStatuses: Map<string, IssueStatus> } {
+  const objectiveStatuses = new Map<string, IssueStatus>();
+  for (const [id, status] of objectiveStatusById) {
+    objectiveStatuses.set(id, objectiveStatusAsIssueStatus(status));
+  }
+
+  const out: IssueRelation[] = [];
+  for (const r of relations) {
+    if (r.type !== "blocks" || endpointType(r.target_type) === "issue") {
+      out.push(r);
+      continue;
+    }
+    if (!objectiveStatusById.has(r.target_id)) continue;
+    for (const issueId of issuesByObjective.get(r.target_id) ?? []) {
+      out.push({
+        ...r,
+        id: `${r.id}:${issueId}`,
+        target_id: issueId,
+        target_type: "issue",
+      });
+    }
+  }
+  return { relations: out, objectiveStatuses };
+}
 
 /** target id → ids of the issues blocking it, from stored `blocks` edges. */
 function blockersIndex(relations: IssueRelation[]): Map<string, string[]> {

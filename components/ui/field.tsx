@@ -83,7 +83,7 @@ function FieldLabel({ className, ...props }: ComponentProps<"label">) {
       className={cn(
         "flex w-fit items-center gap-1.5 text-sm leading-snug font-medium text-foreground",
         "group-data-[disabled=true]/field:opacity-50",
-        "has-[+*]:cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
+        "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
         className,
       )}
       {...props}

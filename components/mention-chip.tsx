@@ -30,7 +30,7 @@
 // that a color cannot render: a face, an orb, an emoji.
 
 import type { CSSProperties, MouseEvent } from "react";
-import { BookText, FileText, Target } from "lucide-react";
+import { BookText, Target } from "lucide-react";
 import { cn } from "mangue-ui";
 import {
   NODE_LINK_CLASS,
@@ -42,6 +42,8 @@ import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbBaseColor } from "@/lib/project-orb-colors";
 import { UserAvatar } from "@/components/user-avatar";
 import { NUMO_MENTION_ID } from "@/lib/mention-attributes";
+import { StatusIndicator } from "@/components/issue-indicators";
+import type { IssueStatus } from "@/lib/issue-constants";
 
 /** The id of the pseudo-entity “Numo” in the mention lists: the assistant
  is not an account, so it does not have its own id. */
@@ -68,6 +70,7 @@ export function MentionChip({
   iconUrl,
   color,
   icon,
+  status,
   href,
   onNavigate,
   className,
@@ -91,6 +94,8 @@ export function MentionChip({
   color?: string | null;
   /** Page: her emoji, when she has one (MIN-273). */
   icon?: string | null;
+  /** Issue workflow state. Its indicator is the issue's figure everywhere. */
+  status?: IssueStatus;
   /**
  * Where does the pill lead. Present = it clicks, and becomes a real anchor:
  * ⌘-click, middle click and “open in new tab” come with it.
@@ -130,7 +135,11 @@ export function MentionChip({
         // nude, in pill ink, which is the brand color here.
         <NumoFace className="size-full" />
       ) : type === "issue" ? (
-        <FileText className="size-full" />
+        status ? (
+          <StatusIndicator status={status} className="size-full" />
+        ) : (
+          <span className="size-[0.7em] rounded-full bg-current" />
+        )
       ) : type === "page" ? (
         // The EMOJI of the page takes the place of the glyph when it has one:
         // it's her own face, and she wears her own colors.
@@ -190,7 +199,7 @@ export function MentionChip({
       className={cn(
         shape,
         NODE_LINK_CLASS,
-        "cursor-pointer no-underline transition-colors hover:bg-(--mention-chip-hover)",
+        "no-underline transition-colors hover:bg-(--mention-chip-hover)",
         // LAST: a caller who repaints the pill (the dark bubble of
         // cat) also repaints its hover, and tailwind-merge can only do that
         // if his class arrives after ours.

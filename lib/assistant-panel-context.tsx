@@ -18,6 +18,7 @@ import type {
   NumoIntent,
   AssistantPageContext,
 } from "@/lib/assistant-types";
+import type { PanelDisplayMode } from "@/components/assistant/panel-geometry";
 import type { ResourceInput } from "@/lib/types";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { trackEvent } from "@/lib/analytics";
@@ -25,6 +26,12 @@ import { trackEvent } from "@/lib/analytics";
 export interface OpenAssistantOptions {
   /** Project context attached by this opening; never replaces the conversation. */
   projectId?: string | null;
+  /**
+   * Open ON a persisted conversation instead of the live one. The panel loads
+   * it and marks it read — the entry of inbox rows and "view the session"
+   * gestures, which have no page to push any more.
+   */
+  conversationId?: string | null;
   /** Auto-send a one-shot message right after opening. */
   prompt?: string;
   /**
@@ -52,6 +59,13 @@ export interface OpenAssistantOptions {
   pageContext?: AssistantPageContext;
   /** Provenance retained when an old caller still uses `open` directly. */
   intent?: Pick<NumoIntent, "source" | "action">;
+  /**
+   * Display mode the panel should open in. Absent = keep whatever mode the
+   * session is already in (the toolbar toggle stays authoritative). The home
+   * composer asks for `"expanded"`: a message sent from the dashboard is a
+   * work session, not a popover glance.
+   */
+  displayMode?: PanelDisplayMode;
 }
 
 export interface AssistantPanelContextValue {
@@ -92,8 +106,13 @@ export interface AssistantPanelContextValue {
   /** `ownerId` counts surfaces: several can be mounted at once. */
   setFabSuppressed: (suppressed: boolean, ownerId: string) => void;
   open: (opts?: OpenAssistantOptions) => void;
-  /** The common entry for every voluntary request to Numo. */
-  openIntent: (intent: NumoIntent) => void;
+  /** The common entry for every voluntary request to Numo. `opts` carries the
+      opening-time presentation choices (e.g. the home composer opens
+      fullscreen). */
+  openIntent: (
+    intent: NumoIntent,
+    opts?: { displayMode?: PanelDisplayMode },
+  ) => void;
   close: () => void;
   toggle: () => void;
   /** Called by the panel after consuming pendingOptions. */
@@ -105,6 +124,14 @@ export interface AssistantPanelContextValue {
 const AssistantPanelContext = createContext<AssistantPanelContextValue | null>(
   null,
 );
+
+export type AssistantPanelActions = Pick<
+  AssistantPanelContextValue,
+  "setAmbientContext" | "setFabSuppressed" | "open" | "openIntent" |
+  "close" | "toggle" | "clearPendingOptions"
+>;
+
+const AssistantPanelActionsContext = createContext<AssistantPanelActions | null>(null);
 
 export function AssistantPanelProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -174,7 +201,7 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openIntent = useCallback(
-    (intent: NumoIntent) => {
+    (intent: NumoIntent, opts?: { displayMode?: PanelDisplayMode }) => {
       open({
         projectId: intent.projectId,
         prompt: intent.prompt,
@@ -183,6 +210,7 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
         command: intent.command,
         attachments: intent.attachments,
         intent: { source: intent.source, action: intent.action },
+        displayMode: opts?.displayMode,
       });
     },
     [open],
@@ -212,6 +240,16 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
   const clearPendingOptions = useCallback(() => {
     setPendingOptions(null);
   }, []);
+
+  const actions = useMemo<AssistantPanelActions>(() => ({
+    setAmbientContext,
+    setFabSuppressed,
+    open,
+    openIntent,
+    close,
+    toggle,
+    clearPendingOptions,
+  }), [setAmbientContext, setFabSuppressed, open, openIntent, close, toggle, clearPendingOptions]);
 
   const value = useMemo<AssistantPanelContextValue>(
     () => ({
@@ -247,10 +285,21 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <AssistantPanelContext.Provider value={value}>
-      {children}
-    </AssistantPanelContext.Provider>
+    <AssistantPanelActionsContext.Provider value={actions}>
+      <AssistantPanelContext.Provider value={value}>
+        {children}
+      </AssistantPanelContext.Provider>
+    </AssistantPanelActionsContext.Provider>
   );
+}
+
+/** Card and menu actions do not subscribe to the current issue or conversation. */
+export function useAssistantPanelActions(): AssistantPanelActions {
+  const actions = useContext(AssistantPanelActionsContext);
+  if (!actions) {
+    throw new Error("useAssistantPanelActions must be used within an AssistantPanelProvider");
+  }
+  return actions;
 }
 
 export function useAssistantPanel(): AssistantPanelContextValue {
@@ -274,7 +323,7 @@ export function useAssistantPanel(): AssistantPanelContextValue {
 export function useAssistantContext(
   context: AssistantPageContext | null,
 ): void {
-  const { setAmbientContext } = useAssistantPanel();
+  const { setAmbientContext } = useAssistantPanelActions();
   const ownerId = useId();
   // Serialize to a stable key so the effect re-publishes only on a real change
   // (the caller passes a fresh object each render). The object is rebuilt from
@@ -307,7 +356,7 @@ export function useAssistantContext(
  * Routines tab, at the same URL.
  */
 export function useSuppressAssistantFab(active = true): void {
-  const { setFabSuppressed } = useAssistantPanel();
+  const { setFabSuppressed } = useAssistantPanelActions();
   const ownerId = useId();
 
   useEffect(() => {

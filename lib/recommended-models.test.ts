@@ -17,7 +17,7 @@ vi.mock("@lobehub/icons", () => {
   const brands = [
     "Ai21", "AionLabs", "Arcee", "Bedrock", "ByteDance", "Claude", "Cohere", "DeepSeek",
     "Gemini", "Grok", "IBM", "Inception", "Kwaipilot", "Liquid", "LongCat", "Meta",
-    "Minimax", "Mistral", "Moonshot", "Nvidia", "OpenAI", "OpenRouter", "Perplexity",
+    "Minimax", "Mistral", "Moonshot", "Nvidia", "OpenAI", "OpenCode", "OpenRouter", "Perplexity",
     "Poolside", "Qwen", "Relace", "Stepfun", "Tencent", "Upstage", "XiaomiMiMo", "Zhipu",
   ];
   return Object.fromEntries(brands.map((b) => [b, icon]));

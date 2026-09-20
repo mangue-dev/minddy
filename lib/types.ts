@@ -1,3 +1,4 @@
+import type { CommentDelivery } from "./comment-delivery";
 import type {
   IssueStatus,
   IssuePriority,
@@ -9,6 +10,7 @@ import type { RepoProviderId } from "./repo-providers";
 import type { RecurrenceCadence } from "./recurrence";
 import type { BillingPlanId } from "./billing-plans";
 import type { AutomationOverride, AutomationRule } from "./automations";
+import type { SmartTriageMode } from "./smart-triage";
 import type { CommentVisibility } from "./feedback/types";
 
 export interface Objective {
@@ -125,6 +127,7 @@ export function isPageResource(
 }
 
 export interface Comment {
+  delivery?: CommentDelivery;
   id: string;
   /** Exactly one of issue_id / objective_id / feedback_post_id is the parent. */
   issue_id: string | null;
@@ -518,6 +521,12 @@ export interface Project {
   /** Smart Assign rules, user_id → free text describing the member's preferred
       tasks (kept on the project — the owner has no project_members row). */
   smart_assign_rules: Record<string, string>;
+  /** Smart Triage (MIN-566): the on-demand column reorder, opt-in per project.
+      `off` (default) never reorders; `rules` orders by the static rules;
+      `jev` replaces the ranking with a decision-layer scoring pass. The
+      reorder runs only when someone clicks the board's "Smart triage" button
+      — the manual drag order stays editable. */
+  smart_triage_mode: SmartTriageMode;
   /** Numo reviews incoming feedback (categorize, junk, sensitive) before it is
       published. Off means feedback goes out as submitted. */
   feedback_review_enabled: boolean;
@@ -566,6 +575,9 @@ export interface ProjectUpdateInput {
   smart_assign_enabled?: boolean;
   auto_assign_enabled?: boolean;
   smart_assign_rules?: Record<string, string>;
+  /** Smart Triage mode (MIN-566) — validated server-side against the known
+      values; arming `jev` additionally requires the owner's AI budget. */
+  smart_triage_mode?: SmartTriageMode;
   feedback_review_enabled?: boolean;
   feedback_review_skip_over_budget?: boolean;
   feedback_translate_enabled?: boolean;
@@ -1041,13 +1053,22 @@ export type { CycleIntensity };
     `blocked_by` is the inverse read of a stored `blocks` edge. */
 export type IssueRelationType = "blocks" | "blocked_by" | "related";
 
+/** What a relation endpoint points at (MIN-513). Relations may now also pair
+    an issue with an objective, or two objectives; `issue` is the default for
+    every row written before objectives could carry relations. */
+export type RelationEndpointType = "issue" | "objective";
+
 /** A stored relation row as returned by the API (only `blocks`/`related` are
-    persisted; `blocked_by` is derived per-issue on the client). */
+    persisted; `blocked_by` is derived per-issue on the client). The kind
+    columns are optional in the type so pre-migration producers stay assignable;
+    readers default them to `issue` (see endpointType). */
 export interface IssueRelation {
   id: string;
   source_id: string;
   target_id: string;
   type: "blocks" | "related";
+  source_type?: RelationEndpointType;
+  target_type?: RelationEndpointType;
 }
 
 /** A relation resolved from one issue's perspective, ready for the UI. */
@@ -1057,6 +1078,9 @@ export interface ResolvedRelation {
   relation: IssueRelationType;
   /** The other issue in the pair. */
   otherId: string;
+  /** What the other end is (MIN-513) — `issue` when unknown (pre-migration
+      producers don't send the kind columns). */
+  otherType?: RelationEndpointType;
   /** A blocking relation whose blocker is closed (done/canceled/duplicate) no
       longer constrains: it's kept in the DB but surfaced as resolved rather than
       as an active blockage. Always false for `related`, and false whenever the
@@ -1069,6 +1093,9 @@ export interface CreateIssueRelationInput {
   target_id: string;
   /** Relation type from `source_id`'s perspective. */
   type: IssueRelationType;
+  /** Endpoint kinds (MIN-513) — default `issue` for both. */
+  source_type?: RelationEndpointType;
+  target_type?: RelationEndpointType;
 }
 
 export type IntegrationWebhookEvent =
@@ -1527,6 +1554,48 @@ export interface AdminOverview {
     /** Among them, those who have explicitly passed it. */
     dismissed: number;
   };
+}
+
+/** One week of the shadow comparison (MIN-567), for ONE use case — read
+ * from the `ai_decision_evaluations_weekly` view, newest week first. Weeks
+ * carry SUMS and COUNTS, never per-week averages: weeks of very different
+ * traffic must weigh by their sample count when the dashboard aggregates
+ * them, so every displayed latency and cost stays a per-sample average. */
+export interface AdminDecisionsQualityWeek {
+  useCase: string;
+  /** ISO instant of the Monday starting the week (UTC). */
+  weekStart: string;
+  /** Confident Jev decisions sampled, whatever the replay did. */
+  samples: number;
+  /** Of which the replay answered at least one comparable question. */
+  comparable: number;
+  /** Of which every comparable answer matched. */
+  agreeCount: number;
+  /** Of which the LLM replay failed (no reference to compare against). */
+  replayFailed: number;
+  /** End-to-end latency of the Jev legs: the week's sum over its count. */
+  jevLatencySum: number;
+  jevLatencyCount: number;
+  /** End-to-end latency of the LLM replays: the week's sum over its count. */
+  llmLatencySum: number;
+  llmLatencyCount: number;
+  /** Ledger cost of the replays — the delta sampling adds: sum over count. */
+  llmCostSum: number;
+  llmCostCount: number;
+}
+
+/**
+ * `GET /api/admin/decisions-quality` — the Jev decision knobs and the
+ * shadow comparison's weekly agreement, per use case (MIN-567).
+ */
+export interface AdminDecisionsQuality {
+  settings: {
+    enabled: boolean;
+    confidenceFloor: number;
+    shadowSampleRate: number;
+    llmFirstUseCases: string[];
+  };
+  weeks: AdminDecisionsQualityWeek[];
 }
 
 /**

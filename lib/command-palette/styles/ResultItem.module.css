@@ -16,7 +16,7 @@
   padding: 12px;
   margin: 0 5px;
   border-radius: var(--cp-radius-md);
-  cursor: pointer;
+  cursor: default;
   user-select: none;
   min-height: 40px;
   color: var(--cp-fg);

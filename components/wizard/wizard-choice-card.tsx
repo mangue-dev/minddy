@@ -45,7 +45,7 @@ export function WizardChoiceCard({
         // <button> handwritten, so the global rule of globals.css — which
         // aims for `[data-slot="button"]` — doesn't hit it. 0.99 and not 0.97:
         // the depth is adjusted to the size, and this is large.
-        "group flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-card outline-none transition-all hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.99] motion-reduce:active:scale-100",
+        "group flex flex-col overflow-hidden rounded-2xl border bg-card outline-none transition-all hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.99] motion-reduce:active:scale-100",
         selected ? "border-brand/50" : "border-border hover:border-brand/40",
       )}
     >

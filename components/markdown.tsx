@@ -65,6 +65,7 @@ function rehypeMentions(scan: MentionScan) {
               "data-mention-type": "issue",
               "data-mention-id": mention.issue.id,
               "data-mention-label": mention.issue.identifier,
+              "data-mention-status": mention.issue.status,
             };
           case "objective":
             return {
@@ -139,6 +140,9 @@ function rehypeResolvedMentions(mentions: AssistantMention[]) {
               : {}),
             ...(mention.icon !== undefined
               ? { "data-mention-icon": mention.icon }
+              : {}),
+            ...(mention.status !== undefined
+              ? { "data-mention-status": mention.status }
               : {}),
           },
           children: [],
@@ -416,7 +420,7 @@ function MarkdownRenderer({
             />
           ),
           details: styled("details", "my-3"),
-          summary: styled("summary", "cursor-pointer font-medium"),
+          summary: styled("summary", "font-medium"),
           /* GFM tables can be arbitrarily wide: keep them in their own scroll
              box so a wide one never stretches (nor side-scrolls) the comment
              around it. `min-w-max` lets the table keep its natural width inside
@@ -518,6 +522,12 @@ function MarkdownRenderer({
                     type === "page" ? (p["data-mention-icon"] as string) : null
                   }
                   color={p["data-mention-color"] as string | undefined}
+                  status={
+                    type === "issue"
+                      ? links?.issueStatus(id) ??
+                        (p["data-mention-status"] as import("@/lib/issue-constants").IssueStatus | undefined)
+                      : undefined
+                  }
                   href={links?.href(type, id) ?? null}
                   onNavigate={() => links?.navigate(type, id)}
                 />

@@ -343,6 +343,7 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
     };
 
     const loop = () => {
+      if (signal.aborted) return;
       frame = requestAnimationFrame(loop);
       autoScroll();
       if (!dirty) return;
@@ -350,15 +351,17 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
       apply();
     };
 
-    const finish = () => {
+    const cleanup = () => {
       if (frame != null) cancelAnimationFrame(frame);
       frame = null;
       document.body.style.userSelect = "";
       const overlay = overlayRef.current;
       if (overlay) overlay.style.display = "none";
-      controller.abort();
       if (abortRef.current === controller) abortRef.current = null;
     };
+    // Aborting on unmount/suspension must stop RAF work as well as listeners.
+    signal.addEventListener("abort", cleanup, { once: true });
+    const finish = () => controller.abort();
 
     window.addEventListener(
       "pointermove",

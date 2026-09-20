@@ -1,0 +1,228 @@
+import "server-only";
+
+import type { ByokModelKey } from "@/lib/ai-surfaces";
+import type { AiFeature } from "@/lib/server/ai-usage-shape";
+import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
+import { resolveConfiguredModel } from "@/lib/server/model-config";
+import { clamp01, type DecisionAnswers, type DecisionSpec } from "@/lib/server/decisions/types";
+import type { DecisionCallContext } from "@/lib/server/decisions/jev";
+
+/**
+ * The LLM adapter of the decision layer (MIN-562): the fallback pass, built
+ * on `forcedToolCall()` and the EXISTING per-use-case tools (`fill_issue`,
+ * `choose_assignee`, `review_feedback`). The prompts and tool schemas ride
+ * in the spec, produced verbatim by the builders of `prepare.ts` — MIN-562
+ * changes nothing to them, so a fallback decision behaves exactly like the
+ * pass it replaces. Aligning them later on the System One question format
+ * (for fair Jev/LLM comparisons in MIN-567) is an open option.
+ *
+ * The mapping is strict, as in the passes today: a value outside the spec's
+ * options is dropped, a missing argument simply produces no answer — the
+ * use case's pure policy (`sanitizeSmartFill`, `decideFeedbackReview`, …)
+ * decides what a missing answer is worth. `null` on any failure; the use
+ * case then applies its own degradation.
+ */
+
+interface LlmPassProfile {
+  modelKey: ByokModelKey;
+  feature: AiFeature;
+  xTitle: string;
+  logPrefix: string;
+  maxTokens?: number;
+  timeoutMs?: number;
+}
+
+/** The existing pass of each use case, unchanged (model, tool, billing feature). */
+const LLM_PASSES: Record<DecisionSpec["useCase"], LlmPassProfile> = {
+  smart_fill: {
+    modelKey: "smart_fill_model",
+    feature: "smart_fill",
+    xTitle: "minddy Smart-fill",
+    logPrefix: "smart-fill",
+    maxTokens: 256,
+    // Someone is waiting in front of their screen: the same ceiling as the pass.
+    timeoutMs: 20_000,
+  },
+  smart_assign: {
+    modelKey: "smart_assign_model",
+    feature: "smart_assign",
+    xTitle: "Smart Assign (minddy)",
+    logPrefix: "[smart-assign]",
+    maxTokens: 256,
+  },
+  feedback_review: {
+    modelKey: "feedback_analysis_model",
+    feature: "feedback_classify",
+    xTitle: "Feedback Review (minddy)",
+    logPrefix: "[feedback-review]",
+  },
+  // The scoring pass of Smart Triage (MIN-566): ONE call per column, whose
+  // `scores` object answers every ticket id on the 1–5 urgency scale. Someone
+  // is waiting in front of their board, and a column can carry forty tickets —
+  // a tighter output ceiling than the default, but a longer window than
+  // smart-fill's single verdict.
+  smart_triage: {
+    modelKey: "smart_triage_model",
+    feature: "smart_triage",
+    xTitle: "Smart Triage (minddy)",
+    logPrefix: "[smart-triage]",
+    maxTokens: 1024,
+    timeoutMs: 20_000,
+  },
+};
+
+/** One allowed-value check for a choice answer. */
+function choiceAnswer(
+  raw: unknown,
+  allowed: string[]
+): { value: string; probability: null; confidence: null } | null {
+  return typeof raw === "string" && allowed.includes(raw)
+    ? { value: raw, probability: null, confidence: null }
+    : null;
+}
+
+/**
+ * Raw tool arguments → decision answers, per use case. The keys mirror the
+ * tool arguments, which the builders made identical to the question keys;
+ * the special cases are the ones the passes already handle today.
+ */
+export function mapLlmAnswers(spec: DecisionSpec, raw: Record<string, unknown>): DecisionAnswers {
+  const question = (key: string): DecisionSpec["questions"][number] | undefined =>
+    spec.questions.find((q) => q.key === key);
+  const options = (key: string): string[] => {
+    const q = question(key);
+    if (!q || (q.kind !== "single_choice" && q.kind !== "multi_choice")) return [];
+    return q.options.map((o) => o.value);
+  };
+  const answers: DecisionAnswers = {};
+
+  switch (spec.useCase) {
+    case "smart_fill": {
+      const priority = choiceAnswer(raw.priority, options("priority"));
+      if (priority) answers.priority = priority;
+      const effort = choiceAnswer(raw.effort, options("effort"));
+      if (effort) answers.effort = effort;
+      const objective = choiceAnswer(raw.objective_id, options("objective_id"));
+      if (objective) answers.objective_id = objective;
+      const allowedCategories = options("category_ids");
+      const categoryQuestion = question("category_ids");
+      const max =
+        categoryQuestion?.kind === "multi_choice" ? categoryQuestion.maxSelections : 0;
+      if (allowedCategories.length > 0 && Array.isArray(raw.category_ids)) {
+        const picked = raw.category_ids.filter(
+          (id): id is string => typeof id === "string" && allowedCategories.includes(id)
+        );
+        // An EMPTY selection is a verdict — "nothing fits" — never silence:
+        // the tool schema REQUIRES the argument, so a missing key is silence
+        // and an empty array is a judged "no category". But ids picked then
+        // ALL filtered out were garbage, not a verdict — that stays silence
+        // (the sanitizer's own reading). The shadow comparison (MIN-567)
+        // reads the difference; the use case's policy still decides what an
+        // empty list is worth on the write side.
+        if (picked.length === 0 && raw.category_ids.length > 0) break;
+        const ids = [...new Set(picked)].slice(0, max);
+        answers.category_ids = { value: ids, probability: null, confidence: null };
+      }
+      break;
+    }
+    case "smart_assign": {
+      const assignee = choiceAnswer(raw.user_id, options("user_id"));
+      if (assignee) answers.user_id = assignee;
+      break;
+    }
+    case "smart_triage": {
+      // One score per ticket id, under `scores` — the shape of the forced
+      // tool. A value outside the scale, or a missing ticket, simply produces
+      // no answer: the consumer reads it as the neutral score, never a guess.
+      const scores = raw.scores;
+      if (scores && typeof scores === "object" && !Array.isArray(scores)) {
+        const record = scores as Record<string, unknown>;
+        for (const question of spec.questions) {
+          if (question.kind !== "score") continue;
+          const parsed = Number.parseInt(String(record[question.key] ?? ""), 10);
+          if (!question.levels.some((level) => level.value === parsed)) continue;
+          answers[question.key] = {
+            value: parsed,
+            probability: null,
+            confidence: null,
+          };
+        }
+      }
+      break;
+    }
+    case "feedback_review": {
+      // A missing boolean reads "no" — exactly what the pass does today
+      // (`args.is_junk === true`); the moderation is fail-safe by construction.
+      answers.is_junk = { value: raw.is_junk === true, probability: null, confidence: null };
+      answers.is_sensitive = { value: raw.is_sensitive === true, probability: null, confidence: null };
+      const sensitivity = choiceAnswer(
+        typeof raw.sensitivity_kind === "string" && raw.sensitivity_kind
+          ? raw.sensitivity_kind
+          : "none",
+        options("sensitivity_kind")
+      );
+      if (sensitivity) answers.sensitivity_kind = sensitivity;
+      // A null duplicate is a real verdict ("no duplicate"): the "none"
+      // sentinel carries it, the confidence rides on the same answer.
+      const duplicateRaw =
+        typeof raw.duplicate_of === "string" && raw.duplicate_of ? raw.duplicate_of : "none";
+      const duplicate = choiceAnswer(duplicateRaw, options("duplicate_of"));
+      if (duplicate) {
+        answers.duplicate_of = { ...duplicate, confidence: clamp01(raw.confidence) };
+      }
+      const allowedCategories = options("category_ids");
+      if (allowedCategories.length > 0 && Array.isArray(raw.category_ids)) {
+        // Empty selection = an explicit "no category fits"; ids picked then
+        // all filtered out stay silence (same reading as smart_fill above).
+        const picked = raw.category_ids.filter(
+          (id): id is string => typeof id === "string" && allowedCategories.includes(id)
+        );
+        if (picked.length === 0 && raw.category_ids.length > 0) break;
+        const ids = [...new Set(picked)];
+        answers.category_ids = { value: ids, probability: null, confidence: null };
+      }
+      break;
+    }
+  }
+  return answers;
+}
+
+/**
+ * One LLM fallback decision: resolve the use case's configured model, replay
+ * the pass verbatim through `forcedToolCall`, map the answer. `null` on any
+ * failure — the use case applies its own degradation, never the user waits
+ * for a retry here.
+ */
+export async function runLlmDecision(
+  spec: DecisionSpec,
+  ctx: DecisionCallContext
+): Promise<DecisionAnswers | null> {
+  const profile = LLM_PASSES[spec.useCase];
+  const { model } = await resolveConfiguredModel(profile.modelKey).catch(() => ({ model: null }));
+  if (!model) return null;
+  const args = await forcedToolCall(
+    model,
+    spec.llm.systemPrompt,
+    spec.llm.userMessage,
+    spec.llm.toolName,
+    spec.llm.parameters,
+    {
+      xTitle: profile.xTitle,
+      logPrefix: profile.logPrefix,
+      modelKey: profile.modelKey,
+      ...(profile.maxTokens !== undefined ? { maxTokens: profile.maxTokens } : {}),
+      ...(profile.timeoutMs !== undefined ? { timeoutMs: profile.timeoutMs } : {}),
+      record: {
+        // The shadow replay (MIN-567) overrides the feature so the sampling
+        // delta does not read as a real pass of the use case.
+        feature: ctx.feature ?? profile.feature,
+        runId: ctx.runId,
+        seq: ctx.seq,
+        billTo: ctx.billTo,
+        projectId: ctx.projectId ?? null,
+      },
+    }
+  );
+  if (!args) return null;
+  return mapLlmAnswers(spec, args);
+}

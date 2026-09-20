@@ -83,7 +83,7 @@ const del = () =>
   );
 
 beforeEach(() => {
-  h.resolveIdentity.mockResolvedValue({ conversationId: "numo-conversation", workId: RUN, detailHref: `/agents?run=${RUN}` });
+  h.resolveIdentity.mockResolvedValue({ conversationId: "numo-conversation", workId: RUN });
   h.updated.length = 0;
   h.deleted.length = 0;
   requestInterrupt.mockClear();

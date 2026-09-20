@@ -1,6 +1,7 @@
 "use client";
 
 import { openInbox } from "@/lib/inbox-launcher";
+import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 
 // Global navigation keyboard chords, a la AutoKap. A leader key **G** (Go) arms
 // a chord; the next key picks the destination. While a chord is armed, the
@@ -30,11 +31,12 @@ import {
   useState,
   type Dispatch,
   type ReactNode,
+  type RefObject,
   type SetStateAction,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useSidebarVisibility } from "@/lib/sidebar-visibility-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
@@ -47,6 +49,7 @@ export const CHORD_PREFIX = "g";
 const CHORD_TIMEOUT_MS = 1500;
 
 const ChordContext = createContext<string | null>(null);
+const ChordEventContext = createContext<RefObject<string | null>>({ current: null });
 
 interface Cheatsheet {
   open: boolean;
@@ -62,6 +65,11 @@ const CheatsheetContext = createContext<Cheatsheet | null>(null);
  */
 export function useChordPrefix(): string | null {
   return useContext(ChordContext);
+}
+
+/** Read the latest chord inside an event handler without subscribing its card. */
+export function useChordPrefixForEvents(): RefObject<string | null> {
+  return useContext(ChordEventContext);
 }
 
 /** Open state of the keyboard-shortcuts cheat sheet (opened by `?` or palette). */
@@ -82,18 +90,18 @@ export function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 function isDialogOpen(): boolean {
-  if (typeof document === "undefined") return false;
-  return !!document.querySelector('[role="dialog"][data-state="open"]');
+  return hasVisibleOpenDialog();
 }
 
 export function KeyboardProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { toggle: toggleAssistant } = useAssistantPanel();
+  const { toggle: toggleAssistant } = useAssistantPanelActions();
   const { open: openScratchpad } = useScratchpad();
   const { toggle: toggleSidebarVisibility } = useSidebarVisibility();
   const { present: secondaryPresent } = useSecondarySidebar();
   const [chordPrefix, setChordPrefix] = useState<string | null>(null);
+  const chordEventRef = useRef<string | null>(null);
   const [cheatsheetOpen, setCheatsheetOpen] = useState(false);
   const cheatsheetValue = useMemo<Cheatsheet>(
     () => ({ open: cheatsheetOpen, setOpen: setCheatsheetOpen }),
@@ -122,6 +130,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
 
     const disarm = () => {
       armedRef.current = false;
+      chordEventRef.current = null;
       setChordPrefix(null);
       if (timer !== null) {
         clearTimeout(timer);
@@ -144,7 +153,9 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
           go("/pull-requests");
           return true;
         case "j":
-          go("/numo");
+          // Numo has no page of its own any more: like G A, the chord opens
+          // (or closes) the panel.
+          toggleAssistantRef.current();
           return true;
         case "u":
           go("/routines");
@@ -212,6 +223,16 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
         disarm();
         return;
       }
+      // ⌘, opens the account settings — the standard macOS “preferences” gesture.
+      // Same policy as ⌘B: allowed while typing, refused under a dialog.
+      if (matchesModCombo(e, ",")) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (isDialogOpen()) return;
+        routerRef.current.push("/settings");
+        disarm();
+        return;
+      }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
 
       // Second key of an armed chord: always consume it so it never reaches the
@@ -242,6 +263,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
       e.preventDefault();
       e.stopImmediatePropagation();
       armedRef.current = true;
+      chordEventRef.current = CHORD_PREFIX;
       setChordPrefix(CHORD_PREFIX);
       timer = setTimeout(disarm, CHORD_TIMEOUT_MS);
     };
@@ -255,10 +277,12 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ChordContext.Provider value={chordPrefix}>
-      <CheatsheetContext.Provider value={cheatsheetValue}>
-        {children}
-      </CheatsheetContext.Provider>
-    </ChordContext.Provider>
+    <ChordEventContext.Provider value={chordEventRef}>
+      <ChordContext.Provider value={chordPrefix}>
+        <CheatsheetContext.Provider value={cheatsheetValue}>
+          {children}
+        </CheatsheetContext.Provider>
+      </ChordContext.Provider>
+    </ChordEventContext.Provider>
   );
 }

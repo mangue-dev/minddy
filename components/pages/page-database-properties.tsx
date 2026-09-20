@@ -21,7 +21,7 @@ import { DatabaseCellEditor } from "./database-cell-editor";
 import { DatabaseSelectCell } from "./database-select-cell";
 
 const TABLE_CELL_TRIGGER =
-  "flex h-10 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-none px-2 py-0 text-left text-sm whitespace-nowrap outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
+  "flex h-10 w-full min-w-0 items-center overflow-hidden rounded-none px-2 py-0 text-left text-sm whitespace-nowrap outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
 
 export { PROPERTY_ICONS } from "./database-property-icons";
 
@@ -92,7 +92,7 @@ export function DatabasePropertyCell({
         className={
           table
             ? triggerClass
-            : `${triggerClass} cursor-pointer whitespace-normal text-left [overflow-wrap:anywhere]`
+            : `${triggerClass} whitespace-normal text-left [overflow-wrap:anywhere]`
         }
         empty={emptyValue}
         save={(next, base) => saveValue(page, property.id, next, base)}

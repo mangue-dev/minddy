@@ -39,6 +39,22 @@ describe("markdown mention attributes", () => {
       seed: "orb-seed",
       color: null,
       icon: "https://example.com/icon.png",
+      status: null,
     });
+  });
+
+  it("keeps an issue status when rebuilding its editor node", () => {
+    expect(
+      mentionAttrsFromScanned({
+        type: "issue",
+        issue: {
+          id: "issue-1",
+          project_id: "project-1",
+          identifier: "MIN-1",
+          title: "Use the status figure",
+          status: "done",
+        },
+      }),
+    ).toMatchObject({ mentionType: "issue", status: "done" });
   });
 });

@@ -103,6 +103,37 @@ export class AmbiguousToolExecutionError extends Error {
   }
 }
 
+/**
+ * Silence tolerated from the provider stream before the round is abandoned.
+ * OpenRouter sends `: OPENROUTER PROCESSING` keep-alive comments while the
+ * model thinks, so a live stream keeps re-arming this timer even across long
+ * reasoning phases. A stream that stops sending anything is a hang: without
+ * this ceiling the round would hold the turn `running` until the stale-lease
+ * recovery steals it six minutes later, and a stop request could not be
+ * observed before the stream ended.
+ */
+const STREAM_IDLE_TIMEOUT_MS = 90_000;
+/**
+ * Ceiling between two `shouldStop` polls while streaming. A stop requested
+ * while a round streams must abort the provider request promptly instead of
+ * waiting for the round to finish on its own.
+ */
+const STOP_POLL_INTERVAL_MS = 1_000;
+
+/**
+ * Raised when the provider stream carried nothing for the idle ceiling. The
+ * durable turn records it as retryable and the drain resumes the turn from
+ * its last checkpoint.
+ */
+export class LlmStreamIdleError extends Error {
+  constructor() {
+    super(
+      `The model stream stayed idle for ${STREAM_IDLE_TIMEOUT_MS / 1000} seconds and was aborted`,
+    );
+    this.name = "LlmStreamIdleError";
+  }
+}
+
 /** Module-level cache — OpenRouter model list is fetched at most once per
     process (on success), then feeds both capability lookups below. */
 const modelIndexCache = new Map<
@@ -345,36 +376,89 @@ export async function processChat(
       }
     } else {
       await context.beforeGeneration?.(roundCount);
-      const call = await fetchAiChat(
-        aiRuntime,
-        requestModel,
-        (m) => ({
-          model: m,
-          messages,
-          stream: true,
-          maxOutputTokens: reasoningMaxTokens(4096, reasoningLevel),
-          reasoning: { effort: reasoningLevel },
-          ...(tools.length > 0 && !forceConclusion ? { tools } : {}),
-        }),
-        "Numo (minddy)",
-        "[assistant]",
-      );
+      // One controller per generation round: it carries both the idle watchdog
+      // and a mid-stream stop. Aborting the signal destroys the pinned socket,
+      // which is what makes a hung stream, or a stop request, observable here.
+      const generationController = new AbortController();
+      let idleTimer: ReturnType<typeof setTimeout> | null = null;
+      let idleAborted = false;
+      let stopObserved = false;
+      let lastStopCheckAt = 0;
+      const armIdleTimer = () => {
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+          idleAborted = true;
+          generationController.abort();
+        }, STREAM_IDLE_TIMEOUT_MS);
+      };
+      armIdleTimer();
+      let call;
+      try {
+        call = await fetchAiChat(
+          aiRuntime,
+          requestModel,
+          (m) => ({
+            model: m,
+            messages,
+            stream: true,
+            maxOutputTokens: reasoningMaxTokens(4096, reasoningLevel),
+            reasoning: { effort: reasoningLevel },
+            ...(tools.length > 0 && !forceConclusion ? { tools } : {}),
+          }),
+          "Numo (minddy)",
+          "[assistant]",
+          { signal: generationController.signal },
+        );
+      } catch (error) {
+        // The watchdog also covers the connection phase: a provider that
+        // accepts the request and never answers must end as a retryable idle
+        // failure, not as an opaque abort.
+        if (idleAborted || generationController.signal.aborted) throw new LlmStreamIdleError();
+        throw error;
+      }
       const response = call.response;
       requestModel = call.model;
+      // These early exits leave before the stream try/finally disarms the
+      // watchdog: without an explicit cleanup every provider refusal would
+      // keep a 90 s timer armed on an already-abandoned controller.
       if (!response.ok) {
+        if (idleTimer) clearTimeout(idleTimer);
         const errorText = await response.text();
         throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
       }
       const reader = response.body?.getReader();
-      if (!reader) throw new Error("No response body from LLM");
+      if (!reader) {
+        if (idleTimer) clearTimeout(idleTimer);
+        throw new Error("No response body from LLM");
+      }
 
       const decoder = new TextDecoder();
       let buffer = "";
       const reasoningStream = new AssistantReasoningStream(emitter);
       try {
         while (true) {
-          const { done, value } = await reader.read();
+          // A stop that arrives mid-stream aborts the provider request right
+          // away: waiting for the round to end would leave a stop pending for
+          // minutes on a long or hung stream.
+          if (Date.now() - lastStopCheckAt >= STOP_POLL_INTERVAL_MS) {
+            lastStopCheckAt = Date.now();
+            if (await context.shouldStop?.()) {
+              stopObserved = true;
+              generationController.abort();
+              break;
+            }
+          }
+          let chunk;
+          try {
+            chunk = await reader.read();
+          } catch (readError) {
+            if (stopObserved) break;
+            if (idleAborted || generationController.signal.aborted) throw new LlmStreamIdleError();
+            throw readError;
+          }
+          const { done, value } = chunk;
           if (done) break;
+          armIdleTimer();
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
           buffer = lines.pop() || "";
@@ -391,6 +475,20 @@ export async function processChat(
             if (parsed.id && !generationId) generationId = parsed.id;
             if (parsed.model) modelUsed = parsed.model;
             if (parsed.usage) usageInfo = parsed.usage;
+            // OpenRouter reports mid-stream provider failures in-band: a
+            // top-level `error` beside the choice, with `finish_reason:
+            // "error"` and no usable content. Swallowing it would surface a
+            // silently truncated reply, so it goes through the durable retry
+            // path like any other generation failure.
+            const streamError = parsed.error
+              ?? (parsed.choices?.[0]?.finish_reason === "error"
+                ? { message: "The provider disconnected mid-stream" }
+                : null);
+            if (streamError) {
+              throw new Error(
+                `LLM stream error: ${String(streamError.message ?? "unknown provider error").slice(0, 200)}`,
+              );
+            }
             const delta = parsed.choices?.[0]?.delta;
             if (!delta) continue;
             if (typeof delta.reasoning === "string" && delta.reasoning) {
@@ -427,6 +525,7 @@ export async function processChat(
           }
         }
       } finally {
+        if (idleTimer) clearTimeout(idleTimer);
         roundReasoning = reasoningStream.finish();
       }
       const generation = {
@@ -439,6 +538,13 @@ export async function processChat(
       };
       generations.push(generation);
       await context.onGeneration?.(generation, roundCount);
+      if (stopObserved) {
+        // The stop was requested while this round streamed: hand the turn back
+        // without persisting a partial round. `executeNumoTurnCore` observes
+        // the pending stop, interrupts any active worker and checkpoints
+        // `stopped`.
+        break;
+      }
     }
 
     // Process completed tool calls

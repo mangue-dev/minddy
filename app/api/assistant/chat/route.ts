@@ -526,7 +526,7 @@ export async function POST(request: NextRequest) {
   // Worker answers and steering have their own authorization and quota path.
   let admittedUsage: UserUsage;
   try {
-    admittedUsage = await ensureUsageBudget(user.id, "assistant");
+    admittedUsage = await ensureUsageBudget(user.id, "assistant", "assistant_model");
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
     throw err;

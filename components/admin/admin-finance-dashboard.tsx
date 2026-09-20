@@ -98,6 +98,14 @@ const FEATURES = [
   "import_map",
   // Breaking a brief into objectives + tickets (MIN-172): one call per brief.
   "brief_split",
+  // Jev decisions (MIN-561): the System One calls of the AI decision layer,
+  // priced on input tokens only ($0.042/MTok) — the line answers “how much do
+  // the automated decisions cost, apart from the LLM passes?”.
+  "jev_decision",
+  // Shadow comparison of the decision layer (MIN-567): the LLM pass replayed
+  // on a ~5% sample after a confident Jev decision. The line answers "what
+  // does measuring the decisions cost, on top of the decisions?"
+  "jev_shadow",
   // Landing Dictation Demo (MIN-150): the ONLY line that no one
   // pays — a visitor without an account, to whom the platform offers passage. A
   // run = a demo played, so “average cost/run” is the price of a run.
