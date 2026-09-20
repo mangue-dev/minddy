@@ -13,6 +13,12 @@ type AppContentHeaderProps = ComponentProps<"div"> & {
  * It stays above the pane's scrolling content with an opaque surface.
  * Dense localized action sets stay on one line and remain horizontally
  * reachable instead of making the header taller than the surrounding chrome.
+ *
+ * Its side padding is derived from the strip's own geometry (MIN-584):
+ * --app-content-header-pad-x is half the strip minus the 16px radius of a
+ * 32px pill — the pills' vertical centering margin — so the visible margin
+ * from the pane edge is the same on the top and both sides. Never widen it
+ * per page — the contract is app-wide.
  */
 export function AppContentHeader({
   className,
@@ -31,7 +37,7 @@ export function AppContentHeader({
     >
       <div
         className={cn(
-          "flex h-full min-w-full flex-nowrap items-center px-3",
+          "flex h-full min-w-full flex-nowrap items-center px-[var(--app-content-header-pad-x)]",
           contentClassName,
         )}
       >
