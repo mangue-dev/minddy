@@ -38,6 +38,48 @@ if (process.argv.includes("--visual")) {
 }
 const cdp = await context.newCDPSession(page);
 await cdp.send("Performance.enable");
+// Per-request decomposition (Axis 2): the Network domain records each request's
+// connection setup, server wait, content download and decoded/wire size, so
+// network-sensitive numbers (cold board load, PR list, comment acknowledgement)
+// decompose into reproducible phases instead of anecdotes.
+await cdp.send("Network.enable");
+const networkRequests = new Map();
+function recordNetworkPhase(requestId, patch) {
+  const entry = networkRequests.get(requestId);
+  if (entry) Object.assign(entry, patch);
+}
+cdp.on("Network.requestWillBeSent", (event) => {
+  // Data URLs never reach the network; frame-scoped service-worker requests
+  // report their own network events and are keyed the same way.
+  if (event.request.url.startsWith("data:")) return;
+  networkRequests.set(event.requestId, {
+    url: event.request.url,
+    path: new URL(event.request.url).pathname,
+    method: event.request.method,
+    at: event.wallTime,
+    decodedBytes: 0,
+    wireBytes: 0,
+  });
+});
+cdp.on("Network.responseReceived", (event) => {
+  recordNetworkPhase(event.requestId, {
+    status: event.response.status,
+    fromCache: event.response.fromDiskCache,
+    waitMs: Math.max(0, (event.response.timing?.receiveHeadersEnd ?? 0) - (event.response.timing?.sendEnd ?? 0)),
+    setupMs: Math.max(0, event.response.timing?.connectEnd ?? 0),
+    mimeType: event.response.mimeType,
+  });
+});
+cdp.on("Network.dataReceived", (event) => {
+  const entry = networkRequests.get(event.requestId);
+  if (entry) {
+    entry.decodedBytes += event.dataLength;
+    entry.wireBytes += event.encodedDataLength;
+  }
+});
+cdp.on("Network.loadingFailed", (event) => {
+  recordNetworkPhase(event.requestId, { failed: event.errorText, canceled: event.canceled });
+});
 const failures = [];
 page.on("pageerror", (error) => failures.push(error.message));
 const responses = [];
@@ -48,7 +90,8 @@ await context.addInitScript(() => {
   localStorage.setItem("cookie_consent", "declined");
   window.__perf = { longTasks: [], events: [], frames: [], storage: [] };
   for (const [type, key] of [["longtask", "longTasks"], ["event", "events"]]) {
-    try { new PerformanceObserver((list) => window.__perf[key].push(...list.getEntries().map((entry) => ({ name: entry.name, start: entry.startTime, duration: entry.duration })))).observe({ type, buffered: true, ...(type === "event" ? { durationThreshold: 16 } : {}) }); } catch { /* Unsupported browser entries are omitted. */ }
+    try { new PerformanceObserver((list) => window.__perf[key].push(...list.getEntries().map((entry) => ({ name: entry.name, start: entry.startTime, duration: entry.duration, // INP-style probes: real user interactions carry an interactionId and their input/processing phases.
+      interactionId: entry.interactionId ?? 0, processingStart: entry.processingStart ?? 0, processingEnd: entry.processingEnd ?? 0 })))).observe({ type, buffered: true, ...(type === "event" ? { durationThreshold: 16 } : {}) }); } catch { /* Unsupported browser entries are omitted. */ }
   }
   let previous = performance.now();
   function frame(now) { window.__perf.frames.push({ start: previous, duration: now - previous }); previous = now; requestAnimationFrame(frame); }
@@ -69,11 +112,22 @@ async function measure(name, action, ready) {
   await page.waitForTimeout(350);
   const stats = await page.evaluate(({ start, visual }) => {
     const select = (key) => window.__perf[key].filter((entry) => entry.start >= start && entry.start <= visual + 350);
-    return { readyMs: visual - start, longTaskMs: select("longTasks").reduce((sum, entry) => sum + entry.duration, 0), longTasks: select("longTasks").length, maxFrameMs: Math.max(0, ...select("frames").map((entry) => entry.duration)), maxEventMs: Math.max(0, ...select("events").map((entry) => entry.duration)), storageWrites: select("storage").length, storageBytes: select("storage").reduce((sum, entry) => sum + entry.bytes, 0), styleSheets: document.styleSheets.length };
+    // INP-style decomposition of the window's real interactions: the slowest
+    // interaction's input delay, processing time and presentation delay.
+    const interactions = select("events").filter((entry) => entry.interactionId > 0);
+    const worst = interactions.reduce((max, entry) => (entry.duration > (max?.duration ?? -1) ? entry : max), null);
+    return { readyMs: visual - start, longTaskMs: select("longTasks").reduce((sum, entry) => sum + entry.duration, 0), longTasks: select("longTasks").length, maxFrameMs: Math.max(0, ...select("frames").map((entry) => entry.duration)), maxEventMs: Math.max(0, ...select("events").map((entry) => entry.duration)), storageWrites: select("storage").length, storageBytes: select("storage").reduce((sum, entry) => sum + entry.bytes, 0), styleSheets: document.styleSheets.length, inpMs: worst?.duration ?? 0, inpInputMs: worst ? Math.max(0, worst.processingStart - worst.start) : 0, inpProcessingMs: worst ? Math.max(0, worst.processingEnd - worst.processingStart) : 0, inpPresentMs: worst ? Math.max(0, worst.duration - (worst.processingEnd - worst.start)) : 0, interactions: interactions.length };
   }, { start, visual });
   const after = Object.fromEntries((await cdp.send("Performance.getMetrics")).metrics.map(({ name, value }) => [name, value]));
   const counter = (name) => (after[name] - (origin > absoluteStart ? 0 : before[name])) * 1000;
-  const result = { name, ...stats, readyMs: origin + visual - absoluteStart, scriptMs: counter("ScriptDuration"), layoutMs: counter("LayoutDuration"), styleMs: counter("RecalcStyleDuration"), nodes: after.Nodes, requests: responses.filter((response) => response.at >= wallStart) };
+  // Per-request timing/size for the window: every network entry whose wallTime
+  // (epoch seconds) falls inside the measured interaction.
+  const requestsInWindow = (fromWall, toWall) => [...networkRequests.values()]
+    .filter((entry) => entry.at >= fromWall / 1000 && entry.at <= toWall / 1000)
+    .sort((a, b) => a.at - b.at)
+    .map(({ url, ...entry }) => ({ ...entry, url: url.startsWith(base) ? new URL(url).pathname : url }));
+  const windowRequests = requestsInWindow(wallStart, Date.now());
+  const result = { name, ...stats, readyMs: origin + visual - absoluteStart, scriptMs: counter("ScriptDuration"), layoutMs: counter("LayoutDuration"), styleMs: counter("RecalcStyleDuration"), nodes: after.Nodes, requests: responses.filter((response) => response.at >= wallStart), network: windowRequests };
   measurements.push(result);
   console.log(JSON.stringify(result));
 }
@@ -93,9 +147,17 @@ try {
     if (!response.ok()) throw new Error("Could not configure benchmark tab");
   }
   const started = Date.now();
+  const coldNetworkStart = started / 1000;
   await page.goto(`${base}/all`, { waitUntil: "domcontentloaded" });
   await page.locator("[data-issue-id]").first().waitFor({ timeout: 90000 });
-  measurements.push({ name: "cold-board", readyMs: Date.now() - started });
+  // Decomposition of the cold load: every request between navigation start and
+  // the first visible card, with its phases, so the headline number splits into
+  // document wait, API waits and transfer sizes per endpoint.
+  const coldRequests = [...networkRequests.values()]
+    .filter((entry) => entry.at >= coldNetworkStart)
+    .sort((a, b) => a.at - b.at)
+    .map(({ url, ...entry }) => ({ ...entry, url: url.startsWith(base) ? new URL(url).pathname : url }));
+  measurements.push({ name: "cold-board", readyMs: Date.now() - started, network: coldRequests });
   await page.waitForTimeout(2000);
   if (process.argv.includes("--visual")) {
     const card = page.locator(`[data-issue-id="${fixture.firstIssue}"]`);
@@ -145,6 +207,16 @@ try {
       await page.locator('[role="dialog"]').first().waitFor({ state: "hidden" });
       await measure(`issue-menu-${run}`, () => page.locator("[data-issue-id]").first().click({ button: "right" }), () => page.locator('[role="menu"]').first().waitFor());
       await page.keyboard.press("Escape");
+      // Input-driven scroll of the 600-card board: the pointer rests over the
+      // first column so wheel events go to its scroller, then the wheel returns
+      // to the top. Paint/composite cost of the visible-card churn shows up in
+      // the frame/style/layout counters.
+      await measure(`board-scroll-${run}`, async () => {
+        await page.locator('[data-board-column-status="backlog"] [data-issue-id]').first().hover();
+        await page.mouse.wheel(0, 1400);
+        await page.waitForTimeout(120);
+        await page.mouse.wheel(0, -1400);
+      });
     }
     if (process.argv.includes("--board-only")) {
       console.log("Board-only measurements complete");
