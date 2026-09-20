@@ -38,7 +38,7 @@ import { normalizeQuote } from "@/lib/page-comments";
  */
 
 export type PageCommentResult =
-  | { ok: true; comment: Record<string, unknown> }
+  | { ok: true; comment: Record<string, unknown>; replayed?: boolean }
   | {
       ok: false;
       status: number;
@@ -59,6 +59,7 @@ const COLUMNS = "*";
 export async function addPageComment({
   pageId,
   actorId,
+  commentId,
   body,
   blockId = null,
   quote = null,
@@ -69,6 +70,8 @@ export async function addPageComment({
 }: {
   pageId: string;
   actorId: string;
+  /** Optional UUID supplied by the interactive composer for safe retries. */
+  commentId?: string;
   body: string;
   /** The anchor: the commented block. Null = a comment on the page. */
   blockId?: string | null;
@@ -136,6 +139,7 @@ export async function addPageComment({
   const { data, error } = await service
     .from("page_comments")
     .insert({
+      ...(commentId ? { id: commentId } : {}),
       page_id: pageId,
       project_id: projectId,
       block_id: anchor,
@@ -149,6 +153,22 @@ export async function addPageComment({
     })
     .select(COLUMNS)
     .single();
+
+  if (error?.code === "23505" && commentId) {
+    // The insert is the idempotency boundary: a collision never updates data,
+    // recreates attachments, or repeats notification/assistant side effects.
+    // Access has already been checked; additionally scope the replay to its
+    // original author and parent entity before returning any content.
+    const { data: existing } = await service
+      .from("page_comments")
+      .select("*")
+      .eq("id", commentId)
+      .eq("page_id", pageId)
+      .eq("author_id", actorId)
+      .maybeSingle();
+    if (existing) return { ok: true, comment: existing, replayed: true };
+    return { ok: false, status: 409, errorKey: "databaseError" };
+  }
 
   if (error) {
     if (error.code === "P0001" && error.message.includes("page_not_live")) {

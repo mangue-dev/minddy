@@ -1,5 +1,7 @@
 "use client";
 
+import { actionMenuItems } from "@/lib/visible-overlays";
+
 // Ticket actions menu: a real Radix dropdown (the same as dropdowns
 // classics of the app), available in two anchors which share the same body —
 // • IssueContextMenu — anchored to the pointer position (right click on a card,
@@ -150,14 +152,9 @@ function ActionMenuBody({
   const q = searchable ? query.trim().toLowerCase() : "";
   const visible = actions.filter((a) => actionMatches(a, q));
 
-  // The content is portaled to <body>; we retrieve the focusable items to
-  // route the keyboard from the search field to the list.
-  const items = () =>
-    Array.from(
-      document.querySelectorAll<HTMLElement>(
-        '[data-slot="dropdown-menu-content"] [data-slot="dropdown-menu-item"]:not([data-disabled]),[data-slot="dropdown-menu-content"] [data-slot="dropdown-menu-sub-trigger"]:not([data-disabled])'
-      )
-    );
+  // Search remains inside this menu, even if an inactive board retains another
+  // open portaled menu earlier in the document.
+  const items = () => actionMenuItems(inputRef.current);
 
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") return; // let Radix close the menu

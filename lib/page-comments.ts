@@ -1,3 +1,4 @@
+import type { CommentDelivery } from "./comment-delivery";
 // The THREADS of a page (MIN-282) — the pure half: the lines enter, the threads
 // come out, ordered and marked.
 //
@@ -21,6 +22,7 @@
 
 /** A page comment, as rendered by the API. */
 export interface PageComment {
+  delivery?: CommentDelivery;
   id: string;
   page_id: string;
   project_id: string;
@@ -88,7 +90,7 @@ export function arrangeThreads(
     return {
       root,
       replies: (repliesByRoot.get(root.id) ?? []).sort((a, b) =>
-        a.created_at.localeCompare(b.created_at)
+        Date.parse(a.created_at) - Date.parse(b.created_at)
       ),
       anchored,
       detached: anchored && !blockIds.has(root.block_id as string),
@@ -97,7 +99,7 @@ export function arrangeThreads(
 
   return threads.sort((a, b) => {
     if (a.detached !== b.detached) return a.detached ? -1 : 1;
-    return a.root.created_at.localeCompare(b.root.created_at);
+    return Date.parse(a.root.created_at) - Date.parse(b.root.created_at);
   });
 }
 

@@ -15,7 +15,7 @@
  * two different places in a column sorted by priority.
  */
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import type {
   DragEndEvent,
   DragMoveEvent,
@@ -67,6 +67,7 @@ export interface BoardDrop {
 }
 
 export function useBoardDrop({
+  root,
   columns,
   makeComparator,
   manual,
@@ -74,6 +75,8 @@ export function useBoardDrop({
   selectedIds,
   crossColumnOnly = false,
 }: {
+  /** Geometry belongs to this board, including when another tab retains the same issues. */
+  root?: RefObject<HTMLElement | null>;
   /** The columns as displayed — the order read is that of the screen. */
   columns: { status: StatusMeta; items: Issue[] }[];
   /** The column display sort (the one that produced `items`) — built per
@@ -175,6 +178,7 @@ export function useBoardDrop({
       const pointedId = pointedCard?.dataset.issueId;
       if (
         pointedId &&
+        (!root || root.current?.contains(pointedCard)) &&
         !movingIds.has(pointedId) &&
         pointedCard.dataset.columnStatus === status
       ) {
@@ -202,7 +206,7 @@ export function useBoardDrop({
         after: lastIssueId != null,
       };
     },
-    [cardCenterY, itemsByStatus],
+    [cardCenterY, itemsByStatus, root],
   );
 
   const plan = useCallback(
@@ -322,7 +326,7 @@ export function useBoardDrop({
       bundleIdsRef.current = new Set(bundle.map((issue) => issue.id));
       cardNodesRef.current = manual
         ? new Map(
-            Array.from(document.querySelectorAll<HTMLElement>(CARD_SELECTOR))
+            Array.from((root ? root.current : document)?.querySelectorAll<HTMLElement>(CARD_SELECTOR) ?? [])
               .map((node) => [node.dataset.issueId, node] as const)
               .filter(
                 (entry): entry is readonly [string, HTMLElement] =>
@@ -337,7 +341,7 @@ export function useBoardDrop({
       setDraggingIds(new Set(bundle.map((issue) => issue.id)));
       setPreview(null);
     },
-    [issueMap, manual, rankById, selectedIds],
+    [issueMap, manual, rankById, selectedIds, root],
   );
 
   const end = useCallback(() => {
@@ -351,6 +355,10 @@ export function useBoardDrop({
     setDraggingIds(new Set());
     setPreview(null);
   }, []);
+
+  // A retained hidden board keeps selection, but never an unfinished gesture or
+  // cached geometry. React Activity also runs this cleanup when suspending it.
+  useEffect(() => end, [end]);
 
   return { preview, draggingIds, activeId, start, track, plan, end };
 }

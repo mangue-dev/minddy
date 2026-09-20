@@ -1,3 +1,4 @@
+import { isCommentId } from "@/lib/comment-id";
 import { NextResponse, after, type NextRequest } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -102,15 +103,21 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
   const input = (body ?? {}) as {
+    id?: unknown;
     body?: unknown;
     mentioned_user_ids?: unknown;
     parent_id?: unknown;
     attachments?: unknown;
   };
 
+  if (input.id !== undefined && !isCommentId(input.id)) {
+    return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
+  }
+
   const result = await addCommentToIssue({
     issueId: id,
     actorId: auth.user.id,
+    commentId: input.id as string | undefined,
     body: typeof input.body === "string" ? input.body : "",
     parentId: typeof input.parent_id === "string" ? input.parent_id : null,
     mentionedUserIds: Array.isArray(input.mentioned_user_ids)
@@ -124,6 +131,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const message = result.rawMessage ?? t(result.errorKey ?? "databaseError");
     return NextResponse.json({ error: message }, { status: result.status });
   }
+
+  const responseComment = result.attachmentError
+    ? { ...result.comment, attachment_error: t("databaseError") }
+    : result.comment;
+  if (result.replayed) return NextResponse.json(responseComment);
 
   // @Numo → fire-and-forget agent reply, after the response is sent. Triggers:
   // an explicit @numo mention, or (Linear-style continuation) a reply posted
@@ -157,5 +169,5 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     );
   }
 
-  return NextResponse.json(result.comment, { status: 201 });
+  return NextResponse.json(responseComment, { status: 201 });
 }

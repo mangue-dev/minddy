@@ -1,5 +1,7 @@
 "use client";
 
+import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -269,7 +271,7 @@ export function ObjectiveDetail({
       if (!matchesModCombo(e, "o")) return;
       // An open dialog (deletion confirmation) holds the screen: we cannot
       // does not take it elsewhere under the user's fingers.
-      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+      if (hasVisibleOpenDialog()) return;
       e.preventDefault();
       router.push(issuesHref);
     };

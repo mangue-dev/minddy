@@ -1,3 +1,4 @@
+import { isCommentId } from "@/lib/comment-id";
 import { NextResponse, after, type NextRequest } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
   const input = (body ?? {}) as {
+    id?: unknown;
     body?: unknown;
     block_id?: unknown;
     quote?: unknown;
@@ -88,9 +90,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     mentioned_user_ids?: unknown;
   };
 
+  if (input.id !== undefined && !isCommentId(input.id)) {
+    return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
+  }
+
   const result = await addPageComment({
     pageId,
     actorId: auth.user.id,
+    commentId: input.id as string | undefined,
     body: typeof input.body === "string" ? input.body : "",
     blockId: typeof input.block_id === "string" ? input.block_id : null,
     quote: typeof input.quote === "string" ? input.quote : null,
@@ -104,6 +111,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!result.ok) {
     return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
   }
+
+  if (result.replayed) return NextResponse.json(result.comment);
 
   const commentBody = typeof input.body === "string" ? input.body : "";
   const created = result.comment as {

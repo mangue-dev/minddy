@@ -13,7 +13,7 @@
 // - the request follows the typing with a delay (DEBOUNCE_MS): the line
 // by title, it appears immediately - this is the order that is necessary, the
 // search by content ENRICHES an already useful list rather than making it
-//   attendre ;
+//   wait;
 // - below MIN_QUERY characters, nothing leaves: “a” would bring back the
 // half the wiki for a typo that is not yet a question;
 // - the result is cached by query (react-query), so clear one
@@ -24,6 +24,7 @@ import { useQuery } from "@tanstack/react-query";
 import { usePaletteStore } from "@/lib/command-palette";
 
 import type { PageSearchHit } from "./types";
+import { pageContentSearchQuery } from "./page-content-search-query";
 
 /** Below this threshold, a strike is still not a question. */
 const MIN_QUERY = 2;
@@ -31,13 +32,6 @@ const MIN_QUERY = 2;
  * so that the result arrives while reading the list of titles. */
 const DEBOUNCE_MS = 220;
 const EMPTY_HITS: PageSearchHit[] = [];
-
-async function fetchPageSearch(query: string): Promise<PageSearchHit[]> {
-  const response = await fetch(`/api/me/pages/search?q=${encodeURIComponent(query)}`);
-  if (!response.ok) return [];
-  const data: unknown = await response.json();
-  return Array.isArray(data) ? (data as PageSearchHit[]) : [];
-}
 
 /**
  * Pages whose CONTENT meets what is typed in ⌘K, all projects
@@ -64,11 +58,11 @@ export function usePageContentSearch(enabled: boolean): PageSearchHit[] {
   }, [query, enabled]);
 
   const { data } = useQuery({
-    queryKey: ["me", "pages", "search", debounced],
-    queryFn: () => fetchPageSearch(debounced),
+    ...pageContentSearchQuery(debounced),
     enabled: enabled && debounced.length >= MIN_QUERY,
-    staleTime: 30_000,
+    // Keep useful snippets while the next debounced request is in flight.
+    placeholderData: (previous) => previous,
   });
 
-  return data ?? EMPTY_HITS;
+  return enabled && query.trim().length >= MIN_QUERY ? data ?? EMPTY_HITS : EMPTY_HITS;
 }

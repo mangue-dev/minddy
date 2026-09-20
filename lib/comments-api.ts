@@ -34,7 +34,8 @@ export async function addCommentApi(
   body: string,
   mentionedUserIds: string[] = [],
   parentId: string | null = null,
-  attachments: ResourceInput[] = []
+  attachments: ResourceInput[] = [],
+  commentId?: string,
 ): Promise<Comment> {
   // Only metadata: slice length, never text.
   trackEvent("comment_added", {
@@ -44,11 +45,12 @@ export async function addCommentApi(
     mention_count: mentionedUserIds.length,
     attachment_count: attachments.length,
   });
-  return parseJson<Comment>(
+  const saved = await parseJson<Comment & { attachment_error?: string }>(
     await fetch(`/api/issues/${issueId}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        id: commentId,
         body,
         mentioned_user_ids: mentionedUserIds,
         parent_id: parentId,
@@ -56,6 +58,8 @@ export async function addCommentApi(
       }),
     })
   );
+  if (saved.attachment_error) throw new Error(saved.attachment_error);
+  return saved;
 }
 
 export async function fetchObjectiveCommentsApi(objectiveId: string): Promise<Comment[]> {
@@ -204,8 +208,9 @@ export async function updateCommentApi(commentId: string, body: string): Promise
   );
 }
 
-export async function deleteCommentApi(commentId: string): Promise<void> {
+export async function deleteCommentApi(commentId: string, missingOk = false): Promise<void> {
   const response = await fetch(`/api/comments/${commentId}`, { method: "DELETE" });
+  if (missingOk && response.status === 404) return;
   if (!response.ok) {
     const data = await response.json().catch(() => null);
     throw new Error(

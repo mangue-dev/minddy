@@ -22,7 +22,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "mangue-ui";
 import { eventKey } from "@/lib/keyboard/event-key";
-import { isTypingTarget, useChordPrefix } from "@/lib/keyboard/keyboard-context";
+import { isTypingTarget, useChordPrefixForEvents } from "@/lib/keyboard/keyboard-context";
 import {
   acquireSelectionKeys,
   selectionKeysActive,
@@ -37,7 +37,7 @@ import {
   shouldAutoStartOnPromptCopy,
 } from "@/lib/prompt-copy-auto-start";
 import { useAuth } from "@/lib/auth-context";
-import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
 import type { Issue, IssueUpdateInput } from "@/lib/types";
 
@@ -66,7 +66,7 @@ export function useBulkSelectionActions({
   const tAgent = useTranslations("Agent");
   const tBulk = useTranslations("BulkActions");
   const { user } = useAuth();
-  const { openIntent } = useAssistantPanel();
+  const { openIntent } = useAssistantPanelActions();
 
   // Mirror refs — the listener subscribes once and always reads the current
   // values (same pattern as the “@” listener of lib/ask-numo-context.tsx).
@@ -165,14 +165,13 @@ export function useBulkSelectionActions({
 
   // THE listener: ⇧P/⇧A act on the selection when there is one. Everything
   // else — typing targets, an armed G-chord, modified combos — is left alone.
-  const chordArmedRef = useRef(false);
-  chordArmedRef.current = useChordPrefix() !== null;
+  const chordPrefixRef = useChordPrefixForEvents();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!selectionKeysActive()) return;
       if (!e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
       if (isTypingTarget(e.target)) return;
-      if (chordArmedRef.current) return;
+      if (chordPrefixRef.current !== null) return;
       const key = eventKey(e);
       if (key !== "p" && key !== "a") return;
       e.preventDefault();

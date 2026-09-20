@@ -83,6 +83,16 @@ export function preparePageNavigation(pageId: string, now = Date.now()): void {
   preparedPages.set(pageId, now + PAGE_NAVIGATION_FRESH_MS);
 }
 
+/** The tree and tab strip share the same freshness-bounded document preparation. */
+export function prefetchPageNavigation(queryClient: QueryClient, projectId: string, pageId: string): void {
+  preparePageNavigation(pageId);
+  void queryClient.prefetchQuery({
+    queryKey: pageKey(pageId),
+    queryFn: ({ signal }) => fetchPageApi(projectId, pageId, signal),
+    staleTime: PAGE_NAVIGATION_FRESH_MS,
+  });
+}
+
 export function isPreparedPageData(
   pageId: string,
   updatedAt: number,
@@ -330,13 +340,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
 
   const prefetchPage = useCallback(
     (pageId: string) => {
-      const pid = projectId as string;
-      preparePageNavigation(pageId);
-      void queryClient.prefetchQuery({
-        queryKey: pageKey(pageId),
-        queryFn: () => fetchPageApi(pid, pageId),
-        staleTime: PAGE_NAVIGATION_FRESH_MS,
-      });
+      prefetchPageNavigation(queryClient, projectId as string, pageId);
     },
     [projectId, queryClient],
   );

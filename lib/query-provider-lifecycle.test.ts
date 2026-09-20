@@ -65,6 +65,18 @@ describe("query provider persistence lifecycle", () => {
     expect(window.localStorage.getItem(QUERY_CACHE_STORAGE_KEY)).toBeNull();
   });
 
+  it("persists confirmed comments but never pending drafts or per-query search snippets", async () => {
+    await mount();
+    client.setQueryData(["comments", "issue-1"], [{ id: "pending", delivery: { state: "sending", retry: () => {} } }]);
+    client.setQueryData(["page-comments", "page-1"], [{ id: "failed", delivery: { state: "error", retry: () => {} } }]);
+    client.setQueryData(["me", "pages", "search", "text"], [{ id: "snippet" }]);
+    client.setQueryData(["comments", "issue-2"], [{ id: "confirmed" }]);
+    window.dispatchEvent(new Event("pagehide"));
+    const snapshot = JSON.parse(window.localStorage.getItem(QUERY_CACHE_STORAGE_KEY)!);
+    expect(snapshot.clientState.queries.map((query: { queryKey: string[] }) => query.queryKey))
+      .toEqual([["comments", "issue-2"]]);
+  });
+
   it("flushes the current snapshot when the document exits", async () => {
     await mount();
     client.setQueryData(["projects"], [{ id: "current-project" }]);

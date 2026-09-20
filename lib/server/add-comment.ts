@@ -26,7 +26,7 @@ import { isCommentVisibility, type CommentVisibility } from "@/lib/feedback/type
  * the same signal RLS invisibility gives.
  */
 export type AddCommentResult =
-  | { ok: true; comment: Record<string, unknown> }
+  | { ok: true; comment: Record<string, unknown>; replayed?: boolean; attachmentError?: boolean }
   | {
       ok: false;
       status: number;
@@ -50,6 +50,7 @@ const MAX_COMMENT_LENGTH = 65_536;
 export async function addCommentToIssue({
   issueId,
   actorId,
+  commentId,
   body,
   parentId,
   mentionedUserIds,
@@ -59,6 +60,8 @@ export async function addCommentToIssue({
 }: {
   issueId: string;
   actorId: string;
+  /** Optional UUID supplied by the interactive composer for safe retries. */
+  commentId?: string;
   body: string;
   parentId?: string | null;
   mentionedUserIds?: string[];
@@ -120,7 +123,7 @@ export async function addCommentToIssue({
       .eq("id", parentId)
       .maybeSingle();
     if (!parent || parent.issue_id !== issueId) {
-      await removeUnretainedResources(service, parsedAttachments);
+      if (!commentId) await removeUnretainedResources(service, parsedAttachments);
       return { ok: false, status: 404, errorKey: "commentNotFound" };
     }
     rootId = (parent.parent_id as string | null) ?? (parent.id as string);
@@ -138,6 +141,7 @@ export async function addCommentToIssue({
   const { data, error } = await service
     .from("comments")
     .insert({
+      ...(commentId ? { id: commentId } : {}),
       issue_id: issueId,
       author_id: actorId,
       body: text,
@@ -149,15 +153,50 @@ export async function addCommentToIssue({
     .select("*")
     .single();
 
+  if (error?.code === "23505" && commentId) {
+    // A collision never updates the body or repeats notification/assistant
+    // side effects. Missing attachment registrations can be recovered below.
+    // Access has already been checked; additionally scope the replay to its
+    // original author and parent entity before returning any content.
+    const { data: existing } = await service
+      .from("comments")
+      .select("*, attachments(*)")
+      .eq("id", commentId)
+      .eq("issue_id", issueId)
+      .eq("author_id", actorId)
+      .maybeSingle();
+    if (!existing) return { ok: false, status: 409, errorKey: "databaseError" };
+    if (existing.body === text && (existing.attachments?.length ?? 0) < parsedAttachments.length) {
+      try {
+        await insertAttachments(service, {
+          projectId: issue.project_id as string, issueId, commentId,
+          createdBy: actorId, resources: parsedAttachments, idempotencyKey: commentId,
+        });
+        // Upsert returns only new rows. Read the complete batch, including rows
+        // committed by another attempt whose response did not reach the caller.
+        const { data: complete, error: readError } = await service.from("comments")
+          .select("*, attachments(*)").eq("id", commentId)
+          .eq("issue_id", issueId).eq("author_id", actorId).maybeSingle();
+        if (readError || !complete) throw new Error("Comment resource reconciliation failed");
+        return { ok: true, comment: complete, replayed: true };
+      } catch (error) {
+        console.error("[add-comment] attachment retry failed:", (error as Error).message);
+        return { ok: true, comment: existing, replayed: true, attachmentError: true };
+      }
+    }
+    return { ok: true, comment: existing, replayed: true };
+  }
+
   if (error) {
     console.error("[add-comment] create failed:", error.message);
-    await removeUnretainedResources(service, parsedAttachments);
+    if (!commentId) await removeUnretainedResources(service, parsedAttachments);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
-  // The comment exists from here on — an attachment-row failure must not fail
-  // the request; the comment just comes back without its files.
+  // The body exists from here on. Client-identified writes retain a failed
+  // resource batch for explicit recovery; legacy callers keep best-effort files.
   let attachmentRows: Awaited<ReturnType<typeof insertAttachments>> = [];
+  let attachmentError = false;
   try {
     attachmentRows = await insertAttachments(service, {
       projectId: issue.project_id as string,
@@ -165,10 +204,12 @@ export async function addCommentToIssue({
       commentId: data.id as string,
       createdBy: actorId,
       resources: parsedAttachments,
+      ...(commentId ? { idempotencyKey: commentId } : {}),
     });
   } catch (e) {
     console.error("[add-comment] attachments failed:", (e as Error).message);
-    await removeUnretainedResources(service, parsedAttachments);
+    attachmentError = !!commentId;
+    if (!commentId) await removeUnretainedResources(service, parsedAttachments);
   }
 
   // Notifications: @mentions + "comment on an issue I own/am assigned" +
@@ -212,7 +253,7 @@ export async function addCommentToIssue({
   ];
   await insertNotifications(service, rows);
 
-  return { ok: true, comment: { ...data, attachments: attachmentRows } };
+  return { ok: true, comment: { ...data, attachments: attachmentRows }, ...(attachmentError ? { attachmentError } : {}) };
 }
 
 /**

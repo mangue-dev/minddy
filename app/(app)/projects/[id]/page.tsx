@@ -1,6 +1,8 @@
 "use client";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
-import { useOptionalAppTabs } from "@/lib/app-tabs-context";
+import { useGeneratingViews } from "@/lib/use-generating-views";
+import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
+import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 
 import {
   Suspense,
@@ -13,12 +15,7 @@ import {
 } from "react";
 import dynamic from "next/dynamic";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  useParams,
-  usePathname,
-  useRouter,
-  useSearchParams,
-} from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Button,
@@ -121,11 +118,9 @@ function ProjectBoard() {
   const tFamily = useTranslations("IssueFamily");
   const tSeed = useTranslations("Seed");
   const tProjects = useTranslations("Projects");
-  const params = useParams<{ id: string }>();
-  const projectId = params.id;
+  const { pathname, searchParams, projectId: routeProjectId } = useAppTabRoute();
+  const projectId = routeProjectId!;
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const objectiveParam = searchParams.get("objective");
   const familyParam = searchParams.get("family");
   const issueParam = searchParams.get("issue");
@@ -161,7 +156,7 @@ function ProjectBoard() {
   // cleanly (`off` renders no button at all).
   const smartTriageMode = project?.smart_triage_mode ?? "rules";
   const { open: openAssistant, openIntent } = useAssistantPanelActions();
-  const appTabs = useOptionalAppTabs();
+  const appTabs = useOptionalAppTabSession();
 
   // Right-click "Add to cycle" (MIN-32) — the cycle is canonical on /all, but
   // picking work into your week from a project board must work too. The patch
@@ -210,7 +205,7 @@ function ProjectBoard() {
               label: tFamily("openNewTab"),
               icon: <ExternalLink className="size-4" />,
               onSelect: () => {
-                if (appTabs) void appTabs.session.create(href);
+                if (appTabs) void appTabs.create(href);
                 else window.open(href, "_blank", "noopener,noreferrer");
               },
             },
@@ -286,10 +281,7 @@ function ProjectBoard() {
   // spinner). Maps view id → the view's updated_at when generation started;
   // cleared when the view's stored config changes (Numo applied filters) or
   // after a safety timeout.
-  const [generatingViews, setGeneratingViews] = useState<Record<string, string>>(
-    {}
-  );
-  const genTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const { generatingViewIds, beginGenerating } = useGeneratingViews(views);
 
   useEffect(() => {
     if (createMounted) return;
@@ -429,11 +421,6 @@ function ProjectBoard() {
       );
     },
     [removeRelation]
-  );
-
-  const generatingViewIds = useMemo(
-    () => new Set(Object.keys(generatingViews)),
-    [generatingViews]
   );
 
   // Family mode takes precedence over the objective and saved-view filters.
@@ -580,17 +567,7 @@ function ProjectBoard() {
       // its filters/sort from the description. It edits this exact view (the id
       // rides along in pageContext), and the board reflects the change live once
       // realtime brings the updated view back (see the config-sync effect).
-      setGeneratingViews((prev) => ({ ...prev, [view.id]: view.updated_at }));
-      const timer = setTimeout(() => {
-        setGeneratingViews((prev) => {
-          if (!(view.id in prev)) return prev;
-          const next = { ...prev };
-          delete next[view.id];
-          return next;
-        });
-        genTimers.current.delete(view.id);
-      }, 120_000);
-      genTimers.current.set(view.id, timer);
+      beginGenerating(view);
       openAssistant({
         projectId,
         prompt: t("numoBuildViewPrompt", { name, description: wish }),
@@ -661,35 +638,6 @@ function ProjectBoard() {
           : { projectId, ...viewCtx }
       : null
   );
-
-  // Clear a view's "generating" spinner once Numo has touched it (its stored
-  // config bumps updated_at) or it disappears. The safety timeout in
-  // handleCreateView covers the case where Numo makes no change.
-  useEffect(() => {
-    setGeneratingViews((prev) => {
-      const ids = Object.keys(prev);
-      if (ids.length === 0) return prev;
-      let changed = false;
-      const next = { ...prev };
-      for (const id of ids) {
-        const v = views.find((x) => x.id === id);
-        if (!v || v.updated_at !== prev[id]) {
-          delete next[id];
-          changed = true;
-          const timer = genTimers.current.get(id);
-          if (timer) clearTimeout(timer);
-          genTimers.current.delete(id);
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [views]);
-
-  // Drop any pending generation timers on unmount.
-  useEffect(() => {
-    const timers = genTimers.current;
-    return () => timers.forEach((timer) => clearTimeout(timer));
-  }, []);
 
   // Deep-link from the Inbox: /projects/[id]?issue=<id> opens that issue.
   useEffect(() => {
@@ -1004,7 +952,7 @@ function ProjectBoard() {
 export default function ProjectPage() {
   return (
     <Suspense fallback={<div className="px-6 py-10"><Skeleton className="h-8 w-64" /></div>}>
-      <ProjectBoard />
+      <AppTabRouteBoundary><ProjectBoard /></AppTabRouteBoundary>
     </Suspense>
   );
 }

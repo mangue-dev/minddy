@@ -1,5 +1,7 @@
 "use client";
 
+import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
+
 // An open PAGE (MIN-270): its header, its body, and what links them to the
 // base.
 //
@@ -833,7 +835,7 @@ function PageSurface({
       // A dialog already open takes up the screen - this one included: without this
       // guard, the shortcut while writing the instruction would reopen the
       // dialog and would erase what was just typed.
-      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+      if (hasVisibleOpenDialog()) return;
       event.preventDefault();
       openAgentCopyRef.current();
     };

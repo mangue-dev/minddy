@@ -92,10 +92,11 @@ export async function fetchPagesApi(projectId: string): Promise<PageSummary[]> {
 /** A page with his body. */
 export async function fetchPageApi(
   projectId: string,
-  pageId: string
+  pageId: string,
+  signal?: AbortSignal,
 ): Promise<Page> {
   return json(
-    await fetch(`/api/projects/${projectId}/pages/${pageId}`),
+    await fetch(`/api/projects/${projectId}/pages/${pageId}`, { signal }),
     "Request failed"
   );
 }
@@ -400,6 +401,7 @@ export async function addPageCommentApi(
   projectId: string,
   pageId: string,
   input: {
+    id?: string;
     body: string;
     /** The anchor: the commented block. Absent = a comment on the page. */
     blockId?: string | null;
@@ -423,6 +425,7 @@ export async function addPageCommentApi(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        id: input.id,
         body: input.body,
         block_id: input.blockId ?? null,
         quote: input.quote ?? null,
@@ -456,15 +459,15 @@ export async function updatePageCommentApi(
 export async function deletePageCommentApi(
   projectId: string,
   pageId: string,
-  commentId: string
+  commentId: string,
+  missingOk = false,
 ): Promise<void> {
-  await ok(
-    await fetch(
-      `/api/projects/${projectId}/pages/${pageId}/comments/${commentId}`,
-      { method: "DELETE" }
-    ),
-    "Request failed"
+  const response = await fetch(
+    `/api/projects/${projectId}/pages/${pageId}/comments/${commentId}`,
+    { method: "DELETE" },
   );
+  if (missingOk && response.status === 404) return;
+  await ok(response, "Request failed");
   trackEvent("comment_deleted", { target: "page" });
 }
 

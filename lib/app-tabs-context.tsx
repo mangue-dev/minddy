@@ -8,6 +8,8 @@ import { AppTabsSession, type AppTabsSnapshot } from "./app-tabs-session";
 import { appTabsQueryKey, useAppTabsQuery } from "./use-app-tabs-query";
 import { AppTabRouteSync } from "@/components/app-tab-route-sync";
 import { appTabsStorageKey } from "./app-tabs-storage";
+import { appTabRoute } from "./app-tab-location";
+import { prefetchPageNavigation } from "./use-pages-query";
 
 interface AppTabsValue extends AppTabsSnapshot {
   session: AppTabsSession;
@@ -60,6 +62,11 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
     };
   }, [session]);
   useEffect(() => {
+    session.prefetch = (href) => {
+      router.prefetch(href);
+      const route = appTabRoute(href);
+      if (route.projectId && route.pageId) prefetchPageNavigation(client, route.projectId, route.pageId);
+    };
     session.navigate = (href) => {
       const current = window.location.pathname;
       const next = href.split(/[?#]/)[0];
@@ -70,7 +77,7 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
     session.remember = (id, href) => {
       try { sessionStorage.setItem(storageKey, JSON.stringify({ id, href })); } catch { /* Storage is optional. */ }
     };
-  }, [router, session, storageKey]);
+  }, [router, session, storageKey, client]);
   useEffect(() => {
     if (!query.data) return;
     session.receive(query.data);
@@ -104,6 +111,13 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
 export const useOptionalAppTabs = () => useContext(Context);
 export const useOptionalAppTabNavigation = () => useContext(NavigationContext);
 export const useOptionalAppTabSession = () => useContext(SessionContext);
+
+/** A retained board keeps its tab's local filters while another tab is active. */
+export function AppTabNavigationScope({ activeId, children }: { activeId: string | null; children: ReactNode }) {
+  const session = useOptionalAppTabSession();
+  const value = useMemo(() => session ? { session, activeId } : null, [session, activeId]);
+  return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
+}
 export function useAppTabs() {
   const value = useOptionalAppTabs();
   if (!value) throw new Error("useAppTabs requires AppTabsProvider");

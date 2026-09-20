@@ -1,5 +1,6 @@
 "use client";
 import { useAppTabDeparture } from "@/lib/app-tabs-context";
+import { useIssuePanelTab } from "@/lib/use-issue-panel-tab";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -197,7 +198,7 @@ export function IssueSidePanel({
   useIdleMarkdownEditorPreload();
   const [title, setTitle] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [tab, setTab] = useState<"description" | "plan">(initialTab);
+  const [tab, setTab] = useIssuePanelTab(issue?.id ?? null, initialTab);
   // Remount the description editor when the description is rewritten under it
   // (dictation, or distant writing) — it only reads `value` during editing and
   // ne commite qu'au blur.
@@ -270,7 +271,8 @@ export function IssueSidePanel({
             createdBy: issue.created_by,
             integrationId: issue.integration_id ?? null,
           }
-        : null
+        : null,
+      issue?.project_id ?? null,
     );
 
   // Code agent of this ticket. Same derivations as maps (lib/server/
@@ -305,11 +307,6 @@ export function IssueSidePanel({
     nextCycle?.id ?? null,
     onSetIssueCycle
   );
-
-  // Land on the tab the opener asked for (plan indicator → plan tab).
-  useEffect(() => {
-    setTab(initialTab);
-  }, [issue?.id, initialTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Title and description: sown when the ticket is opened, then kept up to date on
   // remote writes (see refs above).

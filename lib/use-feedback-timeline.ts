@@ -1,5 +1,6 @@
 "use client";
 
+import { mergeComment, publishCommentWrite, removeCommentThread } from "./comment-cache";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import {
@@ -97,7 +98,7 @@ export function useFeedbackTimeline(projectId: string, postId: string | null) {
       attachments: ResourceInput[] = [],
       visibility: CommentVisibility = "internal"
     ) => {
-      await addFeedbackCommentApi(
+      const saved = await addFeedbackCommentApi(
         projectId,
         postId as string,
         body,
@@ -106,23 +107,26 @@ export function useFeedbackTimeline(projectId: string, postId: string | null) {
         attachments,
         visibility
       );
-      invalidate();
+      await publishCommentWrite<Comment>(queryClient, feedbackCommentsKey(projectId, postId as string),
+        (comments) => mergeComment(comments, saved));
     },
-    [projectId, postId, invalidate]
+    [projectId, postId, queryClient]
   );
   const updateComment = useCallback(
     async (commentId: string, body: string) => {
-      await updateFeedbackCommentApi(projectId, postId as string, commentId, body);
-      invalidate();
+      const saved = await updateFeedbackCommentApi(projectId, postId as string, commentId, body);
+      await publishCommentWrite<Comment>(queryClient, feedbackCommentsKey(projectId, postId as string),
+        (comments) => mergeComment(comments, saved, false));
     },
-    [projectId, postId, invalidate]
+    [projectId, postId, queryClient]
   );
   const deleteComment = useCallback(
     async (commentId: string) => {
       await deleteFeedbackCommentApi(projectId, postId as string, commentId);
-      invalidate();
+      await publishCommentWrite<Comment>(queryClient, feedbackCommentsKey(projectId, postId as string),
+        (comments) => removeCommentThread(comments, commentId));
     },
-    [projectId, postId, invalidate]
+    [projectId, postId, queryClient]
   );
   const deleteAttachment = useCallback(
     async (attachmentId: string) => {

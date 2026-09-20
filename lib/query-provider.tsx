@@ -91,6 +91,7 @@ const persistenceStops = new Set<() => void>();
 const NON_PERSISTED_KEY_PREFIXES: string[][] = [
   ["app-tabs"], // Unbounded account collection; only local activation uses sessionStorage.
   ["me", "search-index"],
+  ["me", "pages", "search"], // Per-keystroke snippets are bounded in memory, never restored from disk.
   ["me", "board-issues"], // short-lived resume snapshot; duplicates full issue rows
   ["agent-run"], // ["agent-run", runId]
   ["agent-runs"], // ["agent-runs", "issue", issueId]
@@ -117,6 +118,10 @@ export function isPersistableKey(key: readonly unknown[]): boolean {
 function isPersistable(query: Query): boolean {
   // A query in error must not freeze its failure on disk.
   if (query.state.status !== "success") return false;
+  // Pending/failed comments retain recovery callbacks and unconfirmed content.
+  // Reopen from authoritative data after a reload; never restore a false success.
+  if ((query.queryKey[0] === "comments" || query.queryKey[0] === "page-comments") &&
+      Array.isArray(query.state.data) && query.state.data.some((comment) => comment?.delivery)) return false;
   return isPersistableKey(query.queryKey);
 }
 

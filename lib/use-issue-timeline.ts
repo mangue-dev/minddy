@@ -1,5 +1,9 @@
 "use client";
 
+import { useAuth } from "./auth-context";
+import { createUuid } from "./create-uuid";
+import { deliverComment, reconcileCommentRead } from "./comment-delivery";
+import { optimisticAttachments } from "./optimistic-comment-attachments";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { mergeComment, publishCommentWrite, removeCommentThread } from "./comment-cache";
@@ -11,6 +15,7 @@ import {
   fetchEventsApi,
   updateCommentApi,
 } from "./comments-api";
+import type { PageSummary } from "./pages-api";
 import type { Comment, IssueEvent, ResourceInput } from "./types";
 
 export type TimelineItem =
@@ -121,12 +126,16 @@ export function buildTimelineItems({
  * `birth` is the display fallback described above: skip the ticket himself
  * guarantees that his timeline always starts with his birth.
  */
-export function useIssueTimeline(issueId: string | null, birth?: IssueBirth | null) {
+export function useIssueTimeline(issueId: string | null, birth?: IssueBirth | null, projectId?: string | null) {
   const queryClient = useQueryClient();
+  const authorId = useAuth().user?.id ?? null;
 
   const { data: comments } = useQuery({
     queryKey: commentsKey(issueId ?? ""),
-    queryFn: () => fetchCommentsApi(issueId as string),
+    queryFn: async () => reconcileCommentRead(
+      await fetchCommentsApi(issueId as string),
+      queryClient.getQueryData<Comment[]>(commentsKey(issueId ?? "")),
+    ),
     enabled: !!issueId,
     // While a @Numo reply streams (assistant_status 'working'), poll as a
     // safety net for the realtime push. Its TEXT rides the comment's own topic
@@ -168,11 +177,22 @@ export function useIssueTimeline(issueId: string | null, birth?: IssueBirth | nu
       parentId: string | null = null,
       attachments: ResourceInput[] = []
     ) => {
-      const saved = await addCommentApi(issueId as string, body, mentionedUserIds, parentId, attachments);
-      await publishCommentWrite<Comment>(queryClient, commentsKey(issueId as string),
-        (comments) => mergeComment(comments, saved));
+      if (!issueId || !authorId) throw new Error("Comment author is unavailable");
+      const id = createUuid();
+      const now = new Date().toISOString();
+      const parent = queryClient.getQueryData<Comment[]>(commentsKey(issueId))
+        ?.find((comment) => comment.id === parentId);
+      const draft: Comment = {
+        id, issue_id: issueId, author_id: authorId, body: body.trim(),
+        parent_id: parent?.parent_id ?? parentId, created_at: now, updated_at: now,
+        attachments: optimisticAttachments(attachments, id, issueId, authorId, now,
+          projectId ?? "", queryClient.getQueryData<PageSummary[]>(["pages", projectId])),
+      };
+      deliverComment(queryClient, commentsKey(issueId), draft,
+        () => addCommentApi(issueId, body, mentionedUserIds, parentId, attachments, id),
+        () => deleteCommentApi(id, true));
     },
-    [issueId, queryClient]
+    [issueId, authorId, projectId, queryClient]
   );
   const updateComment = useCallback(
     async (commentId: string, body: string) => {

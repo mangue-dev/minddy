@@ -1,6 +1,7 @@
 "use client";
 
 import { openInbox } from "@/lib/inbox-launcher";
+import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 
 // Global navigation keyboard chords, a la AutoKap. A leader key **G** (Go) arms
 // a chord; the next key picks the destination. While a chord is armed, the
@@ -30,6 +31,7 @@ import {
   useState,
   type Dispatch,
   type ReactNode,
+  type RefObject,
   type SetStateAction,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -47,6 +49,7 @@ export const CHORD_PREFIX = "g";
 const CHORD_TIMEOUT_MS = 1500;
 
 const ChordContext = createContext<string | null>(null);
+const ChordEventContext = createContext<RefObject<string | null>>({ current: null });
 
 interface Cheatsheet {
   open: boolean;
@@ -62,6 +65,11 @@ const CheatsheetContext = createContext<Cheatsheet | null>(null);
  */
 export function useChordPrefix(): string | null {
   return useContext(ChordContext);
+}
+
+/** Read the latest chord inside an event handler without subscribing its card. */
+export function useChordPrefixForEvents(): RefObject<string | null> {
+  return useContext(ChordEventContext);
 }
 
 /** Open state of the keyboard-shortcuts cheat sheet (opened by `?` or palette). */
@@ -82,8 +90,7 @@ export function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 function isDialogOpen(): boolean {
-  if (typeof document === "undefined") return false;
-  return !!document.querySelector('[role="dialog"][data-state="open"]');
+  return hasVisibleOpenDialog();
 }
 
 export function KeyboardProvider({ children }: { children: ReactNode }) {
@@ -94,6 +101,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
   const { toggle: toggleSidebarVisibility } = useSidebarVisibility();
   const { present: secondaryPresent } = useSecondarySidebar();
   const [chordPrefix, setChordPrefix] = useState<string | null>(null);
+  const chordEventRef = useRef<string | null>(null);
   const [cheatsheetOpen, setCheatsheetOpen] = useState(false);
   const cheatsheetValue = useMemo<Cheatsheet>(
     () => ({ open: cheatsheetOpen, setOpen: setCheatsheetOpen }),
@@ -122,6 +130,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
 
     const disarm = () => {
       armedRef.current = false;
+      chordEventRef.current = null;
       setChordPrefix(null);
       if (timer !== null) {
         clearTimeout(timer);
@@ -254,6 +263,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
       e.preventDefault();
       e.stopImmediatePropagation();
       armedRef.current = true;
+      chordEventRef.current = CHORD_PREFIX;
       setChordPrefix(CHORD_PREFIX);
       timer = setTimeout(disarm, CHORD_TIMEOUT_MS);
     };
@@ -267,10 +277,12 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ChordContext.Provider value={chordPrefix}>
-      <CheatsheetContext.Provider value={cheatsheetValue}>
-        {children}
-      </CheatsheetContext.Provider>
-    </ChordContext.Provider>
+    <ChordEventContext.Provider value={chordEventRef}>
+      <ChordContext.Provider value={chordPrefix}>
+        <CheatsheetContext.Provider value={cheatsheetValue}>
+          {children}
+        </CheatsheetContext.Provider>
+      </ChordContext.Provider>
+    </ChordEventContext.Provider>
   );
 }

@@ -68,6 +68,7 @@ export class AppTabsSession {
   }
   getActiveHref = () => this.activeHref;
   navigate: (href: string) => void = () => {};
+  prefetch: (href: string) => void = () => {};
   remember: (id: string, href: string) => void = () => {};
   onDispose: () => void = () => {};
 
