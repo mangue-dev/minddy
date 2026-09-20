@@ -274,6 +274,55 @@ try {
       await measure(`tab-to-board-${run}`, () => page.locator('[data-app-tab-id][aria-label="Performance board"]').click(), () => page.locator("[data-issue-id]").first().waitFor());
       await measure(`tab-to-page-${run}`, () => page.locator('[data-app-tab-id][aria-label="Performance pages"]').click(), () => page.locator(".page-editor .tiptap").waitFor());
     }
+    // Cold tab creation (fourth pass): a brand-new tab only has the
+    // destination palette. Hovering the destination is the measured intent
+    // window — the palette may prefetch the route and its queries there;
+    // the recorded action starts at the click. Tabs pinned on the same
+    // destination are closed beforehand (API delete + a reload so the strip
+    // matches the account deterministically) so every sample is a true cold
+    // open; the reload also clears the router cache between samples. The
+    // board tab is activated first so the deleted tab is never the active
+    // one, and the reload never has to invent a row for the current URL.
+    async function activateBoardTab() {
+      const board = page.locator('[data-app-tab-id][aria-label="Performance board"]');
+      if ((await board.count()) > 0) await board.click();
+      else {
+        await page.locator('button[aria-label="More tabs"]').click();
+        await page.getByRole("menuitem", { name: "Performance board" }).click();
+      }
+      await page.locator("[data-issue-id]").first().waitFor({ timeout: 90000 });
+    }
+    async function newTabCold(destination, itemLabel, ready, run) {
+      await activateBoardTab();
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const tabsResponse = await context.request.get(`${base}/api/me/app-tabs`);
+        if (!tabsResponse.ok()) throw new Error("Could not list app tabs");
+        const stale = (await tabsResponse.json()).filter((tab) => (tab.href ?? "").split(/[?#]/)[0] === destination);
+        if (stale.length === 0) break;
+        for (const tab of stale) {
+          const response = await context.request.delete(`${base}/api/me/app-tabs/${tab.id}`, { data: { revision: tab.revision } });
+          if (!response.ok()) await page.waitForTimeout(500);
+        }
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await page.locator("[data-app-tab-id]").first().waitFor({ timeout: 60000 });
+        await page.waitForTimeout(1500);
+      }
+      const plusButton = page.locator('button[aria-label="New tab"]');
+      if ((await plusButton.count()) > 0) await plusButton.click();
+      else {
+        await page.locator('button[aria-label="More tabs"]').click();
+        await page.getByRole("menuitem", { name: "New tab" }).click();
+      }
+      const item = page.getByRole("option").filter({ hasText: itemLabel }).first();
+      await item.hover();
+      await page.waitForTimeout(800);
+      await measure(`new-tab-${destination === "/routines" ? "routines" : "pull-requests"}-${run}`, () => item.click(), ready);
+      await page.waitForTimeout(500);
+    }
+    for (let run = 0; run < 3; run++) {
+      await newTabCold("/routines", "Routines", () => page.getByText(/No routine yet|Link a GitHub or GitLab repository|Create a project to give scheduled|Only a project's owner can schedule|the built-in scheduler is not configured|has no server sandbox/).first().waitFor(), run);
+      await newTabCold("/pull-requests", "Pull requests", () => page.getByText("Performance change 1.1", { exact: true }).first().waitFor(), run);
+    }
     await measure("pull-request-list", () => page.goto(`${base}/pull-requests`, { waitUntil: "domcontentloaded" }), () => page.getByText("Performance change 1.1", { exact: true }).first().waitFor());
     }
   }
