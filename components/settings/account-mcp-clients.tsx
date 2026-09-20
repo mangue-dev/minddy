@@ -13,6 +13,11 @@ import {SettingsGroup} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import {MCP_PRESETS, mcpPresetForUrl} from "@/lib/mcp-catalog";
 import type {McpPreset} from "@/lib/mcp-catalog";
+import type {McpRegistryServer} from "@/lib/mcp-registry";
+import {
+  MCP_REGISTRY_SEARCH_MIN_LENGTH,
+  useMcpRegistrySearch,
+} from "@/lib/use-mcp-registry-search";
 import {mcpConnectionNeedsAuth} from "@/lib/mcp-client";
 import type {McpConnection} from "@/lib/mcp-client";
 import {MCP_AUTHORIZATION_PARAM, MCP_DESKTOP_PARAM, prepareMcpAuthorization} from "@/lib/mcp-authorization";
@@ -38,6 +43,22 @@ async function request(path: string, method = "GET", body?: unknown) {
   return result;
 }
 
+/**
+ * A registry match rides the same dialog as a curated preset, but carries no
+ * verified docs or setup note: the endpoint fields stay visible at the top,
+ * like a custom server, so the URL the registry found is there to check.
+ */
+function registryPreset(server: McpRegistryServer): McpPreset {
+  return {
+    id: server.id,
+    name: server.name,
+    url: server.url,
+    auth: "oauth",
+    setup: "standard",
+    docs: "",
+  };
+}
+
 export function AccountMcpClients() {
   const t = useTranslations("McpClients");
   const id = useId();
@@ -59,6 +80,9 @@ export function AccountMcpClients() {
   const [headers, setHeaders] = useState("");
   const [search, setSearch] = useState("");
   const [preset, setPreset] = useState<McpPreset | null>(null);
+  // The public registry search (MIN-586): everything the curated catalog
+  // leaves out, found by the same search box.
+  const registry = useMcpRegistrySearch(search);
   const [busy, setBusy] = useState(false);
   // The desktop handoff lands here to start OAuth in this browser session;
   // discovery and registration can take a few seconds, so the wait is shown.
@@ -202,6 +226,14 @@ export function AccountMcpClients() {
     if (!tab) toast.error(t("popupBlocked"));
     return tab;
   };
+
+  // The registry is searched with the same box; catalog presets win, so a
+  // match never shows twice. Only a settled, error-free search renders.
+  const registryResults = (registry.servers ?? []).filter(
+    (server) => !mcpPresetForUrl(server.url),
+  );
+  const registryVisible =
+    registry.debounced.trim().length >= MCP_REGISTRY_SEARCH_MIN_LENGTH;
 
   const authorize = async (
     connectionId: string,
@@ -428,6 +460,67 @@ export function AccountMcpClients() {
             </Button>
           ))}
         </div>
+        {registryVisible && (
+          <div className="space-y-2" aria-busy={registry.isPending}>
+            <p className="text-xs font-medium text-muted-foreground">
+              {t("registryTitle")}
+            </p>
+            {registry.isPending ? (
+              <p className="text-sm text-muted-foreground">
+                {t("registryLoading")}
+              </p>
+            ) : registryResults.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {t("registryNone")}
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {registryResults.map((server) => (
+                  <Button
+                    key={server.id}
+                    type="button"
+                    disabled={busy || isPending || isError}
+                    onClick={() => {
+                      const existing = data?.connections.find(
+                        (connection) => connection.url === server.url,
+                      );
+                      edit(existing ?? "new", registryPreset(server));
+                    }}
+                    variant="outline"
+                    className="h-auto justify-start gap-3 whitespace-normal rounded-lg p-3 text-left"
+                  >
+                    {server.icon ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={server.icon}
+                        alt=""
+                        aria-hidden
+                        loading="lazy"
+                        className="size-5 shrink-0 object-contain"
+                      />
+                    ) : (
+                      <McpServiceLogo className="size-5" />
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">
+                        {server.name}
+                      </span>
+                      {server.description && (
+                        <span className="line-clamp-2 text-xs text-muted-foreground">
+                          {server.description}
+                        </span>
+                      )}
+                    </span>
+                    <Plus
+                      className="size-4 shrink-0 text-muted-foreground"
+                      aria-hidden
+                    />
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {error && !editing && (
         <p role="alert" className="text-sm text-destructive">
@@ -529,6 +622,7 @@ export function AccountMcpClients() {
                 </p>
               )}
               {!preset && endpointFields}
+              {preset && !preset.docs && endpointFields}
               {authMode === "bearer" && (
                 <>
                   <Field>
@@ -582,7 +676,7 @@ export function AccountMcpClients() {
                       >
                         {t("support")}
                       </p>
-                      {preset && endpointFields}
+                      {preset && preset.docs && endpointFields}
                       <Field>
                         <FieldLabel htmlFor={`${id}-auth`}>
                           {t("authentication")}

@@ -20,10 +20,11 @@ export function getToolResultCharLimit(
     case "list_mcp_tools":
     case "call_mcp_tool":
       return MCP_MAX_RESULT_BYTES;
-    // The catalog plus the user's connections must survive whole: a truncated
-    // preset entry hides the endpoint or setup note the next write needs.
+    // The catalog plus the user's connections plus registry matches must
+    // survive whole: a truncated preset entry hides the endpoint or setup
+    // note the next write needs.
     case "list_mcp_presets":
-      return 8_000;
+      return 16_000;
     // Issue lists must never reach the model truncated mid-array: a partial id
     // list makes the model hallucinate issue ids on the next write.
     case "list_issues":

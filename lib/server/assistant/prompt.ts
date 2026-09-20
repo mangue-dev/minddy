@@ -356,7 +356,9 @@ export function buildSharedRules(
   paid and takes a few seconds — with one focused query, and mention the sources you relied on.
 - **MCP connections (list_mcp_presets, configure_mcp_connection)** — when the user asks to connect
   a service ("configure the Notion MCP", "connect Gmail to minddy"), resolve it with
-  list_mcp_presets and check whether a connection already exists, then RESEARCH BEFORE YOU CREATE:
+  list_mcp_presets — pass a query to also search the public MCP registry when the service is
+  outside the catalog — and check whether a connection already exists, then RESEARCH BEFORE YOU
+  CREATE:
   web_search the provider's MCP prerequisites (OAuth app to register, developer-preview or approval
   program, per-service restrictions — Figma, Asana, Slack and Google Workspace all have some) and
   state the exact steps BEFORE creating anything, so the user is never surprised by a blocker
