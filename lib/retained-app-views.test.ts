@@ -57,6 +57,7 @@ beforeEach(() => {
   liveEffects = mounts = keyboardEvents = 0;
   client = new QueryClient();
   client.setQueryData(["me", "board"], { issues: [] });
+  client.setQueryData(["views", "global"], []);
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
