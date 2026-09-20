@@ -46,7 +46,20 @@ describe("application content header", () => {
     expect(source).toContain("h-[var(--app-content-header-height)] shrink-0");
     expect(source).toContain("overflow-x-auto overflow-y-hidden");
     expect(source).toContain("overscroll-x-contain");
-    expect(source).toContain("items-center px-3");
+    expect(source).toContain("items-center px-[var(--app-content-header-pad-x)]");
+  });
+
+  it("nests its pills concentrically in the pane corners", () => {
+    // The pane radius puts the corner arc's center at the strip's vertical
+    // center (half the 50px strip, plus the 1px pane border) — the same point
+    // as a centered pill's end-cap center. The header inset is that radius
+    // minus the 16px radius of a 32px pill minus the border, making every
+    // margin (top, side, arc) the same 10px.
+    expect(styles).toContain("--app-pane-radius: 26px;");
+    expect(styles).toContain(
+      "--app-content-header-pad-x: calc(var(--app-pane-radius) - 16px - 1px);",
+    );
+    expect(source).toContain("px-[var(--app-content-header-pad-x)]");
   });
 
   it("owns equal edge padding instead of letting pages widen it", () => {
