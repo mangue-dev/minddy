@@ -6,6 +6,7 @@ import { useAuth } from "./auth-context";
 import { appTabRoute } from "./app-tab-location";
 import { APP_TAB_METADATA_BATCH_SIZE, appTabMetadataLocations, type AppTabMetadata } from "./app-tab-metadata";
 import type { PullRequestRef } from "./agent-api";
+import { fetchRoutinesApi } from "./routines-api";
 
 const empty: AppTabMetadata = { pages: [], objectives: [], pullRequests: [], routines: [] };
 
@@ -58,8 +59,11 @@ export function useAppTabMetadata(hrefs: string[]) {
     queryKey: ["pull-request", prId], enabled: false,
     select: (detail: { pr?: PullRequestRef | null }) => detail.pr ? { id: prId, number: detail.pr.number, title: detail.pr.title ?? null } : null,
   })) });
+  // Same key as the Routines surface: reuse its cache without fetching.
+  // The real fetcher is still required — TanStack rejects a queryFn-less
+  // observer even when disabled.
   const routines = useQuery({
-    queryKey: ["routines"], enabled: false,
+    queryKey: ["routines"], queryFn: fetchRoutinesApi, enabled: false,
     select: (result: { routines: AppTabMetadata["routines"] }) => result.routines.filter((routine) => routes.some((route) => route.routineId === routine.id)).map(({ id, title }) => ({ id, title })),
   });
   const pageById = new Map(data.pages.map((page) => [page.id, page]));
