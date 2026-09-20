@@ -278,7 +278,7 @@ export function BlockGutter({
                 aria-label={t("blockMenu")}
                 className={cn(
                   BUTTON,
-                  dragging ? "cursor-grabbing" : "cursor-pointer"
+                  dragging ? "cursor-grabbing" : "cursor-grab"
                 )}
                 // NO `preventDefault` on the `mousedown`, and that's it
                 // subject: native drag IS the default action of

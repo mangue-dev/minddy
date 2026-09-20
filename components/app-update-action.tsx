@@ -54,9 +54,7 @@ function FooterRow({
       aria-haspopup={ariaControls ? "dialog" : undefined}
       className={cn(
         "relative flex items-center rounded-lg text-sm font-medium transition-colors",
-        disabled
-          ? "cursor-default"
-          : "cursor-pointer hover:bg-sidebar-accent hover:text-foreground",
+        !disabled && "hover:bg-sidebar-accent hover:text-foreground",
         active ? "bg-sidebar-accent text-foreground" : "text-muted-foreground",
         compact ? "h-8" : "h-9",
         "pl-[9px]",

@@ -159,7 +159,7 @@ function StatusPill({
         <button
           type="button"
           className={cn(
-            "flex h-7 min-w-0 max-w-full cursor-pointer items-center gap-2 rounded-full px-2.5",
+            "flex h-7 min-w-0 max-w-full items-center gap-2 rounded-full px-2.5",
             "text-sidebar-foreground/70 hover:text-sidebar-foreground",
             "hover:bg-sidebar-accent/70",
             "outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -214,7 +214,7 @@ function StatusBell({
           type="button"
           aria-label={t("bellLabel")}
           className={cn(
-            "inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full",
+            "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
             "text-sidebar-foreground/70 hover:text-sidebar-foreground",
             "hover:bg-sidebar-accent/70",
             "outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -229,7 +229,7 @@ function StatusBell({
           <button
             type="button"
             onClick={onClear}
-            className="cursor-pointer rounded px-1 text-xs text-muted-foreground hover:text-foreground"
+            className="rounded px-1 text-xs text-muted-foreground hover:text-foreground"
           >
             {t("clear")}
           </button>
@@ -244,7 +244,7 @@ function StatusBell({
                   type="button"
                   onClick={() => setExpandedId(expanded ? null : key)}
                   className={cn(
-                    "flex w-full cursor-pointer items-start gap-2 rounded-md px-1.5 py-1.5 text-left",
+                    "flex w-full items-start gap-2 rounded-md px-1.5 py-1.5 text-left",
                     "hover:bg-sidebar-accent/70",
                     "outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   )}

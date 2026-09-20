@@ -144,7 +144,7 @@ export function useWebhookSteps({
           {ALL_EVENTS.map((event) => (
             <label
               key={event}
-              className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-border p-4"
+              className="flex items-center justify-between gap-4 rounded-2xl border border-border p-4"
             >
               <span className="flex min-w-0 flex-col gap-0.5 text-left">
                 <span className="text-sm font-medium">

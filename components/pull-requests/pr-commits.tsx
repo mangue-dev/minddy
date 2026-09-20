@@ -166,7 +166,7 @@ function CommitRow({
           openDiff();
         }
       }}
-      className="flex cursor-pointer items-start gap-3 px-3.5 py-3 outline-none transition-colors hover:bg-muted/50 focus-visible:bg-muted/50"
+      className="flex items-start gap-3 px-3.5 py-3 outline-none transition-colors hover:bg-muted/50 focus-visible:bg-muted/50"
     >
       <AuthorStack authors={authors} className="mt-0.5" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">

@@ -18,6 +18,39 @@
   --breakpoint-wide: 1200px;
 }
 
+/* One hover cursor for the whole app (MIN-587): buttons and every other
+   interactive element show the default arrow, never the pointer hand. The
+   adapted cursor still wins where it carries meaning — text fields, drag
+   handles, zoom, disabled controls — through the `:not()` exemptions: an
+   element carrying one of those utilities is simply left alone.
+   Unlayered on purpose: cascade layers place Tailwind utilities below this
+   rule, so a stray `cursor-pointer` can never reintroduce the hand. */
+:where(
+    button:not(:disabled),
+    a,
+    summary,
+    label,
+    [role="button"],
+    [role="option"],
+    [role="menuitem"],
+    [role="menuitemradio"],
+    [role="menuitemcheckbox"],
+    [role="radio"],
+    [role="checkbox"],
+    [role="switch"],
+    [role="tab"],
+    [role="treeitem"]
+  ):not(
+    .cursor-grab,
+    .cursor-grabbing,
+    .cursor-text,
+    .cursor-zoom-in,
+    .cursor-zoom-out,
+    .cursor-not-allowed
+  ) {
+  cursor: default;
+}
+
 /* `mangue-ui` is also compiled by Turbopack as a dependency: according to the
    development cache, its `desktop:` utilities can keep the
    published threshold (1200 px) while those in the application have already read the theme
@@ -1528,7 +1561,7 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   background: color-mix(in oklab, var(--background) 80%, transparent);
   opacity: 0;
   transition: opacity 0.12s, color 0.12s;
-  cursor: pointer;
+  cursor: default;
 }
 /* “Launch an agent” on the section (MIN-84) — to the left of the copy button. */
 .scratchpad-editor .ProseMirror .scratchpad-section-launch {
@@ -2035,7 +2068,7 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
 }
 
 .page-editor .page-callout-icon-button {
-  cursor: pointer;
+  cursor: default;
   color: inherit;
 }
 
@@ -2131,7 +2164,7 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   height: 1.75rem;
   border-radius: 0.25rem;
   color: var(--muted-foreground);
-  cursor: pointer;
+  cursor: default;
   transition: background-color 0.12s, transform 0.15s;
 }
 .page-editor .page-details-toggle:hover {
@@ -2273,7 +2306,7 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   color: color-mix(in oklab, var(--page-color-teal) 85%, var(--foreground));
   background-color: transparent;
   transition: background-color 120ms ease;
-  cursor: pointer;
+  cursor: default;
   user-select: none;
 }
 

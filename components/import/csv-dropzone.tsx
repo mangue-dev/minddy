@@ -80,7 +80,7 @@ export function CsvDropzone({
           if (file) onFile(file);
         }}
         className={cn(
-          "flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed text-center outline-none transition-colors",
+          "flex flex-col items-center gap-2 rounded-lg border border-dashed text-center outline-none transition-colors",
           size === "lg" ? "px-6 py-12" : "px-6 py-10",
           dragOver
             ? "border-ring bg-accent/40"

@@ -772,7 +772,7 @@ function ComposerDialog({
             <div className="flex items-center gap-1.5">
               <label
                 htmlFor="feedback-make-public"
-                className="cursor-pointer text-sm font-medium"
+                className="text-sm font-medium"
               >
                 {t("makePublic")}
               </label>

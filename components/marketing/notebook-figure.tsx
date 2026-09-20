@@ -12,7 +12,7 @@ export function NotebookFigure({ title, tasks }: { title: string; tasks: string[
       <ul className="space-y-3">
         {tasks.map((task, index) => (
           <li key={task}>
-            <label className="flex min-h-8 cursor-pointer items-start gap-3 text-sm leading-relaxed">
+            <label className="flex min-h-8 items-start gap-3 text-sm leading-relaxed">
               <Checkbox className="mt-1 shrink-0" checked={completed[index]} onCheckedChange={checked => setCompleted(current => current.map((value, i) => i === index ? checked === true : value))} />
               <span className={completed[index] ? "text-muted-foreground line-through" : ""}>{task}</span>
             </label>

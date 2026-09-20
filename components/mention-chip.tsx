@@ -199,7 +199,7 @@ export function MentionChip({
       className={cn(
         shape,
         NODE_LINK_CLASS,
-        "cursor-pointer no-underline transition-colors hover:bg-(--mention-chip-hover)",
+        "no-underline transition-colors hover:bg-(--mention-chip-hover)",
         // LAST: a caller who repaints the pill (the dark bubble of
         // cat) also repaints its hover, and tailwind-merge can only do that
         // if his class arrives after ours.

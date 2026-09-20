@@ -627,7 +627,7 @@ export function RoutineDetail({
                               <tr
                                 key={run.id}
                                 onClick={() => openRoutineRun(run)}
-                                className="group cursor-pointer transition-colors hover:bg-muted/50 focus-within:bg-muted/50"
+                                className="group transition-colors hover:bg-muted/50 focus-within:bg-muted/50"
                               >
                                 <td className="px-4 py-2.5 text-sm">
                                   <button

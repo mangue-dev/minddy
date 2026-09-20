@@ -1524,7 +1524,7 @@ const IssueCardContent = memo(function IssueCardContent({
       {...drop.handlers}
       // No touch-action override: drag-and-drop is mouse-only (MouseSensor), so
       // touch is free to scroll the board/columns natively.
-      className={cn("relative cursor-pointer rounded-xl")}
+      className={cn("relative cursor-grab rounded-xl")}
     >
       <DropOverlay
         show={drop.dragging}

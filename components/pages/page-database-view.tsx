@@ -1007,7 +1007,7 @@ export function PageDatabaseView({
                       <AppTooltip label={t("insertEntryHint")}>
                         <button
                           type="button"
-                          className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                          className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                           aria-label={t("insertEntryHint")}
                           onClick={(event) => insert(entry, event.altKey)}
                         >
@@ -1026,7 +1026,7 @@ export function PageDatabaseView({
                               type="button"
                               aria-label={t("entryActions")}
                               draggable={manual}
-                              className={`flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${isDragging ? "cursor-grabbing" : "cursor-pointer"}`}
+                              className={`flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
                               onPointerDownCapture={(event) => {
                                 if (event.button === 0) event.stopPropagation();
                               }}
@@ -1107,7 +1107,7 @@ export function PageDatabaseView({
                       <div className="pointer-events-auto flex size-6 items-center justify-center">
                         {/* Anchor the checkbox hit area to the full selection container. */}
                         <Checkbox
-                          className="static cursor-pointer after:inset-x-0 after:inset-y-0"
+                          className="static after:inset-x-0 after:inset-y-0"
                           aria-label={t("selectEntry", {
                             name: entry.title || tPages("untitled"),
                           })}
@@ -1144,7 +1144,7 @@ export function PageDatabaseView({
                   <td className="h-10 overflow-hidden border-b border-border/40 p-0">
                     <button
                       type="button"
-                      className="flex h-10 w-full min-w-0 cursor-pointer items-center gap-2 overflow-hidden px-2 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+                      className="flex h-10 w-full min-w-0 items-center gap-2 overflow-hidden px-2 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
                       onClick={() => onOpen(entry.id)}
                       onMouseEnter={() => prefetchPage(entry.id)}
                       onFocus={() => prefetchPage(entry.id)}
