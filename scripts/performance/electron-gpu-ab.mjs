@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -105,40 +106,6 @@ async function removeTemporaryTab(spec) {
     assert.equal(response.status(), 409, "Temporary tab cleanup failed");
   }
   throw new Error("Temporary tab kept changing during cleanup");
-}
-async function screenshot(name) {
-  const destination = path.join(output, `${label}-${name}.png`);
-  await page.screenshot({ path: destination });
-  results.screenshots.push({ path: destination, scope: "Electron renderer viewport" });
-}
-async function nativeSnapshot(name) {
-  const snapshot = await electronApp.evaluate(({ app }) => {
-    const processes = app.getAppMetrics();
-    const sum = (values) => values.length ? values.reduce((total, value) => total + value, 0) : null;
-    const numbers = (select) => processes.map(select).filter((value) => typeof value === "number");
-    return {
-      processCount: processes.length,
-      processTypes: processes.reduce((counts, entry) => ({ ...counts, [entry.type]: (counts[entry.type] ?? 0) + 1 }), {}),
-      aggregateCPUUsagePercent: sum(numbers((entry) => entry.cpu?.percentCPUUsage)),
-      aggregateWorkingSetKB: sum(numbers((entry) => entry.memory?.workingSetSize)),
-      gpuFeatureStatus: app.getGPUFeatureStatus(),
-    };
-  });
-  results.nativeSnapshots.push({ name, ...snapshot,
-    interpretation: "Instantaneous process aggregates; no CPU profile, frame-timing benchmark, forced GC, or release-package comparison" });
-  return snapshot;
-}
-async function check(name, action) {
-  try {
-    const detail = await action();
-    assert.equal(pageErrors.length, 0, `Browser errors: ${pageErrors.join("; ")}`);
-    results.checks.push({ name, status: "passed", detail });
-    console.log(JSON.stringify({ name, status: "passed" }));
-  } catch (error) {
-    results.checks.push({ name, status: "failed", error: error.message });
-    if (page) await screenshot("failure").catch(() => {});
-    throw error;
-  }
 }
 async function readyBoard() {
   await card().waitFor({ state: "visible" });

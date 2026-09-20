@@ -1,6 +1,6 @@
 // Diagnostic only: find root-level style/attribute mutations during the
 // targeted interactions (full-document style recalc attribution).
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { chromium } from "playwright";
 import { createServerClient } from "@supabase/ssr";
 import { loadEnv, requireEnv } from "../../captures/lib/env.mjs";
