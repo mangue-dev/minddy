@@ -1838,7 +1838,7 @@ function FeedbackDetail({
             could edit. */}
         {rawDiffers && (
           <details className="group rounded-md border border-border/60 px-3 py-2">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+            <summary className="flex list-none items-center gap-1.5 text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
               <ChevronRight className="size-3.5 shrink-0 transition-transform group-open:rotate-90" />
               {t("rawTitle")}
             </summary>
@@ -2948,7 +2948,7 @@ function InternalFeedbackDialog({
           <div className="mt-3 flex items-center justify-between gap-4 rounded-lg border px-3 py-2.5">
             <label
               htmlFor="internal-feedback-public"
-              className="flex min-w-0 cursor-pointer flex-col"
+              className="flex min-w-0 flex-col"
             >
               <span className="text-sm font-medium">{t("public")}</span>
               <span className="text-xs text-muted-foreground">

@@ -50,7 +50,7 @@ export function ScratchpadTrigger({
           className={cn(
             "shadow-none",
             chrome
-              ? "h-7 gap-1.5 rounded-full px-2 text-[13px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground cursor-pointer active:scale-[0.97] transition-transform"
+              ? "h-7 gap-1.5 rounded-full px-2 text-[13px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground active:scale-[0.97] transition-transform"
               : sidebar
                 ? cn(
                     SIDEBAR_ROW_ACTION_CLASS,

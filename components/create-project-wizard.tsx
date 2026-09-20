@@ -1080,7 +1080,7 @@ export function CreateProjectWizard({
                     if (file) handleCsvFile(file);
                   }}
                   className={cn(
-                    "flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed px-6 py-10 text-center outline-none transition-colors",
+                    "flex flex-col items-center gap-2 rounded-2xl border border-dashed px-6 py-10 text-center outline-none transition-colors",
                     dragOver
                       ? "border-ring bg-accent/40"
                       : "border-border hover:border-ring/60 focus-visible:border-ring",

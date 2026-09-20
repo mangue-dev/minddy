@@ -1227,7 +1227,7 @@ export function IssueSidePanel({
                         )}
                       </dl>
                       <details className="mt-3">
-                        <summary className="cursor-pointer text-xs text-muted-foreground">
+                        <summary className="text-xs text-muted-foreground">
                           {t("githubRawMetadata")}
                         </summary>
                         <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted p-2 text-xs">

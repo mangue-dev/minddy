@@ -839,7 +839,7 @@ export function CreateIssueDialog({
               <div className="ml-auto flex items-center gap-4">
                 <label
                   htmlFor={createMoreId}
-                  className="cursor-pointer text-sm text-foreground"
+                  className="text-sm text-foreground"
                 >
                   {t("createMore")}
                 </label>

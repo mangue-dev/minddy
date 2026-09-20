@@ -177,7 +177,7 @@ function SidebarRow({ item }: { item: AppNavItem }) {
   const hint = chordPrefix === CHORD_PREFIX && item.shortcut ? item.shortcut : null;
 
   const rowClass = cn(
-    "group relative flex h-9 cursor-pointer items-center gap-3 rounded-lg text-sm font-medium transition-colors",
+    "group relative flex h-9 items-center gap-3 rounded-lg text-sm font-medium transition-colors",
     // The left indent aligns the 18 px icons with the account avatar and
     // the keyboard chord hints from the same edge.
     ROW_PL,
@@ -408,7 +408,7 @@ function ProjectContextRow({
     <DropdownMenuTrigger
       aria-label={currentProject.name}
       className={cn(
-        "flex h-9 cursor-pointer items-center rounded-lg text-sm font-medium text-sidebar-foreground/70 outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
+        "flex h-9 items-center rounded-lg text-sm font-medium text-sidebar-foreground/70 outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
         "min-w-0 flex-1 gap-2 px-2.5 text-left",
       )}
     >
@@ -443,7 +443,7 @@ function ProjectContextRow({
                 event.preventDefault();
                 setHomeMenuPosition({ x: event.clientX, y: event.clientY });
               }}
-              className="relative flex h-9 w-12 shrink-0 cursor-pointer items-center justify-center gap-0.5 rounded-lg outline-hidden text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground"
+              className="relative flex h-9 w-12 shrink-0 items-center justify-center gap-0.5 rounded-lg outline-hidden text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground"
               whileTap={{ scale: 0.97 }}
               transition={transitions.snappy}
             >
@@ -556,7 +556,7 @@ function AccountButton({
           <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger
               className={cn(
-                "flex h-10 cursor-pointer items-center rounded-lg outline-none transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent",
+                "flex h-10 items-center rounded-lg outline-none transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent",
                 // The avatar is 22 px: its own removal refocuses it on the same
                 // vertical than the 18 px icons (see the icons column).
                 AVATAR_PL,
@@ -773,7 +773,7 @@ function ChangelogButton({
               setDialogMounted(true);
               setDialogOpen(true);
             }}
-            className="h-8 cursor-pointer gap-1.5 py-0 max-[1199px]:py-0"
+            className="h-8 gap-1.5 py-0 max-[1199px]:py-0"
           >
             <ChangelogTimelineMarker position="last" />
             <span className="min-w-0 flex-1 truncate">
@@ -797,7 +797,7 @@ function ChangelogButton({
                     );
                   }
                 }}
-                className="cursor-pointer py-1.5 max-[1199px]:py-1.5"
+                className="py-1.5 max-[1199px]:py-1.5"
               >
                 <Megaphone className="size-4 shrink-0 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate">
@@ -1019,7 +1019,7 @@ export function AppSidebar({
                 type="button"
                 onClick={goBack}
                 className={cn(
-                  "relative flex h-9 w-full min-w-0 cursor-pointer items-center rounded-lg text-sm font-medium transition-colors",
+                  "relative flex h-9 w-full min-w-0 items-center rounded-lg text-sm font-medium transition-colors",
                   ROW_PL,
                   "pr-3",
                   "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",

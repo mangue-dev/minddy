@@ -780,7 +780,7 @@ function PrStatusCardView({
           data-testid={card.actions.top.testId}
           onClick={card.actions.top.onClick}
           className={cn(
-            "flex min-h-0 flex-1 cursor-pointer items-center justify-center rounded-t-xl text-sm font-medium outline-none",
+            "flex min-h-0 flex-1 items-center justify-center rounded-t-xl text-sm font-medium outline-none",
             TONE_TITLE[card.tone],
             "hover:bg-muted/50 focus-visible:bg-muted/50",
           )}
@@ -794,7 +794,7 @@ function PrStatusCardView({
           onClick={card.actions.bottom.onClick}
           disabled={card.actions.bottom.disabled}
           className={cn(
-            "flex min-h-0 flex-1 cursor-pointer items-center justify-center rounded-b-xl text-sm font-medium outline-none",
+            "flex min-h-0 flex-1 items-center justify-center rounded-b-xl text-sm font-medium outline-none",
             TONE_TITLE[card.tone],
             card.actions.bottom.disabled && "opacity-50",
             "hover:bg-muted/50 focus-visible:bg-muted/50",
@@ -868,7 +868,7 @@ function PrStatusCardView({
         "max-w-full rounded-xl border text-left",
         TONE_CARD[card.tone],
         activate &&
-          "cursor-pointer outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
+          "outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
       )}
     >
       {inner}
@@ -903,7 +903,7 @@ function ChecksPopoverCard({
           role="button"
           tabIndex={0}
           className={cn(
-            "max-w-full cursor-pointer rounded-xl border outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
+            "max-w-full rounded-xl border outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
             TONE_CARD[tone],
           )}
         >

@@ -56,7 +56,7 @@
   border-radius: var(--cp-radius-sm);
   background: color-mix(in srgb, var(--cp-border) 30%, transparent);
   color: var(--cp-muted);
-  cursor: pointer;
+  cursor: default;
   transition: background 100ms ease, color 100ms ease;
   flex-shrink: 0;
 }
@@ -90,7 +90,7 @@
   border: none;
   border-radius: var(--cp-radius-sm);
   background: transparent;
-  cursor: pointer;
+  cursor: default;
   transition: opacity 120ms ease-out;
 }
 

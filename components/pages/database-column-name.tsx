@@ -115,7 +115,7 @@ export function DatabaseColumnName({
           <button
             type="button"
             data-database-column-trigger={property?.id ?? "title"}
-            className={`flex h-8 w-full min-w-0 items-center gap-2 overflow-hidden rounded-md px-2 text-left outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${dragging ? "cursor-grabbing bg-muted" : "cursor-pointer"}`}
+            className={`flex h-8 w-full min-w-0 items-center gap-2 overflow-hidden rounded-md px-2 text-left outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${dragging ? "cursor-grabbing bg-muted" : "cursor-grab"}`}
             aria-label={t("columnActions", { name })}
             disabled={disabled || pending}
             draggable={!!property && !disabled && !pending}

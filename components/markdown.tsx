@@ -420,7 +420,7 @@ function MarkdownRenderer({
             />
           ),
           details: styled("details", "my-3"),
-          summary: styled("summary", "cursor-pointer font-medium"),
+          summary: styled("summary", "font-medium"),
           /* GFM tables can be arbitrarily wide: keep them in their own scroll
              box so a wide one never stretches (nor side-scrolls) the comment
              around it. `min-w-max` lets the table keep its natural width inside

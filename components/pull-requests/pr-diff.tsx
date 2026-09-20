@@ -804,7 +804,7 @@ const PrDiffFile = memo(function PrDiffFile({
           <DiffStatBar additions={file.additions} deletions={file.deletions} />
         </button>
         {reviewMode && !readOnly && onReviewedChange ? (
-          <label className="flex shrink-0 cursor-pointer items-center gap-2 border-l border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
+          <label className="flex shrink-0 items-center gap-2 border-l border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
             <Checkbox
               checked={reviewed}
               onCheckedChange={(value) => onReviewedChange(value === true)}

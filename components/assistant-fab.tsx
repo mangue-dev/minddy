@@ -104,7 +104,6 @@ export function AssistantFab() {
                       "text-sidebar-foreground/70 hover:text-sidebar-foreground",
                       "hover:bg-sidebar-accent/70",
                       "outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      "cursor-pointer",
                     )}
                   >
                     {/* `animated={false}` (MIN-323): the face animated

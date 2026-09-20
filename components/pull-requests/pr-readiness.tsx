@@ -425,7 +425,7 @@ export function PrReadinessControl({
           // the checkbox reads the forge state and unregisters too.
           <label
             data-testid="pr-auto-merge-toggle"
-            className="flex cursor-pointer items-start gap-2.5 border-t border-border px-3.5 py-3"
+            className="flex items-start gap-2.5 border-t border-border px-3.5 py-3"
           >
             <Checkbox
               checked={mergeFlowActive}

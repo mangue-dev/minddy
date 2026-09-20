@@ -155,7 +155,7 @@
      popover's own radius */
   border-radius: calc(var(--popover-radius) - 6px);
   background: transparent;
-  cursor: pointer;
+  cursor: default;
   text-align: left;
   color: var(--cp-fg);
   transition: background-color 100ms ease;
