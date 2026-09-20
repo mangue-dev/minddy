@@ -14,10 +14,11 @@ type AppContentHeaderProps = ComponentProps<"div"> & {
  * Dense localized action sets stay on one line and remain horizontally
  * reachable instead of making the header taller than the surrounding chrome.
  *
- * Its side padding is concentric with the pane's corner radius (MIN-584):
- * --app-content-header-pad-x equals --app-pane-radius minus the 16px radius
- * of a 32px pill, so the edge pills nest in the pane corners with an even
- * margin. Never widen it per page — the contract is app-wide.
+ * Its side padding is derived from the strip's own geometry (MIN-584):
+ * --app-content-header-pad-x is half the strip minus the 16px radius of a
+ * 32px pill — the pills' vertical centering margin — so the visible margin
+ * from the pane edge is the same on the top and both sides. Never widen it
+ * per page — the contract is app-wide.
  */
 export function AppContentHeader({
   className,

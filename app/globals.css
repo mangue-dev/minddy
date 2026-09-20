@@ -450,21 +450,25 @@ a.markdown-link::before {
    what's-new, skill preview, Numo/agent shells in expanded mode) read it, so
    they all follow the same curve.
 
-   The radius is not a free aesthetic choice: it is concentric with the pills
-   of the App Content Header (MIN-584). The header strip is 50px tall and its
-   pills are vertically centered, so a pill's end-cap center sits 25px below
-   the content-box top — 26px from the pane's outer edge once the 1px border
-   is counted. A 26px radius puts the corner arc's center on that exact point.
-   The header's side inset is then the radius minus the 16px radius of a 32px
-   pill minus the border, which leaves the same 10px visible margin on every
-   side AND along the arc. Change the strip height or the pill size and
-   recompute both. */
+   The radius is a tuned aesthetic value (MIN-584): round enough to echo the
+   pill-shaped header controls, low enough not to balloon the card corners.
+   Its floor is geometric — below ~16px the corner arc would cross a 32px
+   header pill (a 20px radius keeps a ~12px diagonal gap where the arc curves
+   away). The header pills are kept regular against it through the padding
+   token below.
+   `--app-pane-radius` is the single source of the pane's corner rounding: the
+   content column and every pane-mirror modal (scratchpad notebook, wizard,
+   what's-new, skill preview, Numo/agent shells in expanded mode) read it, so
+   they all follow the same curve. */
 :root {
-  --app-pane-radius: 26px;
-  /* Pane radius − 16px pill radius − 1px pane border: the App Content
-     Header's side inset, so its pills nest in the pane corners with an even
-     margin (see above). */
-  --app-content-header-pad-x: calc(var(--app-pane-radius) - 16px - 1px);
+  --app-pane-radius: 20px;
+  /* Half the 50px header strip minus the 16px radius of a 32px pill: the App
+     Content Header's side inset. It matches the pills' vertical centering
+     margin, so the visible margin from the pane edge is the same 10px on the
+     top and both sides, on every page. */
+  --app-content-header-pad-x: calc(
+    (var(--app-content-header-height) - 32px) / 2
+  );
 }
 
 @media (min-width: 768px) {

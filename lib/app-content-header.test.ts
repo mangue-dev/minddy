@@ -49,15 +49,20 @@ describe("application content header", () => {
     expect(source).toContain("items-center px-[var(--app-content-header-pad-x)]");
   });
 
-  it("nests its pills concentrically in the pane corners", () => {
-    // The pane radius puts the corner arc's center at the strip's vertical
-    // center (half the 50px strip, plus the 1px pane border) — the same point
-    // as a centered pill's end-cap center. The header inset is that radius
-    // minus the 16px radius of a 32px pill minus the border, making every
-    // margin (top, side, arc) the same 10px.
-    expect(styles).toContain("--app-pane-radius: 26px;");
+  it("keeps the pane radius low while clearing its corner pills", () => {
+    // The radius is a tuned value, not derived: 26px would be the exact
+    // concentric radius (arc center on the pills' cap center), and it read as
+    // too round. 20px stays above the ~16px floor where the arc would cross a
+    // 32px pill, and curves away from the pills on the diagonal.
+    expect(styles).toContain("--app-pane-radius: 20px;");
+  });
+
+  it("gives its pills the same visible margin on the top and both sides", () => {
+    // Half the strip minus the 16px radius of a 32px pill = the pills'
+    // vertical centering margin, so with the 1px pane border the visible
+    // margin is 10px on the top and both sides, on every page.
     expect(styles).toContain(
-      "--app-content-header-pad-x: calc(var(--app-pane-radius) - 16px - 1px);",
+      "--app-content-header-pad-x: calc(\n    (var(--app-content-header-height) - 32px) / 2\n  );",
     );
     expect(source).toContain("px-[var(--app-content-header-pad-x)]");
   });
