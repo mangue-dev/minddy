@@ -123,7 +123,7 @@ clear **16.8 ms**, POST acknowledgement **382.7 ms**, and the runner's useful
 state including its presentation frames **72 ms**. Neither the submission nor
 the following Page-menu interaction recorded a task over 50 ms in their 2.2-second
 observation tails. The comment's deferred localStorage write took approximately
-**2.7 ms** for a **1.595 MB** snapshot; the following menu's useful state was
+**2.7 ms** for a snapshot of **1.595 million UTF-16 code units**; the following menu's useful state was
 **44.7 ms**. These are individual laboratory observations, not percentiles,
 field INP, or an established backend speedup. Additional series belong in the
 consolidated results.

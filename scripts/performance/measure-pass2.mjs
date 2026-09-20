@@ -55,7 +55,7 @@ await context.addInitScript(() => {
   function frame(now) { window.__perf.frames.push({ start: previous, duration: now - previous }); previous = now; requestAnimationFrame(frame); }
   requestAnimationFrame(frame);
   const setItem = Storage.prototype.setItem;
-  Storage.prototype.setItem = function(key, value) { const start = performance.now(); const result = setItem.call(this, key, value); if (key === "minddy.query-cache") window.__perf.storage.push({ start, duration: performance.now() - start, bytes: value.length }); return result; };
+  Storage.prototype.setItem = function(key, value) { const start = performance.now(); const result = setItem.call(this, key, value); if (key === "minddy.query-cache") window.__perf.storage.push({ start, duration: performance.now() - start, codeUnits: String(value).length }); return result; };
 });
 // Measure actual pointer dispatch after resolving deterministic targets. Keep
 // the observation tail long enough to include deferred cache snapshots.

@@ -208,8 +208,11 @@ Board returns still produce roughly 100 ms of deferred long-task work in the
 roughly 38 ms layout. Retention avoids reconstruction but still reconnects
 effects and reveals a large DOM. It is not a zero-work cache hit.
 
-Actual persisted snapshots in the ordinary series are roughly 1.3–1.6 MB and
-take about 1–3 ms for `setItem`; serialization/dehydration are covered by CPU
+Actual persisted snapshots in the ordinary series contain roughly 1.3–1.6
+million UTF-16 code units and take about 1–3 ms for `setItem`. The legacy raw
+`storage.bytes` field records JavaScript string length, not encoded bytes, disk
+footprint or quota consumption; future runner output names it `codeUnits`.
+Serialization/dehydration are covered by CPU
 counters and diagnostic profiles, not that storage-only number. There is no
 evidence for a new persistent-cache architecture or a claim that hours-long
 session storage is now free. Search-result exclusion prevents a demonstrated

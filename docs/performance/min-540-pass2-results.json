@@ -1,6 +1,11 @@
 {
   "schemaVersion": 1,
   "baseline": "ec6a12e94235b8c589d86637195ae24dfad28cd6",
+  "metricUnits": {
+    "storage": "Legacy storage.bytes is JavaScript string length (UTF-16 code units), not encoded byte size, quota consumption or disk footprint. Future runner output uses codeUnits.",
+    "network": "Resource transfer/decoded body sizes and responseBodySize are byte counts.",
+    "memory": "Heap is bytes; native aggregateWorkingSetKB follows the Electron API kilobyte unit."
+  },
   "method": "See min-540-pass2.md. Production lab samples, not field INP. Raw scalar samples and quantiles retained; credentials/content/fixture UUIDs excluded. CPU profiles and raw resource traces remain in ignored local output. Cohorts and incomplete stress phases must not be pooled blindly.",
   "runs": [
     {
