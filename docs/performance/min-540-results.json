@@ -1043,5 +1043,11 @@
         "interactionMsMax": 0.368583000000001
       }
     }
+  },
+  "secondPass": {
+    "baseline": "ec6a12e94235b8c589d86637195ae24dfad28cd6",
+    "report": "min-540-pass2.md",
+    "results": "min-540-pass2-results.json",
+    "note": "Original first-pass measurements above are preserved. The second pass compares against the starting HEAD of PR #271."
   }
 }
