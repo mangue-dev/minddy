@@ -98,7 +98,7 @@ import { IssuePlan } from "@/components/issue-plan";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the board routes that mount
 // this panel — see markdown-editor-lazy.tsx. Warmed from idle time below.
 import {
-  MarkdownEditor,
+  DeferredMarkdownEditor,
   useIdleMarkdownEditorPreload,
 } from "@/components/markdown-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
@@ -1096,7 +1096,7 @@ export function IssueSidePanel({
                     setEditorKey((k) => k + 1);
                   }}
                 >
-                  <MarkdownEditor
+                  <DeferredMarkdownEditor
                     key={`${issue.id}:${editorKey}`}
                     mentions={mentions}
                     value={issue.description ?? ""}
