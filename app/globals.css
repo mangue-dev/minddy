@@ -473,8 +473,12 @@ a.markdown-link::before {
 
   /* Hidden navigation keeps the same gutter on both sides. Apply the final
      geometry once; only the sidebar surface slides, avoiding repeated page
-     layout and editor resize work throughout its exit animation. */
-  .app-shell:has([data-sidebar-hidden="true"]) > div.flex.min-h-0.min-w-0.flex-1.flex-col {
+     layout and editor resize work throughout its exit animation. The state
+     rides a lifecycle attribute synced onto the shell main and <body> by
+     SidebarNavOverlay: a `:has()` anchored that high would attach
+     descendant-watching invalidation sets to it and broaden every unrelated
+     style change into a full-document recalculation. */
+  .app-shell[data-sidebar-hidden="true"] > div.flex.min-h-0.min-w-0.flex-1.flex-col {
     margin-left: 12px;
   }
 
@@ -509,8 +513,8 @@ a.markdown-link::before {
     transition: left 220ms cubic-bezier(0.32, 0.72, 0, 1);
   }
 
-  body:has([data-sidebar-hidden="true"]) .scratchpad-shell-dialog,
-  body:has([data-sidebar-hidden="true"]) .dialog-pane-mirror {
+  body[data-sidebar-hidden="true"] .scratchpad-shell-dialog,
+  body[data-sidebar-hidden="true"] .dialog-pane-mirror {
     left: 12px !important;
   }
 }

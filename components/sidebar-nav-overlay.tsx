@@ -53,6 +53,25 @@ export function SidebarNavOverlay({
     setFocusWithin(false);
   }, [hidden]);
 
+  // The shell-level rules key off a direct attribute instead of `:has()`.
+  // A `:has()` anchored on <body> or the shell main attaches descendant-watching
+  // invalidation sets to those ancestors: any style-relevant change under them
+  // then re-evaluates the whole workspace, and every sidebar toggle, dialog
+  // open, or scroll ran one full-document style recalculation (measured ~27.6k
+  // nodes per pass). Same selectors, same specificity, no relational scan.
+  // Client-side only, like the visibility preference itself: hydration paints
+  // the docked snapshot, then the stored choice lands with React's resync.
+  const shellHiddenAttribute = hidden ? "true" : "false";
+  useEffect(() => {
+    document.body.setAttribute("data-sidebar-hidden", shellHiddenAttribute);
+    const shell = panel.current?.closest(".app-shell");
+    shell?.setAttribute("data-sidebar-hidden", shellHiddenAttribute);
+    return () => {
+      document.body.removeAttribute("data-sidebar-hidden");
+      shell?.removeAttribute("data-sidebar-hidden");
+    };
+  }, [shellHiddenAttribute]);
+
   const openPanel = useCallback((e?: { clientX: number; clientY: number }) => {
     if (e) {
       lastPointer.current = { x: e.clientX, y: e.clientY };
