@@ -638,7 +638,13 @@ function AttachmentPreview({
     return (
       // Storage file behind an authenticated response; next/image cannot optimize it.
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt={fileName} className="h-full w-full object-contain p-4" />
+      <img
+        src={src}
+        alt={fileName}
+        loading="lazy"
+        decoding="async"
+        className="h-full w-full object-contain p-4"
+      />
     );
   }
   if (kind === "audio") {

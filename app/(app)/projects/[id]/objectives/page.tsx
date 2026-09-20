@@ -331,6 +331,29 @@ function ObjectivesInner() {
     return filtered.filter((o) => matchesFilter(query, [o.name, o.description]));
   }, [filtered, query]);
 
+  /**
+   * Progress per objective, computed once per data/filter change instead of
+   * once per row per render: `objectiveProgress` filters the whole issue list
+   * for each call, so the naive per-row call turned every keystroke of this
+   * filter into an objectives × issues scan. One pass buckets the issues by
+   * objective, each row then only walks its own bucket.
+   */
+  const progressByObjectiveId = useMemo(() => {
+    const linkedByObjective = new Map<string, typeof issues>();
+    for (const issue of issues) {
+      if (!issue.objective_id) continue;
+      const bucket = linkedByObjective.get(issue.objective_id);
+      if (bucket) bucket.push(issue);
+      else linkedByObjective.set(issue.objective_id, [issue]);
+    }
+    return new Map(
+      listed.map((objective) => [
+        objective.id,
+        objectiveProgress(objective.id, linkedByObjective.get(objective.id) ?? []),
+      ]),
+    );
+  }, [listed, issues]);
+
   // Publish the objective being viewed (else just the project) to Numo.
   useAssistantContext(
     project
@@ -591,7 +614,7 @@ function ObjectivesInner() {
                 key={objective.id}
                 objective={objective}
                 selected={objective.id === selectedId}
-                progress={objectiveProgress(objective.id, issues)}
+                progress={progressByObjectiveId.get(objective.id) ?? { done: 0, total: 0, percent: 0 }}
                 lead={
                   objective.lead_user_id
                     ? memberMap.get(objective.lead_user_id) ?? null

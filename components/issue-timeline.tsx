@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import {
   Button,
@@ -1119,7 +1119,11 @@ export function IssueActivity({
 }) {
   const t = useTranslations("Timeline");
   const mentions = useDescriptionMentions(projectId, ctx.members);
-  const rows = groupRows(items);
+  // Memoized: grouping walks the whole feed on every render, and an issue
+  // with hundreds of comments re-renders on each timeline patch or poll.
+  // A long feed used to regroup per render; the array identity only changes
+  // with the items themselves.
+  const rows = useMemo(() => groupRows(items), [items]);
 
   return (
     <div className="flex flex-col">

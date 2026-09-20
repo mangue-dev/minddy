@@ -391,20 +391,24 @@ export default function TriagePage() {
 
   // Candidate canonical issues: anything except the triaged issue itself and
   // issues that are themselves duplicates.
-  const duplicateOptions: PickerOption[] = selected
-    ? issues
-        .filter((i) => i.id !== selected.id && i.status !== "duplicate")
-        .map((i) => ({
-          value: i.id,
-          label: i.title,
-          keywords: [issueIdentifier(project.key, i.number)],
-          icon: (
-            <span className="font-mono text-xs text-muted-foreground">
-              {issueIdentifier(project.key, i.number)}
-            </span>
-          ),
-        }))
-    : [];
+  // Memoized: the picker options used to be rebuilt for EVERY issue on EVERY
+  // render (each title keystroke, each selection change), mapping the whole
+  // project into JSX-bearing options with the picker closed.
+  const duplicateOptions: PickerOption[] = useMemo(() => {
+    if (!selected) return [];
+    return issues
+      .filter((i) => i.id !== selected.id && i.status !== "duplicate")
+      .map((i) => ({
+        value: i.id,
+        label: i.title,
+        keywords: [issueIdentifier(project.key, i.number)],
+        icon: (
+          <span className="font-mono text-xs text-muted-foreground">
+            {issueIdentifier(project.key, i.number)}
+          </span>
+        ),
+      }));
+  }, [selected, issues, project.key]);
 
   const fmtDay = (at: string): string =>
     format.dateTime(new Date(at), { day: "numeric", month: "short" });
