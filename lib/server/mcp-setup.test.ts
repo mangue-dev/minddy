@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   startOAuth: vi.fn(),
   rateLimit: vi.fn(),
   assertEndpoint: vi.fn(),
+  registry: vi.fn(),
   db: {
     connections: [] as Array<Record<string, unknown>>,
     attempts: [] as Array<Record<string, unknown>>,
@@ -24,6 +25,10 @@ vi.mock("./mcp-client", () => ({
     mocks.db.connections
       .filter((row) => row.user_id === userId)
       .map(({ user_id: _userId, ...row }) => row),
+}));
+
+vi.mock("./mcp-registry", () => ({
+  searchMcpRegistry: mocks.registry,
 }));
 
 vi.mock("./mcp-oauth", () => ({
@@ -147,6 +152,7 @@ beforeEach(() => {
   mocks.startOAuth.mockReset().mockResolvedValue(AUTH_URL);
   mocks.rateLimit.mockReset().mockReturnValue({ allowed: true, retryAfter: 0 });
   mocks.assertEndpoint.mockReset().mockResolvedValue({});
+  mocks.registry.mockReset().mockResolvedValue([]);
 });
 
 describe("list_mcp_presets", () => {
@@ -173,6 +179,68 @@ describe("list_mcp_presets", () => {
     expect(result.settings_url).toContain("tab=mcp-clients");
     // No credential material ever leaves the row summaries.
     expect(JSON.stringify(result)).not.toMatch(/encrypted/);
+  });
+
+  it("without a query, the registry is not searched", async () => {
+    const execution = await executeMcpSetupTool(USER, "list_mcp_presets", {});
+    expect(execution.success).toBe(true);
+    expect((execution.result as Record<string, unknown>).registry).toBeUndefined();
+    expect(mocks.registry).not.toHaveBeenCalled();
+  });
+
+  it("with a query, appends registry matches stripped of catalog and connection endpoints", async () => {
+    mocks.db.connections = [row()];
+    const notionUrl = MCP_PRESETS.find((preset) => preset.id === "notion")!.url;
+    mocks.registry.mockResolvedValue([
+      {
+        id: "io.github.zoom/zoom-team-chat",
+        name: "Zoom Team Chat",
+        url: "https://mcp.zoom.us/mcp/chat/streamable",
+        transport: "http",
+      },
+      {
+        id: "com.notion/mcp",
+        name: "Notion",
+        url: notionUrl,
+        transport: "http",
+      },
+      {
+        id: "io.example/dup",
+        name: "Existing",
+        url: "https://mcp.example.com/mcp",
+        transport: "http",
+      },
+    ]);
+    const execution = await executeMcpSetupTool(USER, "list_mcp_presets", {
+      query: "grafana",
+    });
+
+    expect(execution.success).toBe(true);
+    const registry = (execution.result as { registry?: Array<{ id: string }> })
+      .registry;
+    // Only the endpoint the catalog and connections do not cover survives.
+    expect(registry?.map((server) => server.id)).toEqual([
+      "io.github.zoom/zoom-team-chat",
+    ]);
+    // A connection that already exists is deduped by endpoint, slash or not.
+    expect(mocks.registry).toHaveBeenCalledWith("grafana");
+  });
+
+  it("a blank query counts as no query", async () => {
+    await executeMcpSetupTool(USER, "list_mcp_presets", { query: "   " });
+    expect(mocks.registry).not.toHaveBeenCalled();
+  });
+
+  it("refuses a search beyond the registry rate limit", async () => {
+    mocks.rateLimit.mockReturnValue({ allowed: false, retryAfter: 30 });
+    const execution = await executeMcpSetupTool(USER, "list_mcp_presets", {
+      query: "grafana",
+    });
+    expect(execution.success).toBe(false);
+    expect((execution.result as { error: string }).error).toMatch(
+      /too many/i,
+    );
+    expect(mocks.registry).not.toHaveBeenCalled();
   });
 });
 

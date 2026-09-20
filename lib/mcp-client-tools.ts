@@ -72,10 +72,16 @@ export const MCP_SETUP_TOOLS = [
     function: {
       name: "list_mcp_presets",
       description:
-        "List the MCP server catalog AND the user's existing personal MCP connections. Call it before configuring any service the user asks to connect: match the service to a preset id (e.g. 'configure the Gmail MCP' → google-gmail), check whether a connection for it already exists, and read the preset's setup note to learn what the provider requires. Then research the provider's current prerequisites with web_search before creating anything.",
+        "List the MCP server catalog AND the user's existing personal MCP connections. Call it before configuring any service the user asks to connect: match the service to a preset id (e.g. 'configure the Gmail MCP' → google-gmail), check whether a connection for it already exists, and read the preset's setup note to learn what the provider requires. With a query, the public MCP registry is searched too: registry entries beyond the catalog come back with their URL, ready to be configured by name + url. Then research the provider's current prerequisites with web_search before creating anything.",
       parameters: {
         type: "object" as const,
-        properties: {},
+        properties: {
+          query: {
+            type: "string",
+            description:
+              "Optional service name to also search the public MCP registry for servers beyond the catalog ('zoom', 'crm', 'todoist'…). Registry servers are configured with their url and name, like any non-catalog endpoint.",
+          },
+        },
       },
     },
   },
@@ -84,7 +90,7 @@ export const MCP_SETUP_TOOLS = [
     function: {
       name: "configure_mcp_connection",
       description:
-        "Create (or update) one of the user's personal MCP connections on their behalf — the same connections as Account settings → MCP for Numo. The connection is created enabled and left waiting for authentication, and the result carries EXACTLY what the user must do next (the OAuth authorization URL to open, or where the credentials go): relay those steps so the only thing left for the user is signing in. RESEARCH FIRST: web_search the provider's MCP prerequisites (OAuth app to register, developer-preview or approval program, per-service restrictions — Figma, Asana, Slack and Google all have some) and announce the exact steps BEFORE creating the connection. Pass preset_id for a catalog service, or name + url for any other public HTTPS server (local and private-network endpoints are refused). Credentials (token, headers, OAuth client secret) are accepted and stored encrypted — they are never echoed back, and never belong in the URL. With connection_id, update that connection instead (e.g. add the OAuth app credentials the provider required): changing the URL clears its saved credentials. Never create or change a connection the user did not ask for, and say when the provider's prerequisites block the connection. The OAuth authorization URL is single-use and expires in about 10 minutes: have the user open it right away, or call again with connection_id to mint a fresh one.",
+        "Create (or update) one of the user's personal MCP connections on their behalf — the same connections as Account settings → MCP for Numo. The connection is created enabled and left waiting for authentication, and the result carries EXACTLY what the user must do next (the OAuth authorization URL to open, or where the credentials go): relay those steps so the only thing left for the user is signing in. RESEARCH FIRST: web_search the provider's MCP prerequisites (OAuth app to register, developer-preview or approval program, per-service restrictions — Figma, Asana, Slack and Google all have some) and announce the exact steps BEFORE creating the connection. Pass preset_id for a catalog service, or name + url for any other public HTTPS server — including a registry match found with list_mcp_presets (local and private-network endpoints are refused). Credentials (token, headers, OAuth client secret) are accepted and stored encrypted — they are never echoed back, and never belong in the URL. With connection_id, update that connection instead (e.g. add the OAuth app credentials the provider required): changing the URL clears its saved credentials. Never create or change a connection the user did not ask for, and say when the provider's prerequisites block the connection. The OAuth authorization URL is single-use and expires in about 10 minutes: have the user open it right away, or call again with connection_id to mint a fresh one.",
       parameters: {
         type: "object" as const,
         properties: {

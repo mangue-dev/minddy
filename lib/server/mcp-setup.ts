@@ -16,6 +16,7 @@ import { MCP_SETUP_TOOL_NAMES } from "@/lib/mcp-client-tools";
 import { getServiceClient } from "@/lib/supabase-service";
 import { assertPublicHttpUrl } from "./safe-fetch";
 import { checkSessionRateLimit } from "./session-rate-limit";
+import { searchMcpRegistry } from "./mcp-registry";
 import {
   getMcpConnection,
   listMcpConnections,
@@ -43,6 +44,8 @@ const failure = (error: string): ToolExecution => ({
 const SETUP_NOTES: Record<McpPreset["setup"], string> = {
   standard:
     "Standard OAuth: minddy handles discovery, dynamic registration, PKCE and refresh tokens.",
+  apiKey:
+    "This provider authenticates with a static access token: create one in the provider's developer console and save it as the connection's bearer token.",
   oauthApp:
     "This provider requires an OAuth application registered with the provider first: register one with minddy's callback URL, then save its client id and secret on the connection.",
   googlePreview:
@@ -72,6 +75,16 @@ const AUTHENTICATION_INVALID =
 
 function presetForUrl(url: string): McpPreset | undefined {
   return MCP_PRESETS.find((preset) => preset.url === url);
+}
+
+/** Endpoint identity beyond cosmetic trailing slashes, for registry dedup. */
+function canonicalUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.origin}${parsed.pathname.replace(/\/+$/, "")}`;
+  } catch {
+    return url;
+  }
 }
 
 /** The fields the summaries expose — never the encrypted columns. */
@@ -106,12 +119,27 @@ function summarize(connection: ConnectionSummaryInput) {
   };
 }
 
-async function listMcpPresets(userId: string): Promise<ToolExecution> {
+async function listMcpPresets(
+  userId: string,
+  query?: string,
+): Promise<ToolExecution> {
   let connections: McpConnection[];
   try {
     connections = await listMcpConnections(userId);
   } catch {
     return failure("Could not load the existing MCP connections.");
+  }
+  // The search extends the catalog with the public registry (MIN-586):
+  // a query brings back the servers beyond the curated presets, already
+  // stripped of what the catalog or an existing connection covers.
+  let registry: Awaited<ReturnType<typeof searchMcpRegistry>> = [];
+  if (query) {
+    const presetUrls = new Set(MCP_PRESETS.map((preset) => canonicalUrl(preset.url)));
+    const connectionUrls = new Set(connections.map((connection) => canonicalUrl(connection.url)));
+    const matches = await searchMcpRegistry(query);
+    registry = matches.filter(
+      (server) => !presetUrls.has(canonicalUrl(server.url)) && !connectionUrls.has(canonicalUrl(server.url)),
+    );
   }
   return {
     success: true,
@@ -125,6 +153,7 @@ async function listMcpPresets(userId: string): Promise<ToolExecution> {
         docs,
       })),
       connections: connections.map(summarize),
+      ...(query ? { registry } : {}),
       settings_url: mcpSettingsHref(),
     },
   };
@@ -353,6 +382,10 @@ async function configureMcpConnection(
   return createConnection(userId, input);
 }
 
+const listArgs = z.object({
+  query: z.string().trim().min(1).max(120).optional(),
+});
+
 export async function executeMcpSetupTool(
   userId: string,
   name: string,
@@ -360,7 +393,14 @@ export async function executeMcpSetupTool(
 ): Promise<ToolExecution> {
   if (!MCP_SETUP_TOOL_NAMES.has(name)) return failure("Unknown MCP setup tool.");
   try {
-    if (name === "list_mcp_presets") return await listMcpPresets(userId);
+    if (name === "list_mcp_presets") {
+      const parsed = listArgs.safeParse(args);
+      const query = parsed.success ? parsed.data.query : undefined;
+      // Only a search hits the registry; the plain catalog call stays free.
+      if (query && !checkSessionRateLimit(userId, "mcp-registry", { limit: 30 }).allowed)
+        return failure("Too many catalog searches in one minute. Retry shortly.");
+      return await listMcpPresets(userId, query);
+    }
     return await configureMcpConnection(userId, args);
   } catch {
     return failure(
