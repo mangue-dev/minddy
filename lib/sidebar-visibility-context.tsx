@@ -5,25 +5,43 @@ import {
   useCallback,
   useContext,
   useMemo,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { useMediaQuery } from "mangue-ui";
 
 /** Persisted choice — survives reloads; the sidebar never reclaims space on
- * its own after a round trip. Read synchronously in the first render so no
- * frame ever paints the opposite state. Server render always sees "docked",
- * so the hidden value applies from hydration onward. */
+ * its own after a round trip. The preference is read as an external store,
+ * not as a state initializer: hydration renders with the server snapshot
+ * (docked) so the markup matches, and the stored choice is picked up in
+ * React's resynchronization right after — the same trade `useMediaQuery`
+ * makes for breakpoints. */
 const STORAGE_KEY = "minddy.sidebar-hidden";
+/** Same-tab change notice: the `storage` event only reaches other tabs. */
+const CHANGE_EVENT = "minddy.sidebar-hidden-change";
 
 const readPreference = (): boolean => {
-  if (typeof window === "undefined") return false;
   try {
     return window.localStorage.getItem(STORAGE_KEY) === "true";
   } catch {
     return false;
   }
 };
+
+const serverPreference = (): boolean => false;
+
+function subscribe(callback: () => void): () => void {
+  const onStorage = (event: StorageEvent) => {
+    // A `null` key means another tab cleared its storage; both reread.
+    if (event.key === STORAGE_KEY || event.key === null) callback();
+  };
+  window.addEventListener(CHANGE_EVENT, callback);
+  window.addEventListener("storage", onStorage);
+  return () => {
+    window.removeEventListener(CHANGE_EVENT, callback);
+    window.removeEventListener("storage", onStorage);
+  };
+}
 
 interface SidebarVisibilityContextValue {
   disabled: boolean;
@@ -38,20 +56,18 @@ export function SidebarVisibilityProvider({ children }: { children: ReactNode })
   // Compact desktop layouts always hide navigation. Wider layouts follow the
   // user's explicit choice, persisted locally so it survives reloads and never
   // moves by itself.
-  const [preference, setPreference] = useState<boolean | null>(readPreference);
+  const preference = useSyncExternalStore(subscribe, readPreference, serverPreference);
   const disabled = compactDesktop;
-  const hidden = disabled || preference === true;
+  const hidden = disabled || preference;
   const toggle = useCallback(() => {
     if (compactDesktop) return;
-    setPreference((current) => {
-      const next = !(current ?? false);
-      try {
-        window.localStorage.setItem(STORAGE_KEY, next ? "true" : "false");
-      } catch {
-        // Storage unavailable (private mode…): the choice holds for the live session.
-      }
-      return next;
-    });
+    const next = !readPreference();
+    try {
+      window.localStorage.setItem(STORAGE_KEY, next ? "true" : "false");
+    } catch {
+      // Storage unavailable (private mode…): the choice holds for the live session.
+    }
+    window.dispatchEvent(new Event(CHANGE_EVENT));
   }, [compactDesktop]);
   const value = useMemo(
     () => ({ disabled, hidden, toggle }),

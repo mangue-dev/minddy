@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
 import { act, createElement, type ReactNode } from "react";
-import { createRoot, type Root } from "react-dom/client";
+import { createRoot, hydrateRoot, type Root } from "react-dom/client";
+import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SidebarVisibilityButton } from "@/components/sidebar-visibility-button";
@@ -95,6 +96,41 @@ describe("sidebar visibility", () => {
     act(() => button().click());
     expect(window.localStorage.getItem("minddy.sidebar-hidden")).toBe("false");
     expect(isHidden()).toBe(false);
+  });
+
+  it("applies the stored choice at first render and follows other tabs", () => {
+    window.localStorage.setItem("minddy.sidebar-hidden", "true");
+    render();
+    expect(isHidden()).toBe(true);
+    // Another tab's write lands in this tab's storage, then its `storage`
+    // event replays the change here.
+    window.localStorage.setItem("minddy.sidebar-hidden", "false");
+    act(() => window.dispatchEvent(new StorageEvent("storage", {
+      key: "minddy.sidebar-hidden",
+    })));
+    expect(isHidden()).toBe(false);
+  });
+
+  it("hydrates the stored choice without a server/client mismatch", async () => {
+    window.localStorage.setItem("minddy.sidebar-hidden", "true");
+    const children: ReactNode = createElement(NextIntlClientProvider, {
+      locale: "en", messages: { Nav: en.Nav },
+      children: createElement(TooltipProvider, null,
+        createElement(SidebarVisibilityProvider, {
+          children: createElement(Navigation),
+        })),
+    });
+    container.innerHTML = renderToStaticMarkup(children);
+    const problems: string[] = [];
+    const spy = vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
+      problems.push(args.map(String).join(" "));
+    });
+    let hydratedRoot: Root | null = null;
+    await act(async () => { hydratedRoot = hydrateRoot(container, children); });
+    spy.mockRestore();
+    expect(problems.join("\n")).not.toMatch(/hydrat/i);
+    expect(isHidden()).toBe(true);
+    await act(async () => { hydratedRoot!.unmount(); });
   });
 
   it("hides navigation, recalls it from the edge, and restores it with one click", () => {
