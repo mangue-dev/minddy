@@ -6363,12 +6363,9 @@
     "cycleTab": "Ciclo"
   },
   "FaqAsk": {
-    "title": "Un’altra domanda?",
     "placeholder": "Fai la tua domanda…",
-    "submit": "Chiedi",
     "submitAria": "Invia la domanda",
     "loading": "Cerco la risposta…",
-    "disclaimer": "Risposta generata dall’IA a partire dalla documentazione di minddy. Può essere imperfetta.",
     "error": "Non è stato possibile generare la risposta. Riprova tra poco."
   }
 }

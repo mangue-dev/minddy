@@ -6363,12 +6363,9 @@
     "cycleTab": "Zyklus"
   },
   "FaqAsk": {
-    "title": "Noch eine Frage?",
     "placeholder": "Stelle deine eigene Frage…",
-    "submit": "Fragen",
     "submitAria": "Frage senden",
     "loading": "Antwort wird gesucht…",
-    "disclaimer": "KI-generierte Antwort aus der minddy-Dokumentation. Sie kann unvollkommen sein.",
     "error": "Die Antwort konnte nicht erstellt werden. Versuche es gleich noch einmal."
   }
 }

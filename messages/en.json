@@ -6363,12 +6363,9 @@
     "cycleTab": "Cycle"
   },
   "FaqAsk": {
-    "title": "Still have a question?",
     "placeholder": "Ask your own question…",
-    "submit": "Ask",
     "submitAria": "Send the question",
     "loading": "Looking for the answer…",
-    "disclaimer": "AI-generated answer from minddy’s documentation. It can be imperfect.",
     "error": "The answer could not be generated. Try again in a moment."
   }
 }

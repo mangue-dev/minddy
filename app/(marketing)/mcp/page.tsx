@@ -180,8 +180,7 @@ export default async function McpPage() {
       <section className="px-4 py-16 sm:px-6 sm:py-24">
         <div className="mx-auto max-w-3xl">
           <h2 className="mb-8 text-3xl leading-tight font-medium tracking-[-0.035em] text-balance sm:text-4xl">{tl("faqTitle")}</h2>
-          <FaqAccordion items={faqItems} />
-          <FaqAskBox section="mcp" />
+          <FaqAccordion items={faqItems} footer={<FaqAskBox section="mcp" />} />
         </div>
       </section>
       <SectionCta />

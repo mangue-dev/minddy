@@ -1,13 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "mangue-ui/components/ui/accordion";
 
 /** Keep answers in server HTML while animating both directions at their natural height. */
 export function FaqAccordion({
   items,
+  footer,
 }: {
   items: ReadonlyArray<{ key: string; question: string; answer: string }>;
+  /** Rendered inside the root, after the items — the ask box row (MIN-590).
+   * Being a child of the Accordion keeps the separators honest: the last item
+   * reads `not-last:border-b` against it and closes the list above the row. */
+  footer?: ReactNode;
 }) {
   const [value, setValue] = useState("");
 
@@ -24,6 +29,7 @@ export function FaqAccordion({
           </AccordionContent>
         </AccordionItem>
       ))}
+      {footer}
     </Accordion>
   );
 }

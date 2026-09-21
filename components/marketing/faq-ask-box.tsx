@@ -7,8 +7,9 @@ import { FaqAsk, type FaqAskStrings } from "./faq-ask";
  * The SERVER envelope of the FAQ ask box (MIN-590), same shape as the
  * dictation demo's (`voice-demo.tsx`): the strings cross as props because the
  * public browser feed carries only the whitelisted namespaces
- * (`lib/public-client-messages.ts`), and the box disappears entirely when the
- * `faq_ask_enabled` admin switch is off.
+ * (`lib/public-client-messages.ts`), and the row disappears entirely when the
+ * `faq_ask_enabled` admin switch is off. Rendered inside the accordion root
+ * (`FaqAccordion`'s `footer`) so it reads as the list's last row.
  */
 export async function FaqAskBox({ section }: { section: FaqSection }) {
   const enabled = await getAppConfigValue("faq_ask_enabled");
@@ -22,12 +23,9 @@ export async function FaqAskBox({ section }: { section: FaqSection }) {
       locale={locale}
       strings={
         {
-          title: t("title"),
           placeholder: t("placeholder"),
-          submit: t("submit"),
           submitAria: t("submitAria"),
           loading: t("loading"),
-          disclaimer: t("disclaimer"),
           error: t("error"),
         } satisfies FaqAskStrings
       }

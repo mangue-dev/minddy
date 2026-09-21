@@ -21,10 +21,7 @@ export async function SectionFaq() {
           text={t("faqTitle")}
         />
         <Reveal delay={0.12}>
-          <FaqAccordion items={items} />
-        </Reveal>
-        <Reveal delay={0.2}>
-          <FaqAskBox section="landing" />
+          <FaqAccordion items={items} footer={<FaqAskBox section="landing" />} />
         </Reveal>
       </div>
     </section>
