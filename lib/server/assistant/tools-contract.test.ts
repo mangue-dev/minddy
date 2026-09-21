@@ -70,6 +70,28 @@ describe("Numo tool contracts", () => {
     expect(listRoutines?.function.description).toMatch(/full instruction/i);
   });
 
+  it("advertises read-only access to routine runs (MIN-589)", () => {
+    const listRuns = tool("list_routine_runs");
+    expect(listRuns).toBeDefined();
+    expect(listRuns?.function.parameters.required).toEqual(["routine_id"]);
+    expect(listRuns?.function.parameters.properties).toHaveProperty("limit");
+    expect(listRuns?.function.description).toMatch(/list_routines/);
+    // The state of a run is the whole point: waiting for the owner's input
+    // must be visible, not collapsed into a generic "running".
+    expect(listRuns?.function.description).toMatch(/waiting for the owner's input/i);
+
+    const readOccurrence = tool("read_routine_occurrence");
+    expect(readOccurrence).toBeDefined();
+    expect(readOccurrence?.function.parameters.required).toEqual([
+      "occurrence_id",
+    ]);
+    expect(readOccurrence?.function.parameters.properties).not.toHaveProperty(
+      "routine_id",
+    );
+    // The transcript is private to the routine's owner: the tool says so.
+    expect(readOccurrence?.function.description).toMatch(/owner/i);
+  });
+
   it("advertises read-only user statistics tools without parameters (MIN-501)", () => {
     for (const name of ["get_user_stats", "get_plan_usage"]) {
       const stats = tool(name);

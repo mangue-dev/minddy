@@ -259,6 +259,8 @@ const RETRYABLE_READ_TOOLS = new Set([
   "get_page",
   "search_pages",
   "list_routines",
+  "list_routine_runs",
+  "read_routine_occurrence",
   "read_pull_request",
   "propose_backlog",
   "web_search",

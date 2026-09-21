@@ -765,6 +765,21 @@ const TOOL_META: Record<string, ToolMeta> = {
       return t("routineUpdated");
     },
   },
+  // ── Routine runs (MIN-589) ─────────────────────────────────────────────
+  list_routine_runs: {
+    icon: CalendarClock,
+    getLabel: (_args, result, _success, status, t) => {
+      if (status === "running") return t("loadingRoutineRuns");
+      return t("foundRoutineRuns", { count: resultCount(result, "runs") });
+    },
+  },
+  read_routine_occurrence: {
+    icon: CalendarClock,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("loadingRoutineOccurrence");
+      return success ? t("routineOccurrenceLoaded") : t("routineOccurrenceNotFound");
+    },
+  },
   read_pull_request: {
     icon: GitPullRequest,
     getLabel: (args, result, success, status, t) => {
