@@ -13,7 +13,8 @@ section text quotes verbatim.
 canceled.
 - A **section action visible on hover**: the pointed section detaches
 on a gray background, its two buttons appear against its title, and
-the tooltip names the action (“Launch an agent on the section”).
+the tooltip names the action (“Confier cette section à Numo” — wording of
+2026-09, the section hand-off now targets Numo directly).
 - The notebook is **personal and cross-project**: nothing on the screen links it to
 a project, and it is desired.
 

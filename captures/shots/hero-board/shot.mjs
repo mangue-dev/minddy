@@ -7,9 +7,10 @@
  * - the route is `/projects/<id>`, not `/projects/<id>/board` ;
  * - the board is a KANBAN, grouped by status by default. The “list view”
  * of the catalog instruction does not exist in the product;
- * - the columns are 352 px with a fixed pitch of 364, from 280: the edges
- * rights fall to 632, 996, 1360, 1724… The width 1736 therefore stops
- * in the gutter after the 4th column, instead of cutting a card;
+ * - the columns are 352 px with a fixed pitch of 364. The board starts at
+ * 345 (wider sidebar, layout of 2026-09): the right edges fall to 697,
+ * 1061, 1425, 1789, 2153… The width 1792 therefore stops in the gutter
+ * after the 4th column, instead of cutting a card;
  * - there is no `data-testid` on this screen. The waiting anchor is
  * therefore the identifier of a ticket, which does not change from one language to another.
  *
@@ -34,7 +35,7 @@ const OUT = "captures/shots/hero-board/out";
 const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
 
 /** 16/10, positioned on the gutter which follows the 4th column. See intent.md. */
-const VIEWPORT = { width: 1736, height: 1085 };
+const VIEWPORT = { width: 1792, height: 1120 };
 
 const PUBLISH = process.argv.includes("--publish");
 const VARIANTS = CAPTURE_VARIANTS;

@@ -22,7 +22,8 @@ that we can show is that the palette is controlled by the keyboard - not a
 connected as Camille Roy, palette open at the keyboard.
 
 Landing frame: **16/10**, same window as `heroBoard`
-(1736 × 1085) so that both images on the page have the same scale.
+(1792 × 1120 — the hero moved off 1736 × 1085 when the sidebar widened in
+September 2026) so that both images on the page have the same scale.
 
 ## Variations
 

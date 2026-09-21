@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { CalendarClock, Check, GitPullRequest, Bot, Layers } from "lucide-react";
+import { CalendarClock, Check, FileText, GitPullRequest, Bot, Layers, ListChecks, NotebookPen } from "lucide-react";
 import { MCP_PRESETS } from "@/lib/mcp-catalog";
 import { McpServiceLogo } from "@/components/mcp-service-logo";
 import { MCP_AGENTS } from "@/lib/mcp-agents";
@@ -15,8 +15,18 @@ const CAPABILITIES = ["read", "plan", "track", "create", "comment", "wiki", "rev
 const PROVIDER_IDS = ["notion", "github", "slack", "figma"];
 const PROVIDERS = PROVIDER_IDS.map(id => MCP_PRESETS.find(provider => provider.id === id)!);
 const NUMO_CAPABILITIES = ["find", "act", "context"] as const;
+/** The surfaces Numo works with, read left to right — its tools are what a
+    visitor weighs, so they stay visible on the card face, not behind the plus. */
+const NUMO_TOOLS = [
+  { key: "tasks", icon: ListChecks },
+  { key: "pages", icon: FileText },
+  { key: "pullRequests", icon: GitPullRequest },
+  { key: "routines", icon: CalendarClock },
+  { key: "notes", icon: NotebookPen },
+] as const;
 
-/** Read left to right: the agent works, you review, and both keep the same context. */
+/** Read left to right: Numo opens the section, works the repository, you review,
+    and external agents and apps plug into the same conversation through MCP. */
 export async function SectionAgents() {
   const t = await getTranslations("Landing");
   return (
@@ -24,6 +34,26 @@ export async function SectionAgents() {
       <div className="mx-auto max-w-6xl">
         <SectionHeading title={t("agentsTitle")} description={t("agentsSubtitle")} />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {/* Numo first: the entry point of the section — one conversation, its tools on show. */}
+          <FeatureDisclosure id="numo" title={t("numoTitle")} className={`min-h-[440px] lg:col-span-2 ${CARD_TONES.sky}`}
+            details={<dl className="space-y-5">{NUMO_CAPABILITIES.map(key => <div key={key}><dt className="font-medium">{t(`numoCapability_${key}_title`)}</dt><dd className="mt-1 opacity-85">{t(`numoCapability_${key}_body`)}</dd></div>)}</dl>}>
+            <div className="flex h-full flex-col px-6 pt-6 pb-20 sm:px-8 sm:pt-8">
+              <NumoFace className="mb-5 h-5 w-6 shrink-0 self-start" />
+              <h3 className="text-2xl font-medium tracking-tight">{t("numoTitle")}</h3>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{t("numoSubtitle")}</p>
+              <ul className="mt-5 flex flex-wrap gap-x-4 gap-y-1.5 text-xs font-medium">
+                {NUMO_TOOLS.map(tool => (
+                  <li key={tool.key} className="flex items-center gap-1.5 opacity-75">
+                    <tool.icon className="size-3.5 shrink-0" strokeWidth={1.5} aria-hidden />
+                    {t(`numoTool_${tool.key}`)}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-auto pt-6">
+                <ScreenshotSlot id="numoPanel" expandable focused sizes="(min-width: 1024px) 700px, 100vw" className="mx-auto w-full max-w-lg rounded-xl shadow-sm" />
+              </div>
+            </div>
+          </FeatureDisclosure>
           <FeatureDisclosure id="workflow" title={t("workflow_run_title")} className={`min-h-[460px] ${CARD_TONES.lavender}`}
             details={<div className="space-y-5"><p>{t("workflow_write_body")}</p><p>{t("workflow_run_body")}</p><p>{t("workflowSubtitle")}</p><ScreenshotSlot id="workflowAgent" expandable focused sizes="(min-width: 1024px) 310px, 100vw" /></div>}>
             <div className="flex h-full flex-col px-6 pt-6 pb-20 sm:px-8 sm:pt-8">
@@ -46,17 +76,6 @@ export async function SectionAgents() {
               </div>
             </div>
           </FeatureDisclosure>
-          <FeatureDisclosure id="numo" title={t("numoTitle")} className={`min-h-[440px] lg:col-span-2 ${CARD_TONES.sky}`}
-            details={<dl className="space-y-5">{NUMO_CAPABILITIES.map(key => <div key={key}><dt className="font-medium">{t(`numoCapability_${key}_title`)}</dt><dd className="mt-1 opacity-85">{t(`numoCapability_${key}_body`)}</dd></div>)}</dl>}>
-            <div className="flex h-full flex-col px-6 pt-6 pb-20 sm:px-8 sm:pt-8">
-              <NumoFace className="mb-5 h-5 w-6 shrink-0 self-start" />
-              <h3 className="text-2xl font-medium tracking-tight">{t("numoTitle")}</h3>
-              <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{t("numoSubtitle")}</p>
-              <div className="mt-auto pt-6">
-                <ScreenshotSlot id="numoPanel" expandable focused sizes="(min-width: 1024px) 700px, 100vw" className="mx-auto w-full max-w-lg rounded-xl shadow-sm" />
-              </div>
-            </div>
-          </FeatureDisclosure>
           <FeatureDisclosure title={t("navMenu_agents_title")} className={`min-h-[440px] ${CARD_TONES.butter}`}
             details={<><p className="mb-5">{t("agentsMcpRoles")}</p><p className="mb-5">{t("agentsPlanNote")} {t("agentsByokNote")}</p><ul className="space-y-3">{CAPABILITIES.map(key => <li key={key} className="flex gap-3"><Check className="mt-1 size-4 shrink-0" aria-hidden />{t(`agentsCapability_${key}`)}</li>)}</ul></>}>
             <div className="flex h-full flex-col p-6 pb-20 sm:p-8 sm:pb-20">
@@ -68,7 +87,7 @@ export async function SectionAgents() {
               </ul>
             </div>
           </FeatureDisclosure>
-          <FeatureDisclosure id="routines" title={t("routinesCardTitle")} className={`min-h-[440px] lg:col-span-3 ${CARD_TONES.peach}`}
+          <FeatureDisclosure id="routines" title={t("routinesCardTitle")} className={`min-h-[440px] md:col-span-2 lg:col-span-3 ${CARD_TONES.peach}`}
             details={<div className="space-y-5"><p>{t("routinesCardDetailsBody")}</p><p>{t("workflowSubtitle")}</p><ScreenshotSlot id="routines" expandable sizes="(min-width: 1024px) 960px, 100vw" /></div>}>
             <div className="grid h-full items-center gap-8 px-6 py-8 sm:px-8 lg:grid-cols-2">
               <div className="flex h-full flex-col">

@@ -1,4 +1,5 @@
 import { cn } from "mangue-ui/lib/utils";
+import { useId } from "react";
 import { Triangle } from "lucide-react";
 import {
   EFFORT_MAP,
@@ -62,6 +63,14 @@ export function StatusIndicator({
   className?: string;
 }) {
   const base = cn("size-[19px] shrink-0", className);
+  // A DIFFERENT mask id per instance. An SVG mask is referenced by id across
+  // the whole document: with a shared id, the first copy in the DOM wins — and
+  // when it sits inside a HIDDEN container (closed dropdown, inactive tab,
+  // display:none panel), the browser resolves every reference against a mask
+  // that never renders and the knocked-out glyph disappears: a plain "done"
+  // disc without its checkmark, most visible in light mode. useId keeps each
+  // icon's mask its own, wherever the first copy happens to live.
+  const maskId = useId();
   switch (status) {
     case "triage":
       return (
@@ -97,31 +106,31 @@ export function StatusIndicator({
     case "done":
       return (
         <svg viewBox="0 0 16 16" fill="none" className={base}>
-          <mask id="status-hole-done">
+          <mask id={maskId}>
             <circle cx="8" cy="8" r="6.5" fill="#fff" />
             <path d="M5 8.2 7 10.2 11 6" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </mask>
-          <circle cx="8" cy="8" r="6.5" fill="#1DD82C" mask="url(#status-hole-done)" />
+          <circle cx="8" cy="8" r="6.5" fill="#1DD82C" mask={`url(#${maskId})`} />
         </svg>
       );
     case "canceled":
       return (
         <svg viewBox="0 0 16 16" fill="none" className={base}>
-          <mask id="status-hole-canceled">
+          <mask id={maskId}>
             <circle cx="8" cy="8" r="6.5" fill="#fff" />
             <path d="M5.8 5.8 10.2 10.2M10.2 5.8 5.8 10.2" stroke="#000" strokeWidth="1.5" strokeLinecap="round" />
           </mask>
-          <circle cx="8" cy="8" r="6.5" fill="#D62115" mask="url(#status-hole-canceled)" />
+          <circle cx="8" cy="8" r="6.5" fill="#D62115" mask={`url(#${maskId})`} />
         </svg>
       );
     case "duplicate":
       return (
         <svg viewBox="0 0 16 16" fill="none" className={base}>
-          <mask id="status-hole-duplicate">
+          <mask id={maskId}>
             <circle cx="8" cy="8" r="6.5" fill="#fff" />
             <path d="M5.5 6.6h5M5.5 9.4h5" stroke="#000" strokeWidth="1.5" strokeLinecap="round" />
           </mask>
-          <circle cx="8" cy="8" r="6.5" fill="#8E8E93" mask="url(#status-hole-duplicate)" />
+          <circle cx="8" cy="8" r="6.5" fill="#8E8E93" mask={`url(#${maskId})`} />
         </svg>
       );
   }

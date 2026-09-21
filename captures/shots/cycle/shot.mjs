@@ -10,10 +10,17 @@
  */
 import { openPage, settle, shoot, CAPTURE, CAPTURE_VARIANTS } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
+import { catalog } from "../../lib/messages.mjs";
 
 const SLOT = "featureCycle";
 const OUT = "captures/shots/cycle/out";
-const VIEWPORT = { width: 1736, height: 1085 };
+
+/** 16/10, like the other full-width slots. Widened from 1736 × 1085 when the
+ * board started rendering the empty "Canceled" column too: six 352 px columns
+ * no longer leave room for the four non-empty ones after the one-step scroll,
+ * and the Done column — the whole proof of progress — was cut by 42 px. Same
+ * 16/10 ratio, everything fits. */
+const VIEWPORT = { width: 1792, height: 1120 };
 
 /** Not one column of the board: 352 px wide + 12 px gutter. */
 const COLUMN_PITCH = 364;
@@ -24,12 +31,17 @@ const VARIANTS = CAPTURE_VARIANTS;
 async function capture({ locale, theme }) {
   const { browser, page } = await openPage({ theme, locale, viewport: VIEWPORT });
   try {
-    await page.goto(`${CAPTURE.baseUrl}/all?view=cycle`, { waitUntil: "domcontentloaded" });
-
     // Language-independent anchor: a ticket from Beacon, which is not in the
     // cycle only because it is cross-project. If it is missing, the image does not show
     // pas ce qu'elle doit montrer.
+    await page.goto(`${CAPTURE.baseUrl}/all`, { waitUntil: "domcontentloaded" });
     await settle(page, { expect: "text=BCN-8" });
+
+    // The Cycle tab, designated by its label read from the catalog — the
+    // `?view=cycle` deep-link no longer survives a fresh browser context
+    // (the app-tabs session rewrites the URL before the effect sees it).
+    const cycleTab = (await catalog(locale)).Board.cycleTab;
+    await page.getByRole("button", { name: cycleTab, exact: true }).click();
 
     // The rings come from a separate calculation: without them the header is bare.
     await page.locator("main").getByText("%", { exact: false }).first()
@@ -64,7 +76,11 @@ async function capture({ locale, theme }) {
       return {
         visible: visible.map((c) => c.name),
         straddling: columns
-          .filter((c) => c.left < window.innerWidth && c.right > window.innerWidth)
+          .filter((c) =>
+            c.left < window.innerWidth && c.right > window.innerWidth &&
+            // Tolerate a sliver: only a genuinely cut column is a framing error.
+            Math.min(c.right, window.innerWidth) - Math.max(c.left, 0) > 32,
+          )
           .map((c) => c.name),
         // The name of the project prefixes the identifier on each card on the board
         // cross-project. We look for it in all the visible text, without
@@ -76,6 +92,8 @@ async function capture({ locale, theme }) {
       };
     });
 
+    // The empty "Canceled" column renders as a 2 px sliver at the right edge —
+    // tolerated; a real straddle (a card cut mid-way) is not.
     if (check.straddling.length > 0) {
       throw new Error(`${locale}/${theme} — colonne coupée : ${check.straddling.join(", ")}`);
     }
