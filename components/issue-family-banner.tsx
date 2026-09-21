@@ -14,20 +14,19 @@ export function IssueFamilyBoardHeader({
   parent,
   projectKey,
   childCount,
-  completedChildCount,
+  percent,
   exitHref,
 }: {
   parent: Issue;
   projectKey: string;
   childCount: number;
-  completedChildCount: number;
+  /** Effort-weighted completion of the children (statusCompletionCredit),
+      the same grading as the objective and cycle rings — not a raw count. */
+  percent: number;
   /** The same board without the family scope — the back button's destination. */
   exitHref: string;
 }) {
   const t = useTranslations("IssueFamily");
-  const percent = childCount === 0
-    ? 0
-    : Math.round((completedChildCount / childCount) * 100);
 
   return (
     <AppContentHeader contentClassName="gap-3">
