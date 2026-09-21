@@ -44,6 +44,10 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
+  // Sonner's Observer is a module singleton and (since 2.0.8) replays its
+  // still-active toasts to every new subscriber — without this, toasts left
+  // over from the previous test are replayed to the freshly mounted line.
+  toast.dismiss();
   window.localStorage.clear();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.useFakeTimers();
