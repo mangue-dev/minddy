@@ -34,7 +34,7 @@ const OUT = "captures/shots/palette/out";
 const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
 
 /** Same window as heroBoard: both images must have the same scale. */
-const VIEWPORT = { width: 1736, height: 1085 };
+const VIEWPORT = { width: 1792, height: 1120 };
 
 /**
  * The query typed. The same word in both languages: it is English in both

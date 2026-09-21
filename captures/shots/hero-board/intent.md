@@ -38,11 +38,12 @@ logged in as Camille Roy (demo account).
 
 ## Framing — and why this exact width
 
-Landing frame: **16/10**. Capture window **1736 × 1085** in 2x.
+Landing frame: **16/10**. Capture window **1792 × 1120** in 2x.
 
 The kanban columns are 352 px wide, with a fixed pitch of 364, and start
-at 280: their right edges fall at 632, 996, 1360, 1724, 2088, 2452.
-window width of 1736 therefore stops in the gutter which follows the 4ᵉ
+at 345 (the sidebar has widened, layout of September 2026): their right
+edges fall at 697, 1061, 1425, 1789, 2153, 2517.
+window width of 1792 therefore stops in the gutter which follows the 4ᵉ
 column — four entire columns, the fifth entirely off-screen.
 
 This is the only framing that avoids a cut right in the middle of a card. A board
@@ -75,7 +76,9 @@ will scroll farther, which is expected.
 - **The cut on the right.** The first run at 1440 × 900 sliced the “In Review”
 column to a third of a card. It does not read like “there is more to the
 right”; it reads like a broken image. Hence the width aligned with the gutter
-and the automatic check in the script.
+and the automatic check in the script. The width moved from 1736 to 1792 on
+2026-09-21: the sidebar got wider on the landing-refinements layout, so the
+whole board shifted right.
 - **The name of the view is no longer fixed in the database (corrected).** The
 “All” tab was a `views` row whose name, translated at creation
 (`ensureBaselineViews`), remained French in the English variant. It now

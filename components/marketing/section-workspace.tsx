@@ -1,10 +1,11 @@
 import { getTranslations } from "next-intl/server";
-import { Command, FileText, Layers, MessagesSquare, NotebookPen } from "lucide-react";
+import { Command, FileText, Layers, MessagesSquare, NotebookPen, Target } from "lucide-react";
+import { SmartFillIcon } from "@/components/smart-icons";
 import { ScreenshotSlot } from "./screenshot-slot";
 import { FeatureDisclosure } from "./feature-disclosure";
 import { CARD_TONES } from "./card-tones";
 import { SectionHeading } from "./section-heading";
-import { BoardFigure, ScratchpadFigure } from "./workspace-figures";
+import { BoardFigure, ObjectivesFigure, PagesFigure, ScratchpadFigure, SmartFigure } from "./workspace-figures";
 import { VoiceDemo } from "./voice-demo";
 
 /** One workspace tour: planning, knowledge, feedback, and fast ways to capture work. */
@@ -14,12 +15,22 @@ export async function SectionWorkspace() {
     {
       id: "tracker", icon: Layers, title: t("navMenu_tracker_title"), description: t("feature_board_body"),
       screenshot: "heroBoard", tone: CARD_TONES.sage, span: "md:col-span-2",
-      points: (["board", "all", "inbox", "objectives", "cycles", "triage"] as const).map(key => ({ title: t(`feature_${key}_title`), body: t(`feature_${key}_body`) })),
+      points: (["board", "all", "inbox", "cycles", "triage"] as const).map(key => ({ title: t(`feature_${key}_title`), body: t(`feature_${key}_body`) })),
     },
     {
       id: "pages", icon: FileText, title: t("pagesTitle"), description: t("pagesSubtitle"),
-      screenshot: "pagesEditor", tone: CARD_TONES.lavender, span: "",
-      points: (["write", "link", "agents", "publish"] as const).map(key => ({ title: t(`pages_${key}_title`), body: t(`pages_${key}_body`) })),
+      screenshot: "pagesEditor", tone: CARD_TONES.lavender, span: "md:col-span-2",
+      points: (["write", "database", "link", "agents", "publish"] as const).map(key => ({ title: t(`pages_${key}_title`), body: t(`pages_${key}_body`) })),
+    },
+    {
+      id: "smart", icon: SmartFillIcon, title: t("smartTitle"), description: t("smartSubtitle"),
+      screenshot: null, tone: CARD_TONES.mint, span: "",
+      points: (["Fill", "Assign", "Triage"] as const).map(key => ({ title: t(`feature_smart${key}_title`), body: t(`feature_smart${key}_body`) })),
+    },
+    {
+      id: "objectives", icon: Target, title: t("feature_objectives_title"), description: t("feature_objectives_body"),
+      screenshot: null, tone: CARD_TONES.sage, span: "",
+      points: (["progress", "setup", "board"] as const).map(key => ({ title: t(`objective_${key}_title`), body: t(`objective_${key}_body`) })),
     },
     {
       id: "feedback", icon: MessagesSquare, title: t("navMenu_feedback_title"), description: t("feedbackSubtitle"),
@@ -33,7 +44,7 @@ export async function SectionWorkspace() {
     },
     {
       id: "scratchpad", icon: NotebookPen, title: t("scratchpadTitle"), description: t("scratchpadSubtitle"),
-      screenshot: "scratchpad", tone: CARD_TONES.rose, span: "",
+      screenshot: "scratchpad", tone: CARD_TONES.rose, span: "md:col-span-2",
       points: (["write", "prompt", "agent", "promote", "mcp"] as const).map(key => ({ title: "", body: t(`scratchpadPoint_${key}`) })),
     },
   ] as const;
@@ -53,16 +64,29 @@ export async function SectionWorkspace() {
                 </div>
               ))}</dl>}
             >
-              <div className="flex h-full flex-col px-6 pt-6 pb-20 sm:px-8 sm:pt-8">
-                <card.icon className="mb-5 size-5 shrink-0" strokeWidth={1.5} aria-hidden />
-                <h3 className="text-xl font-medium tracking-tight sm:text-2xl">{card.title}</h3>
-                <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{card.description}</p>
-                <div className="mt-auto pt-6">
-                  {card.id === "tracker" ? <BoardFigure /> : card.id === "scratchpad" ? <ScratchpadFigure /> : <ScreenshotSlot id={card.screenshot} expandable focused
-                    sizes="(min-width: 1024px) 480px, (min-width: 768px) 440px, 100vw"
-                    className="w-full rounded-xl shadow-sm" />}
+              {/* Full-width cards pair their text with the figure side by side
+                  from lg; the narrow ones stack the figure under the text. */}
+              {card.id === "scratchpad" ? (
+                <div className="grid h-full items-center gap-8 px-6 py-8 sm:px-8 lg:grid-cols-2">
+                  <div className="flex h-full flex-col">
+                    <card.icon className="mb-5 size-5 shrink-0" strokeWidth={1.5} aria-hidden />
+                    <h3 className="text-xl font-medium tracking-tight sm:text-2xl">{card.title}</h3>
+                    <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{card.description}</p>
+                  </div>
+                  <ScratchpadFigure />
                 </div>
-              </div>
+              ) : (
+                <div className="flex h-full flex-col px-6 pt-6 pb-20 sm:px-8 sm:pt-8">
+                  <card.icon className={`mb-5 shrink-0 ${card.id === "smart" ? "h-4 w-8" : "size-5"}`} strokeWidth={1.5} aria-hidden />
+                  <h3 className="text-xl font-medium tracking-tight sm:text-2xl">{card.title}</h3>
+                  <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{card.description}</p>
+                  <div className="mt-auto pt-6">
+                    {card.id === "tracker" ? <BoardFigure /> : card.id === "pages" ? <PagesFigure /> : card.id === "smart" ? <SmartFigure /> : card.id === "objectives" ? <ObjectivesFigure /> : <ScreenshotSlot id={card.screenshot} expandable focused
+                      sizes="(min-width: 1024px) 480px, (min-width: 768px) 440px, 100vw"
+                      className="w-full rounded-xl shadow-sm" />}
+                  </div>
+                </div>
+              )}
             </FeatureDisclosure>
           ))}
           <article id="voice" className={`min-w-0 scroll-mt-24 rounded-2xl p-6 sm:p-8 md:col-span-2 ${CARD_TONES.sky}`}>

@@ -27,7 +27,8 @@ export type ProductEntry = {
 
 const GROUPS: ReadonlyArray<ReadonlyArray<ProductEntryKey>> = [
   ["tracker", "pages", "feedback"],
-  ["agents", "numo", "speed"],
+  // Numo first: it is the main entry of its landing section, the connections follow.
+  ["numo", "agents", "speed"],
   ["more", "mcp", "selfHosting"],
 ];
 const CLOSE_DELAY_MS = 140;
