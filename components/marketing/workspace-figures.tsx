@@ -20,8 +20,9 @@ import {
   Users,
 } from "lucide-react";
 import { PriorityIndicator, StatusIndicator, EffortIndicator, ObjectiveStatusIndicator } from "@/components/issue-indicators";
+import { MentionChip } from "@/components/mention-chip";
 import { ProgressRing } from "@/components/progress-ring";
-import { SmartFillIcon } from "@/components/smart-icons";
+import { SmartAssignIcon, SmartFillIcon } from "@/components/smart-icons";
 import { UserAvatar } from "@/components/user-avatar";
 import { ProjectOrb } from "@/components/project-orb";
 import { DEFAULT_CATEGORIES, type DefaultCategoryKey } from "@/lib/default-categories";
@@ -419,8 +420,7 @@ export async function SmartFigure() {
   ]);
   return (
     <div className="w-full rounded-xl border border-border bg-background p-5 text-foreground shadow-sm" role="img" aria-label={t("smartTitle")}>
-      <div className="mb-4 flex items-center gap-2 border-b border-border pb-4 text-sm font-medium">
-        <SmartFillIcon className="h-4 w-8 shrink-0" />
+      <div className="mb-4 border-b border-border pb-4 text-sm font-medium">
         {t("smartFigureHeader")}
       </div>
       {/* The incoming ticket, as the board card renders it. */}
@@ -450,8 +450,22 @@ export async function SmartFigure() {
           <span className="min-w-0 text-sm text-muted-foreground">{t("smartFigureFilled")}</span>
         </li>
         <li className="flex items-center gap-3">
-          <UserAvatar seed={FIGURE_AVATARS.tom} className="size-6 shrink-0" />
-          <span className="min-w-0 text-sm text-muted-foreground">{t("smartFigureAssigned")}</span>
+          <span className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 text-xs font-medium text-primary">
+            <SmartAssignIcon className="size-3.5 shrink-0" />
+            {t("feature_smartAssign_title")}
+          </span>
+          <span className="min-w-0 text-sm text-muted-foreground">
+            {t.rich("smartFigureAssigned", {
+              tom: (chunks) => (
+                <MentionChip
+                  type="member"
+                  id={FIGURE_AVATARS.tom}
+                  label={typeof chunks === "string" ? chunks : "Tom"}
+                  avatarSeed={FIGURE_AVATARS.tom}
+                />
+              ),
+            })}
+          </span>
         </li>
         <li className="flex items-center gap-3">
           <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground" aria-hidden>

@@ -4951,7 +4951,7 @@
     "smartFigureHeader": "Quand une tâche arrive",
     "smartFigureTicket": "Le fournisseur de paiement refuse les renouvellements",
     "smartFigureFilled": "Complète la priorité, l’effort et les catégories",
-    "smartFigureAssigned": "Choisit Tom d’après les règles d’attribution",
+    "smartFigureAssigned": "Choisit <tom>Tom</tom> d’après les règles d’attribution",
     "smartFigureTriage": "Le place en premier dans le triage avec le tri Smart",
     "feature_smartAssign_title": "Smart Assign",
     "feature_smartAssign_body": "Aucune tâche active ne reste sans responsable : quand une tâche est créée ou sort du triage sans en avoir un, Smart Assign choisit la bonne personne d’après vos règles d’attribution.",

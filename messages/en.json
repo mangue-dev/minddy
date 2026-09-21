@@ -4951,7 +4951,7 @@
     "smartFigureHeader": "When a task arrives",
     "smartFigureTicket": "Payment provider rejects renewals",
     "smartFigureFilled": "Filled in the priority, the effort and the categories",
-    "smartFigureAssigned": "Picked Tom from the assignment rules",
+    "smartFigureAssigned": "Picked <tom>Tom</tom> from the assignment rules",
     "smartFigureTriage": "Placed first in Triage by the Smart sort",
     "feature_smartAssign_title": "Smart Assign",
     "feature_smartAssign_body": "No active task stays unassigned: when a task is created or leaves triage without one, Smart Assign picks the right teammate from your assignment rules.",
