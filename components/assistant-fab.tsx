@@ -7,7 +7,7 @@ import { Kbd, KbdSequence } from "@/components/ui/kbd";
 import { NumoIcon } from "@/components/numo-icon";
 import { AgentBeam } from "@/components/agent-beam";
 import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
-import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions, useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useAssistantBusy } from "@/lib/assistant-chat-context";
 import { useAgentSessionsQuery } from "@/lib/use-agent-runs";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
@@ -46,7 +46,11 @@ export function AssistantFab() {
   // Same cache as the sidebar: no extra request, and the 5 s poll of a
   // working session keeps the border honest for the whole run.
   const { sessions } = useAgentSessionsQuery();
-  const isBusy = chatBusy || sessions.some((session) => session.working);
+  const { isOpen } = useAssistantPanel();
+  // The beam is a "Numo is working, look over here" signal for a shell the
+  // user is NOT looking at. Panel open → the activity is already on screen;
+  // the border would only re-signal what the user is watching.
+  const beamActive = (chatBusy || sessions.some((session) => session.working)) && !isOpen;
   const chordArmed = useChordPrefix() === CHORD_PREFIX;
   const t = useTranslations("Assistant");
   const tk = useTranslations("Keyboard");
@@ -84,7 +88,7 @@ export function AssistantFab() {
  turns on or off — otherwise its entry animation would replay
  each toggle. */}
             <AgentBeam
-              active={isBusy}
+              active={beamActive}
               size="sm"
               keepMounted
               className="rounded-full"

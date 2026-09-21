@@ -84,3 +84,18 @@
   --cp-hover: color-mix(in oklab, var(--foreground) 12%, var(--popover));
   --cp-active: color-mix(in oklab, var(--foreground) 12%, var(--popover));
 }
+
+/* Same glass as every floating surface — the inbox popover's treatment (see
+   the floating-surfaces rules in globals.css): the surface mixes with what
+   sits behind it and a 16px blur separates it, instead of painting an opaque
+   box. Two classes on purpose: the palette module paints `background:
+   var(--cp-bg)` at (0,1,0), and the cascade order between the module and this
+   bridge is not guaranteed — the doubled selector must win regardless.
+   `desktop-palette-surface` is a GLOBAL class set on the palette root by
+   lib/command-palette/CommandPalette.tsx, same pattern as the overlay. */
+.desktop-palette-overlay > .desktop-palette-surface {
+  background-color: color-mix(in oklab, var(--popover) 84%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  isolation: isolate;
+}

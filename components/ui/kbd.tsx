@@ -68,7 +68,11 @@ export function Kbd({
       data-slot="kbd"
       data-square={square || undefined}
       className={cn(
-        "inline-flex items-center justify-center rounded-[0.375rem] border [border-color:color-mix(in_srgb,currentColor_30%,transparent)] [color:color-mix(in_srgb,currentColor_75%,transparent)] [font-family:var(--font-kbd)] font-semibold",
+        // `tracking-normal`: a key cap often sits inside a `tracking-widest`
+        // shortcut span (dropdown menus); the inherited letter-space is added
+        // AFTER the glyph, so a centered flex item came out visibly left of
+        // center inside the fixed square.
+        "inline-flex items-center justify-center tracking-normal rounded-[0.375rem] border [border-color:color-mix(in_srgb,currentColor_30%,transparent)] [color:color-mix(in_srgb,currentColor_75%,transparent)] [font-family:var(--font-kbd)] font-semibold",
         square
           ? size === "sm"
             ? "size-[15px] text-[10px]"

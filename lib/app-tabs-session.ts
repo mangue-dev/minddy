@@ -225,8 +225,9 @@ export class AppTabsSession {
   /** Called only for a committed route or view change, never for a refetch. */
   observe(href: string, published: string | null) {
     if (!this.snapshot.activeId || this.disposed) return;
+    const activeId = this.snapshot.activeId;
     const location = normalizeAppTabLocation(href);
-    const view = normalizeAppTabLocation(published);
+    const view = published ? normalizeAppTabLocation(published) : null;
     if (!location) return;
     if (this.target) {
       // A consumed selection acknowledges restoration by publishing its target.
@@ -236,19 +237,37 @@ export class AppTabsSession {
       const matches = candidate.pathname === targetUrl.pathname &&
         [...targetUrl.searchParams].every(([key, value]) => candidate.searchParams.get(key) === value);
       if (!matches || location.split(/[?#]/)[0] !== targetUrl.pathname) return;
-      this.activeHref = this.target;
-      this.observedHref = this.target;
+      const destination = this.target;
       this.target = null;
       clearTimeout(this.targetTimer);
+      // The DESTINATION is the truth here, not the URL or publication on
+      // hand: while a switch is settling, both still describe the OUTGOING
+      // screen (the router commit and the incoming page's own publication
+      // have not landed yet). Adopting them glued the outgoing family
+      // board's `?family=` onto the plain tab that replaced it — and the
+      // poisoned destination then kept that board on screen forever. The
+      // incoming page republishes right after its mount, and that fresher,
+      // tagged view refines the location in the next observation.
+      this.observedHref = destination;
+      this.activeHref = destination;
+      this.emit({});
+      this.remember(activeId, destination);
+      if (this.snapshot.recovering) return;
+      this.locations.set(activeId, destination);
+      const acknowledged = this.active();
+      if (acknowledged) this.merge(acknowledged);
+      clearTimeout(this.timer);
+      this.timer = setTimeout(() => void this.flushLocation(), 250);
+      return;
     }
     const next = view && view.split(/[?#]/)[0] === location.split(/[?#]/)[0] ? view : location;
     if (next === this.observedHref) return;
     this.observedHref = next;
     this.activeHref = next;
     this.emit({});
-    this.remember(this.snapshot.activeId, next);
+    this.remember(activeId, next);
     if (this.snapshot.recovering) return;
-    this.locations.set(this.snapshot.activeId, next);
+    this.locations.set(activeId, next);
     const tab = this.active();
     if (tab) this.merge(tab);
     clearTimeout(this.timer);

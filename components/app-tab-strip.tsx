@@ -62,6 +62,11 @@ const routeLabels: Record<string, MessageKey<"Nav">> = {
 const restrictToHorizontalAxis: Modifier = ({ transform }) => ({ ...transform, y: 0 });
 const horizontalDragModifiers = [restrictToHorizontalAxis];
 
+/** Right padding of the strip's outer container (`pr-2`) — never tab room. */
+const RAIL_PAD_RIGHT = 8;
+/** Slack the tab fit always keeps free before the "more tabs" menu takes over. */
+const RAIL_MARGIN = 16;
+
 export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; onNewTabWarm?: () => void }) {
   const { tabs, activeId, session, busy, error, loading, loadError, reload } = useAppTabs();
   const { projects } = useProjects();
@@ -69,8 +74,9 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   const t = useTranslations("AppTabs");
   const nav = useTranslations("Nav");
   const common = useTranslations("Common");
+  const tFamily = useTranslations("IssueFamily");
   const hrefs = tabs.map((tab) => tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href);
-  const { pageById, objectiveById, prById, routineById } = useAppTabMetadata(hrefs);
+  const { pageById, objectiveById, prById, routineById, issueById } = useAppTabMetadata(hrefs);
 
   // Notification badges on the tabs follow the same rules as the sidebar (same
   // counters, same caching): open PRs on the PR tab, working/unread marks on
@@ -116,14 +122,18 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   // "more tabs" menu. This is the width the whole strip may occupy, measured
   // on the OUTER container (flex-1 min-w-0 — its width does not depend on
   // content); the rail itself is content-sized, capped so the trailing
-  // button stays visible right after the last tab.
+  // button stays visible right after the last tab. The content box is what
+  // counts: the container's own right padding must not pass for room the
+  // tabs may occupy — counting it made the row overflow and clipped the
+  // trailing buttons instead of yielding them to the "more tabs" menu.
   const [available, setAvailable] = useState(0);
   useEffect(() => {
     const rail = strip.current;
     if (!rail) return;
-    const observer = new ResizeObserver(() => setAvailable(rail.clientWidth));
+    const measure = (entries: ResizeObserverEntry[]) => setAvailable(entries[0].contentRect.width);
+    const observer = new ResizeObserver(measure);
     observer.observe(rail);
-    setAvailable(rail.clientWidth);
+    setAvailable(rail.clientWidth - RAIL_PAD_RIGHT);
     return () => observer.disconnect();
   }, []);
   const focusId = focused && tabs.some((tab) => tab.id === focused) ? focused : activeId;
@@ -161,22 +171,31 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   const draggedTab = dragged ? tabs.find((tab) => tab.id === dragged) : undefined;
   const describe = (tab: AppTab) => {
     const route = appTabRoute(tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href);
-    const { section, projectId, objectiveId, prId, routineId } = route;
+    const { section, projectId, objectiveId, familyId, view: viewParam, prId, routineId } = route;
     const pageId = route.pageId;
     const project = projectId ? projectById.get(projectId) : undefined;
     const objective = objectiveId ? objectiveById.get(objectiveId) : undefined;
     const page = pageId ? pageById.get(pageId) : undefined;
     const prRef = prId ? prById.get(prId) : undefined;
     const routine = routineId ? routineById.get(routineId) : undefined;
+    const familyParent = familyId ? issueById.get(familyId) : undefined;
     const sectionLabel = nav(routeLabels[section] ?? "home");
     // The tab names its CONTENT first: a pinned page, a selected PR or
     // routine reads by itself; without one, the section-project pair stands.
     const contentLabel = page?.title || (prRef ? `#${prRef.number}${prRef.title ? ` ${prRef.title}` : ""}` : null) || routine?.title || null;
-    const label = tab.custom_name ?? (objective?.name ?? (contentLabel ?? (projectId ? `${sectionLabel} - ${project?.name ?? t("unavailableProject")}` : sectionLabel)));
+    // A board scoped to one issue family names its parent (with the project,
+    // like every project tab); the cycle mode of the global board is its own
+    // screen, not "All issues".
+    const scopeLabel = familyParent
+      ? `${tFamily("tabTitle", { parent: familyParent.title })} - ${project?.name ?? t("unavailableProject")}`
+      : viewParam === "cycle"
+        ? t("cycleTab")
+        : null;
+    const label = tab.custom_name ?? (objective?.name ?? (contentLabel ?? (scopeLabel ?? (projectId ? `${sectionLabel} - ${project?.name ?? t("unavailableProject")}` : sectionLabel))));
     // EXPERIMENT (to revert): composite = project orb + screen icon.
     const composite = Boolean(projectId && project);
     const pageIcon = page?.icon;
-    return { section, projectId, project, objectiveId, objective, pageIcon, composite, label };
+    return { section, projectId, project, objectiveId, objective, familyId, pageIcon, composite, label };
   };
   // Which tabs stay on the rail and how wide the regular ones get: they all
   // shrink to a shared width while that fits, then the tail collapses to its
@@ -193,11 +212,20 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   const TAB_GAP = 4;
   // The trailing button (⋯ or +) sits right after the last tab, never pushed
   // to the right edge: the rail is content-sized, capped so this button (and
-  // the error buttons, when present) keep their room.
+  // the error buttons, when present) keep their room. The loading spinner
+  // rides inside the tab row, so it costs room too.
   const BUTTON_W = 28;
+  const SPINNER_W = 20;
   const buttonReserve = BUTTON_W + TAB_GAP
     + ((loadError || error) ? BUTTON_W + TAB_GAP : 0)
-    + (error === "destination_unavailable" ? BUTTON_W + TAB_GAP : 0);
+    + (error === "destination_unavailable" ? BUTTON_W + TAB_GAP : 0)
+    + (loading ? SPINNER_W : 0)
+    // Dynamic margin the fit never eats into: the measurement is not trusted
+    // to the last pixel, and a row that ends flush at the container edge
+    // leaves no room for the trailing buttons to breathe. Reaching the margin
+    // is what tips the tail behind the "more tabs" menu — unpinned tabs
+    // shrink uniformly to their floor first, the menu takes over after.
+    + RAIL_MARGIN;
   const pinnedWidth = (composite: boolean) => (composite ? PINNED_COMPOSITE_W : PINNED_W);
   let visible = described;
   let hidden: typeof described = [];

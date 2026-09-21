@@ -1,18 +1,19 @@
 import type { Issue } from "@/lib/types";
-import { ALL_STATUSES, type StatusMeta } from "@/lib/issue-constants";
+import { STATUSES, type StatusMeta } from "@/lib/issue-constants";
 
 export const ISSUE_FAMILY_PARAM = "family";
 
 type FamilyIssue = Pick<Issue, "id" | "parent_id">;
 
 /**
- * The columns a family board renders: the FULL status sweep. A family keeps
- * its members whatever their status — `triage` (arrival zone) and
- * `duplicate` (closed as a duplicate) included — so every member always
- * finds its column, whatever the board it came from would have hidden.
+ * The columns a family board renders: the same kanban sweep as every other
+ * board — the objective page included — WITHOUT `triage` and `duplicate`.
+ * A member parked in one of those two statuses reads as unsorted/closed
+ * work, not as a column of its own; it stays on the full board, where its
+ * column exists.
  */
 export function familyBoardStatuses(): StatusMeta[] {
-  return ALL_STATUSES;
+  return STATUSES;
 }
 
 function boardParams(search: string | URLSearchParams): URLSearchParams {

@@ -8,10 +8,10 @@ import { APP_TAB_METADATA_BATCH_SIZE, appTabMetadataLocations, type AppTabMetada
 import type { PullRequestRef } from "./agent-api";
 import { fetchRoutinesApi } from "./routines-api";
 
-const empty: AppTabMetadata = { pages: [], objectives: [], pullRequests: [], routines: [] };
+const empty: AppTabMetadata = { pages: [], objectives: [], pullRequests: [], routines: [], issues: [] };
 
 async function fetchMetadata(hrefs: string[], signal: AbortSignal): Promise<AppTabMetadata> {
-  const result: AppTabMetadata = { pages: [], objectives: [], pullRequests: [], routines: [] };
+  const result: AppTabMetadata = { pages: [], objectives: [], pullRequests: [], routines: [], issues: [] };
   // Large restored sessions use bounded reads instead of one request per tab.
   for (let offset = 0; offset < hrefs.length; offset += APP_TAB_METADATA_BATCH_SIZE) {
     const response = await fetch("/api/me/app-tabs/metadata", {
@@ -26,6 +26,7 @@ async function fetchMetadata(hrefs: string[], signal: AbortSignal): Promise<AppT
     result.objectives.push(...data.objectives);
     result.pullRequests.push(...data.pullRequests);
     result.routines.push(...data.routines);
+    result.issues.push(...data.issues);
   }
   return result;
 }
@@ -47,6 +48,7 @@ export function useAppTabMetadata(hrefs: string[]) {
   const pageProjects = useMemo(() => [...new Set(routes.filter((route) => route.pageId).map((route) => route.projectId!))], [routes]);
   const objectiveProjects = useMemo(() => [...new Set(routes.filter((route) => route.objectiveId).map((route) => route.projectId!))], [routes]);
   const prIds = useMemo(() => [...new Set(routes.map((route) => route.prId).filter((id): id is string => !!id))], [routes]);
+  const familyProjects = useMemo(() => [...new Set(routes.filter((route) => route.familyId).map((route) => route.projectId!))], [routes]);
   const pageQueries = useQueries({ queries: pageProjects.map((projectId) => ({
     queryKey: ["pages", projectId], enabled: false,
     select: (pages: AppTabMetadata["pages"]) => pages.filter((page) => routes.some((route) => route.pageId === page.id)).map(({ id, project_id, title, icon }) => ({ id, project_id, title, icon })),
@@ -59,6 +61,14 @@ export function useAppTabMetadata(hrefs: string[]) {
     queryKey: ["pull-request", prId], enabled: false,
     select: (detail: { pr?: PullRequestRef | null }) => detail.pr ? { id: prId, number: detail.pr.number, title: detail.pr.title ?? null } : null,
   })) });
+  // Family boards name their tab after the parent issue: the project board's
+  // own ["issues", projectId] cache already carries it — reuse, never fetch.
+  const familyQueries = useQueries({ queries: familyProjects.map((projectId) => ({
+    queryKey: ["issues", projectId], enabled: false,
+    select: (issues: { id: string; number: number; title: string }[]) => issues
+      .filter((issue) => routes.some((route) => route.familyId === issue.id))
+      .map(({ id, number, title }) => ({ id, project_id: projectId, number, title })),
+  })) });
   // Same key as the Routines surface: reuse its cache without fetching.
   // The real fetcher is still required — TanStack rejects a queryFn-less
   // observer even when disabled.
@@ -70,6 +80,7 @@ export function useAppTabMetadata(hrefs: string[]) {
   const objectiveById = new Map(data.objectives.map((objective) => [objective.id, objective]));
   const prById = new Map(data.pullRequests.map((pr) => [pr.id, pr]));
   const routineById = new Map(data.routines.map((routine) => [routine.id, routine]));
+  const issueById = new Map(data.issues.map((issue) => [issue.id, issue]));
   // A loaded project list is authoritative, including removals and optimistic renames.
   // Once invalidated, it yields to a newer successful metadata read. Failures
   // retain its previous label instead of replacing it with a generic section.
@@ -92,9 +103,14 @@ export function useAppTabMetadata(hrefs: string[]) {
     if (query.data === null) prById.delete(prIds[index]);
     else if (query.data) prById.set(query.data.id, query.data);
   });
+  familyQueries.forEach((query, index) => {
+    if (!query.data || superseded(["issues", familyProjects[index]])) return;
+    for (const [id, issue] of issueById) if (issue.project_id === familyProjects[index]) issueById.delete(id);
+    for (const issue of query.data) issueById.set(issue.id, issue);
+  });
   if (routines.data && !superseded(["routines"])) {
     routineById.clear();
     for (const routine of routines.data) routineById.set(routine.id, routine);
   }
-  return { pageById, objectiveById, prById, routineById };
+  return { pageById, objectiveById, prById, routineById, issueById };
 }

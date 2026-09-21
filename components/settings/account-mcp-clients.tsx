@@ -5,7 +5,7 @@ import {useQueryClient} from "@tanstack/react-query";
 import {useSearchParams} from "next/navigation";
 import {useTranslations} from "next-intl";
 import {Button, Input, Textarea, Checkbox, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Accordion, AccordionItem, AccordionTrigger, AccordionContent, toast, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem} from "mangue-ui";
-import {Ellipsis, Plus, TriangleAlert} from "lucide-react";
+import {Check, Ellipsis, Plus, TriangleAlert} from "lucide-react";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 import {Field, FieldLabel} from "@/components/ui/field";
 import {McpServiceLogo} from "@/components/mcp-service-logo";
@@ -432,33 +432,67 @@ export function AccountMcpClients() {
             `${item.name} ${item.id}`
               .toLowerCase()
               .includes(search.toLowerCase()),
-          ).map((item) => (
-            <Button
-              key={item.id}
-              type="button"
-              disabled={busy || isPending || isError}
-              onClick={() =>
-                edit(
-                  data?.connections.find(
-                    (connection) =>
-                      mcpPresetForUrl(connection.url)?.id === item.id,
-                  ) ?? "new",
-                  item,
-                )
-              }
-              variant="outline"
-              className="h-auto justify-start gap-3 whitespace-normal p-3 text-left"
-            >
-              <McpServiceLogo service={item.id} />
-              <span className="min-w-0 flex-1 text-sm font-medium">
-                {item.name}
-              </span>
-              <Plus
-                className="size-4 shrink-0 text-muted-foreground"
-                aria-hidden
-              />
-            </Button>
-          ))}
+          ).map((item) => {
+            const connection = data?.connections.find(
+              (existing) => mcpPresetForUrl(existing.url)?.id === item.id,
+            );
+            const needsAuth = connection
+              ? mcpConnectionNeedsAuth(connection)
+              : false;
+            return (
+              <Button
+                key={item.id}
+                type="button"
+                disabled={busy || isPending || isError}
+                onClick={() => edit(connection ?? "new", item)}
+                variant="outline"
+                className="h-auto justify-start gap-3 whitespace-normal p-3 text-left"
+              >
+                <McpServiceLogo service={item.id} />
+                <span className="min-w-0 flex-1 text-sm font-medium">
+                  {item.name}
+                </span>
+                {/* Configured services read at a glance: a check when the
+                    connection is authenticated, the orange triangle when it
+                    still awaits sign-in — the same marks as the list above. */}
+                {connection ? (
+                  needsAuth ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          aria-label={t("unauthenticated")}
+                          className="text-orange-500"
+                        >
+                          <TriangleAlert
+                            className="size-4 shrink-0"
+                            aria-hidden
+                          />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{t("unauthenticated")}</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          aria-label={t("configured")}
+                          className="text-emerald-600 dark:text-emerald-400"
+                        >
+                          <Check className="size-4 shrink-0" aria-hidden />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{t("configured")}</TooltipContent>
+                    </Tooltip>
+                  )
+                ) : (
+                  <Plus
+                    className="size-4 shrink-0 text-muted-foreground"
+                    aria-hidden
+                  />
+                )}
+              </Button>
+            );
+          })}
         </div>
         {registryVisible && (
           <div className="space-y-2" aria-busy={registry.isPending}>
