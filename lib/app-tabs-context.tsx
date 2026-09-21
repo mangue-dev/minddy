@@ -9,6 +9,7 @@ import { appTabsQueryKey, useAppTabsQuery } from "./use-app-tabs-query";
 import { AppTabRouteSync } from "@/components/app-tab-route-sync";
 import { appTabsStorageKey } from "./app-tabs-storage";
 import { prefetchAppTabDestination } from "./prefetch-tab-destination";
+import { NavigationContext, useOptionalAppTabNavigation } from "./app-tab-navigation-context";
 
 interface AppTabsValue extends AppTabsSnapshot {
   session: AppTabsSession;
@@ -19,7 +20,9 @@ interface AppTabsValue extends AppTabsSnapshot {
 const Context = createContext<AppTabsValue | null>(null);
 // Persistence and tab-list changes belong to the strip. Pages only need the
 // active tab, and action handlers need the stable account session.
-const NavigationContext = createContext<Pick<AppTabsValue, "session" | "activeId"> | null>(null);
+// `NavigationContext` itself lives in ./app-tab-navigation-context (imported
+// here and re-exported below) so lower-level modules can read it without a
+// dependency cycle through this provider.
 const SessionContext = createContext<AppTabsSession | null>(null);
 
 export function AppTabsProvider({ children }: { children: ReactNode }) {
@@ -110,7 +113,7 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
 }
 
 export const useOptionalAppTabs = () => useContext(Context);
-export const useOptionalAppTabNavigation = () => useContext(NavigationContext);
+export { useOptionalAppTabNavigation };
 export const useOptionalAppTabSession = () => useContext(SessionContext);
 
 /** A retained board keeps its tab's local filters while another tab is active. */

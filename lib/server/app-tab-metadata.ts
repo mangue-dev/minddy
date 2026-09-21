@@ -14,7 +14,7 @@ export function parseAppTabMetadataLocations(raw: unknown): string[] | null {
 /** Authenticated RLS reads only; resolving a tab label never contacts a forge. */
 export async function readAppTabMetadata(client: SupabaseClient, hrefs: string[]): Promise<AppTabMetadata> {
   const routes = hrefs.map(appTabRoute);
-  const ids = (key: "pageId" | "objectiveId" | "prId" | "routineId") =>
+  const ids = (key: "pageId" | "objectiveId" | "prId" | "routineId" | "familyId") =>
     [...new Set(routes.map((route) => route[key]).filter((id): id is string => !!id && UUID.test(id)))];
   async function read<T>(table: string, columns: string, selectedIds: string[]): Promise<T[]> {
     if (!selectedIds.length) return [];
@@ -22,11 +22,12 @@ export async function readAppTabMetadata(client: SupabaseClient, hrefs: string[]
     if (error) throw new Error("Application tab labels could not be loaded");
     return data as T[];
   }
-  const [pages, objectives, pullRequests, routines] = await Promise.all([
+  const [pages, objectives, pullRequests, routines, issues] = await Promise.all([
     read<AppTabMetadata["pages"][number]>("pages", "id,project_id,title,icon", ids("pageId")),
     read<AppTabMetadata["objectives"][number]>("objectives", "id,project_id,name,color", ids("objectiveId")),
     read<AppTabMetadata["pullRequests"][number]>("pull_requests", "id,number,title", ids("prId")),
     read<AppTabMetadata["routines"][number]>("agent_routines", "id,title", ids("routineId")),
+    read<AppTabMetadata["issues"][number]>("issues", "id,project_id,number,title", ids("familyId")),
   ]);
   // A valid UUID from a different project must not relabel a malformed URL.
   return {
@@ -34,5 +35,6 @@ export async function readAppTabMetadata(client: SupabaseClient, hrefs: string[]
     objectives: objectives.filter((objective) => routes.some((route) => route.projectId === objective.project_id && route.objectiveId === objective.id)),
     pullRequests,
     routines,
+    issues: issues.filter((issue) => routes.some((route) => route.projectId === issue.project_id && route.familyId === issue.id)),
   };
 }
