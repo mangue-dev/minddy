@@ -42,7 +42,14 @@ export type AiConfigKind =
   | "recommended"
   | "flag";
 
-export type AiConfigGroup = "assistant" | "automations" | "agent" | "byok" | "voice" | "feedback";
+export type AiConfigGroup =
+  | "assistant"
+  | "automations"
+  | "agent"
+  | "byok"
+  | "voice"
+  | "feedback"
+  | "site";
 
 export interface AiConfigField {
   /** `app_config` key. */
@@ -218,6 +225,13 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
     group: "feedback",
     catalogCapability: "embedding",
   },
+  // FAQ ask box (MIN-590): an AI answer to a visitor's own question, offered
+  // on every public page that carries a FAQ section. It is anonymous traffic
+  // on the public site — like the landing demo it is bounded by an IP meter,
+  // a per-instance daily ceiling and this master switch, and it stays on the
+  // cheap fast model of the registry: one small completion per question.
+  { key: "faq_ask_enabled", kind: "flag", fallback: "true", group: "site" },
+  { key: "faq_ask_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "site" },
 ];
 
 /**
@@ -258,6 +272,7 @@ export const AI_MODEL_CONFIG_GROUPS: AiConfigGroup[] = [
   "byok",
   "voice",
   "feedback",
+  "site",
 ];
 
 /**

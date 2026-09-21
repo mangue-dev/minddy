@@ -82,6 +82,7 @@ export function AdminModelsDashboard() {
       byok: [],
       voice: [],
       feedback: [],
+      site: [],
     };
     for (const f of AI_MODEL_CONFIG_FIELDS) map[f.group].push(f);
     return map;
@@ -193,6 +194,7 @@ const MODEL_GROUP_SECTIONS: Record<AiConfigGroup, AdminSectionId> = {
   byok: ADMIN_SECTIONS.modelsByok,
   voice: ADMIN_SECTIONS.modelsVoice,
   feedback: ADMIN_SECTIONS.modelsFeedback,
+  site: ADMIN_SECTIONS.modelsSite,
 };
 
 /**

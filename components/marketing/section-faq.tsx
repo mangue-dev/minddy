@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { FaqAccordion } from "./faq-accordion";
+import { FaqAskBox } from "./faq-ask-box";
 import { FAQ_KEYS } from "./faq-keys";
 import { Reveal, RevealHeading } from "./reveal";
 
@@ -20,7 +21,7 @@ export async function SectionFaq() {
           text={t("faqTitle")}
         />
         <Reveal delay={0.12}>
-          <FaqAccordion items={items} />
+          <FaqAccordion items={items} footer={<FaqAskBox section="landing" />} />
         </Reveal>
       </div>
     </section>

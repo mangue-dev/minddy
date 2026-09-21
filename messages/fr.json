@@ -4153,6 +4153,10 @@
         "title": "Retours",
         "desc": "Traitement du board de retours."
       },
+      "site": {
+        "title": "Site public",
+        "desc": "Fonctions d’IA proposées aux visiteurs sans compte."
+      },
       "byokOther": "Autres endpoints"
     },
     "fields": {
@@ -4262,6 +4266,14 @@
       "jev_model": {
         "label": "Modèle de décisions Jev",
         "desc": "Le modèle System One qui répond à des questions structurées (catégories, triage, relecture). Rejoint via l'endpoint decisions d'OpenRouter, facturé sur les tokens d'entrée seulement."
+      },
+      "faq_ask_enabled": {
+        "label": "Encart de questions FAQ",
+        "desc": "Permet à un visiteur sans compte de poser sa propre question dans la section FAQ d'une page et de recevoir une réponse d'IA adossée à la documentation du produit. La seule dépense, avec la démo de la landing, offerte au trafic anonyme : une petite complétion par question, plafonnée à dix par IP et par heure, 1 000 par jour. Désactivé, l'encart disparaît de toutes les FAQ."
+      },
+      "faq_ask_model": {
+        "label": "Modèle de l'encart FAQ",
+        "desc": "Répond à la question d'un visiteur à partir de la FAQ de la page et de la documentation produit. Quelqu'un attend la réponse, et l'encart tourne toute la journée sur le site public : choisir un modèle rapide et pas cher."
       }
     },
     "finance": {
@@ -6420,5 +6432,11 @@
     "unavailableProject": "Projet indisponible",
     "destinationUnavailable": "Cette destination est indisponible. Choisissez une autre page ou fermez l’onglet.",
     "cycleTab": "Cycle"
+  },
+  "FaqAsk": {
+    "placeholder": "Posez votre question…",
+    "submitAria": "Envoyer la question",
+    "loading": "Recherche de la réponse…",
+    "error": "La réponse n’a pas pu être générée. Réessayez dans un instant."
   }
 }

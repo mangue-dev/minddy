@@ -4153,6 +4153,10 @@
         "title": "Sugerencias",
         "desc": "Procesamiento del tablero de sugerencias."
       },
+      "site": {
+        "title": "Sitio público",
+        "desc": "Funciones de IA para visitantes sin cuenta."
+      },
       "byokOther": "Otros endpoints"
     },
     "fields": {
@@ -4262,6 +4266,14 @@
       "jev_model": {
         "label": "Modelo de decisiones Jev",
         "desc": "El modelo System One que responde preguntas estructuradas (categorías, triaje, revisión). Se alcanza por el endpoint decisions de OpenRouter, facturado solo por tokens de entrada."
+      },
+      "faq_ask_enabled": {
+        "label": "Recuadro de preguntas FAQ",
+        "desc": "Permite a un visitante sin cuenta hacer su propia pregunta en la sección FAQ de una página y recibir una respuesta de IA basada en la documentación del producto. El único gasto, junto con la demo de la landing, ofrecido al tráfico anónimo: una pequeña completación por pregunta, limitada a diez por IP y hora, 1000 al día. Desactivado, el recuadro desaparece de todas las FAQ."
+      },
+      "faq_ask_model": {
+        "label": "Modelo del recuadro FAQ",
+        "desc": "Responde la pregunta de un visitante a partir de la FAQ de la página y de la documentación del producto. Alguien espera la respuesta, y el recuadro funciona todo el día en el sitio público: elige un modelo rápido y barato."
       }
     },
     "finance": {
@@ -6420,5 +6432,11 @@
     "unavailableProject": "Proyecto no disponible",
     "destinationUnavailable": "Este destino no está disponible. Elige otra página o cierra la pestaña.",
     "cycleTab": "Ciclo"
+  },
+  "FaqAsk": {
+    "placeholder": "Escribe tu pregunta…",
+    "submitAria": "Enviar la pregunta",
+    "loading": "Buscando la respuesta…",
+    "error": "No se pudo generar la respuesta. Inténtalo de nuevo en un momento."
   }
 }

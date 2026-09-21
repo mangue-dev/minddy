@@ -112,3 +112,10 @@ export function getKnowledgeTopicList(): string {
     .join("\n");
   return topicList;
 }
+
+/** All loaded articles, in catalog order — for callers that ground one prompt
+ * on the whole knowledge base (the FAQ ask box reads it inline instead of
+ * retrieving one topic). */
+export function getKnowledgeArticles(): KnowledgeArticle[] {
+  return loadKnowledge();
+}
