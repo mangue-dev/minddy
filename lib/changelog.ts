@@ -54,6 +54,17 @@ export interface ChangelogEntry {
 
 /** Newest to oldest — this is the display order AND the order of the feed. */
 export const CHANGELOG_ENTRIES: ReadonlyArray<ChangelogEntry> = [
+  { id: "mcp-catalog", date: "2026-09-21" },
+  { id: "performance", date: "2026-09-20" },
+  { id: "family-boards", date: "2026-09-19" },
+  { id: "smart-triage", date: "2026-09-19" },
+  { id: "smart-fill-everywhere", date: "2026-09-19" },
+  { id: "byok-providers", date: "2026-09-19" },
+  { id: "voice-dictation", date: "2026-09-19" },
+  { id: "objective-relations", date: "2026-09-17" },
+  { id: "pr-page", date: "2026-09-16" },
+  { id: "app-tabs", date: "2026-09-14" },
+  { id: "unified-numo", date: "2026-09-13" },
   { id: "page-databases", date: "2026-09-06" },
   { id: "numo-connected-services", date: "2026-09-05" },
   { id: "numo-cross-project", date: "2026-09-05" },
