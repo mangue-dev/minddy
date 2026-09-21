@@ -748,7 +748,8 @@
     "openHere": "Ouvrir le board de cette famille",
     "openNewTab": "Ouvrir dans un nouvel onglet",
     "backToBoard": "Retour au board complet",
-    "childCount": "{count, plural, one {# sous-ticket} other {# sous-tickets}}"
+    "childCount": "{count, plural, one {# sous-ticket} other {# sous-tickets}}",
+    "tabTitle": "Sous-tickets de {parent}"
   },
   "ShareView": {
     "title": "Partager la vue",
@@ -6207,7 +6208,8 @@
     "connectService": "Connecter {name}",
     "editService": "Modifier {name}",
     "connectDescription": "Autorisez Numo à utiliser {name}.",
-    "customDescription": "Saisissez un nom et l’URL du serveur pour le connecter à Numo."
+    "customDescription": "Saisissez un nom et l’URL du serveur pour le connecter à Numo.",
+    "configured": "Configuré et authentifié"
   },
   "PageDatabase": {
     "searchPropertyTypes": "Rechercher un type de colonne",
@@ -6345,6 +6347,7 @@
     "conflict": "Cet onglet a changé dans une autre fenêtre. Réessayez votre action.",
     "lastTab": "Gardez au moins un onglet ouvert.",
     "unavailableProject": "Projet indisponible",
-    "destinationUnavailable": "Cette destination est indisponible. Choisissez une autre page ou fermez l’onglet."
+    "destinationUnavailable": "Cette destination est indisponible. Choisissez une autre page ou fermez l’onglet.",
+    "cycleTab": "Cycle"
   }
 }

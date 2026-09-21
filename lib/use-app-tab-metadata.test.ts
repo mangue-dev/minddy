@@ -27,7 +27,7 @@ beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { queryFn: () => fullRead(), retry: false } } });
   fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({
     pages: [{ id: page, project_id: project, title: "Stored page", icon: null }],
-    objectives: [], pullRequests: [{ id: pr, number: 42, title: "Stored PR" }], routines: [],
+    objectives: [], pullRequests: [{ id: pr, number: 42, title: "Stored PR" }], routines: [], issues: [],
   }) }));
   vi.stubGlobal("fetch", fetchMock);
   container = document.createElement("div");
@@ -56,7 +56,7 @@ describe("tab label cache subscriptions", () => {
     expect(container.textContent).toBe("Cached title/Stored PR");
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({
       pages: [{ id: page, project_id: project, title: "Remote title", icon: null }],
-      objectives: [], pullRequests: [{ id: pr, number: 42, title: "Stored PR" }], routines: [],
+      objectives: [], pullRequests: [{ id: pr, number: 42, title: "Stored PR" }], routines: [], issues: [],
     }) });
     await act(() => client.invalidateQueries({ queryKey: ["app-tab-metadata"] }));
     await settle();

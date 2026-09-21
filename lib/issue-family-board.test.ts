@@ -8,7 +8,6 @@ import {
   issueParentIds,
   resolveIssueFamily,
 } from "./issue-family-board";
-import type { IssueStatus } from "./issue-constants";
 
 const issues = [
   { id: "parent", parent_id: null, status: "todo" },
@@ -71,22 +70,18 @@ describe("issue family board", () => {
     expect([...issueParentIds(issues)]).toEqual(["parent", "child-1"]);
   });
 
-  it("offers a column for every supported status — triage and duplicate included", () => {
-    // The family keeps its members whatever their status: a member in
-    // `triage` or `duplicate` must always find its column, never vanish
-    // from the board while the header still counts it.
-    const columns = new Set(familyBoardStatuses().map((s) => s.value));
-    for (const status of [
-      "triage",
+  it("renders the same kanban sweep as every board — no triage, no duplicate", () => {
+    // Like the objective page: `triage` (arrival zone) and `duplicate`
+    // (closed as a copy) are not columns of their own, so members parked
+    // there do not show on the family board.
+    const columns = familyBoardStatuses().map((s) => s.value);
+    expect(columns).toEqual([
       "backlog",
       "todo",
       "in_progress",
       "in_review",
       "done",
       "canceled",
-      "duplicate",
-    ] as const satisfies readonly IssueStatus[]) {
-      expect(columns.has(status)).toBe(true);
-    }
+    ]);
   });
 });
