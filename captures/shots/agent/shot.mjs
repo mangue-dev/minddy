@@ -24,7 +24,7 @@ import {
   DEFAULT_VIEW_NAMES,
 } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
-import { catalog, icuPlural, toolCallLabel } from "../../lib/messages.mjs";
+import { catalog, toolCallLabel } from "../../lib/messages.mjs";
 
 const SLOT = "workflowAgent";
 const OUT = "captures/shots/agent/out";
