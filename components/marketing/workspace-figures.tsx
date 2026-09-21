@@ -1,29 +1,177 @@
-import { getTranslations } from "next-intl/server";
+import { getFormatter, getTranslations } from "next-intl/server";
+import { Calendar, IterationCw, ListChecks, Plus } from "lucide-react";
 import { PriorityIndicator, StatusIndicator, EffortIndicator } from "@/components/issue-indicators";
+import { UserAvatar } from "@/components/user-avatar";
+import { DEFAULT_CATEGORIES, type DefaultCategoryKey } from "@/lib/default-categories";
+import { dueDateFormat, parseDueDate } from "@/lib/due-date";
+import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
 import { NumoFace } from "@/components/numo-face";
 import { NotebookFigure } from "./notebook-figure";
 
-/** A compact board built from the same status, priority, and effort components as issue cards. */
+/** One ticket of the illustrated board: every field a real card renders. */
+type FigureTicket = {
+  number: number;
+  key: "repro" | "signature" | "retry";
+  status: IssueStatus;
+  priority: IssuePriority;
+  effort: IssueEffort;
+  category: "bug" | "technical" | "feature";
+  /** Assignee's avatar seed — the portrait is drawn from it. */
+  assignee: string;
+  /** Plan progress badge (ListChecks + done/total), as on the card header. */
+  plan?: { done: number; total: number };
+  /** Blue cycle icon before the identifier: the ticket is in MY cycle. */
+  inCycle?: boolean;
+  /** Numo is working on this ticket — its face rides the header row. */
+  working?: boolean;
+  /** Due date, ISO date-only, shown as the card's compact chip. */
+  dueDate?: string;
+};
+
+/** The illustrated board depicts the demo Aurora workspace: its category
+    vocabulary (English labels — every capture uses them, whatever the locale)
+    with the colors the product seeds on every new project. */
+const FIGURE_CATEGORY_LABEL: Record<FigureTicket["category"], string> = {
+  bug: "Bug",
+  technical: "Technical",
+  feature: "Feature",
+};
+
+function figureCategoryColor(key: DefaultCategoryKey): string {
+  return DEFAULT_CATEGORIES.find((category) => category.key === key)?.color ?? "#6b7280";
+}
+
+/** Portraits of three teammates, picked in distinct background families
+    (cold / warm / green) — at 24 px, the background is what tells people
+    apart, exactly why the demo world spreads its members across the wheel. */
+const FIGURE_AVATARS = {
+  alice: "alice",
+  camille: "camille-aurora",
+  tom: "tom",
+} as const;
+
+const FIGURE_TICKETS: FigureTicket[] = [
+  {
+    number: 7,
+    key: "repro",
+    status: "todo",
+    priority: "medium",
+    effort: "s",
+    category: "bug",
+    assignee: FIGURE_AVATARS.alice,
+  },
+  {
+    number: 8,
+    key: "signature",
+    status: "in_progress",
+    priority: "high",
+    effort: "m",
+    category: "technical",
+    assignee: FIGURE_AVATARS.camille,
+    plan: { done: 2, total: 3 },
+    inCycle: true,
+    working: true,
+  },
+  {
+    number: 9,
+    key: "retry",
+    status: "in_review",
+    priority: "high",
+    effort: "s",
+    category: "feature",
+    assignee: FIGURE_AVATARS.tom,
+    dueDate: "2026-09-25",
+  },
+];
+
+/** A compact board built from the same status, priority, and effort components as issue cards.
+    The tickets mirror the real card layout (identifier + plan + assignee header,
+    semibold title over a muted description, status/priority/effort/category
+    indicators, due-date chip) and the columns the real KanbanColumn headers. */
 export async function BoardFigure() {
-  const [t, status] = await Promise.all([getTranslations("Landing"), getTranslations("Status")]);
-  const tasks = [
-    { key: "repro", status: "todo", priority: "medium", effort: "s" },
-    { key: "signature", status: "in_progress", priority: "high", effort: "m" },
-    { key: "retry", status: "in_review", priority: "high", effort: "s" },
-  ] as const;
+  const [t, status, board, format] = await Promise.all([
+    getTranslations("Landing"),
+    getTranslations("Status"),
+    getTranslations("Board"),
+    getFormatter(),
+  ]);
+  const columns = (["todo", "in_progress", "in_review"] as const).map((statusValue) => ({
+    statusValue,
+    tickets: FIGURE_TICKETS.filter((ticket) => ticket.status === statusValue),
+  }));
   return (
     <div className="w-full overflow-hidden rounded-xl border border-border bg-background text-foreground shadow-sm" role="img" aria-label={t("feature_board_title")}>
       <div className="flex items-center gap-2 border-b border-border px-4 py-3 text-xs font-medium">
         <span className="size-2 rounded-full bg-primary" />Aurora<span className="text-muted-foreground">/</span>{t("navMenu_tracker_title")}
       </div>
-      <div className="grid gap-2 p-3 sm:grid-cols-3">
-        {tasks.map((task, index) => (
-          <div key={task.key} className="min-w-0 rounded-lg bg-muted/50 p-2">
-            <div className="mb-3 flex items-center gap-2 text-xs font-medium"><StatusIndicator status={task.status} />{status(task.status)}<span className="ml-auto text-muted-foreground">1</span></div>
-            <div className="rounded-lg border border-border bg-card p-3 shadow-xs">
-              <span className="font-mono text-[10px] text-muted-foreground">AUR-{index + 7}</span>
-              <p className="mt-2 text-sm leading-snug sm:min-h-15">{t(`heroLoopTask_${task.key}`)}</p>
-              <div className="mt-4 flex items-center gap-3"><PriorityIndicator priority={task.priority} /><EffortIndicator effort={task.effort} />{task.status === "in_progress" && <NumoFace className="ml-auto h-4 w-5" />}</div>
+      <div className="grid gap-3 p-3 sm:grid-cols-3">
+        {columns.map((column) => (
+          <div key={column.statusValue} className="flex min-w-0 flex-col">
+            {/* Column header, as KanbanColumn renders it: colored ring, semibold
+                label, muted count. */}
+            <div className="mb-2 flex items-center gap-2 px-1">
+              <StatusIndicator status={column.statusValue} className="size-4" />
+              <span className="text-sm font-semibold">{status(column.statusValue)}</span>
+              <span className="relative top-px text-xs text-muted-foreground">{column.tickets.length}</span>
+            </div>
+            <div className="flex flex-col gap-2 rounded-xl p-2">
+              {column.tickets.map((ticket) => {
+                const due = ticket.dueDate ? parseDueDate(ticket.dueDate) : null;
+                return (
+                <div key={ticket.number} className="flex flex-col gap-2 rounded-xl border border-border/60 bg-card p-3 text-left shadow-none dark:border-border dark:shadow-xs">
+                  {/* Identifier + plan / agent presence / assignee, as on the card header. */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-center gap-1 font-mono text-[11px] text-muted-foreground">
+                      {ticket.inCycle && (
+                        <span className="flex shrink-0 items-center text-blue-500 dark:text-blue-400">
+                          <IterationCw className="size-3" />
+                        </span>
+                      )}
+                      <span className="truncate">AUR-{ticket.number}</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      {ticket.plan && (
+                        <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                          <ListChecks className="size-3.5 shrink-0" />
+                          <span className="tabular-nums">{ticket.plan.done}/{ticket.plan.total}</span>
+                        </span>
+                      )}
+                      {ticket.working && <NumoFace className="h-4 w-5" />}
+                      {ticket.assignee && <UserAvatar seed={ticket.assignee} className="size-6" />}
+                    </span>
+                  </div>
+                  {/* Title over a description preview, with the card's tight spacing. */}
+                  <div className="-mt-1 flex flex-col gap-0.5">
+                    <p className="line-clamp-2 text-sm font-semibold leading-snug">{t(`heroLoopTask_${ticket.key}`)}</p>
+                    <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">{t(`heroLoopDesc_${ticket.key}`)}</p>
+                  </div>
+                  {/* Indicators — status · priority · effort · category, edge to edge. */}
+                  <div className="flex items-center justify-between pt-0.5">
+                    <StatusIndicator status={ticket.status} />
+                    <PriorityIndicator priority={ticket.priority} />
+                    <EffortIndicator effort={ticket.effort} />
+                    <span className="flex min-w-0 items-center gap-1.5 text-xs">
+                      <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: figureCategoryColor(ticket.category) }} aria-hidden />
+                      <span className="truncate">{FIGURE_CATEGORY_LABEL[ticket.category]}</span>
+                    </span>
+                  </div>
+                  {due && (
+                    <div className="flex items-center justify-end pt-0.5">
+                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <Calendar className="size-3 shrink-0" />
+                        {format.dateTime(due, dueDateFormat(due, { compact: true }))}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                );
+              })}
+              {/* The column's "new ticket" affordance, always present on the
+                  real board — decorative here: no hover, no pointer. */}
+              <span className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-6 text-sm font-medium text-muted-foreground">
+                <Plus className="size-4" />
+                {board("newIssue")}
+              </span>
             </div>
           </div>
         ))}
