@@ -45,7 +45,6 @@ import { boardViewTabHref } from "@/lib/board-view-tab";
 import { ME_ASSIGNEE, filterIssues, visibleStatuses } from "@/lib/view-filter";
 import {
   STATUSES,
-  isClosedStatus,
   issueIdentifier,
   type IssueStatus,
 } from "@/lib/issue-constants";
@@ -612,13 +611,25 @@ function ProjectBoard() {
       : null
   );
 
-  // Publish what this board is showing to Numo (open issue > objective > tab),
-  // so "this ticket" / "this objective" / "this view" resolve without searching.
+  // Publish what this board is showing to Numo (open issue > family parent >
+  // objective > tab), so "this ticket" / "this objective" / "this view" resolve
+  // without searching. A family board is scoped to one parent ticket: that
+  // ticket becomes THE ambient context — "this ticket" must mean it — and the
+  // board view underneath stays out of the way, as with an objective scope.
   // The selected view rides along in every case so Numo can edit it in place.
-  const viewCtx =
-    !activeObjective && activeView
-      ? { viewId: activeView.id, viewName: activeView.name }
-      : null;
+  const viewCtx = !activeObjective && activeView
+    ? { viewId: activeView.id, viewName: activeView.name }
+    : null;
+  const familyCtx = activeFamily
+    ? {
+        issueId: activeFamily.parent.id,
+        issueIdentifier: issueIdentifier(
+          project?.key ?? "",
+          activeFamily.parent.number,
+        ),
+        issueTitle: activeFamily.parent.title,
+      }
+    : null;
   useAssistantContext(
     project
       ? openIssue
@@ -629,6 +640,8 @@ function ProjectBoard() {
             issueTitle: openIssue.title,
             ...viewCtx,
           }
+        : familyCtx
+        ? { projectId, ...familyCtx }
         : activeObjective
           ? {
               projectId,
@@ -791,9 +804,16 @@ function ProjectBoard() {
               parent={activeFamily.parent}
               projectKey={project.key}
               childCount={activeFamily.issues.length - 1}
-              completedChildCount={activeFamily.issues
-                .slice(1)
-                .filter((issue) => isClosedStatus(issue.status)).length}
+              // Same grading as the objective and cycle rings: effort-weighted
+              // with partial credit for work in flight, not a raw closed count.
+              percent={
+                cycleCompletionPercent(
+                  activeFamily.issues.slice(1).map((issue) => ({
+                    effort: issue.effort,
+                    status: issue.status,
+                  }))
+                ) ?? 0
+              }
               exitHref={issueFamilyBoardExitHref(projectId, searchParams)}
             />
           ) : activeObjective ? (
