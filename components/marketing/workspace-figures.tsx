@@ -2,6 +2,7 @@ import { getFormatter, getTranslations } from "next-intl/server";
 import type { CSSProperties, ReactNode } from "react";
 import {
   ArrowDownUp,
+  ArrowUpDown,
   Calendar,
   CalendarDays,
   ChevronRight,
@@ -15,9 +16,12 @@ import {
   Plus,
   Search,
   Settings2,
+  Target,
   Users,
 } from "lucide-react";
-import { PriorityIndicator, StatusIndicator, EffortIndicator } from "@/components/issue-indicators";
+import { PriorityIndicator, StatusIndicator, EffortIndicator, ObjectiveStatusIndicator } from "@/components/issue-indicators";
+import { ProgressRing } from "@/components/progress-ring";
+import { SmartFillIcon } from "@/components/smart-icons";
 import { UserAvatar } from "@/components/user-avatar";
 import { ProjectOrb } from "@/components/project-orb";
 import { DEFAULT_CATEGORIES, type DefaultCategoryKey } from "@/lib/default-categories";
@@ -397,6 +401,135 @@ export async function AgentWorkFigure() {
         {(["repro", "signature", "retry"] as const).map(key => <li key={key} className="flex items-start gap-3 text-sm"><StatusIndicator status="done" /><span>{t(`heroLoopTask_${key}`)}</span></li>)}
       </ul>
       <p className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">{t("heroLoopRunDetail")}</p>
+    </div>
+  );
+}
+
+/** The three Smart automations acting on one incoming ticket: Smart Fill
+    completes its properties, Smart Assign picks its teammate from the
+    assignment rules, and the Smart sort places it first in Triage. The
+    subject card mirrors IssueCardBody (identifier + assignee header,
+    semibold title, status/priority/effort/category indicators); the journal
+    lines reuse the product's own words — the "Smart-fill" chip, the "Smart"
+    sort, the assignment rules. */
+export async function SmartFigure() {
+  const [t, tIssueUI] = await Promise.all([
+    getTranslations("Landing"),
+    getTranslations("IssueUI"),
+  ]);
+  return (
+    <div className="w-full rounded-xl border border-border bg-background p-5 text-foreground shadow-sm" role="img" aria-label={t("smartTitle")}>
+      <div className="mb-4 flex items-center gap-2 border-b border-border pb-4 text-sm font-medium">
+        <SmartFillIcon className="h-4 w-8 shrink-0" />
+        {t("smartFigureHeader")}
+      </div>
+      {/* The incoming ticket, as the board card renders it. */}
+      <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-card p-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-mono text-[11px] text-muted-foreground">AUR-10</span>
+          <UserAvatar seed={FIGURE_AVATARS.tom} className="size-6" />
+        </div>
+        <p className="-mt-1 text-sm font-semibold leading-snug">{t("smartFigureTicket")}</p>
+        <div className="flex items-center justify-between pt-0.5">
+          <StatusIndicator status="triage" />
+          <PriorityIndicator priority="urgent" />
+          <EffortIndicator effort="m" />
+          <span className="flex min-w-0 items-center gap-1.5 text-xs">
+            <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: figureCategoryColor("bug") }} aria-hidden />
+            <span className="truncate">{FIGURE_CATEGORY_LABEL.bug}</span>
+          </span>
+        </div>
+      </div>
+      {/* The three journal moments, in the product's own words. */}
+      <ul className="mt-4 space-y-3">
+        <li className="flex items-center gap-3">
+          <span className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 text-xs font-medium text-primary">
+            <SmartFillIcon className="h-3 w-6 shrink-0" />
+            {tIssueUI("smartFillChip")}
+          </span>
+          <span className="min-w-0 text-sm text-muted-foreground">{t("smartFigureFilled")}</span>
+        </li>
+        <li className="flex items-center gap-3">
+          <UserAvatar seed={FIGURE_AVATARS.tom} className="size-6 shrink-0" />
+          <span className="min-w-0 text-sm text-muted-foreground">{t("smartFigureAssigned")}</span>
+        </li>
+        <li className="flex items-center gap-3">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground" aria-hidden>
+            <ArrowUpDown className="size-3.5" />
+          </span>
+          <span className="min-w-0 text-sm text-muted-foreground">{t("smartFigureTriage")}</span>
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+/** One objective as ObjectiveBoardHeader presents it: a color dot over the
+    name with its status, then the three indicator clusters — the
+    effort-weighted progress ring with the unweighted completed count, the
+    lead's avatar, the target date — above the attached issues that feed the
+    ring. Reuses the product's own labels (Progress, Lead, Target date). */
+export async function ObjectivesFigure() {
+  const [t, tObjectives, tObjectiveStatus] = await Promise.all([
+    getTranslations("Landing"),
+    getTranslations("Objectives"),
+    getTranslations("ObjectiveStatus"),
+  ]);
+  const issues = [
+    { key: "objectiveFigureIssue1", status: "done", effort: "m" },
+    { key: "objectiveFigureIssue2", status: "in_progress", effort: "l" },
+    { key: "objectiveFigureIssue3", status: "todo", effort: "s" },
+  ] as const satisfies ReadonlyArray<{ key: string; status: IssueStatus; effort: IssueEffort }>;
+  return (
+    <div className="w-full rounded-xl border border-border bg-background p-5 text-foreground shadow-sm" role="img" aria-label={t("feature_objectives_title")}>
+      {/* Identity: color dot, name, and status. */}
+      <div className="mb-4 flex items-center justify-between gap-2 border-b border-border pb-4">
+        <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
+          <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: "#10b981" }} aria-hidden />
+          <span className="truncate">{t("objectiveFigureName")}</span>
+        </span>
+        <span className="flex shrink-0 items-center gap-1.5">
+          <ObjectiveStatusIndicator status="in_progress" className="size-3.5" />
+          <span className="text-xs text-muted-foreground">{tObjectiveStatus("in_progress")}</span>
+        </span>
+      </div>
+      {/* Indicators — progress · lead · target, as the real header clusters them:
+          a circle followed by a muted label over a small value. */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="flex items-center gap-2">
+          <ProgressRing percent={55} colorClass="text-emerald-500" className="size-7" />
+          <div className="flex flex-col leading-tight">
+            <span className="text-[11px] text-muted-foreground">{tObjectives("progressLabel")}</span>
+            <span className="text-xs font-medium tabular-nums">{tObjectives("completed", { done: 3, total: 8 })}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <UserAvatar seed={FIGURE_AVATARS.camille} className="size-7" />
+          <div className="flex flex-col leading-tight">
+            <span className="text-[11px] text-muted-foreground">{tObjectives("leadFieldLabel")}</span>
+            <span className="max-w-[9rem] truncate text-xs font-medium">{t("objectiveFigureLeadName")}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground" aria-hidden>
+            <Target className="size-3.5" />
+          </span>
+          <div className="flex flex-col leading-tight">
+            <span className="text-[11px] text-muted-foreground">{tObjectives("targetDatePlaceholder")}</span>
+            <span className="text-xs font-medium">{t("objectiveFigureTargetDate")}</span>
+          </div>
+        </div>
+      </div>
+      {/* The attached issues that feed the ring, as slim board rows. */}
+      <ul className="mt-4 space-y-3 border-t border-border pt-4">
+        {issues.map(issue => (
+          <li key={issue.key} className="flex items-center gap-3 text-sm">
+            <span className="shrink-0"><StatusIndicator status={issue.status} /></span>
+            <span className="min-w-0 flex-1 truncate">{t(issue.key)}</span>
+            <EffortIndicator effort={issue.effort} className="shrink-0" />
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
