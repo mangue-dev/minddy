@@ -59,7 +59,7 @@ const frenchPattern = /(?:[àâçéèêëîïôùûüÿœæÀÂÇÉÈÊËÎÏÔ�
 // names, paths/identifiers, and fixtures that explicitly test localization or
 // accented filenames. They are kept visible so the checker does not encourage
 // changing behavior or test data merely to make the heuristic green.
-const intentionalFrenchPattern = /Clément|sautéed|façade|Décor|Terminé|Annulé|Réinitialisez|Édition|Détail|“É”|Règles du web|quand … si … alors|19 juil\.|1 août|arrivée|départ|Réparer|<clé>|<CLÉ>|<prénom nom>|nœud|été|Projets|projet(?:-\w+)?\.mjs|éditeur\/famille-latest|fichier à espaces\.md|`[^`]*(?:projet|clé|CLÉ|dépôt)[^`]*`/u;
+const intentionalFrenchPattern = /Clément|sautéed|façade|Décor|Terminé|Annulé|Réinitialisez|Édition|Détail|“É”|Règles du web|quand … si … alors|19 juil\.|1 août|arrivée|départ|Réparer|<clé>|<CLÉ>|<prénom nom>|nœud|été|Projets|projet(?:-\w+)?\.mjs|éditeur\/famille-latest|fichier à espaces\.md|travaillé pendant|Chargement des modèles|Confier cette section à Numo|Prête à fusionner|checks réussis|Faire vérifier par Numo|Fichiers modifiés|Activité|`[^`]*(?:projet|clé|CLÉ|dépôt)[^`]*`/u;
 
 function isDocumentationLine(file, line, inBlockComment) {
   const extension = path.extname(file);

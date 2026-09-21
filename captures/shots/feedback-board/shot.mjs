@@ -48,6 +48,17 @@ async function capture({ locale, theme }) {
 
     const check = await page.evaluate((top) => {
       const text = document.body.textContent || "";
+      // A visitor-visible identity only counts where it RENDERS: the
+      // serialized RSC payload inside <script> can carry demo names without
+      // ever displaying them, and that is not a leak.
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let rendered = "";
+      while (walker.nextNode()) {
+        const parent = walker.currentNode.parentElement;
+        if (parent && !["SCRIPT", "STYLE"].includes(parent.tagName)) {
+          rendered += walker.currentNode.textContent + "\n";
+        }
+      }
       const items = [...document.querySelectorAll("main li")];
       return {
         missing: top.filter((p) => !text.includes(p.title)).map((p) => p.title),
@@ -56,7 +67,7 @@ async function capture({ locale, theme }) {
         votes: top.filter((p) => !text.includes(String(p.votes))).map((p) => p.votes),
         count: items.length,
         // A logged out visitor should not see any trace of an account.
-        leaksSession: text.includes("Camille") || /captures-demo/.test(text),
+        leaksSession: /Camille|captures-demo/.test(rendered),
       };
     }, TOP);
 

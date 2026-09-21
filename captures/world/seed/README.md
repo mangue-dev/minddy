@@ -14,3 +14,12 @@ passage is ever billed. Runs are seeded at rest (`completed`/`failed`, never
 `queued`/`running`) with no pull request, for the same reasons as `008-agent.mjs`.
 The default run applies after the plan it prints; relaunching is safe, existing
 routines and runs are left as they are.
+
+`017-cycle-recal.mjs` realigns the demo cycle world for the `featureCycle`
+screenshot: AUR-18 — auto-captured into Camille's current fortnight by the
+app — leaves the cycle and is reassigned to Alice Fontaine so the auto-
+capture pool never pulls it back, and the three most recent closed demo
+cycles are recalibrated to 80 completed points so the velocity factor stays
+1 and the capacity ring reads ~45 % instead of a floored 93 %. It creates no
+records; every update goes through the shared write guards, and the default
+run only describes the change before applying it.
