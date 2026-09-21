@@ -79,7 +79,7 @@ export function FaqAsk({
           maxLength={500}
           autoComplete="off"
           disabled={status.kind === "loading"}
-          className="w-full rounded-lg border border-transparent bg-transparent py-6 text-base font-medium text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+          className="w-full rounded-lg border border-transparent bg-transparent py-6 text-base font-medium text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50"
           onChange={(event) => setQuestion(event.target.value)}
         />
         {/* Implicit submission: Enter asks. The sr-only submit keeps the

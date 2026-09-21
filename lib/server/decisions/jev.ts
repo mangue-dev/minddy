@@ -106,11 +106,17 @@ async function resolveJevApiKey(billTo: AiUsageBillTo): Promise<{
 // ── Wire mapping: DecisionQuestion → native questions, and back ──────────────
 
 type JevQuestion =
-  | { type: "choice"; criteria: Record<string, string> }
-  | { type: "noul" }
-  | { type: "score"; levels: { value: number; label: string }[] };
+  | { type: "choice"; criteria: Record<string, string>; instructions: string }
+  | { type: "noul"; instructions: string }
+  | { type: "score"; criteria: { value: number; label: string }[]; instructions: string };
 
 /**
+ * The engine no longer answers a bare question: since the decisions schema
+ * drifted (observed 2026-09-21 — the endpoint started refusing bodies whose
+ * questions carry no `instructions`), every question states in plain words
+ * what it asks. `label` already is that statement ("Short human-readable
+ * statement of what the question asks"), so it rides as-is.
+ *
  * Multi-choice does not exist natively: Jev evaluates every question
  * independently against the same state, so a multi_choice becomes ONE
  * `noul` per option, keyed `<key>:<value>`. The option values are
@@ -129,20 +135,28 @@ export function expandJevQuestions(spec: DecisionSpec): Record<string, JevQuesti
           criteria: Object.fromEntries(
             question.options.map((o) => [o.value, describe(o.label, o.description)])
           ),
+          instructions: question.label,
         };
         break;
       case "multi_choice":
         for (const option of question.options) {
-          questions[`${question.key}:${option.value}`] = { type: "noul" };
+          questions[`${question.key}:${option.value}`] = {
+            type: "noul",
+            instructions: describe(option.label, option.description),
+          };
         }
         break;
       case "boolean":
-        questions[question.key] = { type: "noul" };
+        questions[question.key] = { type: "noul", instructions: question.label };
         break;
       case "score":
         questions[question.key] = {
           type: "score",
-          levels: question.levels.map((l) => ({ value: l.value, label: l.label })),
+          // The score's scale moved from `levels` to a `criteria` ARRAY on
+          // the same drift as `instructions`; the legend of the response
+          // maps the distribution's indices back onto these values.
+          criteria: question.levels.map((l) => ({ value: l.value, label: l.label })),
+          instructions: question.label,
         };
         break;
     }
@@ -272,27 +286,69 @@ function parseScoreAnswer(
   raw: unknown,
   allowed: number[]
 ): { value: number; probability: number | null; confidence: number | null } | null {
-  let value: unknown = raw;
-  let probability: number | null = null;
-  let confidence: number | null = null;
-  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-    const record = raw as Record<string, unknown>;
-    value = record.score;
+  // A bare value stays the tolerant read (older envelopes, tests).
+  if (typeof raw === "number") {
+    return allowed.includes(raw)
+      ? { value: raw, probability: null, confidence: 0 }
+      : null;
+  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const record = raw as Record<string, unknown>;
+  const confidence = clamp01(record.confidence);
+
+  // Legacy shape (MIN-561): `score` IS the chosen level's value, with
+  // probabilities keyed by the values themselves.
+  if (!("legend" in record)) {
+    let value: unknown = record.score;
+    let probability: number | null = null;
     if (record.probabilities && typeof record.probabilities === "object") {
       const probabilities = record.probabilities as Record<string, unknown>;
       const p = clamp01(probabilities[String(value)]);
       if (p !== null) probability = p;
     }
-    confidence = clamp01(record.confidence);
+    const parsed =
+      typeof value === "number"
+        ? value
+        : typeof value === "string" && value.trim() !== ""
+          ? Number.parseFloat(value)
+          : Number.NaN;
+    if (!Number.isFinite(parsed) || !allowed.includes(parsed)) return null;
+    return { value: parsed, probability, confidence: confidence ?? 0 };
   }
-  const parsed =
-    typeof value === "number"
-      ? value
-      : typeof value === "string" && value.trim() !== ""
-        ? Number.parseFloat(value)
-        : Number.NaN;
-  if (!Number.isFinite(parsed) || !allowed.includes(parsed)) return null;
-  return { value: parsed, probability, confidence: confidence ?? 0 };
+
+  // Current shape: `score` is a 0–1 grade of the state against the ordered
+  // scale, NOT the chosen value — the answer carries the distribution over
+  // the criteria's indices (`probabilities`) and a `legend` mapping each
+  // index back onto its {value, label}. The chosen level is the argmax
+  // index, resolved through the legend and checked against the spec.
+  const probabilities =
+    record.probabilities && typeof record.probabilities === "object"
+      ? (record.probabilities as Record<string, unknown>)
+      : null;
+  const legend =
+    record.legend && typeof record.legend === "object"
+      ? (record.legend as Record<string, unknown>)
+      : null;
+  if (!probabilities || !legend) return null;
+  let bestIndex: string | null = null;
+  let bestProbability = -1;
+  for (const [index, rawProbability] of Object.entries(probabilities)) {
+    const p = clamp01(rawProbability);
+    if (p !== null && p > bestProbability) {
+      bestProbability = p;
+      bestIndex = index;
+    }
+  }
+  if (bestIndex === null) return null;
+  const chosen = (legend[bestIndex] ?? null) as Record<string, unknown> | number | null;
+  const chosenValue =
+    typeof chosen === "object" && chosen !== null ? chosen.value : chosen;
+  const value =
+    typeof chosenValue === "number"
+      ? chosenValue
+      : Number.parseFloat(String(chosenValue));
+  if (!Number.isFinite(value) || !allowed.includes(value)) return null;
+  return { value, probability: bestProbability, confidence: confidence ?? 0 };
 }
 
 /**
