@@ -73,13 +73,23 @@ export function Kbd({
         // AFTER the glyph, so a centered flex item came out visibly left of
         // center inside the fixed square.
         "inline-flex items-center justify-center tracking-normal rounded-[0.375rem] border [border-color:color-mix(in_srgb,currentColor_30%,transparent)] [color:color-mix(in_srgb,currentColor_75%,transparent)] [font-family:var(--font-kbd)] font-semibold",
+        // `leading-*` equals the cap's own height, per size. The flex
+        // centering centers the text's LINE BOX, whose height is the
+        // INHERITED line-height — it varies per surface (menu rows, cheat
+        // sheet rows, tooltips) and when (cap height − line box) / 2 lands on
+        // a half pixel, Chromium snaps the baseline a full pixel low: the
+        // glyph visibly sags. A line box exactly as tall as the cap fills the
+        // flex item with no rounding ambiguity, and the ink measures dead
+        // center on every surface. Measured at 4× DPR, Chromium, SF Pro:
+        // 15px cap centered at line-height 15px, sagged 1px at 10/12/14px;
+        // 18px cap centered at 18px, sagged at 16/17/19px.
         square
           ? size === "sm"
-            ? "size-[15px] text-[10px]"
-            : "size-[18px] text-[11px]"
+            ? "size-[15px] text-[10px] leading-[15px]"
+            : "size-[18px] text-[11px] leading-[18px]"
           : size === "sm"
-            ? "h-[15px] min-w-[15px] px-1 text-[10px]"
-            : "h-[18px] min-w-[18px] px-1 text-[11px]",
+            ? "h-[15px] min-w-[15px] px-1 text-[10px] leading-[15px]"
+            : "h-[18px] min-w-[18px] px-1 text-[11px] leading-[18px]",
         className
       )}
       {...props}
