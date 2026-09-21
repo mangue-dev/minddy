@@ -38,6 +38,7 @@ import {
   type ReactNode,
 } from "react";
 import { buildViewHref } from "@/lib/saved-view-href";
+import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
 
 export interface CurrentViewSnapshot {
   /**
@@ -52,16 +53,27 @@ export interface CurrentViewSnapshot {
   label?: string;
 }
 
+/**
+ * A publication tagged with the tab that produced it. Retained boards keep
+ * publishing while hidden in the background of a tab switch; without the tag,
+ * the outgoing board's last word would be read as the incoming tab's truth.
+ */
+interface TaggedPublication {
+  snapshot: CurrentViewSnapshot;
+  tabId: string | null;
+}
+
 interface CurrentViewContextValue {
-  publish: (snapshot: CurrentViewSnapshot | null, ownerId: string) => void;
+  publish: (next: CurrentViewSnapshot | null, ownerId: string, tabId: string | null) => void;
   read: () => CurrentViewSnapshot | null;
+  readTagged: () => TaggedPublication | null;
   subscribe: (listener: () => void) => () => void;
 }
 
 const CurrentViewContext = createContext<CurrentViewContextValue | null>(null);
 
 export function CurrentViewProvider({ children }: { children: ReactNode }) {
-  const snapshotRef = useRef<CurrentViewSnapshot | null>(null);
+  const publicationRef = useRef<TaggedPublication | null>(null);
   const ownerRef = useRef<string | null>(null);
   const listeners = useRef(new Set<() => void>());
 
@@ -69,20 +81,21 @@ export function CurrentViewProvider({ children }: { children: ReactNode }) {
   // because of a publication.
   const value = useMemo<CurrentViewContextValue>(
     () => ({
-      publish: (next, ownerId) => {
+      publish: (next, ownerId, tabId) => {
         if (next) {
           ownerRef.current = ownerId;
-          snapshotRef.current = next;
+          publicationRef.current = { snapshot: next, tabId };
           listeners.current.forEach((listener) => listener());
           return;
         }
         // Only the current owner has the right to delete.
         if (ownerRef.current !== ownerId) return;
         ownerRef.current = null;
-        snapshotRef.current = null;
+        publicationRef.current = null;
         listeners.current.forEach((listener) => listener());
       },
-      read: () => snapshotRef.current,
+      read: () => publicationRef.current?.snapshot ?? null,
+      readTagged: () => publicationRef.current,
       subscribe: (listener) => {
         listeners.current.add(listener);
         return () => { listeners.current.delete(listener); };
@@ -98,11 +111,17 @@ export function CurrentViewProvider({ children }: { children: ReactNode }) {
   );
 }
 
-const emptySnapshot = () => null;
+const emptyTagged = () => null;
 const emptySubscription = () => () => {};
-export function useCurrentViewSnapshot() {
+
+/**
+ * The tagged publication — who published it AND which tab owns it. The route
+ * sync only honors a publication whose tab is the active one; a retained
+ * board's background re-render must not relabel the tab that just took over.
+ */
+export function useCurrentViewTaggedPublication() {
   const context = useContext(CurrentViewContext);
-  return useSyncExternalStore(context?.subscribe ?? emptySubscription, context?.read ?? emptySnapshot, emptySnapshot);
+  return useSyncExternalStore(context?.subscribe ?? emptySubscription, context?.readTagged ?? emptyTagged, emptyTagged);
 }
 
 /**
@@ -116,15 +135,24 @@ export function usePublishCurrentView(
   const ctx = useContext(CurrentViewContext);
   const publish = ctx?.publish;
   const ownerId = useId();
+  // The tab this surface belongs to: a retained board's scope carries ITS tab,
+  // a plain page carries the session's active tab. The tag rides with every
+  // publication so the route sync can tell the active board's word from a
+  // background board's. Re-published when the tag changes: the startup DOM
+  // mounts before tab restoration scopes it to a real tab.
+  const { activeId: ownerTabId } = useOptionalAppTabNavigation() ?? { activeId: null };
+  const ownerTabRef = useRef(ownerTabId);
+  ownerTabRef.current = ownerTabId;
   // Serialized so that the effect only replays on a real change: the caller
   // rebuilds its object each time it is rendered.
   const key = snapshot ? JSON.stringify(snapshot) : null;
 
   useEffect(() => {
     if (!publish) return;
-    publish(key ? (JSON.parse(key) as CurrentViewSnapshot) : null, ownerId);
-    return () => publish(null, ownerId);
-  }, [key, ownerId, publish]);
+    const tagged = ownerTabRef.current;
+    publish(key ? (JSON.parse(key) as CurrentViewSnapshot) : null, ownerId, tagged);
+    return () => publish(null, ownerId, tagged);
+  }, [key, ownerId, publish, ownerTabId]);
 }
 
 export interface CurrentView {

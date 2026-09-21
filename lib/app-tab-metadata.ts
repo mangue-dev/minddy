@@ -6,12 +6,14 @@ export interface AppTabMetadata {
   objectives: { id: string; project_id: string; name: string; color: string | null }[];
   pullRequests: { id: string; number: number; title: string | null }[];
   routines: { id: string; title: string }[];
+  /** Family boards name their tab after the parent issue. */
+  issues: { id: string; project_id: string; number: number; title: string }[];
 }
 
 export function appTabMetadataLocations(hrefs: string[]): string[] {
   return [...new Set(hrefs.map(normalizeAppTabLocation).filter((href): href is string => {
     if (!href) return false;
     const route = appTabRoute(href);
-    return !!(route.pageId || route.objectiveId || route.prId || route.routineId);
+    return !!(route.pageId || route.objectiveId || route.prId || route.routineId || route.familyId);
   }))].sort();
 }

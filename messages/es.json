@@ -748,7 +748,8 @@
     "openHere": "Abrir el tablero de esta familia",
     "openNewTab": "Abrir en una pestaña nueva",
     "backToBoard": "Volver al tablero completo",
-    "childCount": "{count, plural, one {# subtarea} other {# subtareas}}"
+    "childCount": "{count, plural, one {# subtarea} other {# subtareas}}",
+    "tabTitle": "Subtareas de {parent}"
   },
   "ShareView": {
     "title": "Compartir vista",
@@ -6207,7 +6208,8 @@
     "connectService": "Conectar {name}",
     "editService": "Editar {name}",
     "connectDescription": "Permite que Numo use {name}.",
-    "customDescription": "Introduce un nombre y la URL del servidor para conectarlo a Numo."
+    "customDescription": "Introduce un nombre y la URL del servidor para conectarlo a Numo.",
+    "configured": "Configurado y autenticado"
   },
   "PageDatabase": {
     "searchPropertyTypes": "Buscar tipo de columna",
@@ -6345,6 +6347,7 @@
     "conflict": "Esta pestaña cambió en otra ventana. Repite la acción.",
     "lastTab": "Mantén al menos una pestaña abierta.",
     "unavailableProject": "Proyecto no disponible",
-    "destinationUnavailable": "Este destino no está disponible. Elige otra página o cierra la pestaña."
+    "destinationUnavailable": "Este destino no está disponible. Elige otra página o cierra la pestaña.",
+    "cycleTab": "Ciclo"
   }
 }

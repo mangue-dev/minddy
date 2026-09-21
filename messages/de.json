@@ -748,7 +748,8 @@
     "openHere": "Board dieser Ticketfamilie öffnen",
     "openNewTab": "In einem neuen Tab öffnen",
     "backToBoard": "Zurück zum vollständigen Board",
-    "childCount": "{count, plural, one {# Unteraufgabe} other {# Unteraufgaben}}"
+    "childCount": "{count, plural, one {# Unteraufgabe} other {# Unteraufgaben}}",
+    "tabTitle": "Untertickets von {parent}"
   },
   "ShareView": {
     "title": "Ansicht teilen",
@@ -6207,7 +6208,8 @@
     "connectService": "{name} verbinden",
     "editService": "{name} bearbeiten",
     "connectDescription": "Erlaube Numo, {name} zu nutzen.",
-    "customDescription": "Gib einen Namen und die Server-URL ein, um ihn mit Numo zu verbinden."
+    "customDescription": "Gib einen Namen und die Server-URL ein, um ihn mit Numo zu verbinden.",
+    "configured": "Konfiguriert und authentifiziert"
   },
   "PageDatabase": {
     "searchPropertyTypes": "Spaltentyp suchen",
@@ -6345,6 +6347,7 @@
     "conflict": "Dieser Tab wurde in einem anderen Fenster geändert. Wiederhole die Aktion.",
     "lastTab": "Lass mindestens einen Tab geöffnet.",
     "unavailableProject": "Projekt nicht verfügbar",
-    "destinationUnavailable": "Dieses Ziel ist nicht verfügbar. Wähle eine andere Seite oder schließe den Tab."
+    "destinationUnavailable": "Dieses Ziel ist nicht verfügbar. Wähle eine andere Seite oder schließe den Tab.",
+    "cycleTab": "Zyklus"
   }
 }

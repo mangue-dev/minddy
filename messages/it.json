@@ -748,7 +748,8 @@
     "openHere": "Apri la bacheca di questa famiglia",
     "openNewTab": "Apri in una nuova scheda",
     "backToBoard": "Torna alla bacheca completa",
-    "childCount": "{count, plural, one {# sotto-attività} other {# sotto-attività}}"
+    "childCount": "{count, plural, one {# sotto-attività} other {# sotto-attività}}",
+    "tabTitle": "Sottoticket di {parent}"
   },
   "ShareView": {
     "title": "Condividere la vista",
@@ -6207,7 +6208,8 @@
     "connectService": "Collega {name}",
     "editService": "Modifica {name}",
     "connectDescription": "Consenti a Numo di usare {name}.",
-    "customDescription": "Inserisci un nome e l’URL del server per collegarlo a Numo."
+    "customDescription": "Inserisci un nome e l’URL del server per collegarlo a Numo.",
+    "configured": "Configurato e autenticato"
   },
   "PageDatabase": {
     "searchPropertyTypes": "Cerca tipo di colonna",
@@ -6345,6 +6347,7 @@
     "conflict": "Questa scheda è cambiata in un’altra finestra. Ripeti l’azione.",
     "lastTab": "Tieni aperta almeno una scheda.",
     "unavailableProject": "Progetto non disponibile",
-    "destinationUnavailable": "Questa destinazione non è disponibile. Scegli un’altra pagina o chiudi la scheda."
+    "destinationUnavailable": "Questa destinazione non è disponibile. Scegli un’altra pagina o chiudi la scheda.",
+    "cycleTab": "Ciclo"
   }
 }

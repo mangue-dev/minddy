@@ -17,14 +17,21 @@ describe("application tab destinations", () => {
   });
   it("canonicalizes ordering and resolves project sections", () => {
     expect(normalizeAppTabLocation("/all/?view=b&tab=a")).toBe("/all?tab=a&view=b");
-    expect(appTabRoute("/projects/p?view=b")).toEqual({ section: "tickets", projectId: "p", objectiveId: null, pageId: null, prId: null, routineId: null });
-    expect(appTabRoute("/projects/p/pages/a")).toEqual({ section: "pages", projectId: "p", objectiveId: null, pageId: "a", prId: null, routineId: null });
+    expect(appTabRoute("/projects/p?view=b")).toEqual({ section: "tickets", projectId: "p", objectiveId: null, familyId: null, view: "b", pageId: null, prId: null, routineId: null });
+    expect(appTabRoute("/projects/p/pages/a")).toEqual({ section: "pages", projectId: "p", objectiveId: null, familyId: null, view: null, pageId: "a", prId: null, routineId: null });
   });
   it("exposes the objective param so tabs can name an objective's tickets", () => {
-    expect(appTabRoute("/projects/p?objective=o")).toEqual({ section: "tickets", projectId: "p", objectiveId: "o", pageId: null, prId: null, routineId: null });
+    expect(appTabRoute("/projects/p?objective=o")).toEqual({ section: "tickets", projectId: "p", objectiveId: "o", familyId: null, view: null, pageId: null, prId: null, routineId: null });
+  });
+  it("exposes the family param so tabs can name a family board", () => {
+    expect(appTabRoute("/projects/p?family=parent")).toEqual({ section: "tickets", projectId: "p", objectiveId: null, familyId: "parent", view: null, pageId: null, prId: null, routineId: null });
   });
   it("exposes the selection params a tab's title may mirror", () => {
-    expect(appTabRoute("/pull-requests?pr=og")).toEqual({ section: "pull-requests", projectId: null, objectiveId: null, pageId: null, prId: "og", routineId: null });
-    expect(appTabRoute("/routines?routine=rt")).toEqual({ section: "routines", projectId: null, objectiveId: null, pageId: null, prId: null, routineId: "rt" });
+    expect(appTabRoute("/pull-requests?pr=og")).toEqual({ section: "pull-requests", projectId: null, objectiveId: null, familyId: null, view: null, pageId: null, prId: "og", routineId: null });
+    expect(appTabRoute("/routines?routine=rt")).toEqual({ section: "routines", projectId: null, objectiveId: null, familyId: null, view: null, pageId: null, prId: null, routineId: "rt" });
+  });
+  it("exposes the cycle sentinel so tabs can name the cycle board", () => {
+    expect(appTabRoute("/all?view=cycle").view).toBe("cycle");
+    expect(appTabRoute("/all?view=cycle").projectId).toBeNull();
   });
 });

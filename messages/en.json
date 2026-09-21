@@ -748,7 +748,8 @@
     "openHere": "Open this family board",
     "openNewTab": "Open in a new tab",
     "backToBoard": "Back to the full board",
-    "childCount": "{count, plural, one {# sub-issue} other {# sub-issues}}"
+    "childCount": "{count, plural, one {# sub-issue} other {# sub-issues}}",
+    "tabTitle": "Sub-issues of {parent}"
   },
   "ShareView": {
     "title": "Share view",
@@ -6207,7 +6208,8 @@
     "connectService": "Connect {name}",
     "editService": "Edit {name}",
     "connectDescription": "Allow Numo to use {name}.",
-    "customDescription": "Enter a name and the server URL to connect it to Numo."
+    "customDescription": "Enter a name and the server URL to connect it to Numo.",
+    "configured": "Configured and authenticated"
   },
   "PageDatabase": {
     "searchPropertyTypes": "Search column types",
@@ -6345,6 +6347,7 @@
     "conflict": "This tab changed in another window. Try your action again.",
     "lastTab": "Keep at least one tab open.",
     "unavailableProject": "Unavailable project",
-    "destinationUnavailable": "This destination is unavailable. Choose another page or close the tab."
+    "destinationUnavailable": "This destination is unavailable. Choose another page or close the tab.",
+    "cycleTab": "Cycle"
   }
 }

@@ -41,6 +41,12 @@ export function appTabRoute(href: string): {
   /** The `objective` selection param — an objective's tickets load in the
    *  board URL, not on a dedicated page, so the tab names it. */
   objectiveId: string | null;
+  /** The `family` selection param — a board scoped to one parent and its
+   *  direct children; the tab names the parent. */
+  familyId: string | null;
+  /** The `view` selection param — a board view id, or the `cycle` sentinel
+   *  when the global board shows its cycle mode. */
+  view: string | null;
   /** A specific wiki page (…/pages/{pageId}) the tab is pinned on. */
   pageId: string | null;
   /** `pull-requests?pr=` — a selected pull request. */
@@ -53,12 +59,14 @@ export function appTabRoute(href: string): {
   const parts = path.slice(1).split("/");
   const params = new URLSearchParams(query);
   if (parts[0] !== "projects") {
-    return { section: parts[0], projectId: null, objectiveId: null, pageId: null, prId: params.get("pr"), routineId: params.get("routine") };
+    return { section: parts[0], projectId: null, objectiveId: null, familyId: null, view: params.get("view"), pageId: null, prId: params.get("pr"), routineId: params.get("routine") };
   }
   return {
     section: parts[2] ?? "tickets",
     projectId: parts[1],
     objectiveId: params.get("objective"),
+    familyId: params.get("family"),
+    view: params.get("view"),
     pageId: parts[2] === "pages" && parts[3] ? parts[3] : null,
     prId: params.get("pr"),
     routineId: params.get("routine"),
