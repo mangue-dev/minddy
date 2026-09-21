@@ -95,6 +95,7 @@ import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
 import {
   familyBoardStatuses,
+  issueFamilyBoardExitHref,
   issueFamilyBoardHref,
   issueFamilyParentId,
   issueParentIds,
@@ -452,9 +453,9 @@ function ProjectBoard() {
       : normalIssues;
   const statuses = useMemo(
     () =>
-      // Family mode shows the FULL status sweep (see familyBoardStatuses):
-      // the family keeps its members whatever their status, so every member
-      // always finds its column, even when the saved view would hide it.
+      // Family mode renders the same kanban sweep as the objective page
+      // (see familyBoardStatuses): no `triage`, no `duplicate` column —
+      // members parked there stay on the full board.
       activeFamily
         ? familyBoardStatuses()
         : activeObjective
@@ -793,6 +794,7 @@ function ProjectBoard() {
               completedChildCount={activeFamily.issues
                 .slice(1)
                 .filter((issue) => isClosedStatus(issue.status)).length}
+              exitHref={issueFamilyBoardExitHref(projectId, searchParams)}
             />
           ) : activeObjective ? (
             <ObjectiveBoardHeader

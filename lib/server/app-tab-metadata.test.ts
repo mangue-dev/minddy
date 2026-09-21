@@ -50,7 +50,7 @@ describe("application tab metadata", () => {
   it("does not query ordinary routes or non-UUID selections", async () => {
     const from = vi.fn();
     expect(await readAppTabMetadata({ from } as unknown as SupabaseClient, ["/all", "/home", "/pull-requests?pr=bad"]))
-      .toEqual({ pages: [], objectives: [], pullRequests: [], routines: [] });
+      .toEqual({ pages: [], objectives: [], pullRequests: [], routines: [], issues: [] });
     expect(from).not.toHaveBeenCalled();
   });
 

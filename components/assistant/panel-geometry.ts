@@ -10,19 +10,22 @@ import { cn } from "mangue-ui";
 
 export type PanelDisplayMode = "compact" | "expanded";
 
-// Compact: anchored at the bottom right, lifted above the bottom chrome band,
-// very rounded corners. The radius is CONCENTRIC with the composer inside:
+// Compact: glued to the app content pane's bottom-right corner (the pane
+// floats 12px from the right edge and 36px from the bottom — see the
+// `.app-shell` pane rules in globals.css), with its bottom-right radius
+// matching the pane's own `--app-pane-radius` so the two curves coincide.
+// The other corners stay very rounded: concentric with the composer inside,
 // 32px = the surface's 16px (rounded-2xl) + the 16px gutter (assistant shell
 // padding), so the input's corners keep an equal, true offset from the panel.
 const COMPACT_DESKTOP =
-  "md:!inset-auto md:!top-auto md:!left-auto md:!right-4 md:!bottom-12 " +
+  "md:!inset-auto md:!top-auto md:!left-auto md:!right-3 md:!bottom-9 " +
   // `assistant-panel-anchor` re-docks right/bottom to shell corner centered on
   // ultrawide (see globals.css); the extension does not carry it and remains centered
   // on the viewport.
   "assistant-panel-anchor " +
   "md:!w-[min(450px,calc(100vw-24px))] md:!max-w-none " +
   "md:!h-[min(600px,calc(100dvh-96px))] " +
-  "md:rounded-[32px] md:border md:border-l md:origin-bottom-right";
+  "md:rounded-[32px] md:rounded-br-(--app-pane-radius) md:border md:border-l md:origin-bottom-right";
 
 // Expanded: centered, LARGE format — a pane-mirror modal (`dialog-pane-mirror`,
 // see globals.css): the exact box, radius and border of the app content pane.

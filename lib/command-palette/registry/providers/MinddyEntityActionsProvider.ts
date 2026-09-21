@@ -78,7 +78,9 @@ export function createMinddyEntityActionsProvider(
     priority,
     execute: async () => {
       dependencies.navigate(href);
-      return { success: true };
+      // The destination replaces the palette: staying open would hover over
+      // the page it just opened.
+      return { success: true, closeMenu: true };
     },
   });
 
@@ -132,7 +134,8 @@ export function createMinddyEntityActionsProvider(
         basic,
         execute: async () => {
           dependencies.openInNewTab(item.href as string);
-          return { success: true };
+          // A new tab opened: the palette has served its purpose.
+          return { success: true, closeMenu: true };
         },
       },
       {

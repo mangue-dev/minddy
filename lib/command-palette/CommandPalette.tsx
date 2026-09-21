@@ -331,7 +331,7 @@ export function CommandPalette({
         onClick={handleOverlayClick}
       >
         <div
-          className={`${styles.palette} ${isSuccess ? styles.paletteSuccess : ""}`}
+          className={`desktop-palette-surface ${styles.palette} ${isSuccess ? styles.paletteSuccess : ""}`}
           role="dialog"
           aria-modal="true"
           aria-label="Command palette"
