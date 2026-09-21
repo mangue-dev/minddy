@@ -4952,7 +4952,7 @@
     "smartFigureTicket": "El proveedor de pago rechaza las renovaciones",
     "smartFigureFilled": "Completa la prioridad, el esfuerzo y las categorías",
     "smartFigureAssigned": "Elige a <tom>Tom</tom> según tus reglas de asignación",
-    "smartFigureTriage": "Lo coloca primero en la clasificación con la ordenación Smart",
+    "smartFigureTriage": "Lo coloca primero en la clasificación",
     "feature_smartAssign_title": "Smart Assign",
     "feature_smartAssign_body": "Ninguna tarea activa se queda sin persona asignada: cuando una tarea se crea o sale de la clasificación sin una, Smart Assign elige a la persona adecuada según tus reglas de asignación.",
     "feature_palette_title": "Comandos de teclado",

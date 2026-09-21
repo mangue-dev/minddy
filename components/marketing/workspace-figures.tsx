@@ -443,14 +443,14 @@ export async function SmartFigure() {
       {/* The three journal moments, in the product's own words. */}
       <ul className="mt-4 space-y-3">
         <li className="flex items-center gap-3">
-          <span className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 text-xs font-medium text-primary">
+          <span className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 text-xs font-medium">
             <SmartFillIcon className="h-3 w-6 shrink-0" />
             {tIssueUI("smartFillChip")}
           </span>
           <span className="min-w-0 text-sm text-muted-foreground">{t("smartFigureFilled")}</span>
         </li>
         <li className="flex items-center gap-3">
-          <span className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 text-xs font-medium text-primary">
+          <span className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2 text-xs font-medium">
             <SmartAssignIcon className="size-3.5 shrink-0" />
             {t("feature_smartAssign_title")}
           </span>
@@ -468,8 +468,9 @@ export async function SmartFigure() {
           </span>
         </li>
         <li className="flex items-center gap-3">
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground" aria-hidden>
-            <ArrowUpDown className="size-3.5" />
+          <span className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2 text-xs font-medium">
+            <ArrowUpDown className="size-3.5 shrink-0" />
+            {t("feature_smartTriage_title")}
           </span>
           <span className="min-w-0 text-sm text-muted-foreground">{t("smartFigureTriage")}</span>
         </li>

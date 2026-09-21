@@ -4952,7 +4952,7 @@
     "smartFigureTicket": "O provedor de pagamento recusa as renovações",
     "smartFigureFilled": "Preenche a prioridade, o esforço e as categorias",
     "smartFigureAssigned": "Escolhe <tom>Tom</tom> de acordo com as regras de atribuição",
-    "smartFigureTriage": "O coloca em primeiro na triagem com a classificação Smart",
+    "smartFigureTriage": "O coloca em primeiro na triagem",
     "feature_smartAssign_title": "Smart Assign",
     "feature_smartAssign_body": "Nenhuma tarefa ativa fica sem responsável: quando uma tarefa é criada ou sai da triagem sem um, o Smart Assign escolhe a pessoa certa de acordo com suas regras de atribuição.",
     "feature_palette_title": "Comandos de teclado",

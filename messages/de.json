@@ -4952,7 +4952,7 @@
     "smartFigureTicket": "Der Zahlungsanbieter lehnt Verlängerungen ab",
     "smartFigureFilled": "Ergänzt Priorität, Aufwand und Kategorien",
     "smartFigureAssigned": "Wählt <tom>Tom</tom> anhand der Zuweisungsregeln aus",
-    "smartFigureTriage": "Stellt ihn durch die Smart-Sortierung im Triage nach vorn",
+    "smartFigureTriage": "Stellt ihn im Triage nach vorn",
     "feature_smartAssign_title": "Smart Assign",
     "feature_smartAssign_body": "Keine aktive Aufgabe bleibt ohne Zuweisung: Wird eine Aufgabe ohne eine erstellt oder verlässt sie die Triage so, wählt Smart Assign anhand deiner Zuweisungsregeln die passende Person.",
     "feature_palette_title": "Tastaturbefehle",

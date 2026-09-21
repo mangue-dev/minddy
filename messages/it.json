@@ -4952,7 +4952,7 @@
     "smartFigureTicket": "Il fornitore di pagamenti rifiuta i rinnovi",
     "smartFigureFilled": "Completa priorità, sforzo e categorie",
     "smartFigureAssigned": "Sceglie <tom>Tom</tom> in base alle regole di assegnazione",
-    "smartFigureTriage": "Lo mette al primo posto nel triage con l’ordinamento Smart",
+    "smartFigureTriage": "Lo mette al primo posto nel triage",
     "feature_smartAssign_title": "Smart Assign",
     "feature_smartAssign_body": "Nessuna attività attiva resta senza assegnatario: quando viene creata o lascia il triage senza uno, Smart Assign sceglie la persona giusta in base alle tue regole di assegnazione.",
     "feature_palette_title": "Comandi da tastiera",
