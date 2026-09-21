@@ -1,7 +1,8 @@
 import { getFormatter, getTranslations } from "next-intl/server";
-import { Calendar, IterationCw, ListChecks, Plus } from "lucide-react";
+import { Calendar, GitPullRequest, IterationCw, ListChecks, Plus } from "lucide-react";
 import { PriorityIndicator, StatusIndicator, EffortIndicator } from "@/components/issue-indicators";
 import { UserAvatar } from "@/components/user-avatar";
+import { ProjectOrb } from "@/components/project-orb";
 import { DEFAULT_CATEGORIES, type DefaultCategoryKey } from "@/lib/default-categories";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
@@ -22,8 +23,8 @@ type FigureTicket = {
   plan?: { done: number; total: number };
   /** Blue cycle icon before the identifier: the ticket is in MY cycle. */
   inCycle?: boolean;
-  /** Numo is working on this ticket — its face rides the header row. */
-  working?: boolean;
+  /** Open pull request: the emerald "PR available" chip, in place of the plan. */
+  pr?: boolean;
   /** Due date, ISO date-only, shown as the card's compact chip. */
   dueDate?: string;
 };
@@ -50,6 +51,12 @@ const FIGURE_AVATARS = {
   tom: "tom",
 } as const;
 
+/** The header orb: the same ProjectOrb the app paints next to a project
+    name (the sidebar uses this exact size), seeded in the teal family of
+    the demo Aurora workspace — the real project's orb hue lives in its
+    demo-database id, which this static figure cannot read. */
+const FIGURE_ORB_SEED = "bdd736ea-c04b-49f0-9217-6965c2339364";
+
 const FIGURE_TICKETS: FigureTicket[] = [
   {
     number: 7,
@@ -70,7 +77,6 @@ const FIGURE_TICKETS: FigureTicket[] = [
     assignee: FIGURE_AVATARS.camille,
     plan: { done: 2, total: 3 },
     inCycle: true,
-    working: true,
   },
   {
     number: 9,
@@ -80,6 +86,7 @@ const FIGURE_TICKETS: FigureTicket[] = [
     effort: "s",
     category: "feature",
     assignee: FIGURE_AVATARS.tom,
+    pr: true,
     dueDate: "2026-09-25",
   },
 ];
@@ -89,10 +96,11 @@ const FIGURE_TICKETS: FigureTicket[] = [
     semibold title over a muted description, status/priority/effort/category
     indicators, due-date chip) and the columns the real KanbanColumn headers. */
 export async function BoardFigure() {
-  const [t, status, board, format] = await Promise.all([
+  const [t, status, board, tAgent, format] = await Promise.all([
     getTranslations("Landing"),
     getTranslations("Status"),
     getTranslations("Board"),
+    getTranslations("Agent"),
     getFormatter(),
   ]);
   const columns = (["todo", "in_progress", "in_review"] as const).map((statusValue) => ({
@@ -102,7 +110,7 @@ export async function BoardFigure() {
   return (
     <div className="w-full overflow-hidden rounded-xl border border-border bg-background text-foreground shadow-sm" role="img" aria-label={t("feature_board_title")}>
       <div className="flex items-center gap-2 border-b border-border px-4 py-3 text-xs font-medium">
-        <span className="size-2 rounded-full bg-primary" />Aurora<span className="text-muted-foreground">/</span>{t("navMenu_tracker_title")}
+        <ProjectOrb seed={FIGURE_ORB_SEED} className="size-4 shrink-0" />Aurora<span className="text-muted-foreground">/</span>{t("navMenu_tracker_title")}
       </div>
       <div className="grid gap-3 p-3 sm:grid-cols-3">
         {columns.map((column) => (
@@ -136,7 +144,14 @@ export async function BoardFigure() {
                           <span className="tabular-nums">{ticket.plan.done}/{ticket.plan.total}</span>
                         </span>
                       )}
-                      {ticket.working && <NumoFace className="h-4 w-5" />}
+                      {/* Open pull request — the real card shows this emerald
+                          chip in place of the plan indicator. */}
+                      {ticket.pr && (
+                        <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-500">
+                          <GitPullRequest className="size-3.5 shrink-0" />
+                          <span className="truncate">{tAgent("prBadge")}</span>
+                        </span>
+                      )}
                       {ticket.assignee && <UserAvatar seed={ticket.assignee} className="size-6" />}
                     </span>
                   </div>
