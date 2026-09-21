@@ -313,8 +313,9 @@ export async function PagesFigure() {
       <div className="flex items-stretch">
         {/* The tree panel, as SecondarySidebar shows it: a "Pages" title with
             the + create button (the menu offering a page or a database),
-            then the tree. */}
-        <div className="w-28 shrink-0 border-r border-border/60 py-2 sm:w-32">
+            then the tree. The card spans the full grid width, so the tree
+            keeps the proportion the app gives it (about a fifth of the row). */}
+        <div className="w-28 shrink-0 border-r border-border/60 py-2 sm:w-36 lg:w-44">
           <div className="flex items-center justify-between pb-1 pl-3 pr-2">
             <span className="text-[11px] font-medium text-muted-foreground">{t("navMenu_pages_title")}</span>
             <Plus className="size-3.5 text-muted-foreground" aria-hidden />
@@ -329,8 +330,8 @@ export async function PagesFigure() {
         {/* The database view of the active tree line, as PageDatabaseView
             renders it: toolbar (filter, sort, search, columns, New), a title
             column without icon, typed columns, the trailing "+" column. The
-            owner and due columns appear from xl: below, the half-width card
-            keeps the name and status readable instead of clipping every cell. */}
+            owner and due columns appear from sm: below, a phone width keeps
+            the name and status readable instead of clipping every cell. */}
         <div className="min-w-0 flex-1 py-2 pl-1 pr-2">
           <div className="flex items-center justify-end gap-1 pb-1.5">
             <Filter className="size-3.5 text-muted-foreground" aria-hidden />
@@ -343,9 +344,9 @@ export async function PagesFigure() {
           </div>
           <div className="flex items-center border-b border-border/50 text-[11px] text-muted-foreground">
             <span className="min-w-0 flex-1 truncate px-2 py-1.5">{tDb("name")}</span>
-            <span className="flex w-20 shrink-0 items-center gap-1 px-1 py-1.5"><ListFilter className="size-3 shrink-0" aria-hidden /><span className="truncate">{t("pagesFigure_colStatus")}</span></span>
-            <span className="hidden w-16 shrink-0 items-center gap-1 px-1 py-1.5 xl:flex"><Users className="size-3 shrink-0" aria-hidden /><span className="truncate">{t("pagesFigure_colOwner")}</span></span>
-            <span className="hidden w-[4.5rem] shrink-0 items-center gap-1 px-1 py-1.5 xl:flex"><CalendarDays className="size-3 shrink-0" aria-hidden /><span className="truncate">{t("pagesFigure_colDue")}</span></span>
+            <span className="flex w-20 shrink-0 items-center gap-1 px-1 py-1.5 sm:w-[6.5rem]"><ListFilter className="size-3 shrink-0" aria-hidden /><span className="truncate">{t("pagesFigure_colStatus")}</span></span>
+            <span className="hidden w-16 shrink-0 items-center gap-1 px-1 py-1.5 sm:flex"><Users className="size-3 shrink-0" aria-hidden /><span className="truncate">{t("pagesFigure_colOwner")}</span></span>
+            <span className="hidden w-20 shrink-0 items-center gap-1 px-1 py-1.5 sm:flex"><CalendarDays className="size-3 shrink-0" aria-hidden /><span className="truncate">{t("pagesFigure_colDue")}</span></span>
             <span className="flex w-5 shrink-0 items-center justify-center"><Plus className="size-3 text-muted-foreground" aria-hidden /></span>
           </div>
           {FIGURE_ENTRIES.map(entry => {
@@ -356,15 +357,15 @@ export async function PagesFigure() {
                   <FileText className="size-3 shrink-0 text-muted-foreground" aria-hidden />
                   <span className="min-w-0 truncate text-[11px]">{t(`pagesFigure_${entry.key}`)}</span>
                 </span>
-                <span className="flex w-20 shrink-0 items-center px-1">
+                <span className="flex w-20 shrink-0 items-center px-1 sm:w-[6.5rem]">
                   <FigureOptionBadge color={FIGURE_STATUS_COLORS[entry.status]}>{tStatus(entry.status)}</FigureOptionBadge>
                 </span>
-                <span className="hidden w-16 shrink-0 items-center px-1 xl:flex">
+                <span className="hidden w-16 shrink-0 items-center px-1 sm:flex">
                   <span className="flex -space-x-1">
                     {entry.owners.map(seed => <UserAvatar key={seed} seed={seed} className="size-4 ring-2 ring-background" />)}
                   </span>
                 </span>
-                <span className="hidden w-[4.5rem] shrink-0 px-1 text-[11px] text-muted-foreground xl:block">
+                <span className="hidden w-20 shrink-0 px-1 text-[11px] text-muted-foreground sm:block">
                   {due && format.dateTime(due, dueDateFormat(due, { compact: true }))}
                 </span>
                 <span className="w-5 shrink-0" />

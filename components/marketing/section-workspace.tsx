@@ -18,7 +18,7 @@ export async function SectionWorkspace() {
     },
     {
       id: "pages", icon: FileText, title: t("pagesTitle"), description: t("pagesSubtitle"),
-      screenshot: "pagesEditor", tone: CARD_TONES.lavender, span: "",
+      screenshot: "pagesEditor", tone: CARD_TONES.lavender, span: "md:col-span-2",
       points: (["write", "database", "link", "agents", "publish"] as const).map(key => ({ title: t(`pages_${key}_title`), body: t(`pages_${key}_body`) })),
     },
     {
