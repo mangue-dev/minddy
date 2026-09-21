@@ -12,11 +12,11 @@ import { NotebookFigure } from "./notebook-figure";
 /** One ticket of the illustrated board: every field a real card renders. */
 type FigureTicket = {
   number: number;
-  key: "repro" | "signature" | "retry";
+  key: "flicker" | "palette" | "sidebar";
   status: IssueStatus;
   priority: IssuePriority;
   effort: IssueEffort;
-  category: "bug" | "technical" | "feature";
+  category: "bug" | "feature" | "improvement";
   /** Assignee's avatar seed — the portrait is drawn from it. */
   assignee: string;
   /** Plan progress badge (ListChecks + done/total), as on the card header. */
@@ -31,11 +31,13 @@ type FigureTicket = {
 
 /** The illustrated board depicts the demo Aurora workspace: its category
     vocabulary (English labels — every capture uses them, whatever the locale)
-    with the colors the product seeds on every new project. */
+    with the colors the product seeds on every new project. The three tickets
+    each carry a different theme — display bug, keyboard feature, workspace
+    improvement — like a board that lives through several kinds of work. */
 const FIGURE_CATEGORY_LABEL: Record<FigureTicket["category"], string> = {
   bug: "Bug",
-  technical: "Technical",
   feature: "Feature",
+  improvement: "Improvement",
 };
 
 function figureCategoryColor(key: DefaultCategoryKey): string {
@@ -60,31 +62,31 @@ const FIGURE_ORB_SEED = "bdd736ea-c04b-49f0-9217-6965c2339364";
 const FIGURE_TICKETS: FigureTicket[] = [
   {
     number: 7,
-    key: "repro",
+    key: "flicker",
     status: "todo",
-    priority: "medium",
+    priority: "urgent",
     effort: "s",
     category: "bug",
     assignee: FIGURE_AVATARS.alice,
   },
   {
     number: 8,
-    key: "signature",
+    key: "palette",
     status: "in_progress",
     priority: "high",
     effort: "m",
-    category: "technical",
+    category: "feature",
     assignee: FIGURE_AVATARS.camille,
-    plan: { done: 2, total: 3 },
+    plan: { done: 2, total: 6 },
     inCycle: true,
   },
   {
     number: 9,
-    key: "retry",
+    key: "sidebar",
     status: "in_review",
-    priority: "high",
-    effort: "s",
-    category: "feature",
+    priority: "low",
+    effort: "xs",
+    category: "improvement",
     assignee: FIGURE_AVATARS.tom,
     pr: true,
     dueDate: "2026-09-25",
@@ -157,8 +159,8 @@ export async function BoardFigure() {
                   </div>
                   {/* Title over a description preview, with the card's tight spacing. */}
                   <div className="-mt-1 flex flex-col gap-0.5">
-                    <p className="line-clamp-2 text-sm font-semibold leading-snug">{t(`heroLoopTask_${ticket.key}`)}</p>
-                    <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">{t(`heroLoopDesc_${ticket.key}`)}</p>
+                    <p className="line-clamp-2 text-sm font-semibold leading-snug">{t(`boardTask_${ticket.key}`)}</p>
+                    <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">{t(`boardDesc_${ticket.key}`)}</p>
                   </div>
                   {/* Indicators — status · priority · effort · category, edge to edge. */}
                   <div className="flex items-center justify-between pt-0.5">
