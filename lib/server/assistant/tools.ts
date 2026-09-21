@@ -2184,6 +2184,49 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "list_routine_runs",
+      description:
+        "List the past and running occurrences (runs) of ONE routine: for each, its state — running, completed, failed, canceled, or paused waiting for the owner's input (waiting_input) — its scheduled/manual origin, outcome, error, cost and pull request. Resolve the routine with list_routines first. Use read_routine_occurrence on a returned occurrence id to reread what that occurrence actually did.",
+      parameters: {
+        type: "object",
+        properties: {
+          routine_id: {
+            type: "string",
+            description:
+              "id of the routine whose runs to list (see list_routines, or the routine in context).",
+          },
+          limit: {
+            type: "number",
+            description:
+              "Optional cap on returned runs (default 20, most recent first).",
+          },
+        },
+        required: ["routine_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "read_routine_occurrence",
+      description:
+        "Read ONE occurrence of a routine in full: its run state (running, completed, failed, canceled or paused waiting for the owner's input), its outcome and error, any delegated code work (pull request), and — when the caller is the routine's owner — its conversation: what the occurrence said and decided (assistant messages; tool actions summarized). The transcript is private to the owner; for a member the tool returns the state only. Use list_routine_runs to find occurrence ids.",
+      parameters: {
+        type: "object",
+        properties: {
+          occurrence_id: {
+            type: "string",
+            description:
+              "id of the occurrence to read (from list_routine_runs).",
+          },
+        },
+        required: ["occurrence_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "read_pull_request",
       description:
         "Read a selected pull request, or the pull request attached to an issue: its title, description, state, branch, CI checks, per-file diffs (patches, capped), and review comments anchored to code — grouped into conversations, each carrying the root comment `id` that resolve_pull_request_threads targets. Use pull_request_id when the conversation carries a PR directly, including a human PR with no issue. Otherwise use issue_id to resolve the issue's live or most recently updated PR. To delegate repository work, use launch_code_agent with that exact pull_request_id and mode review or fix.",

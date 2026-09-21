@@ -1,6 +1,7 @@
 import { MCP_MAX_RESULT_BYTES } from "@/lib/mcp-client-tools";
 import {
   ROUTINE_LIST_RESULT_CHAR_LIMIT,
+  ROUTINE_RUNS_TOOL_RESULT_CHAR_LIMIT,
   ROUTINE_TOOL_RESULT_CHAR_LIMIT,
 } from "./routine-tool-result";
 
@@ -44,6 +45,11 @@ export function getToolResultCharLimit(
       return typeof args.routine_id === "string" && args.routine_id.length > 0
         ? ROUTINE_TOOL_RESULT_CHAR_LIMIT
         : ROUTINE_LIST_RESULT_CHAR_LIMIT;
+    // A routine's run history stays whole: a truncated tail would hide the
+    // most recent occurrences, which are the ones the user asks about.
+    case "list_routine_runs":
+    case "read_routine_occurrence":
+      return ROUTINE_RUNS_TOOL_RESULT_CHAR_LIMIT;
     // A web search is paid for: truncating it to 4,000 characters would throw
     // away half of the extracts we just bought.
     case "web_search":

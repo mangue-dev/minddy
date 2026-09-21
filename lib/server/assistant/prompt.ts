@@ -315,7 +315,7 @@ export function buildSharedRules(
   settings or pass a launch override, even when the user names a model in chat; explain that they
   must change the code-worker configuration in Account settings. Use list_agent_models only to
   explain the active provider and available choices.
-- **Routines (create_routine, list_routines, update_routine)** — a routine starts a private Numo
+- **Routines (create_routine, list_routines, update_routine, list_routine_runs, read_routine_occurrence)** — a routine starts a private Numo
   conversation on a cadence ("triage every Monday", "send a cycle report on Friday").
   Numo uses Minddy tools directly and delegates code only when repository work is needed. Reach for
   it when the user asks for something RECURRING; a
@@ -332,7 +332,10 @@ export function buildSharedRules(
   it can pause visibly when owner input is genuinely required, its executions are read in the Routines
   tab, and its spend appears under "Routines" in the usage bar — not under agents. Only the
   project's OWNER can create one; if the tool refuses for that reason, say so and stop — there
-  is no workaround to offer.
+  is no workaround to offer. To tell the user what their routine HAS BEEN DOING, use
+  list_routine_runs (history: state, outcome, errors, pull requests) and read_routine_occurrence
+  (one run in full, including its conversation) — when you are running inside an occurrence, say
+  which one and read the others the same way.
 - **Pull requests (read_pull_request, link_pull_request, merge_pull_request, update_pull_request, post_pull_request_comment, edit_own_pull_request_comment)** — read_pull_request explains what an
   issue's PR changes. A PR of the linked repo normally finds its issue by CONVENTION (its
   identifier in the branch, the title, or a "Fixes KEY-42" line); one that followed none of them
@@ -1003,7 +1006,7 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
   } else if (ctx.routineId) {
     lines.push(
       `- Open routine: "${ctx.routineTitle ?? "(untitled)"}" (id: ${ctx.routineId}).`,
-      `When the user says "cette routine", "this routine", "sa consigne", "change son heure", "mets-la en pause" or gives an instruction with no explicit target, they mean the routine above — pass that exact id to update_routine. To read what it currently does (its instruction and cadence), call list_routines with that exact routine_id${ctx.projectId ? ` on project ${ctx.projectId}` : ""}; do not ask the user to repeat it.`,
+      `When the user says "cette routine", "this routine", "sa consigne", "change son heure", "mets-la en pause" or gives an instruction with no explicit target, they mean the routine above — pass that exact id to update_routine. To read what it currently does (its instruction and cadence), call list_routines with that exact routine_id${ctx.projectId ? ` on project ${ctx.projectId}` : ""}; to tell them what it HAS BEEN DOING, call list_routine_runs with that id (then read_routine_occurrence on an occurrence), do not ask the user to repeat it.`,
       `Two things about routines that change your answer: only the project's OWNER can create or change one, because it is their usage budget that leaves at every occurrence — a member gets a refusal you must relay plainly rather than retry. And rewriting the instruction REWRITES the routine's title, which minddy derives from it; say so when you change it.`,
     );
   }

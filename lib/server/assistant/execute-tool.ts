@@ -67,9 +67,15 @@ import { createCategory, updateCategory } from "@/lib/server/categories";
 import { updateProjectSettings } from "@/lib/server/update-project";
 import {
   createRoutine,
+  getRoutineForUser,
   listRoutinesForUser,
   updateRoutine,
 } from "@/lib/server/routines";
+import {
+  routineOccurrenceDetail,
+  routineRunSummaries,
+} from "@/lib/server/routine-runs";
+import type { NumoRoutineOccurrence } from "@/lib/server/routine-occurrences";
 import {
   routineForAssistantTool,
   routinesForAssistantTool,
@@ -2260,6 +2266,71 @@ export async function executeTool(
         if (!result.ok) return toolError(routineErrorMessage(result));
         return {
           result: { routine: routineForAssistantTool(result.routine) },
+          success: true,
+        };
+      }
+
+      // ── Routine runs (MIN-589) : relire ce que les occurrences ont fait ──
+      case "list_routine_runs": {
+        const routineId =
+          typeof args.routine_id === "string" ? args.routine_id : "";
+        if (!routineId)
+          return toolError("routine_id is required (see list_routines).");
+        const found = await getRoutineForUser(routineId, ctx.userId);
+        if (!found || found.routine.project_id !== projectId)
+          return toolError("No routine with that id in this project.");
+        const limit =
+          typeof args.limit === "number" && Number.isFinite(args.limit)
+            ? args.limit
+            : 20;
+        const runs = await routineRunSummaries(found.routine, limit);
+        return {
+          result: {
+            routine_id: routineId,
+            routine_title: found.routine.title,
+            runs,
+          },
+          success: true,
+        };
+      }
+
+      case "read_routine_occurrence": {
+        const occurrenceId =
+          typeof args.occurrence_id === "string" ? args.occurrence_id : "";
+        if (!occurrenceId)
+          return toolError(
+            "occurrence_id is required (see list_routine_runs).",
+          );
+        // Resolution goes through the occurrence first: its routine id is
+        // authoritative, so a single id is enough even when the conversation
+        // does not carry the routine anymore.
+        const { data: occurrenceRow, error: occurrenceError } = await ctx.service
+          .from("numo_routine_occurrences")
+          .select("*")
+          .eq("id", occurrenceId)
+          .maybeSingle();
+        if (occurrenceError) return toolError(occurrenceError.message);
+        if (!occurrenceRow)
+          return toolError(
+            "No occurrence with that id. Use list_routine_runs on the routine first.",
+          );
+        const occurrence = occurrenceRow as NumoRoutineOccurrence;
+        const found = await getRoutineForUser(occurrence.routine_id, ctx.userId);
+        if (!found || found.routine.project_id !== projectId)
+          return toolError("No occurrence with that id in this project.");
+        const detail = await routineOccurrenceDetail({
+          routine: found.routine,
+          occurrence,
+          readClient: ctx.supabase,
+        });
+        return {
+          result: {
+            occurrence: detail.occurrence,
+            transcript: detail.transcript,
+            ...(detail.transcript_note
+              ? { transcript_note: detail.transcript_note }
+              : {}),
+          },
           success: true,
         };
       }
