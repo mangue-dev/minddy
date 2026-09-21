@@ -33,7 +33,7 @@ export async function SectionWorkspace() {
     },
     {
       id: "scratchpad", icon: NotebookPen, title: t("scratchpadTitle"), description: t("scratchpadSubtitle"),
-      screenshot: "scratchpad", tone: CARD_TONES.rose, span: "",
+      screenshot: "scratchpad", tone: CARD_TONES.rose, span: "md:col-span-2",
       points: (["write", "prompt", "agent", "promote", "mcp"] as const).map(key => ({ title: "", body: t(`scratchpadPoint_${key}`) })),
     },
   ] as const;
@@ -53,16 +53,29 @@ export async function SectionWorkspace() {
                 </div>
               ))}</dl>}
             >
-              <div className="flex h-full flex-col px-6 pt-6 pb-20 sm:px-8 sm:pt-8">
-                <card.icon className="mb-5 size-5 shrink-0" strokeWidth={1.5} aria-hidden />
-                <h3 className="text-xl font-medium tracking-tight sm:text-2xl">{card.title}</h3>
-                <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{card.description}</p>
-                <div className="mt-auto pt-6">
-                  {card.id === "tracker" ? <BoardFigure /> : card.id === "pages" ? <PagesFigure /> : card.id === "scratchpad" ? <ScratchpadFigure /> : <ScreenshotSlot id={card.screenshot} expandable focused
-                    sizes="(min-width: 1024px) 480px, (min-width: 768px) 440px, 100vw"
-                    className="w-full rounded-xl shadow-sm" />}
+              {/* Full-width cards pair their text with the figure side by side
+                  from lg; the narrow ones stack the figure under the text. */}
+              {card.id === "scratchpad" ? (
+                <div className="grid h-full items-center gap-8 px-6 py-8 sm:px-8 lg:grid-cols-2">
+                  <div className="flex h-full flex-col">
+                    <card.icon className="mb-5 size-5 shrink-0" strokeWidth={1.5} aria-hidden />
+                    <h3 className="text-xl font-medium tracking-tight sm:text-2xl">{card.title}</h3>
+                    <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{card.description}</p>
+                  </div>
+                  <ScratchpadFigure />
                 </div>
-              </div>
+              ) : (
+                <div className="flex h-full flex-col px-6 pt-6 pb-20 sm:px-8 sm:pt-8">
+                  <card.icon className="mb-5 size-5 shrink-0" strokeWidth={1.5} aria-hidden />
+                  <h3 className="text-xl font-medium tracking-tight sm:text-2xl">{card.title}</h3>
+                  <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{card.description}</p>
+                  <div className="mt-auto pt-6">
+                    {card.id === "tracker" ? <BoardFigure /> : card.id === "pages" ? <PagesFigure /> : <ScreenshotSlot id={card.screenshot} expandable focused
+                      sizes="(min-width: 1024px) 480px, (min-width: 768px) 440px, 100vw"
+                      className="w-full rounded-xl shadow-sm" />}
+                  </div>
+                </div>
+              )}
             </FeatureDisclosure>
           ))}
           <article id="voice" className={`min-w-0 scroll-mt-24 rounded-2xl p-6 sm:p-8 md:col-span-2 ${CARD_TONES.sky}`}>
