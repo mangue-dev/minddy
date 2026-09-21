@@ -1,5 +1,22 @@
 import { getFormatter, getTranslations } from "next-intl/server";
-import { Calendar, GitPullRequest, IterationCw, ListChecks, Plus } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
+import {
+  ArrowDownUp,
+  Calendar,
+  CalendarDays,
+  ChevronRight,
+  Database,
+  FileText,
+  Filter,
+  GitPullRequest,
+  IterationCw,
+  ListChecks,
+  ListFilter,
+  Plus,
+  Search,
+  Settings2,
+  Users,
+} from "lucide-react";
 import { PriorityIndicator, StatusIndicator, EffortIndicator } from "@/components/issue-indicators";
 import { UserAvatar } from "@/components/user-avatar";
 import { ProjectOrb } from "@/components/project-orb";
@@ -192,6 +209,172 @@ export async function BoardFigure() {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/** The figure's page tree: two regular pages — one carrying subpages — and the
+    database whose table is shown on the right, open. The chevron state is
+    per-line: expanded, collapsed, or no children (invisible, as in the tree). */
+type FigureTreeLine = {
+  /** i18n key suffix, as in `pagesFigure_<key>`. */
+  key: "spec" | "guidelines" | "checklist" | "retro" | "launch";
+  chevron: "open" | "closed" | "none";
+  depth: number;
+  active: boolean;
+  /** A database page: the Database icon, not FileText. */
+  database?: boolean;
+};
+
+const FIGURE_TREE: readonly FigureTreeLine[] = [
+  { key: "spec", chevron: "open", depth: 0, active: false },
+  { key: "guidelines", chevron: "none", depth: 1, active: false },
+  { key: "checklist", chevron: "none", depth: 1, active: false },
+  { key: "retro", chevron: "closed", depth: 0, active: false },
+  { key: "launch", chevron: "closed", depth: 0, active: true, database: true },
+];
+
+/** Rows of the illustrated database: a launch plan tracked with the three
+    column types a team reaches for first — a single-select status, owners
+    (one row splits the work, as the real table stacks avatars) and a date.
+    Option names reuse the Status vocabulary; colors come from the fixed
+    label palette the product picks option colors from. */
+const FIGURE_ENTRIES = [
+  { key: "entry1", status: "in_progress", owners: ["camille", "alice"], due: "2026-09-24" },
+  { key: "entry2", status: "done", owners: ["alice"], due: "2026-09-19" },
+  { key: "entry3", status: "todo", owners: ["tom"], due: "2026-09-26" },
+] as const satisfies ReadonlyArray<{ key: string; status: IssueStatus; owners: (keyof typeof FIGURE_AVATARS)[]; due: string }>;
+
+const FIGURE_STATUS_COLORS: Record<FigureStatusKey, string> = {
+  todo: "#eab308",
+  in_progress: "#3b82f6",
+  done: "#22c55e",
+};
+type FigureStatusKey = (typeof FIGURE_ENTRIES)[number]["status"];
+
+/** A select badge as the table cells render it: pill for a single select,
+    tinted background, text mixed from the option color. */
+function FigureOptionBadge({ color, children }: { color: string; children: ReactNode }) {
+  return (
+    <span
+      className="inline-flex max-w-full shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium text-[color:color-mix(in_oklab,var(--option-color)_75%,black)] dark:text-[color:color-mix(in_oklab,var(--option-color)_80%,white)]"
+      style={
+        {
+          "--option-color": color,
+          backgroundColor: `color-mix(in srgb, ${color} 18%, transparent)`,
+        } as CSSProperties
+      }
+    >
+      <span className="truncate">{children}</span>
+    </span>
+  );
+}
+
+/** One tree line, as the page tree renders it: chevron, page or database icon,
+    title (medium weight for the open page), one indent step per level. */
+function FigureTreeLine({ label, database, depth, chevron, active }: {
+  label: string;
+  database?: boolean;
+  depth: number;
+  chevron: "open" | "closed" | "none";
+  active?: boolean;
+}) {
+  return (
+    <li className="flex items-center gap-1 py-1 pr-2" style={{ paddingLeft: 10 + depth * 12 }}>
+      <ChevronRight
+        aria-hidden
+        className={`size-2.5 shrink-0 text-muted-foreground transition-transform ${chevron === "open" ? "rotate-90" : ""} ${chevron === "none" ? "invisible" : ""}`}
+      />
+      {database ? <Database className="size-3 shrink-0 text-muted-foreground" /> : <FileText className="size-3 shrink-0 text-muted-foreground" />}
+      <span className={`min-w-0 truncate text-[11px] leading-4 ${active ? "font-medium" : ""}`}>{label}</span>
+    </li>
+  );
+}
+
+/** The Pages surface: the project's tree of pages and subpages on the left —
+    the wiki a Notion user recognizes — and, opened on the right, one of its
+    page databases: column headers with their type icons, entries as rows,
+    the trailing "+" that adds a column. Built from the same components as
+    the real Pages shell (tree icons, avatars, select badges). */
+export async function PagesFigure() {
+  const [t, tDb, tStatus, format] = await Promise.all([
+    getTranslations("Landing"),
+    getTranslations("PageDatabase"),
+    getTranslations("Status"),
+    getFormatter(),
+  ]);
+  return (
+    <div className="w-full overflow-hidden rounded-xl border border-border bg-background text-foreground shadow-sm" role="img" aria-label={t("pagesFigure_alt")}>
+      {/* Header, as the Pages tab renders it: project orb, name, section. */}
+      <div className="flex items-center gap-2 border-b border-border px-4 py-3 text-xs font-medium">
+        <ProjectOrb seed={FIGURE_ORB_SEED} className="size-4 shrink-0" />Aurora<span className="text-muted-foreground">/</span>{t("navMenu_pages_title")}
+      </div>
+      <div className="flex items-stretch">
+        {/* The tree panel, as SecondarySidebar shows it: a "Pages" title with
+            the + create button (the menu offering a page or a database),
+            then the tree. */}
+        <div className="w-28 shrink-0 border-r border-border/60 py-2 sm:w-32">
+          <div className="flex items-center justify-between pb-1 pl-3 pr-2">
+            <span className="text-[11px] font-medium text-muted-foreground">{t("navMenu_pages_title")}</span>
+            <Plus className="size-3.5 text-muted-foreground" aria-hidden />
+          </div>
+          <ul>
+            {FIGURE_TREE.map(line => (
+              <FigureTreeLine key={line.key} label={t(`pagesFigure_${line.key}`)}
+                database={line.database ?? false} depth={line.depth} chevron={line.chevron} active={line.active} />
+            ))}
+          </ul>
+        </div>
+        {/* The database view of the active tree line, as PageDatabaseView
+            renders it: toolbar (filter, sort, search, columns, New), a title
+            column without icon, typed columns, the trailing "+" column. The
+            owner and due columns appear from xl: below, the half-width card
+            keeps the name and status readable instead of clipping every cell. */}
+        <div className="min-w-0 flex-1 py-2 pl-1 pr-2">
+          <div className="flex items-center justify-end gap-1 pb-1.5">
+            <Filter className="size-3.5 text-muted-foreground" aria-hidden />
+            <ArrowDownUp className="size-3.5 text-muted-foreground" aria-hidden />
+            <Search className="size-3.5 text-muted-foreground" aria-hidden />
+            <Settings2 className="size-3.5 text-muted-foreground" aria-hidden />
+            <span className="ml-2 flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground">
+              <Plus className="size-3" aria-hidden />{tDb("new")}
+            </span>
+          </div>
+          <div className="flex items-center border-b border-border/50 text-[11px] text-muted-foreground">
+            <span className="min-w-0 flex-1 truncate px-2 py-1.5">{tDb("name")}</span>
+            <span className="flex w-20 shrink-0 items-center gap-1 px-1 py-1.5"><ListFilter className="size-3 shrink-0" aria-hidden /><span className="truncate">{t("pagesFigure_colStatus")}</span></span>
+            <span className="hidden w-16 shrink-0 items-center gap-1 px-1 py-1.5 xl:flex"><Users className="size-3 shrink-0" aria-hidden /><span className="truncate">{t("pagesFigure_colOwner")}</span></span>
+            <span className="hidden w-[4.5rem] shrink-0 items-center gap-1 px-1 py-1.5 xl:flex"><CalendarDays className="size-3 shrink-0" aria-hidden /><span className="truncate">{t("pagesFigure_colDue")}</span></span>
+            <span className="flex w-5 shrink-0 items-center justify-center"><Plus className="size-3 text-muted-foreground" aria-hidden /></span>
+          </div>
+          {FIGURE_ENTRIES.map(entry => {
+            const due = parseDueDate(entry.due);
+            return (
+              <div key={entry.key} className="flex h-10 items-center border-b border-border/40">
+                <span className="flex min-w-0 flex-1 items-center gap-1.5 px-2">
+                  <FileText className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+                  <span className="min-w-0 truncate text-[11px]">{t(`pagesFigure_${entry.key}`)}</span>
+                </span>
+                <span className="flex w-20 shrink-0 items-center px-1">
+                  <FigureOptionBadge color={FIGURE_STATUS_COLORS[entry.status]}>{tStatus(entry.status)}</FigureOptionBadge>
+                </span>
+                <span className="hidden w-16 shrink-0 items-center px-1 xl:flex">
+                  <span className="flex -space-x-1">
+                    {entry.owners.map(seed => <UserAvatar key={seed} seed={seed} className="size-4 ring-2 ring-background" />)}
+                  </span>
+                </span>
+                <span className="hidden w-[4.5rem] shrink-0 px-1 text-[11px] text-muted-foreground xl:block">
+                  {due && format.dateTime(due, dueDateFormat(due, { compact: true }))}
+                </span>
+                <span className="w-5 shrink-0" />
+              </div>
+            );
+          })}
+          <span className="flex items-center gap-1.5 py-2 pl-2 text-[11px] text-muted-foreground">
+            <Plus className="size-3" aria-hidden />{tDb("newEntry")}
+          </span>
+        </div>
       </div>
     </div>
   );

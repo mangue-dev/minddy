@@ -4,7 +4,7 @@ import { ScreenshotSlot } from "./screenshot-slot";
 import { FeatureDisclosure } from "./feature-disclosure";
 import { CARD_TONES } from "./card-tones";
 import { SectionHeading } from "./section-heading";
-import { BoardFigure, ScratchpadFigure } from "./workspace-figures";
+import { BoardFigure, PagesFigure, ScratchpadFigure } from "./workspace-figures";
 import { VoiceDemo } from "./voice-demo";
 
 /** One workspace tour: planning, knowledge, feedback, and fast ways to capture work. */
@@ -19,7 +19,7 @@ export async function SectionWorkspace() {
     {
       id: "pages", icon: FileText, title: t("pagesTitle"), description: t("pagesSubtitle"),
       screenshot: "pagesEditor", tone: CARD_TONES.lavender, span: "",
-      points: (["write", "link", "agents", "publish"] as const).map(key => ({ title: t(`pages_${key}_title`), body: t(`pages_${key}_body`) })),
+      points: (["write", "database", "link", "agents", "publish"] as const).map(key => ({ title: t(`pages_${key}_title`), body: t(`pages_${key}_body`) })),
     },
     {
       id: "feedback", icon: MessagesSquare, title: t("navMenu_feedback_title"), description: t("feedbackSubtitle"),
@@ -58,7 +58,7 @@ export async function SectionWorkspace() {
                 <h3 className="text-xl font-medium tracking-tight sm:text-2xl">{card.title}</h3>
                 <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{card.description}</p>
                 <div className="mt-auto pt-6">
-                  {card.id === "tracker" ? <BoardFigure /> : card.id === "scratchpad" ? <ScratchpadFigure /> : <ScreenshotSlot id={card.screenshot} expandable focused
+                  {card.id === "tracker" ? <BoardFigure /> : card.id === "pages" ? <PagesFigure /> : card.id === "scratchpad" ? <ScratchpadFigure /> : <ScreenshotSlot id={card.screenshot} expandable focused
                     sizes="(min-width: 1024px) 480px, (min-width: 768px) 440px, 100vw"
                     className="w-full rounded-xl shadow-sm" />}
                 </div>
