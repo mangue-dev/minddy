@@ -14,7 +14,7 @@ export async function SectionWorkspace() {
     {
       id: "tracker", icon: Layers, title: t("navMenu_tracker_title"), description: t("feature_board_body"),
       screenshot: "heroBoard", tone: CARD_TONES.sage, span: "md:col-span-2",
-      points: (["board", "all", "inbox", "objectives", "cycles", "triage"] as const).map(key => ({ title: t(`feature_${key}_title`), body: t(`feature_${key}_body`) })),
+      points: (["board", "all", "inbox", "objectives", "cycles", "triage", "smartFill", "smartAssign"] as const).map(key => ({ title: t(`feature_${key}_title`), body: t(`feature_${key}_body`) })),
     },
     {
       id: "pages", icon: FileText, title: t("pagesTitle"), description: t("pagesSubtitle"),
@@ -46,7 +46,7 @@ export async function SectionWorkspace() {
           {cards.map(card => (
             <FeatureDisclosure key={card.id} id={card.id} title={card.title}
               className={`min-h-[460px] ${card.tone} ${card.span}`}
-              details={card.id !== "speed" && <dl className="space-y-5">{card.points.map(point => (
+              details={card.id !== "speed" && <dl className={card.id === "tracker" ? "grid gap-x-10 gap-y-4 sm:grid-cols-2" : "space-y-5"}>{card.points.map(point => (
                 <div key={point.body}>
                   {point.title && <dt className="font-medium">{point.title}</dt>}
                   <dd className="mt-1 opacity-85">{point.body}</dd>
