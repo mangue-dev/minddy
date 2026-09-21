@@ -4153,6 +4153,10 @@
         "title": "Feedback",
         "desc": "Procedura del bacheca dei feedback."
       },
+      "site": {
+        "title": "Sito pubblico",
+        "desc": "Funzioni di IA per i visitatori senza account."
+      },
       "byokOther": "Altri endpoint"
     },
     "fields": {
@@ -4262,6 +4266,14 @@
       "jev_model": {
         "label": "Modello di decisioni Jev",
         "desc": "Il modello System One che risponde a domande strutturate (categorie, triaggio, revisione). Raggiunto tramite l'endpoint decisions di OpenRouter, fatturato solo sui token di input."
+      },
+      "faq_ask_enabled": {
+        "label": "Riquadro domande FAQ",
+        "desc": "Permette a un visitatore senza account di porre la propria domanda nella sezione FAQ di una pagina e di ricevere una risposta dell'IA basata sulla documentazione del prodotto. L'unica spesa, insieme alla demo della landing, offerta al traffico anonimo: una piccola completamento per domanda, limitata a dieci per IP all'ora, 1000 al giorno. Disattivato, il riquadro scompare da tutte le FAQ."
+      },
+      "faq_ask_model": {
+        "label": "Modello del riquadro FAQ",
+        "desc": "Risponde alla domanda di un visitatore a partire dalle FAQ della pagina e dalla documentazione del prodotto. Qualcuno aspetta la risposta, e il riquadro funziona tutto il giorno sul sito pubblico: scegli un modello veloce ed economico."
       }
     },
     "finance": {
@@ -6349,5 +6361,14 @@
     "unavailableProject": "Progetto non disponibile",
     "destinationUnavailable": "Questa destinazione non è disponibile. Scegli un’altra pagina o chiudi la scheda.",
     "cycleTab": "Ciclo"
+  },
+  "FaqAsk": {
+    "title": "Un’altra domanda?",
+    "placeholder": "Fai la tua domanda…",
+    "submit": "Chiedi",
+    "submitAria": "Invia la domanda",
+    "loading": "Cerco la risposta…",
+    "disclaimer": "Risposta generata dall’IA a partire dalla documentazione di minddy. Può essere imperfetta.",
+    "error": "Non è stato possibile generare la risposta. Riprova tra poco."
   }
 }

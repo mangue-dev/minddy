@@ -7,6 +7,7 @@ import { localizedHref } from "@/lib/locale-href";
 import { PricingPlans } from "@/components/marketing/pricing-plans";
 import { PricingComparison } from "@/components/marketing/pricing-comparison";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
+import { FaqAskBox } from "@/components/marketing/faq-ask-box";
 import { SectionCta } from "@/components/marketing/section-cta";
 import { StructuredData } from "@/components/marketing/structured-data";
 import { PRICING_FAQ_KEYS } from "@/components/marketing/faq-keys";
@@ -69,6 +70,7 @@ export default async function PricingPage() {
             {tl("faqTitle")}
           </h2>
           <FaqAccordion items={faqItems} />
+          <FaqAskBox section="pricing" />
         </div>
       </section>
 

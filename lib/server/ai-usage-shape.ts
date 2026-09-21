@@ -99,7 +99,15 @@ export type AiFeature =
    * the same decision): one line per engine, both filed under “Automations”.
    * The rules mode costs nothing — it is pure code.
    */
-  | "smart_triage";
+  | "smart_triage"
+  /**
+   * FAQ ask box (MIN-590): one completion per question asked by a visitor in
+   * the question box of a FAQ section. Its own feature, like `landing_demo`:
+   * it is platform-funded traffic offered to someone without an account, and
+   * its cost per question must stay readable on its own line in the finance
+   * view. The caller bills it to `{ platform }`.
+   */
+  | "faq_ask";
 
 /** Form of the `usage` object returned by OpenRouter (chat / embeddings / audio). */
 export interface OpenRouterUsage {

@@ -11,6 +11,7 @@ import { McpAgentLogo } from "@/components/mcp-agent-logo";
 import { CARD_TONES } from "@/components/marketing/card-tones";
 import { CopyButton } from "@/components/marketing/copy-button";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
+import { FaqAskBox } from "@/components/marketing/faq-ask-box";
 import { MCP_FAQ_KEYS } from "@/components/marketing/faq-keys";
 import { SectionCta } from "@/components/marketing/section-cta";
 import { SectionHeading } from "@/components/marketing/section-heading";
@@ -180,6 +181,7 @@ export default async function McpPage() {
         <div className="mx-auto max-w-3xl">
           <h2 className="mb-8 text-3xl leading-tight font-medium tracking-[-0.035em] text-balance sm:text-4xl">{tl("faqTitle")}</h2>
           <FaqAccordion items={faqItems} />
+          <FaqAskBox section="mcp" />
         </div>
       </section>
       <SectionCta />

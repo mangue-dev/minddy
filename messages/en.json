@@ -4153,6 +4153,10 @@
         "title": "Feedback",
         "desc": "Feedback board processing."
       },
+      "site": {
+        "title": "Public site",
+        "desc": "AI features offered to visitors who do not have an account."
+      },
       "byokOther": "Other endpoints"
     },
     "fields": {
@@ -4262,6 +4266,14 @@
       "jev_model": {
         "label": "Jev decisions model",
         "desc": "The System One model answering structured questions (categories, triage, review). Reached through OpenRouter's decisions endpoint, priced on input tokens only."
+      },
+      "faq_ask_enabled": {
+        "label": "FAQ question box",
+        "desc": "Lets a visitor with no account ask their own question in the FAQ section of a page and get an AI answer grounded in the product documentation. The only spend besides the landing demo offered to anonymous traffic: one small completion per question, capped at ten per IP per hour and 1000 a day. Off, the box disappears from every FAQ."
+      },
+      "faq_ask_model": {
+        "label": "FAQ question box model",
+        "desc": "Answers a visitor's question from the page FAQ and the product documentation. Someone is waiting on it, and it runs all day on the public site: pick a fast, cheap model."
       }
     },
     "finance": {
@@ -6349,5 +6361,14 @@
     "unavailableProject": "Unavailable project",
     "destinationUnavailable": "This destination is unavailable. Choose another page or close the tab.",
     "cycleTab": "Cycle"
+  },
+  "FaqAsk": {
+    "title": "Still have a question?",
+    "placeholder": "Ask your own question…",
+    "submit": "Ask",
+    "submitAria": "Send the question",
+    "loading": "Looking for the answer…",
+    "disclaimer": "AI-generated answer from minddy’s documentation. It can be imperfect.",
+    "error": "The answer could not be generated. Try again in a moment."
   }
 }

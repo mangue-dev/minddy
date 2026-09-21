@@ -4153,6 +4153,10 @@
         "title": "Feedback",
         "desc": "Processamento do quadro de feedback."
       },
+      "site": {
+        "title": "Site público",
+        "desc": "Funções de IA para visitantes sem conta."
+      },
       "byokOther": "Outros endpoints"
     },
     "fields": {
@@ -4262,6 +4266,14 @@
       "jev_model": {
         "label": "Modelo de decisões Jev",
         "desc": "O modelo System One que responde perguntas estruturadas (categorias, triagem, revisão). Acessado pelo endpoint decisions do OpenRouter, cobrado apenas pelos tokens de entrada."
+      },
+      "faq_ask_enabled": {
+        "label": "Quadro de perguntas FAQ",
+        "desc": "Permite que um visitante sem conta faça a própria pergunta na seção FAQ de uma página e receba uma resposta de IA baseada na documentação do produto. O único gasto, junto com a demo da landing, oferecido ao tráfego anônimo: uma pequena completude por pergunta, limitada a dez por IP por hora, 1000 por dia. Desligado, o quadro desaparece de todas as FAQ."
+      },
+      "faq_ask_model": {
+        "label": "Modelo do quadro de perguntas FAQ",
+        "desc": "Responde à pergunta de um visitante a partir das FAQ da página e da documentação do produto. Alguém espera pela resposta, e o quadro roda o dia todo no site público: escolha um modelo rápido e barato."
       }
     },
     "finance": {
@@ -6349,5 +6361,14 @@
     "unavailableProject": "Projeto indisponível",
     "destinationUnavailable": "Este destino não está disponível. Escolha outra página ou feche a aba.",
     "cycleTab": "Ciclo"
+  },
+  "FaqAsk": {
+    "title": "Ficou com dúvida?",
+    "placeholder": "Digite sua pergunta…",
+    "submit": "Perguntar",
+    "submitAria": "Enviar a pergunta",
+    "loading": "Procurando a resposta…",
+    "disclaimer": "Resposta gerada por IA a partir da documentação do minddy. Pode ser imperfeita.",
+    "error": "Não foi possível gerar a resposta. Tente novamente em instantes."
   }
 }

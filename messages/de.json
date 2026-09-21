@@ -4153,6 +4153,10 @@
         "title": "Feedback",
         "desc": "Feedback-Board-Verarbeitung."
       },
+      "site": {
+        "title": "Öffentliche Website",
+        "desc": "KI-Funktionen für Besucher ohne Konto."
+      },
       "byokOther": "Andere Endpunkte"
     },
     "fields": {
@@ -4262,6 +4266,14 @@
       "jev_model": {
         "label": "Jev-Entscheidungsmodell",
         "desc": "Das System-One-Modell, das strukturierte Fragen beantwortet (Kategorien, Triage, Prüfung). Erreicht über den Decisions-Endpunkt von OpenRouter, abgerechnet nur nach Eingabe-Tokens."
+      },
+      "faq_ask_enabled": {
+        "label": "FAQ-Fragenfeld",
+        "desc": "Erlaubt einem Besucher ohne Konto, im FAQ-Abschnitt einer Seite eine eigene Frage zu stellen und eine KI-Antwort auf Basis der Produktdokumentation zu erhalten. Die einzige Ausgabe neben der Landing-Demo, die für anonymen Verkehr geboten wird: eine kleine Completion pro Frage, begrenzt auf zehn pro IP und Stunde, 1000 pro Tag. Aus, verschwindet das Feld aus allen FAQs."
+      },
+      "faq_ask_model": {
+        "label": "FAQ-Fragenfeld-Modell",
+        "desc": "Beantwortet die Frage eines Besuchers aus der FAQ der Seite und der Produktdokumentation. Jemand wartet auf die Antwort, und das Feld läuft den ganzen Tag auf der öffentlichen Website: wähle ein schnelles, günstiges Modell."
       }
     },
     "finance": {
@@ -6349,5 +6361,14 @@
     "unavailableProject": "Projekt nicht verfügbar",
     "destinationUnavailable": "Dieses Ziel ist nicht verfügbar. Wähle eine andere Seite oder schließe den Tab.",
     "cycleTab": "Zyklus"
+  },
+  "FaqAsk": {
+    "title": "Noch eine Frage?",
+    "placeholder": "Stelle deine eigene Frage…",
+    "submit": "Fragen",
+    "submitAria": "Frage senden",
+    "loading": "Antwort wird gesucht…",
+    "disclaimer": "KI-generierte Antwort aus der minddy-Dokumentation. Sie kann unvollkommen sein.",
+    "error": "Die Antwort konnte nicht erstellt werden. Versuche es gleich noch einmal."
   }
 }

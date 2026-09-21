@@ -8,6 +8,7 @@ import {
   CircleDollarSign,
   Crosshair,
   Gauge,
+  Globe,
   KeyRound,
   LayoutDashboard,
   MessageSquareHeart,
@@ -49,6 +50,7 @@ export const ADMIN_SECTIONS = {
   modelsByok: "models-byok",
   modelsVoice: "models-voice",
   modelsFeedback: "models-feedback",
+  modelsSite: "models-site",
 } as const;
 
 export type AdminSectionId =
@@ -81,6 +83,7 @@ const MODEL_GROUP_SECTIONS: Record<
   byok: { id: ADMIN_SECTIONS.modelsByok, icon: KeyRound },
   voice: { id: ADMIN_SECTIONS.modelsVoice, icon: Mic },
   feedback: { id: ADMIN_SECTIONS.modelsFeedback, icon: MessageSquareHeart },
+  site: { id: ADMIN_SECTIONS.modelsSite, icon: Globe },
 };
 
 /**
