@@ -57,7 +57,6 @@ import {
   Save,
   Pencil,
   Share2,
-  Sparkles,
   Trash2,
   Triangle,
   ExternalLink,
@@ -71,6 +70,7 @@ import {
   type ContextMenuAction,
 } from "@/components/issue-context-menu";
 import { UserAvatar } from "@/components/user-avatar";
+import { NumoIcon } from "@/components/numo-icon";
 import { useMyAvatarSource } from "@/lib/use-my-avatar";
 import { AppContentHeader } from "@/components/app-content-header";
 import { ProjectOrb } from "@/components/project-orb";
@@ -356,7 +356,7 @@ function FiltersPopover({
                 }}
                 className="flex items-center gap-1.5 rounded-md border bg-background px-2 focus-within:ring-1 focus-within:ring-ring"
               >
-                <Sparkles className="size-4 shrink-0 text-primary" aria-hidden />
+                <NumoIcon animated={false} className="size-4 shrink-0 text-primary" />
                 <Input
                   autoFocus
                   value={aiWish}
@@ -705,7 +705,7 @@ function ViewNameDialog({
           {withDescription && (
             <div className="flex flex-col gap-1.5">
               <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <Sparkles className="size-3.5 text-primary" aria-hidden />
+                <NumoIcon animated={false} className="size-3.5 text-primary" />
                 {t("aiDescribeView")}
               </label>
               <Textarea
