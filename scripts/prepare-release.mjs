@@ -16,7 +16,7 @@ if (execFileSync("git", ["tag", "--list", `v${version}`], { cwd: root, encoding:
   throw new Error(`tag v${version} already exists`);
 }
 
-const manifests = ["package.json", "package-lock.json", "desktop/package.json", "desktop/package-lock.json"];
+const manifests = ["package.json", "package-lock.json", "desktop/package.json", "desktop/package-lock.json", "server.json"];
 const updates = await Promise.all(manifests.map(async (relative) => {
   const file = path.join(root, relative);
   const json = JSON.parse(await readFile(file, "utf8"));
