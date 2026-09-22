@@ -163,12 +163,14 @@ export class AppTabsSession {
       if (!this.snapshot.tabs.length) this.merge(await this.transport.create(true, crypto.randomUUID()));
       const normalized = normalizeAppTabLocation(href) ?? "/home";
       const explicit = href !== "/home";
-      // The load destination claims the row that CONVENTIONALLY ALREADY shows it:
-      // a live reload (the URL still points at the tab the previous session left
-      // open) restores that tab, a typed or shared deep link reuses a tab that
-      // already displays it, and only otherwise the first row. Defaulting to
-      // `tabs[0]` unconditionally is what ground the first tab's location under
-      // the load URL — the home tab turned into a replica of the current page.
+      // The load destination claims the row that CONVENTIONALLY ALREADY shows
+      // it: a live reload (the URL still points at the tab the previous
+      // session left open) restores that tab, a typed or shared deep link
+      // reuses a tab that already displays it. An address NO row displays —
+      // the previous document died before it could observe it, or the memory
+      // was lost — claims a FRESH row: defaulting to `tabs[0]` is what ground
+      // the first pinned tab's location under the load URL — the home tab
+      // turned into a replica of the current page.
       const restoredHref = restored ? normalizeAppTabLocation(restored.href) : null;
       let restoredTab = restored
         ? this.snapshot.tabs.find((tab) => tab.id === restored.id) ?? null
@@ -198,13 +200,28 @@ export class AppTabsSession {
       // richer one, it reconstructs the selection the URL keeps out of the
       // address (?pr=…).
       const loadWins = Boolean(restoredHref && reopensRemembered(restoredHref, normalized));
-      const chosen =
-        (restoredTab && (!explicit || restoredHref === normalized || reloaded)
-          ? restoredTab
-          : explicit
-            ? this.snapshot.tabs.find((tab) => tab.href === normalized) ?? this.snapshot.tabs[0]
-            : null)
-        ?? this.snapshot.tabs[0];
+      const remembered = restoredTab && (!explicit || restoredHref === normalized || reloaded || loadWins)
+        ? restoredTab
+        : null;
+      const matched = explicit ? this.snapshot.tabs.find((tab) => tab.href === normalized) ?? null : null;
+      if (explicit && !remembered && !matched && normalized !== "/home") {
+        // No row displays the load address: give it its own row. The document
+        // is already there, so nothing navigates — the row joins the account
+        // like a newly created tab, and every other row keeps its location.
+        const position = this.snapshot.tabs.reduce((maximum, row) => Math.max(maximum, row.position), -1) + 1;
+        const claimed: AppTab = { ...createHomeTab(this.owner, crypto.randomUUID(), position), href: normalized };
+        this.creating.add(claimed.id);
+        this.locations.set(claimed.id, normalized);
+        this.merge(claimed);
+        void this.persist(() => this.createOnServer(claimed.id));
+        void this.flushLocation();
+        this.emit({ activeId: claimed.id });
+        this.activeHref = normalized;
+        this.observedHref = normalized;
+        this.remember(claimed.id, normalized);
+        return;
+      }
+      const chosen = (remembered ?? matched) ?? this.snapshot.tabs[0];
       if (!chosen || this.disposed) return;
       const destination = explicit
         ? reloaded
