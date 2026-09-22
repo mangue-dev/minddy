@@ -2994,6 +2994,7 @@ export async function executeTool(
               auto_assign_enabled: result.project.auto_assign_enabled,
               smart_assign_enabled: result.project.smart_assign_enabled,
               smart_assign_rules: result.project.smart_assign_rules,
+              smart_triage_mode: result.project.smart_triage_mode,
               automations_enabled: result.project.automations_enabled,
               feedback_review_enabled: result.project.feedback_review_enabled,
               feedback_review_skip_over_budget:

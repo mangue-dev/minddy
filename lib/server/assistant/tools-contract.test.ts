@@ -43,6 +43,33 @@ describe("Numo tool contracts", () => {
     expect(settings).toHaveProperty("smart_fill_triage");
   });
 
+  it("exposes the full Smart Triage engine choice on the project (MIN-566)", () => {
+    // Regression guard: `updateProjectSettings` accepted `smart_triage_mode`
+    // while the tool never advertised it, so Numo could not change the
+    // engine a user had set in the project's Smart Triage settings.
+    const update = tool("update_project");
+    const mode = update?.function.parameters.properties
+      .smart_triage_mode as { enum?: string[]; description?: string };
+
+    expect(mode).toBeDefined();
+    expect(mode?.enum).toEqual(["rules", "jev"]);
+    expect(mode?.description).toMatch(/AI usage/i);
+  });
+
+  it("advertises every account preference the settings screen writes", () => {
+    const settings = tool("update_account_settings")?.function.parameters.properties;
+    for (const name of [
+      "send_shortcut",
+      "automation_start_delay_minutes",
+      "automation_efforts",
+      "analytics_consent",
+      "sandbox_region",
+      "sandbox_size",
+    ]) {
+      expect(settings, name).toHaveProperty(name);
+    }
+  });
+
   it("advertises the internal feedback comment tool", () => {
     const comment = tool("add_feedback_comment");
 

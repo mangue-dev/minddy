@@ -37,6 +37,10 @@ import {
   AUTOMATION_PRESET_META_KEY,
   isAutomationPresetId,
   resolveAutomationPreset,
+  resolveAutomationEfforts,
+  resolveAutomationStartDelayMinutes,
+  ALL_EFFORTS,
+  MAX_AUTOMATION_START_DELAY_MIN,
   type AutomationPresetId,
 } from "@/lib/automations";
 import {
@@ -57,6 +61,25 @@ import {
   DEFAULT_AGENT_BRANCH_PREFIX,
   normalizeAgentBranchPrefix,
 } from "@/lib/server/agent/branch-name";
+import {
+  SEND_MODE_META_KEY,
+  isSendMode,
+  resolveSendMode,
+  type SendMode,
+} from "@/lib/keyboard/send-shortcut";
+import { type IssueEffort } from "@/lib/issue-constants";
+import {
+  AUTOMATION_START_DELAY_META_KEY,
+  AUTOMATION_EFFORTS_META_KEY,
+} from "@/lib/automations";
+import { ANALYTICS_CONSENT_META_KEY, resolveAnalyticsConsent } from "@/lib/cookie-consent";
+import {
+  isSandboxRegion,
+  isSandboxSize,
+  resolveSandboxPreferences,
+  type SandboxRegion,
+  type SandboxSize,
+} from "@/lib/agent-sandbox-config";
 
 /**
  * The requesting user's own account settings, mirroring Account → Profile /
@@ -79,14 +102,22 @@ export interface AccountSettings {
   auto_assign_created: boolean;
   auto_assign_on_start: boolean;
   prompt_copy_auto_start: boolean;
+  /** Keyboard gesture that sends a composer (mod-enter | enter). */
+  send_shortcut: SendMode;
   smart_fill: boolean;
   smart_fill_created: boolean;
   smart_fill_triage: boolean;
   /** Cycles (MIN-32) — Account → Cycles, one key per knob in user_metadata. */
   cycles: CyclePrefs;
   /** Automation preset (MIN-147): Numo loop applied to ALL
- * projects owned by this account. `null` = none. */
+  * projects owned by this account. `null` = none. */
   automation_preset: AutomationPresetId | null;
+  /** Minutes the automation waits after its trigger before starting the agent. */
+  automation_start_delay_minutes: number;
+  /** Which ticket sizes the automation loop may run on. */
+  automation_efforts: Record<IssueEffort, boolean>;
+  /** Product-analytics consent. `null` = never answered. */
+  analytics_consent: "accepted" | "declined" | null;
   /** Inbox (MIN-82) — one toggle per trigger family. */
   notifications: NotificationPrefs;
   /** Code Agent Preferences (MIN-46 / MIN-122). The only account setting block
@@ -99,6 +130,10 @@ export interface AgentPrefs {
   default_model: string | null;
   default_reasoning_level: ReasoningLevel | null;
   branch_prefix: string;
+  /** Where the server sandbox spins up (eu | us) and how big it is
+      (standard | performance) — the same `user_agent_preferences` row. */
+  sandbox_region: SandboxRegion;
+  sandbox_size: SandboxSize;
 }
 
 function metaString(meta: Record<string, unknown>, key: string): string {
@@ -122,27 +157,31 @@ async function readAgentPrefs(
   const service = getServiceClient();
   const { data, error } = await service
     .from("user_agent_preferences")
-    .select("default_model, default_reasoning_level, branch_prefix")
+    .select(
+      "default_model, default_reasoning_level, branch_prefix, sandbox_region, sandbox_size"
+    )
     .eq("user_id", userId)
     .maybeSingle();
   if (error) {
     console.error("[account-settings] agent prefs read failed:", error.message);
     return { ok: false, error: error.message };
   }
-  const row = data as {
-    default_model: string | null;
-    default_reasoning_level: string | null;
-    branch_prefix: string | null;
-  } | null;
+  const sandbox = resolveSandboxPreferences(data);
   return {
     ok: true,
     prefs: {
-      default_model: row?.default_model ?? null,
-      default_reasoning_level: isReasoningLevel(row?.default_reasoning_level)
-        ? row.default_reasoning_level
+      default_model: (data as { default_model?: string | null } | null)?.default_model ?? null,
+      default_reasoning_level: isReasoningLevel(
+        (data as { default_reasoning_level?: string | null } | null)?.default_reasoning_level
+      )
+        ? ((data as { default_reasoning_level: string }).default_reasoning_level as ReasoningLevel)
         : null,
       branch_prefix:
-        normalizeAgentBranchPrefix(row?.branch_prefix) ?? DEFAULT_AGENT_BRANCH_PREFIX,
+        normalizeAgentBranchPrefix(
+          (data as { branch_prefix?: string | null } | null)?.branch_prefix
+        ) ?? DEFAULT_AGENT_BRANCH_PREFIX,
+      sandbox_region: sandbox.sandbox_region,
+      sandbox_size: sandbox.sandbox_size,
     },
   };
 }
@@ -170,11 +209,15 @@ function toSettings(
     auto_assign_created: meta.auto_assign_created === true,
     auto_assign_on_start: resolveAutoAssignOnStart(meta),
     prompt_copy_auto_start: resolvePromptCopyAutoStart(meta),
+    send_shortcut: resolveSendMode(meta),
     smart_fill: resolveSmartFill(meta),
     smart_fill_created: resolveSmartFillScope(meta, "created"),
     smart_fill_triage: resolveSmartFillScope(meta, "triage"),
     cycles: resolveCyclePrefs(meta),
     automation_preset: resolveAutomationPreset(meta),
+    automation_start_delay_minutes: resolveAutomationStartDelayMinutes(meta),
+    automation_efforts: resolveAutomationEfforts(meta),
+    analytics_consent: resolveAnalyticsConsent(meta),
     notifications: resolveNotificationPrefs(meta),
     agent,
   };
@@ -264,6 +307,15 @@ export async function updateAccountSettings({
     }
     next.numo_default_status = input.numo_default_status;
   }
+  if ("send_shortcut" in input) {
+    if (!isSendMode(input.send_shortcut)) {
+      return {
+        ok: false,
+        error: "send_shortcut must be one of: mod-enter, enter.",
+      };
+    }
+    next[SEND_MODE_META_KEY] = input.send_shortcut;
+  }
   if ("auto_assign_created" in input) {
     if (typeof input.auto_assign_created !== "boolean") {
       return { ok: false, error: "auto_assign_created must be a boolean." };
@@ -306,6 +358,65 @@ export async function updateAccountSettings({
       next[AUTOMATION_PRESET_META_KEY] = input.automation_preset;
     } else {
       return { ok: false, error: "automation_preset is not a known preset." };
+    }
+  }
+
+  // Start delay of the automation loop: the reprieve between the trigger and
+  // the agent run. Same bounds as `resolveAutomationStartDelayMinutes`.
+  if ("automation_start_delay_minutes" in input) {
+    const n = input.automation_start_delay_minutes;
+    if (
+      typeof n !== "number" ||
+      !Number.isInteger(n) ||
+      n < 0 ||
+      n > MAX_AUTOMATION_START_DELAY_MIN
+    ) {
+      return {
+        ok: false,
+        error: `automation_start_delay_minutes must be an integer between 0 and ${MAX_AUTOMATION_START_DELAY_MIN}.`,
+      };
+    }
+    next[AUTOMATION_START_DELAY_META_KEY] = n;
+  }
+
+  // Per-effort switches of the automation loop. Partial on purpose: only the
+  // keys sent change, the others keep their value (they default to enabled).
+  if ("automation_efforts" in input) {
+    const raw = input.automation_efforts;
+    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+      return { ok: false, error: "automation_efforts must be an object of effort → boolean." };
+    }
+    const patch: Record<string, boolean> = {};
+    for (const [effort, value] of Object.entries(raw as Record<string, unknown>)) {
+      if (!ALL_EFFORTS.includes(effort as IssueEffort)) {
+        return { ok: false, error: `automation_efforts carries an unknown effort: ${effort}.` };
+      }
+      if (typeof value !== "boolean") {
+        return { ok: false, error: `automation_efforts.${effort} must be a boolean.` };
+      }
+      patch[effort] = value;
+    }
+    // Merge over the CURRENT value, not over the default: a second partial
+    // write must not re-enable a size the user disabled earlier.
+    const current = resolveAutomationEfforts(meta);
+    next[AUTOMATION_EFFORTS_META_KEY] = { ...current, ...patch };
+  }
+
+  // Analytics consent (GDPR). `null` clears the stored answer, so the user
+  // is asked again; the banner itself stays a client concern.
+  if ("analytics_consent" in input) {
+    if (input.analytics_consent === null) {
+      delete next[ANALYTICS_CONSENT_META_KEY];
+    } else if (
+      input.analytics_consent === "accepted" ||
+      input.analytics_consent === "declined"
+    ) {
+      next[ANALYTICS_CONSENT_META_KEY] = input.analytics_consent;
+    } else {
+      return {
+        ok: false,
+        error: "analytics_consent must be 'accepted', 'declined' or null.",
+      };
     }
   }
 
@@ -374,12 +485,29 @@ export async function updateAccountSettings({
     agentPatch.branch_prefix = prefix;
   }
 
+  // Sandbox preferences (MIN-46 family): same `user_agent_preferences` row as
+  // the branch prefix, same writer contract. Each field is validated alone so
+  // a two-field patch that carries one bad value changes nothing at all.
+  if ("sandbox_region" in input) {
+    if (!isSandboxRegion(input.sandbox_region)) {
+      return { ok: false, error: "sandbox_region must be one of: eu, us." };
+    }
+    agentPatch.sandbox_region = input.sandbox_region;
+  }
+  if ("sandbox_size" in input) {
+    if (!isSandboxSize(input.sandbox_size)) {
+      return { ok: false, error: "sandbox_size must be one of: standard, performance." };
+    }
+    agentPatch.sandbox_size = input.sandbox_size;
+  }
+
   // Nothing recognised to change.
   const CHANGEABLE = [
     "display_name",
     "locale",
     "theme",
     "numo_default_status",
+    "send_shortcut",
     "auto_assign_created",
     "auto_assign_on_start",
     "prompt_copy_auto_start",
@@ -389,6 +517,9 @@ export async function updateAccountSettings({
     // Without it, a call carrying ONLY the preset came out here as “nothing to
     // change” — even though the block that wrote it had just placed it.
     AUTOMATION_PRESET_META_KEY,
+    AUTOMATION_START_DELAY_META_KEY,
+    AUTOMATION_EFFORTS_META_KEY,
+    ANALYTICS_CONSENT_META_KEY,
     ...NOTIFICATION_CATEGORIES.map((c) => NOTIFICATION_CATEGORY_META_KEYS[c]),
     CYCLES_ENABLED_META_KEY,
     CYCLE_DURATION_WEEKS_META_KEY,

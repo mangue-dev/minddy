@@ -13,10 +13,15 @@ import { RECURRENCE_CADENCES } from "@/lib/recurrence";
 import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 import { NUMO_DEFAULT_STATUS_OPTIONS } from "@/lib/numo-default-status";
 import { ACCOUNT_THEMES } from "@/lib/account-theme";
+import { SEND_MODES } from "@/lib/keyboard/send-shortcut";
+import {
+  SANDBOX_REGIONS,
+  SANDBOX_SIZES,
+} from "@/lib/agent-sandbox-config";
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { CYCLE_INTENSITIES } from "@/lib/cycle-prefs";
 import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
-import { AUTOMATION_PRESET_IDS } from "@/lib/automations";
+import { AUTOMATION_PRESET_IDS, AUTOMATION_START_DELAY_CHOICES } from "@/lib/automations";
 import {
   CREATE_ROUTINE_DESCRIPTION,
   CREATE_ROUTINE_PARAMETERS,
@@ -28,6 +33,7 @@ import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-validation";
 import { RELATION_TYPE_VALUES } from "@/lib/relation-validation";
 import { TRASH_TYPES } from "@/lib/server/trash";
 import { VIEW_SORTS } from "@/lib/server/views";
+import { SMART_TRIAGE_MODES } from "@/lib/smart-triage";
 import { locales } from "@/i18n/config";
 
 // ── Tool definitions (OpenAI function-calling format) ──────────────────
@@ -1257,7 +1263,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_project",
       description:
-        "Update the project's own settings — every switch of its Settings page: identity (name, key, accent color), auto-assign on create, Smart Assign and its per-member rules, the automations switch (the agent loop), AI review of incoming feedback, and feedback translation (enabled, team language, languages to skip). OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change. Smart Assign and automations are plan-gated: turning one ON can be refused for the owner's plan — relay that refusal, don't retry.",
+        "Update the project's own settings — every switch of its Settings page: identity (name, key, accent color), auto-assign on create, Smart Assign and its per-member rules, Smart Triage's engine (rules, or the AI scoring pass), the automations switch (the agent loop), AI review of incoming feedback, and feedback translation (enabled, team language, languages to skip). OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change. Smart Assign, Smart Triage's AI engine and automations are plan- or budget-gated: turning one ON can be refused for the owner's plan or usage budget — relay that refusal, don't retry.",
       parameters: {
         type: "object",
         properties: {
@@ -1286,6 +1292,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "object",
             description:
               "Smart Assign rules, as a map user_id → one sentence describing what that person takes on (from list_members). REPLACES the whole map: resend the members you want to keep. An empty text drops a member's rule.",
+          },
+          smart_triage_mode: {
+            type: "string",
+            enum: [...SMART_TRIAGE_MODES],
+            description:
+              "Smart Triage's engine for the board's 'Smart' sort and triage button: 'rules' is the free, deterministic static rules; 'jev' is the AI urgency scoring pass (shown as 'AI' in the interface). Arming 'jev' consumes the owner's AI usage and can be refused when their budget is dry — 'rules' is free and always passes.",
           },
           automations_enabled: {
             type: "boolean",
@@ -1479,7 +1491,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_account_settings",
       description:
-        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, the status Numo-created issues land in, the auto-assign, Smart Fill (master, created issues, triage), and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the code agent's default model, reasoning level and branch prefix, and the automation preset. Call this before update_account_settings so you use exact current values.",
+        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, keyboard send shortcut, the status Numo-created issues land in, the auto-assign, Smart Fill (master, created issues, triage), and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the automation preset with its start delay and per-effort switches, analytics consent, the code agent's default model, reasoning level, branch prefix and sandbox (region, size). Call this before update_account_settings so you use exact current values.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -1506,6 +1518,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             enum: [...ACCOUNT_THEMES, null],
             description:
               "Display theme, saved on the account so every device of the user picks it up. null clears it: devices fall back to their own default.",
+          },
+          send_shortcut: {
+            type: "string",
+            enum: [...SEND_MODES],
+            description:
+              "The keyboard gesture that SENDS a composer (comments, Numo, issue fields). 'mod-enter' (default) sends on Cmd/Ctrl+Enter, Enter only inserts a line break; 'enter' sends on plain Enter, Shift+Enter still inserts a line break. Cmd/Ctrl+Enter sends in BOTH modes.",
           },
           numo_default_status: {
             type: "string",
@@ -1618,6 +1636,41 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             enum: [...AUTOMATION_PRESET_IDS, null],
             description:
               "The automation loop applied to EVERY project this account owns (each project still has its own on/off switch — update_project, automations_enabled). null clears it: no loop at all, without touching each project.",
+          },
+          automation_start_delay_minutes: {
+            type: "number",
+            enum: [...AUTOMATION_START_DELAY_CHOICES],
+            description:
+              "How long (minutes) an automation waits AFTER its trigger before starting the code agent — the reprieve that lets a stray drag or a change of mind cancel the run. 0 = immediate. Applies to the whole account's automation loop.",
+          },
+          automation_efforts: {
+            type: "object",
+            description:
+              "Per-effort switches for the automation loop: which ticket sizes the agent may run on, as a map of effort → boolean. Only pass the efforts to CHANGE — an effort left out keeps its current value; every effort is enabled by default. Set false to exclude a size ('no automation on my xl'), true to re-include it.",
+            properties: Object.fromEntries(
+              ISSUE_EFFORTS.map((effort) => [
+                effort,
+                { type: "boolean" as const },
+              ]),
+            ),
+          },
+          analytics_consent: {
+            type: ["string", "null"],
+            enum: ["accepted", "declined", null],
+            description:
+              "The user's product-analytics consent (cookies, PostHog). 'accepted' enables measurement, 'declined' turns it off, null clears the stored answer (they will be asked again).",
+          },
+          sandbox_region: {
+            type: "string",
+            enum: [...SANDBOX_REGIONS],
+            description:
+              "Region of the server sandbox where Numo's code agent runs: 'eu' (Dublin) or 'us' (Virginia). Closer region, faster worker I/O.",
+          },
+          sandbox_size: {
+            type: "string",
+            enum: [...SANDBOX_SIZES],
+            description:
+              "Resources of the server sandbox where Numo's code agent runs: 'standard' (4 vCPU / 8 GB) or 'performance' (8 vCPU / 16 GB, costs more per hour against the AI budget).",
           },
           branch_prefix: {
             type: ["string", "null"],
