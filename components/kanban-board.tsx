@@ -30,6 +30,7 @@ import type {
   IssueUpdateInput,
   Member,
   Objective,
+  SortDirection,
   ViewSort,
 } from "@/lib/types";
 import { resolveRelationsByIssue } from "@/lib/relation-constants";
@@ -79,6 +80,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   relations,
   statuses,
   sort,
+  sortDirection,
   smartScores,
   projectId,
   projectKey,
@@ -107,6 +109,9 @@ export const KanbanBoard = memo(function KanbanBoard({
   relations: IssueRelation[];
   statuses: StatusMeta[];
   sort: ViewSort;
+  /** Direction of the sort (MIN-592) — reversed by the invert button for the
+      directional sorts; ignored by "smart" and "manual". */
+  sortDirection?: SortDirection;
   /**
    * The project's AI urgency scores (project mode `jev`, MIN-576): when
    * present, the "smart" sort orders by score. `null` = rules mode, a
@@ -228,12 +233,16 @@ export const KanbanBoard = memo(function KanbanBoard({
   }, [relations, allIssues, objectives, allIssueMap]);
   const makeComparator = useMemo(
     () =>
-      boardComparatorFactory(sort, {
-        relations: triageContext.relations,
-        statusById: triageContext.statusById,
-        jevScores: smartScores ?? undefined,
-      }),
-    [sort, triageContext, smartScores],
+      boardComparatorFactory(
+        sort,
+        {
+          relations: triageContext.relations,
+          statusById: triageContext.statusById,
+          jevScores: smartScores ?? undefined,
+        },
+        sortDirection ?? "asc"
+      ),
+    [sort, sortDirection, triageContext, smartScores],
   );
   const columns = useMemo(
     () => buildColumns(statuses, issues, makeComparator),

@@ -563,31 +563,20 @@ function ProjectBoard() {
     const view = await createViewAndSelect(name);
     const wish = description?.trim();
     if (wish) {
-      // Hand the view over to Numo: mark it generating, then ask Numo to fill in
-      // its filters/sort from the description. It edits this exact view (the id
-      // rides along in pageContext), and the board reflects the change live once
-      // realtime brings the updated view back (see the config-sync effect).
+      // Hand the view over to the AI: mark it generating, then ask the AI to
+      // fill in its filters/sort from the description. It edits this exact
+      // view (the id rides along in pageContext), and the board reflects the
+      // change live once realtime brings the updated view back (see the
+      // config-sync effect).
       beginGenerating(view);
       openAssistant({
         projectId,
-        prompt: t("numoBuildViewPrompt", { name, description: wish }),
+        prompt: t("aiBuildViewPrompt", { name, description: wish }),
         pageContext: { projectId, viewId: view.id, viewName: name },
       });
     } else {
       toast.success(t("viewCreated", { name }));
     }
-  };
-
-  // Let Numo shape the currently selected view: open the chat carrying the
-  // active view as context so "this view" resolves without the user re-stating
-  // it. Reachable from the "Ask Numo" entry in the filters dropdown.
-  const handleAskNumo = () => {
-    openAssistant({
-      projectId,
-      pageContext: activeView
-        ? { projectId, viewId: activeView.id, viewName: activeView.name }
-        : { projectId },
-    });
   };
 
   const openIssue = openIssueId
@@ -852,7 +841,7 @@ function ProjectBoard() {
               onUpdateActiveView={saveActiveView}
               onRenameView={renameView}
               onDeleteView={deleteView}
-              onAskNumo={handleAskNumo}
+              aiProjectId={projectId}
               // The cycle is personal & cross-project: the tab exists on every
               // board but is canonical on /all only — here it just links out
               // (↗), it never scopes the cycle to this project (MIN-32).
@@ -871,6 +860,7 @@ function ProjectBoard() {
               relations={relations}
               statuses={statuses}
               sort={sort}
+              sortDirection={config.display.sortDirection}
               // The Smart sort's AI scores (project mode jev, MIN-576): the
               // comparator orders by urgency when the view sort is "smart".
               smartScores={smartScores}

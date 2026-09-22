@@ -30,6 +30,7 @@ import type {
   Member,
   Objective,
   Project,
+  SortDirection,
   ViewSort,
 } from "@/lib/types";
 import { boardComparatorFactory } from "@/lib/smart-triage";
@@ -87,6 +88,7 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
   relations,
   statuses,
   sort,
+  sortDirection,
   projectMap,
   memberMapByProject,
   categoryMapByProject,
@@ -118,6 +120,9 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
   relations?: IssueRelation[];
   statuses: StatusMeta[];
   sort: ViewSort;
+  /** Direction of the sort (MIN-592) — reversed by the invert button for the
+      directional sorts; ignored by "smart" and "manual". */
+  sortDirection?: SortDirection;
   projectMap: Map<string, Project>;
   memberMapByProject: Map<string, Map<string, Member>>;
   categoryMapByProject: Map<string, Map<string, Category>>;
@@ -259,12 +264,16 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
         r.type !== "blocks" ||
         (statusById.has(r.source_id) && statusById.has(r.target_id)),
     );
-    return boardComparatorFactory(sort, {
-      relations: known,
-      statusById,
-      jevScores: smartScores ?? undefined,
-    });
-  }, [comparator, sort, relations, allIssueMap, smartScores, allIssues, issues, objectiveMapByProject]);
+    return boardComparatorFactory(
+      sort,
+      {
+        relations: known,
+        statusById,
+        jevScores: smartScores ?? undefined,
+      },
+      sortDirection ?? "asc"
+    );
+  }, [comparator, sort, sortDirection, relations, allIssueMap, smartScores, allIssues, issues, objectiveMapByProject]);
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
   const columns = useMemo(
     () => buildColumns(statuses, issues, makeComparator),

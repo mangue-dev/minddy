@@ -229,7 +229,13 @@ export function sanitizeViewConfig(input: {
       for (const [key, value] of Object.entries(input.display as Record<string, unknown>)) {
         if (key === "hideDone") display.hideDone = Boolean(value);
         else if (key === "hideRecurring") display.hideRecurring = Boolean(value);
-        else invalid.push(`display.${key}: unknown key, dropped`);
+        else if (key === "sortDirection") {
+          // MIN-592: the sort's direction — only the two known values pass.
+          if (value === "asc" || value === "desc") display.sortDirection = value;
+          else if (value === null || value === undefined) {
+            /* cleared — the default ("asc") applies */
+          } else invalid.push(`display.sortDirection: ${JSON.stringify(value)} is not one of asc, desc, dropped`);
+        } else invalid.push(`display.${key}: unknown key, dropped`);
       }
     } else {
       invalid.push("display: expected an object, dropped");

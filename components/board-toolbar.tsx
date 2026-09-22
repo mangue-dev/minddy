@@ -31,24 +31,24 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
   Input,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Separator,
   SplitButton,
   Textarea,
   cn,
   toast,
 } from "mangue-ui";
 import {
+  ArrowDownZA,
+  ArrowUpAZ,
   ArrowUpRight,
   Check,
   CircleUser,
   IterationCw,
   ListFilter,
-  ArrowUpDown,
   Loader2,
   Lock,
   MoreHorizontal,
@@ -57,6 +57,7 @@ import {
   Save,
   Pencil,
   Share2,
+  Sparkles,
   Trash2,
   Triangle,
   ExternalLink,
@@ -69,7 +70,6 @@ import {
   IssueContextMenu,
   type ContextMenuAction,
 } from "@/components/issue-context-menu";
-import { NumoIcon } from "@/components/numo-icon";
 import { UserAvatar } from "@/components/user-avatar";
 import { useMyAvatarSource } from "@/lib/use-my-avatar";
 import { AppContentHeader } from "@/components/app-content-header";
@@ -86,7 +86,7 @@ import {
   type IssuePriority,
   type IssueEffort,
 } from "@/lib/issue-constants";
-import { ME_ASSIGNEE, activeFilterCount } from "@/lib/view-filter";
+import { ME_ASSIGNEE, activeFilterCount, isDirectionalSort, reverseSortDirection } from "@/lib/view-filter";
 import { CYCLE_TAB_KEY, mergeTabOrder } from "@/lib/tab-order";
 import { useTabOrderQuery } from "@/lib/use-tab-order-query";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
@@ -97,6 +97,7 @@ import type {
   Member,
   Objective,
   Project,
+  SortDirection,
   View,
   ViewConfig,
   ViewFilters,
@@ -200,24 +201,54 @@ function toggleFacet<T extends string | null>(
   return [...set];
 }
 
-function ToggleRow({
+/** One toggle row inside a filter submenu — Linear style: clicking toggles
+    WITHOUT closing the menu (onSelect preventDefault), the check sits on the
+    right. */
+function MenuToggleRow({
   active,
-  onClick,
+  onSelect,
   children,
 }: {
   active: boolean;
-  onClick: () => void;
+  onSelect: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+    <DropdownMenuItem
+      onSelect={(event) => {
+        event.preventDefault();
+        onSelect();
+      }}
     >
       <span className="flex min-w-0 flex-1 items-center gap-2">{children}</span>
       {active && <Check className="size-4 shrink-0" />}
-    </button>
+    </DropdownMenuItem>
+  );
+}
+
+/** One facet submenu of the filters menu: the trigger carries the facet name
+    and, when the facet is active, how many values are selected. */
+function FilterSub({
+  label,
+  count,
+  children,
+}: {
+  label: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        {count > 0 && (
+          <span className="ml-auto mr-1 shrink-0 rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground">
+            {count}
+          </span>
+        )}
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="w-56">{children}</DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 }
 
@@ -231,8 +262,8 @@ function FiltersPopover({
   projects,
   groupFacetsByName,
   lockedToMe,
-  withNumo,
-  onAskNumo,
+  withAI,
+  aiProjectId,
 }: {
   config: ViewConfig;
   onChange: (config: ViewConfig) => void;
@@ -247,10 +278,15 @@ function FiltersPopover({
   groupFacetsByName: boolean;
   /** System view: the assignee facet is pinned to "@me" and not editable. */
   lockedToMe: boolean;
-  withNumo: boolean;
-  onAskNumo: () => void;
+  /** The AI input rides when the board has an AI scope (MIN-592). */
+  withAI: boolean;
+  /** Scope the AI interprets for: the project id, or null on the global
+      cross-project board. */
+  aiProjectId: string | null;
 }) {
   const [open, setOpen] = useState(false);
+  const [aiWish, setAiWish] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
   const f = config.filters;
   const setFilters = (next: ViewFilters) =>
     onChange({ ...config, filters: next });
@@ -258,6 +294,7 @@ function FiltersPopover({
   const t = useTranslations("Board");
   const tc = useTranslations("Common");
   const tf = useTranslations("Field");
+  const tSort = useTranslations("Sort");
   const ts = useTranslations("Status");
   const tp = useTranslations("Priority");
 
@@ -274,243 +311,272 @@ function FiltersPopover({
     [integrations, groupFacetsByName]
   );
 
+  const sortDirection: SortDirection = config.display.sortDirection ?? "asc";
+
+  // The AI pass (MIN-592): the wish is interpreted against THIS board's
+  // options, the answer replaces the filters of the live config — saving it
+  // stays the explicit Save gesture.
+  const applyAiFilters = async () => {
+    const wish = aiWish.trim();
+    if (!wish || aiBusy) return;
+    setAiBusy(true);
+    try {
+      const response = await fetch("/api/views/interpret-filters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wish, projectId: aiProjectId }),
+      });
+      const data = (await response.json().catch(() => null)) as {
+        filters?: ViewFilters;
+        error?: string;
+      } | null;
+      if (!response.ok || !data?.filters) {
+        throw new Error(data?.error ?? t("aiFilterFailed"));
+      }
+      onChange({ ...config, filters: data.filters });
+      setAiWish("");
+      toast.success(t("aiFilterApplied"));
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <PopoverTrigger asChild>
+          <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon-sm" aria-label={tc("filters")}>
               <ListFilter className={cn(count > 0 && "text-primary")} />
             </Button>
-          </PopoverTrigger>
+          </DropdownMenuTrigger>
         </TooltipTrigger>
         <TooltipContent>{tc("filters")}</TooltipContent>
       </Tooltip>
-      <PopoverContent align="end" className="max-h-[70vh] w-64 overflow-y-auto p-2">
-        {withNumo && (
+      <DropdownMenuContent align="end" className="w-60">
+        {withAI && (
           <>
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                onAskNumo();
-              }}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+            {/* The AI input (MIN-592): write the wish, press Enter, the AI
+                picks the filters. Replaces the old "Ask Numo" hand-off — the
+                interpretation happens right here, on this config. The keydown
+                is stopped so the menu's own navigation never eats a
+                keystroke, and toggling stays possible while it runs. */}
+            <div
+              className="p-1"
+              onKeyDown={(event) => event.stopPropagation()}
             >
-              <NumoIcon animated={false} className="size-4 shrink-0 text-primary" />
-              <span className="min-w-0 flex-1 truncate">{t("askNumo")}</span>
-            </button>
-            <Separator className="my-1.5" />
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void applyAiFilters();
+                }}
+                className="flex items-center gap-1.5 rounded-md border bg-background px-2 focus-within:ring-1 focus-within:ring-ring"
+              >
+                <Sparkles className="size-4 shrink-0 text-primary" aria-hidden />
+                <Input
+                  autoFocus
+                  value={aiWish}
+                  onChange={(event) => setAiWish(event.target.value)}
+                  placeholder={t("aiFilterInput")}
+                  aria-label={t("aiFilterInput")}
+                  disabled={aiBusy}
+                  className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+                {aiBusy && <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />}
+              </form>
+            </div>
+            <DropdownMenuSeparator />
           </>
         )}
         {projects.length > 0 && (
-          <>
-            <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
-              {tf("project")}
-            </p>
+          <FilterSub label={tf("project")} count={f.project?.length ?? 0}>
             {projects.map((p) => (
-              <ToggleRow
+              <MenuToggleRow
                 key={p.id}
                 active={!!f.project?.includes(p.id)}
-                onClick={() =>
+                onSelect={() =>
                   setFilters({ ...f, project: toggle<string>(f.project, p.id) })
                 }
               >
                 <ProjectOrb seed={projectOrbSeed(p)} iconUrl={p.icon_url} className="size-4 shrink-0" />
                 <span className="truncate">{p.name}</span>
-              </ToggleRow>
+              </MenuToggleRow>
             ))}
-            <Separator className="my-1.5" />
-          </>
+          </FilterSub>
         )}
-        <p className="px-2 py-1 text-xs font-medium text-muted-foreground">{tf("status")}</p>
-        {STATUSES.map((s) => (
-          <ToggleRow
-            key={s.value}
-            active={!!f.status?.includes(s.value)}
-            onClick={() =>
-              setFilters({ ...f, status: toggle<IssueStatus>(f.status, s.value) })
-            }
-          >
-            <StatusIndicator status={s.value} className="size-4" />
-            {ts(s.value)}
-          </ToggleRow>
-        ))}
-
-        <Separator className="my-1.5" />
-        <p className="px-2 py-1 text-xs font-medium text-muted-foreground">{tf("priority")}</p>
-        {PRIORITIES.map((p) => (
-          <ToggleRow
-            key={p.value}
-            active={!!f.priority?.includes(p.value)}
-            onClick={() =>
-              setFilters({
-                ...f,
-                priority: toggle<IssuePriority>(f.priority, p.value),
-              })
-            }
-          >
-            <PriorityIndicator priority={p.value} className="size-4" />
-            {tp(p.value)}
-          </ToggleRow>
-        ))}
-
-        <Separator className="my-1.5" />
-        <p className="px-2 py-1 text-xs font-medium text-muted-foreground">{tf("assignee")}</p>
-        {lockedToMe ? (
-          /* System view: nothing else to pick — one non-interactive locked row. */
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm"
-                aria-disabled
-              >
-                <span className="flex min-w-0 flex-1 items-center gap-2">
-                  <CircleUser className="size-4 shrink-0 text-muted-foreground" />
-                  {tf("assignedToMe")}
-                </span>
-                <Lock className="size-3.5 shrink-0 text-muted-foreground" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>{t("myViewLockedHint")}</TooltipContent>
-          </Tooltip>
-        ) : (
-          <>
-            <ToggleRow
-              active={!!f.assignee?.includes(ME_ASSIGNEE)}
-              onClick={() =>
-                setFilters({ ...f, assignee: toggle(f.assignee, ME_ASSIGNEE) })
+        <FilterSub label={tf("status")} count={f.status?.length ?? 0}>
+          {STATUSES.map((s) => (
+            <MenuToggleRow
+              key={s.value}
+              active={!!f.status?.includes(s.value)}
+              onSelect={() =>
+                setFilters({ ...f, status: toggle<IssueStatus>(f.status, s.value) })
               }
             >
-              <CircleUser className="size-4 shrink-0 text-muted-foreground" />
-              {tf("assignedToMe")}
-            </ToggleRow>
-            <ToggleRow
-              active={!!f.assignee?.includes(null)}
-              onClick={() => setFilters({ ...f, assignee: toggle(f.assignee, null) })}
+              <StatusIndicator status={s.value} className="size-4" />
+              {ts(s.value)}
+            </MenuToggleRow>
+          ))}
+        </FilterSub>
+        <FilterSub label={tf("priority")} count={f.priority?.length ?? 0}>
+          {PRIORITIES.map((p) => (
+            <MenuToggleRow
+              key={p.value}
+              active={!!f.priority?.includes(p.value)}
+              onSelect={() =>
+                setFilters({
+                  ...f,
+                  priority: toggle<IssuePriority>(f.priority, p.value),
+                })
+              }
             >
-              {tf("unassigned")}
-            </ToggleRow>
-            {members.map((m) => (
-              <ToggleRow
-                key={m.user_id}
-                active={!!f.assignee?.includes(m.user_id)}
-                onClick={() =>
-                  setFilters({ ...f, assignee: toggle(f.assignee, m.user_id) })
+              <PriorityIndicator priority={p.value} className="size-4" />
+              {tp(p.value)}
+            </MenuToggleRow>
+          ))}
+        </FilterSub>
+        <FilterSub label={tf("assignee")} count={f.assignee?.length ?? 0}>
+          {lockedToMe ? (
+            /* System view: nothing else to pick — one non-interactive locked row. */
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm"
+                  aria-disabled
+                >
+                  <span className="flex min-w-0 flex-1 items-center gap-2">
+                    <CircleUser className="size-4 shrink-0 text-muted-foreground" />
+                    {tf("assignedToMe")}
+                  </span>
+                  <Lock className="size-3.5 shrink-0 text-muted-foreground" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>{t("myViewLockedHint")}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <>
+              <MenuToggleRow
+                active={!!f.assignee?.includes(ME_ASSIGNEE)}
+                onSelect={() =>
+                  setFilters({ ...f, assignee: toggle(f.assignee, ME_ASSIGNEE) })
                 }
               >
-                <span className="truncate">{displayName(m)}</span>
-              </ToggleRow>
-            ))}
-          </>
-        )}
-
-        <Separator className="my-1.5" />
-        <p className="px-2 py-1 text-xs font-medium text-muted-foreground">{tf("effort")}</p>
-        {EFFORTS.map((e) => (
-          <ToggleRow
-            key={e.value}
-            active={!!f.effort?.includes(e.value)}
-            onClick={() =>
-              setFilters({ ...f, effort: toggle<IssueEffort>(f.effort, e.value) })
-            }
-          >
-            <Triangle className="size-4 text-muted-foreground" />
-            {e.label}
-          </ToggleRow>
-        ))}
-
+                <CircleUser className="size-4 shrink-0 text-muted-foreground" />
+                {tf("assignedToMe")}
+              </MenuToggleRow>
+              <MenuToggleRow
+                active={!!f.assignee?.includes(null)}
+                onSelect={() => setFilters({ ...f, assignee: toggle(f.assignee, null) })}
+              >
+                {tf("unassigned")}
+              </MenuToggleRow>
+              {members.map((m) => (
+                <MenuToggleRow
+                  key={m.user_id}
+                  active={!!f.assignee?.includes(m.user_id)}
+                  onSelect={() =>
+                    setFilters({ ...f, assignee: toggle(f.assignee, m.user_id) })
+                  }
+                >
+                  <span className="truncate">{displayName(m)}</span>
+                </MenuToggleRow>
+              ))}
+            </>
+          )}
+        </FilterSub>
+        <FilterSub label={tf("effort")} count={f.effort?.length ?? 0}>
+          {EFFORTS.map((e) => (
+            <MenuToggleRow
+              key={e.value}
+              active={!!f.effort?.includes(e.value)}
+              onSelect={() =>
+                setFilters({ ...f, effort: toggle<IssueEffort>(f.effort, e.value) })
+              }
+            >
+              <Triangle className="size-4 text-muted-foreground" />
+              {e.label}
+            </MenuToggleRow>
+          ))}
+        </FilterSub>
         {categoryOptions.length > 0 && (
-          <>
-            <Separator className="my-1.5" />
-            <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
-              {tf("categories")}
-            </p>
+          <FilterSub label={tf("categories")} count={f.category?.length ?? 0}>
             {categoryOptions.map((o) => (
-              <ToggleRow
+              <MenuToggleRow
                 key={o.key}
                 active={facetActive(f.category, o.ids)}
-                onClick={() =>
+                onSelect={() =>
                   setFilters({ ...f, category: toggleFacet(f.category, o.ids) })
                 }
               >
                 <span
-                  className="size-2.5 rounded-full"
+                  className="size-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: o.color ?? "var(--muted-foreground)" }}
                   aria-hidden
                 />
                 <span className="truncate">{o.label}</span>
-              </ToggleRow>
+              </MenuToggleRow>
             ))}
-          </>
+          </FilterSub>
         )}
-
         {objectiveOptions.length > 0 && (
-          <>
-            <Separator className="my-1.5" />
-            <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
-              {tf("objective")}
-            </p>
-            <ToggleRow
+          <FilterSub label={tf("objective")} count={f.objective?.length ?? 0}>
+            <MenuToggleRow
               active={!!f.objective?.includes(null)}
-              onClick={() =>
+              onSelect={() =>
                 setFilters({ ...f, objective: toggle(f.objective, null) })
               }
             >
               {tf("noObjective")}
-            </ToggleRow>
+            </MenuToggleRow>
             {objectiveOptions.map((o) => (
-              <ToggleRow
+              <MenuToggleRow
                 key={o.key}
                 active={facetActive(f.objective, o.ids)}
-                onClick={() =>
+                onSelect={() =>
                   setFilters({ ...f, objective: toggleFacet(f.objective, o.ids) })
                 }
               >
                 <span
-                  className="size-2.5 rounded-full"
+                  className="size-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: o.color ?? "var(--muted-foreground)" }}
                   aria-hidden
                 />
                 <span className="truncate">{o.label}</span>
-              </ToggleRow>
+              </MenuToggleRow>
             ))}
-          </>
+          </FilterSub>
         )}
-
         {integrationOptions.length > 0 && (
-          <>
-            <Separator className="my-1.5" />
-            <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
-              {tf("integration")}
-            </p>
-            <ToggleRow
+          <FilterSub label={tf("integration")} count={f.integration?.length ?? 0}>
+            <MenuToggleRow
               active={!!f.integration?.includes(null)}
-              onClick={() =>
+              onSelect={() =>
                 setFilters({ ...f, integration: toggle(f.integration, null) })
               }
             >
               {tf("noIntegration")}
-            </ToggleRow>
+            </MenuToggleRow>
             {integrationOptions.map((o) => (
-              <ToggleRow
+              <MenuToggleRow
                 key={o.key}
                 active={facetActive(f.integration, o.ids)}
-                onClick={() =>
+                onSelect={() =>
                   setFilters({ ...f, integration: toggleFacet(f.integration, o.ids) })
                 }
               >
                 <Plug className="size-3.5 shrink-0 text-blue-500 dark:text-blue-400" />
                 <span className="truncate">{o.label}</span>
-              </ToggleRow>
+              </MenuToggleRow>
             ))}
-          </>
+          </FilterSub>
         )}
 
-        <Separator className="my-1.5" />
-        <ToggleRow
+        <DropdownMenuSeparator />
+        <MenuToggleRow
           active={!!config.display.hideDone}
-          onClick={() =>
+          onSelect={() =>
             onChange({
               ...config,
               display: { ...config.display, hideDone: !config.display.hideDone },
@@ -518,10 +584,10 @@ function FiltersPopover({
           }
         >
           {t("hideDone")}
-        </ToggleRow>
-        <ToggleRow
+        </MenuToggleRow>
+        <MenuToggleRow
           active={!!config.display.hideRecurring}
-          onClick={() =>
+          onSelect={() =>
             onChange({
               ...config,
               display: {
@@ -532,9 +598,50 @@ function FiltersPopover({
           }
         >
           {t("hideRecurring")}
-        </ToggleRow>
-      </PopoverContent>
-    </Popover>
+        </MenuToggleRow>
+
+        {/* Order — moved into the menu (MIN-592), with the direction invert
+            right under the sort list. The invert button does not apply to
+            "smart" and "manual": they carry their own order. */}
+        <DropdownMenuSeparator />
+        <FilterSub label={tf("order")} count={0}>
+          {SORTS.map((s) => (
+            <DropdownMenuItem
+              key={s}
+              onSelect={(event) => {
+                event.preventDefault();
+                onChange({ ...config, sort: s });
+              }}
+            >
+              {tSort(s)}
+              {config.sort === s && <Check className="ml-auto size-4" />}
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            disabled={!isDirectionalSort(config.sort)}
+            onSelect={(event) => {
+              event.preventDefault();
+              if (!isDirectionalSort(config.sort)) return;
+              onChange({
+                ...config,
+                display: {
+                  ...config.display,
+                  sortDirection: reverseSortDirection(sortDirection),
+                },
+              });
+            }}
+          >
+            {sortDirection === "asc" ? (
+              <ArrowDownZA className="text-muted-foreground" />
+            ) : (
+              <ArrowUpAZ className="text-muted-foreground" />
+            )}
+            {t("reverseOrder")}
+          </DropdownMenuItem>
+        </FilterSub>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -613,8 +720,8 @@ function ViewNameDialog({
           {withDescription && (
             <div className="flex flex-col gap-1.5">
               <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <NumoIcon animated={false} className="size-3.5 text-primary" />
-                {t("askNumoOptional")}
+                <Sparkles className="size-3.5 text-primary" aria-hidden />
+                {t("aiDescribeView")}
               </label>
               <Textarea
                 value={description}
@@ -649,7 +756,7 @@ export function BoardToolbar({
   onDeleteView,
   withNumo = true,
   withShare = true,
-  onAskNumo,
+  aiProjectId,
   cycleTab,
   rightControls,
   tabOrderScope,
@@ -675,11 +782,14 @@ export function BoardToolbar({
   onUpdateActiveView: () => Promise<void>;
   onRenameView: (view: View, name: string) => Promise<void>;
   onDeleteView: (view: View) => Promise<void>;
-  /** Numo is project-scoped — the global board hides its affordances. */
+  /** The AI affordances (filters input, new-view dialog) are project-scoped —
+      the global board hides them. */
   withNumo?: boolean;
   /** Global views are not shareable (v1) — the global board hides Share. */
   withShare?: boolean;
-  onAskNumo: () => void;
+  /** Scope the filters AI interprets for (MIN-592): the project id, or null
+      on the global cross-project board. */
+  aiProjectId?: string | null;
   /** The "Cycle" pill (MIN-32), after the view pills. `external` renders the ↗
       icon — a project board's pill that navigates to /all in cycle mode.
       `completionPercent` replaces its cycle glyph while a current cycle exists. */
@@ -715,8 +825,6 @@ export function BoardToolbar({
   } | null>(null);
   const t = useTranslations("Board");
   const tc = useTranslations("Common");
-  const tf = useTranslations("Field");
-  const tSort = useTranslations("Sort");
   const tApi = useTranslations("ApiErrors");
   const tActions = useTranslations("CommandPaletteActions");
   const appTabs = useOptionalAppTabSession();
@@ -970,34 +1078,8 @@ export function BoardToolbar({
             </Button>
           )}
 
-          {/* Order — icon only, accent-coloured when a non-default sort is active */}
-          <DropdownMenu>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon-sm" aria-label={tf("order")}>
-                    <ArrowUpDown
-                      className={cn(config.sort !== "smart" && "text-primary")}
-                    />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent>{tf("order")}</TooltipContent>
-            </Tooltip>
-            <DropdownMenuContent align="end">
-              {SORTS.map((s) => (
-                <DropdownMenuItem
-                  key={s}
-                  onSelect={() => onConfigChange({ ...config, sort: s })}
-                >
-                  {tSort(s)}
-                  {config.sort === s && <Check className="ml-auto size-4" />}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Filters — icon only, accent-coloured when any filter is active */}
+          {/* Filters — icon only, accent-coloured when any filter is active.
+              The order (sort) now lives inside the menu (MIN-592). */}
           <FiltersPopover
             config={config}
             onChange={onConfigChange}
@@ -1008,8 +1090,8 @@ export function BoardToolbar({
             projects={projects}
             groupFacetsByName={groupFacetsByName}
             lockedToMe={isSystem}
-            withNumo={withNumo}
-            onAskNumo={onAskNumo}
+            withAI={withNumo}
+            aiProjectId={aiProjectId ?? null}
           />
 
           {/* Active view actions — rename / share / delete (the system view

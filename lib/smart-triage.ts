@@ -1,7 +1,7 @@
 import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
 import { isClosedStatus } from "@/lib/issue-constants";
 import { calendarDaysBetween } from "@/lib/due-date";
-import type { Issue, IssueRelation, ViewSort } from "@/lib/types";
+import type { Issue, IssueRelation, SortDirection, ViewSort } from "@/lib/types";
 import { dueBoost, issueComparator, PRIORITY_ORDER } from "@/lib/view-filter";
 import { triageScoreComparator } from "@/lib/triage-score-order";
 
@@ -71,10 +71,13 @@ export function boardComparatorFactory(
     statusById?: Map<string, IssueStatus>;
     now?: number;
     jevScores?: Map<string, number | null>;
-  }
+  },
+  /** Direction of the sort (MIN-592) — only the directional sorts reverse;
+      "smart" and "manual" carry their own order. */
+  direction: SortDirection = "asc"
 ): (columnIssues: Issue[]) => (a: Issue, b: Issue) => number {
   if (sort !== "smart") {
-    const comparator = issueComparator(sort, ctx);
+    const comparator = issueComparator(sort, ctx, direction);
     return () => comparator;
   }
   const scores = ctx.jevScores;
