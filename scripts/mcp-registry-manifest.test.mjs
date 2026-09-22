@@ -6,7 +6,8 @@ import { fileURLToPath } from "node:url";
 
 import {
   MCP_REGISTRY_DESCRIPTION_LIMIT,
-  OFFICIAL_MCP_REGISTRY,
+  REGISTRY_MANIFEST_NAME,
+  REGISTRY_NAMESPACE_PREFIX,
   assertRegistryManifest,
   loadRegistryManifest,
 } from "./mcp-registry-manifest.mjs";
@@ -23,7 +24,8 @@ test("the registry manifest keeps the release version", async () => {
 
 test("the registry manifest matches the GitHub OIDC namespace", async () => {
   const manifest = await loadRegistryManifest(root);
-  assert.equal(manifest.name, "io.github.mangue-dev/minddy");
+  assert.equal(manifest.name, REGISTRY_MANIFEST_NAME);
+  assert.ok(manifest.name.startsWith(REGISTRY_NAMESPACE_PREFIX));
   assert.equal(manifest.repository?.source, "github");
   assert.equal(manifest.repository?.url, "https://github.com/mangue-dev/minddy");
 });
@@ -53,7 +55,7 @@ test("the registry manifest stays within the official registry limits", async ()
   );
 });
 
-test("assertRegistryManifest rejects a drifted manifest", () => {
+test("assertRegistryManifest rejects a manifest outside the repository namespace", () => {
   assert.throws(
     () =>
       assertRegistryManifest({
@@ -69,6 +71,18 @@ test("assertRegistryManifest rejects a drifted manifest", () => {
   );
 });
 
-test("the helper exposes the official registry base URL used by the workflow", () => {
-  assert.equal(OFFICIAL_MCP_REGISTRY, "https://registry.modelcontextprotocol.io");
+test("assertRegistryManifest rejects a renamed server in the right namespace", () => {
+  assert.throws(
+    () =>
+      assertRegistryManifest({
+        $schema: "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+        name: "io.github.mangue-dev/renamed",
+        description: "x".repeat(80),
+        version: "9.9.9",
+        websiteUrl: "https://www.minddy.app",
+        repository: { url: "https://github.com/mangue-dev/minddy", source: "github" },
+        remotes: [{ type: "streamable-http", url: "https://www.minddy.app/api/mcp" }],
+      }),
+    new RegExp(`name must be ${REGISTRY_MANIFEST_NAME.replace("/", "\\/")}`),
+  );
 });

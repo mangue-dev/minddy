@@ -101,8 +101,10 @@ In automatic mode:
   from the last publication.
 
 If core is selected, the wizard asks for patch/minor/major or an explicit
-version. It updates the four manifests/lockfiles, creates the
-commit signed DCO, pushes `main` and waits for its remote CI. It then triggers
+version. It updates the five manifests/lockfiles — including the public MCP
+registry manifest, whose publication is documented in
+[docs/mcp-registry-publication.md](docs/mcp-registry-publication.md) — creates
+the commit signed DCO, pushes `main` and waits for its remote CI. It then triggers
 `Promote production`, which is waiting for environment approval
 `cloud-production`, rechecks successful CI of exact SHA, rejects any discrepancies
 and advances `production` in fast-forward. Workflow waits for GitHub Deployment

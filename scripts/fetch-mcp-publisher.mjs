@@ -38,6 +38,15 @@ const REPOSITORY = "modelcontextprotocol/registry";
 const ARCHIVE = "mcp-publisher.tar.gz";
 const BINARY = "mcp-publisher";
 
+/**
+ * The Windows archive ships `mcp-publisher.exe`, the other platforms ship
+ * `mcp-publisher` (see the upstream quickstart), so the extracted name is
+ * resolved per platform key.
+ */
+export function binaryName(key) {
+  return key.startsWith("windows_") ? `${BINARY}.exe` : BINARY;
+}
+
 export function platformKey({ platform, arch } = process) {
   const os = platform === "win32" ? "windows" : platform;
   const cpu = arch === "x64" ? "amd64" : arch;
@@ -71,11 +80,12 @@ async function downloadArchive(url, key, destination) {
   return destination;
 }
 
-async function extractBinary(archive, directory) {
+async function extractBinary(archive, directory, key) {
   execFileSync("tar", ["xzf", archive, "-C", directory], { stdio: "pipe" });
-  const binary = path.join(directory, BINARY);
+  const name = binaryName(key);
+  const binary = path.join(directory, name);
   if (await stat(binary).then(() => true, () => false)) return binary;
-  throw new Error(`Could not locate ${BINARY} after extracting ${archive}.`);
+  throw new Error(`Could not locate ${name} after extracting ${archive}.`);
 }
 
 export async function fetchMcpPublisher(targetDirectory = ".") {
@@ -88,8 +98,8 @@ export async function fetchMcpPublisher(targetDirectory = ".") {
   await mkdir(directory, { recursive: true });
   try {
     await downloadArchive(url, key, archive);
-    const binary = await extractBinary(archive, directory);
-    await chmod(binary, 0o755);
+    const binary = await extractBinary(archive, directory, key);
+    if (!key.startsWith("windows_")) await chmod(binary, 0o755);
     return binary;
   } finally {
     await rm(archive, { force: true });

@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MCP_PUBLISHER_VERSION, verifyChecksum, platformKey } from "./fetch-mcp-publisher.mjs";
+import {
+  MCP_PUBLISHER_VERSION,
+  binaryName,
+  platformKey,
+  verifyChecksum,
+} from "./fetch-mcp-publisher.mjs";
 
 test("the pinned publisher version is a release tag of the registry repository", () => {
   assert.match(MCP_PUBLISHER_VERSION, /^\d+\.\d+\.\d+$/);
@@ -16,6 +21,13 @@ test("the platform key follows the released archive naming", () => {
 
 test("an unpinned platform is refused", () => {
   assert.throws(() => platformKey({ platform: "sunos", arch: "x64" }), /No checksum pinned/);
+});
+
+test("the extracted binary name follows the released archives", () => {
+  assert.equal(binaryName("linux_amd64"), "mcp-publisher");
+  assert.equal(binaryName("darwin_arm64"), "mcp-publisher");
+  assert.equal(binaryName("windows_amd64"), "mcp-publisher.exe");
+  assert.equal(binaryName("windows_arm64"), "mcp-publisher.exe");
 });
 
 test("every pinned checksum is a sha256 digest", () => {

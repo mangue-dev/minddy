@@ -8,9 +8,6 @@
  * carry a new unique version.
  */
 
-/** Base URL of the official registry the manifest is published to. */
-export const OFFICIAL_MCP_REGISTRY = "https://registry.modelcontextprotocol.io";
-
 /** JSON schema dialect the official registry currently validates against. */
 export const REGISTRY_MANIFEST_SCHEMA =
   "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json";
@@ -18,8 +15,12 @@ export const REGISTRY_MANIFEST_SCHEMA =
 /**
  * Namespace reserved through GitHub OIDC publishing: the repository owner,
  * so a moved or renamed repository keeps answering for its server name.
+ * The checks derive their prefix from it instead of hardcoding it.
  */
 export const REGISTRY_MANIFEST_NAME = "io.github.mangue-dev/minddy";
+
+/** Namespace prefix that GitHub OIDC publishing allows for this repository. */
+export const REGISTRY_NAMESPACE_PREFIX = `${REGISTRY_MANIFEST_NAME.split("/")[0]}/`;
 
 /** Hosted instance the registry entry describes (self-hosted instances are out of scope). */
 export const HOSTED_SITE_URL = "https://www.minddy.app";
@@ -39,10 +40,13 @@ export function assertRegistryManifest(manifest) {
   if (manifest.$schema !== REGISTRY_MANIFEST_SCHEMA) {
     throw new Error(`server.json must use schema ${REGISTRY_MANIFEST_SCHEMA}.`);
   }
-  if (!manifest.name.startsWith("io.github.mangue-dev/")) {
+  if (!manifest.name.startsWith(REGISTRY_NAMESPACE_PREFIX)) {
     throw new Error(
-      "server.json must stay in the GitHub OIDC namespace of the repository owner (io.github.mangue-dev/*).",
+      `server.json must stay in the GitHub OIDC namespace of the repository owner (${REGISTRY_NAMESPACE_PREFIX}*).`,
     );
+  }
+  if (manifest.name !== REGISTRY_MANIFEST_NAME) {
+    throw new Error(`server.json name must be ${REGISTRY_MANIFEST_NAME}.`);
   }
   if (manifest.description.length > MCP_REGISTRY_DESCRIPTION_LIMIT) {
     throw new Error(

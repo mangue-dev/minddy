@@ -96,6 +96,10 @@ release). Upgrading the tool means updating those constants deliberately.
 node scripts/fetch-mcp-publisher.mjs /tmp/mcp && /tmp/mcp/mcp-publisher validate
 ```
 
+macOS and Linux developers run the extracted `mcp-publisher` directly; on
+Windows the archive ships `mcp-publisher.exe`, which the fetch script resolves
+per platform (`/tmp/mcp/mcp-publisher.exe validate`).
+
 `mcp-publisher publish` performs the real submission and requires a login.
 
 ## Out of scope
