@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { ManagedDataKeys, type KeyRegistry, type KeyWrapper, type WrappedDataKey } from "./keys";
 import {
@@ -117,6 +117,23 @@ describe("EncryptedStore", () => {
     const keys = new ManagedDataKeys(new MemoryRegistry(), wrapper);
     await Promise.all(Array.from({ length: 20 }, () => keys.current(scope)));
     expect(wrapper.generateCalls).toBe(1);
+  });
+
+  it("zeroes an idle cached key when its TTL expires", async () => {
+    vi.useFakeTimers();
+    try {
+      const keys = new ManagedDataKeys(new MemoryRegistry(), new MemoryWrapper(), 1_000);
+      const current = await keys.current(scope);
+      const cache = (keys as unknown as { cache: Map<string, { key: { bytes: Buffer } }> }).cache;
+      const cachedBytes = cache.get("project:project-1:1")!.key.bytes;
+      expect(cachedBytes.equals(current.bytes)).toBe(true);
+      vi.advanceTimersByTime(1_001);
+      expect(cache.size).toBe(0);
+      expect(cachedBytes.equals(Buffer.alloc(32))).toBe(true);
+      current.bytes.fill(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

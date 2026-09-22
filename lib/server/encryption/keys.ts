@@ -25,6 +25,7 @@ export interface KeyWrapper {
 type CacheEntry = {
   key: DataKey;
   expiresAt: number;
+  timer: ReturnType<typeof setTimeout>;
 };
 
 const DEFAULT_TTL_MS = 60_000;
@@ -67,7 +68,10 @@ export class ManagedDataKeys implements DataKeyProvider {
 
   private evict(id: string): void {
     const entry = this.cache.get(id);
-    if (entry) entry.key.bytes.fill(0);
+    if (entry) {
+      clearTimeout(entry.timer);
+      entry.key.bytes.fill(0);
+    }
     this.cache.delete(id);
   }
 
@@ -78,9 +82,14 @@ export class ManagedDataKeys implements DataKeyProvider {
       if (oldest === undefined) break;
       this.evict(oldest);
     }
+    const timer = setTimeout(() => {
+      if (this.cache.get(id)?.timer === timer) this.evict(id);
+    }, this.ttlMs);
+    timer.unref();
     this.cache.set(id, {
       key: { version: key.version, bytes: Buffer.from(key.bytes) },
       expiresAt: Date.now() + this.ttlMs,
+      timer,
     });
     key.bytes.fill(0);
   }
