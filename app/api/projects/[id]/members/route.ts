@@ -13,6 +13,10 @@ import {
 } from "@/lib/server/members";
 import type { Invitation, Member } from "@/lib/types";
 import type { Locale } from "@/i18n/config";
+import {
+  decryptInvitationEmail,
+  type InvitationEmailColumns,
+} from "@/lib/server/encryption/invitation-email";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -44,7 +48,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
         .from("project_invitations")
         // Without `invited_user_id`: returning it to the client would say which addresses
         // have a minddy account (see the `Invitation` type).
-        .select("id, project_id, invited_email, status, created_at")
+        .select("id, project_id, invited_email, invited_email_ciphertext, invited_email_blind_index, encryption_version, status, created_at")
         .eq("project_id", id)
         .eq("status", "pending")
         // Expired items are excluded from both this list and the atomic RPC's
@@ -64,6 +68,25 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     isOwner || (memberRows ?? []).some((m) => m.user_id === auth.user.id);
   if (!isMember) {
     return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
+  }
+
+  let invitations: Invitation[] = [];
+  if (isOwner) {
+    try {
+      invitations = await Promise.all((inviteRows ?? []).map(async (row) => ({
+        id: row.id as string,
+        project_id: row.project_id as string,
+        invited_email: await decryptInvitationEmail(row as InvitationEmailColumns & {
+          id: string;
+          project_id: string;
+        }, { actorId: auth.user.id, reason: "invitation_list" }),
+        status: row.status as string,
+        created_at: row.created_at as string,
+      })));
+    } catch (error) {
+      console.error("[api/members] invitation read failed:", error);
+      return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+    }
   }
 
   const memberIds = [ownerId, ...(memberRows ?? []).map((m) => m.user_id as string)];
@@ -91,7 +114,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   return NextResponse.json({
     members,
-    invitations: (inviteRows ?? []) as Invitation[],
+    invitations,
     isOwner,
   });
 }

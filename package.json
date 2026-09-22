@@ -22,6 +22,7 @@
     "check:public-repo:remote": "node scripts/check-public-repo.mjs --remote origin",
     "check:github-settings": "node scripts/github-repository-settings.mjs",
     "check:owned-english": "node scripts/check-owned-english.mjs",
+    "check:encrypted-access": "node scripts/check-encrypted-column-access.mjs",
     "check:workflow-action-pins": "node scripts/check-workflow-action-pins.mjs",
     "check:knowledge": "node scripts/knowledge-check.mjs",
     "work:start": "node scripts/contribution-workflow.mjs start",
@@ -89,6 +90,7 @@
     }
   },
   "dependencies": {
+    "@aws-sdk/client-kms": "^3.1138.0",
     "@dicebear/core": "^9.4.3",
     "@dicebear/lorelei": "^9.4.2",
     "@dnd-kit/core": "^6.3.1",

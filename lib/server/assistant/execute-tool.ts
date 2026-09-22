@@ -1197,7 +1197,7 @@ export async function executeTool(
         if ("error" in r) return toolError(r.error);
         // Owners also see pending invitations (for cancel_invitation).
         const pending_invitations = access.isOwner
-          ? await listPendingInvitations(projectId)
+          ? await listPendingInvitations(projectId, access.project.owner_id)
           : [];
         return {
           result: { ...r, pending_invitations },

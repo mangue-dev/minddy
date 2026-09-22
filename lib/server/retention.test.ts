@@ -20,7 +20,7 @@ describe("cutoff", () => {
     expect(cutoff(30, NOW)).toBe("2026-06-30T12:00:00.000Z");
   });
 
-  it("traverse les changements de mois et d'année", () => {
+  it("crosses month and year boundaries", () => {
     expect(cutoff(365, new Date("2026-01-15T00:00:00.000Z"))).toBe(
       "2025-01-15T00:00:00.000Z"
     );
@@ -34,22 +34,22 @@ describe("cutoff", () => {
 describe("RETENTION_DAYS", () => {
   // Each line: the value, and what the privacy policy says about it.
   it.each([
-    ["readNotifications", 180, "notifications lues : 6 mois"],
-    ["pendingInvitations", 90, "invitations en attente : 90 jours"],
-    ["agentRunTrace", 30, "traces des runs d'agent : 30 jours après la fin"],
-    ["stripeWebhookPayload", 90, "charge utile des webhooks Stripe : 90 jours"],
-    ["trash", 30, "corbeille : 30 jours avant suppression définitive"],
+    ["readNotifications", 180, "read notifications: 6 months"],
+    ["pendingInvitations", 30, "pending invitations: 30 days"],
+    ["agentRunTrace", 30, "agent run traces: 30 days after completion"],
+    ["stripeWebhookPayload", 90, "Stripe webhook payloads: 90 days"],
+    ["trash", 30, "trash: 30 days before permanent deletion"],
     [
       "dormantFeedbackIdentities",
       90,
-      "participants de board sans contribution : 90 jours",
+      "board participants without contributions: 90 days",
     ],
     [
       "orphanAttachments",
       7,
-      "objets téléversés puis jamais rattachés : 7 jours de grâce (MIN-348)",
+      "uploaded objects never attached: 7-day grace period (MIN-348)",
     ],
-  ] as const)("%s vaut %i jours — %s", (key, days, _promise) => {
+  ] as const)("%s has %i days of retention — %s", (key, days, _promise) => {
     expect(RETENTION_DAYS[key]).toBe(days);
   });
 
