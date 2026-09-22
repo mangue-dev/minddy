@@ -2,6 +2,11 @@
 
 ## Status and security boundary
 
+The owner requires one complete delivery across all sensitive data. The current
+global inventory, concrete blockers, KMS setup and migration requirements are in
+[the global delivery inventory](encryption/README.md). The invitation-only
+foundation described below is not a production rollout boundary.
+
 This is the implementation inventory and rollout contract. The content columns
 listed below are currently stored as plaintext. No protection against a database
 dump should be claimed until their plaintext columns, search projections,
@@ -36,13 +41,17 @@ It runs on both Vercel and the self-hosted scheduler. Already encrypted expired
 invitations are deleted by the daily retention sweep.
 The normal retention sweep now deletes expired invitations at their
 `expires_at` time rather than keeping them for another 60 days.
+Maintenance also advances up to 20 current content DEKs older than 90 days,
+using a version check to avoid duplicate rotations. Re-encryption of all
+historical content and objects remains unfinished.
 
 The rollout requires `MINDDY_DATA_KMS_KEY_ID` and either
 `MINDDY_DATA_KMS_REGION` or `AWS_REGION`. The runtime AWS principal needs
 `kms:GenerateDataKey` and `kms:Decrypt` on that customer-managed symmetric KMS
 key; restrict both operations to `application=minddy` and the expected
 encryption-context keys. Enable native automatic rotation on the KMS key.
-Application code does not set up the KMS key or AWS principal. Never put AWS
+The reviewed CloudFormation template is in `deploy/aws/data-encryption-kms.json`;
+no AWS key or principal has been provisioned. Never put AWS
 credentials, a raw KEK, or a plaintext DEK in SQL, Git, or a client bundle.
 Before enabling the flag, apply the schema migrations, verify KMS access in the
 target environment, and rehearse backup/key recovery on an isolated database.
@@ -189,11 +198,11 @@ separate control from application-side encryption. Lock down that view before
 using it. Database statement logging is an operator-level setting; avoid SQL
 literals with secrets even if logging is disabled.
 
-## Implementation review against the issue plan
+## Initial implementation review against the issue plan
 
-The issue thread and linked wiki explicitly describe an invitation-only first
-slice. That is a reasonable rollout boundary, but it does not complete the
-broader implementation plan. Task numbers below follow the displayed plan
+The initial issue thread and wiki described an invitation-only first slice.
+The owner has since required a complete rollout across all sensitive data.
+Task numbers below follow the displayed plan
 (one-based; the MCP task indices are zero-based).
 
 | Task | Review result |
@@ -202,7 +211,7 @@ broader implementation plan. Task numbers below follow the displayed plan
 | 2. Server crypto store | Implemented: branded ciphertext, AES-GCM with row/column/scope AAD, explicit key versions, separate HMAC keys, KMS adapter, coalesced loads and bounded cache lifetime. Concurrent cache eviction and initial-key cleanup were corrected in this review. |
 | 3. Schema and privileges | Partially implemented: the key registry and invitation state/index/privilege migration exist, but other target content tables have no encryption columns. Vault view privileges are revoked; credential migration and statement-log configuration remain open. Reopened. |
 | 4. Repository conversion | Invitations use server paths; issue, page, comment, file, search and history paths remain plaintext. Keep in progress. |
-| 5. Backfill, rotation and recovery | The bounded invitation backfill and response/expiry cleanup exist. DEK rotation is a callable primitive, not an automatic scheduled job. Broader migration, mixed-writer rollback and recovery rehearsals remain open. Keep in progress. |
+| 5. Backfill, rotation and recovery | The bounded invitation backfill and response/expiry cleanup exist. Content DEK advancement is now scheduled, but historical-content re-encryption, broader migration, mixed-writer rollback and recovery rehearsals remain open. Keep in progress. |
 | 6. CI guard | Implemented for the converted surface. This review adds invitation RPCs, the key registry and source directories previously omitted by the scanner. This is a source-convention check, not a security boundary against deliberately hidden queries. |
 | 7. Verification | Local regression tests and isolated SQL checks cover the current foundation. Live KMS permissions/failures, production-scale latency, complete search behavior and backup recovery remain unverified. Keep in progress. |
 | 8. Wiki and operational review | The wiki states the current limitations and setup. An operational recovery runbook and measured performance still depend on the remaining implementation and rehearsals. Keep in progress. |

@@ -99,7 +99,9 @@ jobs:
         run: pnpm run lint
 
       - name: Encrypted column access
-        run: pnpm run check:encrypted-access
+        run: |
+          pnpm run check:encrypted-access
+          pnpm run check:encryption-schema
 
       - name: Typecheck
         run: pnpm run typecheck

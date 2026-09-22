@@ -182,8 +182,16 @@ export class ManagedDataKeys implements DataKeyProvider {
   }
 
   /** A rotation job calls this before it begins writing with the new version. */
-  async rotate(scope: EncryptionScope): Promise<number> {
+  async rotate(scope: EncryptionScope, expectedVersion?: number): Promise<number> {
+    if (expectedVersion !== undefined && (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1)) {
+      throw new Error("Invalid expected data key version");
+    }
     const prior = await this.registry.loadCurrent(scope);
+    if (expectedVersion !== undefined && prior?.version !== expectedVersion) {
+      if (!prior) throw new Error("Rotation data key disappeared");
+      if (prior.version < expectedVersion) throw new Error("Current data key version regressed");
+      return prior.version;
+    }
     if (!prior) {
       const initial = await this.current(scope);
       initial.bytes.fill(0);
@@ -198,7 +206,11 @@ export class ManagedDataKeys implements DataKeyProvider {
         version: nextVersion,
         wrappedKey: generated.wrappedKey,
       }, prior.version);
-      if (!updated) throw new Error("Concurrent data key rotation");
+      if (!updated) {
+        const winner = await this.registry.loadCurrent(scope);
+        if (expectedVersion !== undefined && winner && winner.version > prior.version) return winner.version;
+        throw new Error("Concurrent data key rotation");
+      }
       this.invalidate(scope);
       return nextVersion;
     } finally {

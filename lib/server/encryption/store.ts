@@ -35,7 +35,7 @@ export interface DataKeyProvider {
 }
 
 type Envelope = {
-  format: 1;
+  format: 1 | 2;
   keyVersion: number;
   iv: string;
   tag: string;
@@ -47,9 +47,9 @@ const TAG_BYTES = 16;
 const KEY_BYTES = 32;
 const MAX_ENVELOPE_BYTES = 16 * 1024 * 1024;
 
-function aad(context: EncryptionContext): Buffer {
+function aad(context: EncryptionContext, format: 1 | 2, keyVersion: number): Buffer {
   if (
-    (context.scope.kind !== "project" && context.scope.kind !== "user") ||
+    (context.scope.kind !== "project" && context.scope.kind !== "user" && context.scope.kind !== "system") ||
     !context.scope.id ||
     !context.table ||
     !context.column ||
@@ -58,12 +58,13 @@ function aad(context: EncryptionContext): Buffer {
     throw new Error("An encryption context is required");
   }
   return Buffer.from(JSON.stringify([
-    "minddy-data-v1",
+    format === 1 ? "minddy-data-v1" : "minddy-data-v2",
     context.scope.kind,
     context.scope.id,
     context.table,
     context.column,
     context.rowId,
+    ...(format === 2 ? [keyVersion] : []),
   ]));
 }
 
@@ -101,7 +102,7 @@ function parseEnvelope(value: string): Envelope {
   }
   const envelope = parsed as Record<string, unknown>;
   if (
-    envelope.format !== 1 ||
+    (envelope.format !== 1 && envelope.format !== 2) ||
     !Number.isSafeInteger(envelope.keyVersion) ||
     (envelope.keyVersion as number) < 1
   ) {
@@ -137,10 +138,10 @@ export class EncryptedStore {
       }
       const iv = randomBytes(IV_BYTES);
       const cipher = createCipheriv("aes-256-gcm", key.bytes, iv);
-      cipher.setAAD(aad(context));
+      cipher.setAAD(aad(context, 2, key.version));
       const data = Buffer.concat([cipher.update(plaintext), cipher.final()]);
       const envelope: Envelope = {
-        format: 1,
+        format: 2,
         keyVersion: key.version,
         iv: encoded(iv),
         tag: encoded(cipher.getAuthTag()),
@@ -161,7 +162,7 @@ export class EncryptedStore {
         throw new Error("Incorrect data key version");
       }
       const decipher = createDecipheriv("aes-256-gcm", key.bytes, decoded(envelope.iv, IV_BYTES));
-      decipher.setAAD(aad(context));
+      decipher.setAAD(aad(context, envelope.format, envelope.keyVersion));
       decipher.setAuthTag(decoded(envelope.tag, TAG_BYTES));
       const bytes = Buffer.concat([
         decipher.update(decoded(envelope.data, MAX_ENVELOPE_BYTES)),

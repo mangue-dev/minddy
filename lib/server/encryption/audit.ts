@@ -4,7 +4,8 @@ import type { EncryptionContext } from "./store";
 
 export type DecryptAudit = {
   actorId: string | null;
-  reason: "invitation_preview" | "invitation_response" | "invitation_list" | "assistant_member_list";
+  reason: "invitation_preview" | "invitation_response" | "invitation_list" | "assistant_member_list"
+    | "repository_read" | "migration_verification" | "key_rotation";
 };
 
 /** No plaintext, key material, ciphertext, or search input enters this event. */

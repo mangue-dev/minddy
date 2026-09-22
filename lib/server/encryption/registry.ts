@@ -102,10 +102,51 @@ function configuredKeys(purpose: Purpose): ManagedDataKeys {
 }
 
 export function getEncryptedStore(): EncryptedStore {
-  if (!store) store = new EncryptedStore(contentKeys ??= configuredKeys("content"));
+  if (!store) store = new EncryptedStore(getContentKeys());
   return store;
+}
+
+export function getContentKeys(): ManagedDataKeys {
+  return contentKeys ??= configuredKeys("content");
 }
 
 export function getBlindIndexKeys(): ManagedDataKeys {
   return indexKeys ??= configuredKeys("blind_index");
+}
+
+export type DueDataKey = { scope: EncryptionScope; version: number };
+
+/** Content rotation never changes equality indexes or removes historical DEKs. */
+export async function listDueContentKeys(before: string, limit: number): Promise<DueDataKey[]> {
+  const { data, error } = await getServiceClient().from("envelope_data_keys")
+    .select("scope_kind,scope_id,version")
+    .eq("purpose", "content")
+    .eq("is_current", true)
+    .lt("created_at", before)
+    .order("rotation_attempted_at", { ascending: true, nullsFirst: true })
+    .order("created_at", { ascending: true })
+    .order("scope_kind", { ascending: true })
+    .order("scope_id", { ascending: true })
+    .limit(limit);
+  if (error) throw new Error(`Unable to list due data keys: ${error.code}`);
+  return (data ?? []).map((row) => {
+    if (!["project", "user", "system"].includes(row.scope_kind) ||
+        typeof row.scope_id !== "string" || !row.scope_id ||
+        !Number.isSafeInteger(row.version) || row.version < 1) {
+      throw new Error("Invalid due data key record");
+    }
+    return { scope: { kind: row.scope_kind, id: row.scope_id }, version: row.version };
+  });
+}
+
+/** Persist before calling KMS so a timeout or failing scope cannot starve later tenants. */
+export async function markContentKeyRotationAttempt(record: DueDataKey, attemptedAt: string): Promise<void> {
+  const { error } = await getServiceClient().from("envelope_data_keys")
+    .update({ rotation_attempted_at: attemptedAt })
+    .eq("scope_kind", record.scope.kind)
+    .eq("scope_id", record.scope.id)
+    .eq("purpose", "content")
+    .eq("version", record.version)
+    .eq("is_current", true);
+  if (error) throw new Error(`Unable to record data key rotation attempt: ${error.code}`);
 }

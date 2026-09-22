@@ -1,0 +1,69 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Minddy envelope-encryption root key. Deploy a separate stack for each environment.",
+  "Parameters": {
+    "ApplicationRoleArn": {
+      "Type": "String",
+      "Description": "Existing IAM role assumed by the Minddy application and its maintenance workers.",
+      "AllowedPattern": "^arn:[a-z-]+:iam::[0-9]{12}:role/.+$"
+    }
+  },
+  "Resources": {
+    "DataEncryptionKey": {
+      "Type": "AWS::KMS::Key",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "Description": "Wrap Minddy tenant content keys and separate equality-index keys",
+        "KeySpec": "SYMMETRIC_DEFAULT",
+        "KeyUsage": "ENCRYPT_DECRYPT",
+        "EnableKeyRotation": true,
+        "PendingWindowInDays": 30,
+        "KeyPolicy": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "EnableAccountKeyAdministration",
+              "Effect": "Allow",
+              "Principal": { "AWS": { "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:root" } },
+              "Action": "kms:*",
+              "Resource": "*"
+            },
+            {
+              "Sid": "AllowApplicationEnvelopeOperations",
+              "Effect": "Allow",
+              "Principal": { "AWS": { "Ref": "ApplicationRoleArn" } },
+              "Action": ["kms:GenerateDataKey", "kms:Decrypt"],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "kms:EncryptionContext:application": "minddy",
+                  "kms:EncryptionContext:purpose": ["content", "blind_index"],
+                  "kms:EncryptionContext:scope_kind": ["project", "user", "system"]
+                },
+                "Null": { "kms:EncryptionContext:scope_id": "false" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "DataEncryptionAlias": {
+      "Type": "AWS::KMS::Alias",
+      "Properties": {
+        "AliasName": { "Fn::Sub": "alias/${AWS::StackName}" },
+        "TargetKeyId": { "Ref": "DataEncryptionKey" }
+      }
+    }
+  },
+  "Outputs": {
+    "KeyArn": {
+      "Description": "Set MINDDY_DATA_KMS_KEY_ID to this ARN. It is an identifier, not a secret.",
+      "Value": { "Fn::GetAtt": ["DataEncryptionKey", "Arn"] }
+    },
+    "Region": {
+      "Description": "Set MINDDY_DATA_KMS_REGION to this value.",
+      "Value": { "Ref": "AWS::Region" }
+    }
+  }
+}

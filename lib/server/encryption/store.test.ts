@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createCipheriv, randomBytes } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 
 import { ManagedDataKeys, type KeyRegistry, type KeyWrapper, type WrappedDataKey } from "./keys";
@@ -39,7 +39,8 @@ class MemoryRegistry implements KeyRegistry {
   }
 
   async rotate(record: WrappedDataKey, expectedVersion: number) {
-    const existing = await this.loadCurrent(record.scope);
+    const existing = this.records.filter((row) => row.scope.kind === record.scope.kind &&
+      row.scope.id === record.scope.id).at(-1);
     if (existing?.version !== expectedVersion) return false;
     this.records.push(record);
     return true;
@@ -85,8 +86,45 @@ describe("EncryptedStore", () => {
     await expect(store.decrypt(store.fromDatabase(JSON.stringify(parsed)), context))
       .rejects.toThrow("Unable to decrypt data");
     expect(() => store.fromDatabase("plain text")).toThrow("Invalid encrypted value");
-    expect(() => store.fromDatabase(JSON.stringify({ ...parsed, format: 2 })))
+    expect(() => store.fromDatabase(JSON.stringify({ ...parsed, format: 3 })))
       .toThrow("Invalid encrypted value");
+  });
+
+  it("authenticates the key version even if registry versions reference the same wrapped key", async () => {
+    const bytes = randomBytes(32);
+    const store = new EncryptedStore({
+      current: async () => ({ version: 1, bytes: Buffer.from(bytes) }),
+      byVersion: async (_scope, version) => ({ version, bytes: Buffer.from(bytes) }),
+    });
+    const ciphertext = await store.encrypt("private", context);
+    const envelope = JSON.parse(ciphertext);
+    expect(envelope.format).toBe(2);
+    envelope.keyVersion = 2;
+    await expect(store.decrypt(store.fromDatabase(JSON.stringify(envelope)), context))
+      .rejects.toThrow("Unable to decrypt data");
+    envelope.keyVersion = 1;
+    envelope.format = 1;
+    await expect(store.decrypt(store.fromDatabase(JSON.stringify(envelope)), context))
+      .rejects.toThrow("Unable to decrypt data");
+  });
+
+  it("reads existing format-one ciphertext without rewriting or guessing its AAD", async () => {
+    const bytes = randomBytes(32);
+    const iv = randomBytes(12);
+    const cipher = createCipheriv("aes-256-gcm", bytes, iv);
+    cipher.setAAD(Buffer.from(JSON.stringify([
+      "minddy-data-v1", context.scope.kind, context.scope.id, context.table, context.column, context.rowId,
+    ])));
+    const data = Buffer.concat([cipher.update(JSON.stringify("legacy")), cipher.final()]);
+    const store = new EncryptedStore({
+      current: async () => ({ version: 1, bytes: Buffer.from(bytes) }),
+      byVersion: async (_scope, version) => ({ version, bytes: Buffer.from(bytes) }),
+    });
+    const legacy = store.fromDatabase<string>(JSON.stringify({
+      format: 1, keyVersion: 1, iv: iv.toString("base64url"),
+      tag: cipher.getAuthTag().toString("base64url"), data: data.toString("base64url"),
+    }));
+    expect(await store.decrypt(legacy, context)).toBe("legacy");
   });
 
   it("reads the recorded key version after rotation", async () => {
@@ -110,6 +148,35 @@ describe("EncryptedStore", () => {
     expect((await writer.current(scope)).version).toBe(1);
     expect(await rotatingInstance.rotate(scope)).toBe(2);
     expect((await writer.current(scope)).version).toBe(2);
+  });
+
+  it("does not rotate a stale scheduled candidate a second time", async () => {
+    const registry = new MemoryRegistry();
+    const wrapper = new MemoryWrapper();
+    const keys = new ManagedDataKeys(registry, wrapper);
+    (await keys.current(scope)).bytes.fill(0);
+    expect(await keys.rotate(scope, 1)).toBe(2);
+    expect(await keys.rotate(scope, 1)).toBe(2);
+    expect(wrapper.generateCalls).toBe(2);
+    expect(registry.records).toHaveLength(2);
+  });
+
+  it("coalesces concurrent scheduled rotations through the registry CAS", async () => {
+    const registry = new MemoryRegistry();
+    const wrapper = new MemoryWrapper();
+    const keys = new ManagedDataKeys(registry, wrapper);
+    (await keys.current(scope)).bytes.fill(0);
+    const rotated = await Promise.all([keys.rotate(scope, 1), keys.rotate(scope, 1)]);
+    expect(rotated).toEqual([2, 2]);
+    expect(registry.records).toHaveLength(2);
+  });
+
+  it("reports a regressed registry version instead of silently accepting a rollback", async () => {
+    const wrapper = new MemoryWrapper();
+    const keys = new ManagedDataKeys(new MemoryRegistry(), wrapper);
+    (await keys.current(scope)).bytes.fill(0);
+    await expect(keys.rotate(scope, 2)).rejects.toThrow("version regressed");
+    expect(wrapper.generateCalls).toBe(1);
   });
 
   it("returns the winning initial version and clears the caller key copy", async () => {
