@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -56,7 +56,11 @@ import {
   matchesStateFilter,
   updateCachedPullRequestState,
 } from "@/lib/pull-request-list-cache";
-import { deepLinkNeedsAllFilter } from "@/lib/sidebar-deep-link";
+import {
+  consumedDeepLinkHref,
+  deepLinkLensDecision,
+  isTerminalPrState,
+} from "@/lib/sidebar-deep-link";
 
 const PrDetail = dynamic(
   () => import("@/components/pull-requests/pr-detail").then((m) => m.PrDetail),
@@ -430,46 +434,37 @@ export function PullRequestsPage() {
   const tProjects = useTranslations("Projects");
   const tCommon = useTranslations("Common");
   const format = useFormatter();
+  const router = useRouter();
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const queryClient = useQueryClient();
 
-  // Forging actions are slow, but their state is known from the click: we
-  // patches the list before the response, then reconciles with the server. THE
-  // snapshot allows you to put the lists exactly back in place if the forge
-  // ultimately refuses the action (branch protection, rights withdrawn, etc.).
-  const applyOptimisticState = useCallback(
-    (prId: string, state: PullRequestListItem["pr_state"]) => {
-      const previous = queryClient.getQueriesData<PullRequestListResponse>({
-        queryKey: ALL_PULL_REQUESTS_QUERY_KEY,
-      });
-      const previousDetail = queryClient.getQueryData<AgentRunPrResponse>([
-        "pull-request",
-        prId,
-      ]);
-      updateCachedPullRequestState(queryClient, prId, state);
-      return () => {
-        for (const [key, data] of previous) queryClient.setQueryData(key, data);
-        queryClient.setQueryData(["pull-request", prId], previousDetail);
-      };
-    },
-    [queryClient],
-  );
-
-  const applyConfirmedState = useCallback(
-    (prId: string, state: PullRequestListItem["pr_state"]) => {
-      updateCachedPullRequestState(queryClient, prId, state);
-    },
-    [queryClient],
-  );
-
   // Deep-links: `?pr=<id>` (direct, MIN-143) and `?run=<id>` (historical — the
   // issue sidebar and all links already in circulation speak in run).
-  // Both preselect the PR. The status filter is widened later only if the
-  // loaded target is not already visible in the default “open” lens.
+  // Both preselect the PR. The status filter is widened ONCE, when the loaded
+  // target turns out to be invisible in the default “open” lens — after that
+  // the lens the reader picks is the master rule.
   const searchParams = useSearchParams();
   const runParam = searchParams.get("run");
   const prParam = searchParams.get("pr");
   const deepLink = prParam ?? runParam;
+
+  /**
+   * The deep link is CONSUMED, not kept. Its job — put the target on screen,
+   * widening the lens once if needed — ends there; past that a stale `?pr=`
+   * re-pins its row into every refetch and re-widens the lens on each load,
+   * which made the “open” filter impossible to restore after a merge (the
+   * refetch re-pinned the merged row into the “open” response, the widening
+   * effect saw a target outside the lens and forced “all”, again and again).
+   * The selection stays in memory and the published view keeps `?pr=`; only
+   * the address stops carrying the link.
+   */
+  const consumeDeepLink = useCallback(() => {
+    if (!deepLink) return;
+    router.replace(
+      consumedDeepLinkHref("/pull-requests", searchParams.toString()),
+      { scroll: false },
+    );
+  }, [deepLink, router, searchParams]);
 
   const [filter, setFilter] = useState<PullRequestStateFilter>("open");
   const [author, setAuthor] = useState<string>(AUTHOR_ALL);
@@ -500,6 +495,8 @@ export function PullRequestsPage() {
   // The deep-link is PINED on the server side: the targeted PR enters the response
   // even if it falls off the page (a PR from six months ago). Without that, the
   // link would fall to the first in the list — the PR of another ticket.
+  // The pin lives only as long as the link does: once consumed, the address
+  // stops carrying `pr`/`run` and the lens decides who belongs to the list.
   const pin = useMemo(() => ({ pr: prParam, run: runParam }), [prParam, runParam]);
   const { pullRequests, hasMore, truncated, repoCount, anyPr, loading, fetching, refetch } =
     useAllPullRequestsQuery(filter, limit, pin);
@@ -524,21 +521,85 @@ export function PullRequestsPage() {
     [runParam, prParam, pullRequests],
   );
 
+  // The PR the deep link resolved to, kept in a ref: the confirmed-state
+  // callback below recognizes it without being re-created on every list
+  // update. The LAST resolved target survives — an optimistic state change
+  // removes the row from the list before the forge confirms, and the ref
+  // must still name the PR whose link is being fulfilled.
+  const deepLinkTargetRef = useRef<string | null>(null);
+  const resolvedDeepLinkTarget = prParam ?? deepLinkedByRun?.prId ?? null;
+  if (resolvedDeepLinkTarget) deepLinkTargetRef.current = resolvedDeepLinkTarget;
+
+  /**
+   * The deep link widens the lens AT MOST ONCE, at its resolution: a link to
+   * a merged PR arrives under the default “open” lens, and the filter moves
+   * to “all” so the target is visible. The check used to re-run on every
+   * list change — after a merge, the refetch re-pinned the merged row into
+   * the “open” response, the effect saw a target outside the lens and forced
+   * “all” again: the “open” filter had become impossible to restore. The
+   * settlement is tied to the CURRENT link and resets when it leaves the
+   * address, so re-following the same link later is a fresh load free to
+   * widen again — while the in-place loop (refetches under an unchanged
+   * `?pr=`) can never re-widen behind the reader's back.
+   */
+  const settledDeepLinkRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!deepLink) return;
-    if (
-      deepLinkNeedsAllFilter(
-        pullRequests,
-        (pullRequest) =>
-          prParam
-            ? pullRequest.prId === prParam
-            : !!runParam && pullRequest.runIds.includes(runParam),
-        (pullRequest) => matchesStateFilter(pullRequest.pr_state, filter),
-      )
-    ) {
-      setFilter("all");
+    if (!deepLink) {
+      settledDeepLinkRef.current = null;
+      return;
     }
+    if (settledDeepLinkRef.current === deepLink) return;
+    const isTarget = (pullRequest: PullRequestListItem) =>
+      prParam
+        ? pullRequest.prId === prParam
+        : !!runParam && pullRequest.runIds.includes(runParam);
+    const decision = deepLinkLensDecision(
+      pullRequests,
+      isTarget,
+      (pullRequest) => matchesStateFilter(pullRequest.pr_state, filter),
+    );
+    if (decision === "pending") return;
+    settledDeepLinkRef.current = deepLink;
+    if (decision === "widen") setFilter("all");
   }, [deepLink, filter, prParam, pullRequests, runParam]);
+
+  // Forging actions are slow, but their state is known from the click: we
+  // patches the list before the response, then reconciles with the server. THE
+  // snapshot allows you to put the lists exactly back in place if the forge
+  // ultimately refuses the action (branch protection, rights withdrawn, etc.).
+  const applyOptimisticState = useCallback(
+    (prId: string, state: PullRequestListItem["pr_state"]) => {
+      const previous = queryClient.getQueriesData<PullRequestListResponse>({
+        queryKey: ALL_PULL_REQUESTS_QUERY_KEY,
+      });
+      const previousDetail = queryClient.getQueryData<AgentRunPrResponse>([
+        "pull-request",
+        prId,
+      ]);
+      updateCachedPullRequestState(queryClient, prId, state);
+      return () => {
+        for (const [key, data] of previous) queryClient.setQueryData(key, data);
+        queryClient.setQueryData(["pull-request", prId], previousDetail);
+      };
+    },
+    [queryClient],
+  );
+
+  const applyConfirmedState = useCallback(
+    (prId: string, state: PullRequestListItem["pr_state"]) => {
+      updateCachedPullRequestState(queryClient, prId, state);
+      // The deep link asked for this PR while it was live; merged or closed,
+      // its job is done. Keeping `?pr=` would re-pin the row — which the lens
+      // now excludes — into every refetch, and a reload would re-widen the
+      // filter: the sidebar filter takes the master rule back. Confirmed only,
+      // so a refused merge (branch protection, lost rights) keeps the link.
+      if (isTerminalPrState(state) && prId === deepLinkTargetRef.current) {
+        consumeDeepLink();
+      }
+    },
+    [consumeDeepLink, queryClient],
+  );
+
   // Authors present in the loaded page — the menu only offers what we have.
   const authors = useMemo(() => {
     const seen = new Map<string, { login: string; avatar_url: string | null }>();
@@ -549,14 +610,20 @@ export function PullRequestsPage() {
   }, [pullRequests]);
 
   const filtered = useMemo(() => {
-    if (author === AUTHOR_ALL) return pullRequests;
+    // The state lens is served by the server, but ONE row can contradict it:
+    // the deep-link pin, injected even outside the lens so an old PR stays
+    // reachable. The sidebar filter stays the master rule — hide the
+    // contradiction, or a merged PR would keep its place in the “open” list
+    // (and its detail on screen) as long as the address still carries `?pr=`.
+    const inLens = pullRequests.filter((p) => matchesStateFilter(p.pr_state, filter));
+    if (author === AUTHOR_ALL) return inLens;
     // “Opened by Numo” is the FACT of the opening (`numoOpened`), not the
     // login: according to the forge and installation, the author of a Numo
     // PR is sometimes the app, sometimes the connected account. A fix
     // session that bore a human PR without opening it must not pull it in.
-    if (author === AUTHOR_NUMO) return pullRequests.filter((p) => p.numoOpened);
-    return pullRequests.filter((p) => p.author?.login === author);
-  }, [pullRequests, author]);
+    if (author === AUTHOR_NUMO) return inLens.filter((p) => p.numoOpened);
+    return inLens.filter((p) => p.author?.login === author);
+  }, [pullRequests, filter, author]);
 
   /**
    * What the column DISPLAYS. Distinct from `filtered`, the selection of which is
@@ -734,6 +801,10 @@ export function PullRequestsPage() {
             author={author}
             authors={authors}
             onStateChange={(next) => {
+              // A manual lens pick: the deep link yields — the filter the
+              // reader chose becomes the master rule (a merged target pinned
+              // by a stale `?pr=` must not drag the lens back to “all”).
+              consumeDeepLink();
               setFilter(next);
               setLimit(PULL_REQUESTS_PAGE);
             }}
@@ -779,6 +850,9 @@ export function PullRequestsPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
+                  // A manual lens pick: the deep link yields (see
+                  // `consumeDeepLink`) — the filter the reader chose rules.
+                  consumeDeepLink();
                   setFilter("all");
                   setAuthor(AUTHOR_ALL);
                   setLimit(PULL_REQUESTS_PAGE);
