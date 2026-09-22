@@ -579,6 +579,20 @@ function ProjectBoard() {
     }
   };
 
+  // The filters menu's AI input: hand the typed wish to the Numo conversation
+  // (MIN-592, review — the classifier pass proved unreliable for filter
+  // selection, the agent with its hardened view tools is the reliable path),
+  // carrying the active view as context so "this view" resolves.
+  const handleAskAI = (wish: string) => {
+    openAssistant({
+      projectId,
+      prompt: t("aiFilterPrompt", { wish }),
+      pageContext: activeView
+        ? { projectId, viewId: activeView.id, viewName: activeView.name }
+        : { projectId },
+    });
+  };
+
   const openIssue = openIssueId
     ? issues.find((i) => i.id === openIssueId) ?? null
     : null;
@@ -841,7 +855,7 @@ function ProjectBoard() {
               onUpdateActiveView={saveActiveView}
               onRenameView={renameView}
               onDeleteView={deleteView}
-              aiProjectId={projectId}
+              onAskAI={handleAskAI}
               // The cycle is personal & cross-project: the tab exists on every
               // board but is canonical on /all only — here it just links out
               // (↗), it never scopes the cycle to this project (MIN-32).

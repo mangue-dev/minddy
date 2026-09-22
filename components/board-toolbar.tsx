@@ -227,7 +227,8 @@ function MenuToggleRow({
 }
 
 /** One facet submenu of the filters menu: the trigger carries the facet name
-    and, when the facet is active, how many values are selected. */
+    and, when the facet is active, how many values are selected — a bare
+    number, the same count treatment as the sidebar. */
 function FilterSub({
   label,
   count,
@@ -242,7 +243,7 @@ function FilterSub({
       <DropdownMenuSubTrigger>
         <span className="min-w-0 flex-1 truncate">{label}</span>
         {count > 0 && (
-          <span className="ml-auto mr-1 shrink-0 rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground">
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
             {count}
           </span>
         )}
@@ -263,7 +264,7 @@ function FiltersPopover({
   groupFacetsByName,
   lockedToMe,
   withAI,
-  aiProjectId,
+  onAskAI,
 }: {
   config: ViewConfig;
   onChange: (config: ViewConfig) => void;
@@ -280,13 +281,12 @@ function FiltersPopover({
   lockedToMe: boolean;
   /** The AI input rides when the board has an AI scope (MIN-592). */
   withAI: boolean;
-  /** Scope the AI interprets for: the project id, or null on the global
-      cross-project board. */
-  aiProjectId: string | null;
+  /** Hand the typed wish to the AI (the Numo conversation, view context
+      attached) — the entry point of the filter request. */
+  onAskAI: (wish: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [aiWish, setAiWish] = useState("");
-  const [aiBusy, setAiBusy] = useState(false);
   const f = config.filters;
   const setFilters = (next: ViewFilters) =>
     onChange({ ...config, filters: next });
@@ -313,34 +313,17 @@ function FiltersPopover({
 
   const sortDirection: SortDirection = config.display.sortDirection ?? "asc";
 
-  // The AI pass (MIN-592): the wish is interpreted against THIS board's
-  // options, the answer replaces the filters of the live config — saving it
-  // stays the explicit Save gesture.
-  const applyAiFilters = async () => {
+  // The AI hand-off (MIN-592, review): the wish rides to the Numo
+  // conversation — the classifier pass proved unreliable for filter
+  // selection, the conversation agent (with its hardened view tools) is the
+  // reliable path. The menu closes and the assistant opens with the view
+  // context attached.
+  const submitAiWish = () => {
     const wish = aiWish.trim();
-    if (!wish || aiBusy) return;
-    setAiBusy(true);
-    try {
-      const response = await fetch("/api/views/interpret-filters", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wish, projectId: aiProjectId }),
-      });
-      const data = (await response.json().catch(() => null)) as {
-        filters?: ViewFilters;
-        error?: string;
-      } | null;
-      if (!response.ok || !data?.filters) {
-        throw new Error(data?.error ?? t("aiFilterFailed"));
-      }
-      onChange({ ...config, filters: data.filters });
-      setAiWish("");
-      toast.success(t("aiFilterApplied"));
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setAiBusy(false);
-    }
+    if (!wish) return;
+    setOpen(false);
+    setAiWish("");
+    onAskAI(wish);
   };
 
   return (
@@ -358,11 +341,10 @@ function FiltersPopover({
       <DropdownMenuContent align="end" className="w-60">
         {withAI && (
           <>
-            {/* The AI input (MIN-592): write the wish, press Enter, the AI
-                picks the filters. Replaces the old "Ask Numo" hand-off — the
-                interpretation happens right here, on this config. The keydown
-                is stopped so the menu's own navigation never eats a
-                keystroke, and toggling stays possible while it runs. */}
+            {/* The AI input (MIN-592): write the wish, press Enter, the
+                request opens the AI conversation carrying this board's view
+                context. The keydown is stopped so the menu's own navigation
+                never eats a keystroke. */}
             <div
               className="p-1"
               onKeyDown={(event) => event.stopPropagation()}
@@ -370,7 +352,7 @@ function FiltersPopover({
               <form
                 onSubmit={(event) => {
                   event.preventDefault();
-                  void applyAiFilters();
+                  submitAiWish();
                 }}
                 className="flex items-center gap-1.5 rounded-md border bg-background px-2 focus-within:ring-1 focus-within:ring-ring"
               >
@@ -381,10 +363,8 @@ function FiltersPopover({
                   onChange={(event) => setAiWish(event.target.value)}
                   placeholder={t("aiFilterInput")}
                   aria-label={t("aiFilterInput")}
-                  disabled={aiBusy}
-                  className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
-                {aiBusy && <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />}
               </form>
             </div>
             <DropdownMenuSeparator />
@@ -618,6 +598,10 @@ function FiltersPopover({
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
+          {/* The invert action reads like a checked option (MIN-592 review):
+              the icon shows the CURRENT direction (A→Z vs Z→A) and the check
+              marks that the direction is the reversed one. Not available for
+              "smart" and "manual" — they carry their own order. */}
           <DropdownMenuItem
             disabled={!isDirectionalSort(config.sort)}
             onSelect={(event) => {
@@ -638,6 +622,7 @@ function FiltersPopover({
               <ArrowUpAZ className="text-muted-foreground" />
             )}
             {t("reverseOrder")}
+            {sortDirection === "desc" && <Check className="ml-auto size-4" />}
           </DropdownMenuItem>
         </FilterSub>
       </DropdownMenuContent>
@@ -756,7 +741,7 @@ export function BoardToolbar({
   onDeleteView,
   withNumo = true,
   withShare = true,
-  aiProjectId,
+  onAskAI,
   cycleTab,
   rightControls,
   tabOrderScope,
@@ -787,9 +772,9 @@ export function BoardToolbar({
   withNumo?: boolean;
   /** Global views are not shareable (v1) — the global board hides Share. */
   withShare?: boolean;
-  /** Scope the filters AI interprets for (MIN-592): the project id, or null
-      on the global cross-project board. */
-  aiProjectId?: string | null;
+  /** The filters menu's AI input hands the typed wish here (MIN-592) — the
+      board opens its AI conversation with the active view as context. */
+  onAskAI?: (wish: string) => void;
   /** The "Cycle" pill (MIN-32), after the view pills. `external` renders the ↗
       icon — a project board's pill that navigates to /all in cycle mode.
       `completionPercent` replaces its cycle glyph while a current cycle exists. */
@@ -1091,7 +1076,7 @@ export function BoardToolbar({
             groupFacetsByName={groupFacetsByName}
             lockedToMe={isSystem}
             withAI={withNumo}
-            aiProjectId={aiProjectId ?? null}
+            onAskAI={(wish) => onAskAI?.(wish)}
           />
 
           {/* Active view actions — rename / share / delete (the system view
