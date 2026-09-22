@@ -45,6 +45,9 @@ Before enabling the flag, apply the schema migrations, verify KMS access in the
 target environment, and rehearse backup/key recovery on an isolated database.
 Because there is only one production database, no migration or backfill was run
 on production while preparing this branch.
+Read and response paths tolerate the pre-migration invitation schema while the
+flag is off, so a preview deployment sharing that database does not require a
+production schema change. Encrypted writes still require the migrations first.
 
 The invitation blind index is global so an account can claim pending invites
 across projects without scanning every tenant. Equal addresses therefore have

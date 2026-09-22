@@ -27,6 +27,22 @@ export type InvitationEmailColumns = {
   encryption_version: number;
 };
 
+export function missingInvitationEncryptionSchema(error: { code?: string } | null): boolean {
+  return error?.code === "42703" || error?.code === "PGRST204";
+}
+
+/** Preview deployments can serve the legacy schema before the additive migration. */
+export function legacyInvitationEmailColumns<T extends { invited_email: string | null }>(
+  row: T,
+): T & InvitationEmailColumns {
+  return {
+    ...row,
+    invited_email_ciphertext: null,
+    invited_email_blind_index: null,
+    encryption_version: 0,
+  };
+}
+
 export function isInvitationEncryptionEnabled(): boolean {
   return process.env.MINDDY_INVITATION_ENCRYPTION_ENABLED === "true";
 }

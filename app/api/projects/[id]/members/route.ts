@@ -15,6 +15,8 @@ import type { Invitation, Member } from "@/lib/types";
 import type { Locale } from "@/i18n/config";
 import {
   decryptInvitationEmail,
+  legacyInvitationEmailColumns,
+  missingInvitationEncryptionSchema,
   type InvitationEmailColumns,
 } from "@/lib/server/encryption/invitation-email";
 
@@ -28,11 +30,25 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const t = await getTranslations("ApiErrors");
 
   const service = getServiceClient();
+  const invitationQuery = (columns: string) => service
+    .from("project_invitations")
+    .select(columns)
+    .eq("project_id", id)
+    .eq("status", "pending")
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false });
+  const loadInvitations = async () => {
+    const current = await invitationQuery("id, project_id, invited_email, invited_email_ciphertext, invited_email_blind_index, encryption_version, status, created_at");
+    if (!missingInvitationEncryptionSchema(current.error)) return current;
+    const legacy = await invitationQuery("id, project_id, invited_email, status, created_at");
+    return { ...legacy, data: legacy.data?.map((row) =>
+      legacyInvitationEmailColumns(row as unknown as { invited_email: string | null })) };
+  };
   // A single parallel batch: project (owner + deleted_at), members, invitations.
   // Access is deduced from the project + the list of members already loaded — more than
   // second SELECT project_members (what getProjectAccess did), and more
   // sequential phase before the reads.
-  const [{ data: project }, { data: memberRows }, { data: inviteRows }] =
+  const [{ data: project }, { data: memberRows }, { data: inviteData, error: inviteError }] =
     await Promise.all([
       service
         .from("projects")
@@ -44,19 +60,19 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
         .select("user_id, role, created_at")
         .eq("project_id", id)
         .order("created_at", { ascending: true }),
-      service
-        .from("project_invitations")
-        // Without `invited_user_id`: returning it to the client would say which addresses
-        // have a minddy account (see the `Invitation` type).
-        .select("id, project_id, invited_email, invited_email_ciphertext, invited_email_blind_index, encryption_version, status, created_at")
-        .eq("project_id", id)
-        .eq("status", "pending")
-        // Expired items are excluded from both this list and the atomic RPC's
-        // occupied-slot count. The UI counter uses this list, so both views of
-        // capacity must stay aligned.
-        .gt("expires_at", new Date().toISOString())
-        .order("created_at", { ascending: false }),
+      loadInvitations(),
     ]);
+
+  if (inviteError) {
+    console.error("[api/members] invitation list failed:", inviteError.message);
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+  }
+  const inviteRows = inviteData as Array<InvitationEmailColumns & {
+    id: string;
+    project_id: string;
+    status: string;
+    created_at: string;
+  }> | null;
 
   // Access = living project AND (owner OR present in the members list).
   if (!project || project.deleted_at) {

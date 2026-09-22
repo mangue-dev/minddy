@@ -6,6 +6,8 @@ import { displayName } from "@/lib/display-name";
 import type { InvitationPreview } from "@/lib/types";
 import {
   decryptInvitationEmail,
+  legacyInvitationEmailColumns,
+  missingInvitationEncryptionSchema,
   type InvitationEmailColumns,
 } from "@/lib/server/encryption/invitation-email";
 import { digestInvitationToken } from "@/lib/server/encryption/invitation-token-digest";
@@ -45,9 +47,24 @@ export async function resolveInvitationToken(
       : query.eq("encryption_version", 0).maybeSingle();
   };
   const encryptedResult = await lookup(digestInvitationToken(normalized), true);
-  const { data, error } = encryptedResult.data || encryptedResult.error
-    ? encryptedResult
-    : await lookup(normalized, false);
+  const legacyLookup = async () => {
+    const legacy = await service
+      .from("project_invitations")
+      .select("id, project_id, invited_email, invited_by, expires_at, projects(name)")
+      .eq("token", normalized)
+      .eq("status", "pending")
+      .maybeSingle();
+    return { ...legacy, data: legacy.data && legacyInvitationEmailColumns(legacy.data) };
+  };
+  const versionedLegacy = !encryptedResult.data && !encryptedResult.error
+    ? await lookup(normalized, false)
+    : null;
+  const { data, error } = missingInvitationEncryptionSchema(encryptedResult.error) ||
+    missingInvitationEncryptionSchema(versionedLegacy?.error ?? null)
+    ? await legacyLookup()
+    : encryptedResult.data || encryptedResult.error
+      ? encryptedResult
+      : versionedLegacy!;
 
   if (error) {
     console.error("[invitation-token] lookup failed:", error.message);

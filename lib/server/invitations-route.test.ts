@@ -22,6 +22,7 @@ const updateInvitation = vi.fn();
 
 let invitation: Record<string, unknown> | null = null;
 let project: Record<string, unknown> | null = null;
+let legacySchema = false;
 
 vi.mock("next-intl/server", () => ({
   getTranslations: async () => (key: string) => key,
@@ -39,11 +40,16 @@ vi.mock("@/lib/supabase-service", () => ({
     from(table: string) {
       if (table === "project_invitations") {
         return {
-          select: () => ({
-            eq: () => ({ maybeSingle: async () => ({ data: invitation }) }),
+          select: (columns: string) => ({
+            eq: () => ({ maybeSingle: async () => legacySchema && columns.includes("encryption_version")
+              ? { data: null, error: { code: "42703", message: "column does not exist" } }
+              : { data: invitation, error: null } }),
           }),
           update: (patch: unknown) => ({
             eq: async (_column: string, id: string) => {
+              if (legacySchema && Object.hasOwn(patch as object, "invited_email_ciphertext")) {
+                return { error: { code: "42703", message: "column does not exist" } };
+              }
               updateInvitation(patch, id);
               return { error: null };
             },
@@ -86,6 +92,7 @@ function request(action: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  legacySchema = false;
   getAuthedUser.mockResolvedValue({
     ok: true,
     user: { id: USER, email: "invitee@minddy.app" },
@@ -106,6 +113,16 @@ beforeEach(() => {
 });
 
 describe("PATCH /api/projects/invitations", () => {
+  it("keeps legacy preview deployments usable before the additive migration", async () => {
+    legacySchema = true;
+    const response = await PATCH(request("accept"));
+    expect(response.status).toBe(200);
+    expect(updateInvitation).toHaveBeenCalledWith(
+      expect.not.objectContaining({ invited_email_ciphertext: null }),
+      INVITATION,
+    );
+  });
+
   it("adds the invitee to the invitation's project", async () => {
     const response = await PATCH(request("accept"));
     expect(response.status).toBe(200);

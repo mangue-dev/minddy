@@ -27,6 +27,8 @@ import {
   invitationEmailIndex,
   isInvitationEncryptionConfigured,
   isInvitationEncryptionEnabled,
+  legacyInvitationEmailColumns,
+  missingInvitationEncryptionSchema,
   type InvitationEmailColumns,
 } from "@/lib/server/encryption/invitation-email";
 import { createInvitationToken } from "@/lib/server/encryption/invitation-token-digest";
@@ -457,11 +459,12 @@ export async function cancelInvitation({
   if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
 
   const service = getServiceClient();
-  const { error } = await service
+  const respondedAt = new Date().toISOString();
+  const current = await service
     .from("project_invitations")
     .update({
       status: "cancelled",
-      responded_at: new Date().toISOString(),
+      responded_at: respondedAt,
       invited_email: null,
       invited_email_ciphertext: null,
       invited_email_blind_index: null,
@@ -469,6 +472,13 @@ export async function cancelInvitation({
     .eq("id", invitationId)
     .eq("project_id", projectId)
     .eq("status", "pending");
+  const error = missingInvitationEncryptionSchema(current.error) && !isInvitationEncryptionEnabled()
+    ? (await service.from("project_invitations")
+      .update({ status: "cancelled", responded_at: respondedAt })
+      .eq("id", invitationId)
+      .eq("project_id", projectId)
+      .eq("status", "pending")).error
+    : current.error;
   if (error) {
     console.error("[members] cancel invite failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
@@ -484,18 +494,31 @@ export async function listPendingInvitations(
   actorId: string,
 ): Promise<Array<{ id: string; email: string; created_at: string }>> {
   const service = getServiceClient();
-  const { data, error } = await service
+  const query = (columns: string) => service
     .from("project_invitations")
-    .select("id, project_id, invited_email, invited_email_ciphertext, invited_email_blind_index, encryption_version, created_at")
+    .select(columns)
     .eq("project_id", projectId)
     .eq("status", "pending")
     .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false });
+  const loadCompatibleInvitations = async () => {
+    const current = await query("id, project_id, invited_email, invited_email_ciphertext, invited_email_blind_index, encryption_version, created_at");
+    if (!missingInvitationEncryptionSchema(current.error)) return current;
+    const legacy = await query("id, project_id, invited_email, created_at");
+    return { ...legacy, data: legacy.data?.map((row) =>
+      legacyInvitationEmailColumns(row as unknown as { invited_email: string | null })) };
+  };
+  const { data, error } = await loadCompatibleInvitations();
   if (error) {
     console.error("[members] list invitations failed:", error.message);
     return [];
   }
-  return Promise.all((data ?? []).map(async (r) => ({
+  const rows = data as Array<InvitationEmailColumns & {
+    id: string;
+    project_id: string;
+    created_at: string;
+  }> | null;
+  return Promise.all((rows ?? []).map(async (r) => ({
     id: r.id as string,
     email: await decryptInvitationEmail(r as InvitationEmailColumns & {
       id: string;

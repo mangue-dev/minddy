@@ -4,6 +4,7 @@ import { digestInvitationToken } from "./encryption/invitation-token-digest";
 
 const state = vi.hoisted(() => ({
   rows: [] as Array<Record<string, unknown>>,
+  schemaReady: true,
 }));
 
 vi.mock("@/lib/supabase-service", () => ({
@@ -11,17 +12,23 @@ vi.mock("@/lib/supabase-service", () => ({
     from(table: string) {
       if (table !== "project_invitations") throw new Error("Unexpected table");
       const filters: Array<(row: Record<string, unknown>) => boolean> = [];
+      let needsEncryptionSchema = false;
       const query = {
         select() { return query; },
         eq(column: string, value: unknown) {
+          if (column === "encryption_version") needsEncryptionSchema = true;
           filters.push((row: Record<string, unknown>) => row[column] === value);
           return query;
         },
         gt(column: string, value: number) {
+          if (column === "encryption_version") needsEncryptionSchema = true;
           filters.push((row: Record<string, unknown>) => Number(row[column]) > value);
           return query;
         },
         async maybeSingle() {
+          if (!state.schemaReady && needsEncryptionSchema) {
+            return { data: null, error: { code: "42703", message: "column does not exist" } };
+          }
           return { data: state.rows.find((row) => filters.every((filter) => filter(row))) ?? null, error: null };
         },
       };
@@ -36,12 +43,20 @@ vi.mock("@/lib/server/auth-users", () => ({
 vi.mock("@/lib/display-name", () => ({ displayName: () => "Owner" }));
 vi.mock("./encryption/invitation-email", () => ({
   decryptInvitationEmail: async (row: Record<string, unknown>) => row.invited_email,
+  missingInvitationEncryptionSchema: (error: { code?: string } | null) => error?.code === "42703",
+  legacyInvitationEmailColumns: (row: Record<string, unknown>) => ({
+    ...row,
+    invited_email_ciphertext: null,
+    invited_email_blind_index: null,
+    encryption_version: 0,
+  }),
 }));
 
 const { resolveInvitationToken } = await import("./invitation-token");
 
 beforeEach(() => {
   state.rows = [];
+  state.schemaReady = true;
 });
 
 describe("invitation preview tokens", () => {
@@ -77,6 +92,8 @@ describe("invitation preview tokens", () => {
       projects: { name: "Project" },
     }];
 
+    expect(await resolveInvitationToken("legacy-token")).toMatchObject({ invitedEmail: "legacy@example.test" });
+    state.schemaReady = false;
     expect(await resolveInvitationToken("legacy-token")).toMatchObject({ invitedEmail: "legacy@example.test" });
   });
 });
