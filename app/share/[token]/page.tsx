@@ -141,7 +141,9 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
   const statusById = new Map(allIssues.map((i) => [i.id, i.status]));
   const issues = filterIssues(allIssues, config, {
     myUserId: view.user_id ?? ctx.share.created_by,
-  }).sort(issueComparator(config.sort, { relations, statusById }));
+  }).sort(
+    issueComparator(config.sort, { relations, statusById }, config.display.sortDirection)
+  );
 
   // Parent identifiers and relation chips resolve against ALL issues (a filter
   // may hide the other end), mirroring KanbanBoard — resolved here so the full

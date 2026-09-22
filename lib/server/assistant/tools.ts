@@ -160,36 +160,44 @@ const VIEW_FILTER_PROPERTIES = {
   status: {
     type: "array",
     items: { type: "string", enum: [...ISSUE_STATUSES] },
+    description:
+      "Status values to KEEP, copied VERBATIM from this enum — never paraphrase or invent one.",
   },
   priority: {
     type: "array",
     items: { type: "string", enum: [...ISSUE_PRIORITIES] },
+    description:
+      "Priority values to KEEP, copied VERBATIM from this enum — never paraphrase or invent one.",
   },
   effort: {
     type: "array",
     items: { type: "string", enum: [...ISSUE_EFFORTS] },
+    description:
+      "Effort values to KEEP, copied VERBATIM from this enum — never paraphrase or invent one.",
   },
   assignee: {
     type: "array",
     items: { type: ["string", "null"] },
     description:
-      "user_ids; null = unassigned; '@me' = assigned to the viewing user (dynamic).",
+      "user_ids to KEEP, resolved via list_members / list_global_filter_options FIRST — never guess or fabricate an id. null = unassigned; '@me' (this exact sentinel) = assigned to the viewing user (dynamic).",
   },
   objective: {
     type: "array",
     items: { type: ["string", "null"] },
-    description: "objective ids; null = no objective.",
+    description:
+      "objective ids to KEEP, resolved via list_objectives / list_global_filter_options FIRST. null = no objective.",
   },
   category: {
     type: "array",
     items: { type: "string" },
-    description: "category ids.",
+    description:
+      "category ids to KEEP, resolved via list_categories / list_global_filter_options FIRST.",
   },
   integration: {
     type: "array",
     items: { type: ["string", "null"] },
     description:
-      "integration ids (from list_integrations); null = not created by an integration.",
+      "integration ids (from list_integrations) to KEEP; null = not created by an integration.",
   },
 } as const;
 
@@ -426,7 +434,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_views",
       description:
-        "List the saved kanban views of the current scope — the project's views in project mode, the user's personal cross-project views on the global board — with their id, name, kind, shared, filters, sort, display. Call it before update_view to read the filters currently set on a view. kind 'my' is the user's system view ('Mes tickets'): its name and its assignee filter (locked to [\"@me\"], the dynamic 'assigned to me' value) can never change, and it cannot be deleted — other filters/sort/display remain editable.",
+        "List the saved kanban views of the current scope — the project's views in project mode, the user's personal cross-project views on the global board — with their id, name, kind, shared, filters, sort, display. Call it BEFORE update_view: the `filters` argument of update_view replaces the whole config, so you must read the current one and resend every key you want to keep. kind 'my' is the user's system view ('Mes tickets'): its name and its assignee filter (locked to [\"@me\"], the dynamic 'assigned to me' value) can never change, and it cannot be deleted — other filters/sort/display remain editable.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -865,7 +873,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_view",
       description:
-        "Create a saved kanban view. In project mode it is shared with the whole project; in global mode it is your personal CROSS-PROJECT view (spanning every project). The kanban ALWAYS groups by status — a view only filters, sorts and optionally hides done issues. Filters take IDS (resolve names via list_members/list_categories/list_objectives/list_integrations, or list_global_filter_options in global mode, first); null inside assignee/objective/integration means 'unassigned'/'no objective'/'not from an integration'; '@me' inside assignee means 'assigned to the viewing user' (dynamic).",
+        "Create a saved kanban view. In project mode it is shared with the whole project; in global mode it is your personal CROSS-PROJECT view (spanning every project). The kanban ALWAYS groups by status — a view only filters, sorts and optionally hides done issues. STRICT ID RULE: filter values are IDS or enum values, never names or free text — resolve member/category/objective/integration names through list_members / list_categories / list_objectives / list_integrations (or list_global_filter_options in global mode) BEFORE calling, and copy status/priority/effort verbatim from their enums. null inside assignee/objective/integration means 'unassigned'/'no objective'/'not from an integration'; '@me' inside assignee means 'assigned to the viewing user' (dynamic). Omitting a filter key means 'do not filter on it' — a view with NO filters shows everything.",
       parameters: {
         type: "object",
         properties: {
@@ -886,6 +894,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             properties: {
               hideDone: { type: "boolean" },
               hideRecurring: { type: "boolean" },
+              sortDirection: {
+                type: "string",
+                enum: ["asc", "desc"],
+                description:
+                  "Direction of the sort (default asc) — only meaningful for the priority/created/updated/due sorts; smart and manual ignore it.",
+              },
             },
             description: "Display options.",
           },
@@ -899,7 +913,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_view",
       description:
-        "Update a saved kanban view (name, filters, sort, display). Same filter shape and ID rules as create_view. Get view ids via list_views. `filters` REPLACES the whole filter config — read the view with list_views first and resend the keys you want to keep, otherwise you drop them. On the kind='my' system view the name and the assignee filter are locked (assignee stays [\"@me\"]); everything else is editable.",
+        "Update a saved kanban view (name, filters, sort, display). Same filter shape and ID rules as create_view (IDS and enum values only, resolved through the list_* tools first). Get view ids via list_views. DANGER: `filters` REPLACES the whole filter config — read the view with list_views first and resend EVERY key you want to keep, otherwise you silently drop the user's existing filters. On the kind='my' system view the name and the assignee filter are locked (assignee stays [\"@me\"]); everything else is editable.",
       parameters: {
         type: "object",
         properties: {
@@ -920,6 +934,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             properties: {
               hideDone: { type: "boolean" },
               hideRecurring: { type: "boolean" },
+              sortDirection: {
+                type: "string",
+                enum: ["asc", "desc"],
+                description:
+                  "Direction of the sort (default asc) — only meaningful for the priority/created/updated/due sorts; smart and manual ignore it.",
+              },
             },
           },
         },

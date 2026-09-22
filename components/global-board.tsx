@@ -204,13 +204,13 @@ function GlobalBoardInner() {
     const view = await createViewAndSelect(name);
     const wish = description?.trim();
     if (wish) {
-      // Hand the fresh GLOBAL view to Numo (global mode, projectId null): its id
-      // rides along in pageContext so Numo edits this exact view; the board
-      // adopts the new filters live once realtime brings the row back.
+      // Hand the fresh GLOBAL view to the AI (global mode, projectId null): its
+      // id rides along in pageContext so the agent edits this exact view; the
+      // board adopts the new filters live once realtime brings the row back.
       beginGenerating(view);
       openAssistant({
         projectId: null,
-        prompt: tBoard("numoBuildViewPrompt", { name, description: wish }),
+        prompt: tBoard("aiBuildViewPrompt", { name, description: wish }),
         pageContext: { viewId: view.id, viewName: name },
       });
     } else {
@@ -218,11 +218,14 @@ function GlobalBoardInner() {
     }
   };
 
-  // Let Numo shape the currently selected global view: open the chat in global
-  // mode carrying the active view as context so "this view" resolves.
-  const handleAskNumo = () => {
+  // The filters menu's AI input: hand the typed wish to the Numo conversation
+  // (MIN-592, review — the classifier pass proved unreliable for filter
+  // selection, the agent with its hardened view tools is the reliable path),
+  // carrying the active view as context so "this view" resolves.
+  const handleAskAI = (wish: string) => {
     openAssistant({
       projectId: null,
+      prompt: tBoard("aiFilterPrompt", { wish }),
       pageContext: activeView
         ? { viewId: activeView.id, viewName: activeView.name }
         : undefined,
@@ -603,7 +606,7 @@ function GlobalBoardInner() {
           onDeleteView={deleteView}
           withNumo
           withShare={false}
-          onAskNumo={handleAskNumo}
+          onAskAI={handleAskAI}
           cycleTab={{
             active: cycleMode,
             completionPercent: currentCycleCompletionPercent,
@@ -719,6 +722,7 @@ function GlobalBoardInner() {
             issues={filtered}
             statuses={statuses}
             sort={config.sort}
+            sortDirection={config.display.sortDirection}
             // The Smart sort's AI scores (jev-mode projects, MIN-576).
             smartScores={smartScores}
             projectMap={projectMap}

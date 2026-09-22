@@ -1220,11 +1220,18 @@ export interface ViewFilters {
   project?: string[]; // global (cross-project) views only — a project board is single-project
 }
 
+/** Direction of a non-smart, non-manual view sort (MIN-592): "asc" is the
+    historical order (urgent first, newest first…), "desc" reverses it. */
+export type SortDirection = "asc" | "desc";
+
 export interface ViewDisplay {
   hideDone?: boolean;
   /** Remove recurring tickets from the table (MIN-136): the maintenance which
  comes back every week is not what we read there. */
   hideRecurring?: boolean;
+  /** Direction of the view sort (MIN-592) — meaningless for "smart" and
+      "manual", which carry their own order. Default "asc". */
+  sortDirection?: SortDirection;
 }
 
 /** The filter/sort/display triple a view applies (also the live "working" state). */
