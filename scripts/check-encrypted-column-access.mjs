@@ -1,4 +1,5 @@
-import { readdir, readFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 const allowedInvitationAccess = new Set([
@@ -10,31 +11,40 @@ const allowedInvitationAccess = new Set([
   "lib/server/retention.ts",
 ]);
 
-const invitationTableAccess = /\.from\s*\(\s*["'`]project_invitations["'`]\s*\)/;
+const rules = [
+  {
+    access: /\.\s*from\s*\(\s*["'`]project_invitations["'`]\s*\)/,
+    allowed: allowedInvitationAccess,
+  },
+  {
+    access: /\.\s*rpc\s*\(\s*["'`]create_project_invitation_(?:encrypted_)?guarded["'`]/,
+    allowed: new Set(["lib/server/members.ts"]),
+  },
+  {
+    access: /\.\s*(?:from\s*\(\s*["'`]envelope_data_keys["'`]|rpc\s*\(\s*["'`](?:create_envelope_data_key_if_absent|rotate_envelope_data_key)["'`])/,
+    allowed: new Set(["lib/server/encryption/registry.ts"]),
+  },
+];
 
-async function filesIn(directory) {
-  const entries = await readdir(directory, { withFileTypes: true });
-  const files = [];
-  for (const entry of entries) {
-    const next = path.join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...await filesIn(next));
-    else if (/\.[cm]?[jt]sx?$/.test(entry.name) &&
-      !/\.(test|spec)\.[cm]?[jt]sx?$/.test(entry.name)) files.push(next);
-  }
-  return files;
-}
+// Include components, tools, scripts and deployment code, plus untracked local changes.
+const files = [...new Set(execFileSync("git", ["ls-files", "-co", "--exclude-standard", "-z"])
+  .toString().split("\0"))].filter((file) => /\.[cm]?[jt]sx?$/.test(file) &&
+    !/\.(test|spec)\.[cm]?[jt]sx?$/.test(file));
 
 const violations = [];
-for (const file of [...await filesIn("app"), ...await filesIn("lib")]) {
+for (const file of files) {
   const normalized = file.split(path.sep).join("/");
-  if (allowedInvitationAccess.has(normalized)) continue;
-  if (invitationTableAccess.test(await readFile(file, "utf8"))) {
+  const source = await readFile(file, "utf8").catch((error) => {
+    if (error.code === "ENOENT") return ""; // A tracked file can be deleted locally.
+    throw error;
+  });
+  if (rules.some(({ access, allowed }) => !allowed.has(normalized) && access.test(source))) {
     violations.push(normalized);
   }
 }
 
 if (violations.length > 0) {
-  console.error("Direct invitation table access is limited to the reviewed server paths:");
+  console.error("Encrypted table and RPC access is limited to the reviewed server paths:");
   for (const file of violations) console.error(`  ${file}`);
   process.exitCode = 1;
 } else {

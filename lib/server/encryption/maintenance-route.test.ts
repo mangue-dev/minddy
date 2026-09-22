@@ -15,7 +15,7 @@ vi.mock("@/lib/server/encryption/invitation-backfill", () => ({
   backfillInvitationEmailsBatch: state.backfill,
 }));
 
-const { GET } = await import("./route");
+const { GET } = await import("@/app/api/cron/encryption-maintenance/route");
 const secret = "x".repeat(32);
 
 function request(authorized: boolean): NextRequest {

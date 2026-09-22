@@ -41,7 +41,7 @@ function scopeId(scope: EncryptionScope): string {
 /** Keeps decrypted keys only in process memory for a bounded time. */
 export class ManagedDataKeys implements DataKeyProvider {
   private readonly cache = new Map<string, CacheEntry>();
-  private readonly pending = new Map<string, Promise<void>>();
+  private readonly pending = new Map<string, { promise: Promise<DataKey>; readers: number }>();
   private readonly initialPending = new Map<string, Promise<number>>();
 
   constructor(
@@ -94,12 +94,31 @@ export class ManagedDataKeys implements DataKeyProvider {
     key.bytes.fill(0);
   }
 
-  private singleFlight(id: string, load: () => Promise<void>): Promise<void> {
-    const running = this.pending.get(id);
-    if (running) return running;
-    const promise = load().finally(() => this.pending.delete(id));
-    this.pending.set(id, promise);
-    return promise;
+  private async singleFlight(id: string, load: () => Promise<DataKey>): Promise<DataKey> {
+    let running = this.pending.get(id);
+    if (!running) {
+      running = {
+        promise: load().then((key) => {
+          // Each waiter needs its own copy even if another load evicts the cache.
+          this.remember(id, { version: key.version, bytes: Buffer.from(key.bytes) });
+          return key;
+        }),
+        readers: 0,
+      };
+      this.pending.set(id, running);
+    }
+    running.readers += 1;
+    let key: DataKey | undefined;
+    try {
+      key = await running.promise;
+      return { version: key.version, bytes: Buffer.from(key.bytes) };
+    } finally {
+      running.readers -= 1;
+      if (running.readers === 0) {
+        this.pending.delete(id);
+        key?.bytes.fill(0);
+      }
+    }
   }
 
   async current(scope: EncryptionScope): Promise<DataKey> {
@@ -109,11 +128,10 @@ export class ManagedDataKeys implements DataKeyProvider {
       const id = `${prefix}:${record.version}`;
       const cached = this.cached(id);
       if (cached) return { version: cached.version, bytes: Buffer.from(cached.bytes) };
-      await this.singleFlight(id, async () => this.remember(id, {
+      return this.singleFlight(id, async () => ({
         version: record.version,
         bytes: await this.wrapper.unwrap(record),
       }));
-      return this.byVersion(scope, record.version);
     }
 
     let initial = this.initialPending.get(prefix);
@@ -153,25 +171,23 @@ export class ManagedDataKeys implements DataKeyProvider {
     const id = `${scopeId(scope)}:${version}`;
     const cached = this.cached(id);
     if (cached) return { version, bytes: Buffer.from(cached.bytes) };
-    await this.singleFlight(id, async () => {
+    return this.singleFlight(id, async () => {
       const record = await this.registry.loadVersion(scope, version);
       if (!record) throw new Error("Data key version is unavailable");
-      this.remember(id, {
+      return {
         version,
         bytes: await this.wrapper.unwrap(record),
-      });
+      };
     });
-    const loaded = this.cached(id);
-    if (!loaded) throw new Error("Data key cache entry was evicted during load");
-    return { version, bytes: Buffer.from(loaded.bytes) };
   }
 
   /** A rotation job calls this before it begins writing with the new version. */
   async rotate(scope: EncryptionScope): Promise<number> {
     const prior = await this.registry.loadCurrent(scope);
     if (!prior) {
-      await this.current(scope);
-      return 1;
+      const initial = await this.current(scope);
+      initial.bytes.fill(0);
+      return initial.version;
     }
     const nextVersion = prior.version + 1;
     if (!Number.isSafeInteger(nextVersion)) throw new Error("Data key version exhausted");

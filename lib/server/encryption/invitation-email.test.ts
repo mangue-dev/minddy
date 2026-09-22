@@ -50,6 +50,15 @@ describe("invitation email encryption", () => {
     }, audit)).toBe("alice@example.test");
   });
 
+  it("preserves the address spelling used by Auth and the invitation response", async () => {
+    const email = "cafe\u0301@example.test";
+    const encrypted = await encryptInvitationEmail(email, projectId, invitationId);
+    expect(await decryptInvitationEmail({
+      id: invitationId, project_id: projectId, invited_email: null, ...encrypted,
+    }, audit)).toBe(email);
+    expect(await invitationEmailIndex(email)).not.toBe(await invitationEmailIndex(email.normalize("NFC")));
+  });
+
   it("rejects a moved or inconsistent encrypted row", async () => {
     const encrypted = await encryptInvitationEmail(
       "alice@example.test", projectId, invitationId,

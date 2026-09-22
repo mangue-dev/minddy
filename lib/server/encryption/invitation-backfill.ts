@@ -47,16 +47,19 @@ export async function backfillInvitationEmailsBatch(
       continue;
     }
     if (row.status !== "pending" || Date.parse(row.expires_at as string) <= Date.now()) {
-      const { data: purged, error: purgeError } = await service
-        .from("project_invitations")
-        .update({
-          status: row.status === "pending" ? "cancelled" : row.status,
+      const table = service.from("project_invitations");
+      // Expired pending rows must not become cancelled rows that retention never deletes.
+      const purge = row.status === "pending"
+        ? table.delete()
+        : table.update({
           invited_email: null,
           invited_email_ciphertext: null,
           invited_email_blind_index: null,
           token: digestInvitationToken(row.token as string),
-        })
+        });
+      const { data: purged, error: purgeError } = await purge
         .eq("id", row.id)
+        .eq("status", row.status)
         .eq("encryption_version", 0)
         .eq("invited_email", row.invited_email)
         .eq("token", row.token)
@@ -79,6 +82,7 @@ export async function backfillInvitationEmailsBatch(
       .eq("invited_email", row.invited_email)
       .eq("token", row.token)
       .eq("status", "pending")
+      .gt("expires_at", new Date().toISOString())
       .select("id");
     if (updateError) throw new Error(`Unable to encrypt invitation email: ${updateError.code}`);
     result.encrypted += migrated?.length ?? 0;

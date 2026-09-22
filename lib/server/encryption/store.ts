@@ -210,5 +210,6 @@ export function blindIndex(
 }
 
 export function normalizeEmailForIndex(email: string): string {
-  return email.trim().normalize("NFC").toLowerCase();
+  // Match Auth lookup and invitation acceptance; Unicode composition can change identity.
+  return email.trim().toLowerCase();
 }

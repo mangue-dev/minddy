@@ -29,8 +29,11 @@ bounded in-memory key caching, and an atomic SQL key registry. The first
 converted column is `project_invitations.invited_email`. Its database migration
 is additive: legacy rows remain marked `encryption_version = 0`, and new rows
 are encrypted only when `MINDDY_INVITATION_ENCRYPTION_ENABLED=true`. Without that
-flag, existing writes stay legacy. The hourly maintenance route then converts
-up to 100 legacy invitations per run and purges expired or answered emails.
+flag, existing writes stay legacy. The hourly maintenance route converts up to
+100 legacy invitations per run,
+deletes expired legacy invitations, and clears email from answered legacy rows.
+It runs on both Vercel and the self-hosted scheduler. Already encrypted expired
+invitations are deleted by the daily retention sweep.
 The normal retention sweep now deletes expired invitations at their
 `expires_at` time rather than keeping them for another 60 days.
 
@@ -63,8 +66,11 @@ This is a foundation, not completion of MIN-591. Issue/page/comment content,
 derived search/history copies, files, and other inventory rows remain clear.
 There is no scheduled DEK rotation/backfill for those rows yet. Existing credential
 blobs have not moved to Vault, and the managed production statement-logging
-setting has not been changed. The CI guard currently covers direct access to
-`project_invitations`; it must expand with each converted table.
+setting has not been changed. The CI guard covers literal table and RPC access
+to `project_invitations` and
+`envelope_data_keys` across repository JavaScript/TypeScript sources. It must
+expand with each converted table; dynamically constructed queries and raw SQL
+still require review.
 
 ## Column inventory
 
@@ -182,6 +188,63 @@ Supabase Vault can reduce plaintext secrets in backups, but its
 separate control from application-side encryption. Lock down that view before
 using it. Database statement logging is an operator-level setting; avoid SQL
 literals with secrets even if logging is disabled.
+
+## Implementation review against the issue plan
+
+The issue thread and linked wiki explicitly describe an invitation-only first
+slice. That is a reasonable rollout boundary, but it does not complete the
+broader implementation plan. Task numbers below follow the displayed plan
+(one-based; the MCP task indices are zero-based).
+
+| Task | Review result |
+| --- | --- |
+| 1. Column and consumer audit | Incomplete. The inventory above covers the main content tables, not every column or consumer. For example, `agent_run_events.payload`, `agent_run_journal.events`, and `agent_run_messages.content` are also content-bearing copies in the baseline. Later schema changes and SQL consumers still need a complete audit. Reopened. |
+| 2. Server crypto store | Implemented: branded ciphertext, AES-GCM with row/column/scope AAD, explicit key versions, separate HMAC keys, KMS adapter, coalesced loads and bounded cache lifetime. Concurrent cache eviction and initial-key cleanup were corrected in this review. |
+| 3. Schema and privileges | Partially implemented: the key registry and invitation state/index/privilege migration exist, but other target content tables have no encryption columns. Vault view privileges are revoked; credential migration and statement-log configuration remain open. Reopened. |
+| 4. Repository conversion | Invitations use server paths; issue, page, comment, file, search and history paths remain plaintext. Keep in progress. |
+| 5. Backfill, rotation and recovery | The bounded invitation backfill and response/expiry cleanup exist. DEK rotation is a callable primitive, not an automatic scheduled job. Broader migration, mixed-writer rollback and recovery rehearsals remain open. Keep in progress. |
+| 6. CI guard | Implemented for the converted surface. This review adds invitation RPCs, the key registry and source directories previously omitted by the scanner. This is a source-convention check, not a security boundary against deliberately hidden queries. |
+| 7. Verification | Local regression tests and isolated SQL checks cover the current foundation. Live KMS permissions/failures, production-scale latency, complete search behavior and backup recovery remain unverified. Keep in progress. |
+| 8. Wiki and operational review | The wiki states the current limitations and setup. An operational recovery runbook and measured performance still depend on the remaining implementation and rehearsals. Keep in progress. |
+
+Two departures from the original design should be retained: new encrypted
+invitations have no duplicate plaintext write, and reads select the recorded key
+version instead of trying every historical DEK. Both make the row state explicit
+and avoid keeping plaintext or masking corrupted state. The global invitation
+HMAC index is justified by cross-project account claiming; its equality leakage
+is documented above. Account email remains in Supabase Auth as specified.
+
+The review reproduced and corrected:
+
+- Concurrent key loads could fail when another scope evicted their cache entry
+  before the awaiting caller received it. Callers now receive independent key
+  copies, and shared temporary bytes are cleared after the last waiter.
+- Unicode NFC normalization changed invitation email spelling while Auth lookup
+  and acceptance used trim/lowercase only. Encryption and indexing now preserve
+  that existing identity comparison, including decomposed Unicode addresses.
+- Backfill converted expired rows to `cancelled`, making them permanently
+  invisible to pending-invitation retention. It now deletes those rows and
+  checks the selected status before mutation so a concurrent response wins.
+- The self-hosted scheduler never called encryption maintenance. It now uses
+  the same hourly schedule as Vercel.
+- The CI guard accepted invitation RPC calls and source files outside `app/`
+  and `lib/`. It now checks those paths and the key registry too.
+- The maintenance route test lived outside Vitest's configured test discovery.
+  It now lives with the server encryption tests and runs in the normal suite.
+
+The SQL verification ran against the existing isolated local Supabase instance,
+inside a rolled-back transaction: role privileges, first-key idempotency,
+rotation compare-and-swap, invitation row constraints, redacted RPC responses,
+and email purge on terminal rows passed. No production migration was applied.
+The local suite uses a fake KMS adapter; it cannot establish real KMS latency or
+an AWS policy's correctness.
+
+Before a production rollout, rehearse disabling the write flag with both legacy
+and encrypted rows present. The legacy creation RPC compares plaintext email,
+whereas the encrypted RPC also compares the blind index; mixed deployments must
+not be assumed to provide safe rollback or cross-format uniqueness. This remains
+part of the unfinished migration/recovery task rather than a claim of a verified
+rollback procedure.
 
 ## References
 

@@ -112,11 +112,54 @@ describe("EncryptedStore", () => {
     expect((await writer.current(scope)).version).toBe(2);
   });
 
+  it("returns the winning initial version and clears the caller key copy", async () => {
+    const registry = new MemoryRegistry();
+    const keys = new ManagedDataKeys(registry, new MemoryWrapper());
+    const initialBytes = randomBytes(32);
+    vi.spyOn(keys, "current").mockResolvedValue({ version: 2, bytes: initialBytes });
+    expect(await keys.rotate(scope)).toBe(2);
+    expect(initialBytes).toEqual(Buffer.alloc(32));
+  });
+
   it("coalesces concurrent first-key creation", async () => {
     const wrapper = new MemoryWrapper();
     const keys = new ManagedDataKeys(new MemoryRegistry(), wrapper);
     await Promise.all(Array.from({ length: 20 }, () => keys.current(scope)));
     expect(wrapper.generateCalls).toBe(1);
+  });
+
+  it("returns concurrent key loads even when the cache cannot retain every scope", async () => {
+    const registry = new MemoryRegistry();
+    const wrapper = new MemoryWrapper();
+    const scopes = [scope, { ...scope, id: "project-2" }];
+    const setup = new ManagedDataKeys(registry, wrapper);
+    for (const item of scopes) (await setup.current(item)).bytes.fill(0);
+    const keys = new ManagedDataKeys(registry, wrapper, 60_000, 1);
+    const loaded = await Promise.all(scopes.map((item) => keys.byVersion(item, 1)));
+    for (let index = 0; index < scopes.length; index++) {
+      expect(loaded[index].bytes).toEqual(Buffer.from(registry.records[index].wrappedKey));
+      loaded[index].bytes.fill(0);
+    }
+  });
+
+  it("coalesces unwraps, clears temporary key bytes and retries a failed load", async () => {
+    const registry = new MemoryRegistry();
+    const wrapper = new MemoryWrapper();
+    const setup = new ManagedDataKeys(registry, wrapper);
+    (await setup.current(scope)).bytes.fill(0);
+    const keys = new ManagedDataKeys(registry, wrapper);
+    const plaintext = Buffer.from(registry.records[0].wrappedKey);
+    const unwrap = vi.spyOn(wrapper, "unwrap")
+      .mockRejectedValueOnce(new Error("KMS unavailable"))
+      .mockResolvedValueOnce(plaintext);
+    await expect(keys.byVersion(scope, 1)).rejects.toThrow("KMS unavailable");
+    const loaded = await Promise.all([keys.byVersion(scope, 1), keys.byVersion(scope, 1)]);
+    expect(unwrap).toHaveBeenCalledTimes(2);
+    expect(plaintext).toEqual(Buffer.alloc(32));
+    for (const key of loaded) expect(key.bytes).toEqual(Buffer.from(registry.records[0].wrappedKey));
+    loaded[0].bytes.fill(0);
+    expect(loaded[1].bytes).not.toEqual(Buffer.alloc(32));
+    loaded[1].bytes.fill(0);
   });
 
   it("zeroes an idle cached key when its TTL expires", async () => {
