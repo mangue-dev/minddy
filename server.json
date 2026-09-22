@@ -1,0 +1,31 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.mangue-dev/minddy",
+  "title": "minddy",
+  "description": "Minimal issue tracker: projects, objectives and trackable plans, written by agents over MCP.",
+  "version": "0.10.30",
+  "websiteUrl": "https://www.minddy.app",
+  "repository": {
+    "url": "https://github.com/mangue-dev/minddy",
+    "source": "github",
+    "id": "1288848861"
+  },
+  "icons": [
+    {
+      "src": "https://www.minddy.app/web-app-manifest-192x192.png",
+      "sizes": ["192x192"],
+      "mimeType": "image/png"
+    },
+    {
+      "src": "https://www.minddy.app/web-app-manifest-512x512.png",
+      "sizes": ["512x512"],
+      "mimeType": "image/png"
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://www.minddy.app/api/mcp"
+    }
+  ]
+}
