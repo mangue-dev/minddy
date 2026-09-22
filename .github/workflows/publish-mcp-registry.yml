@@ -52,12 +52,12 @@ jobs:
 
       - name: Authenticate to the registry through GitHub OIDC
         run: |
-          chmod +x "$path"
-          "$path" login github-oidc
+          chmod +x "$PUBLISHER"
+          "$PUBLISHER" login github-oidc
         env:
-          path: ${{ steps.publisher.outputs.path }}
+          PUBLISHER: ${{ steps.publisher.outputs.path }}
 
       - name: Publish server.json
-        run: "$path" publish
+        run: '"$PUBLISHER" publish'
         env:
-          path: ${{ steps.publisher.outputs.path }}
+          PUBLISHER: ${{ steps.publisher.outputs.path }}
