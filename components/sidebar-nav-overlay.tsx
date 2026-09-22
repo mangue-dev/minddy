@@ -72,6 +72,21 @@ export function SidebarNavOverlay({
     };
   }, [shellHiddenAttribute]);
 
+  // While the floating panel is actually on screen, it covers the content
+  // pane's header. On macOS that header is a draggable window region, and
+  // regions resolve in layout order — the header comes after this panel in
+  // the DOM, so its `drag` rect wins over the overlap and the panel's top
+  // controls stay visible but inert. The attribute lets the stylesheet retire
+  // the header's drag region for exactly the time the panel overlaps it.
+  const floating = hidden && shown;
+  useEffect(() => {
+    if (!floating) return;
+    document.body.setAttribute("data-sidebar-floating", "true");
+    return () => {
+      document.body.removeAttribute("data-sidebar-floating");
+    };
+  }, [floating]);
+
   const openPanel = useCallback((e?: { clientX: number; clientY: number }) => {
     if (e) {
       lastPointer.current = { x: e.clientX, y: e.clientY };

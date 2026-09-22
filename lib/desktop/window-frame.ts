@@ -1,4 +1,5 @@
-export const MACOS_TRAFFIC_LIGHT_POSITION = { x: 19, y: 15 } as const;
+/** x mirrors y so the controls sit at the same distance from both window edges. */
+export const MACOS_TRAFFIC_LIGHT_POSITION = { x: 15, y: 15 } as const;
 
 export type DesktopWindowFrameOptions =
   | { autoHideMenuBar: true }

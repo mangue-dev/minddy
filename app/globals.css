@@ -2506,6 +2506,19 @@ html[data-desktop-app] .sidebar-nav-panel {
   -webkit-app-region: no-drag;
 }
 
+/* The no-drag above is not enough, though: regions are collected in layout
+   order and the content header sits AFTER this panel in the DOM (the sidebar
+   renders before the pane's children), so a `no-drag` only digs `drag` rects
+   met earlier. Over the overlap the header's `drag` rect wins, and with the
+   sidebar hidden the header spans the whole window — the panel's top strip
+   (search, filter, new) stays visible but inert on macOS. While the floating
+   panel is actually shown, the header therefore gives up its window handle;
+   the app top bar and the rest of the chrome keep dragging the window. */
+html[data-desktop-platform="darwin"] body[data-sidebar-floating="true"]
+  .app-content-header {
+  -webkit-app-region: no-drag;
+}
+
 html[data-desktop-platform="darwin"] .app-content-header
   :is(
     a,
