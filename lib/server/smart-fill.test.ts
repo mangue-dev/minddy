@@ -226,8 +226,8 @@ vi.mock("@/lib/supabase-service", () => ({
 }));
 
 const DB_CATEGORIES = [
-  { id: "cat-bug", name: "Bug" },
-  { id: "cat-feat", name: "Feature" },
+  { id: "cat-bug", project_id: "project-1", name: "Bug" },
+  { id: "cat-feat", project_id: "project-1", name: "Feature" },
 ];
 const DB_OBJECTIVES = [{ id: "obj-v2", project_id: "project-1", name: "Refonte v2", description: null, status: "in_progress" }];
 
@@ -238,6 +238,7 @@ function queryReturning(rows: unknown[], error: { message: string } | null = nul
   query.select = () => query;
   query.eq = () => query;
   query.in = () => query;
+  query.order = () => query;
   query.maybeSingle = async () => ({ data: rows[0] ?? null, error });
   query.then = (onFulfilled: (value: unknown) => unknown) =>
     Promise.resolve({ data: rows, error }).then(onFulfilled);
@@ -312,7 +313,7 @@ describe("runSmartFill — decision layer", () => {
     expect(spec.state).toMatchObject({
       project: "minddy",
       issue: { title: "Fix the flaky test" },
-      categories: DB_CATEGORIES,
+      categories: DB_CATEGORIES.map(({ id, name }) => ({ id, name })),
       objectives: DB_OBJECTIVES.map(({ id, name, status }) => ({ id, name, status })),
     });
     expect(input).toEqual({ billTo: { userId: "user-1" }, projectId: "project-1" });

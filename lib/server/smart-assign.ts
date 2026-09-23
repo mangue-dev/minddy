@@ -1,4 +1,5 @@
 import "server-only";
+import { categoryStore } from "@/lib/server/category-store";
 
 import { previouslyAssignedIssues } from "./issue-event-store";
 import { afterOrNow } from "@/lib/server/after-safe";
@@ -183,9 +184,13 @@ export async function runSmartAssign(
         fetchAuthUsersById(service, memberIds),
         service
           .from("issue_categories")
-          .select("categories(name)")
+          .select("category_id")
           .eq("issue_id", params.issueId),
       ]);
+      const { data: decodedCategories, error: categoryError } = await categoryStore(service)
+        .select("id, name").eq("project_id", params.projectId)
+        .in("id", (categoryRows ?? []).map((row) => row.category_id));
+      if (categoryError) throw new Error("Unable to read smart-assignment categories");
       const spec = prepareSmartAssign({
         projectName: (project.name as string) ?? "",
         issue: {
@@ -198,9 +203,7 @@ export async function runSmartAssign(
         ownerId,
         rules,
         authUsers,
-        categoryNames: (categoryRows ?? [])
-          .map((r) => (r.categories as { name?: string } | null)?.name)
-          .filter((name): name is string => !!name),
+        categoryNames: (decodedCategories ?? []).map((row) => row.name as string),
       });
       // One decision, two engines: Jev first on the structured state, the
       // `choose_assignee` LLM pass replayed verbatim as the fallback, one

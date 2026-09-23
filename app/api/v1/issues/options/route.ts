@@ -1,3 +1,4 @@
+import { categoryStore } from "@/lib/server/category-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
@@ -27,8 +28,7 @@ export async function GET(request: NextRequest) {
   }
 
   const service = getServiceClient();
-  const { data: categories, error } = await service
-    .from("categories")
+  const { data: categories, error } = await categoryStore(service)
     .select("id, name, color")
     .eq("project_id", auth.project.id)
     .order("name");

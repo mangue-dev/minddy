@@ -1,3 +1,4 @@
+import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
@@ -273,8 +274,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       ? objectiveStore(service).select("*").in("project_id", ownedIds)
       : Promise.resolve({ data: [] as Row[], error: null }),
     ownedIds.length
-      ? service
-          .from("categories")
+      ? categoryStore(service)
           .select("id, project_id, name, color, created_at")
           .in("project_id", ownedIds)
           .order("created_at")

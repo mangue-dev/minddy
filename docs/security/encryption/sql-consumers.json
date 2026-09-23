@@ -948,6 +948,19 @@
       ],
       "functionReferences": []
     },
+    "guard_category_encryption()": {
+      "sha256": "be70c4403b3475a3450af31cc0b468277cba8cc00bb23c13d8a5a1f8eff5ec99",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "envelope_data_keys"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "lock_mfa_amr_epoch_delete()": {
       "sha256": "c757bbeb717a29897ec25dbeecb1e13fc45ca4b71efeda47c3fe2511c428e86e",
       "securityDefiner": true,
@@ -1180,6 +1193,21 @@
       "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
+      "functionReferences": []
+    },
+    "broadcast_category_metadata()": {
+      "sha256": "2b8fd4a43026420fa495096fa2c2737c5100cd19dba74d3bf17ebcb63eaecb93",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "categories"
+      ],
+      "protectedRelations": [
+        "categories"
+      ],
       "functionReferences": []
     },
     "broadcast_notifications_row()": {
@@ -2360,6 +2388,23 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "delete_category_guarded(uuid,uuid,uuid)": {
+      "sha256": "9c5c9a678c5b23aff3767f81bf279c8ca99a6b49f207964b532c0b38c6ba975a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "categories"
+      ],
+      "protectedRelations": [
+        "categories"
+      ],
+      "functionReferences": [
+        "guard_project_actor"
+      ]
+    },
     "get_numo_operation_platform_spend(uuid)": {
       "sha256": "4283bca4554f13dd1604d7d0b4352b0177df5f54a1e5c60952e2ddfcda66e231",
       "securityDefiner": true,
@@ -2725,7 +2770,7 @@
       "functionReferences": []
     },
     "get_user_stats(text,timestamp with time zone)": {
-      "sha256": "5e908353d60138f22d81bd554026c6e634829580c0611df5fda79801b613c1f6",
+      "sha256": "1b76b4b49210e28e4845fe6ac9c1ce6259d0fbecd36f03597937bfc53a14cfbd",
       "securityDefiner": false,
       "configuration": [
         "search_path=public"
@@ -3423,6 +3468,21 @@
       ],
       "functionReferences": []
     },
+    "migrate_category_ciphertext(uuid,uuid,bigint,integer,integer,text)": {
+      "sha256": "e5f664dd3a3fac4cd8faa3c8c390300fbcbf5fa0e18de6770de580dfbeba76f7",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "categories"
+      ],
+      "protectedRelations": [
+        "categories"
+      ],
+      "functionReferences": []
+    },
     "migrate_objective_ciphertext(uuid,uuid,bigint,integer,integer,text)": {
       "sha256": "0aed703a55f78a6082d325ddce2c1b59868118d90f23d5dd928350e3280825b6",
       "securityDefiner": true,
@@ -3949,8 +4009,8 @@
       "definition": "CREATE TRIGGER views_freeze_project_id BEFORE UPDATE OF project_id ON views FOR EACH ROW EXECUTE FUNCTION freeze_project_id()"
     },
     "categories.categories_broadcast": {
-      "function": "broadcast_project_scoped()",
-      "definition": "CREATE TRIGGER categories_broadcast AFTER INSERT OR DELETE OR UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION broadcast_project_scoped()"
+      "function": "broadcast_category_metadata()",
+      "definition": "CREATE TRIGGER categories_broadcast AFTER INSERT OR DELETE OR UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION broadcast_category_metadata()"
     },
     "issues.issues_freeze_project_id": {
       "function": "freeze_project_id()",
@@ -4059,6 +4119,10 @@
     "agent_runs.agent_runs_set_completed_at": {
       "function": "agent_runs_stamp_completed_at()",
       "definition": "CREATE TRIGGER agent_runs_set_completed_at BEFORE UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION agent_runs_stamp_completed_at()"
+    },
+    "categories.categories_encryption_guard": {
+      "function": "guard_category_encryption()",
+      "definition": "CREATE TRIGGER categories_encryption_guard BEFORE INSERT OR UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION guard_category_encryption()"
     },
     "objectives.objectives_encryption_guard": {
       "function": "guard_objective_encryption()",

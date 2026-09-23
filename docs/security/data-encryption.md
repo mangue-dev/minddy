@@ -5,9 +5,10 @@
 The owner requires one complete delivery across all sensitive data. The current
 global inventory, concrete blockers, root-key setup and migration requirements are in
 [the global delivery inventory](encryption/README.md). The invitation-only
-foundation described below is not a production rollout boundary. Personal notes
-and statistics snapshots now also have repository integration and isolated
-migration/recovery tests; the linked global inventory is the current status.
+foundation described below is not a production rollout boundary. Notes,
+statistics snapshots, activity, page versions, comments, objectives and category
+names now have repository integration and isolated migration/recovery tests; the
+linked global inventory is the current status.
 
 This is the initial implementation inventory and rollout contract. Most content
 columns listed below still have unconverted plaintext access paths. No protection against a database
@@ -78,9 +79,10 @@ members no longer receive the pending invitation list. Encrypted invitations
 store a SHA-256 digest of their random preview token; legacy links keep working
 while the backfill replaces their stored bearer token with its digest.
 
-This is a foundation, not completion of MIN-591. Issue/page/comment content,
-derived search/history copies, files, and other inventory rows remain clear.
-There is no scheduled DEK rotation/backfill for those rows yet. Existing credential
+This is a foundation, not completion of MIN-591. Issue and page source content,
+agent data, files, and other inventory rows remain clear. Converted repositories
+have scheduled key rotation and bounded backfill; remaining sources do not.
+Existing credential
 blobs have not moved to Vault, and the managed production statement-logging
 setting has not been changed. The CI guard covers literal table and RPC access
 to `project_invitations` and

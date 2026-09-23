@@ -1,3 +1,4 @@
+import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
   const [projectsRes, objectivesRes, categoriesRes] = await Promise.all([
     auth.supabase.from("projects").select("id, key, name, owner_id").is("deleted_at", null),
     objectiveStore(auth.supabase).select("id, name"),
-    auth.supabase.from("categories").select("id, name"),
+    categoryStore(auth.supabase, auth.user.id).select("id, name"),
   ]);
 
   const loadError = projectsRes.error || objectivesRes.error || categoriesRes.error;

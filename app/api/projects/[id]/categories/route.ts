@@ -1,3 +1,4 @@
+import { categoryStore } from "@/lib/server/category-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -12,8 +13,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await auth.supabase
-    .from("categories")
+  const { data, error } = await categoryStore(auth.supabase, auth.user.id)
     .select("*")
     .eq("project_id", id)
     .order("created_at", { ascending: true });

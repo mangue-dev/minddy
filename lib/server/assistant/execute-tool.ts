@@ -1,3 +1,4 @@
+import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
@@ -758,7 +759,7 @@ async function listGlobalFilterOptions(
   }
 
   const [catsRes, objsRes] = await Promise.all([
-    ctx.service.from("categories").select("id, name").in("project_id", projectIds),
+    categoryStore(ctx.service).select("id, name").in("project_id", projectIds),
     objectiveStore(ctx.service).select("id, name").in("project_id", projectIds).is("deleted_at", null),
   ]);
   if (catsRes.error) return toolError(catsRes.error.message);
@@ -1302,8 +1303,7 @@ export async function executeTool(
         };
       }
       case "list_categories": {
-        const { data, error } = await ctx.supabase
-          .from("categories")
+        const { data, error } = await categoryStore(ctx.supabase)
           .select("id, name, color")
           .eq("project_id", projectId)
           .order("name", { ascending: true });

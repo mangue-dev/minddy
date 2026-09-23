@@ -6,7 +6,7 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 116 application tables and 1,230 columns, their primary
+- `schema.json` records 116 application tables and 1,234 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 188 encryption targets include the original content,
@@ -15,7 +15,7 @@ production migration on the strength of crypto unit tests or this inventory.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 236 functions, ten views and 132 triggers. Function
+- `sql-consumers.json` records 240 functions, ten views and 133 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -24,7 +24,7 @@ production migration on the strength of crypto unit tests or this inventory.
   does not invalidate the inventory.
 
 The first 104 migrations were replayed on the isolated local Supabase stack;
-the objective migration was applied to a schema-only clone of that replay.
+the objective and category migrations were applied to successive schema-only clones of that replay.
 No production rows were copied. Migration
 `20270106910000_numo_history_drop_detail_href.sql` previously failed because
 `CREATE OR REPLACE VIEW` cannot remove columns. It now recreates the three
@@ -79,7 +79,7 @@ must be checked separately.
 
 | Surface | Required work and proof of completion |
 | --- | --- |
-| Projects, issues, categories, pages and views | Convert every server repository read/write and all imports, exports, MCP and AI consumers; add ciphertext/version storage and reject older plaintext writers. Preserve access checks before decryption and existing concurrency semantics. Objectives now have a converted repository and bounded migration; they still need representative staging validation before activation. |
+| Projects, issues, pages and views | Convert every server repository read/write and all imports, exports, MCP and AI consumers; add ciphertext/version storage and reject older plaintext writers. Preserve access checks before decryption and existing concurrency semantics. Objectives and category names now have converted repositories and bounded migrations; they still need representative staging validation before activation. |
 | Histories and derived copies | Page versions, issue events and statistics now have converted repositories and migration. Assistant/agent conversations, checkpoints, messages, journals, tool arguments/results and surface projections remain to be converted with their source rows. |
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
@@ -91,7 +91,7 @@ must be checked separately.
 | Root key and operations | Provision a dedicated root key outside the database and rehearse key backup and restore. The offline root-key rewrap procedure is implemented and tested on isolated PostgreSQL; production rehearsal and application-scale latency remain. Production deployment and migration require a later explicit deployment request. |
 
 The common row codec is connected to personal notes, statistics, activity, page
-versions, comments (including page quotes), and objectives. The remaining repositories in the
+versions, comments (including page quotes), objectives, and categories. The remaining repositories in the
 table above are unconverted. It authenticates the real primary key, table and owner, requires complete rows,
 distinguishes legacy and encrypted states, clears protected columns and rejects
 remaining plaintext search projections. Parent-owned records still require a
@@ -119,7 +119,8 @@ the store wipes the mutable plaintext/key buffers that it owns.
 ## Converted personal content and migration rehearsal
 
 `MINDDY_CONTENT_ENCRYPTION_ENABLED=true` enables staging writes and maintenance
-for `user_scratchpad`, `stat_events`, `issue_events` and `page_versions`. Keep it disabled in production until the
+for `user_scratchpad`, `stat_events`, `issue_events`, `page_versions`, comments,
+objectives and categories. Keep it disabled in production until the
 application-wide gates are satisfied. It is independent of the invitation flag.
 Disabling it pauses backfill and new-record opt-in; already encrypted notes still
 require decryption and encrypted writes. Task-completion snapshots derived from
@@ -133,15 +134,15 @@ revision and obsolete edits conflict. Imports no longer bypass that check or
 silently truncate oversized notes. Realtime sends only invalidation metadata,
 including on legacy rows. Statistics protect the project name, issue title and
 task label together; their user scope remains valid after source deletion. The
-current SQL aggregates only need clear ledger metadata. Project/category/objective
-names in those aggregates still need conversion with their source tables.
+current SQL aggregates only need clear ledger metadata. Project names in those
+aggregates still need conversion with their source table.
 
 The shared row worker reads a bounded batch, decrypts and verifies its newly
 encoded replacement, then commits under repository-specific revision/ownership
 checks. It counts failed/conflicted rows without logging their content. Attempt
 ordering revisits failures without starving subsequent rows. Maintenance processes
-at most 50 rows each for notes, statistics, activity, page versions, comments and
-page comments per run,
+at most 50 rows each for notes, statistics, activity, page versions, comments,
+page comments, objectives and categories per run,
 alongside the invitation batch.
 Each repository reports failure independently. Constraints reject plaintext in
 converted rows, version inconsistencies, revision rollback and identity changes.
@@ -169,6 +170,9 @@ docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U sup
 docker exec supabase_db_minddy-encryption-test createdb -U supabase_admin -T minddy_min591_full_audit minddy_min591_objective_audit
 docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_objective_audit < supabase/migrations/20270107090000_objective_encryption.sql
 docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_objective_audit < scripts/encryption-objectives-regression.sql
+docker exec supabase_db_minddy-encryption-test createdb -U supabase_admin -T minddy_min591_objective_audit minddy_min591_category_audit
+docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_category_audit < supabase/migrations/20270107100000_category_encryption.sql
+docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_category_audit < scripts/encryption-categories-regression.sql
 MINDDY_ENCRYPTION_DB_TEST=true npm test -- lib/server/encryption/database-recovery.integration.test.ts
 ```
 
@@ -303,6 +307,32 @@ the migration CAS, guarded writes, revoked privileges and redacted broadcasts.
 Repository tests cover encryption, projection, tampering and encryption after
 the rollout flag is disabled for a project that already has a key. Production
 flags remain off; no production backfill has run.
+
+## Category source names
+
+`category-store.ts` protects category names with the project content key. The
+repository preserves RLS or an already authorized project scope, decodes names
+for the board, authorized search, public views, exports, API, MCP and AI, and
+never returns ciphertext in those payloads. Exact-name matching and name sorting
+run after authorized decryption. A paged scan covers names beyond the first
+1,000 database rows. ID-only membership checks remain metadata queries.
+
+Default seeding, forge/import reconciliation, category creation, rename and
+account transfer encode complete rows before writing. Renames use a revision
+check; database state constraints reject plaintext in encrypted rows and stale
+plaintext writers once a project content key exists. Client mutation grants are
+removed; deletion rechecks project access inside a guarded SQL function. Realtime
+broadcasts carry only routing metadata. Category
+activity uses IDs, so it does not retain copied names.
+
+The statistics RPC now returns category IDs and counts; the authorized server
+repository hydrates names and merges equal labels for the existing presentation.
+The hourly worker converts or re-encrypts at most 50 categories with verified
+compare-and-swap and fair retry ordering. Isolated SQL verifies state, grants,
+CAS, redacted broadcasts and metadata-only statistics. A disposable PostgreSQL
+dump/restore test recovers category names across two project-key versions with a
+cold cache and rejects an incorrect external root. Representative staging
+latency and the application-wide recovery rehearsal remain outstanding.
 
 ## Object codec status
 

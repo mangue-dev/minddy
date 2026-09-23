@@ -1,3 +1,4 @@
+import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import { readIssueEvents } from "@/lib/server/issue-event-store";
@@ -568,7 +569,7 @@ async function withNames(
   access: ProjectAccess,
 ): Promise<Array<Record<string, unknown>>> {
   const service = getServiceClient();
-  const [users, { data: objectives }, { data: categories }] = await Promise.all(
+  const [users, { data: objectives, error: objectiveError }, { data: categories, error: categoryError }] = await Promise.all(
     [
       fetchAuthUsersById(
         service,
@@ -580,12 +581,12 @@ async function withNames(
         .select("id, name")
         .eq("project_id", access.project.id)
         .is("deleted_at", null),
-      service
-        .from("categories")
+      categoryStore(service)
         .select("id, name")
         .eq("project_id", access.project.id),
     ],
   );
+  if (objectiveError || categoryError) throw new Error("Unable to read issue labels");
   const objectiveNames = new Map((objectives ?? []).map((o) => [o.id, o.name]));
   const categoryNames = new Map((categories ?? []).map((c) => [c.id, c.name]));
 
@@ -624,8 +625,7 @@ async function resolveCategoryRefs(
   names: string[] | undefined,
 ): Promise<{ ids: string[]; unmatched: string[] } | { error: ToolResult }> {
   if (!ids?.length && !names?.length) return { ids: [], unmatched: [] };
-  const { data, error } = await getServiceClient()
-    .from("categories")
+  const { data, error } = await categoryStore(getServiceClient())
     .select("id, name")
     .eq("project_id", projectId);
   if (error) return { error: fail("database_error", error.message) };
@@ -1431,8 +1431,7 @@ export function registerMinddyTools(
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
-      const { data, error } = await getServiceClient()
-        .from("categories")
+      const { data, error } = await categoryStore(getServiceClient())
         .select("id, name, color")
         .eq("project_id", scope.access.project.id)
         .order("name", { ascending: true });

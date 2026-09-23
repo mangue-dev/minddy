@@ -1,4 +1,5 @@
 import "server-only";
+import { categoryStore } from "@/lib/server/category-store";
 
 import { after } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -462,9 +463,8 @@ export async function createIssueForProject({
       }
     }
     if (requestedNames.length > 0) {
-      const { data: cats, error } = await service
-        .from("categories")
-        .select("id")
+      const { data: cats, error } = await categoryStore(service)
+        .select("id, name")
         .eq("project_id", projectId)
         .in("name", requestedNames);
       if (error) {

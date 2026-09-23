@@ -1,3 +1,4 @@
+import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
 
@@ -27,7 +28,7 @@ export async function gatherProjectPromptContext({
     { data: recentIssues },
     { data: memberRows },
     { data: objectives, error: objectiveError },
-    { data: categories },
+    { data: categories, error: categoryError },
     { data: pages },
   ] = await Promise.all([
     supabase.from("issues").select("status").eq("project_id", project.id).is("deleted_at", null),
@@ -47,8 +48,7 @@ export async function gatherProjectPromptContext({
       .is("deleted_at", null)
       .eq("project_id", project.id)
       .order("created_at", { ascending: true }),
-    supabase
-      .from("categories")
+    categoryStore(supabase)
       .select("id, name")
       .eq("project_id", project.id)
       .order("name", { ascending: true }),
@@ -62,6 +62,7 @@ export async function gatherProjectPromptContext({
       .order("position", { ascending: true }),
   ]);
   if (objectiveError) throw new Error("Unable to read objective prompt context");
+  if (categoryError) throw new Error("Unable to read category prompt context");
 
   const statusCounts: Record<string, number> = {};
   for (const row of statusRows ?? []) {
@@ -91,7 +92,7 @@ export async function gatherProjectPromptContext({
     })),
     members,
     objectives: (objectives ?? []) as PromptProjectContext["objectives"],
-    categories: (categories ?? []) as PromptProjectContext["categories"],
+    categories: (categories ?? []) as unknown as PromptProjectContext["categories"],
     pages: (pages ?? []) as PromptProjectContext["pages"],
   };
 }

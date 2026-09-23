@@ -12,6 +12,7 @@ const state = vi.hoisted(() => ({
   history: vi.fn(),
   comments: vi.fn(),
   objectives: vi.fn(),
+  categories: vi.fn(),
 }));
 
 vi.mock("@/lib/server/encryption/invitation-email", () => ({
@@ -29,6 +30,7 @@ vi.mock("@/lib/server/encryption/stat-events-backfill", () => ({ backfillStatEve
 vi.mock("@/lib/server/encryption/history-backfill", () => ({ backfillHistoryBatch: state.history }));
 vi.mock("@/lib/server/encryption/comment-backfill", () => ({ backfillCommentsBatch: state.comments }));
 vi.mock("@/lib/server/encryption/objective-backfill", () => ({ backfillObjectivesBatch: state.objectives }));
+vi.mock("@/lib/server/encryption/category-backfill", () => ({ backfillCategoriesBatch: state.categories }));
 
 const { GET } = await import("@/app/api/cron/encryption-maintenance/route");
 const secret = "x".repeat(32);
@@ -50,6 +52,7 @@ beforeEach(() => {
   state.history.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.comments.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.objectives.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
+  state.categories.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.rotate.mockReset().mockResolvedValue({ scanned: 0, advanced: 0, failed: 0 });
 });
 
@@ -107,6 +110,7 @@ describe("encryption maintenance cron", () => {
     expect(state.comments).toHaveBeenCalledWith("comments", 50, expect.any(AbortSignal));
     expect(state.comments).toHaveBeenCalledWith("page_comments", 50, expect.any(AbortSignal));
     expect(state.objectives).toHaveBeenCalledWith(50, expect.any(AbortSignal));
+    expect(state.categories).toHaveBeenCalledWith(50, expect.any(AbortSignal));
     expect(state.backfill).not.toHaveBeenCalled();
     expect(state.rotate).toHaveBeenCalled();
   });

@@ -1,3 +1,4 @@
+import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
 
@@ -155,10 +156,8 @@ export async function runSmartTriage({
       .select("id, name, status")
       .is("deleted_at", null)
       .eq("project_id", projectId),
-    service
-      .from("categories")
+    categoryStore(service)
       .select("id, name")
-      .is("deleted_at", null)
       .eq("project_id", projectId),
   ]);
   if (issueRows.error) {
@@ -166,6 +165,7 @@ export async function runSmartTriage({
     throw new Error(issueRows.error.message);
   }
   if (objectiveRows.error) throw new Error("Unable to read smart-triage objective context");
+  if (categoryRows.error) throw new Error("Unable to read smart-triage category context");
 
   const issues = (issueRows.data ?? []).map(
     (row): TriageIssueRow => ({

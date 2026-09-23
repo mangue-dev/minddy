@@ -1,3 +1,4 @@
+import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
       .is("projects.deleted_at", null)
       .order("updated_at", { ascending: false })
       .limit(MAX_PAGES),
-    auth.supabase.from("categories").select("id, project_id, name, color"),
+    categoryStore(auth.supabase, auth.user.id).select("id, project_id, name, color"),
     auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null),
   ]);
 
@@ -111,7 +112,7 @@ export async function GET(request: NextRequest) {
   const pages = stripJoin<SearchIndexPage>(pagesRes.data);
 
   const categories: Record<string, Category[]> = {};
-  for (const c of (categoriesRes.data ?? []) as Category[]) {
+  for (const c of (categoriesRes.data ?? []) as unknown as Category[]) {
     (categories[c.project_id] ??= []).push(c);
   }
 

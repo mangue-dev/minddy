@@ -1,3 +1,4 @@
+import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
 
@@ -321,8 +322,8 @@ export function fillParameters(ctx: SmartFillContext): Record<string, unknown> {
  */
 async function gatherContext(projectId: string): Promise<SmartFillContext> {
   const service = getServiceClient();
-  const [{ data: categories }, { data: objectives, error: objectiveError }] = await Promise.all([
-    service.from("categories").select("id, name").eq("project_id", projectId),
+  const [{ data: categories, error: categoryError }, { data: objectives, error: objectiveError }] = await Promise.all([
+    categoryStore(service).select("id, name").eq("project_id", projectId),
     objectiveStore(service)
       .select("id, name, status")
       .eq("project_id", projectId)
@@ -331,6 +332,7 @@ async function gatherContext(projectId: string): Promise<SmartFillContext> {
       .in("status", ["planned", "in_progress"]),
   ]);
   if (objectiveError) throw new Error("Unable to read smart-fill objective context");
+  if (categoryError) throw new Error("Unable to read smart-fill category context");
   return {
     categories: (categories ?? []) as SmartFillContext["categories"],
     objectives: (objectives ?? []) as SmartFillContext["objectives"],

@@ -8,6 +8,7 @@ import {
   isValidColor,
 } from "@/lib/category-colors";
 import { DEFAULT_CATEGORIES } from "@/lib/default-categories";
+import { categoryStore, decodeCategory, encodeCategory } from "@/lib/server/category-store";
 
 // Name length limit (MIN-118) — a label remains short, beyond that it is truncated.
 const MAX_NAME_LENGTH = 200;
@@ -68,13 +69,18 @@ export async function seedDefaultCategories({
   }
   if (count) return;
 
-  const { error } = await service.from("categories").insert(
-    DEFAULT_CATEGORIES.map((category) => ({
+  let rows;
+  try {
+    rows = await Promise.all(DEFAULT_CATEGORIES.map((category) => encodeCategory({
       project_id: projectId,
       name: names[category.key] ?? category.key,
       color: category.color,
-    }))
-  );
+    })));
+  } catch {
+    console.error("[categories] default seed encryption failed");
+    return;
+  }
+  const { error } = await service.from("categories").insert(rows);
   if (error) console.error("[categories] default seed failed:", error.message);
 }
 
@@ -113,8 +119,7 @@ export async function resolveCategoryIdsByName(
   if (wanted.size === 0) return { idByKey, created: 0 };
 
   const service = getServiceClient();
-  const { data: existing, error } = await service
-    .from("categories")
+  const { data: existing, error } = await categoryStore(service)
     .select("id, name")
     .eq("project_id", projectId);
   if (error) {
@@ -133,22 +138,30 @@ export async function resolveCategoryIdsByName(
 
   // Continue the palette round-robin where the project's list left off.
   const offset = (existing ?? []).length;
-  const { data: created, error: createError } = await service
-    .from("categories")
-    .insert(
-      missing.map(([, name], i) => ({
+  let newRows;
+  try {
+    newRows = await Promise.all(missing.map(([, name], i) => encodeCategory({
         project_id: projectId,
         // Already in stored form (`categoryName` at the top of the function): the
         // truncating here would reopen the gap between the key and the written line.
         name,
         color: CATEGORY_COLORS[(offset + i) % CATEGORY_COLORS.length],
-      }))
-    )
-    .select("id, name");
+      })));
+  } catch {
+    console.error("[categories] resolve encryption failed");
+    return null;
+  }
+  const { data: stored, error: createError } = await service
+    .from("categories")
+    .insert(newRows)
+    .select("id");
   if (createError) {
     console.error("[categories] resolve create failed:", createError.message);
     return null;
   }
+  const { data: created, error: readError } = await categoryStore(service)
+    .select("id, name").in("id", (stored ?? []).map((row) => row.id));
+  if (readError) return null;
   for (const cat of created ?? []) {
     idByKey.set(categoryKey(cat.name as string), cat.id as string);
   }
@@ -196,9 +209,15 @@ export async function createCategory({
   }
 
   const service = getServiceClient();
+  let encoded;
+  try {
+    encoded = await encodeCategory({ project_id: projectId, name, color });
+  } catch {
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
   const { data, error } = await service
     .from("categories")
-    .insert({ project_id: projectId, name, color })
+    .insert(encoded)
     .select("*")
     .single();
 
@@ -206,7 +225,11 @@ export async function createCategory({
     console.error("[categories] create failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  return { ok: true, category: data };
+  try {
+    return { ok: true, category: await decodeCategory(data, actorId) };
+  } catch {
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
 }
 
 /**
@@ -260,18 +283,44 @@ export async function updateCategory({
   }
 
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("categories")
-    .update(updates)
-    .eq("id", categoryId)
-    .eq("project_id", projectId)
-    .select("*")
-    .maybeSingle();
+  const { data: before, error: readError } = await service
+    .from("categories").select("*").eq("id", categoryId).eq("project_id", projectId).maybeSingle();
+  if (readError) return { ok: false, status: 500, errorKey: "databaseError" };
+  if (!before) return { ok: false, status: 404, errorKey: "categoryNotFound" };
+  let patch: Record<string, unknown> = { ...updates };
+  if (updates.name !== undefined) {
+    try {
+      const plain = await decodeCategory(before, actorId);
+      const encoded = await encodeCategory({ ...plain, ...updates }, before.encryption_version);
+      patch = encoded.encryption_version === undefined
+        ? updates
+        : { name: encoded.name, encrypted_content: encoded.encrypted_content ?? null,
+          encryption_version: encoded.encryption_version, ...("color" in updates ? { color: updates.color } : {}) };
+    } catch {
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+  }
+  let write = service.from("categories").update(patch)
+    .eq("id", categoryId).eq("project_id", projectId);
+  if (Number.isSafeInteger(before.encryption_revision)) {
+    write = write.eq("encryption_revision", before.encryption_revision);
+  }
+  const { data, error } = await write.select("*").maybeSingle();
 
   if (error) {
     console.error("[categories] update failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  if (!data) return { ok: false, status: 404, errorKey: "categoryNotFound" };
-  return { ok: true, category: data };
+  if (!data) {
+    const { data: current, error: currentError } = await service.from("categories")
+      .select("id").eq("id", categoryId).eq("project_id", projectId).maybeSingle();
+    if (currentError) return { ok: false, status: 500, errorKey: "databaseError" };
+    return current ? { ok: false, status: 409, errorKey: "databaseError" }
+      : { ok: false, status: 404, errorKey: "categoryNotFound" };
+  }
+  try {
+    return { ok: true, category: await decodeCategory(data, actorId) };
+  } catch {
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
 }

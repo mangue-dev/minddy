@@ -1,5 +1,6 @@
 import { importComment } from "./comment-store";
 import { encodeObjective } from "./objective-store";
+import { encodeCategory } from "./category-store";
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -569,6 +570,21 @@ async function importSimpleEntity(
         : service.from("objectives").insert(stored);
       const { data, error } = await write.select("id");
       if (error || data?.length !== 1) throw new Error("Unable to import objective");
+    }
+  } else if (table === "categories") {
+    for (const input of out) {
+      const { data: previous, error: readError } = await service.from("categories").select("*")
+        .eq("id", input.id).maybeSingle();
+      if (readError || previous && previous.project_id !== input.project_id) {
+        throw new Error("Unable to inspect imported category");
+      }
+      const stored = await encodeCategory(input, Number(previous?.encryption_version ?? 0));
+      const write = previous
+        ? service.from("categories").update(stored).eq("id", input.id)
+          .eq("project_id", input.project_id).eq("encryption_revision", previous.encryption_revision)
+        : service.from("categories").insert(stored);
+      const { data, error } = await write.select("id");
+      if (error || data?.length !== 1) throw new Error("Unable to import category");
     }
   } else await upsertRows(service, table, out);
   return out.length;

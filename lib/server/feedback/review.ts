@@ -1,3 +1,4 @@
+import { categoryStore } from "@/lib/server/category-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -499,9 +500,10 @@ async function prepareFeedbackReview(
 
   const [rejectedPairs, catRows, translation] = await Promise.all([
     lookForDuplicates ? fetchRejectedPairIds(post.id) : Promise.resolve(new Set<string>()),
-    service.from("categories").select("id, name").eq("project_id", post.project_id),
+    categoryStore(service).select("id, name").eq("project_id", post.project_id),
     projectTranslationSettings(post.project_id),
   ]);
+  if (catRows.error) throw new Error("Unable to read feedback review categories");
 
   let candidates: MatchedPost[] = [];
   if (lookForDuplicates) {

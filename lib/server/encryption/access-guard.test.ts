@@ -31,6 +31,8 @@ describe("encrypted access CI guard", () => {
     ["lib/server/export.ts", 'service.from("user_scratchpad").select("content")'],
     ["components/notes.tsx", 'client.from("user_scratchpad").update(patch)'],
     ["lib/server/export.ts", 'service.from("stat_events").select("*")'],
+    ["lib/server/export.ts", 'service.from("categories").select("name")'],
+    ["lib/server/export.ts", 'service.rpc("delete_category_guarded", params)'],
     ["app/unsafe.ts", 'service.from("stat_events").insert(rows)'],
     ["captures/world/seed/005-carnet.mjs", 'client.from("user_scratchpad").select("user_id,content")'],
   ])("rejects unreviewed access in %s", (file, source) => {

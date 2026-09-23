@@ -98,7 +98,7 @@ const DB = {
     assignee_id: null as string | null,
   },
   members: [{ user_id: "user-dev" }, { user_id: "user-qa" }],
-  categories: [{ categories: { name: "Bug" } }, { categories: { name: "Technique" } }],
+  categories: [{ category_id: "cat-bug" }, { category_id: "cat-tech" }],
 };
 
 const updatePayloads: unknown[] = [];
@@ -133,6 +133,10 @@ function wireDb() {
     if (table === "project_members") return fakeQuery(() => ({ data: DB.members, error: null }));
     if (table === "issue_categories")
       return fakeQuery(() => ({ data: DB.categories, error: null }));
+    if (table === "categories") return fakeQuery(() => ({ data: [
+      { id: "cat-bug", project_id: "project-1", name: "Bug" },
+      { id: "cat-tech", project_id: "project-1", name: "Technique" },
+    ], error: null }));
     if (table === "issues") {
       issueQueries += 1;
       const isClaim = issueQueries > 1;

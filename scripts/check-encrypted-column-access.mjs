@@ -13,6 +13,19 @@ const allowedInvitationAccess = new Set([
 
 const rules = [
   {
+    access: /\.\s*from\s*\(\s*["'`]categories["'`]\s*\)/,
+    allowed: new Set(["lib/server/category-store.ts", "lib/server/categories.ts",
+      "lib/server/encryption/category-backfill.ts", "lib/server/account-import.ts",
+      "lib/server/create-issue.ts", "lib/server/set-issue-categories.ts",
+      "lib/server/feedback/set-post-categories.ts", "app/api/categories/[id]/route.ts",
+      "app/api/v1/issues/route.ts", "captures/world/seed/013-categories-en.mjs",
+      "captures/world/seed/_categories.mjs"]),
+  },
+  {
+    access: /\.\s*rpc\s*\(\s*["'`]delete_category_guarded["'`]/,
+    allowed: new Set(["app/api/categories/[id]/route.ts"]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]objectives["'`]\s*\)/,
     allowed: new Set(["lib/server/objective-store.ts", "lib/server/objectives.ts",
       "lib/server/account-import.ts", "lib/server/encryption/objective-backfill.ts"]),
