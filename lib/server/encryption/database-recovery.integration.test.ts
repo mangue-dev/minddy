@@ -1,7 +1,8 @@
 import { execFileSync } from "node:child_process";
-import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import { ManagedDataKeys, type KeyRegistry, type KeyWrapper, type WrappedDataKey } from "./keys";
+import { ManagedDataKeys, type KeyRegistry, type WrappedDataKey } from "./keys";
+import { LocalKeyWrapper } from "./local-key-wrapper";
 import { EncryptedStore, type EncryptionScope } from "./store";
 import { EncryptedRowCodec, type StoredRow } from "./row-codec";
 
@@ -16,25 +17,9 @@ function sql(database: string, statement: string): string {
   }).trim();
 }
 
-/** Test-only KMS substitute. Its root stays in memory, outside both databases/dump. */
-function kms(root: Buffer): KeyWrapper {
-  return {
-    async generate(scope) {
-      const bytes = randomBytes(32);
-      const iv = randomBytes(12);
-      const cipher = createCipheriv("aes-256-gcm", root, iv);
-      cipher.setAAD(Buffer.from(JSON.stringify(scope)));
-      const ciphertext = Buffer.concat([cipher.update(bytes), cipher.final()]);
-      return { bytes, wrappedKey: Buffer.concat([iv, cipher.getAuthTag(), ciphertext]) };
-    },
-    async unwrap(record) {
-      const wrapped = Buffer.from(record.wrappedKey);
-      const cipher = createDecipheriv("aes-256-gcm", root, wrapped.subarray(0, 12));
-      cipher.setAAD(Buffer.from(JSON.stringify(record.scope)));
-      cipher.setAuthTag(wrapped.subarray(12, 28));
-      return Buffer.concat([cipher.update(wrapped.subarray(28)), cipher.final()]);
-    },
-  };
+function wrapper(root: Buffer): LocalKeyWrapper {
+  vi.stubEnv("MINDDY_DATA_ROOT_KEY", root.toString("hex"));
+  return new LocalKeyWrapper();
 }
 
 function registry(database: string): KeyRegistry {
@@ -60,7 +45,7 @@ function registry(database: string): KeyRegistry {
   };
 }
 
-describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with a local KMS fixture", () => {
+describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root key", () => {
   it("restores mixed row/key versions with cold caches and cannot recover without the external root", async () => {
     const suffix = randomUUID().replaceAll("-", "");
     const source = `minddy_min591_source_${suffix}`;
@@ -78,7 +63,7 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with a local KMS fix
         sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${template};`);
         created.push(name);
       }
-      const keys = new ManagedDataKeys(registry(source), kms(root));
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
       const codec = new EncryptedRowCodec(new EncryptedStore(keys));
       for (const [index, userId] of users.entries()) {
         const row: StoredRow = { user_id: userId, content: `Private restore fixture ${index}`, rev: 4,
@@ -112,7 +97,7 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with a local KMS fix
       sql(restored, dump);
       const rows: StoredRow[] = JSON.parse(sql(restored, "SELECT json_agg(s) FROM public.user_scratchpad s;"));
       const statistics: StoredRow[] = JSON.parse(sql(restored, "SELECT json_agg(s) FROM public.stat_events s;"));
-      const restoredKeys = new ManagedDataKeys(registry(restored), kms(root));
+      const restoredKeys = new ManagedDataKeys(registry(restored), wrapper(root));
       const restoredCodec = new EncryptedRowCodec(new EncryptedStore(restoredKeys));
       for (const [index, userId] of users.entries()) {
         const row = rows.find((candidate) => candidate.user_id === userId)!;
@@ -125,12 +110,13 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with a local KMS fix
         expect(snapshot).toMatchObject({ project_name: `Private project snapshot ${index}`, task_text: `Private task snapshot ${index}` });
         restoredKeys.invalidate(contexts[index].scope);
       }
-      const missingRoot = new EncryptedRowCodec(new EncryptedStore(new ManagedDataKeys(registry(restored), kms(randomBytes(32)))));
+      const missingRoot = new EncryptedRowCodec(new EncryptedStore(new ManagedDataKeys(registry(restored), wrapper(randomBytes(32)))));
       await expect(missingRoot.decode(rows.find((row) => row.user_id === users[0])!, contexts[0], {
         actorId: users[0], reason: "migration_verification",
       })).rejects.toThrow();
     } finally {
       root.fill(0);
+      vi.unstubAllEnvs();
       log.mockRestore();
       for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
     }
@@ -155,7 +141,7 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with a local KMS fix
         INSERT INTO public.projects(id, owner_id, name, key) VALUES(${quote(project)},${quote(actor)},'Source fixture','HISTORY');
         INSERT INTO public.issues(id, project_id, number, title) VALUES(${quote(issue)},${quote(project)},1,'Source fixture');
         INSERT INTO public.pages(id, project_id, position, title, created_by) VALUES(${quote(page)},${quote(project)},'0','Source fixture',${quote(actor)});`);
-      const keys = new ManagedDataKeys(registry(source), kms(root));
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
       const codec = new EncryptedRowCodec(new EncryptedStore(keys));
       for (const number of [1, 2]) {
         if (number === 2) await keys.rotate(scope, 1);
@@ -186,7 +172,7 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with a local KMS fix
       expect(dump).not.toContain("Protected");
       expect(dump).not.toContain(root.toString("base64"));
       sql(restored, dump);
-      const restoredKeys = new ManagedDataKeys(registry(restored), kms(root));
+      const restoredKeys = new ManagedDataKeys(registry(restored), wrapper(root));
       const restoredCodec = new EncryptedRowCodec(new EncryptedStore(restoredKeys));
       for (const table of ["issue_events", "page_versions", "comments", "page_comments"] as const) {
         const stored: StoredRow[] = JSON.parse(sql(restored, `SELECT json_agg(r) FROM public.${table} r;`));
@@ -205,6 +191,7 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with a local KMS fix
       }
     } finally {
       root.fill(0);
+      vi.unstubAllEnvs();
       log.mockRestore();
       for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
     }

@@ -14,7 +14,7 @@ export async function shouldEncryptProjectHistory(projectId: string): Promise<bo
 
 /** Old installations need no key provider; a migrated database also rejects stale plaintext writers. */
 export function canWriteLegacyHistory(): boolean {
-  return !isContentEncryptionEnabled() && !process.env.MINDDY_DATA_KMS_KEY_ID;
+  return !isContentEncryptionEnabled() && !process.env.MINDDY_DATA_ROOT_KEY;
 }
 
 function validateContent(table: HistoryTable, row: Record<string, unknown>): void {

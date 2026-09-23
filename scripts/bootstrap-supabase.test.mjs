@@ -37,6 +37,8 @@ test("bootstrap always generates the forge secrets; optional secrets follow capa
   const minimal = generatedSecrets();
   assert.ok(minimal.AI_KEY_ENCRYPTION_SECRET);
   assert.ok(minimal.FEEDBACK_SSO_ENCRYPTION_SECRET);
+  assert.match(minimal.MINDDY_DATA_ROOT_KEY, /^[a-f0-9]{64}$/);
+  assert.notEqual(minimal.MINDDY_DATA_ROOT_KEY, minimal.AI_KEY_ENCRYPTION_SECRET);
   // Forge secrets are unconditional: GitHub/GitLab connect through the
   // managed forge relay by default.
   assert.ok(minimal.GIT_STATE_SECRET);

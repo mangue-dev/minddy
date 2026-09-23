@@ -2,7 +2,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 
-import { AwsKmsKeyWrapper } from "./aws-kms";
+import { LocalKeyWrapper } from "./local-key-wrapper";
 import { ManagedDataKeys, type KeyRegistry, type WrappedDataKey } from "./keys";
 import { EncryptedStore, type EncryptionScope } from "./store";
 
@@ -92,12 +92,9 @@ let indexKeys: ManagedDataKeys | null = null;
 let store: EncryptedStore | null = null;
 
 function configuredKeys(purpose: Purpose): ManagedDataKeys {
-  const keyId = process.env.MINDDY_DATA_KMS_KEY_ID;
-  const region = process.env.MINDDY_DATA_KMS_REGION ?? process.env.AWS_REGION;
-  if (!keyId || !region) throw new Error("Data encryption KMS is not configured");
   return new ManagedDataKeys(
     new SupabaseKeyRegistry(purpose),
-    new AwsKmsKeyWrapper(keyId, region, purpose),
+    new LocalKeyWrapper(purpose),
   );
 }
 
@@ -139,7 +136,7 @@ export async function listDueContentKeys(before: string, limit: number): Promise
   });
 }
 
-/** Persist before calling KMS so a timeout or failing scope cannot starve later tenants. */
+/** Persist before wrapping so a failing scope cannot starve later tenants. */
 export async function markContentKeyRotationAttempt(record: DueDataKey, attemptedAt: string): Promise<void> {
   const { error } = await getServiceClient().from("envelope_data_keys")
     .update({ rotation_attempted_at: attemptedAt })

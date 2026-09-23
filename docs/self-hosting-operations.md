@@ -116,6 +116,10 @@ certificates after restore. A local second copy checks the procedure, but is
 not protection against host loss. Preserve the verified release assets and
 OCI digests with the backup. Retain the original database image by digest;
 `postgres-image-id.txt` detects a different local image before physical restore.
+The sealed `instance.env` contains `MINDDY_DATA_ROOT_KEY`; a database or Storage
+backup alone cannot decrypt application content. Because this complete backup
+includes both key and data, its outer encryption and access controls are the
+confidentiality boundary. Verify that the restored environment uses the same key.
 
 Keep writes closed through an update. For a backup-only operation, resume with
 `compose up -d --wait` after the sealed copy has been verified.

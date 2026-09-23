@@ -9,6 +9,7 @@ import {
 } from "./store";
 import { getBlindIndexKeys, getEncryptedStore } from "./registry";
 import { auditDecryption, type DecryptAudit } from "./audit";
+import { hasDataRootKey } from "./local-key-wrapper";
 
 const INDEX_SCOPE: EncryptionScope = {
   kind: "system",
@@ -48,8 +49,7 @@ export function isInvitationEncryptionEnabled(): boolean {
 }
 
 export function isInvitationEncryptionConfigured(): boolean {
-  return Boolean(process.env.MINDDY_DATA_KMS_KEY_ID &&
-    (process.env.MINDDY_DATA_KMS_REGION || process.env.AWS_REGION));
+  return hasDataRootKey();
 }
 
 function valueContext(projectId: string, invitationId: string): EncryptionContext {

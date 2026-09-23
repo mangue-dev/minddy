@@ -50,7 +50,7 @@ function query() {
 
 const client = { from: () => query() } as unknown as SupabaseClient;
 vi.mock("./registry", () => ({ getEncryptedStore: () => {
-  if (!state.crypto) throw new Error("KMS unavailable");
+  if (!state.crypto) throw new Error("Root key unavailable");
   return state.crypto;
 } }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => client }));
@@ -84,7 +84,7 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
 
 describe("personal content repository encryption", () => {
-  it("serves legacy and pre-migration rows without requiring KMS", async () => {
+  it("serves legacy and pre-migration rows without requiring a root key", async () => {
     state.crypto = null;
     legacy();
     expect((await getScratchpad(client, "user-1")).content).toBe("- [ ] Private task");
@@ -117,14 +117,14 @@ describe("personal content repository encryption", () => {
     expect(JSON.stringify(state.rows.get("user-1"))).not.toContain("Still encrypted");
   });
 
-  it("fails closed on KMS loss or inconsistent persisted state instead of returning an empty note", async () => {
+  it("fails closed on root-key loss or inconsistent persisted state instead of returning an empty note", async () => {
     legacy();
     vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");
     await setScratchpad(client, "user-1", "Encrypted content", 4);
     const before = structuredClone(state.rows.get("user-1"));
     state.crypto = null;
-    await expect(getScratchpad(client, "user-1")).rejects.toThrow("KMS unavailable");
-    await expect(setScratchpad(client, "user-1", "Replacement", 5)).rejects.toThrow("KMS unavailable");
+    await expect(getScratchpad(client, "user-1")).rejects.toThrow("Root key unavailable");
+    await expect(setScratchpad(client, "user-1", "Replacement", 5)).rejects.toThrow("Root key unavailable");
     expect(state.rows.get("user-1")).toEqual(before);
     state.rows.set("user-1", { ...before, encryption_version: 0 });
     await expect(getScratchpad(client, "user-1")).rejects.toThrow("encryption state");

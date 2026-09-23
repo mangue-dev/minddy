@@ -129,7 +129,7 @@ export async function inviteMember({
   // concurrent requests therefore cannot consume the same final slot.
   const encrypted = isInvitationEncryptionEnabled();
   if (encrypted && !isInvitationEncryptionConfigured()) {
-    console.error("[members] invitation encryption is enabled without KMS configuration");
+    console.error("[members] invitation encryption is enabled without a valid data root key");
     return { ok: false, status: 503, errorKey: "databaseError" };
   }
   const invitationId = encrypted ? randomUUID() : null;

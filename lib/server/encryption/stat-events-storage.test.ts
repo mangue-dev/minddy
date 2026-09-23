@@ -49,7 +49,7 @@ function query(table: string) {
 }
 const client = { from: query } as unknown as SupabaseClient;
 vi.mock("./registry", () => ({ getEncryptedStore: () => {
-  if (!state.crypto) throw new Error("KMS unavailable");
+  if (!state.crypto) throw new Error("Root key unavailable");
   return state.crypto;
 } }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => client }));
@@ -78,7 +78,7 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
 
 describe("protected statistics snapshots", () => {
-  it("reads legacy exports without KMS and includes historical task labels", async () => {
+  it("reads legacy exports without a root key and includes historical task labels", async () => {
     state.crypto = null;
     await appendStatEvents(client, [event(), event("other-user")]);
     const rows = await readStatEvents(client, "user-1");

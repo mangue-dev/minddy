@@ -87,7 +87,7 @@ must be checked separately.
 | Feedback and sharing | Encrypt private feedback identities/content/embeddings and recoverable share tokens, with lookup indexes and retention. Owner dialogs must still recover share URLs, so hashing the only stored share token would break the product. |
 | Credentials and configuration | Migrate legacy environment-key envelopes and secret/configuration stores to the agreed protected boundary; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
 | Migration and recovery | Add restartable batches for every target and object, compare-and-swap against concurrent edits, verification counters, rejection of obsolete writers, a restoration rehearsal and retention of historical wrapped keys. Test mixed plaintext/encrypted tenants and old versions. |
-| KMS and operations | Provision a separate test key/role, run the real-KMS test and application-scale latency measurements, verify production IAM/audit/alerts and backup recovery. Production deployment and migration require a later explicit deployment request. |
+| Root key and operations | Provision a dedicated root key outside the database, rehearse key backup and restore, add a safe root-key rewrap procedure, and measure application-scale latency. Production deployment and migration require a later explicit deployment request. |
 
 The common row codec is connected to personal notes, statistics, activity, page
 versions and comments (including page quotes). The remaining repositories in the
@@ -102,10 +102,10 @@ complete authenticated context. That context includes the owner, table, column,
 primary key, DEK version and JSON/binary encoding. A random 96-bit GCM nonce is
 then used under that derived key. This avoids accumulating every scope write
 under one AES key; a cache TTL alone would not limit that key's lifetime use.
-Derivation is local and adds no KMS calls. Independent WebCrypto interoperability
+Derivation is local and adds no external key-service calls. Independent WebCrypto interoperability
 and tampering tests exercise both encryption directions. See
 [RFC 5869](https://www.rfc-editor.org/info/rfc5869/) for HKDF. This is Minddy's own
-versioned envelope format, not the AWS Encryption SDK's wire format.
+versioned envelope format.
 
 Formats 1 and 2 remain readable. Format 2 introduced authenticated key versions;
 format 1 lacks that binding and must eventually be rewritten. Converted row
@@ -122,7 +122,7 @@ for `user_scratchpad`, `stat_events`, `issue_events` and `page_versions`. Keep i
 application-wide gates are satisfied. It is independent of the invitation flag.
 Disabling it pauses backfill and new-record opt-in; already encrypted notes still
 require decryption and encrypted writes. Task-completion snapshots derived from
-those notes remain encrypted even with the flag disabled. KMS failures never
+those notes remain encrypted even with the flag disabled. Root-key failures never
 fall back to plaintext. Statistics retain their existing best-effort delivery
 contract; account imports instead surface failures.
 
@@ -149,8 +149,8 @@ An opt-in local integration test uses real PostgreSQL key-registry RPCs and a
 real `pg_dump`/restore of notes, statistics, wrapped keys and fixture users into
 disposable databases. A second rehearsal covers project activity and page
 snapshots, comments and page quotes across key rotation. These tests recover mixed legacy/current/historical versions
-with empty caches, and reject the wrong wrapping key. The KMS in this test is an
-in-memory substitute, not AWS. This is a restoration proof for those tables,
+with empty caches, and reject the wrong wrapping key. The test uses the same local
+root-key wrapper as production. This is a restoration proof for those tables,
 not a full application recovery rehearsal. Source projects/issues/pages in the
 history fixture remain plaintext and have no nested hierarchy; restoration of
 the eventual encrypted sources and arbitrary self-referential trees still needs
@@ -172,7 +172,7 @@ The SQL rehearsals roll back all fixtures and check RLS, obsolete writers,
 constraint failures, metadata-only Realtime, statistics aggregation and snapshot
 survival after source deletion. The recovery test creates and drops only its
 uniquely named databases and requires an empty audit template. Default tests
-skip this integration test and the live AWS test. Policy-wide serialization
+skip this integration test. Policy-wide serialization
 round trips cover 73 supported protected tables; they are not proof that those
 repositories are converted or authorized. `ai_decision_evaluations` has no
 primary key; it needs a stable identity before the row codec can protect it.
@@ -206,7 +206,7 @@ reads IDs/timestamps and deletes rows through existing cascades.
 
 The migration adds explicit row state, revision/CAS guards, fair retry queues
 and scheduled 50-row batches for both tables. Once a project has a content key,
-new histories remain encrypted even with the rollout flag off. Without KMS
+new histories remain encrypted even with the rollout flag off. Without root-key
 configuration, stale legacy writers are rejected by the database rather than
 allowed to leak new snapshots. History writes retain their existing best-effort
 contract; provider/database failures produce generic error logs and no plaintext
@@ -240,7 +240,7 @@ AI context reads report storage failures instead of treating them as empty threa
 Forge synchronization still writes its remote-identity sidecar and comment in
 one locked transaction. Encryption uses a predetermined row ID. If two initial
 deliveries race, the loser reloads that ID and encrypts again; SQL also rechecks
-local edits and remote timestamps after the KMS wait. Neither a partial sidecar
+local edits and remote timestamps after encryption. Neither a partial sidecar
 nor ciphertext authenticated for a different row is accepted.
 
 Both comment tables have fair, bounded migration/re-encryption queues. A narrowly
@@ -266,7 +266,7 @@ key rotation/flag rollback, tampering, concurrent edits, imports, forge identity
 races, streaming failure/order, cron errors and PostgreSQL dump/restore. The SQL
 rehearsal checks RLS, client/Numo immutability, timestamps, trashed pages, obsolete
 writers, metadata broadcasts and the atomic forge RPC. All 104 migrations replay
-on isolated Supabase. AWS latency and full application recovery remain unverified.
+on isolated Supabase. Application-scale latency and full recovery remain unverified.
 
 ## Object codec status
 
@@ -290,7 +290,7 @@ Both now use domain-separated HMAC proofs with the server's required service
 credential. The credential never enters a SQL expression or row. Tests reject
 the former database-only proof, preserve valid authentication and check secret
 rotation. This does not claim protection when the application credential is also
-compromised, and does not replace content encryption or KMS isolation.
+compromised, and does not replace content encryption or root-key separation.
 
 Deployment invalidates existing share-unlock cookies and outstanding feedback
 OTP codes: visitors must unlock again or request a new code. Do not accept the
@@ -306,7 +306,7 @@ The scheduled candidate's version is checked again, so concurrent or delayed
 jobs cannot rotate it twice. Historical keys remain available for reads. One
 tenant failure does not stop the rest, and failures return a non-success status
 to the scheduler without logging provider error details or key material.
-An attempt timestamp is persisted before the KMS call, and unattempted/older
+An attempt timestamp is persisted before wrapping, and unattempted/older
 attempts are selected first. Repeated failures therefore cannot permanently
 occupy the head of a bounded queue. The service role can update only this
 timestamp directly; wrapped keys and versions still require the guarded RPCs.
@@ -321,39 +321,27 @@ work remains required. Maintenance runs when either the invitation or staging
 content flag is enabled; only converted repositories are registered for backfill.
 Blind-index keys are excluded from this job to preserve equality lookup.
 
-## Managed KMS setup
+## Root-key setup and recovery
 
-A KMS is a managed service that keeps the root key outside the application
-database. The application authenticates with an IAM role and asks KMS to wrap or
-unwrap tenant data keys. The root key itself never reaches the application.
+`MINDDY_DATA_ROOT_KEY` is a dedicated 32-byte random key encoded as 64 hex
+characters. Generate it with `openssl rand -hex 32`. Keep it in the hosting
+platform's protected server configuration, separate from PostgreSQL and its
+backups. The self-hosted installer generates it for each installation. Never
+reuse `VAULT_ENC_KEY`, a database credential, or another application secret:
+those have independent lifecycles and may be rotated for unrelated reasons.
 
-`deploy/aws/data-encryption-kms.json` is a CloudFormation template for one
-environment. It enables native root-key rotation, retains the key when a stack
-is deleted/replaced, and grants the supplied application role only
-`GenerateDataKey` and `Decrypt`, restricted to Minddy encryption contexts.
-Account administrators can still change policy, as required for recovery; the
-application role must not also receive administration permissions through IAM.
+The application derives distinct wrapping keys for content and blind indexes
+from the root and uses AES-256-GCM to wrap random tenant data keys. The wrapped
+format and associated data authenticate the purpose and scope. The root key is
+available to the application runtime, so runtime compromise can expose it;
+database-only compromise cannot recover the data keys. Protect the runtime
+configuration and never put the root key in Git, SQL, logs or client bundles.
 
-An operator must first create/use an AWS account and an application IAM role,
-configure the hosting platform to assume that role, then deploy this template
-in the chosen region. Prefer short-lived workload credentials. Use separate
-keys and roles for test and production. The stack outputs provide
-`MINDDY_DATA_KMS_KEY_ID` and `MINDDY_DATA_KMS_REGION`; an ARN is an identifier,
-not a secret. Neither the role nor the stack has been provisioned by this change.
-
-Once a test role and key exist, run the explicitly enabled integration test:
-
-```sh
-MINDDY_KMS_INTEGRATION_TEST=true npm test -- lib/server/encryption/kms.integration.test.ts
-```
-
-It makes real GenerateDataKey/Decrypt calls using the configured test key,
-checks scope authentication and historical-key reads, and prints cold/warm
-crypto timing percentiles without plaintext or key material. It stores wrapped
-test keys only in process memory. The default test suite skips it. Its registry
-is in memory, so the timings are not repository, database or search benchmarks.
-No real KMS timing or CloudFormation deployment has been verified yet.
-
-AWS references: [CloudFormation KMS key configuration](https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-kms-key.html),
-[encryption context](https://docs.aws.amazon.com/kms/latest/developerguide/encrypt_context.html)
-and [KMS policy conditions](https://docs.aws.amazon.com/kms/latest/developerguide/conditions-kms.html).
+Keep a protected recovery copy of the root key. The full self-hosted cold backup
+includes the environment file and therefore needs strong outer encryption and
+strict access control. A restore must use the original key. A different key fails closed; it cannot
+recover old content. Keep the root stable across upgrades and redeployments.
+Root-key rotation requires rewrapping every recorded data key while the old key
+remains available, followed by a verified restore. This procedure is still a
+rollout blocker. The scheduled 90-day data-key rotation is separate and does
+not replace root-key rotation.

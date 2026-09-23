@@ -124,7 +124,7 @@ describe("protected row migration and rotation", () => {
       .toBe("Private issue-1");
   });
 
-  it("preserves source rows during a KMS outage and does not expose provider errors", async () => {
+  it("preserves source rows during a key-provider failure and does not expose provider errors", async () => {
     const { provider, store } = fixture();
     vi.mocked(provider.current).mockRejectedValue(new Error("Provider error with secret request content"));
     const source = legacy("issue-1");
@@ -197,7 +197,7 @@ describe("protected row migration and rotation", () => {
   });
 });
 
-/** A local KMS fixture: the root is kept outside the serialized backup. */
+/** A local key fixture: the root is kept outside the serialized backup. */
 class FixtureKms implements KeyWrapper {
   constructor(private readonly root: Buffer) {}
   async generate(scope: EncryptionScope) {
@@ -231,7 +231,7 @@ function memoryKeys(records: WrappedDataKey[] = []): KeyRegistry {
   };
 }
 
-describe("encrypted backup restoration rehearsal (local KMS fixture)", () => {
+describe("encrypted backup restoration rehearsal (local key fixture)", () => {
   it("restores old and current rows without a warm cache and fails closed without the root or historical keys", async () => {
     const root = randomBytes(32);
     const records: WrappedDataKey[] = [];

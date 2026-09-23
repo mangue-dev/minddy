@@ -65,7 +65,7 @@ describe("encryption maintenance cron", () => {
     expect(state.backfill).not.toHaveBeenCalled();
   });
 
-  it("reports missing KMS configuration without running the backfill", async () => {
+  it("reports missing root-key configuration without running the backfill", async () => {
     state.enabled = true;
     const response = await GET(request(true));
     expect(response.status).toBe(503);

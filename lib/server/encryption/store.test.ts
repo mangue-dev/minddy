@@ -174,7 +174,7 @@ describe("EncryptedStore", () => {
     }
   });
 
-  it("does not call KMS again for fresh message keys while the scope key is cached", async () => {
+  it("does not unwrap again for fresh message keys while the scope key is cached", async () => {
     const wrapper = new MemoryWrapper();
     const store = new EncryptedStore(new ManagedDataKeys(new MemoryRegistry(), wrapper));
     const ciphertexts = [];
@@ -291,9 +291,9 @@ describe("EncryptedStore", () => {
     const keys = new ManagedDataKeys(registry, wrapper);
     const plaintext = Buffer.from(registry.records[0].wrappedKey);
     const unwrap = vi.spyOn(wrapper, "unwrap")
-      .mockRejectedValueOnce(new Error("KMS unavailable"))
+      .mockRejectedValueOnce(new Error("Root key unavailable"))
       .mockResolvedValueOnce(plaintext);
-    await expect(keys.byVersion(scope, 1)).rejects.toThrow("KMS unavailable");
+    await expect(keys.byVersion(scope, 1)).rejects.toThrow("Root key unavailable");
     const loaded = await Promise.all([keys.byVersion(scope, 1), keys.byVersion(scope, 1)]);
     expect(unwrap).toHaveBeenCalledTimes(2);
     expect(plaintext).toEqual(Buffer.alloc(32));

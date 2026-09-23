@@ -24,7 +24,7 @@ const metadata = new Set(["id", "author_id", "issue_id", "objective_id", "feedba
   "visibility", "assistant_status", "assistant_tool"]);
 const joins = new Set(["attachments(*)", "feedback_users!feedback_user_id(pseudonym)",
   "feedback_users!feedback_user_id(name,email,pseudonym)", "feedback_users!feedback_user_id(id,name,email,pseudonym)"]);
-const legacyWrites = () => !isContentEncryptionEnabled() && !process.env.MINDDY_DATA_KMS_KEY_ID;
+const legacyWrites = () => !isContentEncryptionEnabled() && !process.env.MINDDY_DATA_ROOT_KEY;
 
 function fields(selection: string): string[] {
   const parts = selection.replace(/\s/g, "").split(/,(?![^()]*\))/);

@@ -119,7 +119,7 @@ describe("encrypted activity and page history repositories", () => {
 
   it("keeps new histories encrypted when the rollout flag is disabled after a project key exists", async () => {
     vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "false");
-    vi.stubEnv("MINDDY_DATA_KMS_KEY_ID", "fixture-key");
+    vi.stubEnv("MINDDY_DATA_ROOT_KEY", "1".repeat(64));
     state.hasKey = true;
     await storeIssueEvents(state.service!, [event]);
     await storePageVersion(state.service!, snapshot);
@@ -129,7 +129,7 @@ describe("encrypted activity and page history repositories", () => {
 
   it("preserves old installations without initializing a key provider", async () => {
     vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "false");
-    vi.stubEnv("MINDDY_DATA_KMS_KEY_ID", "");
+    vi.stubEnv("MINDDY_DATA_ROOT_KEY", "");
     state.unavailable = true;
     await storeIssueEvents(state.service!, [event]);
     await storePageVersion(state.service!, snapshot);
@@ -168,7 +168,7 @@ describe("encrypted activity and page history repositories", () => {
     expect((await readIssueEvents(state.service!, { issue_id: "issue" })).error).not.toBeNull();
   });
 
-  it("never returns a partial activity response or falls back to legacy content on KMS failure", async () => {
+  it("never returns a partial activity response or falls back to legacy content on key failure", async () => {
     rows.issue_events.push({ ...event, id: "legacy" });
     await storeIssueEvents(state.service!, [event]);
     state.unavailable = true;

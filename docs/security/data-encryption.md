@@ -3,7 +3,7 @@
 ## Status and security boundary
 
 The owner requires one complete delivery across all sensitive data. The current
-global inventory, concrete blockers, KMS setup and migration requirements are in
+global inventory, concrete blockers, root-key setup and migration requirements are in
 [the global delivery inventory](encryption/README.md). The invitation-only
 foundation described below is not a production rollout boundary. Personal notes
 and statistics snapshots now also have repository integration and isolated
@@ -15,11 +15,11 @@ dump should be claimed until their plaintext columns, search projections,
 history, and alternate write paths have been migrated and removed.
 
 Minddy needs unattended server-side AI access, so the application server must be
-able to decrypt. The intended boundary is a managed KMS key outside Postgres,
+able to decrypt. The intended boundary is a dedicated server root key outside Postgres,
 versioned data keys per project or user, and authenticated application encryption
 before writes. This protects a database-only extraction, including backups. It
 does not protect a compromised application runtime, a principal allowed to use
-both KMS and the database, or plaintext that has already reached external AI,
+both the server configuration and the database, or plaintext that has already reached external AI,
 email, search, observability, exports, or files. Database RLS and application
 authorization remain necessary.
 
@@ -31,7 +31,7 @@ names are intentionally public to members of their projects.
 ## Implemented foundation on this branch
 
 `lib/server/encryption/` provides AES-256-GCM with row/column AAD, branded
-`Encrypted<T>` values, a separate HMAC blind index, an AWS KMS data-key adapter,
+`Encrypted<T>` values, a separate HMAC blind index, a local root-key wrapper,
 bounded in-memory key caching, and an atomic SQL key registry. The first
 converted column is `project_invitations.invited_email`. Its database migration
 is additive: legacy rows remain marked `encryption_version = 0`, and new rows
@@ -47,16 +47,20 @@ Maintenance also advances up to 20 current content DEKs older than 90 days,
 using a version check to avoid duplicate rotations. Re-encryption of all
 historical content and objects remains unfinished.
 
-The rollout requires `MINDDY_DATA_KMS_KEY_ID` and either
-`MINDDY_DATA_KMS_REGION` or `AWS_REGION`. The runtime AWS principal needs
-`kms:GenerateDataKey` and `kms:Decrypt` on that customer-managed symmetric KMS
-key; restrict both operations to `application=minddy` and the expected
-encryption-context keys. Enable native automatic rotation on the KMS key.
-The reviewed CloudFormation template is in `deploy/aws/data-encryption-kms.json`;
-no AWS key or principal has been provisioned. Never put AWS
-credentials, a raw KEK, or a plaintext DEK in SQL, Git, or a client bundle.
-Before enabling the flag, apply the schema migrations, verify KMS access in the
+The rollout requires `MINDDY_DATA_ROOT_KEY`, a dedicated 32-byte random key
+encoded as 64 hex characters. Generate it with `openssl rand -hex 32`, store it
+in protected server configuration, and preserve a protected recovery copy.
+The self-hosted installer generates it automatically. The root key wraps
+independent random content and blind-index data keys with AES-256-GCM, binding
+each wrapped key to its purpose and scope. Never put the root key or a plaintext
+DEK in SQL, Git, or a client bundle. Do not reuse an existing application secret:
+routine rotation of that secret would make historical content unreadable.
+Before enabling the flag, apply the schema migrations, verify the key in the
 target environment, and rehearse backup/key recovery on an isolated database.
+The full self-hosted cold-backup procedure seals the environment alongside the
+database, so the whole backup must be encrypted and access-controlled. Replacing
+the root key requires rewrapping every stored data key first. That
+operation is not yet implemented, so keep the original root key safe and stable.
 Because there is only one production database, no migration or backfill was run
 on production while preparing this branch.
 Read and response paths tolerate the pre-migration invitation schema while the
@@ -66,7 +70,7 @@ production schema change. Encrypted writes still require the migrations first.
 The invitation blind index is global so an account can claim pending invites
 across projects without scanning every tenant. Equal addresses therefore have
 equal indexes across projects; a database reader can correlate them. The HMAC
-key itself is a separate KMS-wrapped system key, so a database-only extraction
+key itself is a separately wrapped system key, so a database-only extraction
 cannot cheaply enumerate addresses. Invitation email is returned to the owner
 and to the invitation recipient where the product needs it; ordinary project
 members no longer receive the pending invitation list. Encrypted invitations
@@ -148,17 +152,16 @@ for encrypted values and blind indexes. A blind index is HMAC over a normalized,
 purpose-specific value and scope; a regular hash of an email is reversible by
 dictionary attack. Never log plaintext, key material, or full ciphertext.
 
-The application must obtain each DEK from the KMS and cache it for a short,
+The application must unwrap each DEK using the server root key and cache it for a short,
 bounded period, with coalesced concurrent loads and explicit invalidation on
 rotation. The first implementation checks the current key version in Postgres
-on each write, while the KMS-unwrapped bytes remain cached; this avoids stale
+on each write, while the unwrapped bytes remain cached; this avoids stale
 writes from other application instances after rotation and adds one database
-lookup to encrypted writes. A KMS encryption context is nonsecret and should bind the wrapped key
-to its scope. KMS events show key operations; they do **not** show every
-application decrypt served from cache, so repository audit events must record
-actor, reason, scope and row ID without content. Fail closed when KMS is
-unavailable and no valid cached key exists. KEK auto-rotation does not rotate
-DEKs or re-encrypt data; DEK rotation needs a separate versioned job.
+lookup to encrypted writes. Authenticated associated data binds each wrapped
+key to its purpose and scope. Repository audit events record actor, reason,
+scope and row ID without content. Fail closed when the root key is missing,
+wrong or unavailable. Root-key rotation does not rotate DEKs or re-encrypt
+content; it needs a separate rewrap procedure before the old root is removed.
 
 Every encrypted row needs a row-level migration/version state. Transition reads
 may accept legacy plaintext only when that row explicitly says it is legacy;
@@ -176,7 +179,7 @@ the row's recorded version.
 
 1. Inventory all schema revisions and REST/RPC paths, including public views,
    storage, realtime, export and AI paths. Create a testable cleartext allowlist.
-2. Introduce KMS credentials and least-privilege policy outside the database.
+2. Introduce the dedicated root key in protected server configuration outside the database.
    Store wrapped DEKs and a distinct blind-index key; verify key recovery and
    backup restore before production writes.
 3. Add additive columns and mixed-version reads behind a per-row state. Migrate one
@@ -191,8 +194,8 @@ the row's recorded version.
    point requires the old key versions and a tested restore procedure.
 6. Exercise key unavailability, tampering, mixed-version reads, concurrent key
    creation, restart during backfill, sharing, search, account export, and
-   latency at realistic data sizes. Measure KMS cache hit rate and p95/p99
-   repository read/write latency; no fixed KMS latency is assumed.
+   latency at realistic data sizes. Measure cache hit rate and p95/p99
+   repository read/write latency.
 
 Supabase Vault can reduce plaintext secrets in backups, but its
 `vault.decrypted_secrets` view exposes them to roles with view access. It is a
@@ -210,12 +213,12 @@ Task numbers below follow the displayed plan
 | Task | Review result |
 | --- | --- |
 | 1. Column and consumer audit | Incomplete. The inventory above covers the main content tables, not every column or consumer. For example, `agent_run_events.payload`, `agent_run_journal.events`, and `agent_run_messages.content` are also content-bearing copies in the baseline. Later schema changes and SQL consumers still need a complete audit. Reopened. |
-| 2. Server crypto store | Implemented: branded ciphertext, AES-GCM with row/column/scope AAD, explicit key versions, separate HMAC keys, KMS adapter, coalesced loads and bounded cache lifetime. Concurrent cache eviction and initial-key cleanup were corrected in this review. |
+| 2. Server crypto store | Implemented: branded ciphertext, AES-GCM with row/column/scope AAD, explicit key versions, separate HMAC keys, local root-key wrapper, coalesced loads and bounded cache lifetime. Concurrent cache eviction and initial-key cleanup were corrected in this review. |
 | 3. Schema and privileges | Partially implemented: the key registry and invitation state/index/privilege migration exist, but other target content tables have no encryption columns. Vault view privileges are revoked; credential migration and statement-log configuration remain open. Reopened. |
 | 4. Repository conversion | Invitations use server paths; issue, page, comment, file, search and history paths remain plaintext. Keep in progress. |
 | 5. Backfill, rotation and recovery | The bounded invitation backfill and response/expiry cleanup exist. Content DEK advancement is now scheduled, but historical-content re-encryption, broader migration, mixed-writer rollback and recovery rehearsals remain open. Keep in progress. |
 | 6. CI guard | Implemented for the converted surface. This review adds invitation RPCs, the key registry and source directories previously omitted by the scanner. This is a source-convention check, not a security boundary against deliberately hidden queries. |
-| 7. Verification | Local regression tests and isolated SQL checks cover the current foundation. Live KMS permissions/failures, production-scale latency, complete search behavior and backup recovery remain unverified. Keep in progress. |
+| 7. Verification | Local regression tests and isolated SQL checks cover the current foundation. Production-scale latency, complete search behavior and application-wide backup recovery remain unverified. Keep in progress. |
 | 8. Wiki and operational review | The wiki states the current limitations and setup. An operational recovery runbook and measured performance still depend on the remaining implementation and rehearsals. Keep in progress. |
 
 Two departures from the original design should be retained: new encrypted
@@ -247,8 +250,7 @@ The SQL verification ran against the existing isolated local Supabase instance,
 inside a rolled-back transaction: role privileges, first-key idempotency,
 rotation compare-and-swap, invitation row constraints, redacted RPC responses,
 and email purge on terminal rows passed. No production migration was applied.
-The local suite uses a fake KMS adapter; it cannot establish real KMS latency or
-an AWS policy's correctness.
+The local suite exercises the root-key wrapper; it cannot establish production-scale latency.
 
 Before a production rollout, rehearse disabling the write flag with both legacy
 and encrypted rows present. The legacy creation RPC compares plaintext email,
@@ -261,5 +263,4 @@ rollback procedure.
 
 - [Supabase Auth identities](https://supabase.com/docs/guides/auth/users)
 - [Supabase Vault and decrypted view privileges](https://supabase.com/docs/guides/database/vault)
-- [AWS KMS encryption context](https://docs.aws.amazon.com/kms/latest/developerguide/encrypt_context.html)
-- [AWS KMS rotation and its effect on data keys](https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html)
+- [OWASP cryptographic storage and key separation](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html)

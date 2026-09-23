@@ -23,7 +23,7 @@ const pageFixture = { id: "page-comment", page_id: "page", project_id: "project"
 
 beforeEach(() => {
   vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");
-  vi.stubEnv("MINDDY_DATA_KMS_KEY_ID", "fixture-key");
+  vi.stubEnv("MINDDY_DATA_ROOT_KEY", "1".repeat(64));
   vi.spyOn(console, "info").mockImplementation(() => {});
   state.unavailable = state.hasKey = loseRace = forgeConflict = false;
   version = 1;
@@ -117,7 +117,7 @@ describe("encrypted comment repository", () => {
     expect((await store().select("body").eq("id", fixture.id).single()).data?.body).toBe(fixture.body);
   });
 
-  it("does not initialize KMS for metadata projections", async () => {
+  it("does not unwrap data keys for metadata projections", async () => {
     await store().insert(fixture);
     state.unavailable = true;
     expect((await store().select("id,author_id").eq("id", fixture.id).single()).data).toEqual({ id: fixture.id, author_id: "actor" });
@@ -148,7 +148,7 @@ describe("encrypted comment repository", () => {
 
   it("supports legacy installations without encryption configuration", async () => {
     vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "false");
-    vi.stubEnv("MINDDY_DATA_KMS_KEY_ID", "");
+    vi.stubEnv("MINDDY_DATA_ROOT_KEY", "");
     state.unavailable = true;
     expect((await store().insert(fixture).select("body").single()).data?.body).toBe(fixture.body);
     expect(rows.comments[0].encryption_version).toBe(0);
