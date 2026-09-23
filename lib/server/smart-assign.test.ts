@@ -109,25 +109,26 @@ const deferredWorks: (() => void | Promise<void>)[] = [];
 /** A PostgREST chain reduced to what the run touches: chained filters are
  * ignored; `maybeSingle()` / the await resolve the given row, `update()`
  * records its payload (the claim's compare-and-set is what we assert on). */
-function fakeQuery(resolve: () => { data: unknown; error: unknown }): unknown {
+function fakeQuery(resolve: (updated: boolean) => { data: unknown; error: unknown }): unknown {
   const query: Record<string, unknown> = {};
+  let updated = false;
   for (const method of ["select", "eq", "is", "not", "in", "or", "order", "limit"]) {
     query[method] = () => query;
   }
   query.update = (payload: unknown) => {
+    updated = true;
     updatePayloads.push(payload);
     return query;
   };
-  query.maybeSingle = () => Promise.resolve(resolve());
+  query.maybeSingle = () => Promise.resolve(resolve(updated));
   query.then = (onFulfilled: (value: { data: unknown; error: unknown }) => unknown) =>
-    Promise.resolve(resolve()).then(onFulfilled);
+    Promise.resolve(resolve(updated)).then(onFulfilled);
   return query;
 }
 
 /** The run's guard read is the FIRST issues query; the claim's
  * compare-and-set is the SECOND — a second query can only be the claim. */
 function wireDb() {
-  let issueQueries = 0;
   fromMock.mockImplementation((table: string) => {
     if (table === "projects") return fakeQuery(() => ({ data: DB.project, error: null }));
     if (table === "project_members") return fakeQuery(() => ({ data: DB.members, error: null }));
@@ -138,10 +139,8 @@ function wireDb() {
       { id: "cat-tech", project_id: "project-1", name: "Technique" },
     ], error: null }));
     if (table === "issues") {
-      issueQueries += 1;
-      const isClaim = issueQueries > 1;
-      return fakeQuery(() =>
-        isClaim ? { data: { id: DB.issue.id }, error: null } : { data: DB.issue, error: null }
+      return fakeQuery((updated) =>
+        updated ? { data: { id: DB.issue.id }, error: null } : { data: DB.issue, error: null }
       );
     }
     return fakeQuery(() => ({ data: null, error: null }));

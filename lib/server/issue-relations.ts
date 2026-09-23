@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
 
@@ -163,9 +164,7 @@ async function assertEndpointsInProject(
     .filter((e) => e.type === "objective")
     .map((e) => e.id);
   if (issueIds.length > 0) {
-    const { data } = await service
-      .from("issues")
-      .select("id")
+    const { data } = await issueStore(service).select("id")
       .is("deleted_at", null)
       .eq("project_id", projectId)
       .in("id", issueIds);

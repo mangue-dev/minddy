@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { after } from "next/server";
@@ -404,9 +405,7 @@ export async function launchAgentRun(
     if (!reviewLink) return { ok: false, error: "prNotFound" };
     projectId = reviewLink.projectId;
   } else if (issueId) {
-    const { data: issue } = await service
-      .from("issues")
-      .select("id, project_id, title")
+    const { data: issue } = await issueStore(service).select("id, project_id, title")
       .is("deleted_at", null)
       .eq("id", issueId)
       .maybeSingle();

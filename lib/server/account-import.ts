@@ -2,6 +2,7 @@ import { importComment } from "./comment-store";
 import { encodeObjective } from "./objective-store";
 import { encodeCategory } from "./category-store";
 import "server-only";
+import { encodeIssue } from "@/lib/server/issue-store";
 
 import { randomUUID } from "node:crypto";
 import type { AccountTransferDocument, TransferRow } from "@/lib/account-transfer";
@@ -692,7 +693,7 @@ export async function importAccountTransfer(
       cycle_id: mapId(source.cycle_id, cycleIds),
     });
   }
-  await upsertRows(service, "issues", issueRows);
+  await upsertRows(service, "issues", await Promise.all(issueRows.map((row) => encodeIssue(row))));
   result.issues = issueRows.length;
 
   const issueCategoryRows = (document.issue_categories ?? []).flatMap((row) => {

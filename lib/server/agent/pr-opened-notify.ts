@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -100,9 +101,7 @@ export async function notifyPullRequestOpened(
 async function projectsForPr(pr: PullRequestRow): Promise<string[]> {
   const service = getServiceClient();
   if (pr.issue_id) {
-    const { data } = await service
-      .from("issues")
-      .select("project_id")
+    const { data } = await issueStore(service).select("project_id")
       .eq("id", pr.issue_id)
       .is("deleted_at", null)
       .maybeSingle();

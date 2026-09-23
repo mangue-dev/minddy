@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -157,9 +158,7 @@ export async function linkFeedbackIssue(params: {
     return { ok: false, status: 404, errorKey: "feedbackNotFound" };
   }
 
-  const { data: issue } = await service
-    .from("issues")
-    .select("id, status, project_id")
+  const { data: issue } = await issueStore(service).select("id, status, project_id")
     .is("deleted_at", null)
     .eq("id", params.issueId)
     .eq("project_id", post.project_id as string)

@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -60,9 +61,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   }
 
   const service = getServiceClient();
-  const { data: issue } = await service
-    .from("issues")
-    .select("project_id")
+  const { data: issue } = await issueStore(service).select("project_id")
     .is("deleted_at", null)
     .eq("id", id)
     .maybeSingle();

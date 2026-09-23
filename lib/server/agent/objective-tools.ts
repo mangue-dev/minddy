@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
@@ -170,9 +171,7 @@ async function listObjectives(ctx: ObjectiveToolContext): Promise<ToolOutcome> {
       .is("deleted_at", null)
       .eq("project_id", ctx.projectId)
       .order("created_at", { ascending: true }),
-    service
-      .from("issues")
-      .select("objective_id, status, effort")
+    issueStore(service).select("objective_id, status, effort")
       .is("deleted_at", null)
       .eq("project_id", ctx.projectId)
       .not("objective_id", "is", null),
@@ -246,9 +245,7 @@ async function readObjective(
 
   const [{ data: issues }, { data: comments, error: commentsError }, { data: attachmentRows }] =
     await Promise.all([
-      service
-        .from("issues")
-        .select("id, number, title, status, priority, effort, assignee_id")
+      issueStore(service).select("id, number, title, status, priority, effort, assignee_id")
         .is("deleted_at", null)
         .eq("objective_id", objective.id)
         .order("number", { ascending: true }),

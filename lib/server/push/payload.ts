@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import "server-only";
@@ -160,9 +161,7 @@ export async function loadPushContext(
   ] =
     await Promise.all([
     issueIds.length
-      ? service
-          .from("issues")
-          .select("id, number, title")
+      ? issueStore(service).select("id, number, title")
           .in("id", issueIds)
           .is("deleted_at", null)
       : Promise.resolve({ data: [] as { id: string; number: number; title: string }[],

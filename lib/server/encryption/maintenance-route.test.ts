@@ -15,6 +15,7 @@ const state = vi.hoisted(() => ({
   categories: vi.fn(),
   projectDrafts: vi.fn(),
   feedbackPosts: vi.fn(),
+  issues: vi.fn(),
 }));
 
 vi.mock("@/lib/server/encryption/invitation-email", () => ({
@@ -35,6 +36,7 @@ vi.mock("@/lib/server/encryption/objective-backfill", () => ({ backfillObjective
 vi.mock("@/lib/server/encryption/category-backfill", () => ({ backfillCategoriesBatch: state.categories }));
 vi.mock("@/lib/server/encryption/project-draft-backfill", () => ({ backfillProjectDraftsBatch: state.projectDrafts }));
 vi.mock("@/lib/server/encryption/feedback-post-backfill", () => ({ backfillFeedbackPostsBatch: state.feedbackPosts }));
+vi.mock("@/lib/server/encryption/issue-backfill", () => ({ backfillIssuesBatch: state.issues }));
 
 const { GET } = await import("@/app/api/cron/encryption-maintenance/route");
 const secret = "x".repeat(32);
@@ -59,6 +61,7 @@ beforeEach(() => {
   state.categories.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.projectDrafts.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.feedbackPosts.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
+  state.issues.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.rotate.mockReset().mockResolvedValue({ scanned: 0, advanced: 0, failed: 0 });
 });
 
@@ -119,8 +122,18 @@ describe("encryption maintenance cron", () => {
     expect(state.categories).toHaveBeenCalledWith(50, expect.any(AbortSignal));
     expect(state.projectDrafts).toHaveBeenCalledWith(50, expect.any(AbortSignal));
     expect(state.feedbackPosts).toHaveBeenCalledWith(50, expect.any(AbortSignal));
+    expect(state.issues).not.toHaveBeenCalled();
     expect(state.backfill).not.toHaveBeenCalled();
     expect(state.rotate).toHaveBeenCalled();
+  });
+
+  it("runs issue migration only with its separate staging opt-in", async () => {
+    state.contentEnabled = state.configured = true;
+    vi.stubEnv("MINDDY_ISSUE_SOURCE_ENCRYPTION_ENABLED", "true");
+    const response = await GET(request(true));
+    expect(response.status).toBe(200);
+    expect(state.issues).toHaveBeenCalledWith(50, expect.any(AbortSignal));
+    expect(await response.json()).toMatchObject({ issues: { failed: 0 } });
   });
 
   it("reports a failed or interrupted statistics migration to the scheduler", async () => {

@@ -4,6 +4,7 @@ import { resolveAgentExecutionBackend } from "@/lib/capabilities";
 import { workerModelSurfaceForAgentRun } from "@/lib/ai-surfaces";
 import { getUserSandboxPreferences } from "./sandbox-preferences";
 import { getServiceClient } from "@/lib/supabase-service";
+import { issueStore } from "@/lib/server/issue-store";
 import { joinedPage } from "@/lib/server/resource-select";
 import { recordSandboxUsage } from "@/lib/server/usage";
 import {
@@ -269,8 +270,7 @@ async function loadIssueContext(
   const includePromptContext = opts.includePromptContext !== false;
   const [{ data: issue }, { data: project }, { data: attachmentRows }] =
     await Promise.all([
-      service
-        .from("issues")
+      issueStore(service)
         // A resumed opencode session already has its start in its local database.
         // Rereading neither the long markdown nor the plan can influence your next one
         // prompt; it was transport and decoding before each first token.
@@ -281,6 +281,7 @@ async function loadIssueContext(
         )
         .is("deleted_at", null)
         .eq("id", issueId)
+        .eq("project_id", run.project_id)
         .maybeSingle(),
       service
         .from("projects")

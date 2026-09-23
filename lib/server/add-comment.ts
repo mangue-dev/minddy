@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
@@ -85,9 +86,7 @@ export async function addCommentToIssue({
 
   // The issue resolves the project for the access check and carries the
   // owner/assignee we notify below.
-  const { data: issue } = await service
-    .from("issues")
-    .select("project_id, created_by, assignee_id")
+  const { data: issue } = await issueStore(service).select("project_id, created_by, assignee_id")
     .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();

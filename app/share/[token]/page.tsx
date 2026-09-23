@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { cache } from "react";
@@ -113,9 +114,7 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
 
   const [issuesRes, relationsRes, categoriesRes, objectivesRes, membersRes] =
     await Promise.all([
-      service
-        .from("issues")
-        .select(ISSUE_SELECT)
+      issueStore(service).select(ISSUE_SELECT)
         .is("deleted_at", null)
         .eq("project_id", project.id)
         .order("position", { ascending: true })

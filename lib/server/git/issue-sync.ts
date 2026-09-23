@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { commentStore, syncGithubComment } from "@/lib/server/comment-store";
 import "server-only";
 
@@ -216,9 +217,7 @@ export async function applyRemoteIssue(
     return;
   }
   const service = getServiceClient();
-  const { data: existing, error } = await service
-    .from("issues")
-    .select("id, status, title, description, assignee_id, priority, effort, due_date, updated_at")
+  const { data: existing, error } = await issueStore(service).select("id, status, title, description, assignee_id, priority, effort, due_date, updated_at")
     .is("deleted_at", null)
     .eq("project_id", target.projectId)
     .eq("remote_provider", remote.provider)
@@ -582,18 +581,14 @@ export async function syncGithubIssueDependency(
     try {
       const service = getServiceClient();
       const [blocking, blocked] = await Promise.all([
-        service
-          .from("issues")
-          .select("id")
+        issueStore(service).select("id")
           .is("deleted_at", null)
           .eq("project_id", target.projectId)
           .eq("remote_provider", "github")
           .eq("remote_repo_id", dependency.blockingRepoId)
           .eq("remote_number", dependency.blockingNumber)
           .maybeSingle(),
-        service
-          .from("issues")
-          .select("id")
+        issueStore(service).select("id")
           .is("deleted_at", null)
           .eq("project_id", target.projectId)
           .eq("remote_provider", "github")
@@ -649,9 +644,7 @@ async function applyGithubIssueComment(
   remote: GithubIssueComment,
 ): Promise<void> {
   const service = getServiceClient();
-  const { data: issue, error: issueError } = await service
-    .from("issues")
-    .select("id")
+  const { data: issue, error: issueError } = await issueStore(service).select("id")
     .is("deleted_at", null)
     .eq("project_id", target.projectId)
     .eq("remote_provider", "github")
@@ -772,9 +765,7 @@ async function backfillGithubMetadata(
   const numbers = issues.map((issue) => issue.number);
   if (numbers.length === 0) return;
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("issues")
-    .select("id, remote_number")
+  const { data, error } = await issueStore(service).select("id, remote_number")
     .is("deleted_at", null)
     .eq("project_id", target.projectId)
     .eq("remote_provider", "github")
@@ -844,9 +835,7 @@ async function loadImportedNumbers(
   target: IssueSyncTarget,
 ): Promise<Set<number>> {
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("issues")
-    .select("remote_number")
+  const { data, error } = await issueStore(service).select("remote_number")
     .is("deleted_at", null)
     .eq("project_id", target.projectId)
     .eq("remote_provider", target.provider)

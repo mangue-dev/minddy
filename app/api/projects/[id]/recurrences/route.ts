@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -20,9 +21,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await auth.supabase
-    .from("issues")
-    .select("id, number, title, status, assignee_id, due_date, recurrence")
+  const { data, error } = await issueStore(auth.supabase).select("id, number, title, status, assignee_id, due_date, recurrence")
     .eq("project_id", id)
     .not("recurrence", "is", null)
     // The next deadline first: this is the order in which we read them.

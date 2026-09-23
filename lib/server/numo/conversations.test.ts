@@ -24,6 +24,7 @@ function database(tables: Record<string, Row[]> = {}, failedTable?: string) {
     const query = {
       select: (...args: unknown[]) => { calls.push({ table, method: "select", args }); return query; },
       eq: (key: string, value: unknown) => { rows = rows.filter((r) => r[key] === value); return query; },
+      in: (key: string, values: unknown[]) => { rows = rows.filter((r) => values.includes(r[key])); return query; },
       is: (key: string, value: unknown) => { rows = rows.filter((r) => r[key] === value); return query; },
       order: (...args: unknown[]) => { calls.push({ table, method: "order", args }); return query; },
       range: (a: number, b: number) => { calls.push({ table, method: "range", args: [a, b] }); rows = rows.slice(a, b + 1); return query; },
@@ -59,6 +60,19 @@ describe("Numo conversation adapter", () => {
     expect(db.calls.filter((c) => c.method === "order").slice(0, 2).map((c) => c.args)).toEqual([
       ["updated_at", { ascending: false }], ["id", { ascending: true }],
     ]);
+  });
+
+  it("hydrates an issue-derived agent title through the authorized issue repository", async () => {
+    const agent = { id, source: "agent", project_id: "project", title: null,
+      latest_work_id: "work-1" };
+    const db = database({
+      numo_user_conversation_history: [agent],
+      agent_runs: [{ id: "work-1", issue_id: "issue-1" }],
+      issues: [{ id: "issue-1", project_id: "project", title: "Private issue" }],
+    });
+    expect((await listNumoConversations(db.client)).conversations[0].title).toBe("Private issue");
+    expect(db.from).toHaveBeenCalledWith("agent_runs");
+    expect(db.from).toHaveBeenCalledWith("issues");
   });
 
   it("does not read content for a missing or inaccessible common identity", async () => {

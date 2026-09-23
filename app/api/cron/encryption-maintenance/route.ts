@@ -3,6 +3,7 @@ import { backfillObjectivesBatch } from "@/lib/server/encryption/objective-backf
 import { backfillCategoriesBatch } from "@/lib/server/encryption/category-backfill";
 import { backfillProjectDraftsBatch } from "@/lib/server/encryption/project-draft-backfill";
 import { backfillFeedbackPostsBatch } from "@/lib/server/encryption/feedback-post-backfill";
+import { backfillIssuesBatch } from "@/lib/server/encryption/issue-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
   }
   const invitationsEnabled = isInvitationEncryptionEnabled();
   const contentEnabled = isContentEncryptionEnabled();
+  const issuesEnabled = contentEnabled && process.env.MINDDY_ISSUE_SOURCE_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -46,6 +48,7 @@ export async function GET(request: NextRequest) {
       contentEnabled ? backfillCategoriesBatch(50, request.signal) : Promise.resolve(null),
       contentEnabled ? backfillProjectDraftsBatch(50, request.signal) : Promise.resolve(null),
       contentEnabled ? backfillFeedbackPostsBatch(50, request.signal) : Promise.resolve(null),
+      issuesEnabled ? backfillIssuesBatch(50, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -58,12 +61,13 @@ export async function GET(request: NextRequest) {
     const categories = outcomes[8];
     const projectDrafts = outcomes[9];
     const feedbackPosts = outcomes[10];
+    const issues = outcomes[11];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -78,6 +82,7 @@ export async function GET(request: NextRequest) {
         categories: categories.status === "fulfilled" ? categories.value : { failed: true },
         project_drafts: projectDrafts.status === "fulfilled" ? projectDrafts.value : { failed: true },
         feedback_posts: feedbackPosts.status === "fulfilled" ? feedbackPosts.value : { failed: true },
+        ...(issuesEnabled ? { issues: issues.status === "fulfilled" ? issues.value : { failed: true } } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),
       ...(contentEnabled ? { statistics: statistics.status === "fulfilled" ? statistics.value : { failed: true } } : {}),

@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -204,9 +205,7 @@ export async function getUserStats(
     // `projects!inner(deleted_at)` carries the trash filter: a project
     // threw keeps his tickets and `can_access_project` ignores `deleted_at`, so
     // without him the load included tickets which are no longer anywhere.
-    supabase
-      .from("issues")
-      .select("status, projects!inner(deleted_at)")
+    issueStore(supabase).select("status, projects!inner(deleted_at)")
       .is("deleted_at", null)
       .is("projects.deleted_at", null)
       .eq("assignee_id", userId)

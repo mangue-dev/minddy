@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
@@ -277,15 +278,17 @@ function coreFail(r: CoreFailure): ToolResult {
  */
 async function readIssueText(
   issueId: string,
+  projectId: string,
+  actorId: string,
 ): Promise<
   | { plan: string; description: string; updatedAt: string }
   | { error: ToolResult }
 > {
-  const { data, error } = await getServiceClient()
-    .from("issues")
+  const { data, error } = await issueStore(getServiceClient(), actorId)
     .select("plan, description, updated_at")
     .is("deleted_at", null)
     .eq("id", issueId)
+    .eq("project_id", projectId)
     .maybeSingle();
   if (error) return { error: fail("database_error", error.message) };
   if (!data) return { error: fail("not_found", "Issue not found.") };
@@ -978,9 +981,7 @@ export function registerMinddyTools(
       const { project } = scope.access;
 
       const service = getServiceClient();
-      const { count, error } = await service
-        .from("issues")
-        .select("id", { count: "exact", head: true })
+      const { count, error } = await issueStore(service).select("id", { count: "exact", head: true })
         .is("deleted_at", null)
         .eq("project_id", project.id)
         .not("status", "in", "(done,canceled,duplicate)");
@@ -1474,9 +1475,7 @@ export function registerMinddyTools(
           .is("deleted_at", null)
           .eq("project_id", scope.access.project.id)
           .order("created_at", { ascending: true }),
-        service
-          .from("issues")
-          .select("objective_id, status, effort")
+        issueStore(service).select("objective_id, status, effort")
           .is("deleted_at", null)
           .eq("project_id", scope.access.project.id)
           .not("objective_id", "is", null),
@@ -1626,9 +1625,7 @@ export function registerMinddyTools(
         relationRows,
         activity,
       ] = await Promise.all([
-        service
-          .from("issues")
-          .select("id, number, title, status, priority, effort, assignee_id")
+        issueStore(service).select("id, number, title, status, priority, effort, assignee_id")
           .is("deleted_at", null)
           .eq("objective_id", objective.id)
           .order("number", { ascending: true }),
@@ -2245,7 +2242,7 @@ export function registerMinddyTools(
       const ref = await resolveIssueRef(scope.access, args.issue);
       if ("error" in ref) return ref.error;
 
-      const current = await readIssueText(ref.issue.id);
+      const current = await readIssueText(ref.issue.id, scope.access.project.id, scope.userId);
       if ("error" in current) return current.error;
       const plan = current.plan;
       const parsed = parsePlan(plan);
@@ -2339,7 +2336,7 @@ export function registerMinddyTools(
       }
       const section = args.section?.trim() ? args.section.trim() : null;
 
-      const current = await readIssueText(ref.issue.id);
+      const current = await readIssueText(ref.issue.id, scope.access.project.id, scope.userId);
       if ("error" in current) return current.error;
 
       const next = appendToPlan(current.plan, args.markdown, section);
@@ -2423,7 +2420,7 @@ export function registerMinddyTools(
       if ("error" in ref) return ref.error;
 
       const field: IssueTextField = args.field;
-      const current = await readIssueText(ref.issue.id);
+      const current = await readIssueText(ref.issue.id, scope.access.project.id, scope.userId);
       if ("error" in current) return current.error;
 
       const edit = editIssueText({
@@ -3919,9 +3916,7 @@ export function registerMinddyTools(
         }
         // Only pull issues out of the owner's OWN current cycle — project
         // access alone must not allow draining someone else's cycle.
-        const { data: row } = await service
-          .from("issues")
-          .select("cycle_id")
+        const { data: row } = await issueStore(service).select("cycle_id")
           .is("deleted_at", null)
           .eq("id", resolved.issue.id)
           .maybeSingle();

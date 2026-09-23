@@ -41,7 +41,7 @@ function database(tables: Record<string, Row[]>) {
             writes.push({ table, ids: rows.map((row) => row.id), values });
             for (const row of rows) Object.assign(row, values);
           }
-          const data = rows.map((row) => columns === "*" ? { ...row } : Object.fromEntries(
+          const data = rows.map((row) => columns === "*" || columns.startsWith("*,") ? { ...row } : Object.fromEntries(
             columns.split(/,(?![^()]*\))/).map((column) => {
               const key = column.trim().split(/[!(]/)[0];
               return [key, row[key]];

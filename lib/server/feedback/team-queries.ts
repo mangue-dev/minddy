@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
@@ -159,9 +160,7 @@ export async function getTeamFeedbackDetail(
       .order("created_at", { ascending: false }),
     fetchTitles(projectId, row.suggested_merge_into_id ? [row.suggested_merge_into_id] : []),
     row.issue_id
-      ? service
-          .from("issues")
-          .select("id, number, status")
+      ? issueStore(service).select("id, number, status")
           .is("deleted_at", null)
           .eq("id", row.issue_id)
           .maybeSingle()

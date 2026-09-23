@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
@@ -64,9 +65,7 @@ export async function GET(request: NextRequest) {
 
   const [issuesRes, projectsRes, categoriesRes, objectivesRes, relationsRes] =
     await Promise.all([
-      auth.supabase
-        .from("issues")
-        .select(ISSUE_SELECT)
+      issueStore(auth.supabase).select(ISSUE_SELECT)
         .order("position", { ascending: true })
         .order("number", { ascending: true }),
       auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null),

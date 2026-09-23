@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -53,9 +54,7 @@ export async function GET(request: NextRequest) {
     // mattered. A “+1” that could not be found anywhere, until
     // emptying the trash makes it disappear. Same join as the table
     // edge (app/api/me/summary/route.ts) and cycle reconciliation.
-    auth.supabase
-      .from("issues")
-      .select("project_id, projects!inner(deleted_at)")
+    issueStore(auth.supabase).select("project_id, projects!inner(deleted_at)")
       .eq("status", "triage")
       .is("deleted_at", null)
       .is("projects.deleted_at", null),

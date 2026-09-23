@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
 
   // RLS: the caller must be able to see the issue.
-  const { data: issue } = await auth.supabase.from("issues").select("id").eq("id", id).maybeSingle();
+  const { data: issue } = await issueStore(auth.supabase).select("id").eq("id", id).maybeSingle();
   if (!issue) return NextResponse.json({ error: "Issue not found" }, { status: 404 });
 
   const service = getServiceClient();

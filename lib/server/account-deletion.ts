@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
@@ -66,7 +67,7 @@ export async function previewAccountDeletion(userId: string): Promise<DeletionPr
       ? service.from("project_members").select("project_id, user_id").in("project_id", ownedIds)
       : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
     ownedIds.length
-      ? service.from("issues").select("id", { count: "exact", head: true }).in("project_id", ownedIds)
+      ? issueStore(service).select("id", { count: "exact", head: true }).in("project_id", ownedIds)
       : Promise.resolve({ count: 0 }),
     commentStore(service, "comments").select("id", { count: "exact", head: true }).eq("author_id", userId),
     service

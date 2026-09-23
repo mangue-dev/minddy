@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
@@ -31,10 +32,8 @@ export async function gatherProjectPromptContext({
     { data: categories, error: categoryError },
     { data: pages },
   ] = await Promise.all([
-    supabase.from("issues").select("status").eq("project_id", project.id).is("deleted_at", null),
-    supabase
-      .from("issues")
-      .select("number, title, status")
+    issueStore(supabase).select("status").eq("project_id", project.id).is("deleted_at", null),
+    issueStore(supabase).select("number, title, status")
       .is("deleted_at", null)
       .eq("project_id", project.id)
       .order("updated_at", { ascending: false })

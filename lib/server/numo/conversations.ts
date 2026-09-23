@@ -3,10 +3,39 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { NumoConversation, NumoConversationDetail, NumoLegacySource } from "@/lib/assistant-types";
 import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { publicSkillsMetadata } from "@/lib/server/assistant/skills";
+import { issueStore } from "@/lib/server/issue-store";
 
 export const NUMO_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const NUMO_CONVERSATIONS_PAGE_SIZE = 50;
 export const MAX_NUMO_CONVERSATIONS_PAGE_SIZE = 500;
+
+/** Resolve issue-derived history titles only after the invoker view grants access. */
+async function hydrateIssueTitles<T extends NumoConversation>(
+  supabase: SupabaseClient, rows: T[],
+): Promise<T[]> {
+  const pending = rows.filter((row) => row.source === "agent" && row.title == null &&
+    typeof row.project_id === "string" && typeof row.latest_work_id === "string");
+  if (!pending.length) return rows;
+  const runIds = [...new Set(pending.map((row) => row.latest_work_id as string))];
+  const { data: runs, error: runError } = await supabase.from("agent_runs")
+    .select("id, issue_id").in("id", runIds);
+  if (runError) throw new Error("Unable to resolve issue history titles");
+  const issueIds = [...new Set((runs ?? []).map((row) => row.issue_id)
+    .filter((id): id is string => typeof id === "string"))];
+  if (!issueIds.length) return rows;
+  const { data: issues, error: issueError } = await issueStore(supabase)
+    .select("id, project_id, title").in("id", issueIds)
+    .in("project_id", [...new Set(pending.map((row) => row.project_id as string))]);
+  if (issueError) throw new Error("Unable to resolve issue history titles");
+  const issueById = new Map((issues ?? []).map((row) => [row.id as string, row]));
+  const runById = new Map((runs ?? []).map((row) => [row.id as string, row]));
+  return rows.map((row) => {
+    const issueId = runById.get(row.latest_work_id as string)?.issue_id as string | null;
+    const issue = issueId ? issueById.get(issueId) : null;
+    return row.title == null && issue?.project_id === row.project_id
+      ? { ...row, title: issue.title as string } : row;
+  });
+}
 
 /** Always pass the request's RLS client, including for legacy link resolution. */
 export async function listNumoConversations(
@@ -21,7 +50,7 @@ export async function listNumoConversations(
   if (projectId) query = query.eq("project_id", projectId);
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  const rows = (data ?? []) as NumoConversation[];
+  const rows = await hydrateIssueTitles(supabase, (data ?? []) as NumoConversation[]);
   return { conversations: rows.slice(0, limit), hasMore: rows.length > limit };
 }
 
@@ -29,7 +58,8 @@ export async function getNumoConversation(supabase: SupabaseClient, id: string) 
   const { data, error } = await supabase.from("numo_conversation_history")
     .select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(error.message);
-  return data as NumoConversation | null;
+  if (!data) return null;
+  return (await hydrateIssueTitles(supabase, [data as NumoConversation]))[0];
 }
 
 /** Read the assistant-only persisted choices through the caller's RLS client. */

@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { hasMatchingIssueEvent } from "@/lib/server/issue-event-store";
@@ -373,9 +374,7 @@ async function repoWriteActor(opts: {
   issueId: string;
 }): Promise<string | null> {
   const service = getServiceClient();
-  const { data: issue } = await service
-    .from("issues")
-    .select("project_id")
+  const { data: issue } = await issueStore(service).select("project_id")
     .eq("id", opts.issueId)
     .is("deleted_at", null)
     .maybeSingle();

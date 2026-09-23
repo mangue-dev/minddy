@@ -93,8 +93,8 @@ must be checked separately.
 
 The common row codec is connected to personal notes, statistics, activity, page
 versions, comments (including page quotes), objectives, categories, project
-creation drafts, and feedback post content. The remaining repositories in the
-table above are unconverted. It authenticates the real primary key, table and owner, requires complete rows,
+creation drafts, feedback post content, and the issue source paths described below.
+The remaining repositories in the table above are unconverted. It authenticates the real primary key, table and owner, requires complete rows,
 distinguishes legacy and encrypted states, clears protected columns and rejects
 remaining plaintext search projections. Parent-owned records still require a
 trusted repository to resolve and authorize their scope before calling it.
@@ -447,8 +447,10 @@ must be measured on representative staging data before activation.
 This is **not a completed feedback domain**. `feedback_users.email/name/external_id`
 and the SQL/SSO equality paths still store private identities in clear; pending
 `feedback_otp_codes.email` is also clear. Feedback attachments still use unencrypted
-object transport, and promotion copies feedback text into the still-plaintext issue
-source. These paths need coordinated repository, blind-index, object and issue
+object transport. Promotion uses the shared issue creation path, which can now
+encode the new issue title and description only when the separate staging issue
+source flag is enabled; production flags remain off and existing issues have not
+been migrated. These paths need coordinated repository, blind-index, object and issue
 conversion before the feedback boundary can be declared complete. The branch's
 staging content flag is not a production rollout flag; both production encryption
 flags remain disabled. No production data or objects were migrated.
@@ -461,6 +463,50 @@ content and embeddings across two project-key versions with a cold cache and rej
 the wrong external root. Unit tests cover row/scope tampering and multi-page public
 similarity search. These fixtures do not establish production-scale performance or
 restore of feedback identities and files.
+
+## Issue source tranche in progress
+
+`issue-store.ts` encodes title, description, plan, remote URL and automation
+override together under the project key. The shared creation path covers API,
+MCP, agents, forge imports, recurrence and feedback promotion; bulk CSV/brief
+imports and account transfer now encode before insert or upsert. The shared
+update path merges protected fields after project authorization and retains its
+`updated_at` compare-and-swap. Agent checklist synchronization compares the
+source revision before replacing the plan. API, board, export, public-share,
+MCP, AI, forge and notification readers now use the issue adapter, or explicitly
+decode complete rows after their existing RLS/project check. Issue search scans
+project rows in 200-row pages and compares decoded title and description in
+application code. The Numo history view no longer selects `issues.title`; its
+invoker-scoped reader hydrates the issue fallback through the repository.
+
+Migration `20270107130000_issue_source_encryption.sql` adds row state, a
+revision, content clearing, metadata-only Realtime, a fair queue and a
+service-only compare-and-swap operation. An issue-specific project marker is
+committed with the first encrypted issue. A project key made by another domain
+does not by itself reject legacy issue writes; after the marker is committed,
+plaintext inserts and source edits from old writers fail. The isolated SQL
+rehearsal verifies these rules, client privileges, unchanged edit timestamps,
+CAS conflicts and invoker security. Hourly issue backfill is capped at 50 rows
+and runs only with both `MINDDY_CONTENT_ENCRYPTION_ENABLED=true` and
+`MINDDY_ISSUE_SOURCE_ENCRYPTION_ENABLED=true`. The latter defaults off and must
+remain off in production. An already encrypted issue still requires encryption
+when either flag is disabled. A new plaintext issue in a marked project is
+rejected by the database if encryption cannot be performed.
+
+**This is not a completed issue boundary.** Service-role readers without a
+project filter still need an authorization review before decryption; the shared
+adapter preserves each caller's existing query but cannot prove authorization
+itself. Some metadata-only issue updates remain direct, and the allowed demo
+seed fixtures still write plaintext. Derived agent conversation/run and
+pull-request titles, attachment links and object bytes, forge sidecars, and
+external push/webhook/export destinations require a copy-by-copy retention and
+authorization audit. An isolated dump/restore covers one encrypted parent and
+child issue over two key versions, but the application-wide restore rehearsal
+does not include encrypted issue sources or arbitrary parent trees. Application search needs
+representative staging latency and key/cache-load measurements. Do not activate
+the issue flag or describe the domain as converted until those paths and the
+remaining SQL/RPC, imports/exports and old-writer checks are closed. Feedback
+visitor identities, OTP email and files remain clear as above.
 
 ## Root-key setup and recovery
 

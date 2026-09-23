@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { after } from "next/server";
@@ -301,9 +302,7 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     return;
   }
 
-  const { data: issueRow } = await service
-    .from("issues")
-    .select(
+  const { data: issueRow } = await issueStore(service).select(
       "id, number, title, plan, status, priority, effort, assignee_id, automation_override",
     )
     .eq("id", params.issueId)

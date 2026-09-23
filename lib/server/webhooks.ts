@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { after } from "next/server";
@@ -171,9 +172,7 @@ export function dispatchWebhooksForEvents(
             .filter((id): id is string => typeof id === "string")
         ),
       ];
-      const { data: issues } = await service
-        .from("issues")
-        .select("id, project_id, number, title, status, priority, effort, integration_id")
+      const { data: issues } = await issueStore(service).select("id, project_id, number, title, status, priority, effort, integration_id")
         .is("deleted_at", null)
         .in("id", issueIds);
       if (!issues?.length) return;

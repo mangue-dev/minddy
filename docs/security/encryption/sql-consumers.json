@@ -71,7 +71,7 @@
       ]
     },
     "numo_conversation_history": {
-      "sha256": "95083493eb8dffc278d8973a1d81d8a8fa01b42f797823d44d7607055437b20f",
+      "sha256": "d83299c94a670e55091c910e4b99d4b2932e3606cdb0361c879a0a7e7fe47481",
       "relations": [
         "issues",
         "projects",
@@ -308,6 +308,17 @@
         "rotate_user_realtime_generation"
       ]
     },
+    "set_issue_updated_at()": {
+      "sha256": "94e2148051e08dee26eb0c3a0cb0af4f69f92bb9f2a24c78a27ded211a5edddc",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "storage_quota_ok(uuid)": {
       "sha256": "65afd52cdd66cf9de4c23dc877f3d08549901904ac35f5f15f7734a494df32d3",
       "securityDefiner": true,
@@ -519,6 +530,19 @@
       ],
       "functionReferences": []
     },
+    "guard_issue_encryption()": {
+      "sha256": "65c522aaf521904d5ec49998b218b5c86aea812b933f24f293fb6eeaef42be39",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "issue_encryption_scopes"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_project_identity()": {
       "sha256": "a1fc26869bdd69e97e861aa4383e23713a12266d136ad07d47242f89a34218d3",
       "securityDefiner": true,
@@ -594,6 +618,17 @@
         "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "broadcast_issue_content()": {
+      "sha256": "cb7c3ba7800adf043befcd23a777b16954766baf5f4817f562f70f995ee1ee50",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -3467,6 +3502,21 @@
         "guard_project_actor"
       ]
     },
+    "migrate_issue_ciphertext(uuid,uuid,bigint,integer,integer,text)": {
+      "sha256": "1b83ac34e13ceb302a8cc6af663f9028bcf38b0bb47647ed6f58525c9521dbd6",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "issues"
+      ],
+      "protectedRelations": [
+        "issues"
+      ],
+      "functionReferences": []
+    },
     "upsert_github_connection_atomic(uuid,bigint,text,text,text,text)": {
       "sha256": "792f5b2a23bac8a2fb046ed5af231cd8f4b715713e0dddbf7720f6f520ce6b32",
       "securityDefiner": true,
@@ -4028,8 +4078,8 @@
       "definition": "CREATE TRIGGER cycles_broadcast AFTER INSERT OR DELETE OR UPDATE ON cycles FOR EACH ROW EXECUTE FUNCTION broadcast_notifications_row()"
     },
     "issues.issues_broadcast": {
-      "function": "broadcast_project_scoped()",
-      "definition": "CREATE TRIGGER issues_broadcast AFTER INSERT OR DELETE OR UPDATE ON issues FOR EACH ROW EXECUTE FUNCTION broadcast_project_scoped()"
+      "function": "broadcast_issue_content()",
+      "definition": "CREATE TRIGGER issues_broadcast AFTER INSERT OR DELETE OR UPDATE ON issues FOR EACH ROW EXECUTE FUNCTION broadcast_issue_content()"
     },
     "issues.issues_one_level": {
       "function": "enforce_one_level_subissues()",
@@ -4068,8 +4118,8 @@
       "definition": "CREATE TRIGGER cycles_set_updated_at BEFORE UPDATE ON cycles FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
     "issues.issues_set_updated_at": {
-      "function": "set_updated_at()",
-      "definition": "CREATE TRIGGER issues_set_updated_at BEFORE UPDATE ON issues FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+      "function": "set_issue_updated_at()",
+      "definition": "CREATE TRIGGER issues_set_updated_at BEFORE UPDATE ON issues FOR EACH ROW EXECUTE FUNCTION set_issue_updated_at()"
     },
     "pages.pages_broadcast_delete": {
       "function": "broadcast_page_row()",
@@ -4098,6 +4148,10 @@
     "views.views_freeze_project_id": {
       "function": "freeze_project_id()",
       "definition": "CREATE TRIGGER views_freeze_project_id BEFORE UPDATE OF project_id ON views FOR EACH ROW EXECUTE FUNCTION freeze_project_id()"
+    },
+    "issues.issues_encryption_guard": {
+      "function": "guard_issue_encryption()",
+      "definition": "CREATE TRIGGER issues_encryption_guard BEFORE INSERT OR UPDATE ON issues FOR EACH ROW EXECUTE FUNCTION guard_issue_encryption()"
     },
     "categories.categories_broadcast": {
       "function": "broadcast_category_metadata()",

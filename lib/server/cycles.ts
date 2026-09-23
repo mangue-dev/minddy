@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
 
@@ -164,9 +165,7 @@ async function reconcileCycles({
     .filter((r) => r.end_date <= today && r.completed_points === null)
     .sort((a, b) => (a.start_date < b.start_date ? -1 : 1));
   for (const cycle of unclosed) {
-    const { data: cycleIssues } = await service
-      .from("issues")
-      .select("effort, status")
+    const { data: cycleIssues } = await issueStore(service).select("effort, status")
       .eq("cycle_id", cycle.id)
       .is("deleted_at", null);
     const completed = cycleCompletedPoints(
@@ -304,9 +303,7 @@ export async function fillCycleForUser({
   viaAssistant?: boolean;
 }): Promise<{ pickedIds: string[]; points: number }> {
   const [{ data: candidateRows }, { data: cycleIssues }] = await Promise.all([
-    service
-      .from("issues")
-      .select(
+    issueStore(service).select(
         "id, project_id, title, status, priority, effort, objective_id, issue_categories(category_id), projects!inner(deleted_at)"
       )
       .eq("assignee_id", userId)
@@ -314,9 +311,7 @@ export async function fillCycleForUser({
       .in("status", CYCLE_OPEN_STATUSES as string[])
       .is("projects.deleted_at", null)
       .is("deleted_at", null),
-    service
-      .from("issues")
-      .select("effort, status")
+    issueStore(service).select("effort, status")
       .eq("cycle_id", cycle.id)
       .is("deleted_at", null),
   ]);
@@ -407,9 +402,7 @@ export async function fillCycleForUser({
   if (blockerIds.length > 0) {
     // A trashed blocker no longer blocks: absent from `statusById`, it is read
     // comme « pas bloquant » par isBlockedIn (lib/cycle.ts), ce qu'on veut.
-    const { data: blockerRows } = await service
-      .from("issues")
-      .select("id, status")
+    const { data: blockerRows } = await issueStore(service).select("id, status")
       .in("id", blockerIds)
       .is("deleted_at", null);
     for (const row of blockerRows ?? []) {
@@ -529,9 +522,7 @@ export async function getCycleOverview({
         : ensured.current;
   if (!cycle) return { ok: false, error: `No ${which} cycle exists.` };
 
-  const { data: issueRows } = await service
-    .from("issues")
-    .select("id, project_id, number, title, status, priority, effort, projects(key)")
+  const { data: issueRows } = await issueStore(service).select("id, project_id, number, title, status, priority, effort, projects(key)")
     .eq("cycle_id", cycle.id)
     .is("deleted_at", null)
     .order("number", { ascending: true });
@@ -554,9 +545,7 @@ export async function getCycleOverview({
 
   // Best next candidates: the user's assigned, uncycled, open-status pool,
   // reco-scored with `blocks` precedence.
-  const { data: poolRows } = await service
-    .from("issues")
-    .select(
+  const { data: poolRows } = await issueStore(service).select(
       "id, project_id, number, title, status, priority, effort, objective_id, issue_categories(category_id), projects!inner(key, deleted_at)"
     )
     .eq("assignee_id", userId)
@@ -637,9 +626,7 @@ export async function getCycleOverview({
     ...new Set(relations.filter((r) => r.source_type !== "objective").map((r) => r.source_id)),
   ].filter((id) => !statusById.has(id));
   if (externalBlockerIds.length > 0) {
-    const { data: blockerRows } = await service
-      .from("issues")
-      .select("id, status")
+    const { data: blockerRows } = await issueStore(service).select("id, status")
       .in("id", externalBlockerIds)
       .is("deleted_at", null);
     for (const row of blockerRows ?? []) {
@@ -714,9 +701,7 @@ export async function runCycleCapture(params: CycleCaptureParams): Promise<void>
       : prefs.autoCaptureCompleted;
   if (!prefs.enabled || !wanted) return;
 
-  const { data: issue } = await service
-    .from("issues")
-    .select("id, assignee_id, cycle_id, status")
+  const { data: issue } = await issueStore(service).select("id, assignee_id, cycle_id, status")
     .eq("id", params.issueId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -795,9 +780,7 @@ export async function runCycleBlockerPull(params: CycleBlockerPullParams): Promi
   const service = getServiceClient();
 
   // The blocked issue must sit in a cycle…
-  const { data: blocked } = await service
-    .from("issues")
-    .select("id, cycle_id, status")
+  const { data: blocked } = await issueStore(service).select("id, cycle_id, status")
     .eq("id", params.blockedId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -818,9 +801,7 @@ export async function runCycleBlockerPull(params: CycleBlockerPullParams): Promi
   // The blocker must be pullable: real living work, not already planned in a
   // cycle, and not someone else's assignment (their plan, not this one —
   // pulling it here would steal it via a mere relation).
-  const { data: blocker } = await service
-    .from("issues")
-    .select("id, cycle_id, status, assignee_id, project_id")
+  const { data: blocker } = await issueStore(service).select("id, cycle_id, status, assignee_id, project_id")
     .eq("id", params.blockerId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -866,9 +847,7 @@ export async function runCycleBlockerPull(params: CycleBlockerPullParams): Promi
 
   // Rebalance: if the pull overshot the target, evict the lowest-reco
   // unstarted issues (never the blocker/blocked pair, never started work).
-  const { data: cycleIssueRows } = await service
-    .from("issues")
-    .select("id, project_id, title, status, priority, effort, objective_id, issue_categories(category_id)")
+  const { data: cycleIssueRows } = await issueStore(service).select("id, project_id, title, status, priority, effort, objective_id, issue_categories(category_id)")
     .eq("cycle_id", cycle.id)
     .is("deleted_at", null);
   const cycleIssues: RecoIssue[] = (cycleIssueRows ?? []).map((row) => ({
@@ -948,9 +927,7 @@ export async function runCycleBlockerPull(params: CycleBlockerPullParams): Promi
       ...new Set(relations.filter((r) => r.source_type !== "objective").map((r) => r.source_id)),
     ].filter((id) => !statusById.has(id));
     const { data: blockerRows } = externalBlockerIds.length
-      ? await service
-          .from("issues")
-          .select("id, status")
+      ? await issueStore(service).select("id, status")
           .in("id", externalBlockerIds)
           .is("deleted_at", null)
       : { data: [] };

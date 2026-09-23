@@ -1,5 +1,6 @@
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
+import { decodeIssue } from "@/lib/server/issue-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -332,7 +333,7 @@ export async function resolveEntityRelations(
     issueIds.length
       ? db
           .from("issues")
-          .select("id, number, title, status")
+          .select("*")
           .is("deleted_at", null)
           .eq("project_id", scope.projectId)
           .in("id", [...new Set(issueIds)])
@@ -345,8 +346,10 @@ export async function resolveEntityRelations(
           .in("id", [...new Set(objectiveIds)])
       : Promise.resolve({ data: [] }),
   ]);
+  const decodedIssues = await Promise.all(((relatedIssues.data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => decodeIssue(row)));
   const issueMap = new Map(
-    ((relatedIssues.data ?? []) as Array<Record<string, unknown>>).map((o) => [
+    decodedIssues.map((o) => [
       o.id as string,
       o,
     ])
@@ -407,14 +410,9 @@ export async function listIssues(
     typeof args.offset === "number" && args.offset > 0 ? Math.floor(args.offset) : 0;
   const withDescription = args.include_description === true;
 
-  // Typed `string` to bypass the supabase-js type parser,
-  // which does not know how to resolve a conditional select.
-  const columns: string = withDescription
-    ? `${COMPACT_ISSUE_COLUMNS}, description`
-    : COMPACT_ISSUE_COLUMNS;
   let query = ctx.db
     .from("issues")
-    .select(columns)
+    .select("*, issue_categories(category_id)")
     .is("deleted_at", null)
     .eq("project_id", ctx.projectId)
     .order("updated_at", { ascending: false })
@@ -448,7 +446,8 @@ export async function listIssues(
   const { data, error } = await query;
   if (error) return { error: error.message };
 
-  let rows = (data ?? []) as unknown as Array<Record<string, unknown>>;
+  let rows = await Promise.all(((data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => decodeIssue(row, ctx.actorId ?? null)));
   const hasMore = rows.length > limit;
   rows = rows.slice(0, limit);
   // Category filter applies post-query (the N–N join can't be filtered inline
@@ -494,34 +493,39 @@ export async function searchIssues(
   if (number !== null && Number.isFinite(number)) {
     const { data } = await ctx.db
       .from("issues")
-      .select(COMPACT_ISSUE_COLUMNS)
+      .select("*, issue_categories(category_id)")
       .is("deleted_at", null)
       .eq("project_id", ctx.projectId)
       .eq("number", number)
       .maybeSingle();
     if (data) {
       return {
-        issues: [compactIssue(data as Record<string, unknown>, ctx.projectKey)],
+        issues: [compactIssue(await decodeIssue(data as Record<string, unknown>, ctx.actorId ?? null), ctx.projectKey)],
       };
     }
   }
 
-  const pattern = ilikePattern(query);
-  const { data, error } = await ctx.db
-    .from("issues")
-    .select(COMPACT_ISSUE_COLUMNS)
-    .is("deleted_at", null)
-    .eq("project_id", ctx.projectId)
-    .or(`title.ilike.${pattern},description.ilike.${pattern}`)
-    .order("updated_at", { ascending: false })
-    .limit(limit);
-  if (error) return { error: error.message };
-
-  return {
-    issues: ((data ?? []) as Array<Record<string, unknown>>).map((row) =>
-      compactIssue(row, ctx.projectKey)
-    ),
-  };
+  const matches: Array<Record<string, unknown>> = [];
+  const needle = query.toLocaleLowerCase();
+  for (let offset = 0; matches.length < limit; offset += 200) {
+    const { data, error } = await ctx.db.from("issues")
+      .select("*, issue_categories(category_id)")
+      .is("deleted_at", null).eq("project_id", ctx.projectId)
+      .order("updated_at", { ascending: false }).order("id", { ascending: true })
+      .range(offset, offset + 199);
+    if (error) return { error: error.message };
+    const page = data ?? [];
+    for (const stored of page) {
+      const row = await decodeIssue(stored as Record<string, unknown>, ctx.actorId ?? null);
+      if (String(row.title).toLocaleLowerCase().includes(needle) ||
+          String(row.description ?? "").toLocaleLowerCase().includes(needle)) {
+        matches.push(compactIssue(row, ctx.projectKey));
+        if (matches.length === limit) break;
+      }
+    }
+    if (page.length < 200) break;
+  }
+  return { issues: matches };
 }
 
 export interface IssueDetail {
@@ -560,9 +564,10 @@ export async function getIssue(
   } else {
     return { error: "Pass issue_id or number." };
   }
-  const { data: issue, error } = await issueQuery.maybeSingle();
+  const { data: storedIssue, error } = await issueQuery.maybeSingle();
   if (error) return { error: error.message };
-  if (!issue) return { error: "Issue not found in this project." };
+  if (!storedIssue) return { error: "Issue not found in this project." };
+  const issue = await decodeIssue(storedIssue as Record<string, unknown>, ctx.actorId ?? null);
 
   const [
     { data: comments, error: commentsError },
@@ -580,9 +585,10 @@ export async function getIssue(
         .order("created_at", { ascending: true }),
       ctx.db
         .from("issues")
-        .select("id, number, title, status")
+        .select("*")
         .is("deleted_at", null)
         .eq("parent_id", issue.id)
+        .eq("project_id", ctx.projectId)
         .order("number", { ascending: true }),
       // Resource metadata (MIN-24, MIN-184, MIN-275): comment_id null = on the
       // issue itself. A file's contents stay behind the app's signed-URL door —
@@ -609,6 +615,8 @@ export async function getIssue(
     ]);
 
   if (commentsError) return { error: "Unable to read issue comments." };
+  const decodedSubIssues = await Promise.all(((subIssues ?? []) as Array<Record<string, unknown>>)
+    .map((row) => decodeIssue(row, ctx.actorId ?? null)));
   const resourcesByComment = new Map<string | null, Record<string, unknown>[]>();
   for (const row of attachmentRows ?? []) {
     const key = (row.comment_id as string | null) ?? null;
@@ -668,15 +676,16 @@ export async function getIssue(
     // afterwards with the key of THIS project would be wrong on top of that.
     const { data } = await ctx.db
       .from("issues")
-      .select("id, number, title")
+      .select("*")
       .is("deleted_at", null)
       .eq("id", issue.duplicate_of_id)
       .eq("project_id", ctx.projectId)
       .maybeSingle();
     if (data) {
+      const decoded = await decodeIssue(data as Record<string, unknown>, ctx.actorId ?? null);
       duplicateOf = {
-        ...data,
-        identifier: issueIdentifier(ctx.projectKey, data.number as number),
+        ...decoded,
+        identifier: issueIdentifier(ctx.projectKey, decoded.number as number),
       };
     }
   }
@@ -738,7 +747,7 @@ export async function getIssue(
       resources: resourcesByComment.get(null) ?? [],
     },
     comments: commentRows,
-    sub_issues: ((subIssues ?? []) as Array<Record<string, unknown>>).map((s) => ({
+    sub_issues: decodedSubIssues.map((s) => ({
       ...s,
       identifier: issueIdentifier(ctx.projectKey, s.number as number),
     })),

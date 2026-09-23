@@ -14,6 +14,7 @@ const objectiveTemplate = "minddy_min591_objective_audit";
 const categoryTemplate = "minddy_min591_category_audit";
 const draftTemplate = "minddy_min591_draft_audit";
 const feedbackTemplate = "minddy_min591_feedback_audit";
+const issueTemplate = "minddy_min591_issue_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -460,6 +461,69 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       const wrong = new EncryptedRowCodec(new EncryptedStore(
         new ManagedDataKeys(registry(restored), wrapper(randomBytes(32)))));
       await expect(wrong.decode(rows[0], { table: "feedback_posts", scope },
+        { actorId: actor, reason: "migration_verification" })).rejects.toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
+
+  it("restores an encrypted parent and child issue across project key versions", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_issue_source_${suffix}`;
+    const restored = `minddy_min591_issue_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID(), parent = randomUUID();
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(issueTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${issueTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Fixture project','ISS');`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const codec = new EncryptedRowCodec(new EncryptedStore(keys));
+      for (const number of [1, 2]) {
+        if (number === 2) await keys.rotate(scope, 1);
+        const id = number === 1 ? parent : randomUUID();
+        const row = await codec.encode({ id, project_id: project,
+          title: `Private issue ${number}`, description: `Private description ${number}`,
+          plan: `Private plan ${number}`, remote_url: `https://example.test/private/${number}`,
+          automation_override: { prompt: `Private prompt ${number}` },
+          encryption_version: 0, encrypted_content: null }, { table: "issues", scope });
+        sql(source, `INSERT INTO public.issues(id,project_id,number,parent_id,title,description,
+          plan,remote_url,automation_override,encryption_version,encrypted_content)
+          VALUES(${quote(id)},${quote(project)},${number},${number === 1 ? "NULL" : quote(parent)},
+            NULL,NULL,NULL,NULL,NULL,${row.encryption_version},${quote(row.encrypted_content!)});`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "supabase_admin", "-d", source,
+        "--data-only", "--no-owner", "--no-privileges", ...["auth.users", "public.projects",
+          "public.envelope_data_keys", "public.issue_encryption_scopes", "public.issues"]
+          .map((table) => `--table=${table}`)], { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      for (const secret of ["Private issue", "Private description", "Private plan",
+        "Private prompt", "example.test/private"]) expect(dump).not.toContain(secret);
+      sql(restored, dump);
+      const rows: StoredRow[] = JSON.parse(sql(restored, "SELECT json_agg(i ORDER BY number) FROM public.issues i;"));
+      expect(rows.map((row) => row.encryption_version)).toEqual([1, 2]);
+      expect(rows[1].parent_id).toBe(parent);
+      const restoredKeys = new ManagedDataKeys(registry(restored), wrapper(root));
+      const restoredCodec = new EncryptedRowCodec(new EncryptedStore(restoredKeys));
+      for (const row of rows) {
+        restoredKeys.invalidate(scope);
+        const plain = await restoredCodec.decode(row, { table: "issues", scope },
+          { actorId: actor, reason: "migration_verification" });
+        expect(plain.title).toBe(`Private issue ${row.encryption_version}`);
+      }
+      const wrong = new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored), wrapper(randomBytes(32)))));
+      await expect(wrong.decode(rows[0], { table: "issues", scope },
         { actorId: actor, reason: "migration_verification" })).rejects.toThrow();
     } finally {
       root.fill(0);

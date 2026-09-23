@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
@@ -229,11 +230,9 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     service.from("user_agent_preferences").select("*").eq("user_id", userId).maybeSingle(),
     service.from("project_members").select("project_id, role, created_at").eq("user_id", userId),
     ownedIds.length
-      ? service.from("issues").select(ISSUE_COLUMNS).in("project_id", ownedIds)
+      ? issueStore(service).select(ISSUE_COLUMNS).in("project_id", ownedIds)
       : Promise.resolve({ data: [] as Row[], error: null }),
-    service
-      .from("issues")
-      .select(ISSUE_COLUMNS)
+    issueStore(service).select(ISSUE_COLUMNS)
       .or(`created_by.eq.${userId},assignee_id.eq.${userId}`),
     commentStore(service, "comments", userId)
       .select(

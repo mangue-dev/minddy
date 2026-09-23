@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
@@ -149,9 +150,7 @@ export async function readInboxNotifications({
     { data: delegatedWork },
   ] = await Promise.all([
     issueIds.length && projectIds.length
-      ? service
-          .from("issues")
-          .select("id, project_id, number, title")
+      ? issueStore(service).select("id, project_id, number, title")
           .in("id", issueIds)
           .in("project_id", projectIds)
           .is("deleted_at", null)

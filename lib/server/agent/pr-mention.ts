@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -82,9 +83,7 @@ async function scopeForPr(pr: PullRequestRow): Promise<MentionScope | null> {
   const ordered: Array<{ id: string; owner: string | null }> = [];
 
   if (pr.issue_id) {
-    const { data } = await service
-      .from("issues")
-      .select("project_id, projects(owner_id)")
+    const { data } = await issueStore(service).select("project_id, projects(owner_id)")
       .eq("id", pr.issue_id)
       .maybeSingle();
     const row = data as {

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
+import { decodeIssue } from "@/lib/server/issue-store";
 import { updateIssueFields } from "@/lib/server/update-issue";
 import { softDeleteItem } from "@/lib/server/trash";
 
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     console.error("[api/issues/:id] GitHub metadata get failed:", githubMetadataError.message);
   }
   return NextResponse.json({
-    ...mapIssueRow(data),
+    ...mapIssueRow(await decodeIssue(data, auth.user.id)),
     github_metadata: githubMetadata ?? null,
   });
 }

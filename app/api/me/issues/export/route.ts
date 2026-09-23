@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
@@ -69,9 +70,7 @@ export async function GET(request: NextRequest) {
   // than an error — the user requested an export, he receives one.
   let issues: IssueRow[] = [];
   if (scoped.length > 0) {
-    let query = auth.supabase
-      .from("issues")
-      .select(ISSUE_COLUMNS)
+    let query = issueStore(auth.supabase).select(ISSUE_COLUMNS)
       .in("status", statuses)
       // STABLE sorting on the base side, so that the ceiling always cuts at the same
       // place ; the legible ordering (by project name) is then done.
@@ -102,9 +101,7 @@ export async function GET(request: NextRequest) {
   ];
   const parentIdentifier = new Map<string, string>();
   if (orphanParents.length > 0) {
-    const { data } = await auth.supabase
-      .from("issues")
-      .select("id, project_id, number")
+    const { data } = await issueStore(auth.supabase).select("id, project_id, number")
       .in("id", orphanParents);
     for (const row of (data ?? []) as { id: string; project_id: string; number: number }[]) {
       const project = projectById.get(row.project_id);

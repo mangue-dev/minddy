@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { readIssueEvents } from "@/lib/server/issue-event-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
@@ -19,9 +20,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   // relationship. Resolve the ticket and project membership explicitly before
   // using the service client, matching the internal feedback activity routes.
   const service = getServiceClient();
-  const { data: issue, error: issueError } = await service
-    .from("issues")
-    .select("project_id")
+  const { data: issue, error: issueError } = await issueStore(service).select("project_id")
     .eq("id", id)
     .maybeSingle();
 

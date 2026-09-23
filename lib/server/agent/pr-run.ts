@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
@@ -131,9 +132,7 @@ export async function loadPrIssueContext(
   try {
     const service = getServiceClient();
     const [{ data }, { data: commentRows }] = await Promise.all([
-      service
-        .from("issues")
-        .select("number, title, description, plan, projects(key)")
+      issueStore(service).select("number, title, description, plan, projects(key)")
         .eq("id", issueId)
         .is("deleted_at", null)
         .maybeSingle(),

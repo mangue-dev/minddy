@@ -1,5 +1,6 @@
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -749,7 +750,7 @@ async function writeIssuePlan(
   if ("error" in target)
     return { result: { error: target.error }, success: false };
 
-  const current = await readIssueText(target.issue.id);
+  const current = await readIssueText(target.issue.id, ctx.projectId, ctx.actorId);
   if ("error" in current)
     return { result: { error: current.error }, success: false };
 
@@ -794,14 +795,16 @@ async function writeIssuePlan(
  */
 async function readIssueText(
   issueId: string,
+  projectId: string,
+  actorId: string | null,
 ): Promise<
   { plan: string; description: string; updatedAt: string } | { error: string }
 > {
-  const { data, error } = await getServiceClient()
-    .from("issues")
+  const { data, error } = await issueStore(getServiceClient(), actorId)
     .select("plan, description, updated_at")
     .is("deleted_at", null)
     .eq("id", issueId)
+    .eq("project_id", projectId)
     .maybeSingle();
   if (error) return { error: error.message };
   if (!data) return { error: "Issue not found." };
@@ -834,7 +837,7 @@ async function appendToIssuePlan(
   if ("error" in target)
     return { result: { error: target.error }, success: false };
 
-  const current = await readIssueText(target.issue.id);
+  const current = await readIssueText(target.issue.id, ctx.projectId, ctx.actorId);
   if ("error" in current)
     return { result: { error: current.error }, success: false };
 
@@ -904,7 +907,7 @@ async function editIssueTextTool(
   if ("error" in target)
     return { result: { error: target.error }, success: false };
 
-  const current = await readIssueText(target.issue.id);
+  const current = await readIssueText(target.issue.id, ctx.projectId, ctx.actorId);
   if ("error" in current)
     return { result: { error: current.error }, success: false };
 

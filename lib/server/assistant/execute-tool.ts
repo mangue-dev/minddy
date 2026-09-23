@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
@@ -586,9 +587,7 @@ async function readIssueText(
 ): Promise<
   { plan: string; description: string; updatedAt: string } | { error: string }
 > {
-  const { data, error } = await ctx.supabase
-    .from("issues")
-    .select("plan, description, updated_at")
+  const { data, error } = await issueStore(ctx.supabase).select("plan, description, updated_at")
     .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();
@@ -1990,9 +1989,7 @@ export async function executeTool(
         let issueSource: { number: number; title: string; plan: string | null } | null = null;
         let launchIssue: LaunchMessageIssue | null = null;
         if (issueId) {
-          const { data: row } = await ctx.supabase
-            .from("issues")
-            .select("number, title, plan, effort")
+          const { data: row } = await issueStore(ctx.supabase).select("number, title, plan, effort")
             .is("deleted_at", null)
             .eq("id", issueId)
             .maybeSingle();
@@ -2625,9 +2622,7 @@ export async function executeTool(
         ) {
           return toolError("decision must be accept, decline, or duplicate.");
         }
-        const { data: issue } = await ctx.supabase
-          .from("issues")
-          .select("id, status")
+        const { data: issue } = await issueStore(ctx.supabase).select("id, status")
           .is("deleted_at", null)
           .eq("id", issueId)
           .eq("project_id", projectId)
@@ -3400,9 +3395,7 @@ async function executeCycleTool(
       if (removing) {
         // Only pull issues out of the user's OWN current cycle — never someone
         // else's (project access alone would otherwise allow it).
-        const { data: row } = await ctx.service
-          .from("issues")
-          .select("cycle_id")
+        const { data: row } = await issueStore(ctx.service).select("cycle_id")
           .is("deleted_at", null)
           .eq("id", issueId)
           .maybeSingle();

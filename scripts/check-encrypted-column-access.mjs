@@ -13,6 +13,26 @@ const allowedInvitationAccess = new Set([
 
 const rules = [
   {
+    access: /\.\s*from\s*\(\s*["'`]issues["'`]\s*\)/,
+    allowed: new Set([
+      "lib/server/issue-store.ts", "lib/server/encryption/issue-backfill.ts",
+      "lib/server/create-issue.ts", "lib/server/update-issue.ts",
+      "lib/server/import-issues.ts", "lib/server/issue-reads.ts",
+      "app/api/issues/[id]/route.ts", "lib/server/assistant/comment-agent.ts",
+      "lib/server/agent/control-plane.ts", "lib/server/agent/vm-rest.ts",
+      "lib/server/cycles.ts", "lib/server/recurrence.ts", "lib/server/smart-assign.ts",
+      "captures/world/seed/002-projet-aurora.mjs", "captures/world/seed/003-projet-beacon.mjs",
+      "captures/world/seed/004-cycle.mjs", "captures/world/seed/006-numo.mjs",
+      "captures/world/seed/008-agent.mjs", "captures/world/seed/009-densite-aurora.mjs",
+      "captures/world/seed/014-pages-aurora.mjs", "captures/world/seed/015-current-cycle-completed.mjs",
+      "captures/world/seed/017-cycle-recal.mjs", "captures/world/seed/_issues.mjs",
+    ]),
+  },
+  {
+    access: /\.\s*(?:from\s*\(\s*["'`]issue_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_issue_ciphertext["'`])/,
+    allowed: new Set(["lib/server/issue-store.ts", "lib/server/encryption/issue-backfill.ts"]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]feedback_posts["'`]\s*\)/,
     allowed: new Set([
       "lib/server/feedback-post-store.ts", "lib/server/encryption/feedback-post-backfill.ts",

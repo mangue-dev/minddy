@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import { feedbackPostStore } from "@/lib/server/feedback-post-store";
@@ -292,16 +293,18 @@ export async function runCommentMention(input: {
   trigger?: "mention" | "reply";
 }): Promise<void> {
   const { service, actorId, issueId, triggerCommentId } = input;
-  const { data: issue } = await service
-    .from("issues")
-    .select("id, project_id, number, title, created_by, assignee_id")
+  const { data: parent } = await service.from("issues").select("id, project_id")
     .eq("id", issueId)
     .is("deleted_at", null)
     .maybeSingle();
-  const access = issue
-    ? await getProjectAccess(actorId, issue.project_id as string)
+  const access = parent
+    ? await getProjectAccess(actorId, parent.project_id as string)
     : null;
-  if (!issue || !access || !await hasUsageBudget(actorId, "assistant", "assistant_model")) return;
+  if (!parent || !access || !await hasUsageBudget(actorId, "assistant", "assistant_model")) return;
+  const { data: issue } = await issueStore(service, actorId)
+    .select("id, project_id, number, title, created_by, assignee_id")
+    .eq("id", issueId).eq("project_id", parent.project_id).is("deleted_at", null).maybeSingle();
+  if (!issue) return;
 
   const { data: triggerRow } = await commentStore(service, "comments", actorId)
     .select("id, parent_id, body, author_id")

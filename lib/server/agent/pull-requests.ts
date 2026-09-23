@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -446,9 +447,7 @@ export async function resolveIssueForPr(opts: {
   if (!project) return null;
 
   const service = getServiceClient();
-  const { data } = await service
-    .from("issues")
-    .select("id")
+  const { data } = await issueStore(service).select("id")
     .eq("project_id", project.id)
     .eq("number", parsed.number)
     .is("deleted_at", null)

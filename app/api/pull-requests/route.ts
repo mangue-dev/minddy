@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { after, NextResponse, type NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -174,9 +175,7 @@ async function pinnedRow(
   // if it is in the trash, exactly as on the lines of the page.
   let issue: PullRequestWithIssue["issue"] = null;
   if (found.issue_id) {
-    const { data } = await supabase
-      .from("issues")
-      .select("id, number, title, project_id")
+    const { data } = await issueStore(supabase).select("id, number, title, project_id")
       .eq("id", found.issue_id)
       .maybeSingle();
     issue = (data as PullRequestWithIssue["issue"]) ?? null;

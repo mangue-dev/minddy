@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -166,15 +167,11 @@ export async function GET(request: NextRequest) {
     await Promise.all([
       // All statuses combined: onboarding asks “have you already created a
       // ticket? ”, to which a completed ticket answers yes (lib/use-onboarding.ts).
-      auth.supabase
-        .from("issues")
-        .select("id, projects!inner(deleted_at)", { count: "exact", head: true })
+      issueStore(auth.supabase).select("id, projects!inner(deleted_at)", { count: "exact", head: true })
         .is("projects.deleted_at", null)
         .is("deleted_at", null),
       currentCycleId
-        ? auth.supabase
-            .from("issues")
-            .select(SUMMARY_ISSUE_COLUMNS)
+        ? issueStore(auth.supabase).select(SUMMARY_ISSUE_COLUMNS)
             .is("projects.deleted_at", null)
             .is("deleted_at", null)
             .eq("cycle_id", currentCycleId)
@@ -183,9 +180,7 @@ export async function GET(request: NextRequest) {
       // (XL, 8 days) with no lower bound — an overdue ticket remains overdue —
       // then isDueSoon tightens the window clean to everyone's effort. Sorting
       // is already that of the section: the oldest deadline first.
-      auth.supabase
-        .from("issues")
-        .select(SUMMARY_ISSUE_COLUMNS)
+      issueStore(auth.supabase).select(SUMMARY_ISSUE_COLUMNS)
         .is("projects.deleted_at", null)
         .is("deleted_at", null)
         .not("due_date", "is", null)
@@ -196,9 +191,7 @@ export async function GET(request: NextRequest) {
       // “To be sorted” file (MIN-104): tickets in triage, the OLDEST
       // first — in a queue, the one who waited the longest is the one who
       // rots, and so this is what the section shows first.
-      auth.supabase
-        .from("issues")
-        .select(SUMMARY_ISSUE_COLUMNS, { count: "exact" })
+      issueStore(auth.supabase).select(SUMMARY_ISSUE_COLUMNS, { count: "exact" })
         .is("projects.deleted_at", null)
         .is("deleted_at", null)
         .eq("status", "triage")
@@ -267,9 +260,7 @@ export async function GET(request: NextRequest) {
       // Same trash filter: a blocker in a discarded project no longer blocks
       // nothing — otherwise he would keep his ticket indefinitely at the bottom of
       // the receipt order, for a reason that has become invisible.
-      const { data: statusRows } = await auth.supabase
-        .from("issues")
-        .select("id, status, projects!inner(deleted_at)")
+      const { data: statusRows } = await issueStore(auth.supabase).select("id, status, projects!inner(deleted_at)")
         .is("projects.deleted_at", null)
         .is("deleted_at", null)
         .in("id", counterpartIds);

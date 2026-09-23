@@ -1682,6 +1682,21 @@
       ]
     }
   },
+  "issue_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "issue_events": {
     "scope": {
       "kind": "project",
@@ -1813,6 +1828,12 @@
         "deleted_at",
         "due_date",
         "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version",
+        "encryption_revision",
+        "encryption_checked_at"
       ]
     }
   },

@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 import { categoryStore } from "@/lib/server/category-store";
 
@@ -130,9 +131,7 @@ export async function runSmartAssign(
         .eq("id", params.projectId)
         .is("deleted_at", null)
         .maybeSingle(),
-      service
-        .from("issues")
-        .select("id, title, description, status, priority, effort, assignee_id")
+      issueStore(service).select("id, title, description, status, priority, effort, assignee_id")
         .is("deleted_at", null)
         .eq("id", params.issueId)
         .maybeSingle(),
@@ -404,9 +403,7 @@ export async function sweepUnassignedIssues(
   const service = getServiceClient();
   const since = new Date(Date.now() - SWEEP_WINDOW_MS).toISOString();
 
-  const { data: rows, error } = await service
-    .from("issues")
-    .select("id, project_id, projects!inner(smart_assign_enabled, deleted_at)")
+  const { data: rows, error } = await issueStore(service).select("id, project_id, projects!inner(smart_assign_enabled, deleted_at)")
     .is("deleted_at", null)
     .is("assignee_id", null)
     .not("status", "in", "(triage,canceled,duplicate)")
