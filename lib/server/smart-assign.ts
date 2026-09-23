@@ -1,5 +1,6 @@
 import "server-only";
 
+import { previouslyAssignedIssues } from "./issue-event-store";
 import { afterOrNow } from "@/lib/server/after-safe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -416,15 +417,7 @@ export async function sweepUnassignedIssues(
   const candidates = (rows ?? []) as Array<{ id: string; project_id: string }>;
   if (candidates.length === 0) return { candidates: 0, assigned: 0 };
 
-  const { data: touched } = await service
-    .from("issue_events")
-    .select("issue_id")
-    .eq("field", "assignee_id")
-    .in(
-      "issue_id",
-      candidates.map((c) => c.id)
-    );
-  const everAssigned = new Set((touched ?? []).map((e) => e.issue_id as string));
+  const everAssigned = await previouslyAssignedIssues(service, candidates.map((c) => c.id));
 
   let assigned = 0;
   for (const candidate of candidates) {

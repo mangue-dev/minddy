@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   contentEnabled: false,
   scratchpads: vi.fn(),
   statistics: vi.fn(),
+  history: vi.fn(),
 }));
 
 vi.mock("@/lib/server/encryption/invitation-email", () => ({
@@ -22,6 +23,8 @@ vi.mock("@/lib/server/encryption/rotation", () => ({ rotateDueContentKeys: state
 vi.mock("@/lib/server/encryption/content-config", () => ({ isContentEncryptionEnabled: () => state.contentEnabled }));
 vi.mock("@/lib/server/encryption/scratchpad-backfill", () => ({ backfillScratchpadsBatch: state.scratchpads }));
 vi.mock("@/lib/server/encryption/stat-events-backfill", () => ({ backfillStatEventsBatch: state.statistics }));
+
+vi.mock("@/lib/server/encryption/history-backfill", () => ({ backfillHistoryBatch: state.history }));
 
 const { GET } = await import("@/app/api/cron/encryption-maintenance/route");
 const secret = "x".repeat(32);
@@ -40,6 +43,7 @@ beforeEach(() => {
   state.backfill.mockReset();
   state.scratchpads.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.statistics.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
+  state.history.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.rotate.mockReset().mockResolvedValue({ scanned: 0, advanced: 0, failed: 0 });
 });
 
@@ -92,6 +96,8 @@ describe("encryption maintenance cron", () => {
     expect(response.status).toBe(200);
     expect(state.scratchpads).toHaveBeenCalledWith(50, expect.any(AbortSignal));
     expect(state.statistics).toHaveBeenCalledWith(50, expect.any(AbortSignal));
+    expect(state.history).toHaveBeenCalledWith("issue_events", 50, expect.any(AbortSignal));
+    expect(state.history).toHaveBeenCalledWith("page_versions", 50, expect.any(AbortSignal));
     expect(state.backfill).not.toHaveBeenCalled();
     expect(state.rotate).toHaveBeenCalled();
   });
@@ -121,4 +127,18 @@ describe("encryption maintenance cron", () => {
       expect(JSON.stringify(errorLog.mock.calls)).not.toContain("Private provider error");
     } finally { errorLog.mockRestore(); }
   });
+  it("reports a failed history batch while still migrating other histories", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      state.contentEnabled = true;
+      state.configured = true;
+      state.history.mockRejectedValueOnce(new Error("Private history error"));
+      const response = await GET(request(true));
+      expect(response.status).toBe(503);
+      expect(state.history).toHaveBeenCalledTimes(2);
+      expect(await response.json()).toMatchObject({ activity: { failed: true }, page_versions: { failed: 0 } });
+      expect(JSON.stringify(log.mock.calls)).not.toContain("Private history error");
+    } finally { log.mockRestore(); }
+  });
+
 });

@@ -135,4 +135,65 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with a local KMS fix
       for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
     }
   }, 60_000);
+
+  it("restores activity and page snapshots across project key rotation", async () => {
+    const suffix = randomUUID().replaceAll("-", "");
+    const source = `minddy_min591_history_${suffix}`;
+    const restored = `minddy_min591_history_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID(), issue = randomUUID(), page = randomUUID();
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(template, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${template};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id, owner_id, name, key) VALUES(${quote(project)},${quote(actor)},'Source fixture','HISTORY');
+        INSERT INTO public.issues(id, project_id, number, title) VALUES(${quote(issue)},${quote(project)},1,'Source fixture');
+        INSERT INTO public.pages(id, project_id, position, title, created_by) VALUES(${quote(page)},${quote(project)},'0','Source fixture',${quote(actor)});`);
+      const keys = new ManagedDataKeys(registry(source), kms(root));
+      const codec = new EncryptedRowCodec(new EncryptedStore(keys));
+      for (const number of [1, 2]) {
+        if (number === 2) await keys.rotate(scope, 1);
+        const event = await codec.encode({ id: randomUUID(), project_id: project,
+          from_value: `Protected prior title ${number}`, to_value: `Protected next title ${number}`,
+          encryption_version: 0, encrypted_content: null }, { table: "issue_events", scope });
+        const snapshot = await codec.encode({ id: randomUUID(), project_id: project,
+          title: `Protected wiki title ${number}`, icon: null, content: { type: "doc", text: `Protected wiki body ${number}` },
+          encryption_version: 0, encrypted_content: null }, { table: "page_versions", scope });
+        sql(source, `INSERT INTO public.issue_events(id, issue_id, project_id, actor_id, type, encryption_version, encrypted_content)
+          VALUES(${quote(String(event.id))},${quote(issue)},${quote(project)},${quote(actor)},'updated',${event.encryption_version},${quote(event.encrypted_content!)});
+          INSERT INTO public.page_versions(id, page_id, project_id, version, title, content, author_kind, encryption_version, encrypted_content)
+          VALUES(${quote(String(snapshot.id))},${quote(page)},${quote(project)},${number},NULL,NULL,'human',${snapshot.encryption_version},${quote(snapshot.encrypted_content!)});`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "supabase_admin", "-d", source,
+        "--data-only", "--no-owner", "--no-privileges", ...["auth.users", "public.envelope_data_keys", "public.projects",
+          "public.issues", "public.pages", "public.issue_events", "public.page_versions"].map((table) => `--table=${table}`)], {
+        encoding: "utf8", maxBuffer: 4 * 1024 * 1024,
+      });
+      expect(dump).not.toContain("Protected");
+      expect(dump).not.toContain(root.toString("base64"));
+      sql(restored, dump);
+      const restoredKeys = new ManagedDataKeys(registry(restored), kms(root));
+      const restoredCodec = new EncryptedRowCodec(new EncryptedStore(restoredKeys));
+      for (const table of ["issue_events", "page_versions"] as const) {
+        const stored: StoredRow[] = JSON.parse(sql(restored, `SELECT json_agg(r) FROM public.${table} r;`));
+        expect(stored.map((row) => row.encryption_version).sort()).toEqual([1, 2]);
+        for (const row of stored) {
+          restoredKeys.invalidate(scope);
+          const plain = await restoredCodec.decode(row, { table, scope }, { actorId: actor, reason: "migration_verification" });
+          expect(plain[table === "issue_events" ? "to_value" : "title"])
+            .toBe(`Protected ${table === "issue_events" ? "next" : "wiki"} title ${row.encryption_version}`);
+        }
+      }
+    } finally {
+      root.fill(0);
+      log.mockRestore();
+      for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
 });

@@ -224,7 +224,7 @@
       "functionReferences": []
     },
     "get_cycle_stats(text)": {
-      "sha256": "5e25c84c2673d1ee40ebf99a371ac14d1d05dee3cc84599d6025b5addf185dd1",
+      "sha256": "eb0f7b046cd7d637b166ef9220bd673f28ebbf00f676a7a5181ed6944c04e51c",
       "securityDefiner": false,
       "configuration": [
         "search_path=public"
@@ -446,21 +446,17 @@
       ]
     },
     "broadcast_event_scoped()": {
-      "sha256": "d13bb0441e6e1ecec78cc17dbbddf2b6957ebf8edafe783239aba97064bec0f1",
+      "sha256": "ca90d88c1d96bbb523dec3e6c6de2e476193bfb202686369869e4af458705270",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
       "relations": [
-        "pages",
-        "issues",
-        "objectives"
+        "issue_events"
       ],
       "protectedRelations": [
-        "pages",
-        "issues",
-        "objectives"
+        "issue_events"
       ],
       "functionReferences": []
     },
@@ -689,6 +685,30 @@
       ],
       "protectedRelations": [
         "agent_runs"
+      ],
+      "functionReferences": []
+    },
+    "guard_history_encryption()": {
+      "sha256": "a2d4a38eda2559e327b171abba295e08231f563fcc038ae1dbb1d83bf26c03ef",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "pages",
+        "issues",
+        "objectives",
+        "issue_events",
+        "feedback_posts",
+        "envelope_data_keys"
+      ],
+      "protectedRelations": [
+        "pages",
+        "issues",
+        "objectives",
+        "issue_events",
+        "feedback_posts"
       ],
       "functionReferences": []
     },
@@ -4017,6 +4037,10 @@
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER conversations_set_updated_at BEFORE UPDATE ON conversations FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
+    "issue_events.issue_events_encryption_guard": {
+      "function": "guard_history_encryption()",
+      "definition": "CREATE TRIGGER issue_events_encryption_guard BEFORE INSERT OR UPDATE ON issue_events FOR EACH ROW EXECUTE FUNCTION guard_history_encryption()"
+    },
     "page_comments.page_comments_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER page_comments_set_updated_at BEFORE UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
@@ -4068,6 +4092,10 @@
     "feedback_users.feedback_users_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER feedback_users_set_updated_at BEFORE UPDATE ON feedback_users FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    "page_versions.page_versions_encryption_guard": {
+      "function": "guard_history_encryption()",
+      "definition": "CREATE TRIGGER page_versions_encryption_guard BEFORE INSERT OR UPDATE ON page_versions FOR EACH ROW EXECUTE FUNCTION guard_history_encryption()"
     },
     "project_drafts.project_drafts_set_updated_at": {
       "function": "set_updated_at()",

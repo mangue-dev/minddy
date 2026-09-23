@@ -1,3 +1,4 @@
+import { readIssueEvents } from "@/lib/server/issue-event-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -32,11 +33,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("issueNotFound") }, { status: 404 });
   }
 
-  const { data, error } = await service
-    .from("issue_events")
-    .select("*, integration:integrations(name)")
-    .eq("issue_id", id)
-    .order("created_at", { ascending: true });
+  const { data, error } = await readIssueEvents(service, { issue_id: id }, { actorId: auth.user.id, projectId: issue.project_id, integrations: true });
 
   if (error) {
     console.error("[api/events] list failed:", error.message);

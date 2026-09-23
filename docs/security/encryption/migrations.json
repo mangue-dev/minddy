@@ -100,5 +100,6 @@
   "20270107030000_invitation_email_encryption.sql": "1048dea1c6a74be38f8480a5dca00b56fe0816d8b5f4f3e4b7892e703ebc225f",
   "20270107040000_envelope_rotation_fairness.sql": "701528eb54bcf25aae6b299cb2af9dfef46ece3b14cee34ca4f375669e95ea2e",
   "20270107050000_scratchpad_encryption.sql": "ea67209235b613fa263226bbaf253b59cad55efcc9b7add280f56d9d3a4a5656",
-  "20270107060000_stat_events_encryption.sql": "f6baf0ec62bd9086fd99f145d8e49db47be303d7be6edefc9f0e3178f66754a6"
+  "20270107060000_stat_events_encryption.sql": "f6baf0ec62bd9086fd99f145d8e49db47be303d7be6edefc9f0e3178f66754a6",
+  "20270107070000_history_encryption.sql": "7433f7dbcb16b762fcf0802212b0951924c58f62913c5e2846508709c5ca5f40"
 }

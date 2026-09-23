@@ -1668,12 +1668,8 @@
   },
   "issue_events": {
     "scope": {
-      "ancestors": [
-        "issues:issue_id",
-        "objectives:objective_id",
-        "feedback_posts:feedback_post_id",
-        "pages:page_id"
-      ]
+      "kind": "project",
+      "column": "project_id"
     },
     "encrypted": [
       "from_value",
@@ -1686,7 +1682,8 @@
         "via_automation",
         "via_mcp",
         "via_smart_assign",
-        "via_smart_fill"
+        "via_smart_fill",
+        "starts_work"
       ],
       "operational_configuration": [
         "field",
@@ -1701,10 +1698,17 @@
         "integration_id",
         "issue_id",
         "objective_id",
-        "page_id"
+        "page_id",
+        "project_id"
       ],
       "timestamp": [
         "created_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version",
+        "encryption_revision",
+        "encryption_checked_at"
       ]
     }
   },
@@ -2327,6 +2331,12 @@
       ],
       "timestamp": [
         "created_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version",
+        "encryption_revision",
+        "encryption_checked_at"
       ]
     }
   },

@@ -1,3 +1,4 @@
+import { readIssueEvents } from "@/lib/server/issue-event-store";
 import "server-only";
 
 import { z } from "zod";
@@ -500,19 +501,11 @@ async function resolveFeedbackPost(
 , never from both. */
 async function recentActivity(
   parent: { issue_id: string } | { objective_id: string },
+  actorId: string, projectId: string,
 ): Promise<Array<Record<string, unknown>>> {
   const service = getServiceClient();
-  const query = service
-    .from("issue_events")
-    .select(
-      "type, field, from_value, to_value, actor_id, via_assistant, via_mcp, api_key_id, integration_id, created_at",
-    )
-    .order("created_at", { ascending: false })
-    .limit(20);
-  const { data } =
-    "issue_id" in parent
-      ? await query.eq("issue_id", parent.issue_id)
-      : await query.eq("objective_id", parent.objective_id);
+  const { data, error } = await readIssueEvents(service, parent, { descending: true, limit: 20, actorId, projectId });
+  if (error) throw new Error("Unable to read activity");
   const events = (data ?? []).reverse();
   if (events.length === 0) return [];
 
@@ -1118,7 +1111,7 @@ export function registerMinddyTools(
       });
       if ("error" in r) return fail("issue_not_found", r.error);
 
-      const activity = await recentActivity({ issue_id: ref.issue.id });
+      const activity = await recentActivity({ issue_id: ref.issue.id }, scope.userId, scope.access.project.id);
 
       const plan = r.issue.plan;
       const parsed = typeof plan === "string" && plan ? parsePlan(plan) : null;
@@ -1662,7 +1655,7 @@ export function registerMinddyTools(
           },
           objective.id as string,
         ),
-        recentActivity({ objective_id: objective.id as string }),
+        recentActivity({ objective_id: objective.id as string }, scope.userId, scope.access.project.id),
       ]);
 
       // Resources: `comment_id` null = carried by the objective itself, otherwise

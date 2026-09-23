@@ -73,7 +73,7 @@ describe("GET /api/issues/[id]/events", () => {
         issue_id: ISSUE,
         api_key_id: null,
         integration: null,
-        type: "updated",
+        type: "updated", from_value: null, to_value: null,
       },
     ];
 

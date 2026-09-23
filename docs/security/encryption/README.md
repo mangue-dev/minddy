@@ -6,7 +6,7 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 116 application tables and 1,207 columns, their primary
+- `schema.json` records 116 application tables and 1,217 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 188 encryption targets include the original content,
@@ -15,7 +15,7 @@ production migration on the strength of crypto unit tests or this inventory.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 227 functions, ten views and 127 triggers. Function
+- `sql-consumers.json` records 228 functions, ten views and 129 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -23,7 +23,7 @@ production migration on the strength of crypto unit tests or this inventory.
   until the consumer inventory is reviewed. Moving a call to another line alone
   does not invalidate the inventory.
 
-The current snapshot comes from a complete replay of all 102 migrations on the
+The current snapshot comes from a complete replay of all 103 migrations on the
 isolated local Supabase stack. No production rows were copied. Migration
 `20270106910000_numo_history_drop_detail_href.sql` previously failed because
 `CREATE OR REPLACE VIEW` cannot remove columns. It now recreates the three
@@ -79,7 +79,7 @@ must be checked separately.
 | Surface | Required work and proof of completion |
 | --- | --- |
 | Projects, issues, objectives, categories, comments, pages and views | Convert every server repository read/write and all imports, exports, MCP and AI consumers; add ciphertext/version storage and reject older plaintext writers. Preserve access checks before decryption and existing concurrency semantics. |
-| Histories and derived copies | Convert page versions, issue events, statistics, assistant/agent conversations, checkpoints, messages, journals, tool arguments/results and surface projections together with the original rows. Remove plaintext SQL projections. |
+| Histories and derived copies | Page versions, issue events and statistics now have converted repositories and migration. Assistant/agent conversations, checkpoints, messages, journals, tool arguments/results and surface projections remain to be converted with their source rows. |
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
 | Forge data | Resolve ownership of repository data shared by several projects. Private repository names currently participate in primary/unique keys and lookup paths; introduce opaque/indexed identities before encrypting them. The generic row codec deliberately refuses sensitive primary keys. |
@@ -117,7 +117,7 @@ the store wipes the mutable plaintext/key buffers that it owns.
 ## Converted personal content and migration rehearsal
 
 `MINDDY_CONTENT_ENCRYPTION_ENABLED=true` enables staging writes and maintenance
-for `user_scratchpad` and `stat_events`. Keep it disabled in production until the
+for `user_scratchpad`, `stat_events`, `issue_events` and `page_versions`. Keep it disabled in production until the
 application-wide gates are satisfied. It is independent of the invitation flag.
 Disabling it pauses backfill and new-record opt-in; already encrypted notes still
 require decryption and encrypted writes. Task-completion snapshots derived from
@@ -138,16 +138,21 @@ The shared row worker reads a bounded batch, decrypts and verifies its newly
 encoded replacement, then commits under repository-specific revision/ownership
 checks. It counts failed/conflicted rows without logging their content. Attempt
 ordering revisits failures without starving subsequent rows. Maintenance processes
-at most 50 notes and 50 statistics events per run, alongside the invitation batch.
+at most 50 rows each for notes, statistics, activity and page versions per run,
+alongside the invitation batch.
 Each repository reports failure independently. Constraints reject plaintext in
 converted rows, version inconsistencies, revision rollback and identity changes.
 
 An opt-in local integration test uses real PostgreSQL key-registry RPCs and a
 real `pg_dump`/restore of notes, statistics, wrapped keys and fixture users into
-two disposable databases. It recovers mixed legacy/current/historical versions
+disposable databases. A second rehearsal covers project activity and page
+snapshots across key rotation. These tests recover mixed legacy/current/historical versions
 with empty caches, and rejects the wrong wrapping key. The KMS in this test is an
 in-memory substitute, not AWS. This is a restoration proof for those tables,
-not a full application recovery rehearsal. No production rows are used.
+not a full application recovery rehearsal. Source projects/issues/pages in the
+history fixture remain plaintext and have no nested hierarchy; restoration of
+the eventual encrypted sources and arbitrary self-referential trees still needs
+a full-application rehearsal. No production rows are used.
 
 After applying the migrations to a schema-only `minddy_min591_full_audit`
 database in the local `supabase_db_minddy-encryption-test` Docker container:
@@ -156,6 +161,7 @@ database in the local `supabase_db_minddy-encryption-test` Docker container:
 docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_full_audit < scripts/encryption-scratchpad-regression.sql
 docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_full_audit < scripts/encryption-statistics-regression.sql
 docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_full_audit < scripts/numo-history-view-regression.sql
+docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_full_audit < scripts/encryption-history-regression.sql
 MINDDY_ENCRYPTION_DB_TEST=true npm test -- lib/server/encryption/database-recovery.integration.test.ts
 ```
 
@@ -167,6 +173,48 @@ skip this integration test and the live AWS test. Policy-wide serialization
 round trips cover 73 supported protected tables; they are not proof that those
 repositories are converted or authorized. `ai_decision_evaluations` has no
 primary key; it needs a stable identity before the row codec can protect it.
+
+## Activity and page history repositories
+
+`issue-event-store.ts` is the activity persistence/read boundary for all four
+parents: issues, objectives, feedback posts and pages. It resolves the parent
+project before encryption; database composite foreign keys bind that project
+to the actual parent, including service-role writes. Parent IDs, row IDs and
+scope are immutable. Routes retain their authorization/RLS checks and MCP
+reads record the caller in the decryption audit. Webhooks receive the logical
+in-memory event after a successful insert, never the stored ciphertext.
+
+The PR echo/burst guards now filter metadata in SQL, then compare decoded
+values in 500-row pages. They do not apply a one-row limit before a protected
+value comparison. The SQL cycle-duration aggregate uses the bounded
+`starts_work` boolean instead of comparing the encrypted `to_value`; the
+migration initializes it for old activity without broadcasting plaintext.
+Realtime events carry invalidation metadata only. Queue attempts and
+re-encryption do not produce user activity notifications.
+
+`page-version-store.ts` protects complete title/icon/document snapshots and
+serves both history previews and restore operations. History lists still omit
+document bodies from the response, but must decrypt each full envelope to recover
+titles. They first pin up to 200 metadata IDs, then fetch/decrypt at most ten
+snapshots at a time to bound peak memory and avoid pagination drift. Measure
+large-history memory and latency before production;
+these tests are correctness checks, not production benchmarks. Retention only
+reads IDs/timestamps and deletes rows through existing cascades.
+
+The migration adds explicit row state, revision/CAS guards, fair retry queues
+and scheduled 50-row batches for both tables. Once a project has a content key,
+new histories remain encrypted even with the rollout flag off. Without KMS
+configuration, stale legacy writers are rejected by the database rather than
+allowed to leak new snapshots. History writes retain their existing best-effort
+contract; provider/database failures produce generic error logs and no plaintext
+fallback. Deployment must drain old writers and monitor those failures.
+
+Only the metadata initialization (`project_id` and `starts_work`) is performed
+inside the schema migration. Its table-lock duration must be measured on a
+representative staging database. Content conversion itself remains bounded,
+verified and resumable. These changes do **not** yet encrypt the current issue,
+page, objective, feedback or comment bodies; the global activation remains
+blocked on their conversion and the other surfaces listed above.
 
 ## Object codec status
 

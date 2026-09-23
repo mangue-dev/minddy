@@ -13,6 +13,14 @@ const allowedInvitationAccess = new Set([
 
 const rules = [
   {
+    access: /\.\s*from\s*\(\s*["'`]issue_events["'`]\s*\)/,
+    allowed: new Set(["lib/server/issue-event-store.ts"]),
+  },
+  {
+    access: /\.\s*from\s*\(\s*["'`]page_versions["'`]\s*\)/,
+    allowed: new Set(["lib/server/page-version-store.ts", "lib/server/retention.ts"]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]stat_events["'`]\s*\)/,
     allowed: new Set(["lib/server/stat-events.ts", "lib/server/encryption/stat-events-backfill.ts"]),
   },
