@@ -588,12 +588,12 @@
       "functionReferences": []
     },
     "broadcast_feedback_post()": {
-      "sha256": "a0b6e7f5a9b44e1ca42d83bbbe67031a3db1b83edb46480b25eb725706f027a3",
+      "sha256": "7efb860646dfa442ecefea6f7c47358ba0d9f3b8a2467d0734fa38627a96e6cd",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -1541,6 +1541,17 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "set_feedback_post_updated_at()": {
+      "sha256": "537161a2cff81178efbee620070c5c3c43d65a287a9c1fc8e25ba4ec2ae44ad2",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "set_project_draft_updated_at()": {
       "sha256": "136fc97cd27009dd6a956068b065233500dc6c549d7ea7e656887c9a17453f2b",
       "securityDefiner": false,
@@ -1770,6 +1781,19 @@
       "protectedRelations": [
         "pages"
       ],
+      "functionReferences": []
+    },
+    "guard_feedback_post_encryption()": {
+      "sha256": "c3d25f3dddc47f3f98d9797558600ecadcbdd964d29d14d302f98ee11b1c2526",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "envelope_data_keys"
+      ],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "guard_project_draft_encryption()": {
@@ -3074,6 +3098,21 @@
         "append_numo_turn_event"
       ]
     },
+    "save_feedback_post_content(uuid,uuid,bigint,jsonb)": {
+      "sha256": "3a33af48c2972fea990ea5ad361d5813d3baf9c0a6ef02fe07c30ebe79323f60",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "feedback_posts"
+      ],
+      "protectedRelations": [
+        "feedback_posts"
+      ],
+      "functionReferences": []
+    },
     "update_page_database_guarded(uuid,uuid,uuid,jsonb)": {
       "sha256": "ae3c013bbe623d04b4254720acd39eedd3b5060bb91b254afaec66aae302c8f9",
       "securityDefiner": true,
@@ -3183,23 +3222,6 @@
       ],
       "protectedRelations": [],
       "functionReferences": []
-    },
-    "match_feedback_posts(uuid,vector,uuid,integer,boolean)": {
-      "sha256": "ced622af4087131143e385225e0c1ccc7e29bc0e187a2f125fad689aa5353711",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "feedback_posts"
-      ],
-      "protectedRelations": [
-        "feedback_posts"
-      ],
-      "functionReferences": [
-        "can_access_project"
-      ]
     },
     "update_user_ai_key_preferences(uuid,text,text[],jsonb)": {
       "sha256": "3fef543b2f319375c665732e048ecc2c60dc26627490110555fe55934671d956",
@@ -3658,6 +3680,21 @@
       "protectedRelations": [
         "git_connections",
         "git_user_identities"
+      ],
+      "functionReferences": []
+    },
+    "migrate_feedback_post_ciphertext(uuid,uuid,bigint,integer,integer,text)": {
+      "sha256": "082feb95a38e86a4c05c40cd1e274aca042e4beedfcdb608e72c748dc59038cf",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "feedback_posts"
+      ],
+      "protectedRelations": [
+        "feedback_posts"
       ],
       "functionReferences": []
     },
@@ -4331,8 +4368,8 @@
       "definition": "CREATE TRIGGER custom_domains_set_updated_at BEFORE UPDATE ON custom_domains FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
     "feedback_posts.feedback_posts_set_updated_at": {
-      "function": "set_updated_at()",
-      "definition": "CREATE TRIGGER feedback_posts_set_updated_at BEFORE UPDATE ON feedback_posts FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+      "function": "set_feedback_post_updated_at()",
+      "definition": "CREATE TRIGGER feedback_posts_set_updated_at BEFORE UPDATE ON feedback_posts FOR EACH ROW EXECUTE FUNCTION set_feedback_post_updated_at()"
     },
     "feedback_users.feedback_users_set_updated_at": {
       "function": "set_updated_at()",
@@ -4381,6 +4418,10 @@
     "feedback_boards.feedback_boards_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER feedback_boards_set_updated_at BEFORE UPDATE ON feedback_boards FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    "feedback_posts.feedback_posts_encryption_guard": {
+      "function": "guard_feedback_post_encryption()",
+      "definition": "CREATE TRIGGER feedback_posts_encryption_guard BEFORE INSERT OR UPDATE ON feedback_posts FOR EACH ROW EXECUTE FUNCTION guard_feedback_post_encryption()"
     },
     "pages.pages_remove_deleted_database_properties": {
       "function": "remove_deleted_database_properties()",

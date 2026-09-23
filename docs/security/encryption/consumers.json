@@ -744,13 +744,6 @@
   {
     "file": "app/api/me/summary/route.ts",
     "operation": "from",
-    "resource": "feedback_posts",
-    "line": 92,
-    "storage": false
-  },
-  {
-    "file": "app/api/me/summary/route.ts",
-    "operation": "from",
     "resource": "issues",
     "line": 169,
     "storage": false
@@ -3146,42 +3139,42 @@
     "file": "lib/server/assistant/comment-agent.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 294,
+    "line": 295,
     "storage": false
   },
   {
     "file": "lib/server/assistant/comment-agent.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 319,
+    "line": 320,
     "storage": false
   },
   {
     "file": "lib/server/assistant/comment-agent.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 420,
+    "line": 421,
     "storage": false
   },
   {
     "file": "lib/server/assistant/comment-agent.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 494,
+    "line": 495,
     "storage": false
   },
   {
     "file": "lib/server/assistant/comment-agent.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 588,
+    "line": 589,
     "storage": false
   },
   {
     "file": "lib/server/assistant/comment-agent.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 606,
+    "line": 611,
     "storage": false
   },
   {
@@ -4455,14 +4448,7 @@
     "file": "lib/server/embeddings.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 69,
-    "storage": false
-  },
-  {
-    "file": "lib/server/embeddings.ts",
-    "operation": "rpc",
-    "resource": "match_feedback_posts",
-    "line": 200,
+    "line": 70,
     "storage": false
   },
   {
@@ -4505,6 +4491,27 @@
     "operation": "rpc",
     "resource": "migrate_comment_ciphertext",
     "line": 40,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/feedback-post-backfill.ts",
+    "operation": "from",
+    "resource": "feedback_posts",
+    "line": 15,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/feedback-post-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_feedback_post_ciphertext",
+    "line": 26,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/feedback-post-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_feedback_post_ciphertext",
+    "line": 39,
     "storage": false
   },
   {
@@ -4701,6 +4708,34 @@
     "operation": "from",
     "resource": "issues",
     "line": 89,
+    "storage": false
+  },
+  {
+    "file": "lib/server/feedback-post-store.ts",
+    "operation": "from",
+    "resource": "feedback_posts",
+    "line": 113,
+    "storage": false
+  },
+  {
+    "file": "lib/server/feedback-post-store.ts",
+    "operation": "from",
+    "resource": "feedback_posts",
+    "line": 168,
+    "storage": false
+  },
+  {
+    "file": "lib/server/feedback-post-store.ts",
+    "operation": "from",
+    "resource": "feedback_posts",
+    "line": 175,
+    "storage": false
+  },
+  {
+    "file": "lib/server/feedback-post-store.ts",
+    "operation": "rpc",
+    "resource": "save_feedback_post_content",
+    "line": 187,
     "storage": false
   },
   {
@@ -4980,14 +5015,7 @@
     "file": "lib/server/feedback/merge.ts",
     "operation": "from",
     "resource": "feedback_merge_events",
-    "line": 17,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/merge.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 23,
+    "line": 18,
     "storage": false
   },
   {
@@ -5050,77 +5078,56 @@
     "file": "lib/server/feedback/posts.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 144,
+    "line": 162,
     "storage": false
   },
   {
     "file": "lib/server/feedback/posts.ts",
     "operation": "from",
     "resource": "feedback_votes",
-    "line": 223,
+    "line": 233,
     "storage": false
   },
   {
     "file": "lib/server/feedback/posts.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 236,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/posts.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 276,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/posts.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 330,
+    "line": 329,
     "storage": false
   },
   {
     "file": "lib/server/feedback/promote.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 49,
+    "line": 50,
     "storage": false
   },
   {
     "file": "lib/server/feedback/promote.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 107,
+    "line": 113,
     "storage": false
   },
   {
     "file": "lib/server/feedback/promote.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 144,
+    "line": 150,
     "storage": false
   },
   {
     "file": "lib/server/feedback/promote.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 154,
+    "line": 160,
     "storage": false
   },
   {
     "file": "lib/server/feedback/promote.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 169,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/promote.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 196,
+    "line": 175,
     "storage": false
   },
   {
@@ -5128,6 +5135,13 @@
     "operation": "from",
     "resource": "feedback_posts",
     "line": 202,
+    "storage": false
+  },
+  {
+    "file": "lib/server/feedback/promote.ts",
+    "operation": "from",
+    "resource": "feedback_posts",
+    "line": 208,
     "storage": false
   },
   {
@@ -5148,161 +5162,112 @@
     "file": "lib/server/feedback/queries.ts",
     "operation": "from",
     "resource": "feedback_votes",
-    "line": 69,
+    "line": 70,
     "storage": false
   },
   {
     "file": "lib/server/feedback/queries.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 90,
+    "line": 165,
     "storage": false
   },
   {
     "file": "lib/server/feedback/queries.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 138,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/queries.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 166,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/queries.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 194,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/queries.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 238,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/queries.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 280,
+    "line": 245,
     "storage": false
   },
   {
     "file": "lib/server/feedback/queries.ts",
     "operation": "from",
     "resource": "feedback_votes",
-    "line": 287,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/queries.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 306,
+    "line": 301,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 180,
+    "line": 181,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 202,
+    "line": 203,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 250,
+    "line": 251,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 265,
+    "line": 266,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "rpc",
     "resource": "claim_feedback_posts_for_review",
-    "line": 293,
+    "line": 294,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "rpc",
     "resource": "claim_feedback_post_for_review",
-    "line": 354,
+    "line": 357,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 396,
+    "line": 401,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_merge_rejections",
-    "line": 407,
+    "line": 412,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_merge_rejections",
-    "line": 408,
+    "line": 413,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 423,
+    "line": 428,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 490,
+    "line": 647,
     "storage": false
   },
   {
     "file": "lib/server/feedback/review.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 644,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/review.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 709,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/review.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 750,
+    "line": 747,
     "storage": false
   },
   {
@@ -5355,59 +5320,17 @@
     "storage": false
   },
   {
-    "file": "lib/server/feedback/team-guard.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 47,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/team-queries.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 66,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/team-queries.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 101,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/team-queries.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 133,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/team-queries.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 148,
-    "storage": false
-  },
-  {
     "file": "lib/server/feedback/team-queries.ts",
     "operation": "from",
     "resource": "feedback_merge_events",
-    "line": 154,
+    "line": 153,
     "storage": false
   },
   {
     "file": "lib/server/feedback/team-queries.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 163,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/team-queries.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 206,
+    "line": 162,
     "storage": false
   },
   {
@@ -6338,28 +6261,21 @@
     "file": "lib/server/inbox.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 49,
+    "line": 50,
     "storage": false
   },
   {
     "file": "lib/server/inbox.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 151,
+    "line": 152,
     "storage": false
   },
   {
     "file": "lib/server/inbox.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 166,
-    "storage": false
-  },
-  {
-    "file": "lib/server/inbox.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 185,
+    "line": 167,
     "storage": false
   },
   {
@@ -8053,28 +7969,28 @@
     "file": "lib/server/project-draft-store.ts",
     "operation": "from",
     "resource": "project_drafts",
-    "line": 74,
+    "line": 75,
     "storage": false
   },
   {
     "file": "lib/server/project-draft-store.ts",
     "operation": "from",
     "resource": "project_drafts",
-    "line": 80,
+    "line": 84,
     "storage": false
   },
   {
     "file": "lib/server/project-draft-store.ts",
     "operation": "rpc",
     "resource": "save_project_draft_guarded",
-    "line": 86,
+    "line": 90,
     "storage": false
   },
   {
     "file": "lib/server/project-draft-store.ts",
     "operation": "from",
     "resource": "project_drafts",
-    "line": 94,
+    "line": 98,
     "storage": false
   },
   {
@@ -8186,49 +8102,42 @@
     "file": "lib/server/push/payload.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 162,
+    "line": 163,
     "storage": false
   },
   {
     "file": "lib/server/push/payload.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 170,
-    "storage": false
-  },
-  {
-    "file": "lib/server/push/payload.ts",
-    "operation": "from",
-    "resource": "feedback_posts",
-    "line": 179,
+    "line": 171,
     "storage": false
   },
   {
     "file": "lib/server/push/payload.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 187,
+    "line": 188,
     "storage": false
   },
   {
     "file": "lib/server/push/payload.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 191,
+    "line": 192,
     "storage": false
   },
   {
     "file": "lib/server/push/payload.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 198,
+    "line": 199,
     "storage": false
   },
   {
     "file": "lib/server/push/payload.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 205,
+    "line": 206,
     "storage": false
   },
   {
@@ -8942,70 +8851,63 @@
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 183,
+    "line": 184,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "rpc",
     "resource": "soft_delete_objective_guarded",
-    "line": 245,
+    "line": 246,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": null,
-    "line": 265,
+    "line": 266,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": null,
-    "line": 291,
+    "line": 292,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 323,
+    "line": 324,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": null,
-    "line": 354,
+    "line": 361,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 384,
+    "line": 391,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 397,
+    "line": 404,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": null,
-    "line": 565,
-    "storage": false
-  },
-  {
-    "file": "lib/server/trash.ts",
-    "operation": "from",
-    "resource": "pages",
-    "line": 628,
+    "line": 572,
     "storage": false
   },
   {
@@ -9018,15 +8920,22 @@
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
+    "resource": "pages",
+    "line": 642,
+    "storage": false
+  },
+  {
+    "file": "lib/server/trash.ts",
+    "operation": "from",
     "resource": null,
-    "line": 652,
+    "line": 659,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 725,
+    "line": 732,
     "storage": false
   },
   {

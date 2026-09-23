@@ -1,6 +1,8 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { feedbackPostStore } from "@/lib/server/feedback-post-store";
+import { getProjectAccess } from "@/lib/server/project-access";
 import { createIssueForProject } from "@/lib/server/create-issue";
 import { feedbackStatusForIssue } from "@/lib/server/feedback/status-sync";
 import {
@@ -45,14 +47,18 @@ export async function promoteFeedbackPost(params: {
   input?: Record<string, unknown>;
 }): Promise<PromoteResult> {
   const service = getServiceClient();
-
-  const { data: post } = await service
-    .from("feedback_posts")
+  const { data: scope } = await service.from("feedback_posts")
+    .select("project_id").is("deleted_at", null).eq("id", params.postId).maybeSingle();
+  if (!scope || !await getProjectAccess(params.actorId, scope.project_id)) {
+    return { ok: false, status: 404, errorKey: "issueNotFound" };
+  }
+  const { data: post } = await feedbackPostStore(service, params.actorId)
     .select(
       "id, project_id, title, body, vote_count, issue_id, merged_into_id, feedback_post_categories(category_id)"
     )
     .is("deleted_at", null)
     .eq("id", params.postId)
+    .eq("project_id", scope.project_id)
     .maybeSingle();
   // A merged or already promoted post is not promoted (the canonical has the link).
   if (!post || post.merged_into_id !== null || post.issue_id !== null) {

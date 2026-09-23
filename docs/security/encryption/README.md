@@ -6,7 +6,7 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 116 application tables and 1,238 columns, their primary
+- `schema.json` records 116 application tables and 1,242 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 188 encryption targets include the original content,
@@ -15,7 +15,7 @@ production migration on the strength of crypto unit tests or this inventory.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 244 functions, ten views and 134 triggers. Function
+- `sql-consumers.json` records 247 functions, ten views and 135 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -24,7 +24,8 @@ production migration on the strength of crypto unit tests or this inventory.
   does not invalidate the inventory.
 
 The first 104 migrations were replayed on the isolated local Supabase stack;
-the objective and category migrations were applied to successive schema-only clones of that replay.
+the objective, category, project-draft and feedback-post migrations were applied
+to successive schema-only clones of that replay.
 No production rows were copied. Migration
 `20270106910000_numo_history_drop_detail_href.sql` previously failed because
 `CREATE OR REPLACE VIEW` cannot remove columns. It now recreates the three
@@ -91,8 +92,8 @@ must be checked separately.
 | Root key and operations | Provision a dedicated root key outside the database and rehearse key backup and restore. The offline root-key rewrap procedure is implemented and tested on isolated PostgreSQL; production rehearsal and application-scale latency remain. Production deployment and migration require a later explicit deployment request. |
 
 The common row codec is connected to personal notes, statistics, activity, page
-versions, comments (including page quotes), objectives, categories, and project
-creation drafts. The remaining repositories in the
+versions, comments (including page quotes), objectives, categories, project
+creation drafts, and feedback post content. The remaining repositories in the
 table above are unconverted. It authenticates the real primary key, table and owner, requires complete rows,
 distinguishes legacy and encrypted states, clears protected columns and rejects
 remaining plaintext search projections. Parent-owned records still require a
@@ -177,6 +178,9 @@ docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U sup
 docker exec supabase_db_minddy-encryption-test createdb -U supabase_admin -T minddy_min591_category_audit minddy_min591_draft_audit
 docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_draft_audit < supabase/migrations/20270107110000_project_draft_encryption.sql
 docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_draft_audit < scripts/encryption-project-drafts-regression.sql
+docker exec supabase_db_minddy-encryption-test createdb -U supabase_admin -T minddy_min591_draft_audit minddy_min591_feedback_audit
+docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_feedback_audit < supabase/migrations/20270107120000_feedback_post_encryption.sql
+docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_feedback_audit < scripts/encryption-feedback-posts-regression.sql
 MINDDY_ENCRYPTION_DB_TEST=true npm test -- lib/server/encryption/database-recovery.integration.test.ts
 ```
 
@@ -415,6 +419,48 @@ yet implement re-encryption of all historical rows or objects. That migration
 work remains required. Maintenance runs when either the invitation or staging
 content flag is enabled; only converted repositories are registered for backfill.
 Blind-index keys are excluded from this job to preserve equality lookup.
+
+## Feedback post source tranche
+
+The feedback post repository now encodes the canonical and submitted title/body,
+translations, moderation reason and embedding together under the project's content
+key. Creation through the public board, integration API and internal channel assigns
+a stable ID before encryption. Team edits and AI review merge protected fields under
+a guarded revision check; metadata-only status, voting and merge transactions remain
+queryable. The hourly worker scans 50 posts with fair attempt ordering, verifies
+replacement content and uses compare-and-swap for migration and key-version
+rewrites, including trashed posts. Existing encrypted rows remain encrypted when
+the staging flag is disabled. Legacy plaintext inserts or edits are rejected after
+the project has a content key. Realtime broadcasts only IDs and project routing
+metadata, even for legacy posts.
+
+Repository reads cover the public board and private-author detail, team API/MCP
+lists, review/AI context, issue promotion, dashboard, inbox, push and trash. Public
+visibility is filtered before decryption. Feedback comment bodies and activity
+events were already converted. SQL vector matching was removed; authorized server
+search now scans and decrypts project rows in 200-row pages, computes cosine
+similarity and ranks across the whole result set. Public suggestions filter to
+published, public, non-spam posts before decryption. This preserves correctness
+without a plaintext vector index, but its full-scan latency and key/cache load
+must be measured on representative staging data before activation.
+
+This is **not a completed feedback domain**. `feedback_users.email/name/external_id`
+and the SQL/SSO equality paths still store private identities in clear; pending
+`feedback_otp_codes.email` is also clear. Feedback attachments still use unencrypted
+object transport, and promotion copies feedback text into the still-plaintext issue
+source. These paths need coordinated repository, blind-index, object and issue
+conversion before the feedback boundary can be declared complete. The branch's
+staging content flag is not a production rollout flag; both production encryption
+flags remain disabled. No production data or objects were migrated.
+
+Validation on the isolated `minddy_min591_feedback_audit` schema: the migration
+and rolled-back SQL regression cover state constraints, obsolete writers, revision
+conflicts, preserved edit time, grants, removal of SQL similarity, and metadata-only
+Realtime payloads. The opt-in PostgreSQL dump/restore test recovers encrypted post
+content and embeddings across two project-key versions with a cold cache and rejects
+the wrong external root. Unit tests cover row/scope tampering and multi-page public
+similarity search. These fixtures do not establish production-scale performance or
+restore of feedback identities and files.
 
 ## Root-key setup and recovery
 

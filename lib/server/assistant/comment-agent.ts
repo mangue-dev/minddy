@@ -1,5 +1,6 @@
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
+import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -585,14 +586,18 @@ export async function runFeedbackCommentMention(input: {
   trigger?: "mention" | "reply";
 }): Promise<void> {
   const { service, actorId, postId, triggerCommentId } = input;
-  const { data: post } = await service.from("feedback_posts")
-    .select("id, project_id, title").eq("id", postId)
+  const { data: postScope } = await service.from("feedback_posts")
+    .select("id, project_id").eq("id", postId)
     .is("deleted_at", null).maybeSingle();
   if (
-    !post
-    || !await getProjectAccess(actorId, post.project_id as string)
+    !postScope
+    || !await getProjectAccess(actorId, postScope.project_id as string)
     || !await hasUsageBudget(actorId, "assistant", "assistant_model")
   ) return;
+  const { data: post } = await feedbackPostStore(service, actorId)
+    .select("id, project_id, title").eq("id", postId)
+    .eq("project_id", postScope.project_id).is("deleted_at", null).maybeSingle();
+  if (!post) throw new Error("Unable to read feedback post content");
   const { data: triggerRow } = await commentStore(service, "comments", actorId)
     .select("id, parent_id, body, author_id").eq("id", triggerCommentId).eq("feedback_post_id", postId).maybeSingle();
   if (!triggerRow) return;

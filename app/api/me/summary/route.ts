@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
+import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import { ensureCycles, toCycleInfo, todayInTz } from "@/lib/server/cycles";
 import { resolveCyclePrefs } from "@/lib/cycle-prefs";
 import { CLOSED_STATUSES } from "@/lib/issue-constants";
@@ -89,8 +90,7 @@ async function loadNewFeedback(
   projectIds: string[]
 ): Promise<{ posts: HomeSummaryFeedback[]; total: number }> {
   if (projectIds.length === 0) return { posts: [], total: 0 };
-  const { data, count, error } = await getServiceClient()
-    .from("feedback_posts")
+  const { data, count, error } = await feedbackPostStore(getServiceClient())
     .select(SUMMARY_FEEDBACK_COLUMNS, { count: "exact" })
     .is("deleted_at", null)
     .in("project_id", projectIds)

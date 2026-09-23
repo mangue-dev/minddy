@@ -1,4 +1,5 @@
 import { objectiveStore } from "@/lib/server/objective-store";
+import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import "server-only";
 
 import { createTranslator } from "next-intl";
@@ -90,7 +91,7 @@ export interface PushContext {
   issues: Map<string, { number: number; title: string }>;
   agentConversations: Map<string, string | null>;
   objectives: Map<string, string>;
-  feedbackPosts: Map<string, string>;
+  feedbackPosts: Map<string, { projectId: string; title: string }>;
   /** Title of a ROUTINE (MIN-185) — the banner only shows him. */
   routines: Map<string, string>;
   /** Number + title of a PULL REQUEST — the banner shows them as the
@@ -176,12 +177,12 @@ export async function loadPushContext(
           .is("deleted_at", null)
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
     feedbackIds.length
-      ? service
-          .from("feedback_posts")
-          .select("id, title")
+      ? feedbackPostStore(service)
+          .select("id, project_id, title")
           .in("id", feedbackIds)
+          .in("project_id", projectIds)
           .is("deleted_at", null)
-      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+      : Promise.resolve({ data: [] as { id: string; project_id: string; title: string }[] }),
     // A ROUTINE (MIN-185): no basket, the line leaves with it.
     routineIds.length
       ? service.from("agent_routines").select("id, title").in("id", routineIds)
@@ -215,7 +216,7 @@ export async function loadPushContext(
   }
   for (const c of agentConversations.data ?? []) ctx.agentConversations.set(c.id, c.title);
   for (const o of objectives.data ?? []) ctx.objectives.set(o.id, o.name);
-  for (const f of feedback.data ?? []) ctx.feedbackPosts.set(f.id, f.title);
+  for (const f of feedback.data ?? []) ctx.feedbackPosts.set(f.id, { projectId: f.project_id, title: f.title });
   for (const r of routines.data ?? []) ctx.routines.set(r.id, r.title);
   for (const p of pullRequests.data ?? []) {
     ctx.pullRequests.set(p.id, { number: p.number, title: p.title });
@@ -259,9 +260,9 @@ export function buildPushPayload(
     if (!name) return null;
     title = name;
   } else if (row.feedback_post_id) {
-    const postTitle = ctx.feedbackPosts.get(row.feedback_post_id);
-    if (!postTitle) return null;
-    title = postTitle;
+    const post = ctx.feedbackPosts.get(row.feedback_post_id);
+    if (!post || post.projectId !== row.project_id) return null;
+    title = post.title;
   } else if (row.routine_id) {
     const routineTitle = ctx.routines.get(row.routine_id);
     if (!routineTitle) return null;

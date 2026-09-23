@@ -7,6 +7,7 @@ import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { accessibleProjectIds } from "@/lib/server/project-access";
+import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import { displayName } from "@/lib/display-name";
 import type { MyNotification } from "@/lib/types";
 
@@ -182,8 +183,7 @@ export async function readInboxNotifications({
           error: null,
         }),
     feedbackPostIds.length && projectIds.length
-      ? service
-          .from("feedback_posts")
+      ? feedbackPostStore(service, userId)
           .select("id, project_id, title")
           .in("id", feedbackPostIds)
           .in("project_id", projectIds)

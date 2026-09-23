@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
 import { emitFeedbackMerged } from "@/lib/server/feedback/events";
+import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 
 /** Logs a merge (or its undo) on the canonical post, naming the absorbed duplicate. Best-effort: reads the merge event then the title of the duplicate. */
 async function recordMergeActivity(
@@ -20,8 +21,7 @@ async function recordMergeActivity(
     .eq("id", params.eventId)
     .maybeSingle();
   if (!ev) return;
-  const { data: dup } = await service
-    .from("feedback_posts")
+  const { data: dup } = await feedbackPostStore(service)
     .select("title")
     .is("deleted_at", null)
     .eq("id", ev.dup_id as string)

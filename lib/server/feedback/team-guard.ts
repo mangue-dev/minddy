@@ -8,6 +8,7 @@ import { getProjectAccess, type ProjectAccess } from "@/lib/server/project-acces
 import { getServiceClient } from "@/lib/supabase-service";
 import type { FeedbackPostRow } from "@/lib/server/feedback/posts";
 import { FEEDBACK_POST_SELECT } from "@/lib/server/feedback/posts";
+import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 
 /**
  * Common guard of internal feedback API routes (MIN-37): session +
@@ -44,8 +45,7 @@ export async function getProjectFeedbackPost(
   postId: string
 ): Promise<FeedbackPostRow | null> {
   const service = getServiceClient();
-  const { data } = await service
-    .from("feedback_posts")
+  const { data } = await feedbackPostStore(service)
     .select(FEEDBACK_POST_SELECT)
     .is("deleted_at", null)
     .eq("id", postId)

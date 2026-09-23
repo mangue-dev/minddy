@@ -13,6 +13,20 @@ const allowedInvitationAccess = new Set([
 
 const rules = [
   {
+    access: /\.\s*from\s*\(\s*["'`]feedback_posts["'`]\s*\)/,
+    allowed: new Set([
+      "lib/server/feedback-post-store.ts", "lib/server/encryption/feedback-post-backfill.ts",
+      "lib/server/feedback/posts.ts", "lib/server/feedback/review.ts",
+      "lib/server/feedback/queries.ts", "lib/server/feedback/promote.ts",
+      "lib/server/feedback/merge.ts", "lib/server/feedback/status-sync.ts",
+      "lib/server/feedback/comments.ts", "lib/server/feedback/votes.ts",
+      "lib/server/add-comment.ts", "lib/server/assistant/comment-agent.ts",
+      "app/api/cron/feedback-analysis/route.ts", "app/api/me/triage-counts/route.ts",
+      "app/api/projects/[id]/feedback/counts/route.ts", "app/api/v1/feedback/[id]/vote/route.ts",
+      "captures/world/seed/007-feedback.mjs",
+    ]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]project_drafts["'`]\s*\)/,
     allowed: new Set(["lib/server/project-draft-store.ts",
       "lib/server/encryption/project-draft-backfill.ts", "app/api/project-drafts/[id]/route.ts"]),

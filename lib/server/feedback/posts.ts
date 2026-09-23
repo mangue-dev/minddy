@@ -23,6 +23,7 @@ import {
 } from "@/lib/feedback/types";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { lengthBucket } from "@/lib/analytics-sanitize";
+import { decodeFeedbackPost, encodeFeedbackPost, feedbackPostStore, saveFeedbackPostContent } from "@/lib/server/feedback-post-store";
 
 /**
  * Creation of feedback posts (MIN-37) — shared core of the three channels
@@ -141,29 +142,38 @@ export async function createFeedbackPost(input: {
   const now = new Date().toISOString();
   const reviewMarkers = analyze ? {} : { analyzed_at: now, classified_at: now };
 
-  const { data, error } = await service
-    .from("feedback_posts")
-    .insert({
+  let stored: Record<string, unknown>;
+  try {
+    stored = await encodeFeedbackPost({
       project_id: input.projectId,
       author_id: input.authorId,
       created_by_member: input.createdByMember ?? null,
-      title,
-      body,
-      submitted_title: title,
-      submitted_body: body,
+      title, body, submitted_title: title, submitted_body: body,
+      translated_title: null, translated_body: null, moderation_reason: null,
       is_public: input.isPublic ?? true,
       review_state: heldForReview ? "pending" : "published",
       source: input.source,
       embedding: embedding ? toVectorLiteral(embedding) : null,
       ...reviewMarkers,
-    })
-    .select(FEEDBACK_POST_SELECT)
-    .maybeSingle();
-  if (error || !data) {
-    console.error("[feedback-posts] insert failed:", error?.message);
+    });
+  } catch {
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  const post = data as FeedbackPostRow;
+  const { data, error } = await service
+    .from("feedback_posts")
+    .insert(stored)
+    .select("*")
+    .maybeSingle();
+  if (error || !data) {
+    console.error("[feedback-posts] insert failed:", error?.code);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  let post: FeedbackPostRow;
+  try {
+    post = await decodeFeedbackPost(data) as unknown as FeedbackPostRow;
+  } catch {
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
 
   // Analytics (MIN-78). The public board is visited by ANONYMS: side
   // customer, most will never have cut the cookie strip, and a return
@@ -230,18 +240,6 @@ export async function createFeedbackPost(input: {
   return { ok: true, post: { ...post, vote_count: post.vote_count + 1 } };
 }
 
-/** Lit un post par id (sans embedding). */
-export async function getFeedbackPost(postId: string): Promise<FeedbackPostRow | null> {
-  const service = getServiceClient();
-  const { data } = await service
-    .from("feedback_posts")
-    .select(FEEDBACK_POST_SELECT)
-    .is("deleted_at", null)
-    .eq("id", postId)
-    .maybeSingle();
-  return (data as FeedbackPostRow | null) ?? null;
-}
-
 export type UpdateFeedbackFieldsResult =
   | { ok: true; post: FeedbackPostRow }
   | {
@@ -273,8 +271,7 @@ export async function updateFeedbackPostFields(params: {
   mcpKeyId?: string | null;
 }): Promise<UpdateFeedbackFieldsResult> {
   const service = getServiceClient();
-  const { data: before } = await service
-    .from("feedback_posts")
+  const { data: before } = await feedbackPostStore(service, params.actorId)
     .select(FEEDBACK_POST_SELECT)
     .is("deleted_at", null)
     .eq("id", params.postId)
@@ -327,17 +324,18 @@ export async function updateFeedbackPostFields(params: {
     return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
   }
 
-  const { data, error } = await service
-    .from("feedback_posts")
-    .update(updates)
-    .is("deleted_at", null)
-    .eq("id", params.postId)
-    .select(FEEDBACK_POST_SELECT)
-    .maybeSingle();
-  if (error || !data) {
-    console.error("[feedback-posts] update failed:", error?.message);
+  const { data: storedPost, error } = "title" in updates || "body" in updates
+    ? await saveFeedbackPostContent(service, params.postId, before.project_id, updates)
+    : await service.from("feedback_posts").update(updates)
+      .is("deleted_at", null).eq("id", params.postId)
+      .select("*").maybeSingle();
+  if (error || !storedPost) {
+    console.error("[feedback-posts] update failed:", error?.code);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
+  let data: FeedbackPostRow;
+  try { data = await decodeFeedbackPost(storedPost) as unknown as FeedbackPostRow; }
+  catch { return { ok: false, status: 500, errorKey: "databaseError" }; }
 
   await emitFeedbackFieldChanges(service, {
     postId: params.postId,
@@ -351,8 +349,8 @@ export async function updateFeedbackPostFields(params: {
   await notifyFeedbackTransition(
     service,
     before as FeedbackPostRow,
-    data as FeedbackPostRow
+    data
   );
 
-  return { ok: true, post: data as FeedbackPostRow };
+  return { ok: true, post: data };
 }
