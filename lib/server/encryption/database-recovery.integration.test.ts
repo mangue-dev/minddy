@@ -5,6 +5,7 @@ import { ManagedDataKeys, type KeyRegistry, type WrappedDataKey } from "./keys";
 import { LocalKeyWrapper } from "./local-key-wrapper";
 import { EncryptedStore, type EncryptionScope } from "./store";
 import { EncryptedRowCodec, type StoredRow } from "./row-codec";
+import { buildRootSwapSql, parseRegistryOutput, planRootRewrap } from "@/scripts/rewrap-data-root.mjs";
 
 const enabled = process.env.MINDDY_ENCRYPTION_DB_TEST === "true";
 const container = "supabase_db_minddy-encryption-test";
@@ -53,6 +54,7 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
     const created: string[] = [];
     const log = vi.spyOn(console, "info").mockImplementation(() => {});
     const root = randomBytes(32);
+    const nextRoot = randomBytes(32);
     const users = [randomUUID(), randomUUID(), randomUUID()];
     const contexts = users.map((userId) => ({ table: "user_scratchpad" as const, scope: { kind: "user" as const, id: userId } }));
     try {
@@ -114,8 +116,32 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       await expect(missingRoot.decode(rows.find((row) => row.user_id === users[0])!, contexts[0], {
         actorId: users[0], reason: "migration_verification",
       })).rejects.toThrow();
+
+      const readKeys = () => sql(restored, "SELECT row_to_json(k) FROM public.envelope_data_keys k ORDER BY scope_kind,scope_id,purpose,version;");
+      const beforeRewrap = readKeys();
+      const rewrap = await planRootRewrap(parseRegistryOutput(beforeRewrap), root.toString("hex"), nextRoot.toString("hex"));
+      expect(() => sql(restored, buildRootSwapSql([
+        { ...rewrap[0], old_wrapped_key: "AA==" }, ...rewrap.slice(1),
+      ]))).toThrow();
+      expect(readKeys()).toBe(beforeRewrap);
+      sql(restored, buildRootSwapSql(rewrap));
+      const freshKeys = new ManagedDataKeys(registry(restored), wrapper(nextRoot));
+      const freshCodec = new EncryptedRowCodec(new EncryptedStore(freshKeys));
+      for (const [index, userId] of users.entries()) {
+        const row = rows.find((candidate) => candidate.user_id === userId)!;
+        expect((await freshCodec.decode(row, contexts[index], {
+          actorId: userId, reason: "migration_verification",
+        })).content).toBe(`Private restore fixture ${index}`);
+        freshKeys.invalidate(contexts[index].scope);
+      }
+      const staleKeys = new ManagedDataKeys(registry(restored), wrapper(root));
+      await expect(new EncryptedRowCodec(new EncryptedStore(staleKeys)).decode(
+        rows.find((row) => row.user_id === users[0])!, contexts[0],
+        { actorId: users[0], reason: "migration_verification" },
+      )).rejects.toThrow();
     } finally {
       root.fill(0);
+      nextRoot.fill(0);
       vi.unstubAllEnvs();
       log.mockRestore();
       for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);

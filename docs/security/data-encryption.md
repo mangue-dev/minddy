@@ -59,8 +59,9 @@ Before enabling the flag, apply the schema migrations, verify the key in the
 target environment, and rehearse backup/key recovery on an isolated database.
 The full self-hosted cold-backup procedure seals the environment alongside the
 database, so the whole backup must be encrypted and access-controlled. Replacing
-the root key requires rewrapping every stored data key first. That
-operation is not yet implemented, so keep the original root key safe and stable.
+the root key requires an outage and the guarded
+[offline rewrap procedure](encryption/root-key-rotation.md). Rehearse it with a
+verified restore before production use; keep the old root for older backups.
 Because there is only one production database, no migration or backfill was run
 on production while preparing this branch.
 Read and response paths tolerate the pre-migration invitation schema while the

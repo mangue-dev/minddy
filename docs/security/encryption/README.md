@@ -87,7 +87,7 @@ must be checked separately.
 | Feedback and sharing | Encrypt private feedback identities/content/embeddings and recoverable share tokens, with lookup indexes and retention. Owner dialogs must still recover share URLs, so hashing the only stored share token would break the product. |
 | Credentials and configuration | Migrate legacy environment-key envelopes and secret/configuration stores to the agreed protected boundary; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
 | Migration and recovery | Add restartable batches for every target and object, compare-and-swap against concurrent edits, verification counters, rejection of obsolete writers, a restoration rehearsal and retention of historical wrapped keys. Test mixed plaintext/encrypted tenants and old versions. |
-| Root key and operations | Provision a dedicated root key outside the database, rehearse key backup and restore, add a safe root-key rewrap procedure, and measure application-scale latency. Production deployment and migration require a later explicit deployment request. |
+| Root key and operations | Provision a dedicated root key outside the database and rehearse key backup and restore. The offline root-key rewrap procedure is implemented and tested on isolated PostgreSQL; production rehearsal and application-scale latency remain. Production deployment and migration require a later explicit deployment request. |
 
 The common row codec is connected to personal notes, statistics, activity, page
 versions and comments (including page quotes). The remaining repositories in the
@@ -341,7 +341,9 @@ Keep a protected recovery copy of the root key. The full self-hosted cold backup
 includes the environment file and therefore needs strong outer encryption and
 strict access control. A restore must use the original key. A different key fails closed; it cannot
 recover old content. Keep the root stable across upgrades and redeployments.
-Root-key rotation requires rewrapping every recorded data key while the old key
-remains available, followed by a verified restore. This procedure is still a
-rollout blocker. The scheduled 90-day data-key rotation is separate and does
-not replace root-key rotation.
+The [offline root-key rotation procedure](root-key-rotation.md) rewraps every
+recorded data key in one guarded PostgreSQL transaction while all Minddy
+processes are stopped. An isolated database test covers rollback on mismatch,
+content recovery with the new root and rejection of the old root. A production
+rehearsal and backup recovery check are still required. The scheduled 90-day
+data-key rotation is separate and does not replace root-key rotation.
