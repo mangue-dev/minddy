@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -115,8 +116,7 @@ async function currentlyPushableRows(
       ? service.from("projects").select("id, owner_id").in("id", projectIds)
       : Promise.resolve({ data: [] as ScopeRow[], error: null }),
     commentIds.length
-      ? service
-          .from("comments")
+      ? commentStore(service, "comments")
           .select("id, issue_id, objective_id, feedback_post_id")
           .in("id", commentIds)
       : Promise.resolve({ data: [] as ScopeRow[], error: null }),

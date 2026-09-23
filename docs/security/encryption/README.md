@@ -6,7 +6,7 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 116 application tables and 1,217 columns, their primary
+- `schema.json` records 116 application tables and 1,226 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 188 encryption targets include the original content,
@@ -15,7 +15,7 @@ production migration on the strength of crypto unit tests or this inventory.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 228 functions, ten views and 129 triggers. Function
+- `sql-consumers.json` records 232 functions, ten views and 131 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -23,7 +23,7 @@ production migration on the strength of crypto unit tests or this inventory.
   until the consumer inventory is reviewed. Moving a call to another line alone
   does not invalidate the inventory.
 
-The current snapshot comes from a complete replay of all 103 migrations on the
+The current snapshot comes from a complete replay of all 104 migrations on the
 isolated local Supabase stack. No production rows were copied. Migration
 `20270106910000_numo_history_drop_detail_href.sql` previously failed because
 `CREATE OR REPLACE VIEW` cannot remove columns. It now recreates the three
@@ -78,7 +78,7 @@ must be checked separately.
 
 | Surface | Required work and proof of completion |
 | --- | --- |
-| Projects, issues, objectives, categories, comments, pages and views | Convert every server repository read/write and all imports, exports, MCP and AI consumers; add ciphertext/version storage and reject older plaintext writers. Preserve access checks before decryption and existing concurrency semantics. |
+| Projects, issues, objectives, categories, pages and views | Convert every server repository read/write and all imports, exports, MCP and AI consumers; add ciphertext/version storage and reject older plaintext writers. Preserve access checks before decryption and existing concurrency semantics. |
 | Histories and derived copies | Page versions, issue events and statistics now have converted repositories and migration. Assistant/agent conversations, checkpoints, messages, journals, tool arguments/results and surface projections remain to be converted with their source rows. |
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
@@ -89,8 +89,9 @@ must be checked separately.
 | Migration and recovery | Add restartable batches for every target and object, compare-and-swap against concurrent edits, verification counters, rejection of obsolete writers, a restoration rehearsal and retention of historical wrapped keys. Test mixed plaintext/encrypted tenants and old versions. |
 | KMS and operations | Provision a separate test key/role, run the real-KMS test and application-scale latency measurements, verify production IAM/audit/alerts and backup recovery. Production deployment and migration require a later explicit deployment request. |
 
-The common row codec is connected to personal notes and statistics snapshots.
-The other repositories in the table above remain unconverted. It authenticates the real primary key, table and owner, requires complete rows,
+The common row codec is connected to personal notes, statistics, activity, page
+versions and comments (including page quotes). The remaining repositories in the
+table above are unconverted. It authenticates the real primary key, table and owner, requires complete rows,
 distinguishes legacy and encrypted states, clears protected columns and rejects
 remaining plaintext search projections. Parent-owned records still require a
 trusted repository to resolve and authorize their scope before calling it.
@@ -138,7 +139,8 @@ The shared row worker reads a bounded batch, decrypts and verifies its newly
 encoded replacement, then commits under repository-specific revision/ownership
 checks. It counts failed/conflicted rows without logging their content. Attempt
 ordering revisits failures without starving subsequent rows. Maintenance processes
-at most 50 rows each for notes, statistics, activity and page versions per run,
+at most 50 rows each for notes, statistics, activity, page versions, comments and
+page comments per run,
 alongside the invitation batch.
 Each repository reports failure independently. Constraints reject plaintext in
 converted rows, version inconsistencies, revision rollback and identity changes.
@@ -146,8 +148,8 @@ converted rows, version inconsistencies, revision rollback and identity changes.
 An opt-in local integration test uses real PostgreSQL key-registry RPCs and a
 real `pg_dump`/restore of notes, statistics, wrapped keys and fixture users into
 disposable databases. A second rehearsal covers project activity and page
-snapshots across key rotation. These tests recover mixed legacy/current/historical versions
-with empty caches, and rejects the wrong wrapping key. The KMS in this test is an
+snapshots, comments and page quotes across key rotation. These tests recover mixed legacy/current/historical versions
+with empty caches, and reject the wrong wrapping key. The KMS in this test is an
 in-memory substitute, not AWS. This is a restoration proof for those tables,
 not a full application recovery rehearsal. Source projects/issues/pages in the
 history fixture remain plaintext and have no nested hierarchy; restoration of
@@ -162,6 +164,7 @@ docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U sup
 docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_full_audit < scripts/encryption-statistics-regression.sql
 docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_full_audit < scripts/numo-history-view-regression.sql
 docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_full_audit < scripts/encryption-history-regression.sql
+docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_full_audit < scripts/encryption-comments-regression.sql
 MINDDY_ENCRYPTION_DB_TEST=true npm test -- lib/server/encryption/database-recovery.integration.test.ts
 ```
 
@@ -213,8 +216,57 @@ Only the metadata initialization (`project_id` and `starts_work`) is performed
 inside the schema migration. Its table-lock duration must be measured on a
 representative staging database. Content conversion itself remains bounded,
 verified and resumable. These changes do **not** yet encrypt the current issue,
-page, objective, feedback or comment bodies; the global activation remains
+page, objective or feedback bodies; the global activation remains
 blocked on their conversion and the other surfaces listed above.
+
+## Comment repositories and streams
+
+`comment-store.ts` is the shared boundary for issue, objective, feedback and page
+comments. The caller's authorization client, parent/author/visibility predicates,
+ordering and limits remain intact. Only metadata predicates and explicitly
+reviewed projections/joins are accepted. Content projections decode a complete
+stored envelope before projecting the requested fields; metadata-only reads do
+not fetch or decrypt bodies. CI rejects direct table and forge-content RPC access
+outside this repository; dynamic accesses remain part of the separate audit.
+
+The database binds every comment to its actual parent project. Row IDs and key
+scopes cannot change, and encrypted rows cannot revert to plaintext. Complete
+page bodies and quotes share one envelope. Body edits merge the existing quote
+under a revision comparison; stale edits fail instead of losing content. Account
+imports retain their metadata and authorization checks and now encode comments
+before insert/update. API, MCP and agent reads use the same boundary; important
+AI context reads report storage failures instead of treating them as empty threads.
+
+Forge synchronization still writes its remote-identity sidecar and comment in
+one locked transaction. Encryption uses a predetermined row ID. If two initial
+deliveries race, the loser reloads that ID and encrypts again; SQL also rechecks
+local edits and remote timestamps after the KMS wait. Neither a partial sidecar
+nor ciphertext authenticated for a different row is accepted.
+
+Both comment tables have fair, bounded migration/re-encryption queues. A narrowly
+scoped service-only RPC compares row revision, project and old key version, then
+replaces ciphertext without changing the user's modification time or broadcasting
+a user edit. This matters for GitHub conflict detection. It also handles comments
+on soft-deleted pages while normal edits continue to require a live page.
+
+Numo partial answers now persist through the repository at most once per 900 ms,
+with serialized tool/final writes. `realtime.send` can retain its payload in the
+database, so comment text is no longer sent through private live topics. SQL rejects
+those retired stream calls; comment broadcasts contain routing metadata only.
+Existing invalidation/polling retrieves authorized plaintext from the API. Failed
+final persistence is reported. This adds database traffic compared with the old
+broadcast-only stream; measure end-to-end latency, query load and flush behavior
+under representative staging concurrency before activation. Other AI stream
+families remain part of the unconverted scope. Historical Realtime retention,
+logs and backups still require the global rollout audit; old copies are not
+retroactively encrypted by changing new broadcasts.
+
+Validation covers real cipher round trips, all comment parent types, quotes,
+key rotation/flag rollback, tampering, concurrent edits, imports, forge identity
+races, streaming failure/order, cron errors and PostgreSQL dump/restore. The SQL
+rehearsal checks RLS, client/Numo immutability, timestamps, trashed pages, obsolete
+writers, metadata broadcasts and the atomic forge RPC. All 104 migrations replay
+on isolated Supabase. AWS latency and full application recovery remain unverified.
 
 ## Object codec status
 

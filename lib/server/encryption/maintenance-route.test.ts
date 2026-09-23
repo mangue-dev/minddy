@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   scratchpads: vi.fn(),
   statistics: vi.fn(),
   history: vi.fn(),
+  comments: vi.fn(),
 }));
 
 vi.mock("@/lib/server/encryption/invitation-email", () => ({
@@ -25,6 +26,7 @@ vi.mock("@/lib/server/encryption/scratchpad-backfill", () => ({ backfillScratchp
 vi.mock("@/lib/server/encryption/stat-events-backfill", () => ({ backfillStatEventsBatch: state.statistics }));
 
 vi.mock("@/lib/server/encryption/history-backfill", () => ({ backfillHistoryBatch: state.history }));
+vi.mock("@/lib/server/encryption/comment-backfill", () => ({ backfillCommentsBatch: state.comments }));
 
 const { GET } = await import("@/app/api/cron/encryption-maintenance/route");
 const secret = "x".repeat(32);
@@ -44,6 +46,7 @@ beforeEach(() => {
   state.scratchpads.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.statistics.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.history.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
+  state.comments.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.rotate.mockReset().mockResolvedValue({ scanned: 0, advanced: 0, failed: 0 });
 });
 
@@ -98,6 +101,8 @@ describe("encryption maintenance cron", () => {
     expect(state.statistics).toHaveBeenCalledWith(50, expect.any(AbortSignal));
     expect(state.history).toHaveBeenCalledWith("issue_events", 50, expect.any(AbortSignal));
     expect(state.history).toHaveBeenCalledWith("page_versions", 50, expect.any(AbortSignal));
+    expect(state.comments).toHaveBeenCalledWith("comments", 50, expect.any(AbortSignal));
+    expect(state.comments).toHaveBeenCalledWith("page_comments", 50, expect.any(AbortSignal));
     expect(state.backfill).not.toHaveBeenCalled();
     expect(state.rotate).toHaveBeenCalled();
   });
@@ -138,6 +143,19 @@ describe("encryption maintenance cron", () => {
       expect(state.history).toHaveBeenCalledTimes(2);
       expect(await response.json()).toMatchObject({ activity: { failed: true }, page_versions: { failed: 0 } });
       expect(JSON.stringify(log.mock.calls)).not.toContain("Private history error");
+    } finally { log.mockRestore(); }
+  });
+
+  it("reports a failed comment batch while continuing page comments", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      state.contentEnabled = state.configured = true;
+      state.comments.mockRejectedValueOnce(new Error("Private comment error"));
+      const response = await GET(request(true));
+      expect(response.status).toBe(503);
+      expect(state.comments).toHaveBeenCalledTimes(2);
+      expect(await response.json()).toMatchObject({ comments: { failed: true }, page_comments: { failed: 0 } });
+      expect(JSON.stringify(log.mock.calls)).not.toContain("Private comment error");
     } finally { log.mockRestore(); }
   });
 

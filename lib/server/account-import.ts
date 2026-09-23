@@ -1,3 +1,4 @@
+import { importComment } from "./comment-store";
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -745,7 +746,7 @@ export async function importAccountTransfer(
       parent_id: mapId(source.parent_id, commentIds),
     }];
   });
-  await upsertRows(service, "comments", comments);
+  for (const comment of comments) await importComment(service, comment);
   result.comments = comments.length;
 
   const attachments: TransferRow[] = document.attachments.flatMap((source) => {

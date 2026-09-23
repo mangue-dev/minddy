@@ -13,6 +13,14 @@ const allowedInvitationAccess = new Set([
 
 const rules = [
   {
+    access: /\.\s*from\s*\(\s*["'`](?:comments|page_comments)["'`]\s*\)/,
+    allowed: new Set(["lib/server/comment-store.ts"]),
+  },
+  {
+    access: /\.\s*rpc\s*\(\s*["'`]sync_github_issue_comment_atomic["'`]/,
+    allowed: new Set(["lib/server/comment-store.ts"]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]issue_events["'`]\s*\)/,
     allowed: new Set(["lib/server/issue-event-store.ts"]),
   },

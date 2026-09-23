@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -31,6 +32,7 @@ export interface ReadContext {
   service: SupabaseClient;
   projectId: string;
   projectKey: string;
+  actorId?: string;
 }
 
 export const COMPACT_ISSUE_COLUMNS =
@@ -565,15 +567,14 @@ export async function getIssue(
   if (!issue) return { error: "Issue not found in this project." };
 
   const [
-    { data: comments },
+    { data: comments, error: commentsError },
     { data: subIssues },
     { data: attachmentRows },
     { data: githubMetadata },
     { data: githubCommentSyncs },
   ] =
     await Promise.all([
-      ctx.db
-        .from("comments")
+      commentStore(ctx.db, "comments", ctx.actorId ?? null)
         .select(
           "id, author_id, body, parent_id, via_assistant, via_mcp, api_key_id, created_at"
         )
@@ -609,6 +610,7 @@ export async function getIssue(
         .eq("issue_id", issue.id),
     ]);
 
+  if (commentsError) return { error: "Unable to read issue comments." };
   const resourcesByComment = new Map<string | null, Record<string, unknown>[]>();
   for (const row of attachmentRows ?? []) {
     const key = (row.comment_id as string | null) ?? null;

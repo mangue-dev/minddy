@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -219,8 +220,7 @@ export async function listFeedbackForIssue(
   const rows = (data ?? []) as unknown as Omit<IssueLinkedFeedback, "comment_count">[];
   if (rows.length === 0) return [];
 
-  const { data: commentRows } = await service
-    .from("comments")
+  const { data: commentRows } = await commentStore(service, "comments")
     .select("feedback_post_id")
     .in(
       "feedback_post_id",

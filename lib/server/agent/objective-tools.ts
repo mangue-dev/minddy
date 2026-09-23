@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -245,7 +246,7 @@ async function readObjective(
     return { result: { error: "Objective not found in this project." }, success: false };
   }
 
-  const [{ data: issues }, { data: comments }, { data: attachmentRows }] =
+  const [{ data: issues }, { data: comments, error: commentsError }, { data: attachmentRows }] =
     await Promise.all([
       service
         .from("issues")
@@ -253,8 +254,7 @@ async function readObjective(
         .is("deleted_at", null)
         .eq("objective_id", objective.id)
         .order("number", { ascending: true }),
-      service
-        .from("comments")
+      commentStore(service, "comments", ctx.actorId)
         .select("id, author_id, body, parent_id, via_assistant, created_at")
         .eq("objective_id", objective.id)
         .order("created_at", { ascending: true }),
@@ -271,6 +271,7 @@ async function readObjective(
         .order("created_at", { ascending: true }),
     ]);
 
+  if (commentsError) return { result: { error: "Unable to read objective comments." }, success: false };
   const users = await fetchAuthUsersById(service, [
     ...(comments ?? []).map((c) => c.author_id as string),
     ...(issues ?? [])

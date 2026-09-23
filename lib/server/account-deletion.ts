@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -67,7 +68,7 @@ export async function previewAccountDeletion(userId: string): Promise<DeletionPr
     ownedIds.length
       ? service.from("issues").select("id", { count: "exact", head: true }).in("project_id", ownedIds)
       : Promise.resolve({ count: 0 }),
-    service.from("comments").select("id", { count: "exact", head: true }).eq("author_id", userId),
+    commentStore(service, "comments").select("id", { count: "exact", head: true }).eq("author_id", userId),
     service
       .from("billing_accounts")
       .select("stripe_subscription_id, stripe_subscription_status")

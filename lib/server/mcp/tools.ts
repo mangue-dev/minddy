@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import { readIssueEvents } from "@/lib/server/issue-event-store";
 import "server-only";
 
@@ -454,11 +455,12 @@ const RECURRENCE_FIELD = z
       "(null, via minddy_update_issues) to stop the series.",
   );
 
-function mcpReadCtx(access: ProjectAccess): ReadContext {
+function mcpReadCtx(access: ProjectAccess, actorId?: string): ReadContext {
   const service = getServiceClient();
   return {
     db: service,
     service,
+    actorId,
     projectId: access.project.id,
     projectKey: access.project.key,
   };
@@ -1046,7 +1048,7 @@ export function registerMinddyTools(
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
-      const ctx = mcpReadCtx(scope.access);
+      const ctx = mcpReadCtx(scope.access, scope.userId);
       const detailed = args.response_format === "detailed";
 
       if (typeof args.query === "string" && args.query.trim()) {
@@ -1106,7 +1108,7 @@ export function registerMinddyTools(
       const ref = await resolveIssueRef(scope.access, args.issue);
       if ("error" in ref) return ref.error;
 
-      const r = await getIssue(mcpReadCtx(scope.access), {
+      const r = await getIssue(mcpReadCtx(scope.access, scope.userId), {
         issue_id: ref.issue.id,
       });
       if ("error" in r) return fail("issue_not_found", r.error);
@@ -1408,7 +1410,7 @@ export function registerMinddyTools(
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
       const r = await listMembers(
-        mcpReadCtx(scope.access),
+        mcpReadCtx(scope.access, scope.userId),
         scope.access.project.owner_id,
       );
       if ("error" in r) return fail("database_error", r.error);
@@ -1622,7 +1624,7 @@ export function registerMinddyTools(
 
       const [
         { data: issues },
-        { data: comments },
+        { data: comments, error: commentsError },
         { data: attachmentRows },
         relationRows,
         activity,
@@ -1633,8 +1635,7 @@ export function registerMinddyTools(
           .is("deleted_at", null)
           .eq("objective_id", objective.id)
           .order("number", { ascending: true }),
-        service
-          .from("comments")
+        commentStore(service, "comments", scope.userId)
           .select(
             "id, author_id, body, parent_id, via_assistant, via_mcp, api_key_id, created_at",
           )
@@ -1658,6 +1659,7 @@ export function registerMinddyTools(
         recentActivity({ objective_id: objective.id as string }, scope.userId, scope.access.project.id),
       ]);
 
+      if (commentsError) return fail("database_error", "Unable to read objective comments.");
       // Resources: `comment_id` null = carried by the objective itself, otherwise
       // by one of his comments — same cut as minddy_get_issue.
       const resourcesByComment = new Map<
@@ -2617,8 +2619,7 @@ export function registerMinddyTools(
       }
 
       if (args.comment_id) {
-        const { data: comment } = await getServiceClient()
-          .from("comments")
+        const { data: comment } = await commentStore(getServiceClient(), "comments")
           .select("id, issue_id")
           .eq("id", args.comment_id)
           .maybeSingle();
@@ -4049,13 +4050,13 @@ export function registerMinddyTools(
         );
 
       const service = getServiceClient();
-      const { data: comments } = await service
-        .from("comments")
+      const { data: comments, error: commentsError } = await commentStore(service, "comments", scope.userId)
         .select(
           "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
         )
         .eq("feedback_post_id", args.feedback_post_id)
         .order("created_at", { ascending: true });
+      if (commentsError) return fail("database_error", "Unable to read feedback comments.");
       const users = await fetchAuthUsersById(
         service,
         (comments ?? [])

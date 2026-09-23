@@ -2325,11 +2325,31 @@
       },
       "body": {
         "type": "text",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       },
       "created_at": {
         "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "encrypted_content": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "encryption_version": {
+        "type": "integer",
         "nullable": false,
         "generated": false
       },
@@ -2361,6 +2381,11 @@
       "parent_id": {
         "type": "uuid",
         "nullable": true,
+        "generated": false
+      },
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
         "generated": false
       },
       "updated_at": {
@@ -2404,8 +2429,18 @@
         "targetColumn": "id"
       },
       {
+        "table": "feedback_posts",
+        "column": "feedback_post_id",
+        "targetColumn": "id"
+      },
+      {
         "table": "feedback_users",
         "column": "feedback_user_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "issues",
+        "column": "issue_id",
         "targetColumn": "id"
       },
       {
@@ -2419,9 +2454,29 @@
         "targetColumn": "id"
       },
       {
+        "table": "objectives",
+        "column": "objective_id",
+        "targetColumn": "id"
+      },
+      {
         "table": "comments",
         "column": "parent_id",
         "targetColumn": "id"
+      },
+      {
+        "table": "feedback_posts",
+        "column": "project_id",
+        "targetColumn": "project_id"
+      },
+      {
+        "table": "issues",
+        "column": "project_id",
+        "targetColumn": "project_id"
+      },
+      {
+        "table": "objectives",
+        "column": "project_id",
+        "targetColumn": "project_id"
       }
     ]
   },
@@ -6267,11 +6322,31 @@
       },
       "body": {
         "type": "text",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       },
       "created_at": {
         "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "encrypted_content": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "encryption_version": {
+        "type": "integer",
         "nullable": false,
         "generated": false
       },
@@ -6336,9 +6411,19 @@
         "targetColumn": "id"
       },
       {
+        "table": "pages",
+        "column": "page_id",
+        "targetColumn": "id"
+      },
+      {
         "table": "page_comments",
         "column": "parent_id",
         "targetColumn": "id"
+      },
+      {
+        "table": "pages",
+        "column": "project_id",
+        "targetColumn": "project_id"
       },
       {
         "table": "projects",

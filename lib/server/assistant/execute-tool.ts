@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { MCP_CLIENT_TOOL_NAMES, MCP_SETUP_TOOL_NAMES } from "@/lib/mcp-client-tools";
@@ -547,6 +548,7 @@ function readCtx(
   return {
     db: ctx.supabase,
     service: ctx.service,
+    actorId: ctx.userId,
     projectId,
     projectKey: access.project.key,
   };
@@ -2770,13 +2772,13 @@ export async function executeTool(
         const detail = await getTeamFeedbackDetail(projectId, postId);
         if (!detail)
           return toolError("Feedback post not found in this project.");
-        const { data: comments } = await ctx.service
-          .from("comments")
+        const { data: comments, error: commentsError } = await commentStore(ctx.service, "comments", ctx.userId)
           .select(
             "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
           )
           .eq("feedback_post_id", postId)
           .order("created_at", { ascending: true });
+        if (commentsError) return toolError("Unable to read feedback comments.");
         // Resolve author display names (never surface raw uuids to the model).
         const commentAuthorIds = [
           ...new Set(

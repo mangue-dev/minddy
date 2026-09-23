@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -138,8 +139,7 @@ export async function loadPrIssueContext(
         .maybeSingle(),
       // The MOST RECENT first on the SQL side, then put back in reading order:
       // an ascending `limit` would keep the beginning of a discussion, never its end.
-      service
-        .from("comments")
+      commentStore(service, "comments")
         .select("body, author_id, via_assistant")
         .eq("issue_id", issueId)
         .order("created_at", { ascending: false })

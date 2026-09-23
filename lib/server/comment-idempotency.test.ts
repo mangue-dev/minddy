@@ -21,7 +21,7 @@ const attachment = { storage_path: "projects/p1/test.png", file_name: "test.png"
 function serviceFor(entity: "page" | "issue", existingAuthor: string = "u1", existingEntity: string = "e1") {
   let inserted: Record<string, unknown> | undefined;
   const filters: Record<string, unknown> = {};
-  const existing = { id: commentId, author_id: existingAuthor, [`${entity}_id`]: existingEntity, body: "Original", attachments: [{ id: "a1", ...attachment }] };
+  const existing = { id: commentId, author_id: existingAuthor, [`${entity}_id`]: existingEntity, body: "Original", ...(entity === "page" ? { quote: null } : {}), attachments: [{ id: "a1", ...attachment }] };
   const service = { from(table: string) {
     const query = {
       select: () => query, is: () => query,

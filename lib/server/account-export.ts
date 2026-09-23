@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -232,8 +233,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       .from("issues")
       .select(ISSUE_COLUMNS)
       .or(`created_by.eq.${userId},assignee_id.eq.${userId}`),
-    service
-      .from("comments")
+    commentStore(service, "comments", userId)
       .select(
         "id, issue_id, parent_id, body, via_assistant, via_mcp, created_at, updated_at"
       )

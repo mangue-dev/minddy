@@ -10,18 +10,9 @@ import {
 import { onRealtimeRekey, resolveRealtimeTopic } from "./realtime-topic";
 
 /**
- * A response @Numo LIVE, on a table-specific private comment topic
- * (migration 20260909090000_numo_comment_live_stream).
- *
- * The assistant streams because its panel holds the SSE connection of the route
- * which runs the loop. A comment response cannot: it
- * is written in an after(), without a browser on the line. The server broadcasts
- * therefore the text of the round on the comment topic (lib/server/assistant/
- * comment-live.ts), and this is where we receive it — ~4 times per second, without a single
- * write to the base nor a single refetch of the thread.
- *
- * The refetch as long as the response is 'working' remains in place: it is the net
- * (message lost, tab asleep, subscription not yet attached).
+ * Compatibility receiver for comment streams from servers draining during rollout.
+ * Current servers persist encrypted snapshots through the comment repository;
+ * metadata invalidation and polling fetch their plaintext through authorized APIs.
  */
 
 export interface CommentLive {

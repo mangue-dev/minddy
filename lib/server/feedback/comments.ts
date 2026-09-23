@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -60,8 +61,7 @@ export async function listPublicComments(params: {
   viewerId: string | null;
 }): Promise<PublicComment[]> {
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("comments")
+  const { data, error } = await commentStore(service, "comments")
     .select(PUBLIC_COMMENT_SELECT)
     .eq("feedback_post_id", params.postId)
     .eq("visibility", "public")
@@ -102,8 +102,7 @@ export async function publicCommentSummaries(
   if (postIds.length === 0) return summaries;
 
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("comments")
+  const { data, error } = await commentStore(service, "comments")
     .select("feedback_post_id, feedback_user_id, created_at")
     .in("feedback_post_id", postIds)
     .eq("visibility", "public");
@@ -147,8 +146,7 @@ async function resolvePublicThreadRoot(
   postId: string,
   parentId: string
 ): Promise<string | null> {
-  const { data: parent } = await service
-    .from("comments")
+  const { data: parent } = await commentStore(service, "comments")
     .select("id, parent_id, feedback_post_id, visibility")
     .eq("id", parentId)
     .maybeSingle();
@@ -208,8 +206,7 @@ export async function addPublicComment(params: {
     if (!rootId) return { ok: false, error: "notFound" };
   }
 
-  const { data, error } = await service
-    .from("comments")
+  const { data, error } = await commentStore(service, "comments")
     .insert({
       feedback_post_id: params.postId,
       author_id: null,

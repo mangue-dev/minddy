@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import { isCommentId } from "@/lib/comment-id";
 import { NextResponse, after, type NextRequest } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -29,8 +30,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await auth.supabase
-    .from("comments")
+  const { data, error } = await commentStore(auth.supabase, "comments", auth.user.id)
     .select("*, attachments(*)")
     .eq("issue_id", id)
     .order("created_at", { ascending: true });

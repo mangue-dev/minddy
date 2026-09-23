@@ -1,3 +1,4 @@
+import { commentStore, syncGithubComment } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -670,8 +671,7 @@ async function applyGithubIssueComment(
 
   let commentUpdatedAt: string | null = null;
   if (synced?.comment_id) {
-    const { data: localComment, error: commentError } = await service
-      .from("comments")
+    const { data: localComment, error: commentError } = await commentStore(service, "comments")
       .select("updated_at")
       .eq("id", synced.comment_id as string)
       .eq("issue_id", issueId)
@@ -692,7 +692,7 @@ async function applyGithubIssueComment(
   }
 
   const body = remote.action === "deleted" ? "[Deleted on GitHub]" : remote.body;
-  const { error: writeError } = await service.rpc("sync_github_issue_comment_atomic", {
+  await syncGithubComment(service, {
     p_issue_id: issueId,
     p_remote_comment_id: remote.remoteCommentId,
     p_author_id: target.createdBy,
@@ -707,7 +707,6 @@ async function applyGithubIssueComment(
         ? remote.updatedAt ?? new Date().toISOString()
         : null,
   });
-  if (writeError) throw new Error(writeError.message);
 }
 
 function toGithubIssueComment(

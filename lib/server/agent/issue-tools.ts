@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -206,6 +207,7 @@ async function searchIssuesTool(
     {
       db: service,
       service,
+      actorId: ctx.actorId ?? undefined,
       projectId: ctx.projectId,
       projectKey: ctx.projectKey,
     },
@@ -229,6 +231,7 @@ async function readIssue(
     {
       db: service,
       service,
+      actorId: ctx.actorId ?? undefined,
       projectId: ctx.projectId,
       projectKey: ctx.projectKey,
     },
@@ -370,14 +373,14 @@ async function readFeedback(
   }
 
   const service = getServiceClient();
-  const { data: rows } = await service
-    .from("comments")
+  const { data: rows, error: commentsError } = await commentStore(service, "comments", ctx.actorId)
     .select(
       "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
     )
     .eq("feedback_post_id", postId)
     .order("created_at", { ascending: true });
 
+  if (commentsError) return { result: { error: "Unable to read feedback comments." }, success: false };
   const authorIds = (rows ?? [])
     .map((c) => c.author_id as string | null)
     .filter((v): v is string => !!v);

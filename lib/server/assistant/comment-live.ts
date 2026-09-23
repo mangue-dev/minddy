@@ -1,93 +1,23 @@
-import { supabaseServerFetch } from "@/lib/server/supabase-fetch";
 import "server-only";
-
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  numoCommentTopic,
-  type CommentLiveTable,
-} from "@/lib/comment-live-topic";
+import type { CommentLiveTable } from "@/lib/comment-live-topic";
+import { commentStore } from "@/lib/server/comment-store";
 
 export { numoCommentTopic } from "@/lib/comment-live-topic";
 
-/**
- * Displaying an @Numo response as it is written (migration
- * 20260909090000_numo_comment_live_stream).
- *
- * Two channels, and the distribution between the two is the whole point:
- *
- * LIVE — the text of the round, broadcast on the private topic
- * `numo-comment:{id}` or `numo-page-comment:{id}` at the cadence of
- * `LIVE_FLUSH_MS`. Ephemeral: nothing is written in base, nothing is refetched,
- * the open thread repainted and that's it.
- * THE BASE — the only transitions that count: the current tool, the end, a
- * failure. Replayable, therefore readable by the tab which arrives along the way
- * or which has missed a message.
- *
- * Before, everything went through the base: an UPDATE every 900 ms, a complete refetch
- * of the thread behind each one. The text arrived in blocks and the end of the
- * message only appeared on final writing.
- *
- * The loop calls the same service-only PostgREST RPC as the code agent. The
- * RPC resolves the current membership generation before writing the private
- * broadcast, while the server keeps a stateless best-effort transport.
- *
- * Direct is best-effort from end to end: a failed broadcast must never
- * cause a response to fail — the thread polls as long as it is 'working'.
- */
-
-/** Live cadence, aligned with that of the code agent (agent-loop.ts). */
-const LIVE_FLUSH_MS = 250;
-
-/** Live payload: the COMPLETE state of the round, never a delta — un
- * lost message is therefore made up for in the next one, without a gap in the text. */
-export interface NumoCommentLive {
-  /** Answer as written so far. */
-  text: string;
-  /** Current tool, if there is one: it takes precedence over the text on the screen. */
-  tool: string | null;
-  /** Transmission timestamp (ms). The client throws what arrives out of order.
- * A counter would not be suitable: two POSTs left 250 ms apart can
- * very well arrive in the other direction, and an older text would erase the
- * end of the one already displayed. */
-  at: number;
-}
-
-async function broadcast(
-  commentId: string,
-  table: CommentLiveTable,
-  payload: NumoCommentLive,
-): Promise<void> {
-  const url = process.env.MINDDY_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return;
-  try {
-    await supabaseServerFetch(`${url}/rest/v1/rpc/broadcast_private_realtime`, {
-      method: "POST",
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        p_topic: numoCommentTopic(commentId, table),
-        p_event: "stream",
-        p_payload: payload,
-      }),
-    });
-  } catch {
-    // The thread polls as long as the response is 'working': at worst, a delay.
-  }
-}
+// Persist throttled snapshots through encryption; Realtime sends only invalidations.
+// SQL realtime.send stores its payload, so private topics cannot carry plaintext.
+const LIVE_FLUSH_MS = 900;
 
 /** The response being written, seen from the server. */
 export interface CommentDisplay {
-  /** Text of the round as written so far — broadcast, throttled, never in base. */
+  /** Persist a throttled snapshot of the current answer. */
   stream(text: string): void;
-  /** A tool starts: in base (the arriving tab must see it) and live. */
+  /** Persist the active tool so a newly opened tab can display it. */
   tool(name: string): void;
   /** End of response: the full text, then the frozen state. */
   finish(body: string): Promise<void>;
-  /** Failure: empty body + 'error' status, the thread renders its line located. */
+  /** Persist an empty body and the failure status. */
   fail(): Promise<void>;
 }
 
@@ -100,62 +30,42 @@ export function commentDisplay(
   let lastFlushAt = 0;
   let lastFlushLen = -1;
 
-  // The writings follow one another in single file. They left so far in
-  // fire-and-forget: nothing guaranteed that the last one requested was the
-  // last applied, and a partial UPDATE doubling the final UPDATE left the
-  // comment truncated for good, in 'done' status.
+  // Serialize snapshots so a late partial write cannot truncate the final answer.
   let writes: Promise<void> = Promise.resolve();
   const write = (fields: Record<string, unknown>): Promise<void> => {
-    writes = writes.then(async () => {
-      const { error } = await service
-        .from(table)
-        .update(fields)
-        .eq("id", commentId);
-      if (error) console.error("[numo-comment] update failed:", error.message);
+    writes = writes.catch(() => {}).then(async () => {
+      const { error } = await commentStore(service, table).update(fields).eq("id", commentId);
+      if (error) throw new Error("Unable to persist assistant comment");
     });
     return writes;
   };
 
-  const push = (text: string): void => {
-    void broadcast(commentId, table, {
-      text,
-      tool: currentTool,
-      at: Date.now(),
-    });
-  };
 
   return {
     stream(text) {
-      // The model writes: the previous tool is finished. A single writing
-      // toggle — not one per text fragment.
+      // Clear the previous tool once when text resumes.
       if (currentTool !== null) {
         currentTool = null;
-        void write({ assistant_tool: null });
+        void write({ assistant_tool: null }).catch(() => {});
       }
       const now = Date.now();
       if (text.length === lastFlushLen || now - lastFlushAt < LIVE_FLUSH_MS) return;
       lastFlushAt = now;
       lastFlushLen = text.length;
-      push(text);
+      void write({ body: text }).catch(() => {});
     },
 
     tool(name) {
       currentTool = name;
-      // The next round starts with an empty text: without that, its first broadcast
+      // The next round starts with an empty text: without that, its first snapshot
       // could fall on the same length as the last one from the previous round
       // and get filtered.
       lastFlushLen = -1;
-      push("");
-      void write({ assistant_tool: name });
+      void write({ body: "", assistant_tool: name }).catch(() => {});
     },
 
     async finish(body) {
       currentTool = null;
-      // The complete text goes LIVE first: the screen is up to date all the time
-      // following. Without this flush, the last fragments — retained by the throttle —
-      // only happened with the refetch triggered by the writing below, a
-      // a good second later, and the end of the message fell straight away.
-      push(body);
       await write({
         body,
         assistant_status: "done",
@@ -165,9 +75,6 @@ export function commentDisplay(
 
     async fail() {
       currentTool = null;
-      // Blank broadcast: the wire releases the direct and falls back onto the line
-      // base, that the writing which follows passes into 'error'.
-      push("");
       await write({
         body: "",
         assistant_status: "error",

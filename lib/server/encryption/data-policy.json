@@ -776,11 +776,8 @@
   },
   "comments": {
     "scope": {
-      "ancestors": [
-        "issues:issue_id",
-        "objectives:objective_id",
-        "feedback_posts:feedback_post_id"
-      ]
+      "kind": "project",
+      "column": "project_id"
     },
     "encrypted": [
       "body"
@@ -803,11 +800,18 @@
         "id",
         "issue_id",
         "objective_id",
-        "parent_id"
+        "parent_id",
+        "project_id"
       ],
       "timestamp": [
         "created_at",
         "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version",
+        "encryption_revision",
+        "encryption_checked_at"
       ]
     }
   },
@@ -2236,6 +2240,12 @@
       "timestamp": [
         "created_at",
         "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version",
+        "encryption_revision",
+        "encryption_checked_at"
       ]
     }
   },

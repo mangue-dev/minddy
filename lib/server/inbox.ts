@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -72,9 +73,8 @@ export async function readInboxNotifications({
   const commentIds = [
     ...new Set(readable.map((n) => n.comment_id).filter(Boolean)),
   ] as string[];
-  const { data: comments } = commentIds.length
-    ? await service
-        .from("comments")
+  const { data: comments, error: commentsError } = commentIds.length
+    ? await commentStore(service, "comments", userId)
         .select(
           "id, issue_id, objective_id, feedback_post_id, body, via_assistant, via_mcp, api_key_id",
         )
@@ -90,10 +90,12 @@ export async function readInboxNotifications({
           via_mcp: boolean;
           api_key_id: string | null;
         }[],
+        error: null,
       };
+  if (commentsError) return { notifications: [], error: "Unable to read notification comments" };
 
-  // A comment has no project_id of its own. Resolve its immutable parent in the
-  // same bounded batch as direct notification targets, then require that parent
+  // Resolve the immutable parent in the same bounded batch as direct notification
+  // targets, then require that parent
   // to match the notification project before exposing the excerpt.
   const issueIds = [
     ...new Set(

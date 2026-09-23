@@ -530,6 +530,17 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "set_comment_updated_at()": {
+      "sha256": "d8d7e3b097a2dfb0d7079faa14888c727a95211028c82396fdba5094c3e1dd7f",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "validate_page_database()": {
       "sha256": "e97d26ff209669c1fed38be4e2e1731b03600339cf7b61b5a7f959aa153b6cdb",
       "securityDefiner": false,
@@ -685,6 +696,30 @@
       ],
       "protectedRelations": [
         "agent_runs"
+      ],
+      "functionReferences": []
+    },
+    "guard_comment_encryption()": {
+      "sha256": "45e9ceea3bd75c4904b3883085e507e9055acb4f7d39eb1a370ee8cb2c11af84",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "issues",
+        "comments",
+        "objectives",
+        "page_comments",
+        "feedback_posts",
+        "envelope_data_keys"
+      ],
+      "protectedRelations": [
+        "issues",
+        "comments",
+        "objectives",
+        "page_comments",
+        "feedback_posts"
       ],
       "functionReferences": []
     },
@@ -916,6 +951,17 @@
     "set_scratchpad_updated_at()": {
       "sha256": "a46e6f9045420eb7e32fcf2e6649b5351d9e043d300f6d90ebc42de16d47731d",
       "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "broadcast_comment_metadata()": {
+      "sha256": "fec8959c147392980658f7f59c8e7b81617afe52ed009a73bbb5e68e854fa430",
+      "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
@@ -1175,17 +1221,19 @@
       "functionReferences": []
     },
     "guard_comment_client_update()": {
-      "sha256": "86790844090ca96b496bbe8846dc4c6a5531b9df44280c0514f172ea9ba9a209",
+      "sha256": "416c5c534da1c021bfde6545f4af4fb97cc50d64a8a2717e9ffdf54b45359abb",
       "securityDefiner": false,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres}",
       "relations": [
-        "comments"
+        "comments",
+        "page_comments"
       ],
       "protectedRelations": [
-        "comments"
+        "comments",
+        "page_comments"
       ],
       "functionReferences": []
     },
@@ -1957,7 +2005,7 @@
       ]
     },
     "guard_live_page_comment_mutation()": {
-      "sha256": "d33615dbcae4e6777118c690d4b52f4dfa03a6edc3793ff896836e89b69622f2",
+      "sha256": "4bc59016a8e3630e65ffb38dceda5180312ec91d1cffbaa1938674592974c9bc",
       "securityDefiner": false,
       "configuration": [
         "search_path=\"\""
@@ -2552,7 +2600,7 @@
       "functionReferences": []
     },
     "broadcast_private_realtime(text,text,jsonb)": {
-      "sha256": "cd67127c816baa13fbe0b3535777aef6d7a10e172e9adbb3b0df6ecff074ce6f",
+      "sha256": "94065a6d7c6ca743e4d6c80fa2318569dad9b01eddc28e2e5a5ce8f8ef55c894",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3426,6 +3474,23 @@
       ],
       "functionReferences": []
     },
+    "migrate_comment_ciphertext(text,uuid,uuid,bigint,integer,integer,text)": {
+      "sha256": "0acd0569eeb4dd19cefc74fa4b5937a979d2a831949b9384d368485789ac7fb8",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "comments",
+        "page_comments"
+      ],
+      "protectedRelations": [
+        "comments",
+        "page_comments"
+      ],
+      "functionReferences": []
+    },
     "replace_user_ai_key(uuid,text,text,text,text,timestamp with time zone)": {
       "sha256": "0da9806285b42c68de9c5501420eecad73f281e84e0f329d0dfc459d93221168",
       "securityDefiner": true,
@@ -3730,8 +3795,8 @@
         "resume_latest_agent_run_with_message"
       ]
     },
-    "sync_github_issue_comment_atomic(uuid,text,uuid,text,text,text,text,timestamp with time zone,timestamp with time zone,timestamp with time zone)": {
-      "sha256": "0ed01301ffd003a9ee6f4b4d2b6c8e5da1d4ed39fac91325c6e0215dc6b16d45",
+    "sync_github_issue_comment_atomic(uuid,text,uuid,text,text,text,text,timestamp with time zone,timestamp with time zone,timestamp with time zone,uuid,integer,text)": {
+      "sha256": "ea591830cea414efbec6fb627361d4fba7413602482419b4ee3905d2b3305c23",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3782,8 +3847,8 @@
       "definition": "CREATE TRIGGER app_tabs_broadcast AFTER INSERT OR DELETE OR UPDATE ON app_tabs FOR EACH ROW EXECUTE FUNCTION broadcast_app_tab()"
     },
     "comments.comments_broadcast": {
-      "function": "broadcast_activity_scoped()",
-      "definition": "CREATE TRIGGER comments_broadcast AFTER INSERT OR DELETE OR UPDATE ON comments FOR EACH ROW EXECUTE FUNCTION broadcast_activity_scoped()"
+      "function": "broadcast_comment_metadata()",
+      "definition": "CREATE TRIGGER comments_broadcast AFTER INSERT OR DELETE OR UPDATE ON comments FOR EACH ROW EXECUTE FUNCTION broadcast_comment_metadata()"
     },
     "issues.issues_enforce_cycle": {
       "function": "enforce_issue_cycle()",
@@ -3850,8 +3915,8 @@
       "definition": "CREATE TRIGGER page_links_broadcast AFTER INSERT OR DELETE OR UPDATE ON page_links FOR EACH ROW EXECUTE FUNCTION broadcast_project_scoped()"
     },
     "comments.comments_set_updated_at": {
-      "function": "set_updated_at()",
-      "definition": "CREATE TRIGGER comments_set_updated_at BEFORE UPDATE ON comments FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+      "function": "set_comment_updated_at()",
+      "definition": "CREATE TRIGGER comments_set_updated_at BEFORE UPDATE ON comments FOR EACH ROW EXECUTE FUNCTION set_comment_updated_at()"
     },
     "projects.projects_guard_identity": {
       "function": "guard_project_identity()",
@@ -3872,6 +3937,10 @@
     "agent_runs.trg_agent_run_sync_turn": {
       "function": "sync_agent_turn_from_run()",
       "definition": "CREATE TRIGGER trg_agent_run_sync_turn AFTER UPDATE OF status, model, reasoning_level, cost_usd, outcome, error_message, started_at, completed_at, updated_at ON agent_runs FOR EACH ROW EXECUTE FUNCTION sync_agent_turn_from_run()"
+    },
+    "comments.comments_encryption_guard": {
+      "function": "guard_comment_encryption()",
+      "definition": "CREATE TRIGGER comments_encryption_guard BEFORE INSERT OR UPDATE ON comments FOR EACH ROW EXECUTE FUNCTION guard_comment_encryption()"
     },
     "feedback_votes.feedback_votes_count": {
       "function": "feedback_votes_maintain_count()",
@@ -3922,8 +3991,8 @@
       "definition": "CREATE TRIGGER objectives_purge_relations AFTER DELETE ON objectives FOR EACH ROW EXECUTE FUNCTION purge_issue_relations()"
     },
     "page_comments.page_comments_broadcast": {
-      "function": "broadcast_project_scoped()",
-      "definition": "CREATE TRIGGER page_comments_broadcast AFTER INSERT OR DELETE OR UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION broadcast_project_scoped()"
+      "function": "broadcast_comment_metadata()",
+      "definition": "CREATE TRIGGER page_comments_broadcast AFTER INSERT OR DELETE OR UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION broadcast_comment_metadata()"
     },
     "agent_runs.agent_runs_broadcast_insert": {
       "function": "broadcast_agent_run_row()",
@@ -4042,8 +4111,8 @@
       "definition": "CREATE TRIGGER issue_events_encryption_guard BEFORE INSERT OR UPDATE ON issue_events FOR EACH ROW EXECUTE FUNCTION guard_history_encryption()"
     },
     "page_comments.page_comments_set_updated_at": {
-      "function": "set_updated_at()",
-      "definition": "CREATE TRIGGER page_comments_set_updated_at BEFORE UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+      "function": "set_comment_updated_at()",
+      "definition": "CREATE TRIGGER page_comments_set_updated_at BEFORE UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION set_comment_updated_at()"
     },
     "page_comments.page_comments_validate_scope": {
       "function": "validate_page_comment_scope()",
@@ -4092,6 +4161,10 @@
     "feedback_users.feedback_users_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER feedback_users_set_updated_at BEFORE UPDATE ON feedback_users FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    "page_comments.page_comments_encryption_guard": {
+      "function": "guard_comment_encryption()",
+      "definition": "CREATE TRIGGER page_comments_encryption_guard BEFORE INSERT OR UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION guard_comment_encryption()"
     },
     "page_versions.page_versions_encryption_guard": {
       "function": "guard_history_encryption()",
