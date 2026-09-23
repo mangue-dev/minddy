@@ -6505,7 +6505,7 @@
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
-    "resource": "numo_work",
+    "resource": "agent_runs",
     "line": 20,
     "storage": false
   },
