@@ -1541,6 +1541,17 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "set_project_draft_updated_at()": {
+      "sha256": "136fc97cd27009dd6a956068b065233500dc6c549d7ea7e656887c9a17453f2b",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "undo_feedback_merge(uuid,uuid)": {
       "sha256": "6853ef77b23e322058a593e3d721ded50bac3e66f50863e2312cac50e6440e91",
       "securityDefiner": true,
@@ -1759,6 +1770,19 @@
       "protectedRelations": [
         "pages"
       ],
+      "functionReferences": []
+    },
+    "guard_project_draft_encryption()": {
+      "sha256": "d7d56584e24c2973560bbf53ee6e2ea7788ed038e70163933c2c75cbaf42792b",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "envelope_data_keys"
+      ],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "next_issue_numbers(uuid,integer)": {
@@ -3637,6 +3661,21 @@
       ],
       "functionReferences": []
     },
+    "migrate_project_draft_ciphertext(uuid,uuid,bigint,integer,integer,text)": {
+      "sha256": "f0b5a35d275e23add658f2b14109634f58c55ac66bdc86ffaf05b71364b583ca",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "project_drafts"
+      ],
+      "protectedRelations": [
+        "project_drafts"
+      ],
+      "functionReferences": []
+    },
     "reserve_provider_operation(uuid,text,text,text,integer,integer,integer)": {
       "sha256": "11f2764fafe5c06b30e01b0d9a237c9882fa276feca2fbb1dffaaa636018b7a8",
       "securityDefiner": true,
@@ -3668,6 +3707,21 @@
         "agent_runs",
         "numo_assistant_turns",
         "numo_tool_operations"
+      ],
+      "functionReferences": []
+    },
+    "save_project_draft_guarded(uuid,uuid,text,text,jsonb,integer,text,bigint)": {
+      "sha256": "f39e641b85eea4849f689f285fcc573478481a29dfcffaca7e52073e36cd99d8",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "project_drafts"
+      ],
+      "protectedRelations": [
+        "project_drafts"
       ],
       "functionReferences": []
     },
@@ -4293,8 +4347,8 @@
       "definition": "CREATE TRIGGER page_versions_encryption_guard BEFORE INSERT OR UPDATE ON page_versions FOR EACH ROW EXECUTE FUNCTION guard_history_encryption()"
     },
     "project_drafts.project_drafts_set_updated_at": {
-      "function": "set_updated_at()",
-      "definition": "CREATE TRIGGER project_drafts_set_updated_at BEFORE UPDATE ON project_drafts FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+      "function": "set_project_draft_updated_at()",
+      "definition": "CREATE TRIGGER project_drafts_set_updated_at BEFORE UPDATE ON project_drafts FOR EACH ROW EXECUTE FUNCTION set_project_draft_updated_at()"
     },
     "pull_requests.pull_requests_broadcast_insert": {
       "function": "broadcast_pull_request_row()",
@@ -4331,6 +4385,10 @@
     "pages.pages_remove_deleted_database_properties": {
       "function": "remove_deleted_database_properties()",
       "definition": "CREATE TRIGGER pages_remove_deleted_database_properties AFTER UPDATE OF database_schema ON pages FOR EACH ROW WHEN (old.database_schema IS DISTINCT FROM new.database_schema) EXECUTE FUNCTION remove_deleted_database_properties()"
+    },
+    "project_drafts.project_drafts_encryption_guard": {
+      "function": "guard_project_draft_encryption()",
+      "definition": "CREATE TRIGGER project_drafts_encryption_guard BEFORE INSERT OR UPDATE ON project_drafts FOR EACH ROW EXECUTE FUNCTION guard_project_draft_encryption()"
     },
     "project_members.project_members_authority_lock": {
       "function": "lock_project_authority_mutation()",

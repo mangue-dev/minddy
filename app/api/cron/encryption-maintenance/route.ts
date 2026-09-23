@@ -1,6 +1,7 @@
 import { backfillCommentsBatch } from "@/lib/server/encryption/comment-backfill";
 import { backfillObjectivesBatch } from "@/lib/server/encryption/objective-backfill";
 import { backfillCategoriesBatch } from "@/lib/server/encryption/category-backfill";
+import { backfillProjectDraftsBatch } from "@/lib/server/encryption/project-draft-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest) {
       contentEnabled ? backfillCommentsBatch("page_comments", 50, request.signal) : Promise.resolve(null),
       contentEnabled ? backfillObjectivesBatch(50, request.signal) : Promise.resolve(null),
       contentEnabled ? backfillCategoriesBatch(50, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillProjectDraftsBatch(50, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -52,12 +54,13 @@ export async function GET(request: NextRequest) {
     const pageComments = outcomes[6];
     const objectives = outcomes[7];
     const categories = outcomes[8];
+    const projectDrafts = outcomes[9];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -70,6 +73,7 @@ export async function GET(request: NextRequest) {
         page_versions: pageVersions.status === "fulfilled" ? pageVersions.value : { failed: true },
         objectives: objectives.status === "fulfilled" ? objectives.value : { failed: true },
         categories: categories.status === "fulfilled" ? categories.value : { failed: true },
+        project_drafts: projectDrafts.status === "fulfilled" ? projectDrafts.value : { failed: true },
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),
       ...(contentEnabled ? { statistics: statistics.status === "fulfilled" ? statistics.value : { failed: true } } : {}),

@@ -2477,6 +2477,12 @@
       "name"
     ],
     "clear": {
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version",
+        "encryption_revision",
+        "encryption_checked_at"
+      ],
       "operational_configuration": [
         "step"
       ],

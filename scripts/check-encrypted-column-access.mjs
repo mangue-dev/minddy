@@ -13,6 +13,15 @@ const allowedInvitationAccess = new Set([
 
 const rules = [
   {
+    access: /\.\s*from\s*\(\s*["'`]project_drafts["'`]\s*\)/,
+    allowed: new Set(["lib/server/project-draft-store.ts",
+      "lib/server/encryption/project-draft-backfill.ts", "app/api/project-drafts/[id]/route.ts"]),
+  },
+  {
+    access: /\.\s*rpc\s*\(\s*["'`](?:save_project_draft_guarded|migrate_project_draft_ciphertext)["'`]/,
+    allowed: new Set(["lib/server/project-draft-store.ts", "lib/server/encryption/project-draft-backfill.ts"]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]categories["'`]\s*\)/,
     allowed: new Set(["lib/server/category-store.ts", "lib/server/categories.ts",
       "lib/server/encryption/category-backfill.ts", "lib/server/account-import.ts",
@@ -81,6 +90,10 @@ for (const file of files) {
     throw error;
   });
   if (rules.some(({ access, allowed }) => !allowed.has(normalized) && access.test(source))) {
+    violations.push(normalized);
+  }
+  if (normalized === "app/api/project-drafts/[id]/route.ts" &&
+      /\.\s*from\s*\(\s*["'`]project_drafts["'`]\s*\)(?!\s*\.\s*delete\s*\(\s*\))/.test(source)) {
     violations.push(normalized);
   }
   // The demo seed only checks existence. Its constant demo fixture is not a user-content reader.

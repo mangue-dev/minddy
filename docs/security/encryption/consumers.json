@@ -903,20 +903,6 @@
     "storage": false
   },
   {
-    "file": "app/api/project-drafts/route.ts",
-    "operation": "from",
-    "resource": "project_drafts",
-    "line": 34,
-    "storage": false
-  },
-  {
-    "file": "app/api/project-drafts/route.ts",
-    "operation": "from",
-    "resource": "project_drafts",
-    "line": 103,
-    "storage": false
-  },
-  {
     "file": "app/api/projects/[id]/agent-runs/route.ts",
     "operation": "from",
     "resource": "agent_runs",
@@ -4585,6 +4571,27 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/project-draft-backfill.ts",
+    "operation": "from",
+    "resource": "project_drafts",
+    "line": 15,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/project-draft-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_project_draft_ciphertext",
+    "line": 26,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/project-draft-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_project_draft_ciphertext",
+    "line": 39,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/registry.ts",
     "operation": "from",
     "resource": "envelope_data_keys",
@@ -8033,6 +8040,41 @@
     "operation": "from",
     "resource": "project_members",
     "line": 77,
+    "storage": false
+  },
+  {
+    "file": "lib/server/project-draft-store.ts",
+    "operation": "from",
+    "resource": "project_drafts",
+    "line": 64,
+    "storage": false
+  },
+  {
+    "file": "lib/server/project-draft-store.ts",
+    "operation": "from",
+    "resource": "project_drafts",
+    "line": 74,
+    "storage": false
+  },
+  {
+    "file": "lib/server/project-draft-store.ts",
+    "operation": "from",
+    "resource": "project_drafts",
+    "line": 80,
+    "storage": false
+  },
+  {
+    "file": "lib/server/project-draft-store.ts",
+    "operation": "rpc",
+    "resource": "save_project_draft_guarded",
+    "line": 86,
+    "storage": false
+  },
+  {
+    "file": "lib/server/project-draft-store.ts",
+    "operation": "from",
+    "resource": "project_drafts",
+    "line": 94,
     "storage": false
   },
   {

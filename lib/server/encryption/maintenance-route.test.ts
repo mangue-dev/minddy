@@ -13,6 +13,7 @@ const state = vi.hoisted(() => ({
   comments: vi.fn(),
   objectives: vi.fn(),
   categories: vi.fn(),
+  projectDrafts: vi.fn(),
 }));
 
 vi.mock("@/lib/server/encryption/invitation-email", () => ({
@@ -31,6 +32,7 @@ vi.mock("@/lib/server/encryption/history-backfill", () => ({ backfillHistoryBatc
 vi.mock("@/lib/server/encryption/comment-backfill", () => ({ backfillCommentsBatch: state.comments }));
 vi.mock("@/lib/server/encryption/objective-backfill", () => ({ backfillObjectivesBatch: state.objectives }));
 vi.mock("@/lib/server/encryption/category-backfill", () => ({ backfillCategoriesBatch: state.categories }));
+vi.mock("@/lib/server/encryption/project-draft-backfill", () => ({ backfillProjectDraftsBatch: state.projectDrafts }));
 
 const { GET } = await import("@/app/api/cron/encryption-maintenance/route");
 const secret = "x".repeat(32);
@@ -53,6 +55,7 @@ beforeEach(() => {
   state.comments.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.objectives.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.categories.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
+  state.projectDrafts.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.rotate.mockReset().mockResolvedValue({ scanned: 0, advanced: 0, failed: 0 });
 });
 
@@ -111,6 +114,7 @@ describe("encryption maintenance cron", () => {
     expect(state.comments).toHaveBeenCalledWith("page_comments", 50, expect.any(AbortSignal));
     expect(state.objectives).toHaveBeenCalledWith(50, expect.any(AbortSignal));
     expect(state.categories).toHaveBeenCalledWith(50, expect.any(AbortSignal));
+    expect(state.projectDrafts).toHaveBeenCalledWith(50, expect.any(AbortSignal));
     expect(state.backfill).not.toHaveBeenCalled();
     expect(state.rotate).toHaveBeenCalled();
   });
@@ -164,6 +168,18 @@ describe("encryption maintenance cron", () => {
       expect(state.comments).toHaveBeenCalledTimes(2);
       expect(await response.json()).toMatchObject({ comments: { failed: true }, page_comments: { failed: 0 } });
       expect(JSON.stringify(log.mock.calls)).not.toContain("Private comment error");
+    } finally { log.mockRestore(); }
+  });
+
+  it("reports a failed draft batch without exposing its error", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      state.contentEnabled = state.configured = true;
+      state.projectDrafts.mockRejectedValueOnce(new Error("Private draft content"));
+      const response = await GET(request(true));
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({ project_drafts: { failed: true } });
+      expect(JSON.stringify(log.mock.calls)).not.toContain("Private draft content");
     } finally { log.mockRestore(); }
   });
 

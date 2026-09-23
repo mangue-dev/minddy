@@ -7034,7 +7034,7 @@
       },
       "data": {
         "type": "jsonb",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       },
       "id": {
@@ -7044,7 +7044,7 @@
       },
       "name": {
         "type": "text",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       },
       "step": {
@@ -7060,6 +7060,26 @@
       "user_id": {
         "type": "uuid",
         "nullable": false,
+        "generated": false
+      },
+      "encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "encrypted_content": {
+        "type": "text",
+        "nullable": true,
         "generated": false
       }
     },

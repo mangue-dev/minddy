@@ -6,7 +6,7 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 116 application tables and 1,234 columns, their primary
+- `schema.json` records 116 application tables and 1,238 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 188 encryption targets include the original content,
@@ -15,7 +15,7 @@ production migration on the strength of crypto unit tests or this inventory.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 240 functions, ten views and 133 triggers. Function
+- `sql-consumers.json` records 244 functions, ten views and 134 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -91,7 +91,8 @@ must be checked separately.
 | Root key and operations | Provision a dedicated root key outside the database and rehearse key backup and restore. The offline root-key rewrap procedure is implemented and tested on isolated PostgreSQL; production rehearsal and application-scale latency remain. Production deployment and migration require a later explicit deployment request. |
 
 The common row codec is connected to personal notes, statistics, activity, page
-versions, comments (including page quotes), objectives, and categories. The remaining repositories in the
+versions, comments (including page quotes), objectives, categories, and project
+creation drafts. The remaining repositories in the
 table above are unconverted. It authenticates the real primary key, table and owner, requires complete rows,
 distinguishes legacy and encrypted states, clears protected columns and rejects
 remaining plaintext search projections. Parent-owned records still require a
@@ -120,7 +121,7 @@ the store wipes the mutable plaintext/key buffers that it owns.
 
 `MINDDY_CONTENT_ENCRYPTION_ENABLED=true` enables staging writes and maintenance
 for `user_scratchpad`, `stat_events`, `issue_events`, `page_versions`, comments,
-objectives and categories. Keep it disabled in production until the
+objectives, categories and project drafts. Keep it disabled in production until the
 application-wide gates are satisfied. It is independent of the invitation flag.
 Disabling it pauses backfill and new-record opt-in; already encrypted notes still
 require decryption and encrypted writes. Task-completion snapshots derived from
@@ -142,7 +143,7 @@ encoded replacement, then commits under repository-specific revision/ownership
 checks. It counts failed/conflicted rows without logging their content. Attempt
 ordering revisits failures without starving subsequent rows. Maintenance processes
 at most 50 rows each for notes, statistics, activity, page versions, comments,
-page comments, objectives and categories per run,
+page comments, objectives, categories and project drafts per run,
 alongside the invitation batch.
 Each repository reports failure independently. Constraints reject plaintext in
 converted rows, version inconsistencies, revision rollback and identity changes.
@@ -173,6 +174,9 @@ docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U sup
 docker exec supabase_db_minddy-encryption-test createdb -U supabase_admin -T minddy_min591_objective_audit minddy_min591_category_audit
 docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_category_audit < supabase/migrations/20270107100000_category_encryption.sql
 docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_category_audit < scripts/encryption-categories-regression.sql
+docker exec supabase_db_minddy-encryption-test createdb -U supabase_admin -T minddy_min591_category_audit minddy_min591_draft_audit
+docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_draft_audit < supabase/migrations/20270107110000_project_draft_encryption.sql
+docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_draft_audit < scripts/encryption-project-drafts-regression.sql
 MINDDY_ENCRYPTION_DB_TEST=true npm test -- lib/server/encryption/database-recovery.integration.test.ts
 ```
 
@@ -333,6 +337,31 @@ CAS, redacted broadcasts and metadata-only statistics. A disposable PostgreSQL
 dump/restore test recovers category names across two project-key versions with a
 cold cache and rejects an incorrect external root. Representative staging
 latency and the application-wide recovery rehearsal remain outstanding.
+
+## Project creation drafts
+
+`project-draft-store.ts` protects the draft name and the complete arbitrary
+wizard state under the owner's user content key. This includes the seed brief,
+selected repository name and any compressed icon data URL held in the draft.
+The only durable consumer is the authenticated draft API: its list filters by
+owner under RLS, decrypts before returning the existing response shape, and
+keeps ciphertext and revision fields out of the response. Draft deletion still
+uses the owner's RLS policy. These drafts have no content search, history, MCP
+or AI reader, and no derived database copy; the browser keeps only a draft ID
+pointer across an external Git authorization redirect.
+
+The guarded save function checks ownership and a row revision atomically after
+the server encrypts the complete draft. The migration permits mixed legacy and
+encrypted rows, rejects plaintext writes once a user has a content key, and
+removes direct client insert/update grants. An unmigrated preview can still
+save legacy drafts while the staging flag is off; a flag-enabled write fails
+closed if the schema is unavailable. Hourly maintenance scans at most 50 rows,
+verifies replacement plaintext before a revision and owner scoped compare-and-
+swap, revisits failed rows, and preserves the user's edit timestamp. The SQL
+regression covers owner isolation, stale writers, permissions, revision conflicts
+and migration timestamps. A disposable PostgreSQL dump/restore test recovers
+drafts across two user-key versions with an empty cache and rejects the wrong
+root. No production draft migration or activation has occurred.
 
 ## Object codec status
 
