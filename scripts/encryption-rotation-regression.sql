@@ -1,5 +1,5 @@
 -- Run against an isolated migrated database as its migration administrator.
--- Test-only wrapped-key placeholders never reach KMS. Every write is rolled back.
+-- Test-only wrapped-key placeholders never reach the key wrapper. Every write is rolled back.
 \set ON_ERROR_STOP on
 BEGIN;
 
@@ -35,7 +35,7 @@ BEGIN
   UPDATE public.envelope_data_keys SET rotation_attempted_at = now()
     WHERE scope_kind = 'user' AND scope_id = failing_scope AND purpose = 'content'
       AND version = 1 AND is_current;
-  -- Simulate KMS failure: the key remains current and overdue, but cannot block the next tenant.
+  -- Simulate key-wrapper failure: the key remains current and overdue, but cannot block the next tenant.
   SELECT scope_id INTO candidate FROM public.envelope_data_keys
     WHERE purpose = 'content' AND is_current AND created_at < now() - interval '90 days'
       AND scope_id IN (failing_scope, healthy_scope, index_scope)

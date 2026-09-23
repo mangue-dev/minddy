@@ -94,7 +94,7 @@ const service = {
 
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => service }));
 vi.mock("./encryption/registry", () => ({ getEncryptedStore: () => {
-  if (!database.crypto) throw new Error("Test KMS unavailable");
+  if (!database.crypto) throw new Error("Test key wrapper unavailable");
   return database.crypto;
 } }));
 
@@ -297,7 +297,7 @@ describe("account import tenant isolation", () => {
       content: "Imported private notes", updated_at: "2026-09-23T12:00:00Z",
     });
     database.crypto = null;
-    await expect(buildAccountExport(USER)).rejects.toThrow("Test KMS unavailable");
+    await expect(buildAccountExport(USER)).rejects.toThrow("Test key wrapper unavailable");
   });
 
   it("rejects an oversized imported notebook rather than silently truncating it", async () => {

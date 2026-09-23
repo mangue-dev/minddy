@@ -1,5 +1,5 @@
 -- MIN-591: only the application service can read wrapped tenant data keys.
--- Plaintext data keys and KMS key material never enter PostgreSQL.
+-- Plaintext data keys and root key material never enter PostgreSQL.
 
 CREATE TABLE public.envelope_data_keys (
   scope_kind text NOT NULL CHECK (scope_kind IN ('project', 'user', 'system')),

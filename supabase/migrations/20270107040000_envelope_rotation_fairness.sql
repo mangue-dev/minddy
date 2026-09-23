@@ -1,4 +1,4 @@
--- Failed KMS scopes must not permanently occupy the head of a bounded rotation scan.
+-- Failed key scopes must not permanently occupy the head of a bounded rotation scan.
 ALTER TABLE public.envelope_data_keys
   ADD COLUMN IF NOT EXISTS rotation_attempted_at timestamptz;
 
