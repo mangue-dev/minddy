@@ -803,6 +803,17 @@
       ],
       "functionReferences": []
     },
+    "set_objective_updated_at()": {
+      "sha256": "6caf02de60815a5315d9489801655b931a4d6c66bd75d369febf01eb71f1a72d",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "sync_agent_turn_from_run()": {
       "sha256": "cd96bbc15595cf66c706867fbfe7a765ee79161199b7cbed98a0657ff2a9f3ef",
       "securityDefiner": true,
@@ -1062,6 +1073,19 @@
       ],
       "functionReferences": []
     },
+    "guard_objective_encryption()": {
+      "sha256": "4bf302f5f2ff470a884656e6d39cc7d7bb61145fdc16d586dabba059bdc546db",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "envelope_data_keys"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_page_database_parent()": {
       "sha256": "28a9989d4787cacf0ab815918f3685a125d215496aa8b594c699edcb030d2f62",
       "securityDefiner": false,
@@ -1309,6 +1333,21 @@
       "protectedRelations": [
         "pages",
         "page_comments"
+      ],
+      "functionReferences": []
+    },
+    "broadcast_objective_metadata()": {
+      "sha256": "039bf7563de3375e7d8d3f24c914e8fe17e1fe456c3afb7061cbdd1b1fd8fd00",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "objectives"
+      ],
+      "protectedRelations": [
+        "objectives"
       ],
       "functionReferences": []
     },
@@ -2433,7 +2472,7 @@
       "functionReferences": []
     },
     "create_objective_guarded(uuid,uuid,jsonb)": {
-      "sha256": "2753fee376429416960c7dde35551eed5588a545e4c19f7a401aa46970aed778",
+      "sha256": "4097aa32b2192752a1ea24e511bde68c47050a9f8385fea37d267174dd1ee3d0",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2551,7 +2590,7 @@
       ]
     },
     "update_objective_guarded(uuid,uuid,jsonb)": {
-      "sha256": "ad55d571c4d3feae9624fa6ae0041c2c33bb99957894a852cae11749976f271b",
+      "sha256": "6b61aa7f6a4d93e129d22858938cc1c0ac6479f21ab10c8f305d86841ca16606",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2686,7 +2725,7 @@
       "functionReferences": []
     },
     "get_user_stats(text,timestamp with time zone)": {
-      "sha256": "7928f7b183a14c8e28830e2a59a198e016610562f8f405c63dd1e0c52bb1c9c2",
+      "sha256": "5e908353d60138f22d81bd554026c6e634829580c0611df5fda79801b613c1f6",
       "securityDefiner": false,
       "configuration": [
         "search_path=public"
@@ -3384,6 +3423,21 @@
       ],
       "functionReferences": []
     },
+    "migrate_objective_ciphertext(uuid,uuid,bigint,integer,integer,text)": {
+      "sha256": "0aed703a55f78a6082d325ddce2c1b59868118d90f23d5dd928350e3280825b6",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "objectives"
+      ],
+      "protectedRelations": [
+        "objectives"
+      ],
+      "functionReferences": []
+    },
     "purge_dormant_feedback_identities(timestamp with time zone,integer)": {
       "sha256": "2d65fc7f1aade1107717b1bfcdffa9de341312d0dfa4276e1a88200af56fa2ea",
       "securityDefiner": true,
@@ -3907,8 +3961,8 @@
       "definition": "CREATE TRIGGER issues_refs_same_project BEFORE INSERT OR UPDATE OF objective_id, duplicate_of_id ON issues FOR EACH ROW EXECUTE FUNCTION enforce_issue_refs_same_project()"
     },
     "objectives.objectives_broadcast": {
-      "function": "broadcast_project_scoped()",
-      "definition": "CREATE TRIGGER objectives_broadcast AFTER INSERT OR DELETE OR UPDATE ON objectives FOR EACH ROW EXECUTE FUNCTION broadcast_project_scoped()"
+      "function": "broadcast_objective_metadata()",
+      "definition": "CREATE TRIGGER objectives_broadcast AFTER INSERT OR DELETE OR UPDATE ON objectives FOR EACH ROW EXECUTE FUNCTION broadcast_objective_metadata()"
     },
     "page_links.page_links_broadcast": {
       "function": "broadcast_project_scoped()",
@@ -3967,8 +4021,8 @@
       "definition": "CREATE TRIGGER register_numo_identity AFTER INSERT ON conversations FOR EACH ROW EXECUTE FUNCTION register_numo_conversation()"
     },
     "objectives.objectives_set_updated_at": {
-      "function": "set_updated_at()",
-      "definition": "CREATE TRIGGER objectives_set_updated_at BEFORE UPDATE ON objectives FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+      "function": "set_objective_updated_at()",
+      "definition": "CREATE TRIGGER objectives_set_updated_at BEFORE UPDATE ON objectives FOR EACH ROW EXECUTE FUNCTION set_objective_updated_at()"
     },
     "projects.projects_sync_storage_owner": {
       "function": "sync_project_storage_owner()",
@@ -4005,6 +4059,10 @@
     "agent_runs.agent_runs_set_completed_at": {
       "function": "agent_runs_stamp_completed_at()",
       "definition": "CREATE TRIGGER agent_runs_set_completed_at BEFORE UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION agent_runs_stamp_completed_at()"
+    },
+    "objectives.objectives_encryption_guard": {
+      "function": "guard_objective_encryption()",
+      "definition": "CREATE TRIGGER objectives_encryption_guard BEFORE INSERT OR UPDATE ON objectives FOR EACH ROW EXECUTE FUNCTION guard_objective_encryption()"
     },
     "projects.projects_rekey_realtime_owner": {
       "function": "rekey_project_realtime_owner()",

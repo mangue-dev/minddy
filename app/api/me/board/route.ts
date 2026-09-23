@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
         .order("number", { ascending: true }),
       auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null),
       auth.supabase.from("categories").select("*"),
-      auth.supabase.from("objectives").select("*"),
+      objectiveStore(auth.supabase).select("*"),
       // ALL relation types: `blocks` feeds the cycle reco ordering, and the
       // full set powers the cards' relation chips + the side panel (RLS scopes
       // the rows to my projects).

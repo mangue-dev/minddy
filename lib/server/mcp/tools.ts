@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import { readIssueEvents } from "@/lib/server/issue-event-store";
 import "server-only";
@@ -575,8 +576,7 @@ async function withNames(
           .map((r) => r.assignee_id)
           .filter((v): v is string => typeof v === "string"),
       ),
-      service
-        .from("objectives")
+      objectiveStore(service)
         .select("id, name")
         .eq("project_id", access.project.id)
         .is("deleted_at", null),
@@ -1468,8 +1468,7 @@ export function registerMinddyTools(
         { data: linkedIssues, error: issuesError },
         { data: attachmentRows },
       ] = await Promise.all([
-        service
-          .from("objectives")
+        objectiveStore(service)
           .select(
             "id, name, description, status, lead_user_id, target_date, color",
           )
@@ -1610,8 +1609,7 @@ export function registerMinddyTools(
       if ("error" in scope) return scope.error;
       const service = getServiceClient();
 
-      const { data: objective, error } = await service
-        .from("objectives")
+      const { data: objective, error } = await objectiveStore(service)
         .select("*")
         .is("deleted_at", null)
         .eq("id", args.objective_id)
@@ -3170,8 +3168,7 @@ export function registerMinddyTools(
       if ("error" in scope) return scope.error;
 
       // Scope check: the objective must belong to the project in question.
-      const { data: obj } = await getServiceClient()
-        .from("objectives")
+      const { data: obj } = await objectiveStore(getServiceClient())
         .select("id")
         .is("deleted_at", null)
         .eq("id", args.objective_id)
@@ -3234,8 +3231,7 @@ export function registerMinddyTools(
       // Scope check: the objective must belong to the project in question. The heart
       // checks access to the PROJECT of the objective, not that it is THIS project —
       // without that, an objective of another accessible project would pass.
-      const { data: obj } = await getServiceClient()
-        .from("objectives")
+      const { data: obj } = await objectiveStore(getServiceClient())
         .select("id")
         .is("deleted_at", null)
         .eq("id", args.objective_id)

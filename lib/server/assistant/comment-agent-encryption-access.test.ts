@@ -20,7 +20,8 @@ describe.each(cases)("$table assistant comment authorization", ({ table, column,
       const query = {
         select: () => query, is: () => query,
         eq: (column: string, value: unknown) => { filters[column] = value; return query; },
-        maybeSingle: async () => ({ data: name === table ? { id: "parent", project_id: "project" } : null, error: null }),
+        maybeSingle: async () => ({ data: name === table ? { id: "parent", project_id: "project",
+          ...(table === "objectives" ? { name: "Private objective", description: null, lead_user_id: null } : {}) } : null, error: null }),
       };
       return query;
     });
@@ -36,7 +37,9 @@ describe.each(cases)("$table assistant comment authorization", ({ table, column,
     state.access.mockResolvedValue({ project: { id: "project", key: "TEST" } });
     const test = fixture();
     await run(test.input as never);
-    expect(test.from.mock.calls.map(([name]) => name)).toEqual([table, table === "pages" ? "page_comments" : "comments"]);
+    expect(test.from.mock.calls.map(([name]) => name)).toEqual([
+      table, ...(table === "objectives" ? [table] : []), table === "pages" ? "page_comments" : "comments",
+    ]);
     expect(test.filters).toMatchObject({ id: "trigger", [column]: "parent" });
   });
 });

@@ -30,6 +30,13 @@ function fakeSupabase(byEffort: RawEffort[]) {
     then: (resolve: (r: { data: unknown[]; error: null }) => unknown) =>
       resolve({ data: [], error: null }),
   };
+  const objectives = {
+    select: () => objectives,
+    in: () => objectives,
+    then: (resolve: (r: { data: unknown[]; error: null }) => unknown) =>
+      resolve({ data: [{ id: "objective-1", project_id: "project-1", name: "Launch",
+        description: null, encryption_version: 0, encrypted_content: null }], error: null }),
+  };
   return {
     rpc: async (name: string) =>
       name === "get_cycle_stats"
@@ -77,7 +84,7 @@ function fakeSupabase(byEffort: RawEffort[]) {
             },
             error: null,
           },
-    from: () => workload,
+    from: (table: string) => table === "objectives" ? objectives : workload,
   } as unknown as SupabaseClient;
 }
 

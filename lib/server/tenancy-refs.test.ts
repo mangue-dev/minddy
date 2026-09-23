@@ -233,8 +233,8 @@ beforeEach(() => {
       },
     ],
     objectives: [
-      { id: "objective-mine", project_id: MINE, name: "Le mien", deleted_at: null },
-      { id: "objective-theirs", project_id: THEIRS, name: "Le leur", deleted_at: null },
+      { id: "objective-mine", project_id: MINE, name: "Le mien", description: null, deleted_at: null },
+      { id: "objective-theirs", project_id: THEIRS, name: "Le leur", description: null, deleted_at: null },
     ],
     cycles: [
       { id: "cycle-mine", user_id: ME },

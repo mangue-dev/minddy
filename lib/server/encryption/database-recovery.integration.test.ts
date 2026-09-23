@@ -10,6 +10,7 @@ import { buildRootSwapSql, parseRegistryOutput, planRootRewrap } from "@/scripts
 const enabled = process.env.MINDDY_ENCRYPTION_DB_TEST === "true";
 const container = "supabase_db_minddy-encryption-test";
 const template = "minddy_min591_full_audit";
+const objectiveTemplate = "minddy_min591_objective_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -215,6 +216,65 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
           }
         }
       }
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
+
+  it("restores encrypted objective sources across project key versions", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_objective_source_${suffix}`;
+    const restored = `minddy_min591_objective_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID();
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(objectiveTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${objectiveTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key) VALUES(${quote(project)},${quote(actor)},'Source','OBJ');`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const codec = new EncryptedRowCodec(new EncryptedStore(keys));
+      for (const number of [1, 2]) {
+        if (number === 2) await keys.rotate(scope, 1);
+        const row = await codec.encode({ id: randomUUID(), project_id: project,
+          name: `Private objective ${number}`, description: `Private description ${number}`,
+          encryption_version: 0, encrypted_content: null }, { table: "objectives", scope });
+        sql(source, `INSERT INTO public.objectives(id,project_id,name,description,encryption_version,encrypted_content)
+          VALUES(${quote(String(row.id))},${quote(project)},NULL,NULL,${row.encryption_version},${quote(row.encrypted_content!)});`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "supabase_admin", "-d", source,
+        "--data-only", "--no-owner", "--no-privileges", ...["auth.users", "public.envelope_data_keys",
+          "public.projects", "public.objectives"].map((table) => `--table=${table}`)], {
+        encoding: "utf8", maxBuffer: 4 * 1024 * 1024,
+      });
+      expect(dump).not.toContain("Private objective");
+      expect(dump).not.toContain("Private description");
+      expect(dump).not.toContain(root.toString("base64"));
+      sql(restored, dump);
+      const rows: StoredRow[] = JSON.parse(sql(restored, "SELECT json_agg(o) FROM public.objectives o;"));
+      expect(rows.map((row) => row.encryption_version).sort()).toEqual([1, 2]);
+      const restoredKeys = new ManagedDataKeys(registry(restored), wrapper(root));
+      const restoredCodec = new EncryptedRowCodec(new EncryptedStore(restoredKeys));
+      for (const row of rows) {
+        restoredKeys.invalidate(scope);
+        const plain = await restoredCodec.decode(row, { table: "objectives", scope },
+          { actorId: actor, reason: "migration_verification" });
+        expect(plain).toMatchObject({ name: `Private objective ${row.encryption_version}`,
+          description: `Private description ${row.encryption_version}` });
+      }
+      const wrong = new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored), wrapper(randomBytes(32)))));
+      await expect(wrong.decode(rows[0], { table: "objectives", scope },
+        { actorId: actor, reason: "migration_verification" })).rejects.toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();

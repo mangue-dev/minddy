@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -123,7 +124,7 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
         .select("id, source_id, target_id, type")
         .eq("project_id", project.id),
       service.from("categories").select("*").eq("project_id", project.id),
-      service.from("objectives").select("*").eq("project_id", project.id).is("deleted_at", null),
+      objectiveStore(service).select("*").eq("project_id", project.id).is("deleted_at", null),
       service.from("project_members").select("user_id").eq("project_id", project.id),
     ]);
 

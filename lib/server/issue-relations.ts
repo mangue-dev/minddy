@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -171,8 +172,7 @@ async function assertEndpointsInProject(
     if ((data ?? []).length !== issueIds.length) return false;
   }
   if (objectiveIds.length > 0) {
-    const { data } = await service
-      .from("objectives")
+    const { data } = await objectiveStore(service)
       .select("id")
       .is("deleted_at", null)
       .eq("project_id", projectId)

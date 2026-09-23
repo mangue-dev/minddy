@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -25,7 +26,7 @@ export async function gatherProjectPromptContext({
     { data: statusRows },
     { data: recentIssues },
     { data: memberRows },
-    { data: objectives },
+    { data: objectives, error: objectiveError },
     { data: categories },
     { data: pages },
   ] = await Promise.all([
@@ -41,8 +42,7 @@ export async function gatherProjectPromptContext({
       .from("project_members")
       .select("user_id")
       .eq("project_id", project.id),
-    supabase
-      .from("objectives")
+    objectiveStore(supabase)
       .select("id, name, status")
       .is("deleted_at", null)
       .eq("project_id", project.id)
@@ -61,6 +61,7 @@ export async function gatherProjectPromptContext({
       .eq("project_id", project.id)
       .order("position", { ascending: true }),
   ]);
+  if (objectiveError) throw new Error("Unable to read objective prompt context");
 
   const statusCounts: Record<string, number> = {};
   for (const row of statusRows ?? []) {

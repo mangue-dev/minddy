@@ -6211,9 +6211,24 @@
   },
   "objectives": {
     "columns": {
+      "id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "name": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
       "color": {
         "type": "text",
         "nullable": true,
+        "generated": false
+      },
+      "status": {
+        "type": "text",
+        "nullable": false,
         "generated": false
       },
       "created_at": {
@@ -6231,34 +6246,19 @@
         "nullable": true,
         "generated": false
       },
-      "description": {
-        "type": "text",
-        "nullable": true,
-        "generated": false
-      },
-      "id": {
-        "type": "uuid",
-        "nullable": false,
-        "generated": false
-      },
-      "lead_user_id": {
-        "type": "uuid",
-        "nullable": true,
-        "generated": false
-      },
-      "name": {
-        "type": "text",
-        "nullable": false,
-        "generated": false
-      },
       "project_id": {
         "type": "uuid",
         "nullable": false,
         "generated": false
       },
-      "status": {
-        "type": "text",
+      "updated_at": {
+        "type": "timestamp with time zone",
         "nullable": false,
+        "generated": false
+      },
+      "description": {
+        "type": "text",
+        "nullable": true,
         "generated": false
       },
       "target_date": {
@@ -6266,9 +6266,29 @@
         "nullable": true,
         "generated": false
       },
-      "updated_at": {
-        "type": "timestamp with time zone",
+      "lead_user_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "encrypted_content": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_version": {
+        "type": "integer",
         "nullable": false,
+        "generated": false
+      },
+      "encryption_revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       }
     },

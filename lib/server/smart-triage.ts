@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -150,8 +151,7 @@ export async function runSmartTriage({
       .from("issue_relations")
       .select("id, source_id, source_type, target_id, target_type, type")
       .eq("project_id", projectId),
-    service
-      .from("objectives")
+    objectiveStore(service)
       .select("id, name, status")
       .is("deleted_at", null)
       .eq("project_id", projectId),
@@ -165,6 +165,7 @@ export async function runSmartTriage({
     console.error("[smart-triage] issues fetch failed:", issueRows.error.message);
     throw new Error(issueRows.error.message);
   }
+  if (objectiveRows.error) throw new Error("Unable to read smart-triage objective context");
 
   const issues = (issueRows.data ?? []).map(
     (row): TriageIssueRow => ({

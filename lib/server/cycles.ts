@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
 
 import { afterOrNow } from "@/lib/server/after-safe";
@@ -379,8 +380,7 @@ export async function fillCycleForUser({
   ];
   const objectiveStatusById = new Map<string, ObjectiveStatus>();
   if (objectiveStatusIds.length > 0) {
-    const { data: objectiveRows } = await service
-      .from("objectives")
+    const { data: objectiveRows } = await objectiveStore(service)
       .select("id, status")
       .in("id", objectiveStatusIds)
       .is("deleted_at", null);
@@ -618,8 +618,7 @@ export async function getCycleOverview({
   ];
   const objectiveStatusById = new Map<string, ObjectiveStatus>();
   if (objectiveStatusIds.length > 0) {
-    const { data: objectiveRows } = await service
-      .from("objectives")
+    const { data: objectiveRows } = await objectiveStore(service)
       .select("id, status")
       .in("id", objectiveStatusIds)
       .is("deleted_at", null);
@@ -925,8 +924,7 @@ export async function runCycleBlockerPull(params: CycleBlockerPullParams): Promi
     ];
     const objectiveStatusById = new Map<string, ObjectiveStatus>();
     if (objectiveStatusIds.length > 0) {
-      const { data: objectiveRows } = await service
-        .from("objectives")
+      const { data: objectiveRows } = await objectiveStore(service)
         .select("id, status")
         .in("id", objectiveStatusIds)
         .is("deleted_at", null);

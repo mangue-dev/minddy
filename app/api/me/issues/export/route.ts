@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
 
   const [projectsRes, objectivesRes, categoriesRes] = await Promise.all([
     auth.supabase.from("projects").select("id, key, name, owner_id").is("deleted_at", null),
-    auth.supabase.from("objectives").select("id, name"),
+    objectiveStore(auth.supabase).select("id, name"),
     auth.supabase.from("categories").select("id, name"),
   ]);
 

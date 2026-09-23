@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
@@ -758,7 +759,7 @@ async function listGlobalFilterOptions(
 
   const [catsRes, objsRes] = await Promise.all([
     ctx.service.from("categories").select("id, name").in("project_id", projectIds),
-    ctx.service.from("objectives").select("id, name").in("project_id", projectIds).is("deleted_at", null),
+    objectiveStore(ctx.service).select("id, name").in("project_id", projectIds).is("deleted_at", null),
   ]);
   if (catsRes.error) return toolError(catsRes.error.message);
   if (objsRes.error) return toolError(objsRes.error.message);
@@ -1211,8 +1212,7 @@ export async function executeTool(
         if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(objectiveId)) {
           return toolError("objective_id must be an objective UUID from list_objectives.");
         }
-        const { data: objective, error } = await ctx.supabase
-          .from("objectives")
+        const { data: objective, error } = await objectiveStore(ctx.supabase)
           .select("id, name, description, status, lead_user_id, target_date")
           .is("deleted_at", null)
           .eq("project_id", projectId)
@@ -1258,8 +1258,7 @@ export async function executeTool(
         // basket goes back down `page: null`, and the pill remains inert without
         // that we have to take care of the trash (lib/server/resource-select.ts).
         const [{ data, error }, { data: attachmentRows }] = await Promise.all([
-          ctx.supabase
-            .from("objectives")
+          objectiveStore(ctx.supabase)
             .select("id, name, status, lead_user_id, target_date")
             .is("deleted_at", null)
             .eq("project_id", projectId)
@@ -1851,8 +1850,7 @@ export async function executeTool(
           );
           if (!scoped.ok) return toolError(scoped.error);
         } else {
-          const { data: objective } = await ctx.supabase
-            .from("objectives")
+          const { data: objective } = await objectiveStore(ctx.supabase)
             .select("id")
             .is("deleted_at", null)
             .eq("id", objectiveId)
@@ -2590,8 +2588,7 @@ export async function executeTool(
           typeof args.objective_id === "string" ? args.objective_id : "";
         if (!objectiveId) return toolError("objective_id is required.");
         // Scope check: the objective must belong to the project in scope.
-        const { data: obj } = await ctx.supabase
-          .from("objectives")
+        const { data: obj } = await objectiveStore(ctx.supabase)
           .select("id")
           .is("deleted_at", null)
           .eq("id", objectiveId)

@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -78,8 +79,7 @@ export async function GET(request: NextRequest) {
       .is("projects.deleted_at", null)
       .order("updated_at", { ascending: false })
       .limit(MAX_ISSUES),
-    auth.supabase
-      .from("objectives")
+    objectiveStore(auth.supabase)
       .select(OBJECTIVE_COLUMNS)
       .is("projects.deleted_at", null)
       .order("updated_at", { ascending: false })

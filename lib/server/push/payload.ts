@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
 
 import { createTranslator } from "next-intl";
@@ -169,8 +170,7 @@ export async function loadPushContext(
       ? service.from("agent_conversations").select("id, title").in("id", conversationIds)
       : Promise.resolve({ data: [] as { id: string; title: string | null }[] }),
     objectiveIds.length
-      ? service
-          .from("objectives")
+      ? objectiveStore(service)
           .select("id, name")
           .in("id", objectiveIds)
           .is("deleted_at", null)

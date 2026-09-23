@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
@@ -394,14 +395,19 @@ export async function runObjectiveCommentMention(input: {
   trigger?: "mention" | "reply";
 }): Promise<void> {
   const { service, actorId, objectiveId, triggerCommentId } = input;
-  const { data: objective } = await service.from("objectives")
-    .select("id, project_id, name, lead_user_id").eq("id", objectiveId)
+  const { data: target } = await objectiveStore(service)
+    .select("id, project_id, lead_user_id").eq("id", objectiveId)
     .is("deleted_at", null).maybeSingle();
   if (
-    !objective
-    || !await getProjectAccess(actorId, objective.project_id as string)
+    !target
+    || !await getProjectAccess(actorId, target.project_id as string)
     || !await hasUsageBudget(actorId, "assistant", "assistant_model")
   ) return;
+  const { data: objective, error: objectiveError } = await objectiveStore(service, actorId)
+    .select("id, project_id, name, lead_user_id").eq("id", objectiveId)
+    .eq("project_id", target.project_id as string).is("deleted_at", null).maybeSingle();
+  if (objectiveError) throw new Error("Unable to read objective context");
+  if (!objective) return;
   const { data: triggerRow } = await commentStore(service, "comments", actorId)
     .select("id, parent_id, body, author_id").eq("id", triggerCommentId).eq("objective_id", objectiveId).maybeSingle();
   if (!triggerRow) return;

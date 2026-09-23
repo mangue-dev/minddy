@@ -66,8 +66,8 @@ const ISSUE_ROWS = [
 const OBJECTIVE_ID = "44444444-4444-4444-8444-444444444444";
 const FOREIGN_OBJECTIVE_ID = "55555555-5555-4555-8555-555555555555";
 const OBJECTIVE_ROWS = [
-  { id: OBJECTIVE_ID, project_id: "proj-1", name: "Refonte du board", status: "in_progress" },
-  { id: FOREIGN_OBJECTIVE_ID, project_id: "proj-2", name: "Ailleurs", status: "planned" },
+  { id: OBJECTIVE_ID, project_id: "proj-1", name: "Refonte du board", description: null, status: "in_progress" },
+  { id: FOREIGN_OBJECTIVE_ID, project_id: "proj-2", name: "Ailleurs", description: null, status: "planned" },
 ];
 
 const attachmentBase = {

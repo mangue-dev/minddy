@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -52,8 +53,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   }
 
   const service = getServiceClient();
-  const { data: objective } = await service
-    .from("objectives")
+  const { data: objective } = await objectiveStore(service)
     .select("project_id")
     .is("deleted_at", null)
     .eq("id", id)

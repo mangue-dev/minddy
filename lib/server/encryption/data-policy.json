@@ -2207,6 +2207,12 @@
         "deleted_at",
         "target_date",
         "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version",
+        "encryption_revision",
+        "encryption_checked_at"
       ]
     }
   },

@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { objectiveStore } from "@/lib/server/objective-store";
 import { CLOSED_STATUSES } from "@/lib/server/issue-reads";
 import { EFFORTS } from "@/lib/issue-constants";
 import type {
@@ -37,7 +38,7 @@ interface RawStats {
   per_objective: Array<{
     id: string;
     project_id: string;
-    name: string;
+    name: string | null;
     color: string | null;
     completed: number;
   }>;
@@ -213,6 +214,14 @@ export async function getUserStats(
 
   if (statsRes.error) throw new Error(statsRes.error.message);
   const raw = (statsRes.data ?? {}) as RawStats;
+  const objectiveIds = (raw.per_objective ?? []).map((row) => row.id);
+  const objectiveNames = new Map<string, string>();
+  if (objectiveIds.length) {
+    const { data, error } = await objectiveStore(supabase, userId)
+      .select("id, name").in("id", objectiveIds);
+    if (error) throw new Error(error.message);
+    for (const objective of data ?? []) objectiveNames.set(objective.id, objective.name);
+  }
 
   // Best-effort: an error in the RPC cycles (e.g. function not yet deployed)
   // does not invalidate the page — we land on an empty cycles section.
@@ -286,18 +295,18 @@ export async function getUserStats(
     perObjective: (raw.per_objective ?? []).flatMap((objective) =>
       typeof objective.id === "string" &&
       typeof objective.project_id === "string" &&
-      typeof objective.name === "string"
+      typeof objectiveNames.get(objective.id) === "string"
         ? [
             {
               id: objective.id,
               projectId: objective.project_id,
-              name: objective.name,
+              name: objectiveNames.get(objective.id)!,
               color: objective.color,
               completed: num(objective.completed) ?? 0,
             },
           ]
         : [],
-    ),
+    ).sort((left, right) => right.completed - left.completed || left.name.localeCompare(right.name)),
     heatmap: { tz, start, end, max, days },
     workload,
     week: weekTotals(days),

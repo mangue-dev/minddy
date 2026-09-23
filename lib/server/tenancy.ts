@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -25,8 +26,7 @@ export async function objectiveInProject(
   objectiveId: string,
   projectId: string
 ): Promise<boolean> {
-  const { data } = await service
-    .from("objectives")
+  const { data } = await objectiveStore(service)
     .select("id")
     .eq("id", objectiveId)
     .eq("project_id", projectId)

@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
@@ -105,8 +106,7 @@ export async function assertObjectiveInProject(
   projectId: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!objectiveId) return { ok: false, error: "objective_id is required." };
-  const { data } = await db
-    .from("objectives")
+  const { data } = await objectiveStore(db)
     .select("id")
     .is("deleted_at", null)
     .eq("id", objectiveId)
@@ -223,8 +223,7 @@ export async function resolveObjectiveRef(
     };
   }
 
-  const query = () => db
-    .from("objectives")
+  const query = () => objectiveStore(db)
     .select("id, name, status, lead_user_id")
     .is("deleted_at", null)
     .eq("project_id", scope.projectId);
@@ -339,8 +338,7 @@ export async function resolveEntityRelations(
           .in("id", [...new Set(issueIds)])
       : Promise.resolve({ data: [] }),
     objectiveIds.length
-      ? db
-          .from("objectives")
+      ? objectiveStore(db)
           .select("id, name, status, lead_user_id")
           .is("deleted_at", null)
           .eq("project_id", scope.projectId)

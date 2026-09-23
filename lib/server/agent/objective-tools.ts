@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
@@ -102,8 +103,7 @@ export async function resolveObjectiveRef(
     };
   }
   const service = getServiceClient();
-  const query = service
-    .from("objectives")
+  const query = objectiveStore(service)
     .select("id, name")
     .is("deleted_at", null)
     .eq("project_id", projectId);
@@ -165,8 +165,7 @@ function progressOf(
 async function listObjectives(ctx: ObjectiveToolContext): Promise<ToolOutcome> {
   const service = getServiceClient();
   const [{ data, error }, { data: linked, error: issuesError }] = await Promise.all([
-    service
-      .from("objectives")
+    objectiveStore(service)
       .select("id, name, description, status, lead_user_id, target_date")
       .is("deleted_at", null)
       .eq("project_id", ctx.projectId)
@@ -234,8 +233,7 @@ async function readObjective(
   if ("error" in target) return { result: { error: target.error }, success: false };
 
   const service = getServiceClient();
-  const { data: objective, error } = await service
-    .from("objectives")
+  const { data: objective, error } = await objectiveStore(service)
     .select("id, name, description, status, lead_user_id, target_date, created_at")
     .is("deleted_at", null)
     .eq("id", target.objective.id)

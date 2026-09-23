@@ -229,18 +229,18 @@ const DB_CATEGORIES = [
   { id: "cat-bug", name: "Bug" },
   { id: "cat-feat", name: "Feature" },
 ];
-const DB_OBJECTIVES = [{ id: "obj-v2", name: "Refonte v2", status: "in_progress" }];
+const DB_OBJECTIVES = [{ id: "obj-v2", project_id: "project-1", name: "Refonte v2", description: null, status: "in_progress" }];
 
 /** A PostgREST select chain reduced to what `gatherContext` touches: the
  * chained filters are ignored, the await resolves the rows of the table. */
-function queryReturning(rows: unknown[]): unknown {
+function queryReturning(rows: unknown[], error: { message: string } | null = null): unknown {
   const query: Record<string, unknown> = {};
   query.select = () => query;
   query.eq = () => query;
   query.in = () => query;
-  query.maybeSingle = async () => ({ data: rows[0] ?? null, error: null });
+  query.maybeSingle = async () => ({ data: rows[0] ?? null, error });
   query.then = (onFulfilled: (value: unknown) => unknown) =>
-    Promise.resolve({ data: rows, error: null }).then(onFulfilled);
+    Promise.resolve({ data: rows, error }).then(onFulfilled);
   return query;
 }
 
@@ -313,7 +313,7 @@ describe("runSmartFill — decision layer", () => {
       project: "minddy",
       issue: { title: "Fix the flaky test" },
       categories: DB_CATEGORIES,
-      objectives: DB_OBJECTIVES,
+      objectives: DB_OBJECTIVES.map(({ id, name, status }) => ({ id, name, status })),
     });
     expect(input).toEqual({ billTo: { userId: "user-1" }, projectId: "project-1" });
   });
@@ -321,6 +321,15 @@ describe("runSmartFill — decision layer", () => {
   it("leaves the patch empty when BOTH engines fail — the ticket is born as it was written", async () => {
     runDecisionMock.mockResolvedValue(null);
     await expect(run()).resolves.toEqual({});
+  });
+
+  it("does not send a partial objective context to the model when the read fails", async () => {
+    fromMock.mockImplementation((table: string) =>
+      queryReturning(table === "categories" ? DB_CATEGORIES : DB_OBJECTIVES,
+        table === "objectives" ? { message: "Database unavailable" } : null)
+    );
+    await expect(run()).resolves.toEqual({});
+    expect(runDecisionMock).not.toHaveBeenCalled();
   });
 
   it("leaves the patch empty when the outcome carries no usable answer", async () => {

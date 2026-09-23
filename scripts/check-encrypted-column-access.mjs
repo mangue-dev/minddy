@@ -13,6 +13,11 @@ const allowedInvitationAccess = new Set([
 
 const rules = [
   {
+    access: /\.\s*from\s*\(\s*["'`]objectives["'`]\s*\)/,
+    allowed: new Set(["lib/server/objective-store.ts", "lib/server/objectives.ts",
+      "lib/server/account-import.ts", "lib/server/encryption/objective-backfill.ts"]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`](?:comments|page_comments)["'`]\s*\)/,
     allowed: new Set(["lib/server/comment-store.ts"]),
   },

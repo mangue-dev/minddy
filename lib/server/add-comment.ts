@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
@@ -287,8 +288,7 @@ export async function addCommentToObjective({
 
   // The objective resolves the project for the access check and carries the
   // lead we notify below.
-  const { data: objective } = await service
-    .from("objectives")
+  const { data: objective } = await objectiveStore(service)
     .select("project_id, lead_user_id")
     .is("deleted_at", null)
     .eq("id", objectiveId)

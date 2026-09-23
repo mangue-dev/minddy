@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
@@ -258,8 +259,7 @@ async function readIssue(
   const objectiveId = (detail.issue.objective_id as string | null) ?? null;
   let objective: { id: string; name: string; status: unknown } | null = null;
   if (objectiveId) {
-    const { data: row } = await service
-      .from("objectives")
+    const { data: row } = await objectiveStore(service)
       .select("id, name, status")
       .is("deleted_at", null)
       .eq("id", objectiveId)

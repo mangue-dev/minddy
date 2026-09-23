@@ -209,6 +209,7 @@ describe("readInboxNotifications target isolation", () => {
       project_id: project,
       title,
       name: title,
+      description: null,
       deleted_at: null,
     });
     const fixtures: Fixtures = {

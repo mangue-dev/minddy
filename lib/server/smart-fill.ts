@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -320,16 +321,16 @@ export function fillParameters(ctx: SmartFillContext): Record<string, unknown> {
  */
 async function gatherContext(projectId: string): Promise<SmartFillContext> {
   const service = getServiceClient();
-  const [{ data: categories }, { data: objectives }] = await Promise.all([
+  const [{ data: categories }, { data: objectives, error: objectiveError }] = await Promise.all([
     service.from("categories").select("id, name").eq("project_id", projectId),
-    service
-      .from("objectives")
+    objectiveStore(service)
       .select("id, name, status")
       .eq("project_id", projectId)
       // A completed or abandoned objective does not accommodate a ticket that arises:
       // proposing it to the model is inviting him to reopen closed work.
       .in("status", ["planned", "in_progress"]),
   ]);
+  if (objectiveError) throw new Error("Unable to read smart-fill objective context");
   return {
     categories: (categories ?? []) as SmartFillContext["categories"],
     objectives: (objectives ?? []) as SmartFillContext["objectives"],

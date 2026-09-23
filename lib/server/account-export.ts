@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
@@ -269,7 +270,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
           .order("created_at")
       : Promise.resolve({ data: [] as Row[], error: null }),
     ownedIds.length
-      ? service.from("objectives").select("*").in("project_id", ownedIds)
+      ? objectiveStore(service).select("*").in("project_id", ownedIds)
       : Promise.resolve({ data: [] as Row[], error: null }),
     ownedIds.length
       ? service

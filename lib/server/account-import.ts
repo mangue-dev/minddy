@@ -1,4 +1,5 @@
 import { importComment } from "./comment-store";
+import { encodeObjective } from "./objective-store";
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -553,7 +554,23 @@ async function importSimpleEntity(
     }
     out.push(row);
   }
-  await upsertRows(service, table, out);
+  if (table === "objectives") {
+    for (const input of out) {
+      const { data: previous, error: readError } = await service.from("objectives").select("*")
+        .eq("id", input.id).maybeSingle();
+      if (readError || previous && previous.project_id !== input.project_id) {
+        throw new Error("Unable to inspect imported objective");
+      }
+      const stored = await encodeObjective({ ...input, description: input.description ?? null },
+        Number(previous?.encryption_version ?? 0));
+      const write = previous
+        ? service.from("objectives").update(stored).eq("id", input.id)
+          .eq("project_id", input.project_id).eq("encryption_revision", previous.encryption_revision)
+        : service.from("objectives").insert(stored);
+      const { data, error } = await write.select("id");
+      if (error || data?.length !== 1) throw new Error("Unable to import objective");
+    }
+  } else await upsertRows(service, table, out);
   return out.length;
 }
 

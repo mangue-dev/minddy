@@ -76,7 +76,7 @@ beforeEach(() => {
   tables = {
     objectives: [
       { id: objectiveId, project_id: "project-1", name: "Release", description: "Ship it", status: "planned", lead_user_id: "user-1", target_date: null },
-      { id: otherObjectiveId, project_id: "project-1", name: "Foundation", status: "in_progress", lead_user_id: null },
+      { id: otherObjectiveId, project_id: "project-1", name: "Foundation", description: null, status: "in_progress", lead_user_id: null },
     ],
     issues: [{ id: issueId, project_id: "project-1", number: 7, title: "Prepare", status: "todo" }],
     issue_relations: [
@@ -94,7 +94,7 @@ describe("Numo get_objective", () => {
     expect(result).toEqual({
       success: true,
       result: {
-        objective: tables.objectives[0],
+        objective: { id: objectiveId, name: "Release", description: "Ship it", status: "planned", lead_user_id: "user-1", target_date: null },
         relations: [
           { relation: "blocked_by", objective_id: otherObjectiveId, name: "Foundation", status: "in_progress", lead_user_id: null },
           { relation: "blocks", issue_id: issueId, identifier: "MIN-7", title: "Prepare", status: "todo" },
@@ -132,7 +132,7 @@ describe("Numo get_objective", () => {
 
   it("surfaces objective database errors", async () => {
     databaseError = { message: "Database unavailable" };
-    expect(await executeTool("get_objective", { project_id: "project-1", objective_id: objectiveId }, context())).toEqual({ success: false, result: { error: "Database unavailable" } });
+    expect(await executeTool("get_objective", { project_id: "project-1", objective_id: objectiveId }, context())).toEqual({ success: false, result: { error: "Unable to access objective content" } });
   });
 });
 
@@ -177,6 +177,6 @@ describe("shared objective reference resolver", () => {
 
   it.each([objectiveId, "obj:Release"])("surfaces database errors for %s", async (reference) => {
     databaseError = { message: "Database unavailable" };
-    expect(await resolve(reference)).toEqual({ code: "database_error", error: "Database unavailable" });
+    expect(await resolve(reference)).toEqual({ code: "database_error", error: "Unable to access objective content" });
   });
 });

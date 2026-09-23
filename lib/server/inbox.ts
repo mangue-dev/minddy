@@ -1,3 +1,4 @@
+import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
@@ -137,7 +138,7 @@ export async function readInboxNotifications({
   const [
     { data: issues },
     { data: agentConversations },
-    { data: objectives },
+    { data: objectives, error: objectivesError },
     { data: feedbackPosts },
     { data: routines },
     { data: pullRequests },
@@ -171,14 +172,14 @@ export async function readInboxNotifications({
           data: [] as { id: string; project_id: string; title: string | null }[],
         }),
     objectiveIds.length && projectIds.length
-      ? service
-          .from("objectives")
+      ? objectiveStore(service)
           .select("id, project_id, name")
           .in("id", objectiveIds)
           .in("project_id", projectIds)
           .is("deleted_at", null)
       : Promise.resolve({
           data: [] as { id: string; project_id: string; name: string }[],
+          error: null,
         }),
     feedbackPostIds.length && projectIds.length
       ? service
@@ -259,6 +260,7 @@ export async function readInboxNotifications({
           }[],
         }),
   ]);
+  if (objectivesError) return { notifications: [], error: "Unable to read notification objectives" };
 
   const issueMap = new Map((issues ?? []).map((item) => [item.id, item]));
   const conversationMap = new Map(
@@ -357,7 +359,7 @@ export async function readInboxNotifications({
     (!n.agent_conversation_id ||
       agentConversations === null ||
       !!conversationFor(n)) &&
-    (!n.objective_id || objectives === null || !!objectiveFor(n)) &&
+    (!n.objective_id || !!objectiveFor(n)) &&
     (!n.feedback_post_id || feedbackPosts === null || !!feedbackFor(n)) &&
     (!n.routine_id || routines === null || !!routineFor(n)) &&
     (!n.pull_request_id ||
