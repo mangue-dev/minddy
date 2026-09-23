@@ -1,4 +1,4 @@
-import { createCipheriv, randomBytes } from "node:crypto";
+import { createCipheriv, randomBytes, webcrypto } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 
 import { ManagedDataKeys, type KeyRegistry, type KeyWrapper, type WrappedDataKey } from "./keys";
@@ -86,7 +86,7 @@ describe("EncryptedStore", () => {
     await expect(store.decrypt(store.fromDatabase(JSON.stringify(parsed)), context))
       .rejects.toThrow("Unable to decrypt data");
     expect(() => store.fromDatabase("plain text")).toThrow("Invalid encrypted value");
-    expect(() => store.fromDatabase(JSON.stringify({ ...parsed, format: 3 })))
+    expect(() => store.fromDatabase(JSON.stringify({ ...parsed, format: 4 })))
       .toThrow("Invalid encrypted value");
   });
 
@@ -98,7 +98,7 @@ describe("EncryptedStore", () => {
     });
     const ciphertext = await store.encrypt("private", context);
     const envelope = JSON.parse(ciphertext);
-    expect(envelope.format).toBe(2);
+    expect(envelope.format).toBe(3);
     envelope.keyVersion = 2;
     await expect(store.decrypt(store.fromDatabase(JSON.stringify(envelope)), context))
       .rejects.toThrow("Unable to decrypt data");
@@ -108,12 +108,13 @@ describe("EncryptedStore", () => {
       .rejects.toThrow("Unable to decrypt data");
   });
 
-  it("reads existing format-one ciphertext without rewriting or guessing its AAD", async () => {
+  it.each([1, 2])("reads existing format-%i ciphertext without rewriting or guessing its AAD", async (format) => {
     const bytes = randomBytes(32);
     const iv = randomBytes(12);
     const cipher = createCipheriv("aes-256-gcm", bytes, iv);
     cipher.setAAD(Buffer.from(JSON.stringify([
-      "minddy-data-v1", context.scope.kind, context.scope.id, context.table, context.column, context.rowId,
+      `minddy-data-v${format}`, context.scope.kind, context.scope.id, context.table, context.column, context.rowId,
+      ...(format === 2 ? [1] : []),
     ])));
     const data = Buffer.concat([cipher.update(JSON.stringify("legacy")), cipher.final()]);
     const store = new EncryptedStore({
@@ -121,10 +122,83 @@ describe("EncryptedStore", () => {
       byVersion: async (_scope, version) => ({ version, bytes: Buffer.from(bytes) }),
     });
     const legacy = store.fromDatabase<string>(JSON.stringify({
-      format: 1, keyVersion: 1, iv: iv.toString("base64url"),
+      format, keyVersion: 1, iv: iv.toString("base64url"),
       tag: cipher.getAuthTag().toString("base64url"), data: data.toString("base64url"),
     }));
     expect(await store.decrypt(legacy, context)).toBe("legacy");
+  });
+
+  it("interoperates with WebCrypto HKDF/AES-GCM and derives a different key for each write", async () => {
+    const bytes = randomBytes(32);
+    const store = new EncryptedStore({
+      current: async () => ({ version: 7, bytes: Buffer.from(bytes) }),
+      byVersion: async (_scope, version) => ({ version, bytes: Buffer.from(bytes) }),
+    });
+    const source = { text: "Private content", nested: [null, false, 42] };
+    const first = JSON.parse(await store.encrypt(source, context));
+    const second = JSON.parse(await store.encrypt(source, context));
+    expect(first.salt).not.toBe(second.salt);
+    const material = await webcrypto.subtle.importKey("raw", bytes, "HKDF", false, ["deriveKey"]);
+    const additionalData = Buffer.from(JSON.stringify([
+      "minddy-data-v3", scope.kind, scope.id, context.table, context.column, context.rowId, 7, "json",
+    ]));
+    const keyFor = (salt: string) => webcrypto.subtle.deriveKey({
+      name: "HKDF", hash: "SHA-256", salt: Buffer.from(salt, "base64url"), info: additionalData,
+    }, material, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+    const ciphertext = Buffer.concat([Buffer.from(first.data, "base64url"), Buffer.from(first.tag, "base64url")]);
+    const algorithm = { name: "AES-GCM", iv: Buffer.from(first.iv, "base64url"), additionalData, tagLength: 128 };
+    const opened = await webcrypto.subtle.decrypt(algorithm, await keyFor(first.salt), ciphertext);
+    expect(JSON.parse(Buffer.from(opened).toString())).toEqual(source);
+    await expect(webcrypto.subtle.decrypt(algorithm, await keyFor(second.salt), ciphertext)).rejects.toThrow();
+
+    const written = Buffer.from(await webcrypto.subtle.encrypt(algorithm, await keyFor(first.salt),
+      Buffer.from(JSON.stringify("WebCrypto fixture"))));
+    const fixture = store.fromDatabase<string>(JSON.stringify({
+      ...first, data: written.subarray(0, -16).toString("base64url"), tag: written.subarray(-16).toString("base64url"),
+    }));
+    expect(await store.decrypt(fixture, context)).toBe("WebCrypto fixture");
+  });
+
+  it("rejects a missing or altered derivation salt and format downgrades", async () => {
+    const store = new EncryptedStore(new ManagedDataKeys(new MemoryRegistry(), new MemoryWrapper()));
+    const envelope = JSON.parse(await store.encrypt("private", context));
+    for (const salt of [undefined, "", "AA", "=".repeat(43)]) {
+      expect(() => store.fromDatabase(JSON.stringify({ ...envelope, salt }))).toThrow("Invalid encrypted value");
+    }
+    for (const changed of [
+      { ...envelope, salt: randomBytes(32).toString("base64url") },
+      { ...envelope, format: 2 },
+      { ...envelope, format: 1 },
+    ]) {
+      await expect(store.decrypt(store.fromDatabase(JSON.stringify(changed)), context)).rejects.toThrow("Unable to decrypt");
+    }
+  });
+
+  it("does not call KMS again for fresh message keys while the scope key is cached", async () => {
+    const wrapper = new MemoryWrapper();
+    const store = new EncryptedStore(new ManagedDataKeys(new MemoryRegistry(), wrapper));
+    const ciphertexts = [];
+    for (let i = 0; i < 100; i += 1) ciphertexts.push(await store.encrypt({ i }, context));
+    for (let i = 0; i < ciphertexts.length; i += 1) expect(await store.decrypt(ciphertexts[i], context)).toEqual({ i });
+    expect(wrapper.generateCalls).toBe(1);
+    expect(wrapper.unwrapCalls).toBe(0);
+    expect(new Set(ciphertexts.map((value) => JSON.parse(value).salt)).size).toBe(100);
+  });
+
+  it("round-trips raw binary and empty buffers without confusing them with JSON envelopes", async () => {
+    const store = new EncryptedStore(new ManagedDataKeys(new MemoryRegistry(), new MemoryWrapper()));
+    for (const bytes of [Buffer.alloc(0), Buffer.from([0, 255, 128, 32]), Buffer.from('"valid JSON"')]) {
+      const encrypted = await store.encryptBytes(bytes, context);
+      expect(await store.decryptBytes(encrypted, context)).toEqual(bytes);
+      await expect(store.decrypt(encrypted, context)).rejects.toThrow("encoding");
+      const envelope = JSON.parse(encrypted);
+      envelope.encoding = "json";
+      if (bytes.length) {
+        await expect(store.decrypt(store.fromDatabase(JSON.stringify(envelope)), context)).rejects.toThrow("Unable to decrypt");
+      }
+    }
+    const json = await store.encrypt("value", context);
+    await expect(store.decryptBytes(store.fromDatabase<Uint8Array>(json), context)).rejects.toThrow("encoding");
   });
 
   it("reads the recorded key version after rotation", async () => {

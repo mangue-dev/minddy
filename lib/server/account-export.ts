@@ -8,6 +8,8 @@ import {
   CURRENT_ACCOUNT_EXPORT_VERSION,
 } from "@/lib/account-transfer";
 import { projectIconPaths } from "@/lib/server/project-storage";
+import { getScratchpadRow } from "@/lib/server/scratchpad";
+import { readStatEvents } from "@/lib/server/stat-events";
 
 /**
  * Export of account data (MIN-119, GDPR art. 15 and 20).
@@ -278,11 +280,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       : Promise.resolve({ data: [] as Row[], error: null }),
     service.from("views").select("*").eq("user_id", userId),
     service.from("cycles").select("*").eq("user_id", userId).order("start_date"),
-    service
-      .from("user_scratchpad")
-      .select("content, updated_at")
-      .eq("user_id", userId)
-      .maybeSingle(),
+    getScratchpadRow(service, userId),
     service
       .from("conversations")
       .select("id, project_id, title, created_at, updated_at")
@@ -305,11 +303,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       .select("transport, native_installation_id, device_label, enabled, created_at, last_push_at")
       .eq("user_id", userId)
       .order("created_at"),
-    service
-      .from("stat_events")
-      .select("kind, occurred_at, project_name, issue_number, issue_title")
-      .eq("user_id", userId)
-      .order("occurred_at"),
+    readStatEvents(service, userId),
     service
       .from("billing_accounts")
       .select(
@@ -502,7 +496,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     issue_categories: issueCategories,
     views: list("views", views),
     cycles: list("cycles", cycles),
-    scratchpad: one("user_scratchpad", scratchpad),
+    scratchpad: scratchpad ? { content: scratchpad.content, updated_at: scratchpad.updated_at } : null,
     assistant_conversations: conversationRows.map((c) => ({
       ...c,
       messages: messagesByConversation.get(c.id as string) ?? [],
@@ -515,7 +509,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     })),
     notifications: list("notifications", notifications),
     push_devices: list("push_subscriptions", pushDevices),
-    statistics: list("stat_events", statistics),
+    statistics,
     billing: one("billing_accounts", billing),
     ai_usage: list("ai_usage", aiUsage),
     api_keys: list("api_keys", apiKeys),

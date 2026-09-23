@@ -4,6 +4,7 @@ import {
   createCipheriv,
   createDecipheriv,
   createHmac,
+  hkdfSync,
   randomBytes,
 } from "node:crypto";
 
@@ -35,8 +36,10 @@ export interface DataKeyProvider {
 }
 
 type Envelope = {
-  format: 1 | 2;
+  format: 1 | 2 | 3;
   keyVersion: number;
+  salt?: string;
+  encoding?: "json" | "bytes";
   iv: string;
   tag: string;
   data: string;
@@ -45,9 +48,10 @@ type Envelope = {
 const IV_BYTES = 12;
 const TAG_BYTES = 16;
 const KEY_BYTES = 32;
+const SALT_BYTES = 32;
 const MAX_ENVELOPE_BYTES = 16 * 1024 * 1024;
 
-function aad(context: EncryptionContext, format: 1 | 2, keyVersion: number): Buffer {
+function aad(context: EncryptionContext, format: Envelope["format"], keyVersion: number, encoding: "json" | "bytes" = "json"): Buffer {
   if (
     (context.scope.kind !== "project" && context.scope.kind !== "user" && context.scope.kind !== "system") ||
     !context.scope.id ||
@@ -58,13 +62,14 @@ function aad(context: EncryptionContext, format: 1 | 2, keyVersion: number): Buf
     throw new Error("An encryption context is required");
   }
   return Buffer.from(JSON.stringify([
-    format === 1 ? "minddy-data-v1" : "minddy-data-v2",
+    `minddy-data-v${format}`,
     context.scope.kind,
     context.scope.id,
     context.table,
     context.column,
     context.rowId,
-    ...(format === 2 ? [keyVersion] : []),
+    ...(format !== 1 ? [keyVersion] : []),
+    ...(format === 3 ? [encoding] : []),
   ]));
 }
 
@@ -72,7 +77,8 @@ function encoded(bytes: Buffer): string {
   return bytes.toString("base64url");
 }
 
-function decoded(value: unknown, maxBytes: number): Buffer {
+function decoded(value: unknown, maxBytes: number, allowEmpty = false): Buffer {
+  if (allowEmpty && value === "") return Buffer.alloc(0);
   if (
     typeof value !== "string" ||
     value.length > Math.ceil(maxBytes * 4 / 3) + 4 ||
@@ -102,17 +108,21 @@ function parseEnvelope(value: string): Envelope {
   }
   const envelope = parsed as Record<string, unknown>;
   if (
-    (envelope.format !== 1 && envelope.format !== 2) ||
+    (envelope.format !== 1 && envelope.format !== 2 && envelope.format !== 3) ||
     !Number.isSafeInteger(envelope.keyVersion) ||
     (envelope.keyVersion as number) < 1
   ) {
+    throw new Error("Invalid encrypted value");
+  }
+  if (envelope.format === 3 && (decoded(envelope.salt, SALT_BYTES).length !== SALT_BYTES ||
+      (envelope.encoding !== "json" && envelope.encoding !== "bytes"))) {
     throw new Error("Invalid encrypted value");
   }
   if (decoded(envelope.iv, IV_BYTES).length !== IV_BYTES ||
       decoded(envelope.tag, TAG_BYTES).length !== TAG_BYTES) {
     throw new Error("Invalid encrypted value");
   }
-  decoded(envelope.data, MAX_ENVELOPE_BYTES);
+  decoded(envelope.data, MAX_ENVELOPE_BYTES, envelope.encoding === "bytes");
   return envelope as Envelope;
 }
 
@@ -127,51 +137,89 @@ export class EncryptedStore {
   constructor(private readonly keys: DataKeyProvider) {}
 
   async encrypt<T>(value: T, context: EncryptionContext): Promise<Encrypted<T>> {
-    const key = await this.keys.current(context.scope);
+    const serialized = JSON.stringify(value);
+    if (serialized === undefined) throw new Error("Value cannot be serialized");
+    return await this.seal(Buffer.from(serialized, "utf8"), context, "json") as Encrypted<T>;
+  }
+
+  async encryptBytes(value: Uint8Array, context: EncryptionContext): Promise<Encrypted<Uint8Array>> {
+    return await this.seal(Buffer.from(value), context, "bytes") as Encrypted<Uint8Array>;
+  }
+
+  private async seal(plaintext: Buffer, context: EncryptionContext, encoding: "json" | "bytes"): Promise<string> {
+    if (plaintext.length > MAX_ENVELOPE_BYTES) {
+      plaintext.fill(0);
+      throw new Error("Value is too large to encrypt");
+    }
+    let key: DataKey | undefined;
+    let messageKey: Buffer | undefined;
     try {
+      key = await this.keys.current(context.scope);
       assertKey(key);
-      const serialized = JSON.stringify(value);
-      if (serialized === undefined) throw new Error("Value cannot be serialized");
-      const plaintext = Buffer.from(serialized, "utf8");
-      if (plaintext.length > MAX_ENVELOPE_BYTES) {
-        throw new Error("Value is too large to encrypt");
-      }
+      const authenticatedContext = aad(context, 3, key.version, encoding);
+      const salt = randomBytes(SALT_BYTES);
+      // RFC 5869: each write derives a separate AES key from the cached scope key.
+      messageKey = Buffer.from(hkdfSync("sha256", key.bytes, salt, authenticatedContext, KEY_BYTES));
       const iv = randomBytes(IV_BYTES);
-      const cipher = createCipheriv("aes-256-gcm", key.bytes, iv);
-      cipher.setAAD(aad(context, 2, key.version));
+      const cipher = createCipheriv("aes-256-gcm", messageKey, iv);
+      cipher.setAAD(authenticatedContext);
       const data = Buffer.concat([cipher.update(plaintext), cipher.final()]);
       const envelope: Envelope = {
-        format: 2,
+        format: 3,
         keyVersion: key.version,
+        salt: encoded(salt),
+        encoding,
         iv: encoded(iv),
         tag: encoded(cipher.getAuthTag()),
         data: encoded(data),
       };
-      return JSON.stringify(envelope) as Encrypted<T>;
+      return JSON.stringify(envelope);
     } finally {
-      key.bytes.fill(0);
+      messageKey?.fill(0);
+      plaintext.fill(0);
+      key?.bytes.fill(0);
     }
   }
 
   async decrypt<T>(value: Encrypted<T>, context: EncryptionContext): Promise<T> {
+    const bytes = await this.open(value, context, "json");
+    try { return JSON.parse(bytes.toString("utf8")) as T; }
+    catch { throw new Error("Unable to decrypt data"); }
+    finally { bytes.fill(0); }
+  }
+
+  async decryptBytes(value: Encrypted<Uint8Array>, context: EncryptionContext): Promise<Buffer> {
+    return this.open(value, context, "bytes");
+  }
+
+  private async open(value: string, context: EncryptionContext, encoding: "json" | "bytes"): Promise<Buffer> {
     const envelope = parseEnvelope(value);
+    if ((envelope.format === 3 ? envelope.encoding : "json") !== encoding) throw new Error("Incorrect encrypted value encoding");
     const key = await this.keys.byVersion(context.scope, envelope.keyVersion);
+    let messageKey: Buffer | undefined;
+    let bytes: Buffer | undefined;
+    let pending: Buffer | undefined;
     try {
       assertKey(key);
       if (key.version !== envelope.keyVersion) {
         throw new Error("Incorrect data key version");
       }
-      const decipher = createDecipheriv("aes-256-gcm", key.bytes, decoded(envelope.iv, IV_BYTES));
-      decipher.setAAD(aad(context, envelope.format, envelope.keyVersion));
+      const authenticatedContext = aad(context, envelope.format, envelope.keyVersion, encoding);
+      messageKey = envelope.format === 3
+        ? Buffer.from(hkdfSync("sha256", key.bytes, decoded(envelope.salt, SALT_BYTES), authenticatedContext, KEY_BYTES))
+        : Buffer.from(key.bytes);
+      const decipher = createDecipheriv("aes-256-gcm", messageKey, decoded(envelope.iv, IV_BYTES));
+      decipher.setAAD(authenticatedContext);
       decipher.setAuthTag(decoded(envelope.tag, TAG_BYTES));
-      const bytes = Buffer.concat([
-        decipher.update(decoded(envelope.data, MAX_ENVELOPE_BYTES)),
-        decipher.final(),
-      ]);
-      return JSON.parse(bytes.toString("utf8")) as T;
+      pending = decipher.update(decoded(envelope.data, MAX_ENVELOPE_BYTES, encoding === "bytes"));
+      bytes = Buffer.concat([pending, decipher.final()]);
+      return bytes;
     } catch {
+      bytes?.fill(0);
       throw new Error("Unable to decrypt data");
     } finally {
+      pending?.fill(0);
+      messageKey?.fill(0);
       key.bytes.fill(0);
     }
   }
@@ -185,6 +233,10 @@ export class EncryptedStore {
 
   versionOf<T>(value: Encrypted<T>): number {
     return parseEnvelope(value).keyVersion;
+  }
+
+  formatOf<T>(value: Encrypted<T>): Envelope["format"] {
+    return parseEnvelope(value).format;
   }
 }
 

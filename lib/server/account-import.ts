@@ -3,6 +3,9 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { AccountTransferDocument, TransferRow } from "@/lib/account-transfer";
 import { getServiceClient } from "@/lib/supabase-service";
+import { getScratchpad, setScratchpad } from "@/lib/server/scratchpad";
+import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
+import { appendStatEvents, type StatEventRow } from "@/lib/server/stat-events";
 
 type Service = ReturnType<typeof getServiceClient>;
 
@@ -786,7 +789,11 @@ export async function importAccountTransfer(
     result.personalData += 1;
   }
   if (document.scratchpad) {
-    await upsertRows(service, "user_scratchpad", [{ ...document.scratchpad, user_id: userId }], "user_id");
+    if (typeof document.scratchpad.content !== "string") throw new Error("Invalid imported scratchpad content");
+    if (document.scratchpad.content.length > MAX_SCRATCHPAD_LENGTH) throw new Error("Imported scratchpad exceeds the content limit");
+    const previous = await getScratchpad(service, userId);
+    const saved = await setScratchpad(service, userId, document.scratchpad.content, previous.rev, { recordCompletions: false });
+    if (saved.conflicted) throw new Error("Scratchpad changed during import; retry after reviewing the current note");
     result.personalData += 1;
   }
   await upsertRows(
@@ -913,16 +920,28 @@ export async function importAccountTransfer(
     }];
   });
   await upsertRows(service, "notifications", notifications);
-  await upsertRows(
-    service,
-    "stat_events",
-    document.statistics.flatMap((source) => [{
-      ...pick(source, ["kind", "occurred_at", "project_name", "issue_number", "issue_title", "task_text"]),
+  await appendStatEvents(service, document.statistics.map((source): StatEventRow => {
+    if (source.kind !== "issue_created" && source.kind !== "issue_completed" && source.kind !== "scratchpad_task_completed") {
+      throw new Error("Invalid statistics event kind");
+    }
+    if (typeof source.occurred_at !== "string" || !Number.isFinite(Date.parse(source.occurred_at))) {
+      throw new Error("Invalid statistics event date");
+    }
+    for (const column of ["project_name", "issue_title", "task_text"]) {
+      if (source[column] != null && typeof source[column] !== "string") throw new Error("Invalid statistics snapshot");
+    }
+    return {
+      kind: source.kind,
+      occurred_at: source.occurred_at,
+      project_name: typeof source.project_name === "string" ? source.project_name : null,
+      issue_title: typeof source.issue_title === "string" ? source.issue_title : null,
+      task_text: typeof source.task_text === "string" ? source.task_text : null,
+      issue_number: typeof source.issue_number === "number" ? source.issue_number : null,
       user_id: userId,
       project_id: mapId(source.project_id, projects.projectIds),
       issue_id: mapId(source.issue_id, issueIds),
-    }]),
-  );
+    };
+  }));
   await upsertRows(
     service,
     "ai_usage",

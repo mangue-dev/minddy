@@ -663,14 +663,18 @@
       "functionReferences": []
     },
     "broadcast_scratchpad_row()": {
-      "sha256": "406e1a01b42f8f78a3031f781c4071ba4ec7adf81e1b4596cbe3792d9c06522e",
+      "sha256": "d4590f7ffcfa63470f9018908a33ea2646b073f8183d5d4658aed4493492749c",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/supabase_admin,supabase_admin=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}",
-      "relations": [],
-      "protectedRelations": [],
+      "acl": "{supabase_admin=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "user_scratchpad"
+      ],
+      "protectedRelations": [
+        "user_scratchpad"
+      ],
       "functionReferences": []
     },
     "claim_agent_run_rest(uuid)": {
@@ -885,6 +889,17 @@
         "search_path=\"\""
       ],
       "acl": "{supabase_admin=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "set_scratchpad_updated_at()": {
+      "sha256": "a46e6f9045420eb7e32fcf2e6649b5351d9e043d300f6d90ebc42de16d47731d",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -1154,6 +1169,17 @@
       ],
       "functionReferences": []
     },
+    "guard_scratchpad_encryption()": {
+      "sha256": "bb2e03f2b68871b36224bde69b36117cfb7a8e6f30d6cc0ac02276437f7104a5",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "rekey_deleted_auth_sessions()": {
       "sha256": "1c94c34a277eec8b9fc0f0922fdc626e86df5736b6be30114c5bc8f5aa0223ed",
       "securityDefiner": true,
@@ -1274,6 +1300,17 @@
       "relations": [
         "ai_usage"
       ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "guard_stat_events_encryption()": {
+      "sha256": "01d3892fd9f74309f78ae37bd0df796adac33816074e90b5e79078b322f5af98",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
       "protectedRelations": [],
       "functionReferences": []
     },
@@ -3932,6 +3969,10 @@
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER agent_chains_set_updated_at BEFORE UPDATE ON agent_chains FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
+    "stat_events.stat_events_encryption_guard": {
+      "function": "guard_stat_events_encryption()",
+      "definition": "CREATE TRIGGER stat_events_encryption_guard BEFORE UPDATE ON stat_events FOR EACH ROW EXECUTE FUNCTION guard_stat_events_encryption()"
+    },
     "user_ai_keys.user_ai_keys_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER user_ai_keys_set_updated_at BEFORE UPDATE ON user_ai_keys FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
@@ -4073,8 +4114,8 @@
       "definition": "CREATE TRIGGER project_members_authority_lock AFTER INSERT OR DELETE OR UPDATE ON project_members FOR EACH ROW EXECUTE FUNCTION lock_project_authority_mutation()"
     },
     "user_scratchpad.user_scratchpad_set_updated_at": {
-      "function": "set_updated_at()",
-      "definition": "CREATE TRIGGER user_scratchpad_set_updated_at BEFORE UPDATE ON user_scratchpad FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+      "function": "set_scratchpad_updated_at()",
+      "definition": "CREATE TRIGGER user_scratchpad_set_updated_at BEFORE UPDATE ON user_scratchpad FOR EACH ROW EXECUTE FUNCTION set_scratchpad_updated_at()"
     },
     "agent_run_events.agent_run_events_capture_input": {
       "function": "capture_agent_run_input_request()",
@@ -4111,6 +4152,10 @@
     "pull_requests.pull_requests_rekey_realtime_scope": {
       "function": "rekey_pull_request_scope()",
       "definition": "CREATE TRIGGER pull_requests_rekey_realtime_scope BEFORE UPDATE OF provider, repo_full_name ON pull_requests FOR EACH ROW EXECUTE FUNCTION rekey_pull_request_scope()"
+    },
+    "user_scratchpad.user_scratchpad_encryption_guard": {
+      "function": "guard_scratchpad_encryption()",
+      "definition": "CREATE TRIGGER user_scratchpad_encryption_guard BEFORE UPDATE ON user_scratchpad FOR EACH ROW EXECUTE FUNCTION guard_scratchpad_encryption()"
     },
     "notifications.notifications_validate_target_scope": {
       "function": "validate_notification_target_scope()",

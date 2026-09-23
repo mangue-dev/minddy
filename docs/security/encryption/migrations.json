@@ -98,5 +98,7 @@
   "20270107010000_faq_ask_feature.sql": "614011c0667fa5eebf10857c94105d3942d78bc8928bf2a724bd6f1d2fb3459b",
   "20270107020000_envelope_key_registry.sql": "90c932c3a3436456374dadb1b127925eea76d5f431af4eb3416e8a666501bc54",
   "20270107030000_invitation_email_encryption.sql": "1048dea1c6a74be38f8480a5dca00b56fe0816d8b5f4f3e4b7892e703ebc225f",
-  "20270107040000_envelope_rotation_fairness.sql": "701528eb54bcf25aae6b299cb2af9dfef46ece3b14cee34ca4f375669e95ea2e"
+  "20270107040000_envelope_rotation_fairness.sql": "701528eb54bcf25aae6b299cb2af9dfef46ece3b14cee34ca4f375669e95ea2e",
+  "20270107050000_scratchpad_encryption.sql": "ea67209235b613fa263226bbaf253b59cad55efcc9b7add280f56d9d3a4a5656",
+  "20270107060000_stat_events_encryption.sql": "f6baf0ec62bd9086fd99f145d8e49db47be303d7be6edefc9f0e3178f66754a6"
 }

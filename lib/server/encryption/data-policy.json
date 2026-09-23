@@ -2806,7 +2806,13 @@
       ],
       "timestamp": [
         "created_at",
+        "encryption_checked_at",
         "occurred_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_revision",
+        "encryption_version"
       ]
     }
   },
@@ -3008,7 +3014,12 @@
         "user_id"
       ],
       "timestamp": [
+        "encryption_checked_at",
         "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
       ]
     }
   },

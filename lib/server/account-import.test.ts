@@ -1,5 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { randomBytes } from "node:crypto";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccountTransferDocument } from "@/lib/account-transfer";
+import { EncryptedStore } from "./encryption/store";
+import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 
 vi.mock("server-only", () => ({}));
 
@@ -8,16 +11,28 @@ interface Row extends Record<string, unknown> {}
 const database = vi.hoisted(() => ({
   rows: {} as Record<string, Row[]>,
   writes: [] as Array<{ table: string; rows: Row[] }>,
+  crypto: null as EncryptedStore | null,
 }));
 
 function makeQuery(table: string) {
   const filters: Array<(row: Row) => boolean> = [];
   let writeRows: Row[] | null = null;
+  let operation = "select";
 
   const matching = () =>
     (database.rows[table] ?? []).filter((row) => filters.every((filter) => filter(row)));
   const run = () => {
     if (writeRows) {
+      if (table === "user_scratchpad") {
+        if (operation === "update") {
+          writeRows = matching().map((row) => ({ ...row, ...writeRows![0] }));
+        } else {
+          writeRows = writeRows.map((row) => ({ encryption_version: 0, encrypted_content: null,
+            updated_at: "2026-09-23T12:00:00Z", ...row }));
+        }
+        database.rows[table] = writeRows;
+      }
+      if (table === "stat_events") database.rows[table] = [...(database.rows[table] ?? []), ...writeRows];
       database.writes.push({ table, rows: writeRows });
       return { data: writeRows, error: null };
     }
@@ -27,6 +42,9 @@ function makeQuery(table: string) {
   const query: Record<string, unknown> = {};
   Object.assign(query, {
     select: () => query,
+    order: () => query,
+    limit: () => query,
+    or: () => query,
     eq: (column: string, value: unknown) => {
       filters.push((row) => row[column] === value);
       return query;
@@ -40,7 +58,13 @@ function makeQuery(table: string) {
       return query;
     },
     update: (row: Row) => {
+      operation = "update";
       writeRows = [row];
+      return query;
+    },
+    insert: (row: Row | Row[]) => {
+      operation = "insert";
+      writeRows = Array.isArray(row) ? row : [row];
       return query;
     },
     maybeSingle: async () => {
@@ -69,8 +93,13 @@ const service = {
 };
 
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => service }));
+vi.mock("./encryption/registry", () => ({ getEncryptedStore: () => {
+  if (!database.crypto) throw new Error("Test KMS unavailable");
+  return database.crypto;
+} }));
 
 const { AccountImportScopeError, importAccountTransfer } = await import("./account-import");
+const { buildAccountExport } = await import("./account-export");
 
 const USER = "11111111-1111-4111-8111-111111111111";
 const SOURCE_USER = "22222222-2222-4222-8222-222222222222";
@@ -118,7 +147,10 @@ function transfer(overrides: Partial<AccountTransferDocument> = {}): AccountTran
 beforeEach(() => {
   database.rows = {};
   database.writes.length = 0;
+  database.crypto = null;
+  vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "false");
 });
+afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
 describe("account import tenant isolation", () => {
   it("rejects a membership that references another tenant's project", async () => {
@@ -241,5 +273,36 @@ describe("account import tenant isolation", () => {
     expect(result.projects).toBe(1);
     expect(result.issues).toBe(1);
     expect(database.writes.map((write) => write.table)).toEqual(["projects", "issues"]);
+  });
+
+  it("imports personal notes encrypted and exports their plaintext through the repository", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");
+    const material = randomBytes(32);
+    database.crypto = new EncryptedStore({
+      current: async () => ({ version: 1, bytes: Buffer.from(material) }),
+      byVersion: async (_scope, version) => ({ version, bytes: Buffer.from(material) }),
+    });
+    const statistics = [{ kind: "scratchpad_task_completed", occurred_at: "2026-09-23T12:00:00Z",
+      project_name: "Private historical project", issue_title: "", task_text: "Private checked task", issue_number: null }];
+    const result = await importAccountTransfer(transfer({ scratchpad: { content: "Imported private notes" }, statistics }), USER);
+    expect(result.personalData).toBe(2);
+    expect(database.rows.user_scratchpad[0]).toMatchObject({ user_id: USER, content: null, encryption_version: 1, rev: 1 });
+    expect(JSON.stringify(database.writes)).not.toContain("Imported private notes");
+    expect(JSON.stringify(database.writes)).not.toContain("Private historical project");
+    expect(JSON.stringify(database.writes)).not.toContain("Private checked task");
+    const exported = await buildAccountExport(USER);
+    expect(exported.statistics).toEqual(statistics);
+    expect(exported.scratchpad).toEqual({
+      content: "Imported private notes", updated_at: "2026-09-23T12:00:00Z",
+    });
+    database.crypto = null;
+    await expect(buildAccountExport(USER)).rejects.toThrow("Test KMS unavailable");
+  });
+
+  it("rejects an oversized imported notebook rather than silently truncating it", async () => {
+    await expect(importAccountTransfer(transfer({ scratchpad: { content: "x".repeat(MAX_SCRATCHPAD_LENGTH + 1) } }), USER))
+      .rejects.toThrow("exceeds the content limit");
+    expect(database.writes).toEqual([]);
   });
 });

@@ -6,7 +6,7 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 116 application tables and 1,200 columns, their primary
+- `schema.json` records 116 application tables and 1,207 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 188 encryption targets include the original content,
@@ -15,7 +15,7 @@ production migration on the strength of crypto unit tests or this inventory.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 224 functions, ten views and 125 triggers. Function
+- `sql-consumers.json` records 227 functions, ten views and 127 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -80,19 +80,94 @@ must be checked separately.
 | Migration and recovery | Add restartable batches for every target and object, compare-and-swap against concurrent edits, verification counters, rejection of obsolete writers, a restoration rehearsal and retention of historical wrapped keys. Test mixed plaintext/encrypted tenants and old versions. |
 | KMS and operations | Provision a separate test key/role, run the real-KMS test and application-scale latency measurements, verify production IAM/audit/alerts and backup recovery. Production deployment and migration require a later explicit deployment request. |
 
-The common row codec is tested but is not yet connected to those repositories.
-It authenticates the real primary key, table and owner, requires complete rows,
+The common row codec is connected to personal notes and statistics snapshots.
+The other repositories in the table above remain unconverted. It authenticates the real primary key, table and owner, requires complete rows,
 distinguishes legacy and encrypted states, clears protected columns and rejects
 remaining plaintext search projections. Parent-owned records still require a
 trusted repository to resolve and authorize their scope before calling it.
 
-New encrypted values use envelope format 2, which authenticates the DEK version
-as well as the row/table/column/owner. Format 1 did not include the key version
-in AAD: if two registry versions referred to the same wrapped key, changing the
-envelope's version could still authenticate. A regression test demonstrates
-that format 2 rejects this change and a format downgrade. Existing format-1
-values remain readable; the eventual re-encryption pass must upgrade them.
-Rollback binaries must understand format 2 after any format-2 write occurs.
+New encrypted values use envelope format 3. Each write derives a fresh AES-256
+key with HKDF-SHA-256 from the cached scope DEK, a random 256-bit salt and the
+complete authenticated context. That context includes the owner, table, column,
+primary key, DEK version and JSON/binary encoding. A random 96-bit GCM nonce is
+then used under that derived key. This avoids accumulating every scope write
+under one AES key; a cache TTL alone would not limit that key's lifetime use.
+Derivation is local and adds no KMS calls. Independent WebCrypto interoperability
+and tampering tests exercise both encryption directions. See
+[RFC 5869](https://www.rfc-editor.org/info/rfc5869/) for HKDF. This is Minddy's own
+versioned envelope format, not the AWS Encryption SDK's wire format.
+
+Formats 1 and 2 remain readable. Format 2 introduced authenticated key versions;
+format 1 lacks that binding and must eventually be rewritten. Converted row
+backfills upgrade old formats as well as old DEK versions. Invitation backfill
+still only selects legacy rows, so its encrypted historical values need an
+additional rotation pass. Rollback binaries must understand format 3 after any
+format-3 writes. JSON strings cannot be reliably erased from JavaScript memory;
+the store wipes the mutable plaintext/key buffers that it owns.
+
+## Converted personal content and migration rehearsal
+
+`MINDDY_CONTENT_ENCRYPTION_ENABLED=true` enables staging writes and maintenance
+for `user_scratchpad` and `stat_events`. Keep it disabled in production until the
+application-wide gates are satisfied. It is independent of the invitation flag.
+Disabling it pauses backfill and new-record opt-in; already encrypted notes still
+require decryption and encrypted writes. Task-completion snapshots derived from
+those notes remain encrypted even with the flag disabled. KMS failures never
+fall back to plaintext. Statistics retain their existing best-effort delivery
+contract; account imports instead surface failures.
+
+The shared note repository serves the API, MCP and agent operations and account
+transfer. Notes retain their optimistic revision check: migration advances the
+revision and obsolete edits conflict. Imports no longer bypass that check or
+silently truncate oversized notes. Realtime sends only invalidation metadata,
+including on legacy rows. Statistics protect the project name, issue title and
+task label together; their user scope remains valid after source deletion. The
+current SQL aggregates only need clear ledger metadata. Project/category/objective
+names in those aggregates still need conversion with their source tables.
+
+The shared row worker reads a bounded batch, decrypts and verifies its newly
+encoded replacement, then commits under repository-specific revision/ownership
+checks. It counts failed/conflicted rows without logging their content. Attempt
+ordering revisits failures without starving subsequent rows. Maintenance processes
+at most 50 notes and 50 statistics events per run, alongside the invitation batch.
+Each repository reports failure independently. Constraints reject plaintext in
+converted rows, version inconsistencies, revision rollback and identity changes.
+
+An opt-in local integration test uses real PostgreSQL key-registry RPCs and a
+real `pg_dump`/restore of notes, statistics, wrapped keys and fixture users into
+two disposable databases. It recovers mixed legacy/current/historical versions
+with empty caches, and rejects the wrong wrapping key. The KMS in this test is an
+in-memory substitute, not AWS. This is a restoration proof for those tables,
+not a full application recovery rehearsal. No production rows are used.
+
+After applying the migrations to a schema-only `minddy_min591_full_audit`
+database in the local `supabase_db_minddy-encryption-test` Docker container:
+
+```sh
+docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_full_audit < scripts/encryption-scratchpad-regression.sql
+docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_full_audit < scripts/encryption-statistics-regression.sql
+MINDDY_ENCRYPTION_DB_TEST=true npm test -- lib/server/encryption/database-recovery.integration.test.ts
+```
+
+The SQL rehearsals roll back all fixtures and check RLS, obsolete writers,
+constraint failures, metadata-only Realtime, statistics aggregation and snapshot
+survival after source deletion. The recovery test creates and drops only its
+uniquely named databases and requires an empty audit template. Default tests
+skip this integration test and the live AWS test. Policy-wide serialization
+round trips cover 73 supported protected tables; they are not proof that those
+repositories are converted or authorized. `ai_decision_evaluations` has no
+primary key; it needs a stable identity before the row codec can protect it.
+
+## Object codec status
+
+The shared object codec encrypts file bytes and filename/MIME metadata, using
+1 MiB chunks and an encrypted manifest binding each chunk's digest, position and
+size. Tests cover empty files through the existing 20 MiB attachment limit,
+truncation, reordering, substitution and owner/path changes. **No production
+upload or download path uses it yet.** Remaining work includes authorized and
+hosting-compatible upload transport, opaque paths, downloads for app/AI/export,
+cross-project copies, all metadata rows, and verified object migration. A codec
+unit test does not protect existing objects or make signed plaintext URLs safe.
 
 ## Implemented protection against authentication through a database dump
 
@@ -132,8 +207,8 @@ privileges on an isolated migrated database, inside a rolled-back transaction.
 
 This schedules key advancement for every recorded content scope. It does not
 yet implement re-encryption of all historical rows or objects. That migration
-work remains required. Maintenance is still gated by the existing invitation
-write flag until the global repositories and rollout controls are implemented.
+work remains required. Maintenance runs when either the invitation or staging
+content flag is enabled; only converted repositories are registered for backfill.
 Blind-index keys are excluded from this job to preserve equality lookup.
 
 ## Managed KMS setup

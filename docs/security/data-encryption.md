@@ -5,10 +5,12 @@
 The owner requires one complete delivery across all sensitive data. The current
 global inventory, concrete blockers, KMS setup and migration requirements are in
 [the global delivery inventory](encryption/README.md). The invitation-only
-foundation described below is not a production rollout boundary.
+foundation described below is not a production rollout boundary. Personal notes
+and statistics snapshots now also have repository integration and isolated
+migration/recovery tests; the linked global inventory is the current status.
 
-This is the implementation inventory and rollout contract. The content columns
-listed below are currently stored as plaintext. No protection against a database
+This is the initial implementation inventory and rollout contract. Most content
+columns listed below still have unconverted plaintext access paths. No protection against a database
 dump should be claimed until their plaintext columns, search projections,
 history, and alternate write paths have been migrated and removed.
 

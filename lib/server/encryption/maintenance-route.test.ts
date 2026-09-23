@@ -6,6 +6,9 @@ const state = vi.hoisted(() => ({
   configured: false,
   backfill: vi.fn(),
   rotate: vi.fn(),
+  contentEnabled: false,
+  scratchpads: vi.fn(),
+  statistics: vi.fn(),
 }));
 
 vi.mock("@/lib/server/encryption/invitation-email", () => ({
@@ -16,6 +19,9 @@ vi.mock("@/lib/server/encryption/invitation-backfill", () => ({
   backfillInvitationEmailsBatch: state.backfill,
 }));
 vi.mock("@/lib/server/encryption/rotation", () => ({ rotateDueContentKeys: state.rotate }));
+vi.mock("@/lib/server/encryption/content-config", () => ({ isContentEncryptionEnabled: () => state.contentEnabled }));
+vi.mock("@/lib/server/encryption/scratchpad-backfill", () => ({ backfillScratchpadsBatch: state.scratchpads }));
+vi.mock("@/lib/server/encryption/stat-events-backfill", () => ({ backfillStatEventsBatch: state.statistics }));
 
 const { GET } = await import("@/app/api/cron/encryption-maintenance/route");
 const secret = "x".repeat(32);
@@ -29,8 +35,11 @@ function request(authorized: boolean): NextRequest {
 beforeEach(() => {
   vi.stubEnv("CRON_SECRET", secret);
   state.enabled = false;
+  state.contentEnabled = false;
   state.configured = false;
   state.backfill.mockReset();
+  state.scratchpads.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
+  state.statistics.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.rotate.mockReset().mockResolvedValue({ scanned: 0, advanced: 0, failed: 0 });
 });
 
@@ -74,5 +83,42 @@ describe("encryption maintenance cron", () => {
     state.backfill.mockResolvedValue({ scanned: 0, encrypted: 0, purged: 0 });
     expect((await GET(request(true))).status).toBe(503);
     expect(state.backfill).toHaveBeenCalledWith(100);
+  });
+
+  it("maintains personal content independently of the invitation flag", async () => {
+    state.contentEnabled = true;
+    state.configured = true;
+    const response = await GET(request(true));
+    expect(response.status).toBe(200);
+    expect(state.scratchpads).toHaveBeenCalledWith(50, expect.any(AbortSignal));
+    expect(state.statistics).toHaveBeenCalledWith(50, expect.any(AbortSignal));
+    expect(state.backfill).not.toHaveBeenCalled();
+    expect(state.rotate).toHaveBeenCalled();
+  });
+
+  it("reports a failed or interrupted statistics migration to the scheduler", async () => {
+    state.contentEnabled = true;
+    state.configured = true;
+    state.statistics.mockResolvedValue({ scanned: 1, migrated: 0, unchanged: 0, conflicted: 0, failed: 1, interrupted: false });
+    expect((await GET(request(true))).status).toBe(503);
+    state.statistics.mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: true });
+    expect((await GET(request(true))).status).toBe(503);
+  });
+
+  it("reports partial failure without exposing provider details or blocking other repositories", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      state.contentEnabled = true;
+      state.enabled = true;
+      state.configured = true;
+      state.backfill.mockRejectedValue(new Error("Private provider error"));
+      const response = await GET(request(true));
+      expect(response.status).toBe(503);
+      expect(state.scratchpads).toHaveBeenCalled();
+      const output = JSON.stringify(await response.json());
+      expect(output).toContain("invitation_failed");
+      expect(output).not.toContain("Private provider error");
+      expect(JSON.stringify(errorLog.mock.calls)).not.toContain("Private provider error");
+    } finally { errorLog.mockRestore(); }
   });
 });

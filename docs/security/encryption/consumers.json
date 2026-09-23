@@ -1634,7 +1634,7 @@
     "file": "captures/world/seed/005-carnet.mjs",
     "operation": "from",
     "resource": "user_scratchpad",
-    "line": 59,
+    "line": 57,
     "storage": false
   },
   {
@@ -1977,41 +1977,34 @@
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 79,
+    "line": 81,
     "storage": true
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "project-icons",
-    "line": 106,
+    "line": 108,
     "storage": true
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 189,
+    "line": 191,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_agent_preferences",
-    "line": 224,
+    "line": 226,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 225,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "issues",
     "line": 227,
     "storage": false
   },
@@ -2025,260 +2018,253 @@
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
+    "resource": "issues",
+    "line": 231,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-export.ts",
+    "operation": "from",
     "resource": "comments",
-    "line": 233,
+    "line": 235,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 240,
+    "line": 242,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "page_files",
-    "line": 251,
+    "line": 253,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 263,
+    "line": 265,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "objectives",
-    "line": 270,
+    "line": 272,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "categories",
-    "line": 273,
+    "line": 275,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "views",
-    "line": 279,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "cycles",
-    "line": 280,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "user_scratchpad",
     "line": 281,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
+    "resource": "cycles",
+    "line": 282,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-export.ts",
+    "operation": "from",
     "resource": "conversations",
-    "line": 286,
+    "line": 284,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 291,
+    "line": 289,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 303,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "stat_events",
-    "line": 308,
+    "line": 301,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 313,
+    "line": 307,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "ai_usage",
-    "line": 325,
+    "line": 319,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 333,
+    "line": 327,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 338,
+    "line": 332,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 343,
+    "line": 337,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 350,
+    "line": 344,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 355,
+    "line": 349,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 367,
+    "line": 361,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 385,
+    "line": 379,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_messages",
-    "line": 394,
+    "line": 388,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_turns",
-    "line": 399,
+    "line": 393,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversation_contexts",
-    "line": 406,
+    "line": 400,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "issue_categories",
-    "line": 432,
+    "line": 426,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": null,
-    "line": 92,
+    "line": 95,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 294,
+    "line": 297,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": null,
-    "line": 380,
+    "line": 383,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 406,
+    "line": 409,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 422,
+    "line": 425,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 447,
+    "line": 450,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "project-icons",
-    "line": 505,
+    "line": 508,
     "storage": true
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "project-icons",
-    "line": 509,
+    "line": 512,
     "storage": true
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 510,
+    "line": 513,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 719,
+    "line": 722,
     "storage": true
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 774,
+    "line": 777,
     "storage": true
   },
   {
@@ -4995,6 +4981,48 @@
     "operation": "from",
     "resource": "envelope_data_keys",
     "line": 144,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/scratchpad-backfill.ts",
+    "operation": "from",
+    "resource": "user_scratchpad",
+    "line": 15,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/scratchpad-backfill.ts",
+    "operation": "from",
+    "resource": "user_scratchpad",
+    "line": 24,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/scratchpad-backfill.ts",
+    "operation": "from",
+    "resource": "user_scratchpad",
+    "line": 36,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/stat-events-backfill.ts",
+    "operation": "from",
+    "resource": "stat_events",
+    "line": 15,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/stat-events-backfill.ts",
+    "operation": "from",
+    "resource": "stat_events",
+    "line": 25,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/stat-events-backfill.ts",
+    "operation": "from",
+    "resource": "stat_events",
+    "line": 36,
     "storage": false
   },
   {
@@ -9187,21 +9215,21 @@
     "file": "lib/server/scratchpad.ts",
     "operation": "from",
     "resource": "user_scratchpad",
-    "line": 66,
+    "line": 78,
     "storage": false
   },
   {
     "file": "lib/server/scratchpad.ts",
     "operation": "from",
     "resource": "user_scratchpad",
-    "line": 144,
+    "line": 165,
     "storage": false
   },
   {
     "file": "lib/server/scratchpad.ts",
     "operation": "from",
     "resource": "user_scratchpad",
-    "line": 164,
+    "line": 185,
     "storage": false
   },
   {
@@ -9411,7 +9439,14 @@
     "file": "lib/server/stat-events.ts",
     "operation": "from",
     "resource": "stat_events",
-    "line": 36,
+    "line": 61,
+    "storage": false
+  },
+  {
+    "file": "lib/server/stat-events.ts",
+    "operation": "from",
+    "resource": "stat_events",
+    "line": 68,
     "storage": false
   },
   {
