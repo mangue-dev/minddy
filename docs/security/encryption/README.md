@@ -23,13 +23,22 @@ production migration on the strength of crypto unit tests or this inventory.
   until the consumer inventory is reviewed. Moving a call to another line alone
   does not invalidate the inventory.
 
-The snapshot came from a schema-only copy of the isolated local Supabase stack,
-with later table migrations applied. No production rows were copied. A known
-replay failure remains in `20270106910000_numo_history_drop_detail_href.sql`:
-`CREATE OR REPLACE VIEW` attempts to remove an existing column. The recorded
-Numo views therefore still have their preceding definitions; the later table
-migrations do not change that fact. A successful fresh replay and a refreshed
-view inventory are required before declaring the schema audit complete.
+The current snapshot comes from a complete replay of all 102 migrations on the
+isolated local Supabase stack. No production rows were copied. Migration
+`20270106910000_numo_history_drop_detail_href.sql` previously failed because
+`CREATE OR REPLACE VIEW` cannot remove columns. It now recreates the three
+known views and two dependent active-conversation policies transactionally,
+without CASCADE, preserving invoker security and explicit read grants. The
+Numo regression verifies private-history isolation and denial of inaccessible
+active-conversation targets. Function grants in this snapshot reflect the
+fresh replay's migration owner (`postgres`), rather than the earlier manually
+restored schema's owner (`supabase_admin`). Foreign-key ordering is deterministic.
+
+An instance that already recorded that migration will not automatically rerun
+an edited historical file. Verify the three view definitions and two policies
+during rollout; the fresh-replay correction is not evidence that production was
+changed. The source and SQL consumer review remains unfinished even though the
+complete schema can now be reproduced.
 
 To reproduce against an isolated database, run `scripts/encryption-schema-audit.sql`
 with `psql -At` and save its JSON output outside the repository. Review its
@@ -71,7 +80,7 @@ must be checked separately.
 | --- | --- |
 | Projects, issues, objectives, categories, comments, pages and views | Convert every server repository read/write and all imports, exports, MCP and AI consumers; add ciphertext/version storage and reject older plaintext writers. Preserve access checks before decryption and existing concurrency semantics. |
 | Histories and derived copies | Convert page versions, issue events, statistics, assistant/agent conversations, checkpoints, messages, journals, tool arguments/results and surface projections together with the original rows. Remove plaintext SQL projections. |
-| SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay error must be resolved and replayed. |
+| SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
 | Forge data | Resolve ownership of repository data shared by several projects. Private repository names currently participate in primary/unique keys and lookup paths; introduce opaque/indexed identities before encrypting them. The generic row codec deliberately refuses sensitive primary keys. |
 | Files and images | Replace direct browser uploads and signed plaintext-object reads with authorized server paths. Use opaque object names; migrate attachments, page files and private project icons, including copies/imports/exports/AI downloads and orphan cleanup. Public avatars have an explicit public-use exception. |
@@ -146,6 +155,7 @@ database in the local `supabase_db_minddy-encryption-test` Docker container:
 ```sh
 docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_full_audit < scripts/encryption-scratchpad-regression.sql
 docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_full_audit < scripts/encryption-statistics-regression.sql
+docker exec -i supabase_db_minddy-encryption-test psql -v ON_ERROR_STOP=1 -U supabase_admin -d minddy_min591_full_audit < scripts/numo-history-view-regression.sql
 MINDDY_ENCRYPTION_DB_TEST=true npm test -- lib/server/encryption/database-recovery.integration.test.ts
 ```
 

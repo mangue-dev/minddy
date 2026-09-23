@@ -1271,14 +1271,14 @@
         "targetColumn": "id"
       },
       {
-        "table": "projects",
-        "column": "project_id",
-        "targetColumn": "id"
-      },
-      {
         "table": "agent_conversations",
         "column": "project_id",
         "targetColumn": "project_id"
+      },
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
       },
       {
         "table": "pull_requests",
@@ -7871,14 +7871,14 @@
         "targetColumn": "id"
       },
       {
-        "table": "users",
-        "column": "user_id",
-        "targetColumn": "id"
-      },
-      {
         "table": "user_ai_keys",
         "column": "user_id",
         "targetColumn": "user_id"
+      },
+      {
+        "table": "users",
+        "column": "user_id",
+        "targetColumn": "id"
       }
     ]
   },

@@ -1,6 +1,17 @@
 title = "Minddy public-repository secret and data-marker policy"
 
 [[allowlists]]
+description = "Exact SHA-256 migration fingerprints, independently verified by check:encryption-schema."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(?:^|/)docs/security/encryption/migrations\.json$''']
+regexTarget = "secret"
+regexes = [
+  '''^e91b66803ed385e3160a1e2d8787ceff63f270b96689a88687717081fa930001$''',
+  '''^90c932c3a3436456374dadb1b127925eea76d5f431af4eb3416e8a666501bc54$''',
+]
+
+[[allowlists]]
 description = "Accessible tab-reorder keyboard shortcut, not an API credential."
 targetRules = ["generic-api-key"]
 condition = "AND"

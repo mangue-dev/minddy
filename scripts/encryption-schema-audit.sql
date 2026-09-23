@@ -11,7 +11,7 @@ SELECT jsonb_pretty(jsonb_build_object(
       JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.attnum
       WHERE i.indrelid = c.oid AND i.indisprimary), '[]'::jsonb),
     'foreignKeys', COALESCE((SELECT jsonb_agg(jsonb_build_object('column', a.attname,
-      'table', target.relname, 'targetColumn', ta.attname) ORDER BY a.attname)
+      'table', target.relname, 'targetColumn', ta.attname) ORDER BY a.attname, target.relname, ta.attname)
       FROM pg_constraint fk JOIN pg_class target ON target.oid = fk.confrelid
       CROSS JOIN LATERAL unnest(fk.conkey, fk.confkey) k(source_key, target_key)
       JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = k.source_key
