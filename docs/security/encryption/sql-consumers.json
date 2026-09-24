@@ -2171,7 +2171,7 @@
       ]
     },
     "guard_agent_journal_parent_scope()": {
-      "sha256": "a71b1d52bf1afc2c7b4dc0c96204addae8ea875e74536a7d759615e8956c369e",
+      "sha256": "851ff9c240a6e5eeba5742361aae83bffeb916e6651f934e497370c1ce91d151",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""

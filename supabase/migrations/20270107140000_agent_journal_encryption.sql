@@ -76,7 +76,8 @@ CREATE FUNCTION public.guard_agent_journal_parent_scope()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 BEGIN
   IF NEW.project_id IS DISTINCT FROM OLD.project_id AND EXISTS (
-    SELECT 1 FROM public.agent_run_journal WHERE run_id = OLD.id
+    SELECT 1 FROM public.agent_run_journal
+    WHERE run_id = OLD.id AND encryption_version > 0
   ) THEN
     RAISE EXCEPTION 'agent_journal_parent_scope_is_immutable' USING ERRCODE = '23514';
   END IF;

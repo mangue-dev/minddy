@@ -10,7 +10,8 @@ DO $test$
 DECLARE
   actor uuid := gen_random_uuid(); project uuid := gen_random_uuid();
   other_project uuid := gen_random_uuid();
-  conversation uuid := gen_random_uuid(); run uuid := gen_random_uuid();
+  conversation uuid := gen_random_uuid(); other_conversation uuid := gen_random_uuid();
+  run uuid := gen_random_uuid();
   legacy bigint; fresh bigint;
   cipher text := '{"format":3,"keyVersion":1,"data":"test-only-placeholder"}';
   digest text := repeat('a',64);
@@ -20,10 +21,16 @@ BEGIN
   INSERT INTO public.projects(id,owner_id,name,key) VALUES(other_project,actor,'Other project','AJO');
   INSERT INTO public.agent_conversations(id,project_id,owner_id)
     VALUES(conversation,project,actor);
+  INSERT INTO public.agent_conversations(id,project_id,owner_id)
+    VALUES(other_conversation,other_project,actor);
   INSERT INTO public.agent_runs(id,project_id,conversation_id,created_by)
     VALUES(run,project,conversation,actor);
   INSERT INTO public.agent_run_journal(run_id,session_id,events)
     VALUES(run,'session', '[{"output":"private"}]') RETURNING id INTO legacy;
+  UPDATE public.agent_runs SET project_id=other_project,
+    conversation_id=other_conversation WHERE id=run;
+  UPDATE public.agent_runs SET project_id=project,
+    conversation_id=conversation WHERE id=run;
   IF NOT public.agent_journal_legacy_batch_exists(run,'session','[{"output":"private"}]') THEN
     RAISE EXCEPTION 'legacy journal duplicate lookup failed';
   END IF;
@@ -46,7 +53,8 @@ BEGIN
     RAISE EXCEPTION 'journal writer fence was not activated';
   END IF;
   BEGIN
-    UPDATE public.agent_runs SET project_id=other_project WHERE id=run;
+    UPDATE public.agent_runs SET project_id=other_project,
+      conversation_id=other_conversation WHERE id=run;
     RAISE EXCEPTION 'journal parent scope moved';
   EXCEPTION WHEN check_violation THEN NULL; END;
   BEGIN

@@ -567,7 +567,7 @@ than sending an incomplete session. The journal has no Realtime publication or
 content broadcast; the SQL regression verifies that fact. A project-specific
 marker rejects old plaintext inserts after the first encrypted batch. Direct
 client mutations are revoked. Moving a parent run to another project after it
-has journal rows is rejected so the ciphertext scope cannot silently change.
+has encrypted journal rows is rejected so the ciphertext scope cannot silently change.
 The hourly worker processes at most five rows per
 pass, verifies plaintext equality before a version-checked replacement, and
 revisits old envelope or content-key versions. The journal has no content search.
@@ -590,8 +590,9 @@ first read-side step and the payload and trigger copy are still plaintext.
 Those paths, conversation/run titles, prompts,
 checkpoints, queued messages and input requests remain in clear form. The
 journal tranche therefore does not close the issue boundary. No staging
-connection or representative staging data was available: the local database is
-a schema-only clone populated with small fixtures. Issue search latency and
+connection or representative staging data was available: the available
+Supabase project listing shows only the Minddy production project, while the
+local database is a schema-only clone populated with small fixtures. Issue search latency and
 project key/cache load cannot be inferred from those fixtures and remain
 unmeasured. Both production encryption flags and the new journal flag remain
 disabled; no production deployment or data migration occurred.
