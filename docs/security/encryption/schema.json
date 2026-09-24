@@ -4679,6 +4679,11 @@
         "type": "uuid[]",
         "nullable": false,
         "generated": false
+      },
+      "sso_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -9682,6 +9687,24 @@
     "foreignKeys": []
   },
   "numo_surface_destination_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "feedback_sso_encryption_scope": {
     "columns": {
       "id": {
         "type": "boolean",

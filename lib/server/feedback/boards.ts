@@ -2,24 +2,22 @@ import "server-only";
 
 import { randomBytes } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
-import { afterOrNow } from "@/lib/server/after-safe";
 import {
   encryptBoardSsoSecret,
-  isSsoCryptoConfigured,
-  readBoardSsoSecret,
 } from "@/lib/server/feedback/sso-crypto";
+import { decodeBoardSso, encodeBoardSso,
+  shouldProtectBoardSso } from "@/lib/server/feedback/board-sso-content";
 
 /**
- * Feedback boards (MIN-37). One board per project, opt-in. The token is the
- * capability of the public URL (/f/<token>), stored in plaintext like the shared
- * views (it must be redisplayable). enabled=false = the public page 404
+ * Feedback boards (MIN-37). One board per project, opt-in. The public URL
+ * token (/f/<token>) is a capability and remains readable for routing.
+ * enabled=false = the public page 404
  * but the collection (API + internal + AI) continues. feedback_boards is RLS
  * deny-all: everything goes through customer service, access checks on the road side.
  *
- * The SSO secret is encrypted at rest (MIN-119): this module is the ONLY
- * place that sees it pass, and it always returns plaintext to its callers —
- * `hydrateBoard` decrypts reads, and the secret writers encrypt before storage.
- * So no caller has to know that the column carries an envelope.
+ * The SSO secret is encrypted at rest and decrypted only for authorized
+ * callers. Legacy environment-key envelopes remain readable during the
+ * bounded migration to project-bound content keys.
  */
 
 export interface FeedbackBoardRow {
@@ -68,32 +66,14 @@ export interface PublicBoardContext {
 /**
  * Returns the line as the rest of the code expects: `sso_secret` in plaintext.
  *
- * A secret still in plaintext in the base (board before MIN-119) is resealed at the
- * passage, after the response. `afterOrNow` and not a detached `void`: reading
- * of a board is done in full rendering of the page, and a detached promise would die
- * when the invocation is frozen — the secret would never be encrypted, without saying anything.
+ * Historical environment-key envelopes and plaintext rows remain readable
+ * until the dedicated CAS migration has converted them.
  */
-function hydrateBoard(row: FeedbackBoardRow | null): FeedbackBoardRow | null {
+async function hydrateBoard(row: FeedbackBoardRow | null):
+  Promise<FeedbackBoardRow | null> {
   if (!row) return null;
-  const { plain, legacy } = readBoardSsoSecret(row.sso_secret);
-
-  if (legacy && plain && isSsoCryptoConfigured()) {
-    const sealed = encryptBoardSsoSecret(plain);
-    afterOrNow(async () => {
-      const { error } = await getServiceClient()
-        .from("feedback_boards")
-        .update({ sso_secret: sealed })
-        .eq("id", row.id)
-        // Anti-crush guard: if a rotation has passed between reading and
-        // ce rescellement, on ne remet pas l'ancien secret en place.
-        .eq("sso_secret", row.sso_secret as string);
-      if (error) {
-        console.error("[feedback-boards] sso reseal failed:", error.message);
-      }
-    });
-  }
-
-  return { ...row, sso_secret: plain };
+  return { ...row, sso_secret: await decodeBoardSso(row.project_id,
+    row.id, row.sso_secret) };
 }
 
 /** Public token resolution. Do NOT filter on enabled: the page decides
@@ -151,7 +131,7 @@ export async function getBoardWithSsoSecretByToken(
   if (!project) return null;
 
   return {
-    board: hydrateBoard(board as FeedbackBoardRow) as FeedbackBoardRow,
+    board: await hydrateBoard(board as FeedbackBoardRow) as FeedbackBoardRow,
     project: project as PublicBoardContext["project"],
   };
 }
@@ -342,8 +322,18 @@ async function writeSsoSecret(
   const secret = "fbsso_" + randomBytes(24).toString("base64url");
 
   let sealed: string;
+  let boardId: string | null = null;
+  let protectedSecret = false;
   try {
-    sealed = encryptBoardSsoSecret(secret);
+    const service = getServiceClient();
+    protectedSecret = await shouldProtectBoardSso(service);
+    if (protectedSecret) {
+      const board = await service.from("feedback_boards").select("id")
+        .eq("project_id", projectId).maybeSingle();
+      if (board.error || !board.data?.id) return null;
+      boardId = board.data.id as string;
+      sealed = await encodeBoardSso(projectId, boardId, secret);
+    } else sealed = encryptBoardSsoSecret(secret);
   } catch (err) {
     console.error(
       `[feedback-boards] sso rotate refused: ${
@@ -353,20 +343,23 @@ async function writeSsoSecret(
     return null;
   }
 
-  const { data, error } = await getServiceClient().rpc(
-    "write_feedback_sso_secret",
-    {
-      p_project_id: projectId,
-      p_sso_secret: sealed,
-      p_only_if_absent: onlyIfAbsent,
-    }
-  );
+  const { data, error } = protectedSecret
+    ? await getServiceClient().rpc("write_feedback_sso_secret_protected", {
+        p_project_id: projectId, p_board_id: boardId,
+        p_sso_secret: sealed, p_only_if_absent: onlyIfAbsent,
+      })
+    : await getServiceClient().rpc("write_feedback_sso_secret", {
+        p_project_id: projectId, p_sso_secret: sealed,
+        p_only_if_absent: onlyIfAbsent,
+      });
   if (error) {
     console.error("[feedback-boards] serialized SSO write failed:", error.message);
     return null;
   }
   if (typeof data !== "string") return null;
-  return readBoardSsoSecret(data).plain;
+  return protectedSecret && boardId
+    ? decodeBoardSso(projectId, boardId, data)
+    : decodeBoardSso(projectId, "legacy", data);
 }
 
 /** Rotate the SSO secret while holding the board row lock in PostgreSQL. */

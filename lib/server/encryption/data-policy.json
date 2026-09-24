@@ -1331,7 +1331,8 @@
       ],
       "timestamp": [
         "created_at",
-        "updated_at"
+        "updated_at",
+        "sso_encryption_checked_at"
       ]
     }
   },
@@ -3683,6 +3684,20 @@
     }
   },
   "numo_surface_destination_encryption_scope": {
+    "scope": {
+      "kind": "system"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "feedback_sso_encryption_scope": {
     "scope": {
       "kind": "system"
     },

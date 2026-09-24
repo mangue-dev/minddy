@@ -1237,6 +1237,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_feedback_sso_secret()": {
+      "sha256": "dec233b16c8d5479fecaadab4f4a4dc2c9098febf0515f927ebc224a95fbbc56",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "feedback_sso_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "lock_mfa_amr_epoch_delete()": {
       "sha256": "c757bbeb717a29897ec25dbeecb1e13fc45ca4b71efeda47c3fe2511c428e86e",
       "securityDefiner": true,
@@ -3641,6 +3654,21 @@
         "current_realtime_topic"
       ]
     },
+    "migrate_feedback_sso_secret(uuid,text,text)": {
+      "sha256": "8fd614a6c9dd63ae38448ae402dac546e8981e9a946a57a34ad72ca8f900fe2b",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "feedback_boards"
+      ],
+      "protectedRelations": [
+        "feedback_boards"
+      ],
+      "functionReferences": []
+    },
     "migrate_numo_worker_event(uuid,jsonb,jsonb)": {
       "sha256": "94d5eee79a00bff3a10fe9bbbd2359f52103ced616da6d85cb27b9e3bdb5a3f5",
       "securityDefiner": true,
@@ -4544,6 +4572,21 @@
         "projects",
         "page_files",
         "attachments"
+      ],
+      "functionReferences": []
+    },
+    "write_feedback_sso_secret_protected(uuid,uuid,text,boolean)": {
+      "sha256": "4a06a9823bd5d5e6d5ff19ca5051a7aa94ee7237bad120eb4025d0659fe63ecd",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "feedback_boards"
+      ],
+      "protectedRelations": [
+        "feedback_boards"
       ],
       "functionReferences": []
     },
@@ -5995,6 +6038,10 @@
     "comments.comments_validate_parent_scope": {
       "function": "validate_comment_parent_scope()",
       "definition": "CREATE TRIGGER comments_validate_parent_scope BEFORE INSERT OR UPDATE ON comments FOR EACH ROW EXECUTE FUNCTION validate_comment_parent_scope()"
+    },
+    "feedback_boards.feedback_sso_root_guard": {
+      "function": "guard_feedback_sso_secret()",
+      "definition": "CREATE TRIGGER feedback_sso_root_guard BEFORE INSERT OR UPDATE ON feedback_boards FOR EACH ROW EXECUTE FUNCTION guard_feedback_sso_secret()"
     },
     "feedback_posts.feedback_posts_broadcast": {
       "function": "broadcast_feedback_post()",

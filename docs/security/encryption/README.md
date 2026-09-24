@@ -6,7 +6,7 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 145 application tables and 1,390 columns, their primary
+- `schema.json` records 146 application tables and 1,393 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 187 encryption targets include the original content,
@@ -18,7 +18,7 @@ production migration on the strength of crypto unit tests or this inventory.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 354 functions, ten views and 193 triggers. Function
+- `sql-consumers.json` records 357 functions, ten views and 194 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -92,7 +92,7 @@ must be checked separately.
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
 | Forge data | Resolve ownership of repository data shared by several projects. Private repository names currently participate in primary/unique keys and lookup paths; introduce opaque/indexed identities before encrypting them. The generic row codec deliberately refuses sensitive primary keys. |
 | Files and images | Attachment and page-file server paths, opaque names, ciphertext bytes and metadata are implemented below; private project icons and any remaining object copies still need conversion. Public avatars have an explicit public-use exception. |
-| Feedback and sharing | Feedback posts, private visitor identities and recoverable share tokens have repository and migration checkpoints below. Remaining board copies still need conversion; owner dialogs must retain access to share URLs. |
+| Feedback and sharing | Feedback posts, private visitor identities, board SSO secrets and recoverable share tokens have repository and migration checkpoints below. Remaining feedback copies still need conversion; owner dialogs must retain access to share URLs. |
 | Credentials and configuration | Migrate legacy environment-key envelopes and secret/configuration stores to the agreed protected boundary; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
 | Migration and recovery | Add restartable batches for every target and object, compare-and-swap against concurrent edits, verification counters, rejection of obsolete writers, a restoration rehearsal and retention of historical wrapped keys. Test mixed plaintext/encrypted tenants and old versions. |
 | Root key and operations | Provision a dedicated root key outside the database and rehearse key backup and restore. The offline root-key rewrap procedure is implemented and tested on isolated PostgreSQL; production rehearsal and application-scale latency remain. Production deployment and migration require a later explicit deployment request. |
@@ -1288,3 +1288,19 @@ PostgreSQL restore loads events before threads and conversations in independent
 batches, reads two key versions with cold caches and rejects a wrong root.
 Other Numo operation, message and conversation content in the remaining-work
 table still needs conversion. No production flag was enabled.
+
+## Feedback SSO root-key checkpoint — 25 September 2026
+
+`feedback_boards.sso_secret` now uses the project's content key and authenticated
+board identity for new writes behind the feedback SSO and global content flags.
+The owner and public SSO readers support both new ciphertext and the older
+environment-key envelope until migration. The locked protected RPC preserves
+only-if-absent initialization, checks the board identity and returns the
+current secret on a replay. A bounded CAS worker converts plaintext and old
+environment-key envelopes, verifies the replacement and rotates old project
+key versions. The SQL regression checks CAS, locked initialization and refusal
+of the old writer after activation. An isolated PostgreSQL restore loads board
+rows before parents in independent batches, recovers two project-key versions
+with cold caches and rejects a wrong root. Keep the old environment secret
+available until verification shows every legacy board has migrated. Production
+flags remain disabled; other configuration stores remain open.

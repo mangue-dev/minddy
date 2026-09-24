@@ -5152,6 +5152,20 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/feedback-sso-backfill.ts",
+    "operation": "from",
+    "resource": "feedback_boards",
+    "line": 20,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/feedback-sso-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_feedback_sso_secret",
+    "line": 49,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/forge-relay-audit-backfill.ts",
     "operation": "from",
     "resource": "forge_relay_audit",
@@ -5551,143 +5565,157 @@
     "storage": false
   },
   {
-    "file": "lib/server/feedback/boards.ts",
+    "file": "lib/server/feedback/board-sso-content.ts",
     "operation": "from",
-    "resource": "feedback_boards",
-    "line": 83,
+    "resource": "feedback_sso_encryption_scope",
+    "line": 25,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 104,
+    "line": 84,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 111,
+    "line": 91,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 138,
+    "line": 118,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 145,
+    "line": 125,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 163,
+    "line": 143,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 173,
+    "line": 153,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 191,
+    "line": 171,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 199,
+    "line": 179,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 217,
+    "line": 197,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 230,
+    "line": 210,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 243,
+    "line": 223,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 256,
+    "line": 236,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 269,
+    "line": 249,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 282,
+    "line": 262,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 300,
+    "line": 280,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 309,
+    "line": 289,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 319,
+    "line": 299,
+    "storage": false
+  },
+  {
+    "file": "lib/server/feedback/boards.ts",
+    "operation": "from",
+    "resource": "feedback_boards",
+    "line": 331,
+    "storage": false
+  },
+  {
+    "file": "lib/server/feedback/boards.ts",
+    "operation": "rpc",
+    "resource": "write_feedback_sso_secret_protected",
+    "line": 347,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "rpc",
     "resource": "write_feedback_sso_secret",
-    "line": 356,
+    "line": 351,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "rpc",
     "resource": "write_feedback_sso_secret",
-    "line": 385,
+    "line": 378,
     "storage": false
   },
   {
@@ -7913,70 +7941,70 @@
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "numo_surface_threads",
-    "line": 70,
+    "line": 71,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 93,
+    "line": 94,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "numo_surface_threads",
-    "line": 106,
+    "line": 107,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 121,
+    "line": 122,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 142,
+    "line": 143,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 158,
+    "line": 159,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 175,
+    "line": 176,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 187,
+    "line": 188,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 198,
+    "line": 199,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 220,
+    "line": 221,
     "storage": false
   },
   {
@@ -7990,42 +8018,42 @@
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 60,
+    "line": 72,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 79,
+    "line": 91,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 168,
+    "line": 182,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 186,
+    "line": 200,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 226,
+    "line": 240,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 267,
+    "line": 281,
     "storage": false
   },
   {

@@ -3211,4 +3211,90 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       }
     }
   }, 60_000);
+
+  it("restores project-bound feedback SSO secrets across key versions", async () => {
+    const suffix = randomUUID().replaceAll("-", "");
+    const source = `minddy_min591_sso_${suffix}`;
+    const restored = `minddy_min591_sso_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID();
+    const projects = [randomUUID(), randomUUID()];
+    const boards = [randomUUID(), randomUUID()];
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(attachmentTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${attachmentTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key) VALUES
+          (${quote(projects[0])},${quote(actor)},'SSO One','SSO1'),
+          (${quote(projects[1])},${quote(actor)},'SSO Two','SSO2');`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      for (const [index, boardId] of boards.entries()) {
+        const scope: EncryptionScope = { kind: "project", id: projects[index] };
+        if (index) {
+          const key = await keys.current(scope);
+          key.bytes.fill(0);
+          await keys.rotate(scope, 1);
+        }
+        const secret = `fbsso_private_secret_${index + 1}`;
+        const cipher = await store.encrypt(secret, { scope,
+          table: "feedback_boards", column: "sso_secret", rowId: boardId });
+        const stored = `mdyb3:${store.versionOf(cipher)}:${Buffer.from(cipher)
+          .toString("base64url")}`;
+        sql(source, `INSERT INTO public.feedback_boards(id,project_id,token,
+          sso_secret) VALUES(${quote(boardId)},${quote(projects[index])},
+          ${quote(`board-token-${index}`)},${quote(stored)});`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["auth.users", "public.projects",
+          "public.envelope_data_keys", "public.feedback_sso_encryption_scope",
+          "public.feedback_boards"].map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("fbsso_private_secret_");
+      const match = dump.match(/(COPY public\.feedback_boards[^\n]*\n)([\s\S]*?)(\\\.\n)/);
+      expect(match).not.toBeNull();
+      const dependencies = dump.replace(match![0], "");
+      for (const line of match![2].trimEnd().split("\n").reverse()) {
+        sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${match![1]}${line}\n${match![3]}COMMIT;`);
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${dependencies}\nCOMMIT;`);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(root)));
+      for (const [index, boardId] of boards.entries()) {
+        const value = sql(restored, `SELECT sso_secret FROM public.feedback_boards
+          WHERE id=${quote(boardId)};`);
+        expect(value).toMatch(new RegExp(`^mdyb3:${index + 1}:`));
+        const scope: EncryptionScope = { kind: "project", id: projects[index] };
+        const cipher = cold.fromDatabase<string>(Buffer.from(value.split(":")[2],
+          "base64url").toString("utf8"));
+        expect(await cold.decrypt(cipher, { scope, table: "feedback_boards",
+          column: "sso_secret", rowId: boardId }))
+          .toBe(`fbsso_private_secret_${index + 1}`);
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const value = sql(restored, `SELECT sso_secret FROM public.feedback_boards
+        WHERE id=${quote(boards[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase<string>(Buffer.from(
+        value.split(":")[2], "base64url").toString("utf8")), {
+        scope: { kind: "project", id: projects[0] }, table: "feedback_boards",
+        column: "sso_secret", rowId: boards[0],
+      })).rejects.toThrow();
+      expect(() => sql(restored, `SELECT public.write_feedback_sso_secret(
+        ${quote(projects[0])},'old-writer-secret',false);`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
 });
