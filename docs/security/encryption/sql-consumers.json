@@ -1818,6 +1818,22 @@
       ],
       "functionReferences": []
     },
+    "guard_agent_journal_encryption()": {
+      "sha256": "fdcf9c4a0e2412fa28959cf36ef9c6d2b627eb356c1395eaa5bec5deae20173e",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "agent_journal_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_runs"
+      ],
+      "functionReferences": []
+    },
     "guard_feedback_post_encryption()": {
       "sha256": "c3d25f3dddc47f3f98d9797558600ecadcbdd964d29d14d302f98ee11b1c2526",
       "securityDefiner": true,
@@ -2153,6 +2169,21 @@
       "functionReferences": [
         "can_access_comment_parent"
       ]
+    },
+    "guard_agent_journal_parent_scope()": {
+      "sha256": "a71b1d52bf1afc2c7b4dc0c96204addae8ea875e74536a7d759615e8956c369e",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_run_journal"
+      ],
+      "protectedRelations": [
+        "agent_run_journal"
+      ],
+      "functionReferences": []
     },
     "guard_live_page_comment_mutation()": {
       "sha256": "4bc59016a8e3630e65ffb38dceda5180312ec91d1cffbaa1938674592974c9bc",
@@ -3081,6 +3112,21 @@
       ],
       "functionReferences": []
     },
+    "agent_journal_legacy_batch_exists(uuid,text,jsonb)": {
+      "sha256": "8f2ffe4f935372ebd8bf7bca6f992952058d1bf1325c519a19b44df4be584d41",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_run_journal"
+      ],
+      "protectedRelations": [
+        "agent_run_journal"
+      ],
+      "functionReferences": []
+    },
     "apply_forge_relay_link_snapshot(uuid,bigint,jsonb)": {
       "sha256": "5f29b483bd54444e73d370b16fa9c7ad6bf6ff97a5bae07bc7ffadf649f609b5",
       "securityDefiner": true,
@@ -3914,6 +3960,21 @@
       ],
       "functionReferences": []
     },
+    "migrate_agent_journal_ciphertext(bigint,uuid,integer,text,text,integer,integer,integer,integer)": {
+      "sha256": "ad57dd895b83974863476421553fca8db673e86d4926227cf9b30cc727197228",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_run_journal"
+      ],
+      "protectedRelations": [
+        "agent_run_journal"
+      ],
+      "functionReferences": []
+    },
     "consume_feedback_voice_attempt(uuid,uuid,text,text,timestamp with time zone,integer,integer,integer)": {
       "sha256": "2bc73250709f8c0c66a1a988d175300c5e574bcdd23c1690cae7eebfd1616fba",
       "securityDefiner": true,
@@ -4333,6 +4394,10 @@
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER user_ai_keys_set_updated_at BEFORE UPDATE ON user_ai_keys FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
+    "agent_runs.agent_runs_journal_scope_guard": {
+      "function": "guard_agent_journal_parent_scope()",
+      "definition": "CREATE TRIGGER agent_runs_journal_scope_guard BEFORE UPDATE OF project_id ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_journal_parent_scope()"
+    },
     "issue_relations.issue_relations_broadcast": {
       "function": "broadcast_project_scoped()",
       "definition": "CREATE TRIGGER issue_relations_broadcast AFTER INSERT OR DELETE OR UPDATE ON issue_relations FOR EACH ROW EXECUTE FUNCTION broadcast_project_scoped()"
@@ -4516,6 +4581,10 @@
     "project_members.project_members_authority_rekey": {
       "function": "rekey_project_realtime_membership()",
       "definition": "CREATE TRIGGER project_members_authority_rekey AFTER INSERT OR DELETE OR UPDATE ON project_members FOR EACH ROW EXECUTE FUNCTION rekey_project_realtime_membership()"
+    },
+    "agent_run_journal.agent_journal_encryption_guard": {
+      "function": "guard_agent_journal_encryption()",
+      "definition": "CREATE TRIGGER agent_journal_encryption_guard BEFORE INSERT OR UPDATE ON agent_run_journal FOR EACH ROW EXECUTE FUNCTION guard_agent_journal_encryption()"
     },
     "project_members.project_members_auth_insert_lock": {
       "function": "lock_project_member_auth_insert()",

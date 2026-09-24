@@ -36,10 +36,12 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import type { AssistantMention } from "@/lib/assistant-types";
 import type { AgentUserMessage } from "@/lib/agent-mentions";
 import {
-  decodeRunJournalRow,
-  encodeRunJournal,
-  type StoredRunJournalRow,
-} from "./run-journal-codec";
+  decodeJournal,
+  encryptJournal,
+  journalEncodedRow,
+  journalProject,
+  shouldEncryptJournal,
+} from "./encrypted-journal";
 
 /**
  * Data access to code agent runs (MIN-46): creation, CAS claim,
@@ -2177,19 +2179,29 @@ export async function appendRunJournal(
   events: Record<string, unknown>[],
 ): Promise<void> {
   if (!sessionId || events.length === 0) return;
-  const encoded = encodeRunJournal(stripUnstorable(events));
+  const sanitized = stripUnstorable(events);
+  const encoded = journalEncodedRow(runId, sessionId, sanitized);
   const service = getServiceClient();
-  const { error } = await service.from("agent_run_journal").insert({
-    run_id: runId,
-    session_id: sessionId,
-    events: null,
-    payload: encoded.payload,
-    payload_encoding: encoded.encoding,
-    payload_sha256: encoded.sha256,
-    event_count: encoded.eventCount,
-    payload_bytes: encoded.payloadBytes,
-    stored_bytes: encoded.storedBytes,
-  });
+  const projectId = await journalProject(runId);
+  const encrypt = await shouldEncryptJournal(projectId);
+  if (encrypt) {
+    const legacy = await service.from("agent_run_journal").select("id")
+      .eq("run_id", runId).eq("session_id", sessionId)
+      .eq("payload_sha256", encoded.payload_sha256)
+      .eq("encryption_version", 0).maybeSingle();
+    if (legacy.error) throw new Error("Unable to check agent journal retry");
+    if (legacy.data) return;
+    const oldJson = await service.rpc("agent_journal_legacy_batch_exists", {
+      p_run_id: runId, p_session_id: sessionId, p_events: sanitized,
+    });
+    if (oldJson.error) throw new Error("Unable to check legacy agent journal retry");
+    if (oldJson.data) return;
+  }
+  const stored = encrypt
+    ? await encryptJournal(projectId, { ...encoded, id: 0 })
+    : encoded;
+  const { id: _unused, ...insert } = stored as typeof stored & { id?: number };
+  const { error } = await service.from("agent_run_journal").insert(insert as never);
   if (error && error.code !== JOURNAL_DUPLICATE) {
     throw new Error(`agent_run_journal insert failed: ${error.message}`);
   }
@@ -2209,6 +2221,13 @@ export async function loadRunJournal(
 ): Promise<Record<string, unknown>[] | null> {
   if (!sessionId) return null;
   const service = getServiceClient();
+  let projectId: string;
+  try {
+    projectId = await journalProject(runId);
+  } catch {
+    console.error("[agent-runs] loadRunJournal failed: unable to resolve run");
+    return null;
+  }
   const events: Record<string, unknown>[] = [];
   let afterId = 0;
   let payloadBytes = 0;
@@ -2217,7 +2236,7 @@ export async function loadRunJournal(
     const { data, error } = await service
       .from("agent_run_journal")
       .select(
-        "id,events,payload,payload_encoding,payload_sha256,payload_bytes,event_count,stored_bytes",
+        "id,run_id,session_id,events,payload,payload_encoding,payload_sha256,payload_bytes,event_count,stored_bytes,encryption_version",
       )
       .eq("run_id", runId)
       .eq("session_id", sessionId)
@@ -2238,12 +2257,12 @@ export async function loadRunJournal(
     }
 
     try {
-      const row = data as StoredRunJournalRow & { id: number | string };
+      const row = data as Parameters<typeof decodeJournal>[1];
       const nextId = Number(row.id);
       if (!Number.isSafeInteger(nextId) || nextId <= afterId) {
         throw new Error("agent journal row has an invalid cursor");
       }
-      const decoded = decodeRunJournalRow(row);
+      const decoded = await decodeJournal(projectId, row);
       payloadBytes += decoded.payloadBytes;
       if (payloadBytes > RUN_JOURNAL_REPLAY_MAX_BYTES) {
         console.warn(

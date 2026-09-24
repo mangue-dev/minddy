@@ -6,16 +6,16 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 116 application tables and 1,242 columns, their primary
+- `schema.json` records 118 application tables and 1,252 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
-  column exactly once. Its 188 encryption targets include the original content,
+  column exactly once. Its 187 encryption targets include the original content,
   derived copies, arbitrary user JSON, private identities, credentials and share
   tokens. This is a target policy, not evidence that those columns are encrypted.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 247 functions, ten views and 135 triggers. Function
+- `sql-consumers.json` records 255 functions, ten views and 138 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -81,7 +81,7 @@ must be checked separately.
 | Surface | Required work and proof of completion |
 | --- | --- |
 | Projects, issues, pages and views | Convert every server repository read/write and all imports, exports, MCP and AI consumers; add ciphertext/version storage and reject older plaintext writers. Preserve access checks before decryption and existing concurrency semantics. Objectives and category names now have converted repositories and bounded migrations; they still need representative staging validation before activation. |
-| Histories and derived copies | Page versions, issue events and statistics now have converted repositories and migration. Assistant/agent conversations, checkpoints, messages, journals, tool arguments/results and surface projections remain to be converted with their source rows. |
+| Histories and derived copies | Page versions, issue events, statistics and durable agent replay journals now have converted repositories and migration. Assistant/agent conversations, other checkpoints, messages, run events, tool arguments/results and surface projections remain to be converted with their source rows. |
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
 | Forge data | Resolve ownership of repository data shared by several projects. Private repository names currently participate in primary/unique keys and lookup paths; introduce opaque/indexed identities before encrypting them. The generic row codec deliberately refuses sensitive primary keys. |
@@ -535,16 +535,66 @@ content or sensitive related data in clear form:
 
 | Path | Remaining work |
 | --- | --- |
-| Agent state | `agent_runs.title/prompt/checkpoint` and related delegation fields, `agent_conversations.title`, messages, journals and tool results still persist readable content. The launch title generator can summarize an issue into these rows. Convert this agent boundary, its SQL title-sync trigger, reads, Realtime and historical rows together. |
+| Agent state | `agent_runs.title/prompt/checkpoint` and related delegation fields, `agent_conversations.title`, messages, run events and tool results still persist readable content. Durable OpenCode replay batches in `agent_run_journal` now have a separately gated encrypted path. The launch title generator can summarize an issue into the remaining clear rows. Convert the rest of the agent boundary, its SQL title-sync trigger, reads, Realtime and historical rows together. |
 | Forge and external delivery | `pull_requests.title`, branch/repository names and URLs, GitHub issue metadata/sidecars and forge relay payloads remain clear in the application database. GitHub/GitLab issue synchronization, PR publication, webhooks, push and downloaded exports deliberately disclose content to their recipients or providers; review authorization, retention and provider controls for each destination. |
 | Resources and objects | Issue attachment URLs, filenames, storage paths and file bytes remain clear. Direct upload/download, AI resource reads, account exports/imports, copy and orphan cleanup still need an authorized opaque-path object transport, migration and restore. MIME and size are currently classified as operational metadata. |
 | Search and SQL | Application issue search reads through the repository, but representative latency and key/cache load are unmeasured. The SQL consumer inventory is a candidate list, not proof that every function or RPC has a safe content flow. |
-| Recovery and rollout | The seven-node fixture exercises the schema's supported one-level parent hierarchy only. `pg_dump` warns about self-referential issue foreign keys in data-only restores; a full application restore with arbitrary row order, all linked tables and objects remains unverified. No representative staging database or staging credentials were available in this session. |
+| Recovery and rollout | The seven-node fixture exercises the schema's supported one-level parent hierarchy with issue COPY rows deliberately reversed so children precede parents. PostgreSQL restores and decrypts them, but `pg_dump` still warns about self-referential foreign keys in data-only restores. A full application restore with every linked table and object remains unverified. No representative staging database or staging credentials were available in this session. |
 
 The source flag and global content flag remain disabled in production. This
-follow-up does not convert agent, forge, object or page sources, and is not an
+follow-up does not convert the remaining agent, forge, object or page sources, and is not an
 issue-domain completion claim. Feedback visitor identities, pending OTP email
 and feedback objects remain clear. No production data was migrated or deployed.
+
+## Durable agent journal tranche — 24 September 2026
+
+`agent_run_journal` is the first converted agent storage boundary. The server
+resolves the owning run's project before encrypting an OpenCode replay batch.
+Its gzip payload and original SHA-256 digest are authenticated inside a
+project-key envelope bound to the run ID, session ID and stored lookup value.
+The database stores a project-keyed HMAC for idempotent batch retries; the
+blind-index key is independent of the content key and is not rotated by the
+content-key scheduler. It must not be rotated without a coordinated lookup
+rewrite of every stored journal row. Existing compressed and JSON retries are
+checked before an encrypted insert. The first legacy JSON batch receives the
+normal keyed lookup; identical historical duplicates receive a row-specific
+lookup during migration so both the retry identity and the replay sequence
+remain intact.
+
+`loadRunJournal` reads the project scope from the run and decrypts before
+bounded replay. Tampered rows or missing keys abandon automatic replay rather
+than sending an incomplete session. The journal has no Realtime publication or
+content broadcast; the SQL regression verifies that fact. A project-specific
+marker rejects old plaintext inserts after the first encrypted batch. Direct
+client mutations are revoked. Moving a parent run to another project after it
+has journal rows is rejected so the ciphertext scope cannot silently change.
+The hourly worker processes at most five rows per
+pass, verifies plaintext equality before a version-checked replacement, and
+revisits old envelope or content-key versions. The journal has no content search.
+
+The isolated SQL regression passes state, stale-writer, CAS, privileges and
+Realtime checks. Unit tests cover protected append/replay data, scope tampering,
+legacy duplicate identities and key rotation. A real PostgreSQL dump/restore
+recovers two encrypted batches across two project-key versions, with both
+content and blind-index keys, cold caches and wrong-root rejection. The issue
+restore fixture now deliberately reverses its COPY rows; children are restored
+before parents within Minddy's enforced one-level hierarchy. This is still not
+a full application/object recovery rehearsal.
+
+The next agent boundary is the run event/message pair:
+`agent_run_events.payload` is copied by the SQL
+`capture_agent_assistant_message` trigger into
+`agent_messages.content`. Its API and delegation readers now share a
+project-bound event query which fails on storage errors; this is only the
+first read-side step and the payload and trigger copy are still plaintext.
+Those paths, conversation/run titles, prompts,
+checkpoints, queued messages and input requests remain in clear form. The
+journal tranche therefore does not close the issue boundary. No staging
+connection or representative staging data was available: the local database is
+a schema-only clone populated with small fixtures. Issue search latency and
+project key/cache load cannot be inferred from those fixtures and remain
+unmeasured. Both production encryption flags and the new journal flag remain
+disabled; no production deployment or data migration occurred.
 
 ## Root-key setup and recovery
 

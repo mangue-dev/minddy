@@ -3,8 +3,9 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { ManagedDataKeys, type KeyRegistry, type WrappedDataKey } from "./keys";
 import { LocalKeyWrapper } from "./local-key-wrapper";
-import { EncryptedStore, type EncryptionScope } from "./store";
+import { EncryptedStore, blindIndex, type EncryptionScope } from "./store";
 import { EncryptedRowCodec, type StoredRow } from "./row-codec";
+import { decodeRunJournalRow, encodeRunJournal } from "@/lib/server/agent/run-journal-codec";
 import { buildRootSwapSql, parseRegistryOutput, planRootRewrap } from "@/scripts/rewrap-data-root.mjs";
 
 const enabled = process.env.MINDDY_ENCRYPTION_DB_TEST === "true";
@@ -15,6 +16,7 @@ const categoryTemplate = "minddy_min591_category_audit";
 const draftTemplate = "minddy_min591_draft_audit";
 const feedbackTemplate = "minddy_min591_feedback_audit";
 const issueTemplate = "minddy_min591_issue_audit";
+const journalTemplate = "minddy_min591_journal_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -23,13 +25,13 @@ function sql(database: string, statement: string): string {
   }).trim();
 }
 
-function wrapper(root: Buffer): LocalKeyWrapper {
+function wrapper(root: Buffer, purpose: "content" | "blind_index" = "content"): LocalKeyWrapper {
   vi.stubEnv("MINDDY_DATA_ROOT_KEY", root.toString("hex"));
-  return new LocalKeyWrapper();
+  return new LocalKeyWrapper(purpose);
 }
 
-function registry(database: string): KeyRegistry {
-  const predicate = (scope: EncryptionScope) => `scope_kind=${quote(scope.kind)} AND scope_id=${quote(scope.id)} AND purpose='content'`;
+function registry(database: string, purpose: "content" | "blind_index" = "content"): KeyRegistry {
+  const predicate = (scope: EncryptionScope) => `scope_kind=${quote(scope.kind)} AND scope_id=${quote(scope.id)} AND purpose=${quote(purpose)}`;
   const record = (raw: string, scope: EncryptionScope): WrappedDataKey | null => {
     if (!raw) return null;
     const row = JSON.parse(raw);
@@ -43,10 +45,10 @@ function registry(database: string): KeyRegistry {
       return record(sql(database, `SELECT row_to_json(k) FROM public.envelope_data_keys k WHERE ${predicate(scope)} AND version=${version};`), scope);
     },
     async insertFirst(key) {
-      return record(sql(database, `SELECT row_to_json(k) FROM public.create_envelope_data_key_if_absent(${quote(key.scope.kind)},${quote(key.scope.id)},'content',${quote(Buffer.from(key.wrappedKey).toString("base64"))}) k;`), key.scope)!;
+      return record(sql(database, `SELECT row_to_json(k) FROM public.create_envelope_data_key_if_absent(${quote(key.scope.kind)},${quote(key.scope.id)},${quote(purpose)},${quote(Buffer.from(key.wrappedKey).toString("base64"))}) k;`), key.scope)!;
     },
     async rotate(key, expected) {
-      return sql(database, `SELECT public.rotate_envelope_data_key(${quote(key.scope.kind)},${quote(key.scope.id)},'content',${expected},${quote(Buffer.from(key.wrappedKey).toString("base64"))});`) === "t";
+      return sql(database, `SELECT public.rotate_envelope_data_key(${quote(key.scope.kind)},${quote(key.scope.id)},${quote(purpose)},${expected},${quote(Buffer.from(key.wrappedKey).toString("base64"))});`) === "t";
     },
   };
 }
@@ -478,6 +480,7 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
     const root = randomBytes(32);
     const actor = randomUUID(), project = randomUUID();
     const firstRoot = randomUUID(), secondRoot = randomUUID();
+    const children = Array.from({ length: 5 }, () => randomUUID());
     const scope: EncryptionScope = { kind: "project", id: project };
     const log = vi.spyOn(console, "info").mockImplementation(() => {});
     try {
@@ -493,12 +496,12 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       const codec = new EncryptedRowCodec(new EncryptedStore(keys));
       const tree = [
         { number: 1, id: firstRoot, parent: null, keyVersion: 1 },
-        { number: 2, id: randomUUID(), parent: firstRoot, keyVersion: 1 },
-        { number: 3, id: randomUUID(), parent: firstRoot, keyVersion: 1 },
+        { number: 2, id: children[0], parent: firstRoot, keyVersion: 1 },
+        { number: 3, id: children[1], parent: firstRoot, keyVersion: 1 },
         { number: 4, id: secondRoot, parent: null, keyVersion: 2 },
-        { number: 5, id: randomUUID(), parent: firstRoot, keyVersion: 2 },
-        { number: 6, id: randomUUID(), parent: secondRoot, keyVersion: 2 },
-        { number: 7, id: randomUUID(), parent: secondRoot, keyVersion: 2 },
+        { number: 5, id: children[2], parent: firstRoot, keyVersion: 2 },
+        { number: 6, id: children[3], parent: secondRoot, keyVersion: 2 },
+        { number: 7, id: children[4], parent: secondRoot, keyVersion: 2 },
       ];
       for (const { number, id, parent, keyVersion } of tree) {
         if (number === 4) await keys.rotate(scope, 1);
@@ -519,7 +522,18 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
           .map((table) => `--table=${table}`)], { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
       for (const secret of ["Private issue", "Private description", "Private plan",
         "Private prompt", "example.test/private"]) expect(dump).not.toContain(secret);
-      sql(restored, dump);
+      // The data-only dump is a COPY stream. Deliberately reverse its issue
+      // rows so descendants precede ancestors during the restore.
+      let reversed = false;
+      const shuffledDump = dump.replace(
+        /(COPY public\.issues[^\n]*\n)([\s\S]*?)(\\\.\n)/,
+        (_whole, header: string, body: string, footer: string) => {
+          reversed = true;
+          return header + body.trimEnd().split("\n").reverse().join("\n") + "\n" + footer;
+        },
+      );
+      expect(reversed).toBe(true);
+      sql(restored, shuffledDump);
       const rows: StoredRow[] = JSON.parse(sql(restored, "SELECT json_agg(i ORDER BY number) FROM public.issues i;"));
       expect(rows.map((row) => row.encryption_version)).toEqual(tree.map((node) => node.keyVersion));
       expect(rows.map((row) => row.parent_id)).toEqual(tree.map((node) => node.parent));
@@ -535,6 +549,99 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
         new ManagedDataKeys(registry(restored), wrapper(randomBytes(32)))));
       await expect(wrong.decode(rows[0], { table: "issues", scope },
         { actorId: actor, reason: "migration_verification" })).rejects.toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
+
+  it("restores encrypted agent journals with their content and index keys", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_journal_source_${suffix}`;
+    const restored = `minddy_min591_journal_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID();
+    const conversation = randomUUID(), run = randomUUID();
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(journalTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${journalTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Fixture project','JRN');
+        INSERT INTO public.agent_conversations(id,project_id,owner_id)
+          VALUES(${quote(conversation)},${quote(project)},${quote(actor)});
+        INSERT INTO public.agent_runs(id,project_id,conversation_id,created_by)
+          VALUES(${quote(run)},${quote(project)},${quote(conversation)},${quote(actor)});`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const indexKeys = new ManagedDataKeys(registry(source, "blind_index"),
+        wrapper(root, "blind_index"));
+      const store = new EncryptedStore(keys);
+      for (let index = 1; index <= 2; index++) {
+        if (index === 2) await keys.rotate(scope, 1);
+        const encoded = encodeRunJournal([{ seq: index, output: `Private journal ${index}` }]);
+        const searchKey = await indexKeys.current(scope);
+        const digest = blindIndex(encoded.sha256,
+          { scope, table: "agent_run_journal", column: "payload_sha256" }, searchKey.bytes);
+        searchKey.bytes.fill(0);
+        const context = { scope, table: "agent_run_journal", column: "payload",
+          rowId: JSON.stringify([run, "session", digest]) };
+        const ciphertext = await store.encrypt({
+          events: null, payload: encoded.payload, payload_sha256: encoded.sha256,
+        }, context);
+        sql(source, `INSERT INTO public.agent_run_journal(run_id,session_id,events,
+          payload,payload_encoding,payload_sha256,event_count,payload_bytes,
+          stored_bytes,encryption_version) VALUES(
+          ${quote(run)},'session',NULL,${quote(ciphertext)},'encrypted-gzip-json-v1',
+          ${quote(digest)},${encoded.eventCount},${encoded.payloadBytes},
+          ${encoded.storedBytes},${store.versionOf(ciphertext)});`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "supabase_admin",
+        "-d", source, "--data-only", "--no-owner", "--no-privileges",
+        ...["auth.users", "public.projects", "public.agent_conversations",
+          "public.agent_runs", "public.envelope_data_keys",
+          "public.agent_journal_encryption_scopes", "public.agent_run_journal"]
+          .map((table) => `--table=${table}`)], { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("Private journal");
+      expect(dump).not.toContain(root.toString("base64"));
+      sql(restored, dump);
+      const rows = JSON.parse(sql(restored,
+        "SELECT json_agg(j ORDER BY id) FROM public.agent_run_journal j;")) as Array<{
+        run_id: string; session_id: string; payload: string; payload_sha256: string;
+        encryption_version: number; payload_bytes: number; event_count: number;
+      }>;
+      expect(rows.map((row) => row.encryption_version)).toEqual([1, 2]);
+      const restoredKeys = new ManagedDataKeys(registry(restored), wrapper(root));
+      const restoredIndexKeys = new ManagedDataKeys(registry(restored, "blind_index"),
+        wrapper(root, "blind_index"));
+      const restoredStore = new EncryptedStore(restoredKeys);
+      for (const [index, row] of rows.entries()) {
+        const clear = await restoredStore.decrypt(
+          restoredStore.fromDatabase<{ events: null; payload: string; payload_sha256: string }>(row.payload),
+          { scope, table: "agent_run_journal", column: "payload",
+            rowId: JSON.stringify([row.run_id, row.session_id, row.payload_sha256]) });
+        const searchKey = await restoredIndexKeys.current(scope);
+        expect(blindIndex(clear.payload_sha256,
+          { scope, table: "agent_run_journal", column: "payload_sha256" }, searchKey.bytes))
+          .toBe(row.payload_sha256);
+        searchKey.bytes.fill(0);
+        expect(decodeRunJournalRow({
+          payload: clear.payload, payload_encoding: "gzip-json-v1",
+          payload_sha256: clear.payload_sha256, payload_bytes: row.payload_bytes,
+        }).events).toEqual([{ seq: index + 1, output: `Private journal ${index + 1}` }]);
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      await expect(wrong.decrypt(wrong.fromDatabase(rows[0].payload),
+        { scope, table: "agent_run_journal", column: "payload",
+          rowId: JSON.stringify([run, "session", rows[0].payload_sha256]) })).rejects.toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();

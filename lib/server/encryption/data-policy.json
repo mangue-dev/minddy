@@ -135,6 +135,21 @@
       ]
     }
   },
+  "agent_journal_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "agent_messages": {
     "scope": {
       "ancestor": "agent_conversations:conversation_id"
@@ -274,8 +289,7 @@
     },
     "encrypted": [
       "events",
-      "payload",
-      "payload_sha256"
+      "payload"
     ],
     "clear": {
       "bounded_metadata": [
@@ -286,6 +300,9 @@
       "operational_configuration": [
         "payload_encoding"
       ],
+      "one_way_authentication": [
+        "payload_sha256"
+      ],
       "routing_identity": [
         "id",
         "run_id",
@@ -293,6 +310,10 @@
       ],
       "timestamp": [
         "created_at"
+      ],
+      "encryption_metadata": [
+        "encryption_version",
+        "encryption_checked_at"
       ]
     }
   },

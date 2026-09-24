@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { encodeRunJournal } from "./run-journal-codec";
 
@@ -32,7 +32,14 @@ const query = {
     };
   },
 };
-const service = { from: () => query } as unknown as SupabaseClient;
+const runQuery = {
+  select: () => runQuery,
+  eq: () => runQuery,
+  single: async () => ({ data: { project_id: "project-1" }, error: null }),
+};
+const service = {
+  from: (table: string) => table === "agent_runs" ? runQuery : query,
+} as unknown as SupabaseClient;
 
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => service }));
 vi.mock("@/lib/server/notifications", () => ({
@@ -52,12 +59,15 @@ vi.mock("./live", () => ({ broadcastRunEvent: vi.fn() }));
 const { appendRunJournal, loadRunJournal } = await import("./runs");
 
 beforeEach(() => {
+  vi.stubEnv("MINDDY_DATA_ROOT_KEY", "");
+  vi.stubEnv("MINDDY_AGENT_JOURNAL_ENCRYPTION_ENABLED", "false");
   h.rows = [];
   h.inserted = [];
   h.insertError = null;
   h.afterId = 0;
   h.reads = 0;
 });
+afterEach(() => vi.unstubAllEnvs());
 
 describe("agent run journal persistence", () => {
   it("stores compressed content and no JSONB event copy", async () => {

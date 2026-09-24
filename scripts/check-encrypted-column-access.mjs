@@ -13,6 +13,27 @@ const allowedInvitationAccess = new Set([
 
 const rules = [
   {
+    access: /\.\s*from\s*\(\s*["'`]agent_run_events["'`]\s*\)/,
+    allowed: new Set(["lib/server/agent/runs.ts",
+      "lib/server/agent/run-event-store.ts",
+      "app/api/pull-requests/route.ts", "lib/server/retention.ts"]),
+  },
+  {
+    access: /\.\s*from\s*\(\s*["'`]agent_run_journal["'`]\s*\)/,
+    allowed: new Set(["lib/server/agent/runs.ts",
+      "lib/server/encryption/agent-journal-backfill.ts",
+      "lib/server/retention.ts"]),
+  },
+  {
+    access: /\.\s*(?:from\s*\(\s*["'`]agent_journal_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_agent_journal_ciphertext["'`])/,
+    allowed: new Set(["lib/server/agent/encrypted-journal.ts",
+      "lib/server/encryption/agent-journal-backfill.ts"]),
+  },
+  {
+    access: /\.\s*rpc\s*\(\s*["'`]agent_journal_legacy_batch_exists["'`]/,
+    allowed: new Set(["lib/server/agent/runs.ts"]),
+  },
+  {
     access: /\bissues(?:![\w]+)?\([^\r\n)]*\b(?:title|description|plan|remote_url|automation_override)\b/,
     allowed: new Set(),
   },
@@ -138,6 +159,14 @@ for (const file of files) {
   // The demo seed only checks existence. Its constant demo fixture is not a user-content reader.
   if (normalized === "captures/world/seed/005-carnet.mjs" &&
       /\.\s*from\s*\(\s*["'`]user_scratchpad["'`]\s*\)(?!\s*\.\s*select\s*\(\s*["'`]user_id["'`]\s*\))/.test(source)) {
+    violations.push(normalized);
+  }
+  if (normalized === "app/api/pull-requests/route.ts" &&
+      /\.\s*from\s*\(\s*["'`]agent_run_events["'`]\s*\)(?!\s*\.\s*select\s*\(\s*["'`]run_id["'`]\s*\))/.test(source)) {
+    violations.push(normalized);
+  }
+  if (normalized === "lib/server/retention.ts" &&
+      /\.\s*from\s*\(\s*["'`]agent_run_(?:events|journal)["'`]\s*\)(?!\s*\.\s*delete\s*\()/.test(source)) {
     violations.push(normalized);
   }
 }
