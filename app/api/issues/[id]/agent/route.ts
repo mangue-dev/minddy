@@ -11,9 +11,13 @@ import {
 } from "@/lib/server/agent/run-access";
 import { agentRunCanResume } from "@/lib/agent-run-resumability";
 import { decodeAgentLaunch, legacyAgentLaunchSchema } from "@/lib/server/agent/run-launch-content";
+import { decodeAgentBaseBranch } from "@/lib/server/agent/run-base-branch-content";
 
 /** The `RUN_COLUMNS` columns this file needs to slice. */
 type RunRow = RunAnchors & {
+  id: string;
+  project_id: string;
+  base_branch: string | null;
   created_by: string | null;
   conversation: Pick<ConversationAccessRecord, "owner_id" | "visibility"> | null;
 } & Record<string, unknown>;
@@ -99,8 +103,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const failedWithCheckpoint = new Set(
     ((checkpointRows ?? []) as Array<{ id: string }>).map((run) => run.id),
   );
-  const decodedRuns = await Promise.all(visibleRuns.map((run) =>
-    decodeAgentLaunch(run as RunRow & Parameters<typeof decodeAgentLaunch>[0], auth.user.id)));
+  const decodedRuns = await Promise.all(visibleRuns.map(async (run) =>
+    decodeAgentBaseBranch(await decodeAgentLaunch(
+      run as RunRow & Parameters<typeof decodeAgentLaunch>[0], auth.user.id), auth.user.id)));
   const runs = decodedRuns.map(
     ({
       created_by: _c,

@@ -537,6 +537,7 @@
         "sandbox_reap_claim"
       ],
       "timestamp": [
+        "base_branch_encryption_checked_at",
         "checkpoint_encryption_checked_at",
         "completed_at",
         "created_at",
@@ -574,6 +575,7 @@
         "execution"
       ],
       "routing_identity": [
+        "base_branch_bound_run_id",
         "connection_id",
         "conversation_id",
         "current_run_id",
@@ -582,6 +584,7 @@
         "sandbox_id"
       ],
       "timestamp": [
+        "base_branch_encryption_checked_at",
         "checkpoint_encryption_checked_at",
         "created_at",
         "last_activity_at",
@@ -607,6 +610,21 @@
       ],
       "timestamp": [
         "last_read_at"
+      ]
+    }
+  },
+  "agent_base_branch_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   },

@@ -976,3 +976,29 @@ Other run/turn results, branch/PR/runtime/artifact fields and Numo copies,
 issue PR/forge and attachment copies, and feedback identities/objects remain
 open. Production flags remain disabled; no production migration or deployment
 occurred.
+
+## Agent base branch checkpoint
+
+`agent_runs.base_branch` now stores a run-ID-bound format-3 project envelope
+in the existing text column. The runtime synchronization trigger copies the
+same ciphertext into `agent_runtime_sessions.base_branch` atomically. A
+runtime trigger checks that an encrypted copy matches its current run and
+rejects direct plaintext edits after project activation. Run creation,
+managed-budget creation and guarded stamps encrypt before SQL; authorized
+run, issue-panel and inherited-work reads decrypt after their access checks.
+Detached runtime sessions use a separate conversation-ID binding. A runtime
+copy retains its original run ID after its run is deleted while the
+conversation survives, so its ciphertext remains decryptable and rotatable.
+
+The two service-only compare-and-swap workers convert or rotate runs and
+detached runtime copies in bounded 20-row batches. A project marker rejects
+old plaintext writers, scope changes and key-version rollback. The SQL
+regression proves that source and runtime copies lack the branch text and
+that older run and runtime writers fail. A PostgreSQL dump/restore test loads
+turns, runtime sessions, runs and conversations in separate child-first
+batches, revalidates runtime foreign keys, recovers two key versions from
+cold caches and rejects a wrong root. Its two-run fixture cannot estimate
+staging latency or key/cache load. `branch_name`, `pr_url`, turn outcomes,
+delegation results, artifacts and Numo copies, as well as issue PR/forge and
+attachment copies and feedback identities/objects, remain open. Production
+flags are disabled; no production data was changed.

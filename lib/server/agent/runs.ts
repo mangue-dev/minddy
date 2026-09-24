@@ -55,6 +55,8 @@ import { decodeAgentVerdict, encodeAgentVerdict,
   shouldEncryptAgentVerdict } from "./run-verdict-content";
 import { decodeAgentDeploymentUrl, deploymentLookupPrefix,
   encodeAgentDeploymentUrl, shouldEncryptAgentDeployment } from "./run-deployment-content";
+import { decodeAgentBaseBranch, encodeAgentBaseBranch,
+  shouldEncryptAgentBaseBranch } from "./run-base-branch-content";
 import { hasDataRootKey } from "@/lib/server/encryption/local-key-wrapper";
 
 /**
@@ -589,7 +591,9 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
   const deploymentScope = currentDeploymentScope();
   const encryptDeployment = deploymentScope &&
     await shouldEncryptAgentDeployment(service, input.projectId);
-  const id = encryptLaunch || encryptTitle || encryptDelegation || encryptDeployment
+  const encryptBaseBranch = input.baseBranch &&
+    await shouldEncryptAgentBaseBranch(service, input.projectId);
+  const id = encryptLaunch || encryptTitle || encryptDelegation || encryptDeployment || encryptBaseBranch
     ? randomUUID() : null;
   const launchContent = {
     prompt: stripUnstorable(input.prompt ?? null),
@@ -644,7 +648,9 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     key_mode: input.keyMode,
     worker_model_source: "account",
     worker_model_provider: input.workerModelProvider,
-    base_branch: input.baseBranch ?? null,
+    base_branch: encryptBaseBranch
+      ? await encodeAgentBaseBranch(input.projectId, id!, input.baseBranch!)
+      : input.baseBranch ?? null,
     branch_name: input.branchName ?? null,
     pr_number: input.prNumber ?? null,
     pr_url: input.prUrl ?? null,
@@ -712,14 +718,14 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     },
     groups: { project: input.projectId },
   });
-  return decodeAgentDeploymentUrl(await decodeAgentDelegationInput(
-    await decodeAgentLaunch(data as AgentRun)));
+  return decodeAgentBaseBranch(await decodeAgentDeploymentUrl(
+    await decodeAgentDelegationInput(await decodeAgentLaunch(data as AgentRun))));
 }
 
 async function hydrateRun(row: AgentRun | null): Promise<AgentRun | null> {
-  return row ? decodeAgentDeploymentUrl(await decodeAgentVerdict(
+  return row ? decodeAgentBaseBranch(await decodeAgentDeploymentUrl(await decodeAgentVerdict(
     await decodeAgentDelegationInput(await decodeAgentCheckpoint(
-      await decodeAgentLaunch(row))))) : null;
+      await decodeAgentLaunch(row)))))) : null;
 }
 
 /** Atomic CAS claim (queued → running). Returns null when another worker won. */
@@ -1368,24 +1374,27 @@ export async function inheritableWorkForPr(opts: {
   if (linkIds.length === 0) return null;
   const { data } = await service
     .from("agent_runs")
-    .select("branch_name, base_branch, pr_number, pr_url, pr_state")
+    .select("id, project_id, branch_name, base_branch, pr_number, pr_url, pr_state")
     .eq("pr_number", opts.prNumber)
     .in("repo_link_id", linkIds)
     .not("branch_name", "is", null)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const row = data as {
+  const stored = data as {
+    id: string;
+    project_id: string;
     branch_name: string | null;
     base_branch: string | null;
     pr_number: number | null;
     pr_url: string | null;
     pr_state: AgentRun["pr_state"];
   } | null;
-  if (!row?.branch_name) return null;
+  if (!stored?.branch_name) return null;
+  const row = await decodeAgentBaseBranch(stored);
   if (row.pr_state === "merged") return null;
   return {
-    branchName: row.branch_name,
+    branchName: row.branch_name!,
     baseBranch: row.base_branch,
     prNumber: row.pr_number,
     prUrl: row.pr_url,
@@ -1666,6 +1675,23 @@ export async function stampRunResult(
     if (await shouldEncryptAgentVerdict(service, projectId)) {
       storedFields = { ...storedFields,
         ...await encodeAgentVerdict(projectId, runId, fields.verdict ?? null) };
+    }
+    checkpointProjectId = projectId;
+  }
+  if (Object.prototype.hasOwnProperty.call(fields, "base_branch")) {
+    let projectId = checkpointProjectId;
+    if (!projectId) {
+      const { data: metadata, error: metadataError } = await service.from("agent_runs")
+        .select("project_id").eq("id", runId).maybeSingle();
+      if (metadataError || !metadata?.project_id) {
+        console.error("[agent-runs] base branch scope lookup failed");
+        return { run: null, failed: true };
+      }
+      projectId = metadata.project_id as string;
+    }
+    if (await shouldEncryptAgentBaseBranch(service, projectId)) {
+      storedFields = { ...storedFields, base_branch: await encodeAgentBaseBranch(
+        projectId, runId, fields.base_branch ?? null) };
     }
     checkpointProjectId = projectId;
   }

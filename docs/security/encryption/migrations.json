@@ -121,5 +121,6 @@
   "20270107240000_github_issue_metadata_encryption.sql": "1eabd2b21c9b34aa331e57d39d99b0da960a92308e2bf8522e14b9a90c73e728",
   "20270107250000_github_issue_comment_url_encryption.sql": "f43c13d809b1b70dff10d6b472d2d03b95a5aad361d96d323dfd5e2e9e2151bc",
   "20270107260000_agent_verdict_encryption.sql": "be62e89794d2bc539d53ad8ab200a2beee3adab3634c1b109c0cd5715c281e1f",
-  "20270107270000_agent_deployment_url_encryption.sql": "bfba40947f27ce62e4df40147b212d3a69bba7d5a7567fcf43a6cee2564f532c"
+  "20270107270000_agent_deployment_url_encryption.sql": "bfba40947f27ce62e4df40147b212d3a69bba7d5a7567fcf43a6cee2564f532c",
+  "20270107280000_agent_base_branch_encryption.sql": "85ca6c55aa0e6eee04afb0147116cb9054b91d2dc82f0e37c850e4640b9b8000"
 }

@@ -43,6 +43,7 @@ import {
 } from "./scratchpad-tools";
 import { agentRunTopic, broadcastToTopic } from "./live";
 import { decodeAgentLaunch } from "./run-launch-content";
+import { decodeAgentBaseBranch } from "./run-base-branch-content";
 import {
   appendEvent,
   appendRunJournal,
@@ -1326,6 +1327,7 @@ async function runCreatePr(
   args: Record<string, unknown>,
   body: Record<string, unknown>,
 ): Promise<ControlPlaneResult> {
+  run = await decodeAgentBaseBranch(run);
   const [
     { openPullRequestAfterPush, PrLandingAuthorityError },
     { resolveRepoCloneTarget },

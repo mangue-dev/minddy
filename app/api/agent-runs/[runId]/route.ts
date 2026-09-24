@@ -7,6 +7,7 @@ import { getRun, requestInterrupt, type AgentRun } from "@/lib/server/agent/runs
 import { decodeAgentLaunch } from "@/lib/server/agent/run-launch-content";
 import { encodeAgentTitle, shouldEncryptAgentTitle } from "@/lib/server/agent/run-title-content";
 import { decodeAgentCheckpoint } from "@/lib/server/agent/run-checkpoint-content";
+import { decodeAgentBaseBranch } from "@/lib/server/agent/run-base-branch-content";
 import { revokeRunKey } from "@/lib/server/agent/run-key";
 import { stopSandboxByName } from "@/lib/server/agent/sandbox";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -89,7 +90,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   // only recovered on remount). Without an identity the run is returned as-is.
   const identity = await resolveNumoConversation(auth.supabase, "run", run.id)
     .catch(() => null);
-  const readable = await decodeAgentCheckpoint(await decodeAgentLaunch(run, auth.user.id), auth.user.id);
+  const readable = await decodeAgentBaseBranch(
+    await decodeAgentCheckpoint(await decodeAgentLaunch(run, auth.user.id), auth.user.id),
+    auth.user.id);
   return NextResponse.json({ run: { ...sanitizeRun(readable),
     conversation_id: run.conversation_id,
     numo_conversation_id: identity?.conversationId ?? null,
@@ -139,7 +142,9 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
 
   const conversationId = run.conversation_id ?? run.id;
-  const readable = await decodeAgentCheckpoint(await decodeAgentLaunch(run, auth.user.id), auth.user.id);
+  const readable = await decodeAgentBaseBranch(
+    await decodeAgentCheckpoint(await decodeAgentLaunch(run, auth.user.id), auth.user.id),
+    auth.user.id);
   let title = readable.title;
   if (hasTitle) {
     const raw = typeof payload.title === "string" ? payload.title.trim() : "";

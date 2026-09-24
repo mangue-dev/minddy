@@ -1443,6 +1443,19 @@
       ],
       "functionReferences": []
     },
+    "guard_agent_run_base_branch()": {
+      "sha256": "ffbe6ac6387955a0808fcc252aa31226c98c97fb1daade2f38183d155d7c4ce8",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_base_branch_encryption_scopes"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_comment_client_update()": {
       "sha256": "416c5c534da1c021bfde6545f4af4fb97cc50d64a8a2717e9ffdf54b45359abb",
       "securityDefiner": false,
@@ -2366,6 +2379,24 @@
       ],
       "functionReferences": []
     },
+    "guard_agent_runtime_base_branch()": {
+      "sha256": "5dd36dbc327699db88f2d910e96c982beb4810bedb5b8e5d992d082b2a731461",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "agent_conversations",
+        "agent_base_branch_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "agent_conversations"
+      ],
+      "functionReferences": []
+    },
     "is_auth_session_active(uuid,uuid)": {
       "sha256": "b030104ac7f7fbd8676efec4914cac017726cf660f2b5a24fd43f67869f57545",
       "securityDefiner": true,
@@ -2786,6 +2817,22 @@
       "functionReferences": [
         "rotate_project_realtime_generation"
       ]
+    },
+    "guard_agent_base_branch_parent_scope()": {
+      "sha256": "f220bf7202eb304a2897173b7ced74a1e3b315511e7f8e2c08e85616b36153b5",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runtime_sessions",
+        "agent_base_branch_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_runtime_sessions"
+      ],
+      "functionReferences": []
     },
     "guard_project_actor(uuid,uuid,boolean)": {
       "sha256": "4c008dbea4231232300868c240967b5876fc7c086e0db91d4622271d24ee58c1",
@@ -3552,6 +3599,21 @@
       ],
       "functionReferences": []
     },
+    "migrate_agent_run_base_branch(uuid,uuid,text,text)": {
+      "sha256": "d2b8405c349b4f45bc6d8a74186a9ba1ba3fd37460db1f01c7106c61bb21cb61",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs"
+      ],
+      "protectedRelations": [
+        "agent_runs"
+      ],
+      "functionReferences": []
+    },
     "resume_numo_turn_from_worker(uuid,uuid,text,jsonb)": {
       "sha256": "8ff45fd71f101efc1c1d2cdaae5bbbd32539e275e20cb085882446e76e721dc4",
       "securityDefiner": true,
@@ -4092,6 +4154,23 @@
       ],
       "protectedRelations": [
         "categories"
+      ],
+      "functionReferences": []
+    },
+    "migrate_orphan_agent_runtime_base_branch(uuid,uuid,text,uuid,text)": {
+      "sha256": "4423b3ae6d254f806419b04cb7c8dc2fccdff47c170c43bf4d35e1695bcee20d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_conversations",
+        "agent_runtime_sessions"
+      ],
+      "protectedRelations": [
+        "agent_conversations",
+        "agent_runtime_sessions"
       ],
       "functionReferences": []
     },
@@ -5022,6 +5101,10 @@
       "function": "broadcast_comment_metadata()",
       "definition": "CREATE TRIGGER page_comments_broadcast AFTER INSERT OR DELETE OR UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION broadcast_comment_metadata()"
     },
+    "agent_runs.agent_run_base_branch_guard": {
+      "function": "guard_agent_run_base_branch()",
+      "definition": "CREATE TRIGGER agent_run_base_branch_guard BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_run_base_branch()"
+    },
     "agent_runs.agent_run_queue_scope_guard": {
       "function": "guard_agent_queue_parent_scope()",
       "definition": "CREATE TRIGGER agent_run_queue_scope_guard BEFORE UPDATE OF project_id ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_queue_parent_scope()"
@@ -5414,6 +5497,10 @@
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER agent_conversations_set_updated_at BEFORE UPDATE ON agent_conversations FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
+    "agent_runtime_sessions.agent_runtime_base_branch_guard": {
+      "function": "guard_agent_runtime_base_branch()",
+      "definition": "CREATE TRIGGER agent_runtime_base_branch_guard BEFORE INSERT OR UPDATE ON agent_runtime_sessions FOR EACH ROW EXECUTE FUNCTION guard_agent_runtime_base_branch()"
+    },
     "github_issue_sync_metadata.github_issue_metadata_guard": {
       "function": "guard_github_issue_metadata()",
       "definition": "CREATE TRIGGER github_issue_metadata_guard BEFORE INSERT OR UPDATE ON github_issue_sync_metadata FOR EACH ROW EXECUTE FUNCTION guard_github_issue_metadata()"
@@ -5429,6 +5516,10 @@
     "agent_conversation_contexts.agent_context_snapshot_guard": {
       "function": "guard_agent_context_snapshot()",
       "definition": "CREATE TRIGGER agent_context_snapshot_guard BEFORE INSERT OR UPDATE ON agent_conversation_contexts FOR EACH ROW EXECUTE FUNCTION guard_agent_context_snapshot()"
+    },
+    "agent_conversations.agent_base_branch_parent_scope_guard": {
+      "function": "guard_agent_base_branch_parent_scope()",
+      "definition": "CREATE TRIGGER agent_base_branch_parent_scope_guard BEFORE UPDATE OF project_id ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_agent_base_branch_parent_scope()"
     },
     "project_git_links.project_git_links_rekey_realtime_after": {
       "function": "rekey_project_git_link_after()",
