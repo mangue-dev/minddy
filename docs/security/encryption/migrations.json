@@ -144,5 +144,6 @@
   "20270107470000_feedback_sso_root_encryption.sql": "64a5afd2a37d52d92bf693378465c4632a6142922ae9838c15e28bff76c10c0b",
   "20270107480000_forge_mention_throttle_private_key.sql": "76cffaeea84c4025fed71f96a23e655cdcd0d2eff1496a61ef79533f887d09e5",
   "20270107490000_numo_activity_payload_encryption.sql": "c11a3d891453d4864cef871b569c87fd0fc475d3920f56e2592eb79f587a3246",
-  "20270107500000_provider_operation_resource_index.sql": "1e5f812aba65e56cc679a2cc75a6dc559e14ba43ace77589c98a06010bb9f925"
+  "20270107500000_provider_operation_resource_index.sql": "1e5f812aba65e56cc679a2cc75a6dc559e14ba43ace77589c98a06010bb9f925",
+  "20270107510000_app_config_encryption.sql": "21d63e554b1c3570fe5986ebe43b9fb5e16c66c19e1550cec3044628ca481497"
 }

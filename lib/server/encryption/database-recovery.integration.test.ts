@@ -3537,4 +3537,75 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       }
     }
   }, 60_000);
+
+  it("restores configuration ciphertext before two system key versions", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_config_${suffix}`;
+    const restored = `minddy_min591_config_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const scope: EncryptionScope = { kind: "system",
+      id: "00000000-0000-0000-0000-000000000000" };
+    const values = ["private-config-first", "private-config-second"];
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(attachmentTemplate, "SELECT count(*) FROM public.app_config;"))
+        .toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${attachmentTemplate};`);
+        created.push(name);
+      }
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const codec = new EncryptedRowCodec(new EncryptedStore(keys));
+      for (const [index, value] of values.entries()) {
+        if (index === 1) await keys.rotate(scope, 1);
+        const row = await codec.encode({ key: `private_key_${index}`, value,
+          encryption_version: 0, encrypted_content: null },
+        { table: "app_config", scope });
+        sql(source, `INSERT INTO public.app_config(key,value,encryption_version,
+          encrypted_content) VALUES(${quote(String(row.key))},NULL,
+          ${row.encryption_version},${quote(String(row.encrypted_content))});`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["public.app_config",
+          "public.app_config_encryption_scope", "public.envelope_data_keys"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("private-config-");
+      const match = dump.match(/(COPY public\.app_config[^\n]*\n)([\s\S]*?)(\\\.\n)/);
+      expect(match).not.toBeNull();
+      const dependencies = dump.replace(match![0], "");
+      for (const line of match![2].trimEnd().split("\n").reverse()) {
+        sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${match![1]}${line}\n${match![3]}COMMIT;`);
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${dependencies}\nCOMMIT;`);
+      const cold = new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored), wrapper(root))));
+      for (const [index, value] of values.entries()) {
+        const row = JSON.parse(sql(restored, `SELECT row_to_json(c) FROM
+          public.app_config c WHERE key=${quote(`private_key_${index}`)};`));
+        expect(row.value).toBeNull();
+        expect(row.encryption_version).toBe(index + 1);
+        expect((await cold.decode(row, { table: "app_config", scope },
+          { actorId: null, reason: "migration_verification" })).value)
+          .toBe(value);
+      }
+      const wrong = new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored), wrapper(randomBytes(32)))));
+      const first = JSON.parse(sql(restored, `SELECT row_to_json(c) FROM
+        public.app_config c WHERE key='private_key_0';`));
+      await expect(wrong.decode(first, { table: "app_config", scope },
+        { actorId: null, reason: "migration_verification" })).rejects.toThrow();
+      expect(() => sql(restored, `INSERT INTO public.app_config(key,value)
+        VALUES('obsolete_writer','clear');`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
 });

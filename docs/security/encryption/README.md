@@ -6,7 +6,7 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 149 application tables and 1,400 columns, their primary
+- `schema.json` records 150 application tables and 1,405 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 185 encryption targets include the original content,
@@ -19,7 +19,7 @@ production migration on the strength of crypto unit tests or this inventory.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 367 functions, ten views and 197 triggers. Function
+- `sql-consumers.json` records 370 functions, ten views and 198 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -94,7 +94,7 @@ must be checked separately.
 | Forge data | Forge mention throttle identities now use a stable system blind index; convert the remaining repository data shared by several projects. Private repository names still participate in other primary/unique keys and lookup paths; introduce opaque/indexed identities before encrypting them. The generic row codec deliberately refuses sensitive primary keys. |
 | Files and images | Attachment and page-file server paths, opaque names, ciphertext bytes and metadata are implemented below; private project icons and any remaining object copies still need conversion. Public avatars have an explicit public-use exception. |
 | Feedback and sharing | Feedback posts, private visitor identities, board SSO secrets and recoverable share tokens have repository and migration checkpoints below. Remaining feedback copies still need conversion; owner dialogs must retain access to share URLs. |
-| Credentials and configuration | Migrate legacy environment-key envelopes and secret/configuration stores to the agreed protected boundary; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
+| Credentials and configuration | The `app_config.value` repository now has a system-key envelope, bounded CAS rotation and an activated old-writer guard. Migrate other legacy environment-key envelopes and secret/configuration stores; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
 | Migration and recovery | Add restartable batches for every target and object, compare-and-swap against concurrent edits, verification counters, rejection of obsolete writers, a restoration rehearsal and retention of historical wrapped keys. Test mixed plaintext/encrypted tenants and old versions. |
 | Root key and operations | Provision a dedicated root key outside the database and rehearse key backup and restore. The offline root-key rewrap procedure is implemented and tested on isolated PostgreSQL; production rehearsal and application-scale latency remain. Production deployment and migration require a later explicit deployment request. |
 
@@ -1289,6 +1289,24 @@ PostgreSQL restore loads events before threads and conversations in independent
 batches, reads two key versions with cold caches and rejects a wrong root.
 Other Numo operation, message and conversation content in the remaining-work
 table still needs conversion. No production flag was enabled.
+
+## App configuration value checkpoint — 25 September 2026
+
+The common row codec now seals `app_config.value` with a system content key
+bound to its configuration key when both the global content flag and
+`MINDDY_APP_CONFIG_ENCRYPTION_ENABLED=true` are enabled. Reads decode through
+the configuration repository, including the batched reader. An existing
+encrypted row stays encrypted if the write flag is later disabled. Once the
+first ciphertext is stored, a database marker rejects new or changed clear
+values from obsolete writers. A bounded service-only CAS worker verifies and
+rotates historical values while retaining earlier key versions. The SQL
+regression checks the source, stale CAS, client privileges and obsolete writer
+refusal. The isolated PostgreSQL restore loads ciphertext rows before the
+key registry in independent batches, recovers two key versions from cold
+caches and rejects the wrong root. This does not close the other credential,
+configuration, agent, issue or Numo targets. Production flags remain disabled;
+representative latency and cache-load measurements are required before
+activation, not code review.
 
 ## Feedback SSO root-key checkpoint — 25 September 2026
 

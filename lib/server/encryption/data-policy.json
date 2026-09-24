@@ -885,11 +885,31 @@
       "value"
     ],
     "clear": {
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ],
       "routing_identity": [
         "key"
       ],
       "timestamp": [
+        "encryption_checked_at",
         "updated_at"
+      ]
+    }
+  },
+  "app_config_encryption_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   },

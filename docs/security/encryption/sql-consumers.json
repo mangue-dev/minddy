@@ -1658,6 +1658,19 @@
       ],
       "functionReferences": []
     },
+    "guard_app_config_encryption()": {
+      "sha256": "04281af4742e9f950e630cfc3f686a3f48cbdc179511006d5fb4210df8663000",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "app_config_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_comment_client_update()": {
       "sha256": "416c5c534da1c021bfde6545f4af4fb97cc50d64a8a2717e9ffdf54b45359abb",
       "securityDefiner": false,
@@ -4002,6 +4015,21 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "mark_app_config_attempt(text,text,text,integer)": {
+      "sha256": "9f2cace07cdf12e120153c3f37c8b4c5b4931b4d4c3ac7d307fe6f5e99366b36",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "app_config"
+      ],
+      "protectedRelations": [
+        "app_config"
+      ],
+      "functionReferences": []
+    },
     "migrate_feedback_otp_email(uuid,text,text,text)": {
       "sha256": "26ee1c080753b7b2147dbd0dd41ac09f0babd59ba8edbb70bf0a155feb3e6a9c",
       "securityDefiner": true,
@@ -4725,6 +4753,21 @@
       "functionReferences": [
         "lock_live_project_actor_access"
       ]
+    },
+    "migrate_app_config_value(text,text,text,integer,text,integer)": {
+      "sha256": "4a6aa20703b96d0247d03d3e06bcc2314f238f18827f9737500ce355795a8d80",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "app_config"
+      ],
+      "protectedRelations": [
+        "app_config"
+      ],
+      "functionReferences": []
     },
     "steer_numo_worker(uuid,uuid,uuid,text,text,jsonb,jsonb,jsonb)": {
       "sha256": "60d91e8aca87058f023b779d9df04df388f99d03d3ea0f1f3d26fbf1e85b63e5",
@@ -6135,6 +6178,10 @@
     "agent_runs.agent_runs_set_completed_at": {
       "function": "agent_runs_stamp_completed_at()",
       "definition": "CREATE TRIGGER agent_runs_set_completed_at BEFORE UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION agent_runs_stamp_completed_at()"
+    },
+    "app_config.app_config_encryption_guard": {
+      "function": "guard_app_config_encryption()",
+      "definition": "CREATE TRIGGER app_config_encryption_guard BEFORE INSERT OR UPDATE ON app_config FOR EACH ROW EXECUTE FUNCTION guard_app_config_encryption()"
     },
     "categories.categories_encryption_guard": {
       "function": "guard_category_encryption()",

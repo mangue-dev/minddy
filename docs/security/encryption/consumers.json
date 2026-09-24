@@ -3174,7 +3174,7 @@
     "file": "lib/server/app-config.ts",
     "operation": "from",
     "resource": "app_config",
-    "line": 17,
+    "line": 18,
     "storage": false
   },
   {
@@ -3188,14 +3188,28 @@
     "file": "lib/server/app-config.ts",
     "operation": "from",
     "resource": "app_config",
-    "line": 80,
+    "line": 81,
     "storage": false
   },
   {
     "file": "lib/server/app-config.ts",
     "operation": "from",
     "resource": "app_config",
-    "line": 89,
+    "line": 90,
+    "storage": false
+  },
+  {
+    "file": "lib/server/app-config.ts",
+    "operation": "from",
+    "resource": "app_config_encryption_scope",
+    "line": 95,
+    "storage": false
+  },
+  {
+    "file": "lib/server/app-config.ts",
+    "operation": "from",
+    "resource": "app_config",
+    "line": 105,
     "storage": false
   },
   {
@@ -4995,6 +5009,27 @@
     "operation": "rpc",
     "resource": "migrate_orphan_agent_runtime_work_branch",
     "line": 179,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/app-config-backfill.ts",
+    "operation": "from",
+    "resource": "app_config",
+    "line": 15,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/app-config-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_app_config_value",
+    "line": 43,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/app-config-backfill.ts",
+    "operation": "rpc",
+    "resource": "mark_app_config_attempt",
+    "line": 58,
     "storage": false
   },
   {
