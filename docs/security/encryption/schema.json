@@ -1589,6 +1589,11 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "deployment_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -9124,6 +9129,30 @@
     ]
   },
   "agent_verdict_encryption_scopes": {
+    "columns": {
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "project_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "agent_deployment_encryption_scopes": {
     "columns": {
       "project_id": {
         "type": "uuid",

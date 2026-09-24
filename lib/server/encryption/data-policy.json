@@ -551,7 +551,8 @@
         "title_encryption_checked_at",
         "updated_at",
         "window_started_at",
-        "verdict_encryption_checked_at"
+        "verdict_encryption_checked_at",
+        "deployment_encryption_checked_at"
       ]
     }
   },
@@ -3370,6 +3371,21 @@
     }
   },
   "agent_verdict_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "agent_deployment_encryption_scopes": {
     "scope": {
       "kind": "project",
       "column": "project_id"

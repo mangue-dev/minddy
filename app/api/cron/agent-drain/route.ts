@@ -10,6 +10,7 @@ import {
   type QueuedRunRow,
 } from "@/lib/server/agent/deployment";
 import { notifyAgentRun } from "@/lib/server/agent/runs";
+import { decodeAgentDeploymentUrl } from "@/lib/server/agent/run-deployment-content";
 
 /**
  * LAUNCHER of agent runs (MIN-46, reduced to this profession in MIN-225). He doesn't
@@ -52,7 +53,7 @@ const CRON_DRAIN_BUDGET_MS = 270_000;
 async function dueScopedRuns(service: SupabaseClient): Promise<QueuedRunRow[]> {
   const { data, error } = await service
     .from("agent_runs")
-    .select("id, deployment_url, not_before")
+    .select("id, project_id, deployment_url, not_before")
     .eq("status", "queued")
     .not("deployment_url", "is", null)
     .lte("not_before", new Date().toISOString())
@@ -62,7 +63,16 @@ async function dueScopedRuns(service: SupabaseClient): Promise<QueuedRunRow[]> {
     console.error("[agent-drain] preview dispatch read failed:", error.message);
     return [];
   }
-  return (data ?? []) as QueuedRunRow[];
+  try {
+    return await Promise.all((data ?? []).map(async (row) => {
+      const decoded = await decodeAgentDeploymentUrl(row);
+      return { id: decoded.id, deployment_url: decoded.deployment_url,
+        not_before: decoded.not_before };
+    }));
+  } catch {
+    console.error("[agent-drain] preview dispatch decryption failed");
+    return [];
+  }
 }
 
 /** Wakes A deployment preview. Best effort: production never executes these

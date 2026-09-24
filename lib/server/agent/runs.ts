@@ -53,6 +53,9 @@ import { decodeAgentDelegationInput, encodeAgentDelegationInput,
   shouldEncryptAgentDelegation } from "./run-delegation-content";
 import { decodeAgentVerdict, encodeAgentVerdict,
   shouldEncryptAgentVerdict } from "./run-verdict-content";
+import { decodeAgentDeploymentUrl, deploymentLookupPrefix,
+  encodeAgentDeploymentUrl, shouldEncryptAgentDeployment } from "./run-deployment-content";
+import { hasDataRootKey } from "@/lib/server/encryption/local-key-wrapper";
 
 /**
  * Data access to code agent runs (MIN-46): creation, CAS claim,
@@ -583,7 +586,11 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
   const encryptTitle = await shouldEncryptAgentTitle(service, input.projectId);
   const encryptDelegation = input.delegationBrief &&
     await shouldEncryptAgentDelegation(service, input.projectId);
-  const id = encryptLaunch || encryptTitle || encryptDelegation ? randomUUID() : null;
+  const deploymentScope = currentDeploymentScope();
+  const encryptDeployment = deploymentScope &&
+    await shouldEncryptAgentDeployment(service, input.projectId);
+  const id = encryptLaunch || encryptTitle || encryptDelegation || encryptDeployment
+    ? randomUUID() : null;
   const launchContent = {
     prompt: stripUnstorable(input.prompt ?? null),
     prompt_mentions: stripUnstorable(input.promptMentions ?? null),
@@ -603,6 +610,9 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       : { delegation_brief: input.delegationBrief,
           delegation_attachments: input.delegationAttachments ?? [] }
     : null;
+  const storedDeployment = encryptDeployment
+    ? await encodeAgentDeploymentUrl(input.projectId, id!, deploymentScope!)
+    : deploymentScope;
   const values = {
     ...(id ? { id } : {}),
     ...(input.conversationId ? { conversation_id: input.conversationId } : {}),
@@ -646,7 +656,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     intent: input.intent ?? null,
     // Deployment affinity (MIN-165): set ONCE, at creation. All
     // the chunks of a run launched from a preview remain on this deployment.
-    deployment_url: currentDeploymentScope(),
+    deployment_url: storedDeployment,
     loop_in_vm: loopInVm,
     agent_engine: engine,
     // Historical columns remain readable, but all newly admitted workers use
@@ -702,12 +712,14 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     },
     groups: { project: input.projectId },
   });
-  return decodeAgentDelegationInput(await decodeAgentLaunch(data as AgentRun));
+  return decodeAgentDeploymentUrl(await decodeAgentDelegationInput(
+    await decodeAgentLaunch(data as AgentRun)));
 }
 
 async function hydrateRun(row: AgentRun | null): Promise<AgentRun | null> {
-  return row ? decodeAgentVerdict(await decodeAgentDelegationInput(
-    await decodeAgentCheckpoint(await decodeAgentLaunch(row)))) : null;
+  return row ? decodeAgentDeploymentUrl(await decodeAgentVerdict(
+    await decodeAgentDelegationInput(await decodeAgentCheckpoint(
+      await decodeAgentLaunch(row))))) : null;
 }
 
 /** Atomic CAS claim (queued → running). Returns null when another worker won. */
@@ -1034,30 +1046,30 @@ export async function findQueuedLocalRunForMachine(input: {
   if (input.projectIds.length === 0) return null;
 
   const client = input.client ?? getServiceClient();
-  let query = client
-    .from("agent_runs")
-    .select("*")
-    .eq("status", "queued")
-    .eq("local_exec", true)
-    .eq("created_by", input.userId)
-    .in("project_id", [...input.projectIds])
-    .lte("not_before", new Date().toISOString());
   const scope = currentDeploymentScope();
-  query =
-    scope === null
-      ? query.is("deployment_url", null)
-      : query.eq("deployment_url", scope);
-
-  const { data, error } = await query
-    .order("not_before", { ascending: true })
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (error) {
-    console.error("[agent-runs] local queue lookup failed:", error.message);
+  const prefix = scope && hasDataRootKey() ? await deploymentLookupPrefix(scope) : null;
+  const base = () => client.from("agent_runs").select("*")
+    .eq("status", "queued").eq("local_exec", true)
+    .eq("created_by", input.userId).in("project_id", [...input.projectIds])
+    .lte("not_before", new Date().toISOString());
+  const candidates = await Promise.all([
+    (scope === null ? base().is("deployment_url", null)
+      : base().eq("deployment_url", scope))
+      .order("not_before", { ascending: true })
+      .order("created_at", { ascending: true }).limit(1).maybeSingle(),
+    ...(prefix ? [base().like("deployment_url", `${prefix}%`)
+      .order("not_before", { ascending: true })
+      .order("created_at", { ascending: true }).limit(1).maybeSingle()] : []),
+  ]);
+  if (candidates.some((candidate) => candidate.error)) {
+    console.error("[agent-runs] local queue lookup failed");
     return null;
   }
-  return hydrateRun((data as AgentRun | null) ?? null);
+  const run = candidates.map((candidate) => candidate.data as AgentRun | null)
+    .filter((candidate): candidate is AgentRun => candidate !== null)
+    .sort((a, b) => a.not_before.localeCompare(b.not_before) ||
+      a.created_at.localeCompare(b.created_at))[0] ?? null;
+  return hydrateRun(run);
 }
 
 /**

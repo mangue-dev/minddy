@@ -27,6 +27,7 @@ const queueTemplate = "minddy_min591_queue_audit";
 const answerTemplate = "minddy_min591_answer_audit";
 const contextTemplate = "minddy_min591_context_audit";
 const verdictTemplate = "minddy_min591_verdict_audit";
+const deploymentTemplate = "minddy_min591_deployment_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -1702,6 +1703,106 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
         wrapper(randomBytes(32))));
       await expect(wrong.decrypt(wrong.fromDatabase(rows[0].cipher),
         { scope, table: "agent_runs", column: "verdict", rowId: rows[0].id }))
+        .rejects.toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
+
+  it("restores encrypted deployment affinity and its equality key across run batches", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_deployment_source_${suffix}`;
+    const restored = `minddy_min591_deployment_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID();
+    const runs = [randomUUID(), randomUUID()];
+    const url = "private-preview.vercel.app";
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const indexScope: EncryptionScope = { kind: "system",
+      id: "00000000-0000-0000-0000-000000000000" };
+    const indexContext = { scope: indexScope, table: "agent_runs", column: "deployment_url" };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(deploymentTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${deploymentTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Fixture project','ADE');`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const indexKeys = new ManagedDataKeys(registry(source, "blind_index"),
+        wrapper(root, "blind_index"));
+      const store = new EncryptedStore(keys);
+      const indexKey = await indexKeys.current(indexScope);
+      const index = blindIndex(url, indexContext, indexKey.bytes);
+      indexKey.bytes.fill(0);
+      for (const [position, runId] of runs.entries()) {
+        if (position === 1) await keys.rotate(scope, 1);
+        const cipher = await store.encrypt(url, {
+          scope, table: "agent_runs", column: "deployment_url", rowId: runId,
+        });
+        const encoded = `mdye3:${index}:${store.versionOf(cipher)}:${Buffer.from(cipher).toString("base64url")}`;
+        sql(source, `INSERT INTO public.agent_runs(id,project_id,created_by,deployment_url)
+          VALUES(${quote(runId)},${quote(project)},${quote(actor)},${quote(encoded)});`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "supabase_admin",
+        "-d", source, "--data-only", "--no-owner", "--no-privileges",
+        ...["auth.users", "public.projects", "public.envelope_data_keys",
+          "public.agent_conversations", "public.agent_runs", "public.agent_turns",
+          "public.agent_deployment_encryption_scopes"].map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain(url);
+      let dependencies = dump;
+      const batches = new Map<string, { header: string; lines: string[]; footer: string }>();
+      for (const table of ["agent_turns", "agent_runs", "agent_conversations"]) {
+        const match = dependencies.match(new RegExp(`(COPY public\\.${table}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`));
+        expect(match).not.toBeNull();
+        batches.set(table, { header: match![1], lines: match![2].trimEnd().split("\n").reverse(),
+          footer: match![3] });
+        dependencies = dependencies.replace(match![0], "");
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${dependencies}\nCOMMIT;`);
+      for (const table of ["agent_turns", "agent_runs", "agent_conversations"]) {
+        const copy = batches.get(table)!;
+        for (const line of copy.lines) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${copy.header}${line}\n${copy.footer}COMMIT;`);
+        }
+      }
+      const rows = JSON.parse(sql(restored, `SELECT json_agg(json_build_object(
+        'id',r.id,'encoded',r.deployment_url) ORDER BY r.id)
+        FROM public.agent_runs r JOIN public.agent_conversations c
+          ON c.id=r.conversation_id AND c.project_id=r.project_id
+        JOIN public.agent_turns t ON t.run_id=r.id;`)) as Array<{
+          id: string; encoded: string;
+        }>;
+      expect(rows).toHaveLength(2);
+      expect(rows.map((row) => Number(row.encoded.split(":")[2])).sort()).toEqual([1, 2]);
+      const coldIndexKeys = new ManagedDataKeys(registry(restored, "blind_index"),
+        wrapper(root, "blind_index"));
+      const coldIndexKey = await coldIndexKeys.current(indexScope);
+      const coldIndex = blindIndex(url, indexContext, coldIndexKey.bytes);
+      coldIndexKey.bytes.fill(0);
+      expect(coldIndex).toBe(index);
+      expect(sql(restored, `SELECT count(*) FROM public.agent_runs
+        WHERE deployment_url LIKE ${quote(`mdye3:${coldIndex}:%`)};`)).toBe("2");
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored), wrapper(root)));
+      for (const row of rows) {
+        const serialized = Buffer.from(row.encoded.split(":")[3], "base64url").toString("utf8");
+        const clear = await cold.decrypt(cold.fromDatabase<string>(serialized),
+          { scope, table: "agent_runs", column: "deployment_url", rowId: row.id });
+        expect(clear).toBe(url);
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      await expect(wrong.decrypt(wrong.fromDatabase<string>(
+        Buffer.from(rows[0].encoded.split(":")[3], "base64url").toString("utf8")),
+      { scope, table: "agent_runs", column: "deployment_url", rowId: rows[0].id }))
         .rejects.toThrow();
     } finally {
       root.fill(0);

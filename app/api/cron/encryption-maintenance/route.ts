@@ -16,6 +16,7 @@ import { backfillAgentContextsBatch } from "@/lib/server/encryption/agent-contex
 import { backfillGithubIssueMetadataBatch } from "@/lib/server/encryption/github-issue-metadata-backfill";
 import { backfillGithubCommentUrlsBatch } from "@/lib/server/encryption/github-comment-url-backfill";
 import { backfillAgentVerdictsBatch } from "@/lib/server/encryption/agent-verdict-backfill";
+import { backfillAgentDeploymentUrlsBatch } from "@/lib/server/encryption/agent-deployment-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
   const agentContextEnabled = contentEnabled && process.env.MINDDY_AGENT_CONTEXT_ENCRYPTION_ENABLED === "true";
   const issueSidecarEnabled = contentEnabled && process.env.MINDDY_ISSUE_SIDECAR_ENCRYPTION_ENABLED === "true";
   const agentVerdictEnabled = contentEnabled && process.env.MINDDY_AGENT_VERDICT_ENCRYPTION_ENABLED === "true";
+  const agentDeploymentEnabled = contentEnabled && process.env.MINDDY_AGENT_DEPLOYMENT_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -82,6 +84,7 @@ export async function GET(request: NextRequest) {
       issueSidecarEnabled ? backfillGithubIssueMetadataBatch(20, request.signal) : Promise.resolve(null),
       issueSidecarEnabled ? backfillGithubCommentUrlsBatch(20, request.signal) : Promise.resolve(null),
       agentVerdictEnabled ? backfillAgentVerdictsBatch(20, request.signal) : Promise.resolve(null),
+      agentDeploymentEnabled ? backfillAgentDeploymentUrlsBatch(20, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -107,12 +110,13 @@ export async function GET(request: NextRequest) {
     const issueSidecar = outcomes[21];
     const githubCommentUrls = outcomes[22];
     const agentVerdicts = outcomes[23];
+    const agentDeployments = outcomes[24];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -140,6 +144,7 @@ export async function GET(request: NextRequest) {
         ...(issueSidecarEnabled ? { github_issue_metadata: issueSidecar.status === "fulfilled" ? issueSidecar.value : { failed: true } } : {}),
         ...(issueSidecarEnabled ? { github_comment_urls: githubCommentUrls.status === "fulfilled" ? githubCommentUrls.value : { failed: true } } : {}),
         ...(agentVerdictEnabled ? { agent_verdicts: agentVerdicts.status === "fulfilled" ? agentVerdicts.value : { failed: true } } : {}),
+        ...(agentDeploymentEnabled ? { agent_deployments: agentDeployments.status === "fulfilled" ? agentDeployments.value : { failed: true } } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),
       ...(contentEnabled ? { statistics: statistics.status === "fulfilled" ? statistics.value : { failed: true } } : {}),

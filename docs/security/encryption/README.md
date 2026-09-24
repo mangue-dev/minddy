@@ -945,3 +945,34 @@ run results, errors, delegation results, branch/PR/runtime/artifact fields,
 Numo automation outcomes, issue PR/forge copies, attachment objects and
 feedback identities/objects remain open. Production flags are disabled; no
 production data migration or deployment occurred.
+
+## Agent deployment affinity checkpoint
+
+`agent_runs.deployment_url` now stores an opaque format-3 project-key envelope
+bound to the run ID for preview deployments. Its same-column value carries a
+system-keyed HMAC equality prefix and the envelope key version; the preview
+URL itself is absent from SQL. The common production/local queue retains
+`NULL`. This layout keeps the managed-budget insertion RPC atomic without a
+second SQL copy. Both local and cloud drains query legacy exact URLs and the
+encrypted equality prefix during conversion. The production dispatcher
+decrypts due preview URLs before waking deployments. Authorized run hydration
+also decrypts after its existing access checks.
+
+A project marker rejects obsolete plaintext preview writers once an encrypted
+run exists, plus scope changes and key-version rollback. A service-only
+20-row compare-and-swap worker converts and rotates historical preview URLs.
+The blind-index key is separate from content keys and remains stable across
+content-key rotations, as with invitation email equality indexes. Rotating
+that system blind-index key would require a coordinated index rewrite before
+new drains could locate existing runs.
+
+The SQL regression checks legacy-writer rejection, equality lookup, the
+managed-budget RPC, CAS, key rollback and Realtime absence. A PostgreSQL
+dump/restore test loads turns, runs and conversations in independent
+child-first batches, recovers two content-key versions and the blind-index
+key from cold caches, and rejects a wrong root. The fixture contains two
+runs and cannot estimate representative drain latency or key/cache load.
+Other run/turn results, branch/PR/runtime/artifact fields and Numo copies,
+issue PR/forge and attachment copies, and feedback identities/objects remain
+open. Production flags remain disabled; no production migration or deployment
+occurred.
