@@ -1,0 +1,19 @@
+# MIN-591 source and copy closure matrix
+
+This matrix tracks code conversion. Representative search, latency, key-cache
+and load measurements remain checks before production activation.
+
+| Source | Copies | Writers | Readers | Migration | Proof and state |
+| --- | --- | --- | --- | --- | --- |
+| Agent runs, turns, runtime sessions, journal and messages | Agent contexts, Numo worker events/checkpoints, artifacts, PR URL and branch copies | Agent launch, status, queue, SQL capture and synchronization RPCs, account import | Authorized run/turn repositories, Numo detail, AI/MCP, account export | Project-key CAS workers and activated SQL guards | Dedicated SQL regressions and child-first, mixed-key PostgreSQL restores pass; review remaining Numo conversation content before declaring the whole agent boundary closed. |
+| Issues and feedback posts | Histories, comments, agent launches, forge metadata, PR titles and URLs, attachment rows | Issue/feedback repositories, imports, SQL sidecars and forge handlers | Search, Numo, notifications, AI/MCP, exports | Project-key CAS workers and activated SQL guards | Source and copy regressions plus mixed-key restores pass; repository identities and other derived data below remain open. |
+| Attachment and page-file metadata and bytes | Storage objects, path aliases, links and export/import payloads | Authenticated upload route, metadata repository, object backfill | Authorized download route, AI/MCP, export | Opaque paths, encrypted chunks, guarded metadata CAS and object registration | SQL regressions and independent-batch PostgreSQL restore pass; private project icon objects remain open. Feedback post attachments use this same attachment boundary. |
+| Feedback visitor identity and pending OTP email | Lookup digests and sessions | Team/visitor repositories and protected OTP RPCs | Authorized team/visitor readers, search and exports | Purpose-separated index, row/system envelopes, bounded CAS | SQL regression and child-first, mixed-key restore pass. |
+| Application configuration values | No durable text copy in the repository; in-process TTL cache | Admin configuration repository | Batched and single-key configuration repository | System-key row envelope, bounded CAS, activated old-writer guard | SQL regression, unit tests and mixed-key restore pass. |
+| Private forge repository names | Links, relay mirror/claims, PR keys, syncs, comment edits, run repository bindings | Link, webhook, relay, PR and rename paths | Forge clients, agent launch, notifications, AI/MCP and exports | **Open:** stable opaque equality identity and reversible owner-authorized name storage needed across key relationships | No source-and-copy closure proof yet. |
+| Numo conversation and tool content | History views, assistant messages, turn checkpoints, tool results, routine occurrences | Numo turn RPCs, assistant loop, routine and surface writers | Numo history/detail, AI/MCP and exports | **Open:** convert source and views together, preserving claims and idempotence | Worker-specific copies are tested; general conversation/turn/tool content is not closed. |
+| Projects, pages, views, routines and private icons | Numo/search/public projections, derived histories and object paths | Product repositories, SQL functions, imports | Authorized UI, AI/MCP, public sharing and exports | **Open:** convert each source with copies and old-writer guards | No global closure proof. |
+
+The code PR remains a draft while any open row above can retain sensitive
+content. No production flag, deployment or production data migration is part of
+this matrix.

@@ -6,6 +6,9 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
+The current source, copy, writer, reader, migration and proof status is tracked
+in [the closure matrix](closure-matrix.md).
+
 - `schema.json` records 150 application tables and 1,405 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
