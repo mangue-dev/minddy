@@ -279,7 +279,7 @@ export async function authorizeRunPrRequest(
   const auth = await getAuthedUser(request);
   if (!auth.ok) return { ok: false, response: auth.response };
 
-  const run = await getRun(runId);
+  const run = await getRun(runId, { decode: false });
   if (!run || !(await canReadAgentRun(auth.user.id, run))) {
     return { ok: false, response: NextResponse.json({ error: "Run not found" }, { status: 404 }) };
   }

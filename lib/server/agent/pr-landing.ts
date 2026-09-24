@@ -87,7 +87,7 @@ export async function assertPrLandingAuthority(
   ctx: PrLandingContext,
   target: RepoCloneTarget = ctx.target,
 ): Promise<AgentRun> {
-  const current = await getRun(ctx.run.id).catch(() => null);
+  const current = await getRun(ctx.run.id, { decode: false }).catch(() => null);
   if (!current || current.status !== "running" || !current.created_by) {
     throw new PrLandingAuthorityError("run is no longer authorized to land");
   }
@@ -441,7 +441,7 @@ export async function registerPr(
 export async function refreshPrStateFromDb(
   ctx: PrLandingContext,
 ): Promise<void> {
-  const db = await getRun(ctx.run.id).catch(() => null);
+  const db = await getRun(ctx.run.id, { decode: false }).catch(() => null);
   if (!db) return;
   ctx.prState.number = db.pr_number;
   ctx.prState.url = db.pr_url;

@@ -1020,7 +1020,7 @@ async function executeNumoTurnCore(input: {
       claimed.active_run_id &&
       (status === "completed" || status === "waiting_input")
     ) {
-      const worker = await getRun(claimed.active_run_id);
+      const worker = await getRun(claimed.active_run_id, { decode: false });
       if (worker?.parent_numo_turn_id === claimed.id) {
         const notificationType = status === "waiting_input"
           ? "agent_question"
@@ -1031,7 +1031,7 @@ async function executeNumoTurnCore(input: {
       }
     }
     if (status === "waiting_work" && result.suspension?.kind === "work") {
-      const worker = await getRun(result.suspension.runId);
+      const worker = await getRun(result.suspension.runId, { decode: false });
       if (worker && ["completed", "failed", "canceled"].includes(worker.status)) {
         await deliverAgentDelegationResult(worker);
         const { data: reconciled } = await service.from("numo_assistant_turns")

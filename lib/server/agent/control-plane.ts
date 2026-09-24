@@ -42,6 +42,7 @@ import {
   type ScratchpadToolContext,
 } from "./scratchpad-tools";
 import { agentRunTopic, broadcastToTopic } from "./live";
+import { decodeAgentLaunch } from "./run-launch-content";
 import {
   appendEvent,
   appendRunJournal,
@@ -485,7 +486,7 @@ export async function handleControlPlaneRequest(opts: {
   // which makes the surface stateless, therefore safe to call from a VM which can
   // die between two requests. A deleted run (retention) or sandbox name
   // which does not correspond to anything falls here, no further.
-  const run = await getRun(runId);
+  const run = await getRun(runId, { decode: false });
   if (!run) return { status: 404, body: { error: "unknown run" } };
 
   // The microVM of the run is named once and for all and persisted: another
@@ -1362,13 +1363,14 @@ async function runCreatePr(
    * this first push in the normal case. Reading it alone here opened the pull request
    * on an empty head, and stamped `branch_name: ""` in passing.
    */
+  const launch = run.branch_name ? null : await decodeAgentLaunch(run, run.created_by);
   const expectedBranch =
     run.branch_name ??
     generatedAgentBranchName({
       runId: run.id,
       issueIdentifier: identifier,
       conversationTitle: run.title,
-      prompt: run.prompt,
+      prompt: launch?.prompt ?? run.prompt,
       branchPrefix,
     });
   const suppliedBranch =

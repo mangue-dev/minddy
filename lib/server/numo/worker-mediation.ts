@@ -56,7 +56,7 @@ export async function answerNumoWorkerInput(input: {
   messageId?: string;
   persistParentMessage: boolean;
 }): Promise<WorkerMessageDisposition> {
-  const run = await getRun(input.correlation.runId);
+  const run = await getRun(input.correlation.runId, { decode: false });
   if (
     !run
     || run.created_by !== input.userId
@@ -189,7 +189,7 @@ export async function relaunchNumoWorkerRun(input: {
 }): Promise<
   { ok: true; run: AgentRun } | { ok: false; code: string }
 > {
-  const run = await getRun(input.runId);
+  const run = await getRun(input.runId, { decode: false });
   if (!run) return { ok: false, code: "not_found" };
   if (run.parent_numo_conversation_id !== input.conversationId) {
     return { ok: false, code: "not_conversation_worker" };

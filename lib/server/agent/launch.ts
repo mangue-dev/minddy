@@ -456,7 +456,7 @@ export async function launchAgentRun(
   }
 
   const continuedRun = input.continueRunId
-    ? await getRun(input.continueRunId)
+    ? await getRun(input.continueRunId, { decode: false })
     : null;
   if (input.continueRunId && (
     !continuedRun
