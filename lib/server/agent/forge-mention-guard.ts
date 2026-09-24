@@ -3,6 +3,8 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { buildForgeAssigneeIndex } from "@/lib/server/git/forge-members";
+import { forgeMentionKeyIndex,
+  shouldIndexForgeMentionKey } from "@/lib/server/encryption/forge-mention-key";
 
 /**
  * Who has the right to make a project owner spend, and how many
@@ -64,10 +66,18 @@ const DENIAL_LIMIT_PER_AUTHOR = 1;
  */
 async function claim(key: string): Promise<number | null> {
   try {
-    const { data, error } = await getServiceClient().rpc("claim_forge_mention", {
-      p_key: key,
-      p_window_seconds: MENTION_WINDOW_SECONDS,
-    });
+    const service = getServiceClient();
+    const protectedKey = await shouldIndexForgeMentionKey(service);
+    const { data, error } = protectedKey
+      ? await service.rpc("claim_forge_mention_protected", {
+          p_legacy: key,
+          p_indexed: await forgeMentionKeyIndex(key),
+          p_window_seconds: MENTION_WINDOW_SECONDS,
+        })
+      : await service.rpc("claim_forge_mention", {
+          p_key: key,
+          p_window_seconds: MENTION_WINDOW_SECONDS,
+        });
     if (error) {
       console.error("[forge-mention-guard] throttle unavailable:", error.message);
       return null;

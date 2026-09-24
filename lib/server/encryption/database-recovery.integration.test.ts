@@ -3297,4 +3297,73 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       }
     }
   }, 60_000);
+
+  it("restores indexed forge mention counters without private repository names", async () => {
+    const suffix = randomUUID().replaceAll("-", "");
+    const source = `minddy_min591_forge_key_${suffix}`;
+    const restored = `minddy_min591_forge_key_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const scope: EncryptionScope = { kind: "system",
+      id: "00000000-0000-0000-0000-000000000000" };
+    const clear = ["mention:github:private-org/repo:alice",
+      "denied:github:private-org/repo:bob"];
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(attachmentTemplate,
+        "SELECT count(*) FROM public.forge_mention_throttle;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${attachmentTemplate};`);
+        created.push(name);
+      }
+      const keys = new ManagedDataKeys(registry(source, "blind_index"),
+        wrapper(root, "blind_index"));
+      const first = await keys.current(scope);
+      const indexed = clear.map((value) => `mdyf1:${blindIndex(value, {
+        scope, table: "forge_mention_throttle", column: "key",
+      }, first.bytes)}`);
+      first.bytes.fill(0);
+      await keys.rotate(scope, 1);
+      sql(source, `INSERT INTO public.forge_mention_throttle(key,window_start,count)
+        VALUES(${quote(indexed[0])},now(),4),(${quote(indexed[1])},now(),2);`);
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["public.forge_mention_throttle",
+          "public.forge_mention_key_encryption_scope",
+          "public.envelope_data_keys"].map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("private-org/repo");
+      const match = dump.match(/(COPY public\.forge_mention_throttle[^\n]*\n)([\s\S]*?)(\\\.\n)/);
+      expect(match).not.toBeNull();
+      const dependencies = dump.replace(match![0], "");
+      for (const line of match![2].trimEnd().split("\n").reverse()) {
+        sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${match![1]}${line}\n${match![3]}COMMIT;`);
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${dependencies}\nCOMMIT;`);
+      const cold = new ManagedDataKeys(registry(restored, "blind_index"),
+        wrapper(root, "blind_index"));
+      const historical = await cold.byVersion(scope, 1);
+      for (const [index, value] of clear.entries()) {
+        const digest = `mdyf1:${blindIndex(value, {
+          scope, table: "forge_mention_throttle", column: "key",
+        }, historical.bytes)}`;
+        expect(digest).toBe(indexed[index]);
+        expect(sql(restored, `SELECT count FROM public.forge_mention_throttle
+          WHERE key=${quote(digest)};`)).toBe(String([4, 2][index]));
+      }
+      historical.bytes.fill(0);
+      const wrong = new ManagedDataKeys(registry(restored, "blind_index"),
+        wrapper(randomBytes(32), "blind_index"));
+      await expect(wrong.byVersion(scope, 1)).rejects.toThrow();
+      expect(() => sql(restored, `SELECT public.claim_forge_mention(
+        ${quote(clear[0])},3600);`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
 });

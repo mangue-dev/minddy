@@ -775,6 +775,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_forge_mention_key()": {
+      "sha256": "1651cb3b83af5d0fbf42227c1904e164a46e3d1d4f6d0fb615f87b4171ca8ce0",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "forge_mention_key_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "rekey_deleted_auth_user()": {
       "sha256": "beed7d97cf2095bf777639fa615215ef9987455b99ced33fc3b6d8f67804fed3",
       "securityDefiner": true,
@@ -2586,9 +2599,7 @@
       "relations": [
         "forge_mention_throttle"
       ],
-      "protectedRelations": [
-        "forge_mention_throttle"
-      ],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "enforce_issue_refs_same_project()": {
@@ -4011,6 +4022,21 @@
       ],
       "functionReferences": []
     },
+    "claim_forge_mention_protected(text,text,integer)": {
+      "sha256": "9bb84dc14467b05172f444dce78545c5df205faae6db58f6cf98284692d1d552",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "forge_mention_throttle"
+      ],
+      "protectedRelations": [],
+      "functionReferences": [
+        "rekey_forge_mention_counter"
+      ]
+    },
     "migrate_numo_worker_checkpoint(uuid,jsonb,jsonb)": {
       "sha256": "82ec939192d0ad3c67e625ee39278ba7691db341dc89e88b995c2bafb8d6e0b9",
       "securityDefiner": true,
@@ -5326,6 +5352,19 @@
       ],
       "functionReferences": []
     },
+    "rekey_forge_mention_counter(text,text,integer,timestamp with time zone,integer)": {
+      "sha256": "92d4d50fbb356732e6b777cb9682941d0261b05320834433398188e4c5f13d70",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "forge_mention_throttle"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "create_agent_run_with_budget(uuid,timestamp with time zone,numeric,numeric,jsonb)": {
       "sha256": "2c7710b463b09f80023df925dc2ee354ee8c3418c7843015e4e7bc3bfda711a3",
       "securityDefiner": true,
@@ -6302,6 +6341,10 @@
     "feedback_posts.feedback_posts_encryption_guard": {
       "function": "guard_feedback_post_encryption()",
       "definition": "CREATE TRIGGER feedback_posts_encryption_guard BEFORE INSERT OR UPDATE ON feedback_posts FOR EACH ROW EXECUTE FUNCTION guard_feedback_post_encryption()"
+    },
+    "forge_mention_throttle.forge_mention_key_guard": {
+      "function": "guard_forge_mention_key()",
+      "definition": "CREATE TRIGGER forge_mention_key_guard BEFORE INSERT OR UPDATE ON forge_mention_throttle FOR EACH ROW EXECUTE FUNCTION guard_forge_mention_key()"
     },
     "pages.pages_remove_deleted_database_properties": {
       "function": "remove_deleted_database_properties()",

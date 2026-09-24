@@ -1617,9 +1617,7 @@
       "kind": "system",
       "id": "00000000-0000-0000-0000-000000000000"
     },
-    "encrypted": [
-      "key"
-    ],
+    "encrypted": [],
     "clear": {
       "bounded_metadata": [
         "count"
@@ -1627,6 +1625,24 @@
       "timestamp": [
         "updated_at",
         "window_start"
+      ],
+      "token_digest": [
+        "key"
+      ]
+    }
+  },
+  "forge_mention_key_encryption_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   },

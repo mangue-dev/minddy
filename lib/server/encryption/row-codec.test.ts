@@ -61,9 +61,6 @@ describe("encrypted row codec", () => {
     delete source.title;
     await expect(codec.encode(source, context)).rejects.toThrow("Incomplete protected row");
     await expect(codec.encode(row("issues", { id: null }), context)).rejects.toThrow("primary key");
-    await expect(codec.encode(row("forge_mention_throttle", { key: "private repository" }), {
-      table: "forge_mention_throttle", scope: { kind: "system", id: "00000000-0000-0000-0000-000000000000" },
-    })).rejects.toThrow("primary key");
   });
 
   it("reads mixed migration states using the persisted version and rejects inconsistent states", async () => {

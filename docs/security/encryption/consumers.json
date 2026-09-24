@@ -2165,8 +2165,15 @@
   {
     "file": "lib/server/agent/forge-mention-guard.ts",
     "operation": "rpc",
+    "resource": "claim_forge_mention_protected",
+    "line": 72,
+    "storage": false
+  },
+  {
+    "file": "lib/server/agent/forge-mention-guard.ts",
+    "operation": "rpc",
     "resource": "claim_forge_mention",
-    "line": 67,
+    "line": 77,
     "storage": false
   },
   {
@@ -5163,6 +5170,27 @@
     "operation": "rpc",
     "resource": "migrate_feedback_sso_secret",
     "line": 49,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-mention-backfill.ts",
+    "operation": "from",
+    "resource": "forge_mention_throttle",
+    "line": 18,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-mention-backfill.ts",
+    "operation": "rpc",
+    "resource": "rekey_forge_mention_counter",
+    "line": 29,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-mention-key.ts",
+    "operation": "from",
+    "resource": "forge_mention_key_encryption_scope",
+    "line": 17,
     "storage": false
   },
   {

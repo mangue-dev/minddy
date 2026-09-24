@@ -6,19 +6,20 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 146 application tables and 1,393 columns, their primary
+- `schema.json` records 147 application tables and 1,395 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
-  column exactly once. Its 187 encryption targets include the original content,
+  column exactly once. Its 186 encryption targets include the original content,
   derived copies, arbitrary user JSON, private identities, credentials and share
   tokens. The relay audit detail target was removed by an action-specific SQL
   guard and historical scrub; opaque attachment object paths replace two path
-  encryption targets. This is a target
+  encryption targets; the forge mention throttle identity now uses a
+  purpose-separated one-way equality digest. This is a target
   policy, not evidence that those columns are encrypted.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 357 functions, ten views and 194 triggers. Function
+- `sql-consumers.json` records 360 functions, ten views and 195 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -90,7 +91,7 @@ must be checked separately.
 | Histories and derived copies | Page versions, issue events, statistics, durable agent replay journals and run event payloads now have converted repositories and migration. The event-triggered assistant summary and pending question copies are protected with their event. Numo surface destinations are protected with their event; other surface projections, initial prompts, steering messages, answers, checkpoints and conversation content remain to be converted with their source rows. |
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
-| Forge data | Resolve ownership of repository data shared by several projects. Private repository names currently participate in primary/unique keys and lookup paths; introduce opaque/indexed identities before encrypting them. The generic row codec deliberately refuses sensitive primary keys. |
+| Forge data | Forge mention throttle identities now use a stable system blind index; convert the remaining repository data shared by several projects. Private repository names still participate in other primary/unique keys and lookup paths; introduce opaque/indexed identities before encrypting them. The generic row codec deliberately refuses sensitive primary keys. |
 | Files and images | Attachment and page-file server paths, opaque names, ciphertext bytes and metadata are implemented below; private project icons and any remaining object copies still need conversion. Public avatars have an explicit public-use exception. |
 | Feedback and sharing | Feedback posts, private visitor identities, board SSO secrets and recoverable share tokens have repository and migration checkpoints below. Remaining feedback copies still need conversion; owner dialogs must retain access to share URLs. |
 | Credentials and configuration | Migrate legacy environment-key envelopes and secret/configuration stores to the agreed protected boundary; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
@@ -1304,3 +1305,19 @@ rows before parents in independent batches, recovers two project-key versions
 with cold caches and rejects a wrong root. Keep the old environment secret
 available until verification shows every legacy board has migrated. Production
 flags remain disabled; other configuration stores remain open.
+
+## Forge mention throttle identity checkpoint — 25 September 2026
+
+`forge_mention_throttle.key` now uses a purpose-separated system blind index
+with its search key pinned to version one. The service derives the digest before
+the atomic claim; the protected RPC first folds a historical clear counter into
+its indexed row under one advisory lock, preserving the current window and
+count. A bounded CAS pass converts counters not touched by live claims. Once an
+indexed row activates the marker, the database rejects the old clear-key RPC
+and direct clear inserts or updates. SQL regression checks count continuity,
+CAS, source plaintext absence, client privilege and obsolete-writer refusal.
+The PostgreSQL rehearsal restores counters and both blind-index key versions
+from independent batches with cold caches and rejects the wrong root. Other
+forge repository and identity sidecars remain open. Production flags remain
+disabled; representative throughput and key/cache-load measurements are a
+prerequisite to production activation, not code review.

@@ -141,5 +141,6 @@
   "20270107440000_feedback_otp_private_lookup.sql": "9be0d2373bcb08b4300a17f17d6c5b728df0e3c45bb0f120ea95921a09c1b088",
   "20270107450000_recoverable_share_token_encryption.sql": "649c4ef49500f08d47c52750a3bc65c8cfb595b786c2e0a2be1af8e620626cc8",
   "20270107460000_numo_surface_destination_encryption.sql": "bf8b07ed5408406c57e7c8c4e4b36a4150fd0d8a97e5e0af5d702f48d3f1e8a5",
-  "20270107470000_feedback_sso_root_encryption.sql": "64a5afd2a37d52d92bf693378465c4632a6142922ae9838c15e28bff76c10c0b"
+  "20270107470000_feedback_sso_root_encryption.sql": "64a5afd2a37d52d92bf693378465c4632a6142922ae9838c15e28bff76c10c0b",
+  "20270107480000_forge_mention_throttle_private_key.sql": "76cffaeea84c4025fed71f96a23e655cdcd0d2eff1496a61ef79533f887d09e5"
 }
