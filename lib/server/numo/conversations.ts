@@ -9,6 +9,8 @@ import { hydrateAgentLaunchCopies, hydrateImportedAgentMessages } from "@/lib/se
 import { hydrateAgentQueueCopies } from "@/lib/server/agent/run-queue-content";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 import { decodeAgentTitle, legacyAgentTitleSchema } from "@/lib/server/agent/run-title-content";
+import { decodeAgentContextSnapshot, legacyAgentContextSchema } from
+  "@/lib/server/agent/context-snapshot-content";
 
 export const NUMO_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const NUMO_CONVERSATIONS_PAGE_SIZE = 50;
@@ -177,6 +179,38 @@ async function collection(supabase: SupabaseClient, table: string, id: string) {
   }
 }
 
+async function hydrateContextSnapshots(supabase: SupabaseClient,
+  rows: Record<string, unknown>[], actorId: string | null) {
+  const ids = rows.map((row) => row.id).filter((id): id is string => typeof id === "string");
+  if (!ids.length) return rows;
+  const snapshots = new Map<string, Record<string, unknown>>();
+  for (let offset = 0; offset < ids.length; offset += 100) {
+    const first = await supabase.from("agent_conversation_contexts")
+      .select("id,conversation_id,kind,resource_id,snapshot,snapshot_ciphertext,snapshot_encryption_version,conversation:agent_conversations!inner(project_id)")
+      .in("id", ids.slice(offset, offset + 100));
+    const { data, error } = legacyAgentContextSchema(first.error)
+      ? await supabase.from("agent_conversation_contexts")
+          .select("id,conversation_id,kind,resource_id,snapshot,conversation:agent_conversations!inner(project_id)")
+          .in("id", ids.slice(offset, offset + 100))
+      : first;
+    if (error) throw new Error("Unable to read agent context snapshots");
+    for (const stored of data ?? []) {
+      const projected = rows.find((row) => row.id === stored.id);
+      const linked = stored.conversation as unknown;
+      const conversation = Array.isArray(linked) ? linked[0] as { project_id: string } | undefined
+        : linked as { project_id: string } | null;
+      if (!projected || !conversation?.project_id) continue;
+      const decoded = await decodeAgentContextSnapshot(conversation.project_id,
+        stored as unknown as { conversation_id: string; kind: string; resource_id: string;
+          snapshot: Record<string, unknown>; snapshot_ciphertext?: string | null;
+          snapshot_encryption_version?: number }, actorId);
+      snapshots.set(stored.id as string, decoded.snapshot);
+    }
+  }
+  if (snapshots.size !== ids.length) throw new Error("Agent context snapshot access changed");
+  return rows.map((row) => ({ ...row, snapshot: snapshots.get(row.id as string) }));
+}
+
 export async function getNumoConversationDetail(
   supabase: SupabaseClient, id: string, actorId: string | null = null,
 ): Promise<NumoConversationDetail | null> {
@@ -210,7 +244,9 @@ export async function getNumoConversationDetail(
     },
     messages: safeMessages.filter((m) => m.kind !== "action"),
     actions: safeMessages.filter((m) => m.kind === "action"),
-    work: await hydrateWorkTitles(supabase, work, actorId), contexts, artifacts, turns,
+    work: await hydrateWorkTitles(supabase, work, actorId),
+    contexts: await hydrateContextSnapshots(supabase, contexts, actorId),
+    artifacts, turns,
     routine_occurrence: occurrenceResult.data ?? null,
   } as unknown as NumoConversationDetail;
 }

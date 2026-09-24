@@ -12,6 +12,9 @@ import { backfillAgentCheckpointBatch } from "@/lib/server/encryption/agent-chec
 import { backfillAgentDelegationBatch } from "@/lib/server/encryption/agent-delegation-backfill";
 import { backfillAgentStandaloneMessages } from "@/lib/server/encryption/agent-standalone-message-backfill";
 import { backfillAgentQueueBatch } from "@/lib/server/encryption/agent-queue-backfill";
+import { backfillAgentContextsBatch } from "@/lib/server/encryption/agent-context-backfill";
+import { backfillGithubIssueMetadataBatch } from "@/lib/server/encryption/github-issue-metadata-backfill";
+import { backfillGithubCommentUrlsBatch } from "@/lib/server/encryption/github-comment-url-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -42,6 +45,8 @@ export async function GET(request: NextRequest) {
   const agentTitleEnabled = contentEnabled && process.env.MINDDY_AGENT_TITLE_ENCRYPTION_ENABLED === "true";
   const agentCheckpointEnabled = contentEnabled && process.env.MINDDY_AGENT_CHECKPOINT_ENCRYPTION_ENABLED === "true";
   const agentDelegationEnabled = contentEnabled && process.env.MINDDY_AGENT_DELEGATION_ENCRYPTION_ENABLED === "true";
+  const agentContextEnabled = contentEnabled && process.env.MINDDY_AGENT_CONTEXT_ENCRYPTION_ENABLED === "true";
+  const issueSidecarEnabled = contentEnabled && process.env.MINDDY_ISSUE_SIDECAR_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -71,6 +76,9 @@ export async function GET(request: NextRequest) {
       agentDelegationEnabled ? backfillAgentDelegationBatch(20, request.signal) : Promise.resolve(null),
       agentLaunchEnabled ? backfillAgentStandaloneMessages(20, request.signal) : Promise.resolve(null),
       agentLaunchEnabled ? backfillAgentQueueBatch(20, request.signal) : Promise.resolve(null),
+      agentContextEnabled ? backfillAgentContextsBatch(20, request.signal) : Promise.resolve(null),
+      issueSidecarEnabled ? backfillGithubIssueMetadataBatch(20, request.signal) : Promise.resolve(null),
+      issueSidecarEnabled ? backfillGithubCommentUrlsBatch(20, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -92,12 +100,15 @@ export async function GET(request: NextRequest) {
     const agentDelegation = outcomes[17];
     const agentStandaloneMessages = outcomes[18];
     const agentQueueMessages = outcomes[19];
+    const agentContexts = outcomes[20];
+    const issueSidecar = outcomes[21];
+    const githubCommentUrls = outcomes[22];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -121,6 +132,9 @@ export async function GET(request: NextRequest) {
         ...(agentDelegationEnabled ? { agent_delegation: agentDelegation.status === "fulfilled" ? agentDelegation.value : { failed: true } } : {}),
         ...(agentLaunchEnabled ? { agent_standalone_messages: agentStandaloneMessages.status === "fulfilled" ? agentStandaloneMessages.value : { failed: true } } : {}),
         ...(agentLaunchEnabled ? { agent_queue_messages: agentQueueMessages.status === "fulfilled" ? agentQueueMessages.value : { failed: true } } : {}),
+        ...(agentContextEnabled ? { agent_contexts: agentContexts.status === "fulfilled" ? agentContexts.value : { failed: true } } : {}),
+        ...(issueSidecarEnabled ? { github_issue_metadata: issueSidecar.status === "fulfilled" ? issueSidecar.value : { failed: true } } : {}),
+        ...(issueSidecarEnabled ? { github_comment_urls: githubCommentUrls.status === "fulfilled" ? githubCommentUrls.value : { failed: true } } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),
       ...(contentEnabled ? { statistics: statistics.status === "fulfilled" ? statistics.value : { failed: true } } : {}),

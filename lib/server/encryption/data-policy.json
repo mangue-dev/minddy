@@ -72,6 +72,21 @@
       ]
     }
   },
+  "agent_context_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "agent_conversation_contexts": {
     "scope": {
       "ancestor": "agent_conversations:conversation_id"
@@ -90,7 +105,12 @@
         "resource_id"
       ],
       "timestamp": [
-        "created_at"
+        "created_at",
+        "snapshot_encryption_checked_at"
+      ],
+      "encryption_metadata": [
+        "snapshot_ciphertext",
+        "snapshot_encryption_version"
       ]
     }
   },
@@ -1748,7 +1768,41 @@
         "created_at_remote",
         "deleted_at_remote",
         "synced_at",
-        "updated_at_remote"
+        "updated_at_remote",
+        "html_url_encryption_checked_at"
+      ],
+      "encryption_metadata": [
+        "html_url_encryption_version"
+      ]
+    }
+  },
+  "github_issue_comment_url_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "github_issue_metadata_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   },
@@ -1781,7 +1835,12 @@
         "closed_at_remote",
         "created_at_remote",
         "synced_at",
-        "updated_at_remote"
+        "updated_at_remote",
+        "content_encryption_checked_at"
+      ],
+      "encryption_metadata": [
+        "content_ciphertext",
+        "content_encryption_version"
       ]
     }
   },

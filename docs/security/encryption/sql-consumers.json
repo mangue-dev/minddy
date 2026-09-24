@@ -849,6 +849,22 @@
       ],
       "functionReferences": []
     },
+    "guard_github_comment_url()": {
+      "sha256": "90f4028d7d47fcabc27e414456c44c6e59ff2c826ff9cda39d3d893704b9058b",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "issues",
+        "github_issue_comment_url_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "issues"
+      ],
+      "functionReferences": []
+    },
     "guard_history_encryption()": {
       "sha256": "a2d4a38eda2559e327b171abba295e08231f563fcc038ae1dbb1d83bf26c03ef",
       "securityDefiner": true,
@@ -1431,6 +1447,22 @@
       ],
       "functionReferences": []
     },
+    "guard_github_issue_metadata()": {
+      "sha256": "77d10ff854718a2b5da2098c5e4c2fd815494f6cfa03259d47e5a8c0354d0510",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "issues",
+        "github_issue_metadata_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "issues"
+      ],
+      "functionReferences": []
+    },
     "guard_scratchpad_encryption()": {
       "sha256": "bb2e03f2b68871b36224bde69b36117cfb7a8e6f30d6cc0ac02276437f7104a5",
       "securityDefiner": false,
@@ -1594,6 +1626,22 @@
         "ai_usage"
       ],
       "protectedRelations": [],
+      "functionReferences": []
+    },
+    "guard_agent_context_snapshot()": {
+      "sha256": "11da5801d98fe38dd0be10668f2d53464d4149ed6879bc4f0d986d8a57334300",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_conversations",
+        "agent_context_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_conversations"
+      ],
       "functionReferences": []
     },
     "guard_agent_delegation_input()": {
@@ -2411,6 +2459,22 @@
         "can_access_comment_parent"
       ]
     },
+    "guard_agent_context_parent_scope()": {
+      "sha256": "27a3a39d0c3721a2ae4314b92eeea49f222489cec215b90f25b644882bfebaf8",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_conversation_contexts",
+        "agent_context_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_conversation_contexts"
+      ],
+      "functionReferences": []
+    },
     "guard_agent_journal_parent_scope()": {
       "sha256": "851ff9c240a6e5eeba5742361aae83bffeb916e6651f934e497370c1ce91d151",
       "securityDefiner": true,
@@ -2786,6 +2850,22 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_github_comment_url_parent_scope()": {
+      "sha256": "929239e36fd13dc3e9ba67742e19ba490b6788ba7d676ee0f4e30b6cc02319d4",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "github_issue_comment_syncs",
+        "github_issue_comment_url_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "github_issue_comment_syncs"
+      ],
+      "functionReferences": []
+    },
     "claim_feedback_posts_for_review(integer)": {
       "sha256": "e9ed88c8aa4998407aac84f5bd550d83d1df5c07a90a2c462121c90884c8421e",
       "securityDefiner": true,
@@ -3064,6 +3144,22 @@
       ],
       "protectedRelations": [
         "git_connections"
+      ],
+      "functionReferences": []
+    },
+    "guard_github_issue_metadata_parent_scope()": {
+      "sha256": "3f4f6c218620825d5b89d2d23f0fa5f32c26dc094f798d9cdd3930436abcd08b",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "github_issue_sync_metadata",
+        "github_issue_metadata_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "github_issue_sync_metadata"
       ],
       "functionReferences": []
     },
@@ -3559,6 +3655,23 @@
         "envelope_data_keys"
       ],
       "protectedRelations": [],
+      "functionReferences": []
+    },
+    "sync_github_issue_metadata_encrypted(uuid,uuid,jsonb)": {
+      "sha256": "99f79b14be3d8c0c4a7c4fe0d78aa979c70174d7f14ad93b996b7f1129f2efbe",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "issues",
+        "github_issue_sync_metadata"
+      ],
+      "protectedRelations": [
+        "issues",
+        "github_issue_sync_metadata"
+      ],
       "functionReferences": []
     },
     "claim_forge_relay_refresh_lineage(uuid,text,text,uuid)": {
@@ -4245,6 +4358,23 @@
       ],
       "functionReferences": []
     },
+    "migrate_agent_context_snapshot(uuid,uuid,uuid,jsonb,text,integer,text,integer)": {
+      "sha256": "11f88adc693f84276fee91ff7b154b5a2e135756edaed179c13f509458846286",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_conversations",
+        "agent_conversation_contexts"
+      ],
+      "protectedRelations": [
+        "agent_conversations",
+        "agent_conversation_contexts"
+      ],
+      "functionReferences": []
+    },
     "create_agent_run_with_budget(uuid,timestamp with time zone,numeric,numeric,jsonb)": {
       "sha256": "2c7710b463b09f80023df925dc2ee354ee8c3418c7843015e4e7bc3bfda711a3",
       "securityDefiner": true,
@@ -4395,6 +4525,23 @@
       ],
       "functionReferences": []
     },
+    "migrate_github_comment_url(uuid,text,uuid,text,integer,timestamp with time zone,text,integer)": {
+      "sha256": "6bd8003ce8d6626a23763e2018d71beb6d401bd4312fc278c7ccdd3726d248a4",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "issues",
+        "github_issue_comment_syncs"
+      ],
+      "protectedRelations": [
+        "issues",
+        "github_issue_comment_syncs"
+      ],
+      "functionReferences": []
+    },
     "migrate_agent_journal_ciphertext(bigint,uuid,integer,text,text,integer,integer,integer,integer)": {
       "sha256": "ad57dd895b83974863476421553fca8db673e86d4926227cf9b30cc727197228",
       "securityDefiner": true,
@@ -4455,6 +4602,23 @@
       "protectedRelations": [
         "agent_runs",
         "agent_conversations"
+      ],
+      "functionReferences": []
+    },
+    "migrate_github_issue_metadata(uuid,uuid,jsonb,jsonb,text,integer,timestamp with time zone,text,integer)": {
+      "sha256": "e6be44fc4a1faae06f8b65c5b37bbbedab618c16c53e6d98d17251cb34c80d96",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "issues",
+        "github_issue_sync_metadata"
+      ],
+      "protectedRelations": [
+        "issues",
+        "github_issue_sync_metadata"
       ],
       "functionReferences": []
     },
@@ -4573,6 +4737,23 @@
         "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "comments",
+        "github_issue_comment_syncs"
+      ],
+      "protectedRelations": [
+        "comments",
+        "github_issue_comment_syncs"
+      ],
+      "functionReferences": []
+    },
+    "sync_github_issue_comment_encrypted_url(uuid,text,uuid,text,text,text,text,timestamp with time zone,timestamp with time zone,timestamp with time zone,uuid,integer,text,integer)": {
+      "sha256": "8342ac45ac8145ba657300747ee337a37b287d6a428bd8171c74a31da8c2d14f",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
       "relations": [
         "comments",
         "github_issue_comment_syncs"
@@ -4981,6 +5162,10 @@
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER feedback_users_set_updated_at BEFORE UPDATE ON feedback_users FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
+    "issues.github_comment_url_parent_scope_guard": {
+      "function": "guard_github_comment_url_parent_scope()",
+      "definition": "CREATE TRIGGER github_comment_url_parent_scope_guard BEFORE UPDATE OF project_id ON issues FOR EACH ROW EXECUTE FUNCTION guard_github_comment_url_parent_scope()"
+    },
     "page_comments.page_comments_encryption_guard": {
       "function": "guard_comment_encryption()",
       "definition": "CREATE TRIGGER page_comments_encryption_guard BEFORE INSERT OR UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION guard_comment_encryption()"
@@ -5077,6 +5262,10 @@
       "function": "freeze_project_id()",
       "definition": "CREATE TRIGGER feedback_posts_freeze_project_id BEFORE UPDATE OF project_id ON feedback_posts FOR EACH ROW EXECUTE FUNCTION freeze_project_id()"
     },
+    "issues.github_issue_metadata_parent_scope_guard": {
+      "function": "guard_github_issue_metadata_parent_scope()",
+      "definition": "CREATE TRIGGER github_issue_metadata_parent_scope_guard BEFORE UPDATE OF project_id ON issues FOR EACH ROW EXECUTE FUNCTION guard_github_issue_metadata_parent_scope()"
+    },
     "notifications.notifications_guard_client_update": {
       "function": "guard_notification_client_update()",
       "definition": "CREATE TRIGGER notifications_guard_client_update BEFORE UPDATE ON notifications FOR EACH ROW EXECUTE FUNCTION guard_notification_client_update()"
@@ -5137,6 +5326,14 @@
       "function": "lock_project_authority_mutation()",
       "definition": "CREATE TRIGGER project_git_links_authority_lock AFTER INSERT OR DELETE OR UPDATE ON project_git_links FOR EACH ROW EXECUTE FUNCTION lock_project_authority_mutation()"
     },
+    "github_issue_comment_syncs.github_comment_url_guard": {
+      "function": "guard_github_comment_url()",
+      "definition": "CREATE TRIGGER github_comment_url_guard BEFORE INSERT OR UPDATE ON github_issue_comment_syncs FOR EACH ROW EXECUTE FUNCTION guard_github_comment_url()"
+    },
+    "agent_conversations.agent_context_parent_scope_guard": {
+      "function": "guard_agent_context_parent_scope()",
+      "definition": "CREATE TRIGGER agent_context_parent_scope_guard BEFORE UPDATE OF project_id ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_agent_context_parent_scope()"
+    },
     "agent_run_events.trg_agent_assistant_message_capture": {
       "function": "capture_agent_assistant_message()",
       "definition": "CREATE TRIGGER trg_agent_assistant_message_capture AFTER INSERT ON agent_run_events FOR EACH ROW EXECUTE FUNCTION capture_agent_assistant_message()"
@@ -5153,6 +5350,10 @@
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER agent_conversations_set_updated_at BEFORE UPDATE ON agent_conversations FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
+    "github_issue_sync_metadata.github_issue_metadata_guard": {
+      "function": "guard_github_issue_metadata()",
+      "definition": "CREATE TRIGGER github_issue_metadata_guard BEFORE INSERT OR UPDATE ON github_issue_sync_metadata FOR EACH ROW EXECUTE FUNCTION guard_github_issue_metadata()"
+    },
     "project_git_links.project_git_links_parent_insert_lock": {
       "function": "lock_project_git_link_parent_insert()",
       "definition": "CREATE TRIGGER project_git_links_parent_insert_lock BEFORE INSERT ON project_git_links FOR EACH ROW EXECUTE FUNCTION lock_project_git_link_parent_insert()"
@@ -5160,6 +5361,10 @@
     "project_invitations.project_invitations_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER project_invitations_set_updated_at BEFORE UPDATE ON project_invitations FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    "agent_conversation_contexts.agent_context_snapshot_guard": {
+      "function": "guard_agent_context_snapshot()",
+      "definition": "CREATE TRIGGER agent_context_snapshot_guard BEFORE INSERT OR UPDATE ON agent_conversation_contexts FOR EACH ROW EXECUTE FUNCTION guard_agent_context_snapshot()"
     },
     "project_git_links.project_git_links_rekey_realtime_after": {
       "function": "rekey_project_git_link_after()",

@@ -854,3 +854,74 @@ are still plaintext. Other PR/forge copies and attachment object bytes are
 unconverted. Feedback identities (`feedback_users.email/name/external_id`),
 `feedback_otp_codes.email` and feedback objects remain plaintext. The issue
 boundary and MIN-591 remain in progress, and PR #289 remains a draft.
+
+## Agent context snapshot checkpoint
+
+`agent_conversation_contexts.snapshot` now uses a project-key envelope bound
+to the stable conversation/kind/resource tuple. Encrypted rows retain only an
+empty JSON object in the source and `numo_contexts` view. Account import
+encrypts snapshots; account export and authorized Numo detail reads decrypt
+them after the source row's access policy. SQL-generated context links have
+empty snapshots and remain metadata-only. An activated project rejects direct
+legacy inserts, including empty inserts, and content changes; SQL trigger
+creation of empty links remains permitted. A 20-row service-only maintenance
+pass verifies ciphertext and uses a compare-and-swap RPC to convert or rotate
+snapshots. A parent project move is rejected when it would invalidate the
+encryption scope.
+
+The isolated SQL regression checks obsolete-writer rejection, source and Numo
+plaintext absence, parent scope and CAS. A real PostgreSQL dump/restore test
+loads context children before their parent conversation in separate committed
+batches, revalidates the foreign key, recovers two project-key versions from
+cold caches and rejects the wrong root. The fixture contains two snapshots
+and cannot estimate representative latency or key/cache load. Production
+flags remain disabled; no production deployment or data migration occurred.
+
+The agent boundary remains open: run and turn outcomes/errors/results, branch
+and PR fields, runtime branch copies, artifacts, Numo projections and other
+agent content listed in the policy still need conversion. The issue boundary
+still includes forge and PR copies, attachment links and object bytes, external
+outputs and old writers. Feedback identities and objects remain open. MIN-591
+and the draft PR remain in progress.
+
+## GitHub issue metadata sidecar checkpoint
+
+The `github_issue_sync_metadata.milestone` and `metadata` JSON fields now
+share an issue-ID-bound project envelope. Their SQL columns hold only `NULL`
+and an empty object after conversion. The GitHub sync writer encrypts before
+an atomic timestamp-guarded RPC; older timestamped webhook deliveries cannot
+replace a newer sidecar. Authorized issue API and MCP reads decrypt after issue access
+checks, while exports do not include this provider-specific sidecar. A
+project marker rejects obsolete plaintext inserts and edits. A bounded
+20-row CAS pass converts or rotates legacy rows and preserves concurrent sync
+updates. The parent issue cannot move projects after the sidecar is encrypted.
+
+The isolated SQL regression checks stale delivery, old-writer refusal, CAS,
+source plaintext absence and client/Realtime privileges. A PostgreSQL dump
+and restore test loads sidecars before encrypted issue parents in separate
+committed batches, revalidates their foreign key, recovers two key versions
+from cold caches and rejects a wrong root. Its two-row fixture is insufficient
+for latency or key/cache estimates. Other issue copies, attachment metadata
+and bytes, PR/forge data, external outputs and feedback identities/objects
+remain open. Production flags remain disabled and no production data was
+changed.
+
+## GitHub issue comment link checkpoint
+
+`github_issue_comment_syncs.html_url` now stores a project-key envelope bound
+to the issue and stable remote comment ID, including when the link is absent.
+The encrypted URL travels through the same atomic comment synchronization RPC
+as the body; the RPC preserves stale-delivery and comment-ID conflict checks.
+Issue API and MCP readers decrypt only after their issue access checks. An
+activated project rejects the older plaintext RPC writer and direct edits.
+A bounded 20-row CAS worker converts and rotates historical links while
+preserving concurrent sidecar updates.
+
+The SQL regression checks source ciphertext, obsolete writers, migration CAS,
+stale deliveries and client/Realtime privileges. The PostgreSQL recovery
+rehearsal loads comment-link rows before encrypted comments and issue parents
+in separate committed batches, revalidates their foreign keys, recovers two
+key versions from cold caches and rejects a wrong root. Its two-row fixture
+does not measure staging latency. PR/forge copies, attachment objects,
+external outputs and feedback identities/objects remain open; the issue and
+agent boundaries are still incomplete. No production flags or data changed.

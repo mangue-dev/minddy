@@ -5,6 +5,8 @@ import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import { decodeIssue } from "@/lib/server/issue-store";
 import { updateIssueFields } from "@/lib/server/update-issue";
 import { softDeleteItem } from "@/lib/server/trash";
+import { decodeGithubIssueMetadata, legacyGithubIssueMetadataSchema } from
+  "@/lib/server/git/issue-sync-content";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -29,19 +31,30 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!data) return NextResponse.json({ error: t("issueNotFound") }, { status: 404 });
-  const { data: githubMetadata, error: githubMetadataError } = await auth.supabase
+  const firstMetadata = await auth.supabase
     .from("github_issue_sync_metadata")
     .select(
-      "github_node_id, author_login, author_association, state_reason, locked, active_lock_reason, milestone, created_at_remote, updated_at_remote, closed_at_remote, closed_by_login, metadata, synced_at"
+      "issue_id, github_node_id, author_login, author_association, state_reason, locked, active_lock_reason, milestone, created_at_remote, updated_at_remote, closed_at_remote, closed_by_login, metadata, synced_at, content_ciphertext, content_encryption_version"
     )
     .eq("issue_id", id)
     .maybeSingle();
+  const { data: githubMetadata, error: githubMetadataError } =
+    legacyGithubIssueMetadataSchema(firstMetadata.error)
+      ? await auth.supabase.from("github_issue_sync_metadata")
+          .select("issue_id, github_node_id, author_login, author_association, state_reason, locked, active_lock_reason, milestone, created_at_remote, updated_at_remote, closed_at_remote, closed_by_login, metadata, synced_at")
+          .eq("issue_id", id).maybeSingle()
+      : firstMetadata;
   if (githubMetadataError) {
     console.error("[api/issues/:id] GitHub metadata get failed:", githubMetadataError.message);
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   return NextResponse.json({
     ...mapIssueRow(await decodeIssue(data, auth.user.id)),
-    github_metadata: githubMetadata ?? null,
+    github_metadata: githubMetadata ? await decodeGithubIssueMetadata(
+      data.project_id as string, githubMetadata as unknown as {
+        issue_id: string; metadata: Record<string, unknown>; milestone: unknown | null;
+        content_ciphertext?: string | null; content_encryption_version?: number },
+      auth.user.id) : null,
   });
 }
 

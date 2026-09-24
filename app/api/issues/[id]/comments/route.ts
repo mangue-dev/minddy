@@ -7,6 +7,8 @@ import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { addCommentToIssue } from "@/lib/server/add-comment";
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeGithubCommentUrl, legacyGithubCommentUrlSchema } from
+  "@/lib/server/git/comment-sync-url-content";
 import {
   mentionsNumo,
   replyTargetsNumo,
@@ -46,19 +48,29 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     (data ?? []).map((c) => c.api_key_id as string | null)
   );
   const commentIds = (data ?? []).map((comment) => comment.id as string);
-  const { data: githubRows, error: githubError } = commentIds.length
-    ? await auth.supabase
-        .from("github_issue_comment_syncs")
-        .select(
-          "comment_id, author_login, author_association, html_url, created_at_remote, updated_at_remote, deleted_at_remote"
-        )
+  const firstGithub = commentIds.length
+    ? await auth.supabase.from("github_issue_comment_syncs")
+        .select("issue_id,remote_comment_id,comment_id,author_login,author_association,html_url,html_url_encryption_version,created_at_remote,updated_at_remote,deleted_at_remote")
         .in("comment_id", commentIds)
     : { data: [], error: null };
+  const { data: githubRows, error: githubError } = legacyGithubCommentUrlSchema(firstGithub.error)
+    ? await auth.supabase.from("github_issue_comment_syncs")
+        .select("issue_id,remote_comment_id,comment_id,author_login,author_association,html_url,created_at_remote,updated_at_remote,deleted_at_remote")
+        .in("comment_id", commentIds)
+    : firstGithub;
   if (githubError) {
     console.error("[api/comments] GitHub metadata list failed:", githubError.message);
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
+  const { data: issueScope, error: issueScopeError } = await auth.supabase.from("issues")
+    .select("project_id").eq("id", id).maybeSingle();
+  if (issueScopeError || !issueScope?.project_id) {
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+  }
+  const decodedGithubRows = await Promise.all((githubRows ?? []).map((row) =>
+    decodeGithubCommentUrl(issueScope.project_id, row, auth.user.id)));
   const githubByComment = new Map(
-    (githubRows ?? []).map((row) => [row.comment_id as string, row]),
+    decodedGithubRows.map((row) => [(row as Record<string, unknown>).comment_id as string, row]),
   );
   return NextResponse.json(
     (data ?? []).map((comment) => ({

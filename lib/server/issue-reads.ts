@@ -1,6 +1,10 @@
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import { decodeIssue } from "@/lib/server/issue-store";
+import { decodeGithubIssueMetadata, legacyGithubIssueMetadataSchema } from
+  "@/lib/server/git/issue-sync-content";
+import { decodeGithubCommentUrl, legacyGithubCommentUrlSchema } from
+  "@/lib/server/git/comment-sync-url-content";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -573,8 +577,8 @@ export async function getIssue(
     { data: comments, error: commentsError },
     { data: subIssues },
     { data: attachmentRows },
-    { data: githubMetadata },
-    { data: githubCommentSyncs },
+    { data: githubMetadata, error: githubMetadataError },
+    { data: githubCommentSyncs, error: githubCommentSyncError },
   ] =
     await Promise.all([
       commentStore(ctx.db, "comments", ctx.actorId ?? null)
@@ -601,20 +605,32 @@ export async function getIssue(
         )
         .eq("issue_id", issue.id)
         .order("created_at", { ascending: true }),
-      ctx.db
-        .from("github_issue_sync_metadata")
-        .select(
-          "github_node_id, author_login, author_association, state_reason, locked, active_lock_reason, milestone, created_at_remote, updated_at_remote, closed_at_remote, closed_by_login, metadata, synced_at"
-        )
-        .eq("issue_id", issue.id)
-        .maybeSingle(),
-      ctx.db
-        .from("github_issue_comment_syncs")
-        .select("comment_id, author_login, author_association, html_url, created_at_remote, updated_at_remote, deleted_at_remote")
-        .eq("issue_id", issue.id),
+      (async () => {
+        const first = await ctx.db.from("github_issue_sync_metadata")
+          .select("issue_id,github_node_id,author_login,author_association,state_reason,locked,active_lock_reason,milestone,created_at_remote,updated_at_remote,closed_at_remote,closed_by_login,metadata,synced_at,content_ciphertext,content_encryption_version")
+          .eq("issue_id", issue.id).maybeSingle();
+        return legacyGithubIssueMetadataSchema(first.error)
+          ? ctx.db.from("github_issue_sync_metadata")
+              .select("issue_id,github_node_id,author_login,author_association,state_reason,locked,active_lock_reason,milestone,created_at_remote,updated_at_remote,closed_at_remote,closed_by_login,metadata,synced_at")
+              .eq("issue_id", issue.id).maybeSingle()
+          : first;
+      })(),
+      (async () => {
+        const first = await ctx.db.from("github_issue_comment_syncs")
+          .select("issue_id,remote_comment_id,comment_id,author_login,author_association,html_url,html_url_encryption_version,created_at_remote,updated_at_remote,deleted_at_remote")
+          .eq("issue_id", issue.id);
+        return legacyGithubCommentUrlSchema(first.error)
+          ? ctx.db.from("github_issue_comment_syncs")
+              .select("issue_id,remote_comment_id,comment_id,author_login,author_association,html_url,created_at_remote,updated_at_remote,deleted_at_remote")
+              .eq("issue_id", issue.id)
+          : first;
+      })(),
     ]);
 
   if (commentsError) return { error: "Unable to read issue comments." };
+  if (githubMetadataError || githubCommentSyncError) {
+    return { error: "Unable to read issue forge metadata." };
+  }
   const decodedSubIssues = await Promise.all(((subIssues ?? []) as Array<Record<string, unknown>>)
     .map((row) => decodeIssue(row, ctx.actorId ?? null)));
   const resourcesByComment = new Map<string | null, Record<string, unknown>[]>();
@@ -632,8 +648,10 @@ export async function getIssue(
     fetchAuthUsersById(ctx.service, authorIds),
     resolveApiKeyActors((comments ?? []).map((c) => c.api_key_id as string | null)),
   ]);
+  const decodedGithubComments = await Promise.all((githubCommentSyncs ?? []).map((row) =>
+    decodeGithubCommentUrl(issue.project_id as string, row, ctx.actorId ?? null)));
   const githubCommentById = new Map(
-    (githubCommentSyncs ?? []).map((row) => [row.comment_id as string, row]),
+    decodedGithubComments.map((row) => [(row as Record<string, unknown>).comment_id as string, row]),
   );
   const commentRows = (comments ?? []).map((c) => {
     const githubComment = githubCommentById.get(c.id as string);
@@ -754,7 +772,11 @@ export async function getIssue(
     relations: relationList,
     ...(duplicateOf ? { duplicate_of: duplicateOf } : {}),
     ...(linkedFeedback.length > 0 ? { linked_feedback: linkedFeedback } : {}),
-    ...(githubMetadata ? { github_metadata: githubMetadata } : {}),
+    ...(githubMetadata ? { github_metadata: await decodeGithubIssueMetadata(
+      issue.project_id as string, githubMetadata as unknown as {
+        issue_id: string; metadata: Record<string, unknown>; milestone: unknown | null;
+        content_ciphertext?: string | null; content_encryption_version?: number },
+      ctx.actorId ?? null) } : {}),
   };
 }
 

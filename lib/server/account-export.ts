@@ -18,6 +18,8 @@ import { hydrateAgentSummaryCopies } from "@/lib/server/agent/run-event-store";
 import { hydrateAgentLaunchCopies, hydrateImportedAgentMessages } from "@/lib/server/agent/run-launch-content";
 import { hydrateAgentQueueCopies } from "@/lib/server/agent/run-queue-content";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
+import { decodeAgentContextSnapshot, legacyAgentContextSchema } from
+  "@/lib/server/agent/context-snapshot-content";
 
 /**
  * Export of account data (MIN-119, GDPR art. 15 and 20).
@@ -420,11 +422,16 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
           )
           .in("conversation_id", codeConversationIds)
           .order("created_at"),
-        service
-          .from("agent_conversation_contexts")
-          .select("conversation_id, kind, resource_id, role, snapshot, created_at")
-          .in("conversation_id", codeConversationIds)
-          .order("created_at"),
+        (async () => {
+          const first = await service.from("agent_conversation_contexts")
+            .select("conversation_id, kind, resource_id, role, snapshot, snapshot_ciphertext, snapshot_encryption_version, created_at")
+            .in("conversation_id", codeConversationIds).order("created_at");
+          return legacyAgentContextSchema(first.error)
+            ? service.from("agent_conversation_contexts")
+                .select("conversation_id, kind, resource_id, role, snapshot, created_at")
+                .in("conversation_id", codeConversationIds).order("created_at")
+            : first;
+        })(),
       ])
     : [
         { data: [] as Row[], error: null },
@@ -436,7 +443,16 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     list(table, result).filter((row) => row.conversation_id === id);
   const exportedCodeConversations = await Promise.all(codeConversationRows.map(async (c) => ({
     ...c,
-    contexts: codeRowsFor("agent_conversation_contexts", codeContexts, c.id as string),
+    contexts: await Promise.all(codeRowsFor("agent_conversation_contexts", codeContexts,
+      c.id as string).map(async (row) => {
+      const decoded = await decodeAgentContextSnapshot(c.project_id as string,
+        row as { conversation_id: string; kind: string; resource_id: string;
+          snapshot: Record<string, unknown>; snapshot_ciphertext?: string | null;
+          snapshot_encryption_version?: number }, userId);
+      const { snapshot_ciphertext: _cipher, snapshot_encryption_version: _version,
+        ...exported } = decoded;
+      return exported;
+    })),
     turns: codeRowsFor("agent_turns", codeTurns, c.id as string),
     messages: (await hydrateImportedAgentMessages(service,
       await hydrateAgentQueueCopies(service,

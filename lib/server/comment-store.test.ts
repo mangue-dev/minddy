@@ -32,7 +32,8 @@ beforeEach(() => {
     byVersion: async (_scope, asked) => ({ version: asked, bytes: Buffer.from(key) }) });
   rows = { issues: [{ id: "issue", project_id: "project" }], pages: [{ id: "page", project_id: "project" }],
     objectives: [{ id: "objective", project_id: "other" }], feedback_posts: [{ id: "post", project_id: "other" }],
-    comments: [], page_comments: [], github_issue_comment_syncs: [] };
+    comments: [], page_comments: [], github_issue_comment_syncs: [],
+    github_issue_comment_url_encryption_scopes: [] };
   requests = [];
   state.service = createClient("https://fixture.supabase.co", "fixture-key", {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -50,7 +51,8 @@ beforeEach(() => {
         else row.encryption_checked_at = "checked";
         return response(true);
       }
-      if (table === "sync_github_issue_comment_atomic") {
+      if (table === "sync_github_issue_comment_atomic" ||
+          table === "sync_github_issue_comment_encrypted_url") {
         if (forgeConflict) {
           forgeConflict = false;
           rows.github_issue_comment_syncs.push({ issue_id: "issue", remote_comment_id: "remote", comment_id: "race-winner" });
@@ -182,6 +184,20 @@ describe("encrypted comment repository", () => {
     expect(writes[0].body.p_comment_id).not.toBe(writes[1].body.p_comment_id);
     expect(writes[1].body.p_body).toBeNull();
     expect((await store().select("id,body").single()).data).toEqual({ id: "race-winner", body: "Private mirrored body" });
+  });
+
+  it("keeps the forge URL encrypted inside the atomic comment RPC", async () => {
+    vi.stubEnv("MINDDY_ISSUE_SIDECAR_ENCRYPTION_ENABLED", "true");
+    await syncGithubComment(state.service!, { p_issue_id: "issue",
+      p_remote_comment_id: "remote", p_author_id: "actor",
+      p_body: "Private mirrored body", p_author_login: "actor",
+      p_author_association: "OWNER", p_html_url: "https://github.test/private/repo",
+      p_created_at_remote: null, p_updated_at_remote: null,
+      p_deleted_at_remote: null });
+    const write = requests.find((request) =>
+      request.table === "sync_github_issue_comment_encrypted_url");
+    expect(write?.body.p_url_encryption_version).toBe(1);
+    expect(JSON.stringify(write?.body)).not.toContain("private/repo");
   });
 
   it("backfills both tables through the timestamp-preserving CAS RPC and revisits rotated rows", async () => {

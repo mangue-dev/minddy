@@ -25,6 +25,7 @@ const delegationTemplate = "minddy_min591_delegation_audit";
 const standaloneMessageTemplate = "minddy_min591_standalone_audit";
 const queueTemplate = "minddy_min591_queue_audit";
 const answerTemplate = "minddy_min591_answer_audit";
+const contextTemplate = "minddy_min591_context_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -1520,6 +1521,254 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
         wrapper(randomBytes(32))));
       await expect(wrong.decrypt(wrong.fromDatabase(rows[0].encrypted_delegation_input), {
         scope, table: "agent_runs", column: "delegation_input", rowId: rows[0].id,
+      })).rejects.toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
+
+  it("restores agent context snapshots before their conversation across key versions", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_context_source_${suffix}`;
+    const restored = `minddy_min591_context_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID(), conversation = randomUUID();
+    const resources = [randomUUID(), randomUUID()];
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(contextTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${contextTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Fixture project','CTX');
+        INSERT INTO public.agent_conversations(id,project_id,owner_id)
+          VALUES(${quote(conversation)},${quote(project)},${quote(actor)});`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      for (const [index, resource] of resources.entries()) {
+        if (index === 1) await keys.rotate(scope, 1);
+        const rowId = `${conversation}:issue:${resource}`;
+        const cipher = await store.encrypt({ title: `Private context ${index + 1}` }, {
+          scope, table: "agent_conversation_contexts", column: "snapshot", rowId,
+        });
+        sql(source, `INSERT INTO public.agent_conversation_contexts(
+          conversation_id,kind,resource_id,snapshot,snapshot_ciphertext,
+          snapshot_encryption_version) VALUES(${quote(conversation)},'issue',
+          ${quote(resource)},'{}',${quote(cipher)},${store.versionOf(cipher)});`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "supabase_admin",
+        "-d", source, "--data-only", "--no-owner", "--no-privileges",
+        ...["auth.users", "public.projects", "public.envelope_data_keys",
+          "public.agent_conversations", "public.agent_conversation_contexts",
+          "public.agent_context_encryption_scopes"].map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("Private context");
+      expect(dump).not.toContain(root.toString("base64"));
+      let dependencies = dump;
+      const batches = new Map<string, { header: string; lines: string[]; footer: string }>();
+      for (const table of ["agent_conversation_contexts", "agent_conversations"]) {
+        const match = dependencies.match(new RegExp(`(COPY public\\.${table}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`));
+        expect(match).not.toBeNull();
+        batches.set(table, { header: match![1], lines: match![2].trimEnd().split("\n").reverse(),
+          footer: match![3] });
+        dependencies = dependencies.replace(match![0], "");
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${dependencies}\nCOMMIT;`);
+      for (const table of ["agent_conversation_contexts", "agent_conversations"]) {
+        const copy = batches.get(table)!;
+        for (const line of copy.lines) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${copy.header}${line}\n${copy.footer}COMMIT;`);
+        }
+      }
+      sql(restored, `ALTER TABLE public.agent_conversation_contexts
+          DROP CONSTRAINT agent_conversation_contexts_conversation_id_fkey;
+        ALTER TABLE public.agent_conversation_contexts
+          ADD CONSTRAINT agent_conversation_contexts_conversation_id_fkey
+          FOREIGN KEY (conversation_id) REFERENCES public.agent_conversations(id) ON DELETE CASCADE;`);
+      const rows = JSON.parse(sql(restored,
+        "SELECT json_agg(x ORDER BY x.resource_id) FROM public.agent_conversation_contexts x;")) as Array<{
+          conversation_id: string; kind: string; resource_id: string;
+          snapshot: Record<string, unknown>; snapshot_ciphertext: string;
+          snapshot_encryption_version: number;
+        }>;
+      expect(rows).toHaveLength(2);
+      expect(rows.map((row) => row.snapshot_encryption_version).sort()).toEqual([1, 2]);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored), wrapper(root)));
+      for (const [index, resource] of resources.entries()) {
+        const row = rows.find((item) => item.resource_id === resource)!;
+        expect(row.snapshot).toEqual({});
+        const clear = await cold.decrypt(cold.fromDatabase<{ title: string }>(
+          row.snapshot_ciphertext), { scope, table: "agent_conversation_contexts",
+          column: "snapshot", rowId: `${conversation}:issue:${resource}` });
+        expect(clear.title).toBe(`Private context ${index + 1}`);
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      await expect(wrong.decrypt(wrong.fromDatabase(rows[0].snapshot_ciphertext), {
+        scope, table: "agent_conversation_contexts", column: "snapshot",
+        rowId: `${conversation}:issue:${rows[0].resource_id}`,
+      })).rejects.toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
+
+  it("restores GitHub issue sidecars before encrypted issue parents in independent batches", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_sidecar_source_${suffix}`;
+    const restored = `minddy_min591_sidecar_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID();
+    const issues = [randomUUID(), randomUUID()];
+    const comments = [randomUUID(), randomUUID()];
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(contextTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${contextTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Fixture project','GHS');`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      const codec = new EncryptedRowCodec(store);
+      for (const [index, issueId] of issues.entries()) {
+        if (index === 1) await keys.rotate(scope, 1);
+        const issue = await codec.encode({ id: issueId, project_id: project,
+          title: `Private issue ${index + 1}`, description: null, plan: null,
+          remote_url: null, automation_override: null, encryption_version: 0,
+          encrypted_content: null }, { table: "issues", scope });
+        sql(source, `INSERT INTO public.issues(id,project_id,number,title,description,
+          plan,remote_url,automation_override,encryption_version,encrypted_content)
+          VALUES(${quote(issueId)},${quote(project)},${index + 1},NULL,NULL,NULL,NULL,NULL,
+            ${issue.encryption_version},${quote(issue.encrypted_content!)});`);
+        const sidecar = await store.encrypt({ metadata: { issue_type: `Private type ${index + 1}` },
+          milestone: { title: `Private milestone ${index + 1}` } }, {
+          scope, table: "github_issue_sync_metadata", column: "content", rowId: issueId,
+        });
+        sql(source, `INSERT INTO public.github_issue_sync_metadata(issue_id,metadata,milestone,
+          content_ciphertext,content_encryption_version)
+          VALUES(${quote(issueId)},'{}',NULL,${quote(sidecar)},${store.versionOf(sidecar)});`);
+        const comment = await codec.encode({ id: comments[index], project_id: project,
+          body: `Private comment ${index + 1}`, encryption_version: 0,
+          encrypted_content: null }, { table: "comments", scope });
+        sql(source, `INSERT INTO public.comments(id,issue_id,project_id,author_id,body,
+          encryption_version,encrypted_content) VALUES(${quote(comments[index])},
+          ${quote(issueId)},${quote(project)},${quote(actor)},NULL,
+          ${comment.encryption_version},${quote(comment.encrypted_content!)});`);
+        const remoteId = `remote-${index + 1}`;
+        const url = await store.encrypt(`https://github.test/Private/repo/${index + 1}`, {
+          scope, table: "github_issue_comment_syncs", column: "html_url",
+          rowId: `${issueId}:${remoteId}`,
+        });
+        sql(source, `INSERT INTO public.github_issue_comment_syncs(
+          remote_comment_id,issue_id,comment_id,html_url,html_url_encryption_version)
+          VALUES(${quote(remoteId)},${quote(issueId)},${quote(comments[index])},
+            ${quote(url)},${store.versionOf(url)});`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "supabase_admin",
+        "-d", source, "--data-only", "--no-owner", "--no-privileges",
+        ...["auth.users", "public.projects", "public.envelope_data_keys",
+          "public.issue_encryption_scopes", "public.github_issue_metadata_encryption_scopes",
+          "public.issues", "public.github_issue_sync_metadata",
+          "public.comment_encryption_scopes", "public.comments",
+          "public.github_issue_comment_url_encryption_scopes",
+          "public.github_issue_comment_syncs"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      for (const secret of ["Private issue", "Private type", "Private milestone",
+        "Private comment", "github.test/Private"])
+        expect(dump).not.toContain(secret);
+      let dependencies = dump;
+      const batches = new Map<string, { header: string; lines: string[]; footer: string }>();
+      for (const table of ["github_issue_comment_syncs", "github_issue_sync_metadata",
+        "comments", "issues"]) {
+        const match = dependencies.match(new RegExp(`(COPY public\\.${table}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`));
+        expect(match).not.toBeNull();
+        batches.set(table, { header: match![1], lines: match![2].trimEnd().split("\n").reverse(),
+          footer: match![3] });
+        dependencies = dependencies.replace(match![0], "");
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${dependencies}\nCOMMIT;`);
+      for (const table of ["github_issue_comment_syncs", "github_issue_sync_metadata",
+        "comments", "issues"]) {
+        const copy = batches.get(table)!;
+        for (const line of copy.lines) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${copy.header}${line}\n${copy.footer}COMMIT;`);
+        }
+      }
+      sql(restored, `ALTER TABLE public.github_issue_sync_metadata
+          DROP CONSTRAINT github_issue_sync_metadata_issue_id_fkey;
+        ALTER TABLE public.github_issue_sync_metadata
+          ADD CONSTRAINT github_issue_sync_metadata_issue_id_fkey
+          FOREIGN KEY (issue_id) REFERENCES public.issues(id) ON DELETE CASCADE;`);
+      sql(restored, `ALTER TABLE public.github_issue_comment_syncs
+          DROP CONSTRAINT github_issue_comment_syncs_comment_id_fkey;
+        ALTER TABLE public.github_issue_comment_syncs
+          ADD CONSTRAINT github_issue_comment_syncs_comment_id_fkey
+          FOREIGN KEY (comment_id) REFERENCES public.comments(id) ON DELETE CASCADE;
+        ALTER TABLE public.github_issue_comment_syncs
+          DROP CONSTRAINT github_issue_comment_syncs_issue_id_fkey;
+        ALTER TABLE public.github_issue_comment_syncs
+          ADD CONSTRAINT github_issue_comment_syncs_issue_id_fkey
+          FOREIGN KEY (issue_id) REFERENCES public.issues(id) ON DELETE CASCADE;`);
+      const rows = JSON.parse(sql(restored,
+        "SELECT json_agg(m ORDER BY issue_id) FROM public.github_issue_sync_metadata m;")) as Array<{
+          issue_id: string; metadata: Record<string, unknown>; milestone: unknown;
+          content_ciphertext: string; content_encryption_version: number;
+        }>;
+      expect(rows.map((row) => row.content_encryption_version).sort()).toEqual([1, 2]);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored), wrapper(root)));
+      for (const [index, issueId] of issues.entries()) {
+        const row = rows.find((item) => item.issue_id === issueId)!;
+        expect(row.metadata).toEqual({});
+        expect(row.milestone).toBeNull();
+        const clear = await cold.decrypt(cold.fromDatabase<{
+          metadata: { issue_type: string }; milestone: { title: string }
+        }>(row.content_ciphertext), {
+          scope, table: "github_issue_sync_metadata", column: "content", rowId: issueId,
+        });
+        expect(clear.metadata.issue_type).toBe(`Private type ${index + 1}`);
+        expect(clear.milestone.title).toBe(`Private milestone ${index + 1}`);
+      }
+      const urlRows = JSON.parse(sql(restored,
+        "SELECT json_agg(s ORDER BY remote_comment_id) FROM public.github_issue_comment_syncs s;")) as Array<{
+          issue_id: string; remote_comment_id: string; html_url: string;
+          html_url_encryption_version: number;
+        }>;
+      expect(urlRows.map((row) => row.html_url_encryption_version)).toEqual([1, 2]);
+      for (const [index, issueId] of issues.entries()) {
+        const row = urlRows.find((item) => item.issue_id === issueId)!;
+        const clear = await cold.decrypt(cold.fromDatabase<string>(row.html_url), {
+          scope, table: "github_issue_comment_syncs", column: "html_url",
+          rowId: `${issueId}:${row.remote_comment_id}`,
+        });
+        expect(clear).toBe(`https://github.test/Private/repo/${index + 1}`);
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      await expect(wrong.decrypt(wrong.fromDatabase(rows[0].content_ciphertext), {
+        scope, table: "github_issue_sync_metadata", column: "content",
+        rowId: rows[0].issue_id,
+      })).rejects.toThrow();
+      await expect(wrong.decrypt(wrong.fromDatabase(urlRows[0].html_url), {
+        scope, table: "github_issue_comment_syncs", column: "html_url",
+        rowId: `${urlRows[0].issue_id}:${urlRows[0].remote_comment_id}`,
       })).rejects.toThrow();
     } finally {
       root.fill(0);

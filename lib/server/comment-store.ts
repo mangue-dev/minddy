@@ -1,4 +1,6 @@
 import "server-only";
+import { encodeGithubCommentUrl, shouldEncryptGithubCommentUrl } from
+  "@/lib/server/git/comment-sync-url-content";
 
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -238,6 +240,16 @@ export async function syncGithubComment(client: SupabaseClient, parameters: {
     if (error) throw new Error("Unable to synchronize comment");
     return;
   }
+  const { data: issueScope, error: issueScopeError } = await client.from("issues")
+    .select("project_id").eq("id", parameters.p_issue_id).maybeSingle();
+  if (issueScopeError || !issueScope?.project_id) {
+    throw new Error("Unable to resolve GitHub comment URL scope");
+  }
+  const encryptUrl = await shouldEncryptGithubCommentUrl(client, issueScope.project_id);
+  const storedUrl = encryptUrl
+    ? await encodeGithubCommentUrl(issueScope.project_id, parameters.p_issue_id,
+        parameters.p_remote_comment_id, parameters.p_html_url)
+    : { html_url: parameters.p_html_url, html_url_encryption_version: 0 };
   for (let attempt = 0; attempt < 3; attempt++) {
     const { data: sidecar, error } = await client.from("github_issue_comment_syncs").select("comment_id")
       .eq("issue_id", parameters.p_issue_id).eq("remote_comment_id", parameters.p_remote_comment_id).maybeSingle();
@@ -246,10 +258,16 @@ export async function syncGithubComment(client: SupabaseClient, parameters: {
     const encoded = await encodeComment(client, "comments", {
       id, issue_id: parameters.p_issue_id, author_id: parameters.p_author_id, body: parameters.p_body,
     });
-    const { data, error: writeError } = await client.rpc("sync_github_issue_comment_atomic", {
+    const values = {
       ...parameters, p_comment_id: id, p_body: encoded.body,
       p_encryption_version: encoded.encryption_version ?? 0, p_encrypted_content: encoded.encrypted_content ?? null,
-    });
+      p_html_url: storedUrl.html_url,
+    };
+    const { data, error: writeError } = encryptUrl
+      ? await client.rpc("sync_github_issue_comment_encrypted_url", {
+          ...values, p_url_encryption_version: storedUrl.html_url_encryption_version,
+        })
+      : await client.rpc("sync_github_issue_comment_atomic", values);
     if (writeError) throw new Error("Unable to synchronize comment");
     if (data?.state === "synced" || data?.state === "stale") return;
     if (data?.state !== "conflict") throw new Error("Invalid comment synchronization result");

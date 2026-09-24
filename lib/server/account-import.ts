@@ -4,6 +4,8 @@ import { encodeCategory } from "./category-store";
 import "server-only";
 import { encodeIssue } from "@/lib/server/issue-store";
 import { encodeImportedAgentMessage, shouldEncryptAgentLaunch } from "@/lib/server/agent/run-launch-content";
+import { encodeAgentContextSnapshot, shouldEncryptAgentContext } from
+  "@/lib/server/agent/context-snapshot-content";
 
 import { randomUUID } from "node:crypto";
 import type { AccountTransferDocument, TransferRow } from "@/lib/account-transfer";
@@ -938,11 +940,13 @@ export async function importAccountTransfer(
       created_by: remapUser(row.created_by, sourceUserId, userId) };
   }));
   await upsertRows(service, "agent_messages", codeMessages);
-  const codeContexts = document.code_agent_conversations.flatMap((conversation) => {
+  const codeContexts = (await Promise.all(document.code_agent_conversations.map(async (conversation) => {
     const conversationId = uuidValue(conversation, "id");
     if (!conversationId || !codeConversationIds.has(conversationId)) return [];
+    const projectId = codeConversations.find((item) => item.id === conversationId)?.project_id;
+    if (typeof projectId !== "string") throw new Error("Invalid imported agent context scope");
     return Array.isArray(conversation.contexts)
-      ? (conversation.contexts as unknown[]).flatMap((context) => {
+      ? (await Promise.all((conversation.contexts as unknown[]).map(async (context) => {
           if (!context || typeof context !== "object") return [];
           const row = context as TransferRow;
           const resourceId = row.kind === "issue"
@@ -950,12 +954,17 @@ export async function importAccountTransfer(
             : row.kind === "page"
               ? mapId(row.resource_id, pageIds)
               : null;
-          return resourceId
-            ? [{ ...pick(row, ["kind", "role", "snapshot", "created_at"]), conversation_id: conversationId, resource_id: resourceId }]
-            : [];
-        })
+          if (!resourceId) return [];
+          const stored = { conversation_id: conversationId, kind: row.kind as string,
+            resource_id: resourceId, snapshot: row.snapshot as Record<string, unknown> ?? {} };
+          const content = await shouldEncryptAgentContext(service, projectId)
+            ? await encodeAgentContextSnapshot(projectId, stored)
+            : { snapshot: stored.snapshot };
+          return [{ ...pick(row, ["kind", "role", "created_at"]),
+            conversation_id: conversationId, resource_id: resourceId, ...content }];
+        }))).flat()
       : [];
-  });
+  }))).flat();
   await upsertRows(service, "agent_conversation_contexts", codeContexts, "conversation_id,kind,resource_id");
   result.personalData += codeConversations.length;
 

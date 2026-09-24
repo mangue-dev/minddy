@@ -570,7 +570,21 @@
     "file": "app/api/issues/[id]/comments/route.ts",
     "operation": "from",
     "resource": "github_issue_comment_syncs",
-    "line": 50,
+    "line": 52,
+    "storage": false
+  },
+  {
+    "file": "app/api/issues/[id]/comments/route.ts",
+    "operation": "from",
+    "resource": "github_issue_comment_syncs",
+    "line": 57,
+    "storage": false
+  },
+  {
+    "file": "app/api/issues/[id]/comments/route.ts",
+    "operation": "from",
+    "resource": "issues",
+    "line": 64,
     "storage": false
   },
   {
@@ -584,14 +598,21 @@
     "file": "app/api/issues/[id]/route.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 21,
+    "line": 23,
     "storage": false
   },
   {
     "file": "app/api/issues/[id]/route.ts",
     "operation": "from",
     "resource": "github_issue_sync_metadata",
-    "line": 32,
+    "line": 34,
+    "storage": false
+  },
+  {
+    "file": "app/api/issues/[id]/route.ts",
+    "operation": "from",
+    "resource": "github_issue_sync_metadata",
+    "line": 43,
     "storage": false
   },
   {
@@ -1641,266 +1662,266 @@
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 89,
+    "line": 91,
     "storage": true
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "project-icons",
-    "line": 116,
+    "line": 118,
     "storage": true
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 199,
+    "line": 201,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 207,
+    "line": 209,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_agent_preferences",
-    "line": 239,
+    "line": 241,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 255,
+    "line": 257,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "page_files",
-    "line": 266,
+    "line": 268,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 278,
+    "line": 280,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "views",
-    "line": 293,
+    "line": 295,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "cycles",
-    "line": 294,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "conversations",
     "line": 296,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
+    "resource": "conversations",
+    "line": 298,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-export.ts",
+    "operation": "from",
     "resource": "notifications",
-    "line": 301,
+    "line": 303,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 313,
+    "line": 315,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 319,
+    "line": 321,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "ai_usage",
-    "line": 331,
+    "line": 333,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 339,
+    "line": 341,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 344,
+    "line": 346,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 349,
+    "line": 351,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 356,
+    "line": 358,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 361,
+    "line": 363,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 373,
+    "line": 375,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 393,
+    "line": 395,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 397,
+    "line": 399,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_messages",
-    "line": 411,
+    "line": 413,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_turns",
-    "line": 416,
+    "line": 418,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversation_contexts",
-    "line": 423,
+    "line": 426,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-export.ts",
+    "operation": "from",
+    "resource": "agent_conversation_contexts",
+    "line": 430,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "issue_categories",
-    "line": 469,
+    "line": 485,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": null,
-    "line": 100,
+    "line": 102,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 302,
+    "line": 304,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": null,
-    "line": 388,
+    "line": 390,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 414,
+    "line": 416,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 430,
+    "line": 432,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 455,
+    "line": 457,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "project-icons",
-    "line": 513,
+    "line": 515,
     "storage": true
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "project-icons",
-    "line": 517,
+    "line": 519,
     "storage": true
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 518,
+    "line": 520,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "objectives",
-    "line": 562,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-import.ts",
-    "operation": "from",
-    "resource": "objectives",
-    "line": 570,
+    "line": 564,
     "storage": false
   },
   {
@@ -1913,15 +1934,15 @@
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
-    "resource": "categories",
-    "line": 578,
+    "resource": "objectives",
+    "line": 574,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "categories",
-    "line": 585,
+    "line": 580,
     "storage": false
   },
   {
@@ -1934,15 +1955,22 @@
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
+    "resource": "categories",
+    "line": 589,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-import.ts",
+    "operation": "from",
     "resource": "attachments",
-    "line": 758,
+    "line": 760,
     "storage": true
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 813,
+    "line": 815,
     "storage": true
   },
   {
@@ -1985,6 +2013,13 @@
     "operation": "rpc",
     "resource": "auth_authorization_state",
     "line": 71,
+    "storage": false
+  },
+  {
+    "file": "lib/server/agent/context-snapshot-content.ts",
+    "operation": "from",
+    "resource": "agent_context_encryption_scopes",
+    "line": 36,
     "storage": false
   },
   {
@@ -3839,42 +3874,28 @@
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": null,
-    "line": 66,
+    "line": 68,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": null,
-    "line": 142,
+    "line": 144,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": null,
-    "line": 146,
+    "line": 148,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": null,
-    "line": 155,
-    "storage": false
-  },
-  {
-    "file": "lib/server/comment-store.ts",
-    "operation": "from",
-    "resource": null,
-    "line": 162,
-    "storage": false
-  },
-  {
-    "file": "lib/server/comment-store.ts",
-    "operation": "from",
-    "resource": null,
-    "line": 163,
+    "line": 157,
     "storage": false
   },
   {
@@ -3887,43 +3908,71 @@
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
-    "resource": "comments",
-    "line": 215,
+    "resource": null,
+    "line": 165,
+    "storage": false
+  },
+  {
+    "file": "lib/server/comment-store.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 166,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": "comments",
-    "line": 222,
+    "line": 217,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": "comments",
-    "line": 223,
+    "line": 224,
+    "storage": false
+  },
+  {
+    "file": "lib/server/comment-store.ts",
+    "operation": "from",
+    "resource": "comments",
+    "line": 225,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "rpc",
     "resource": "sync_github_issue_comment_atomic",
-    "line": 237,
+    "line": 239,
+    "storage": false
+  },
+  {
+    "file": "lib/server/comment-store.ts",
+    "operation": "from",
+    "resource": "issues",
+    "line": 243,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "from",
     "resource": "github_issue_comment_syncs",
-    "line": 242,
+    "line": 254,
+    "storage": false
+  },
+  {
+    "file": "lib/server/comment-store.ts",
+    "operation": "rpc",
+    "resource": "sync_github_issue_comment_encrypted_url",
+    "line": 267,
     "storage": false
   },
   {
     "file": "lib/server/comment-store.ts",
     "operation": "rpc",
     "resource": "sync_github_issue_comment_atomic",
-    "line": 249,
+    "line": 270,
     "storage": false
   },
   {
@@ -4270,6 +4319,27 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/agent-context-backfill.ts",
+    "operation": "from",
+    "resource": "agent_conversation_contexts",
+    "line": 28,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/agent-context-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_agent_context_snapshot",
+    "line": 44,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/agent-context-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_agent_context_snapshot",
+    "line": 62,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/agent-delegation-backfill.ts",
     "operation": "from",
     "resource": "agent_runs",
@@ -4498,6 +4568,48 @@
     "operation": "rpc",
     "resource": "migrate_feedback_post_ciphertext",
     "line": 39,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/github-comment-url-backfill.ts",
+    "operation": "from",
+    "resource": "github_issue_comment_syncs",
+    "line": 28,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/github-comment-url-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_github_comment_url",
+    "line": 46,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/github-comment-url-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_github_comment_url",
+    "line": 65,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/github-issue-metadata-backfill.ts",
+    "operation": "from",
+    "resource": "github_issue_sync_metadata",
+    "line": 29,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/github-issue-metadata-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_github_issue_metadata",
+    "line": 46,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/github-issue-metadata-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_github_issue_metadata",
+    "line": 65,
     "storage": false
   },
   {
@@ -5782,6 +5894,13 @@
     "storage": false
   },
   {
+    "file": "lib/server/git/comment-sync-url-content.ts",
+    "operation": "from",
+    "resource": "github_issue_comment_url_encryption_scopes",
+    "line": 34,
+    "storage": false
+  },
+  {
     "file": "lib/server/git/connections.ts",
     "operation": "from",
     "resource": "git_connections",
@@ -5915,73 +6034,94 @@
     "storage": false
   },
   {
-    "file": "lib/server/git/issue-sync.ts",
+    "file": "lib/server/git/issue-sync-content.ts",
     "operation": "from",
-    "resource": "project_git_links",
-    "line": 147,
+    "resource": "github_issue_metadata_encryption_scopes",
+    "line": 32,
     "storage": false
   },
   {
     "file": "lib/server/git/issue-sync.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 165,
+    "line": 149,
     "storage": false
   },
   {
     "file": "lib/server/git/issue-sync.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 186,
+    "line": 167,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/issue-sync.ts",
+    "operation": "from",
+    "resource": "project_git_links",
+    "line": 188,
     "storage": false
   },
   {
     "file": "lib/server/git/issue-sync.ts",
     "operation": "from",
     "resource": "github_issue_sync_metadata",
-    "line": 385,
+    "line": 387,
     "storage": false
   },
   {
     "file": "lib/server/git/issue-sync.ts",
     "operation": "from",
     "resource": "github_issue_sync_metadata",
-    "line": 432,
+    "line": 434,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/issue-sync.ts",
+    "operation": "from",
+    "resource": "issues",
+    "line": 445,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/issue-sync.ts",
+    "operation": "rpc",
+    "resource": "sync_github_issue_metadata_encrypted",
+    "line": 472,
     "storage": false
   },
   {
     "file": "lib/server/git/issue-sync.ts",
     "operation": "from",
     "resource": "github_issue_sync_metadata",
-    "line": 443,
+    "line": 475,
     "storage": false
   },
   {
     "file": "lib/server/git/issue-sync.ts",
     "operation": "from",
     "resource": "issue_categories",
-    "line": 504,
+    "line": 519,
     "storage": false
   },
   {
     "file": "lib/server/git/issue-sync.ts",
     "operation": "from",
     "resource": "github_issue_comment_syncs",
-    "line": 657,
+    "line": 672,
     "storage": false
   },
   {
     "file": "lib/server/git/issue-sync.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 821,
+    "line": 836,
     "storage": false
   },
   {
     "file": "lib/server/git/issue-sync.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 1049,
+    "line": 1064,
     "storage": false
   },
   {
@@ -6387,98 +6527,112 @@
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 91,
+    "line": 95,
     "storage": false
   },
   {
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 163,
+    "line": 167,
     "storage": false
   },
   {
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "issue_relations",
-    "line": 316,
+    "line": 320,
     "storage": false
   },
   {
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 334,
+    "line": 338,
     "storage": false
   },
   {
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 413,
+    "line": 417,
     "storage": false
   },
   {
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 494,
+    "line": 498,
     "storage": false
   },
   {
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 511,
+    "line": 515,
     "storage": false
   },
   {
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 555,
+    "line": 559,
     "storage": false
   },
   {
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 586,
+    "line": 590,
     "storage": false
   },
   {
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 597,
+    "line": 601,
     "storage": false
   },
   {
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "github_issue_sync_metadata",
-    "line": 604,
+    "line": 609,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "github_issue_sync_metadata",
+    "line": 613,
     "storage": false
   },
   {
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "github_issue_comment_syncs",
-    "line": 611,
+    "line": 619,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-reads.ts",
+    "operation": "from",
+    "resource": "github_issue_comment_syncs",
+    "line": 623,
     "storage": false
   },
   {
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 677,
+    "line": 692,
     "storage": false
   },
   {
     "file": "lib/server/issue-reads.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 765,
+    "line": 784,
     "storage": false
   },
   {
@@ -6905,91 +7059,105 @@
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 26,
+    "line": 28,
     "storage": false
   },
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 30,
+    "line": 32,
     "storage": false
   },
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 50,
+    "line": 52,
     "storage": false
   },
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 76,
+    "line": 78,
     "storage": false
   },
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 80,
+    "line": 82,
     "storage": false
   },
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": "numo_user_conversation_history",
-    "line": 104,
+    "line": 106,
     "storage": false
   },
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": "numo_conversation_history",
-    "line": 116,
+    "line": 118,
     "storage": false
   },
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 130,
+    "line": 132,
     "storage": false
   },
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": "numo_work",
-    "line": 150,
+    "line": 152,
     "storage": false
   },
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": "numo_work_origins",
-    "line": 156,
+    "line": 158,
     "storage": false
   },
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": "numo_conversation_ids",
-    "line": 161,
+    "line": 163,
     "storage": false
   },
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": null,
-    "line": 170,
+    "line": 172,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/conversations.ts",
+    "operation": "from",
+    "resource": "agent_conversation_contexts",
+    "line": 188,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/conversations.ts",
+    "operation": "from",
+    "resource": "agent_conversation_contexts",
+    "line": 192,
     "storage": false
   },
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": "numo_routine_occurrences",
-    "line": 190,
+    "line": 224,
     "storage": false
   },
   {

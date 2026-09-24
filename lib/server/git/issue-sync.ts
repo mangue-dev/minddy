@@ -1,5 +1,7 @@
 import { issueStore } from "@/lib/server/issue-store";
 import { commentStore, syncGithubComment } from "@/lib/server/comment-store";
+import { encodeGithubIssueMetadata, shouldEncryptGithubIssueMetadata } from
+  "./issue-sync-content";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -440,8 +442,18 @@ async function syncGithubMetadata(issueId: string, remote: RemoteIssue): Promise
   }
   if (isOlderThanLocal(remote.updatedAt, data?.updated_at_remote)) return;
   const metadata = remote.githubMetadata;
-  const { error: writeError } = await service.from("github_issue_sync_metadata").upsert(
-    {
+  const { data: issueScope, error: issueScopeError } = await service.from("issues")
+    .select("project_id").eq("id", issueId).maybeSingle();
+  if (issueScopeError || !issueScope?.project_id) {
+    throw new Error("Unable to resolve GitHub issue metadata scope");
+  }
+  const encrypted = await shouldEncryptGithubIssueMetadata(service, issueScope.project_id);
+  const content = encrypted
+    ? await encodeGithubIssueMetadata(issueScope.project_id, issueId, {
+        milestone: metadata.milestone, metadata: { issue_type: metadata.issueType },
+      })
+    : { milestone: metadata.milestone, metadata: { issue_type: metadata.issueType } };
+  const values = {
       issue_id: issueId,
       github_node_id: metadata.nodeId,
       author_login: metadata.authorLogin,
@@ -449,16 +461,19 @@ async function syncGithubMetadata(issueId: string, remote: RemoteIssue): Promise
       state_reason: metadata.stateReason,
       locked: metadata.locked,
       active_lock_reason: metadata.activeLockReason,
-      milestone: metadata.milestone,
+      ...content,
       created_at_remote: metadata.createdAt,
       updated_at_remote: remote.updatedAt,
       closed_at_remote: metadata.closedAt,
       closed_by_login: metadata.closedByLogin,
-      metadata: { issue_type: metadata.issueType },
       synced_at: new Date().toISOString(),
-    },
-    { onConflict: "issue_id" },
-  );
+    };
+  const { error: writeError } = encrypted
+    ? await service.rpc("sync_github_issue_metadata_encrypted", {
+        p_issue_id: issueId, p_project_id: issueScope.project_id, p_values: values,
+      })
+    : await service.from("github_issue_sync_metadata")
+        .upsert(values as Record<string, unknown>, { onConflict: "issue_id" });
   if (writeError) {
     console.error(`[issue-sync] GitHub metadata write failed for issue ${issueId}:`, writeError.message);
   }

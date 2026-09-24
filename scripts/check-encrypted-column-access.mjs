@@ -31,6 +31,16 @@ const rules = [
       "lib/server/encryption/agent-standalone-message-backfill.ts"]),
   },
   {
+    access: /\.\s*from\s*\(\s*["'`]agent_conversation_contexts["'`]\s*\)/,
+    allowed: new Set(["lib/server/account-export.ts", "lib/server/account-import.ts",
+      "lib/server/numo/conversations.ts", "lib/server/encryption/agent-context-backfill.ts"]),
+  },
+  {
+    access: /\.\s*(?:from\s*\(\s*["'`]agent_context_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_agent_context_snapshot["'`])/,
+    allowed: new Set(["lib/server/agent/context-snapshot-content.ts",
+      "lib/server/encryption/agent-context-backfill.ts"]),
+  },
+  {
     access: /\.\s*rpc\s*\(\s*["'`]migrate_agent_standalone_message["'`]/,
     allowed: new Set(["lib/server/encryption/agent-standalone-message-backfill.ts"]),
   },
@@ -95,6 +105,8 @@ const rules = [
       "lib/server/issue-store.ts", "lib/server/encryption/issue-backfill.ts",
       "lib/server/create-issue.ts", "lib/server/update-issue.ts",
       "lib/server/import-issues.ts", "lib/server/issue-reads.ts",
+      "lib/server/git/issue-sync.ts",
+      "lib/server/comment-store.ts", "app/api/issues/[id]/comments/route.ts",
       "app/api/issues/[id]/route.ts", "lib/server/assistant/comment-agent.ts",
       "lib/server/agent/control-plane.ts", "lib/server/agent/vm-rest.ts",
       "lib/server/cycles.ts", "lib/server/recurrence.ts", "lib/server/smart-assign.ts",
@@ -104,6 +116,30 @@ const rules = [
       "captures/world/seed/014-pages-aurora.mjs", "captures/world/seed/015-current-cycle-completed.mjs",
       "captures/world/seed/017-cycle-recal.mjs", "captures/world/seed/_issues.mjs",
     ]),
+  },
+  {
+    access: /\.\s*from\s*\(\s*["'`]github_issue_sync_metadata["'`]\s*\)/,
+    allowed: new Set(["lib/server/git/issue-sync.ts",
+      "lib/server/issue-reads.ts", "app/api/issues/[id]/route.ts",
+      "lib/server/encryption/github-issue-metadata-backfill.ts"]),
+  },
+  {
+    access: /\.\s*from\s*\(\s*["'`]github_issue_comment_syncs["'`]\s*\)/,
+    allowed: new Set(["lib/server/comment-store.ts", "lib/server/git/issue-sync.ts",
+      "lib/server/issue-reads.ts", "app/api/issues/[id]/comments/route.ts",
+      "lib/server/encryption/github-comment-url-backfill.ts"]),
+  },
+  {
+    access: /\.\s*(?:from\s*\(\s*["'`]github_issue_comment_url_encryption_scopes["'`]|rpc\s*\(\s*["'`](?:migrate_github_comment_url|sync_github_issue_comment_encrypted_url)["'`])/,
+    allowed: new Set(["lib/server/git/comment-sync-url-content.ts",
+      "lib/server/comment-store.ts",
+      "lib/server/encryption/github-comment-url-backfill.ts"]),
+  },
+  {
+    access: /\.\s*(?:from\s*\(\s*["'`]github_issue_metadata_encryption_scopes["'`]|rpc\s*\(\s*["'`](?:migrate_github_issue_metadata|sync_github_issue_metadata_encrypted)["'`])/,
+    allowed: new Set(["lib/server/git/issue-sync-content.ts",
+      "lib/server/git/issue-sync.ts",
+      "lib/server/encryption/github-issue-metadata-backfill.ts"]),
   },
   {
     access: /\.\s*(?:from\s*\(\s*["'`]issue_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_issue_ciphertext["'`])/,
