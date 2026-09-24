@@ -81,7 +81,7 @@ must be checked separately.
 | Surface | Required work and proof of completion |
 | --- | --- |
 | Projects, issues, pages and views | Convert every server repository read/write and all imports, exports, MCP and AI consumers; add ciphertext/version storage and reject older plaintext writers. Preserve access checks before decryption and existing concurrency semantics. Objectives and category names now have converted repositories and bounded migrations; they still need representative staging validation before activation. |
-| Histories and derived copies | Page versions, issue events, statistics and durable agent replay journals now have converted repositories and migration. Assistant/agent conversations, other checkpoints, messages, run events, tool arguments/results and surface projections remain to be converted with their source rows. |
+| Histories and derived copies | Page versions, issue events, statistics, durable agent replay journals and run event payloads now have converted repositories and migration. The event-triggered assistant summary and pending question copies are protected with their event. Initial prompts, steering messages, answers, other checkpoints, conversation content and surface projections remain to be converted with their source rows. |
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
 | Forge data | Resolve ownership of repository data shared by several projects. Private repository names currently participate in primary/unique keys and lookup paths; introduce opaque/indexed identities before encrypting them. The generic row codec deliberately refuses sensitive primary keys. |
@@ -535,11 +535,11 @@ content or sensitive related data in clear form:
 
 | Path | Remaining work |
 | --- | --- |
-| Agent state | `agent_runs.title/prompt/checkpoint` and related delegation fields, `agent_conversations.title`, messages, run events and tool results still persist readable content. Durable OpenCode replay batches in `agent_run_journal` now have a separately gated encrypted path. The launch title generator can summarize an issue into the remaining clear rows. Convert the rest of the agent boundary, its SQL title-sync trigger, reads, Realtime and historical rows together. |
+| Agent state | `agent_runs.title/prompt/checkpoint` and related delegation fields, `agent_conversations.title`, initial/steering messages, input answers and runtime sessions still persist readable content. Durable replay batches and run events have separately gated encrypted paths; event-triggered summary and question copies follow the event ciphertext. The launch title generator can summarize an issue into remaining clear rows. Convert the rest of the agent boundary, its SQL title-sync trigger, reads, Realtime and historical rows together. |
 | Forge and external delivery | `pull_requests.title`, branch/repository names and URLs, GitHub issue metadata/sidecars and forge relay payloads remain clear in the application database. GitHub/GitLab issue synchronization, PR publication, webhooks, push and downloaded exports deliberately disclose content to their recipients or providers; review authorization, retention and provider controls for each destination. |
 | Resources and objects | Issue attachment URLs, filenames, storage paths and file bytes remain clear. Direct upload/download, AI resource reads, account exports/imports, copy and orphan cleanup still need an authorized opaque-path object transport, migration and restore. MIME and size are currently classified as operational metadata. |
 | Search and SQL | Application issue search reads through the repository, but representative latency and key/cache load are unmeasured. The SQL consumer inventory is a candidate list, not proof that every function or RPC has a safe content flow. |
-| Recovery and rollout | The seven-node fixture exercises the schema's supported one-level parent hierarchy with issue COPY rows deliberately reversed so children precede parents. PostgreSQL restores and decrypts them, but `pg_dump` still warns about self-referential foreign keys in data-only restores. A full application restore with every linked table and object remains unverified. No representative staging database or staging credentials were available in this session. |
+| Recovery and rollout | The seven-node fixture exercises the schema's supported one-level parent hierarchy with children and parents in separate COPY statements in reverse dependency order. The data-only restore suppresses triggers, then recreates the parent foreign key to validate every restored link. PostgreSQL restores and decrypts them, but `pg_dump` still warns about self-referential foreign keys in data-only restores. A full application restore with every linked table and object remains unverified. No representative Minddy staging database or credentials were available in this session. |
 
 The source flag and global content flag remain disabled in production. This
 follow-up does not convert the remaining agent, forge, object or page sources, and is not an
@@ -596,6 +596,53 @@ local database is a schema-only clone populated with small fixtures. Issue searc
 project key/cache load cannot be inferred from those fixtures and remain
 unmeasured. Both production encryption flags and the new journal flag remain
 disabled; no production deployment or data migration occurred.
+
+## Run events and event-triggered copies — 24 September 2026
+
+`agent_run_events.payload` now has a separately gated project-key envelope.
+The event writer resolves its parent run's project, allocates the event ID
+before encryption and stores a format-3 ciphertext bound to that ID and run. The
+authorized run API and delegation reader decrypt through one project-bound
+repository. The live event broadcast uses the in-memory logical payload after
+the database insert; the event table has no Realtime publication. An activated
+project rejects obsolete plaintext event writers and cannot move an encrypted
+run to another project. Older preview schemas retain a read-only legacy
+fallback while the event flag is off.
+
+The SQL summary trigger copies the event ciphertext into
+`agent_messages.content`; Numo conversation detail and account export resolve
+the source event after authorization and return the logical summary. The input
+trigger copies the same ciphertext into `agent_run_input_requests` instead of
+persisting the question array, while retaining only question/call routing IDs.
+The status endpoint decrypts the pending question after its RLS read. Guards
+reject new plaintext summary and question copies after project activation.
+One service-only compare-and-swap RPC converts or rotates an event and both
+derived copies in the same transaction. Hourly maintenance attempts at most
+20 events with fair retry ordering and verifies the replacement before commit.
+`MINDDY_AGENT_EVENT_ENCRYPTION_ENABLED` and the global content flag must both
+be true for new opt-in writes or maintenance; both remain off in production.
+
+The isolated SQL regression covers legacy and encrypted triggers, migration
+CAS, stale writers, scope moves, copy guards and privileges. A real PostgreSQL
+dump/restore recovers encrypted summary and question events across two content
+key versions, their SQL-created copies and cold keys; a wrong root fails. The
+issue recovery fixture now restores children and parents in separate COPY
+statements with children first, then recreates the parent foreign key to
+validate restored references. These are small, isolated fixtures, not a full
+application or object restore. The Supabase CLI project listing contains the
+Minddy production project but no identified Minddy staging project. No staging
+connection or representative staging rows were supplied, so issue search
+latency, event write throughput and project-key/cache load remain unmeasured;
+fixture timings cannot establish production behavior.
+
+This closes the event payload and its two event-triggered plaintext copies,
+not the agent or issue boundary. `agent_runs` titles, prompts, checkpoints and
+delegation data; `agent_conversations.title`; initial/steering messages,
+pending input answers, runtime sessions and Numo projections remain clear.
+The next queue tranche has begun by making failed pending-message claims stop
+the worker instead of silently appearing empty. Feedback visitor identities,
+OTP email and feedback objects also remain clear. Production flags stay off;
+no production migration or deployment occurred.
 
 ## Root-key setup and recovery
 
