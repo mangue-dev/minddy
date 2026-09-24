@@ -1509,6 +1509,26 @@
         "type": "boolean",
         "nullable": false,
         "generated": false
+      },
+      "has_launch_prompt": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "encrypted_launch_content": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "launch_encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "launch_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -8766,6 +8786,30 @@
       {
         "table": "users",
         "column": "actor_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "agent_launch_encryption_scopes": {
+    "columns": {
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "project_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
         "targetColumn": "id"
       }
     ]

@@ -954,7 +954,7 @@
       "functionReferences": []
     },
     "create_agent_turn_for_run()": {
-      "sha256": "a8ee6be53c9017d3874475a7438f2bf7c9544c53147d826ed18834bb8a5bb364",
+      "sha256": "e93b88119e49cc6c864c6a47d9ec8a0d762e513850d7280a020320379ac0381b",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1706,6 +1706,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_agent_launch_encryption()": {
+      "sha256": "073aabb457c8961f5dee2369b116b3f0e11f23bb596bc34426ed6a9bcb516db4",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_launch_encryption_scopes"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "lock_project_membership_scope()": {
       "sha256": "bd69c56a0c5b97efa80089da228f062c687fa232cddf7f80713169efdcdef833",
       "securityDefiner": false,
@@ -2099,6 +2112,24 @@
       "protectedRelations": [
         "issues",
         "objectives"
+      ],
+      "functionReferences": []
+    },
+    "guard_agent_initial_prompt_copy()": {
+      "sha256": "0d33c40451aef7932aec691eac57a5a7dfe95c663cd21e93878e038eea8375ff",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "agent_conversations",
+        "agent_launch_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "agent_conversations"
       ],
       "functionReferences": []
     },
@@ -3944,8 +3975,25 @@
       ],
       "functionReferences": []
     },
+    "migrate_agent_launch_ciphertext(uuid,uuid,uuid,integer,text,integer,boolean)": {
+      "sha256": "57ea10e4ad2db80ad84cb045c6e05878ec0d8f2165840f1593b8c87c8e7496cd",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "agent_messages"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "agent_messages"
+      ],
+      "functionReferences": []
+    },
     "create_agent_run_with_budget(uuid,timestamp with time zone,numeric,numeric,jsonb)": {
-      "sha256": "4e2f34e627fd4776f21e812c88168963fad53262511686d4c474270a45ce8359",
+      "sha256": "ff73c073e4ce6fdb076c381378057001d93b1d04d3f26423aec507966fa366f5",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4316,6 +4364,10 @@
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER projects_set_updated_at BEFORE UPDATE ON projects FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
+    "agent_runs.agent_run_launch_guard": {
+      "function": "guard_agent_launch_encryption()",
+      "definition": "CREATE TRIGGER agent_run_launch_guard BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_launch_encryption()"
+    },
     "attachments.attachments_broadcast": {
       "function": "broadcast_project_scoped()",
       "definition": "CREATE TRIGGER attachments_broadcast AFTER INSERT OR DELETE OR UPDATE ON attachments FOR EACH ROW EXECUTE FUNCTION broadcast_project_scoped()"
@@ -4615,6 +4667,10 @@
     "page_comments.page_comments_freeze_project_id": {
       "function": "freeze_project_id()",
       "definition": "CREATE TRIGGER page_comments_freeze_project_id BEFORE UPDATE OF project_id ON page_comments FOR EACH ROW EXECUTE FUNCTION freeze_project_id()"
+    },
+    "agent_messages.agent_initial_prompt_copy_guard": {
+      "function": "guard_agent_initial_prompt_copy()",
+      "definition": "CREATE TRIGGER agent_initial_prompt_copy_guard BEFORE INSERT OR UPDATE ON agent_messages FOR EACH ROW EXECUTE FUNCTION guard_agent_initial_prompt_copy()"
     },
     "feedback_boards.feedback_boards_set_updated_at": {
       "function": "set_updated_at()",

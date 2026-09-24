@@ -10,6 +10,7 @@ import {
   type RunAnchors,
 } from "@/lib/server/agent/run-access";
 import { agentRunCanResume } from "@/lib/agent-run-resumability";
+import { decodeAgentLaunch, legacyAgentLaunchSchema } from "@/lib/server/agent/run-launch-content";
 
 /** The `RUN_COLUMNS` columns this file needs to slice. */
 type RunRow = RunAnchors & {
@@ -32,7 +33,7 @@ export const runtime = "nodejs";
 // to decide visibility. The service-key query needs them before it can return a
 // safe public response.
 const RUN_COLUMNS =
-  "id, conversation_id, parent_numo_turn_id, status, model, model_forced, reasoning_level, key_mode, triggered_by, prompt, prompt_mentions, pull_request_id, created_by, chain_id, routine_id, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input, local_exec, local_worktree, conversation:agent_conversations(owner_id, visibility)";
+  "id, project_id, conversation_id, parent_numo_turn_id, status, model, model_forced, reasoning_level, key_mode, triggered_by, prompt, prompt_mentions, pull_request_id, created_by, chain_id, routine_id, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input, local_exec, local_worktree, conversation:agent_conversations(owner_id, visibility)";
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -48,18 +49,23 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   // more about `agent_runs` (MIN-163). A ticket can carry a PR without any
   // run has opened it — human PR attached by convention, or attached to
   // the hand from the PR header — and the panel then shut it up.
-  const [{ data }, { data: prs }] = await Promise.all([
-    service
+  const readRuns = (columns: string) => service
       .from("agent_runs")
-      .select(RUN_COLUMNS)
+      .select(columns)
       .eq("issue_id", id)
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false });
+  const [initialRuns, { data: prs }] = await Promise.all([
+    readRuns(`${RUN_COLUMNS}, encrypted_launch_content, launch_encryption_version`),
     service
       .from("pull_requests")
       .select("id, issue_id, number, state, updated_at")
       .eq("issue_id", id)
       .order("updated_at", { ascending: false }),
   ]);
+  const runsResult = legacyAgentLaunchSchema(initialRuns.error)
+    ? await readRuns(RUN_COLUMNS) : initialRuns;
+  if (runsResult.error) return NextResponse.json({ error: "Unable to read agent runs" }, { status: 500 });
+  const data = runsResult.data;
   const pullRequest =
     pickIssuePullRequests((prs ?? []) as IssuePrRow[])[id] ?? null;
   // The issue is public, but its conversations are not (MIN-332): the panel
@@ -88,7 +94,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const failedWithCheckpoint = new Set(
     ((checkpointRows ?? []) as Array<{ id: string }>).map((run) => run.id),
   );
-  const runs = visibleRuns.map(
+  const decodedRuns = await Promise.all(visibleRuns.map((run) =>
+    decodeAgentLaunch(run as RunRow & Parameters<typeof decodeAgentLaunch>[0], auth.user.id)));
+  const runs = decodedRuns.map(
     ({
       created_by: _c,
       chain_id: _ch,

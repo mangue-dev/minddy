@@ -161,7 +161,7 @@ async function pinnedRow(
 
   let pr = prId ? await findPullRequest(prId) : null;
   if (!pr && runId) {
-    const run = await getRun(runId);
+    const run = await getRun(runId, { decode: false });
     pr = run ? await resolvePrForRun(run) : null;
   }
   if (!pr) return null;

@@ -43,6 +43,7 @@ import {
   shouldEncryptJournal,
 } from "./encrypted-journal";
 import { encodeRunEvent, shouldEncryptRunEvent } from "./run-event-store";
+import { decodeAgentLaunch, encodeAgentLaunch, shouldEncryptAgentLaunch } from "./run-launch-content";
 
 /**
  * Data access to code agent runs (MIN-46): creation, CAS claim,
@@ -286,6 +287,8 @@ export interface AgentRun {
   created_by: string | null;
   prompt: string | null;
   prompt_mentions: AssistantMention[] | null;
+  encrypted_launch_content?: string | null;
+  launch_encryption_version?: number;
   /** Durable Numo ownership and idempotency correlation for delegated work. */
   parent_numo_conversation_id?: string | null;
   parent_numo_turn_id?: string | null;
@@ -559,7 +562,17 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
    */
   const engine = AGENT_ENGINE;
   const loopInVm = true;
+  const encryptLaunch = await shouldEncryptAgentLaunch(service, input.projectId);
+  const id = encryptLaunch ? randomUUID() : null;
+  const launchContent = {
+    prompt: stripUnstorable(input.prompt ?? null),
+    prompt_mentions: stripUnstorable(input.promptMentions ?? null),
+  };
+  const storedLaunch = encryptLaunch
+    ? await encodeAgentLaunch(input.projectId, id!, launchContent)
+    : launchContent;
   const values = {
+    ...(id ? { id } : {}),
     ...(input.conversationId ? { conversation_id: input.conversationId } : {}),
     project_id: input.projectId,
     issue_id: input.issueId,
@@ -572,8 +585,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     status: "queued",
     triggered_by: input.triggeredBy,
     created_by: input.createdBy,
-    prompt: input.prompt ?? null,
-    prompt_mentions: input.promptMentions ?? null,
+    ...storedLaunch,
     ...(input.delegationBrief
       ? {
           parent_numo_conversation_id: input.parentNumoConversationId,
@@ -659,7 +671,11 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     },
     groups: { project: input.projectId },
   });
-  return data as AgentRun;
+  return decodeAgentLaunch(data as AgentRun);
+}
+
+async function hydrateRun(row: AgentRun | null): Promise<AgentRun | null> {
+  return row ? decodeAgentLaunch(row) : null;
 }
 
 /** Atomic CAS claim (queued → running). Returns null when another worker won. */
@@ -675,7 +691,7 @@ export async function claimRun(runId: string): Promise<AgentRun | null> {
   const rows = (data ?? []) as AgentRun[];
   const run = rows[0] ?? null;
   if (!run) return null;
-  if (await runAuthorityIsCurrent(run)) return run;
+  if (await runAuthorityIsCurrent(run)) return (await hydrateRun(run))!;
 
   // The generic claim RPC only arbitrates queued workers. Authorization can
   // change after the run was queued, so close a stale claim before an executor
@@ -701,7 +717,7 @@ export async function claimRunRest(runId: string): Promise<AgentRun | null> {
     console.error("[agent-runs] rest claim failed:", error.message);
     return null;
   }
-  return ((data ?? []) as AgentRun[])[0] ?? null;
+  return hydrateRun(((data ?? []) as AgentRun[])[0] ?? null);
 }
 
 /**
@@ -727,17 +743,20 @@ export async function claimLocalRun(input: {
     console.error("[agent-runs] local claim failed:", error.message);
     return null;
   }
-  return ((data ?? []) as AgentRun[])[0] ?? null;
+  return hydrateRun(((data ?? []) as AgentRun[])[0] ?? null);
 }
 
-export async function getRun(runId: string): Promise<AgentRun | null> {
+export async function getRun(
+  runId: string, options: { decode?: boolean } = {},
+): Promise<AgentRun | null> {
   const service = getServiceClient();
   const { data } = await service
     .from("agent_runs")
     .select("*, conversation:agent_conversations(owner_id, visibility)")
     .eq("id", runId)
     .maybeSingle();
-  return (data as AgentRun | null) ?? null;
+  const row = (data as AgentRun | null) ?? null;
+  return options.decode === false ? row : hydrateRun(row);
 }
 
 /** True when no newer run exists on the anchor whose history this run shares. */
@@ -998,7 +1017,7 @@ export async function findQueuedLocalRunForMachine(input: {
     console.error("[agent-runs] local queue lookup failed:", error.message);
     return null;
   }
-  return (data as AgentRun | null) ?? null;
+  return hydrateRun((data as AgentRun | null) ?? null);
 }
 
 /**
@@ -1026,7 +1045,7 @@ export async function declineQueuedLocalRun(
     );
     return null;
   }
-  return (data as AgentRun | null) ?? null;
+  return hydrateRun((data as AgentRun | null) ?? null);
 }
 
 /**
@@ -1136,7 +1155,7 @@ export async function activeRunForIssue(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (data as AgentRun | null) ?? null;
+  return hydrateRun((data as AgentRun | null) ?? null);
 }
 
 /** Run ACTIVE of an automation chain. The ticket is no longer a lock:
@@ -1154,7 +1173,7 @@ export async function activeRunForChain(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (data as AgentRun | null) ?? null;
+  return hydrateRun((data as AgentRun | null) ?? null);
 }
 
 /**
@@ -1177,7 +1196,7 @@ export async function activeRunForPullRequest(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (data as AgentRun | null) ?? null;
+  return hydrateRun((data as AgentRun | null) ?? null);
 }
 
 /**
@@ -1200,7 +1219,7 @@ export async function activeRunForRoutine(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (data as AgentRun | null) ?? null;
+  return hydrateRun((data as AgentRun | null) ?? null);
 }
 
 /**
@@ -1222,7 +1241,7 @@ export async function runsForRoutine(
     .is("parent_numo_turn_id", null)
     .order("created_at", { ascending: false })
     .limit(limit);
-  return (data ?? []) as AgentRun[];
+  return Promise.all(((data ?? []) as AgentRun[]).map((row) => decodeAgentLaunch(row)));
 }
 
 /**
@@ -1242,7 +1261,7 @@ export async function latestRunForPullRequest(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (data as AgentRun | null) ?? null;
+  return hydrateRun((data as AgentRun | null) ?? null);
 }
 
 /**
@@ -1345,7 +1364,7 @@ export async function activeRunForPrNumber(opts: {
     .in("status", ACTIVE_STATUSES)
     .order("created_at", { ascending: false })
     .limit(1);
-  return ((data ?? []) as AgentRun[])[0] ?? null;
+  return hydrateRun(((data ?? []) as AgentRun[])[0] ?? null);
 }
 
 /**
@@ -1592,7 +1611,7 @@ export async function stampRunResult(
   // deliberately target an already-terminal run (for example, clearing its
   // provider key). Treating those writes as fresh endings repeats analytics and
   // routine notifications.
-  const run = (data as AgentRun | null) ?? null;
+  const run = await hydrateRun((data as AgentRun | null) ?? null);
   const enteredTerminalStatus =
     fields.status != null && TERMINAL_RUN_STATUSES.has(fields.status);
   if (run && enteredTerminalStatus && TERMINAL_RUN_STATUSES.has(run.status)) {

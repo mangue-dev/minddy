@@ -18,6 +18,7 @@ const feedbackTemplate = "minddy_min591_feedback_audit";
 const issueTemplate = "minddy_min591_issue_audit";
 const journalTemplate = "minddy_min591_journal_audit";
 const eventTemplate = "minddy_min591_event_audit";
+const launchTemplate = "minddy_min591_launch_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -527,17 +528,18 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       // reverse dependency order. A full restore adds FKs after data; the
       // schema-only template already has them, so use the data-only restore's
       // trigger suppression and then recreate the parent FK to validate it.
-      let separated = false;
-      const shuffledDump = dump.replace(
-        /(COPY public\.issues[^\n]*\n)([\s\S]*?)(\\\.\n)/,
-        (_whole, header: string, body: string, footer: string) => {
-          separated = true;
-          return body.trimEnd().split("\n").reverse()
-            .map((line) => header + line + "\n" + footer).join("");
-        },
-      );
-      expect(separated).toBe(true);
-      sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${shuffledDump}\nCOMMIT;`);
+      const issueCopy = dump.match(/(COPY public\.issues[^\n]*\n)([\s\S]*?)(\\\.\n)/);
+      expect(issueCopy).not.toBeNull();
+      const [copyStatement, header, body, footer] = issueCopy!;
+      const lines = body.trimEnd().split("\n").reverse();
+      const dependencies = dump.replace(copyStatement, "");
+      sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${dependencies}\nCOMMIT;`);
+      // Each child or parent arrives in its own committed restore batch. This
+      // models independent backup streams, rather than one transaction whose
+      // deferred references happen to be present by commit time.
+      for (const line of lines) {
+        sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${header}${line}\n${footer}COMMIT;`);
+      }
       sql(restored, `ALTER TABLE public.issues DROP CONSTRAINT issues_parent_id_fkey;
         ALTER TABLE public.issues ADD CONSTRAINT issues_parent_id_fkey
           FOREIGN KEY (parent_id) REFERENCES public.issues(id) ON DELETE SET NULL;`);
@@ -749,6 +751,92 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       await expect(wrong.decrypt(wrong.fromDatabase(rows[0].encrypted_content), {
         scope, table: "agent_run_events", column: "payload",
         rowId: JSON.stringify([run, rows[0].id]),
+      })).rejects.toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
+
+  it("restores encrypted launch prompts and SQL-created initial messages across key versions", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_launch_source_${suffix}`;
+    const restored = `minddy_min591_launch_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID(), conversation = randomUUID();
+    const runs = [randomUUID(), randomUUID()];
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(launchTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${launchTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Fixture project','LCH');
+        INSERT INTO public.agent_conversations(id,project_id,owner_id)
+          VALUES(${quote(conversation)},${quote(project)},${quote(actor)});`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      const contents = runs.map((_, index) => ({
+        prompt: `Private launch prompt ${index + 1}`,
+        prompt_mentions: [{ id: `issue-${index + 1}`, label: `Private mention ${index + 1}` }],
+      }));
+      for (const [index, run] of runs.entries()) {
+        if (index === 1) await keys.rotate(scope, 1);
+        const encrypted = await store.encrypt(contents[index], {
+          scope, table: "agent_runs", column: "launch_content", rowId: run,
+        });
+        sql(source, `INSERT INTO public.agent_runs(id,project_id,conversation_id,created_by,
+          prompt,prompt_mentions,encrypted_launch_content,launch_encryption_version,has_launch_prompt)
+          VALUES(${quote(run)},${quote(project)},${quote(conversation)},${quote(actor)},
+            NULL,NULL,${quote(encrypted)},${store.versionOf(encrypted)},true);`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "supabase_admin",
+        "-d", source, "--data-only", "--no-owner", "--no-privileges",
+        ...["auth.users", "public.projects", "public.agent_conversations",
+          "public.agent_runs", "public.agent_turns", "public.envelope_data_keys",
+          "public.agent_launch_encryption_scopes", "public.agent_messages"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("Private launch prompt");
+      expect(dump).not.toContain("Private mention");
+      expect(dump).not.toContain(root.toString("base64"));
+      sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${dump}\nCOMMIT;`);
+      const rows = JSON.parse(sql(restored,
+        "SELECT json_agg(r ORDER BY r.created_at, r.id) FROM public.agent_runs r;")) as Array<{
+          id: string; prompt: string | null; prompt_mentions: unknown;
+          encrypted_launch_content: string; launch_encryption_version: number;
+        }>;
+      expect(rows.map((row) => row.launch_encryption_version).sort()).toEqual([1, 2]);
+      expect(rows.every((row) => row.prompt === null && row.prompt_mentions === null)).toBe(true);
+      const copies = JSON.parse(sql(restored,
+        "SELECT json_agg(m) FROM public.agent_messages m WHERE source='initial_prompt';")) as Array<{
+          run_id: string; content: string; content_encryption_version: number;
+        }>;
+      expect(copies).toHaveLength(2);
+      for (const copy of copies) {
+        const run = rows.find((row) => row.id === copy.run_id)!;
+        expect(copy.content).toBe(run.encrypted_launch_content);
+        expect(copy.content_encryption_version).toBe(run.launch_encryption_version);
+      }
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored), wrapper(root)));
+      for (const [index, run] of runs.entries()) {
+        const row = rows.find((item) => item.id === run)!;
+        const plain = await cold.decrypt(cold.fromDatabase(row.encrypted_launch_content), {
+          scope, table: "agent_runs", column: "launch_content", rowId: run,
+        });
+        expect(plain).toEqual(contents[index]);
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      await expect(wrong.decrypt(wrong.fromDatabase(rows[0].encrypted_launch_content), {
+        scope, table: "agent_runs", column: "launch_content", rowId: rows[0].id,
       })).rejects.toThrow();
     } finally {
       root.fill(0);

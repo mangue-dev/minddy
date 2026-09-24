@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { loadIssueTitles } from "@/lib/server/issue-store";
+import { decodeAgentLaunch, legacyAgentLaunchSchema } from "@/lib/server/agent/run-launch-content";
+import type { AssistantMention } from "@/lib/assistant-types";
 
 /**
  * GLOBAL list of code agent (Numo) conversations, all projects
@@ -32,6 +34,7 @@ type AgentRunStatus = "queued" | "running" | "completed" | "failed" | "canceled"
 
 interface RunRow {
   id: string;
+  project_id: string;
   conversation_id: string;
   parent_numo_turn_id: string | null;
   issue_id: string | null;
@@ -40,6 +43,9 @@ interface RunRow {
   model: string | null;
   triggered_by: "button" | "chat" | "mention";
   prompt: string | null;
+  prompt_mentions: AssistantMention[] | null;
+  encrypted_launch_content: string | null;
+  launch_encryption_version: number;
   title: string | null;
   pr_number: number | null;
   pr_url: string | null;
@@ -129,17 +135,18 @@ export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  const { data, error } = await auth.supabase
+  const baseColumns = "id, project_id, conversation_id, parent_numo_turn_id, issue_id, pull_request_id, status, model, triggered_by, prompt, prompt_mentions, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, conversation:agent_conversations(title, visibility), issue:issues(id, number), project:projects(id, key, name, icon_url, orb_seed, deleted_at), pull_request:pull_requests(id, number, title, url)";
+  const readRuns = (columns: string) => auth.supabase
     .from("agent_runs")
-    .select(
-      "id, conversation_id, parent_numo_turn_id, issue_id, pull_request_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, conversation:agent_conversations(title, visibility), issue:issues(id, number), project:projects(id, key, name, icon_url, orb_seed, deleted_at), pull_request:pull_requests(id, number, title, url)",
-    )
+    .select(columns)
     // Routine passages and Numo-owned workers are not standalone conversations:
     // the former live in routine history and the latter are mediated only in
     // their parent Numo conversation.
     .is("routine_id", null)
     .is("parent_numo_turn_id", null)
     .order("created_at", { ascending: false });
+  let { data, error } = await readRuns(`${baseColumns}, encrypted_launch_content, launch_encryption_version`);
+  if (legacyAgentLaunchSchema(error)) ({ data, error } = await readRuns(baseColumns));
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -177,7 +184,9 @@ export async function GET(request: NextRequest) {
     visibleRows.map((row) => row.issue?.id).filter((id): id is string => !!id),
     visibleRows.map((row) => row.project?.id).filter((id): id is string => !!id),
     auth.user.id);
-  const rows = visibleRows.map((row) => ({ ...row,
+  const decodedRows = await Promise.all(visibleRows.map((row) =>
+    decodeAgentLaunch(row, auth.user.id)));
+  const rows = decodedRows.map((row) => ({ ...row,
     issue: row.issue && titles.has(row.issue.id)
       ? { ...row.issue, title: titles.get(row.issue.id)! } : null,
   })).filter((row) => row.issue_id === null || row.issue !== null);

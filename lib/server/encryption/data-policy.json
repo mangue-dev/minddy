@@ -135,6 +135,21 @@
       ]
     }
   },
+  "agent_launch_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "agent_journal_encryption_scopes": {
     "scope": {
       "kind": "project",
@@ -396,6 +411,7 @@
         "budget_usd",
         "continuations",
         "cost_usd",
+        "has_launch_prompt",
         "interrupt_requested",
         "local_exec",
         "local_exec_gen",
@@ -420,6 +436,10 @@
         "triggered_by",
         "worker_model_provider",
         "worker_model_source"
+      ],
+      "encryption_metadata": [
+        "encrypted_launch_content",
+        "launch_encryption_version"
       ],
       "routing_identity": [
         "chain_id",
@@ -450,6 +470,7 @@
         "completed_at",
         "created_at",
         "last_activity_at",
+        "launch_encryption_checked_at",
         "not_before",
         "rest_claimed_at",
         "sandbox_reap_claimed_at",

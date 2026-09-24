@@ -5,6 +5,7 @@ import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { publicSkillsMetadata } from "@/lib/server/assistant/skills";
 import { issueStore } from "@/lib/server/issue-store";
 import { hydrateAgentSummaryCopies } from "@/lib/server/agent/run-event-store";
+import { hydrateAgentLaunchCopies, hydrateImportedAgentMessages } from "@/lib/server/agent/run-launch-content";
 
 export const NUMO_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const NUMO_CONVERSATIONS_PAGE_SIZE = 50;
@@ -138,7 +139,9 @@ export async function getNumoConversationDetail(
   if (occurrenceResult.error) throw new Error(occurrenceResult.error.message);
   // The invoker-scoped event policy authorizes each worker's own project;
   // a delegated worker may belong to a different project from its parent thread.
-  const hydratedMessages = await hydrateAgentSummaryCopies(supabase, null, messages, actorId);
+  const hydratedMessages = await hydrateImportedAgentMessages(supabase,
+    await hydrateAgentLaunchCopies(supabase,
+      await hydrateAgentSummaryCopies(supabase, null, messages, actorId), actorId), actorId);
   const safeMessages: Record<string, unknown>[] = hydratedMessages.map((m) =>
     ({ ...m, metadata: publicSkillsMetadata(m.metadata) }));
   return {

@@ -644,6 +644,49 @@ the worker instead of silently appearing empty. Feedback visitor identities,
 OTP email and feedback objects also remain clear. Production flags stay off;
 no production migration or deployment occurred.
 
+## Agent launch prompt checkpoint — 24 September 2026
+
+`agent_runs.prompt` and `prompt_mentions` now share a project-key envelope
+authenticated to the assigned run primary key. New run creation assigns that ID
+before encryption; the managed-budget SQL RPC accepts the encrypted fields while
+retaining its reservation and creation in one transaction. The SQL first-turn
+trigger copies the ciphertext into `agent_messages.content` for the initial
+prompt. Run reads, the issue and agent lists, Numo detail, and account export
+decode only after their existing visibility checks. Imported transcript entries
+without a source run receive their own message-ID-bound envelope and are decoded
+after a conversation-scoped read. Legacy previews retain a read fallback while
+the new flag is off.
+
+A project marker rejects old plaintext run and initial-message writers after
+the first encrypted launch or imported initial message. The guarded service RPC
+converts an existing run and every run-linked initial-message copy together,
+checking the run ID, project, conversation, and prior version. Hourly maintenance
+attempts at most 20 rows with fair retry ordering, verifies the new envelope,
+and rewrites historical key or envelope versions. The separate
+`MINDDY_AGENT_LAUNCH_ENCRYPTION_ENABLED` flag and global content flag remain
+disabled in production. The isolated SQL regression covers direct and
+managed-budget creation, obsolete writers, copy mismatch, immutable scope,
+client privileges, and Realtime absence. A real PostgreSQL dump/restore recovers
+two launch prompts and their copies across two project-key versions with empty
+caches; the wrong root fails. The issue restoration now commits children and
+parents in separate reverse-order batches before restoring its parent FK.
+
+**The agent boundary remains open.** Run and conversation titles, checkpoints,
+delegation fields, initial system content, steering and queued messages,
+input answers, runtime sessions, other Numo projections, and any content they
+copy remain readable in SQL. Imports of other agent message sources still need
+the general agent-message boundary; encryption of run-linked initial prompts
+does not establish that the whole transcript is protected. PR and forge data,
+files, feedback visitor identities, OTP email, and feedback objects remain
+clear as recorded above. No production deployment or migration occurred.
+
+The accessible Supabase project listing on 24 September 2026 contains one
+linked Minddy project and no identified Minddy staging project. The isolated
+schema clones hold only synthetic one- and two-run fixtures and cannot estimate
+production search latency, write latency, or project-key/cache load. Those
+measurements remain outstanding until representative staging data and access
+exist. Production flags stay off.
+
 ## Root-key setup and recovery
 
 `MINDDY_DATA_ROOT_KEY` is a dedicated 32-byte random key encoded as 64 hex

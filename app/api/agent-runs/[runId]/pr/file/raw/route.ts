@@ -53,7 +53,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const user = await getAuthedUser(request);
   if (!user.ok) return user.response;
 
-  const run = await getRun(runId);
+  const run = await getRun(runId, { decode: false });
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
   if (!(await canReadAgentRun(user.user.id, run))) {

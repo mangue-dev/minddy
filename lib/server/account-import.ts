@@ -3,6 +3,7 @@ import { encodeObjective } from "./objective-store";
 import { encodeCategory } from "./category-store";
 import "server-only";
 import { encodeIssue } from "@/lib/server/issue-store";
+import { encodeImportedAgentMessage, shouldEncryptAgentLaunch } from "@/lib/server/agent/run-launch-content";
 
 import { randomUUID } from "node:crypto";
 import type { AccountTransferDocument, TransferRow } from "@/lib/account-transfer";
@@ -907,17 +908,29 @@ export async function importAccountTransfer(
       : [];
   });
   await upsertRows(service, "agent_turns", codeTurns);
-  const codeMessages = document.code_agent_conversations.flatMap((conversation) => {
+  const codeMessages = await Promise.all(document.code_agent_conversations.flatMap((conversation) => {
     const conversationId = uuidValue(conversation, "id");
     if (!conversationId || !codeConversationIds.has(conversationId)) return [];
     return Array.isArray(conversation.messages)
       ? (conversation.messages as unknown[]).flatMap((message) => {
           if (!message || typeof message !== "object") return [];
           const row = message as TransferRow;
-          return [{ ...pick(row, ["role", "content", "source", "created_at"]), conversation_id: conversationId, turn_id: mapId(row.turn_id, codeTurnIds), created_by: remapUser(row.created_by, sourceUserId, userId) }];
+          return [{ row, conversationId }];
         })
       : [];
-  });
+  }).map(async ({ row, conversationId }) => {
+    const id = randomUUID();
+    const projectId = codeConversations.find((item) => item.id === conversationId)?.project_id;
+    if (typeof projectId !== "string" || typeof row.content !== "string") {
+      throw new Error("Invalid imported agent message");
+    }
+    const content = await shouldEncryptAgentLaunch(service, projectId)
+      ? await encodeImportedAgentMessage(projectId, id, row.content)
+      : { content: row.content };
+    return { ...pick(row, ["role", "source", "created_at"]), id, ...content,
+      conversation_id: conversationId, turn_id: mapId(row.turn_id, codeTurnIds),
+      created_by: remapUser(row.created_by, sourceUserId, userId) };
+  }));
   await upsertRows(service, "agent_messages", codeMessages);
   const codeContexts = document.code_agent_conversations.flatMap((conversation) => {
     const conversationId = uuidValue(conversation, "id");
