@@ -745,8 +745,8 @@ their own source-and-derived conversion. `numo_assistant_turns.outcome` and
 the two agent outcome fields were moved into the policy's encryption targets
 because they can contain authored summaries. The issues and feedback
 boundaries remain open; in particular `feedback_users.email/name/external_id`,
-`feedback_otp_codes.email`, feedback posts and their derived objects are still
-clear. MIN-591 must stay in progress.
+`feedback_otp_codes.email`, feedback attachment objects and any remaining
+derived copies are still clear. MIN-591 must stay in progress.
 
 ## Root-key setup and recovery
 
