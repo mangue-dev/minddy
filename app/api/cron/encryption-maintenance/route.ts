@@ -57,6 +57,8 @@ import { backfillFeedbackSsoBatch } from
   "@/lib/server/encryption/feedback-sso-backfill";
 import { backfillForgeMentionKeysBatch } from
   "@/lib/server/encryption/forge-mention-backfill";
+import { backfillNumoActivityBatch } from
+  "@/lib/server/encryption/numo-activity-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -121,6 +123,8 @@ export async function GET(request: NextRequest) {
     process.env.MINDDY_FEEDBACK_SSO_ENCRYPTION_ENABLED === "true";
   const forgeMentionEnabled = contentEnabled &&
     process.env.MINDDY_FORGE_THROTTLE_ENCRYPTION_ENABLED === "true";
+  const numoActivityEnabled = contentEnabled &&
+    process.env.MINDDY_NUMO_EVENT_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -181,6 +185,7 @@ export async function GET(request: NextRequest) {
       numoSurfaceEnabled ? backfillNumoSurfaceDestinationsBatch(30, request.signal) : Promise.resolve(null),
       feedbackSsoEnabled ? backfillFeedbackSsoBatch(30, request.signal) : Promise.resolve(null),
       forgeMentionEnabled ? backfillForgeMentionKeysBatch(50, request.signal) : Promise.resolve(null),
+      numoActivityEnabled ? backfillNumoActivityBatch(30, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -233,12 +238,13 @@ export async function GET(request: NextRequest) {
     const numoSurfaces = outcomes[48];
     const feedbackSso = outcomes[49];
     const forgeMention = outcomes[50];
+    const numoActivity = outcomes[51];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -304,6 +310,9 @@ export async function GET(request: NextRequest) {
         } : {}),
         ...(forgeMentionEnabled ? {
           forge_mention_keys: forgeMention.status === "fulfilled" ? forgeMention.value : { failed: true },
+        } : {}),
+        ...(numoActivityEnabled ? {
+          numo_activity: numoActivity.status === "fulfilled" ? numoActivity.value : { failed: true },
         } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),

@@ -61,6 +61,8 @@ import {
 } from "@/lib/server/agent/runs";
 import { withoutWebSearch } from "@/lib/server/web-search";
 import { decodeWorkerEventPayload, encodeWorkerEventPayload } from "./worker-event-content";
+import { encodeNumoTurnEvent,
+  shouldProtectNumoTurnEvents } from "./turn-event-content";
 import type { SafeEmitter } from "@/lib/server/assistant/sse";
 import {
   failNumoSurfaceProjection,
@@ -311,7 +313,9 @@ export async function beginNumoTurn(input: BeginNumoTurnInput): Promise<NumoTurn
 
 const PERSISTED_EVENT_TYPES = new Set([
   "conversation_id",
+  "content_delta",
   "reasoning_start",
+  "reasoning_delta",
   "reasoning_end",
   "tool_call_start",
   "tool_call_args_delta",
@@ -330,6 +334,7 @@ export function createDurableNumoEmitter(
   service: SupabaseClient,
   turnId: string,
   live?: SafeEmitter,
+  userId?: string,
 ): DurableEmitter {
   let pendingContent = "";
   // Reasoning deltas are snapshots of the trace so far, not increments: only
@@ -349,11 +354,29 @@ export function createDurableNumoEmitter(
   const append = (type: string, payload: unknown) => {
     if (!PERSISTED_EVENT_TYPES.has(type)) return;
     enqueue(async () => {
+      const eventId = randomUUID();
+      const clear = payload ?? {};
+      if (!clear || typeof clear !== "object" || Array.isArray(clear)) {
+        throw new Error("Invalid Numo activity payload");
+      }
+      let stored = clear as Record<string, unknown>;
+      if (await shouldProtectNumoTurnEvents(service)) {
+        let owner = userId;
+        if (!owner) {
+          const turn = await service.from("numo_assistant_turns").select("user_id")
+            .eq("id", turnId).maybeSingle();
+          if (turn.error || !turn.data?.user_id) {
+            throw new Error("Numo activity owner is unavailable");
+          }
+          owner = turn.data.user_id as string;
+        }
+        stored = await encodeNumoTurnEvent(owner, turnId, eventId, stored);
+      }
       const { error } = await service.rpc("append_numo_turn_event", {
         p_turn_id: turnId,
-        p_event_id: randomUUID(),
+        p_event_id: eventId,
         p_type: type,
-        p_payload: payload ?? {},
+        p_payload: stored,
       });
       if (error) throw new Error(`Numo activity append failed: ${error.message}`);
     });
@@ -362,30 +385,14 @@ export function createDurableNumoEmitter(
     if (!pendingContent) return;
     const delta = pendingContent;
     pendingContent = "";
-    enqueue(async () => {
-      const { error } = await service.rpc("append_numo_turn_event", {
-        p_turn_id: turnId,
-        p_event_id: randomUUID(),
-        p_type: "content_delta",
-        p_payload: { delta },
-      });
-      if (error) throw new Error(`Numo activity append failed: ${error.message}`);
-    });
+    append("content_delta", { delta });
   };
 
   const flushReasoning = () => {
     if (pendingReasoning === null) return;
     const text = pendingReasoning;
     pendingReasoning = null;
-    enqueue(async () => {
-      const { error } = await service.rpc("append_numo_turn_event", {
-        p_turn_id: turnId,
-        p_event_id: randomUUID(),
-        p_type: "reasoning_delta",
-        p_payload: { text },
-      });
-      if (error) throw new Error(`Numo activity append failed: ${error.message}`);
-    });
+    append("reasoning_delta", { text });
   };
 
   return {
@@ -808,7 +815,8 @@ async function executeNumoTurnCore(input: {
   let latestCheckpoint = claimed.checkpoint;
   let latestActiveRunId = claimed.active_run_id;
 
-  const emitter = createDurableNumoEmitter(service, claimed.id, input.liveEmitter);
+  const emitter = createDurableNumoEmitter(service, claimed.id, input.liveEmitter,
+    claimed.user_id);
   emitter.emit("conversation_id", { conversationId: claimed.conversation_id, turnId: claimed.id });
   const background = claimed.checkpoint?.phase === "worker_result";
   const { data: savedFinal } = await service.from("assistant_messages")

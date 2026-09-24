@@ -2607,7 +2607,23 @@
       ],
       "timestamp": [
         "created_at",
-        "payload_encryption_checked_at"
+        "payload_encryption_checked_at",
+        "payload_user_encryption_checked_at"
+      ]
+    }
+  },
+  "numo_event_content_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   },

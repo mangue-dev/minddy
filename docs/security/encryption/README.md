@@ -6,7 +6,7 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 147 application tables and 1,395 columns, their primary
+- `schema.json` records 148 application tables and 1,398 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 186 encryption targets include the original content,
@@ -19,7 +19,7 @@ production migration on the strength of crypto unit tests or this inventory.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 360 functions, ten views and 195 triggers. Function
+- `sql-consumers.json` records 362 functions, ten views and 196 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -88,7 +88,7 @@ must be checked separately.
 | Surface | Required work and proof of completion |
 | --- | --- |
 | Projects, issues, pages and views | Convert every server repository read/write and all imports, exports, MCP and AI consumers; add ciphertext/version storage and reject older plaintext writers. Preserve access checks before decryption and existing concurrency semantics. Objectives and category names now have converted repositories and bounded migrations; they still need representative staging validation before activation. |
-| Histories and derived copies | Page versions, issue events, statistics, durable agent replay journals and run event payloads now have converted repositories and migration. The event-triggered assistant summary and pending question copies are protected with their event. Numo surface destinations are protected with their event; other surface projections, initial prompts, steering messages, answers, checkpoints and conversation content remain to be converted with their source rows. |
+| Histories and derived copies | Page versions, issue events, statistics, durable agent replay journals and run event payloads now have converted repositories and migration. The event-triggered assistant summary and pending question copies are protected with their event. Numo surface destinations and the non-worker durable activity payloads now have protected readers, writers and migrations; initial prompts, other surface projections, checkpoints and conversation content remain to be converted with their source rows. |
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
 | Forge data | Forge mention throttle identities now use a stable system blind index; convert the remaining repository data shared by several projects. Private repository names still participate in other primary/unique keys and lookup paths; introduce opaque/indexed identities before encrypting them. The generic row codec deliberately refuses sensitive primary keys. |
@@ -1321,3 +1321,19 @@ from independent batches with cold caches and rejects the wrong root. Other
 forge repository and identity sidecars remain open. Production flags remain
 disabled; representative throughput and key/cache-load measurements are a
 prerequisite to production activation, not code review.
+
+## Durable Numo activity checkpoint — 25 September 2026
+
+Non-worker `numo_turn_events.payload` now uses a user-key envelope bound to the
+event ID and carries its turn and owner IDs for database validation. The durable
+emitter encrypts before the idempotent append RPC; the authorized status reader
+decodes after conversation access. Worker event payloads retain their existing
+project-bound encryption and checkpoint synchronization. A bounded CAS worker
+converts clear historical activity and rotates older user key versions. The
+database rejects new clear non-worker payloads after activation. Isolated SQL
+regression and PostgreSQL dump/restore check source plaintext absence, old
+writer rejection, child-first independent batches, two key versions, cold
+caches and a wrong-root rejection. Other Numo message, turn, tool-operation and
+conversation fields remain open, including copies of some activity content.
+Production flags remain disabled; representative search, latency and key/cache
+measurements precede production activation.

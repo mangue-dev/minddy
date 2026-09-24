@@ -381,35 +381,35 @@
     "file": "app/api/assistant/conversations/[id]/status/route.ts",
     "operation": "from",
     "resource": "numo_conversation_history",
-    "line": 20,
+    "line": 21,
     "storage": false
   },
   {
     "file": "app/api/assistant/conversations/[id]/status/route.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 32,
+    "line": 33,
     "storage": false
   },
   {
     "file": "app/api/assistant/conversations/[id]/status/route.ts",
     "operation": "from",
     "resource": "numo_turn_events",
-    "line": 43,
+    "line": 44,
     "storage": false
   },
   {
     "file": "app/api/assistant/conversations/[id]/status/route.ts",
     "operation": "from",
     "resource": "agent_run_input_requests",
-    "line": 51,
+    "line": 52,
     "storage": false
   },
   {
     "file": "app/api/assistant/conversations/[id]/status/route.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 75,
+    "line": 76,
     "storage": false
   },
   {
@@ -5327,6 +5327,20 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/numo-activity-backfill.ts",
+    "operation": "from",
+    "resource": "numo_turn_events",
+    "line": 21,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/numo-activity-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_numo_activity_payload",
+    "line": 53,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/numo-surface-destination-backfill.ts",
     "operation": "from",
     "resource": "numo_surface_events",
@@ -8085,129 +8099,122 @@
     "storage": false
   },
   {
+    "file": "lib/server/numo/turn-event-content.ts",
+    "operation": "from",
+    "resource": "numo_event_content_scope",
+    "line": 34,
+    "storage": false
+  },
+  {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "begin_numo_turn_with_budget",
-    "line": 296,
+    "line": 298,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "begin_numo_turn",
-    "line": 302,
+    "line": 304,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/turns.ts",
+    "operation": "from",
+    "resource": "numo_assistant_turns",
+    "line": 364,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "append_numo_turn_event",
-    "line": 352,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/turns.ts",
-    "operation": "rpc",
-    "resource": "append_numo_turn_event",
-    "line": 366,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/turns.ts",
-    "operation": "rpc",
-    "resource": "append_numo_turn_event",
-    "line": 381,
+    "line": 373,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 504,
+    "line": 509,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "claim_numo_tool_operation",
-    "line": 634,
+    "line": 639,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "complete_numo_tool_operation",
-    "line": 665,
+    "line": 670,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "checkpoint_numo_turn",
-    "line": 691,
+    "line": 696,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 708,
+    "line": 713,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 715,
+    "line": 720,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 732,
+    "line": 737,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 736,
+    "line": 741,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "claim_numo_turn",
-    "line": 800,
+    "line": 805,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 814,
+    "line": 820,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "checkpoint_numo_tool_round",
-    "line": 908,
+    "line": 914,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1040,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/turns.ts",
-    "operation": "from",
-    "resource": "numo_assistant_turns",
-    "line": 1091,
+    "line": 1046,
     "storage": false
   },
   {
@@ -8221,56 +8228,63 @@
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1125,
+    "line": 1103,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1157,
+    "line": 1131,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/turns.ts",
+    "operation": "from",
+    "resource": "numo_assistant_turns",
+    "line": 1163,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "resume_numo_turn_from_worker",
-    "line": 1226,
+    "line": 1232,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "request_numo_turn_stop",
-    "line": 1237,
+    "line": 1243,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "retry_numo_turn",
-    "line": 1246,
+    "line": 1252,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1260,
+    "line": 1266,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "recover_stale_numo_turns",
-    "line": 1274,
+    "line": 1280,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1276,
+    "line": 1282,
     "storage": false
   },
   {

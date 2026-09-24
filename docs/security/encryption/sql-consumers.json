@@ -1691,6 +1691,22 @@
       ],
       "functionReferences": []
     },
+    "guard_numo_activity_payload()": {
+      "sha256": "fadcdefb675ed2f27be482bdc0a06165cb617c98fbb833ba9ca4ad4f1fe6b1fc",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_assistant_turns",
+        "numo_event_content_scope"
+      ],
+      "protectedRelations": [
+        "numo_assistant_turns"
+      ],
+      "functionReferences": []
+    },
     "guard_scratchpad_encryption()": {
       "sha256": "bb2e03f2b68871b36224bde69b36117cfb7a8e6f30d6cc0ac02276437f7104a5",
       "securityDefiner": false,
@@ -3988,6 +4004,23 @@
       ],
       "functionReferences": []
     },
+    "migrate_numo_activity_payload(uuid,jsonb,jsonb)": {
+      "sha256": "c6c5befa3c4df30ea5aff1a94d4aed15b5ea4d0322fa34bf294bd326bb60bd9c",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_turn_events",
+        "numo_assistant_turns"
+      ],
+      "protectedRelations": [
+        "numo_turn_events",
+        "numo_assistant_turns"
+      ],
+      "functionReferences": []
+    },
     "release_provider_operation(uuid,text,text,text)": {
       "sha256": "73aa7d0f0ed618a41f30afd3f87a476d51a9ffe5fe4f08a3b089ac5764af600a",
       "securityDefiner": true,
@@ -6261,6 +6294,10 @@
     "issues.github_comment_url_parent_scope_guard": {
       "function": "guard_github_comment_url_parent_scope()",
       "definition": "CREATE TRIGGER github_comment_url_parent_scope_guard BEFORE UPDATE OF project_id ON issues FOR EACH ROW EXECUTE FUNCTION guard_github_comment_url_parent_scope()"
+    },
+    "numo_turn_events.numo_activity_payload_guard": {
+      "function": "guard_numo_activity_payload()",
+      "definition": "CREATE TRIGGER numo_activity_payload_guard BEFORE INSERT OR UPDATE ON numo_turn_events FOR EACH ROW EXECUTE FUNCTION guard_numo_activity_payload()"
     },
     "page_comments.page_comments_encryption_guard": {
       "function": "guard_comment_encryption()",

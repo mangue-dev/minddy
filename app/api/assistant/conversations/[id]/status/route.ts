@@ -3,6 +3,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { NUMO_UUID } from "@/lib/server/numo/conversations";
 import { decodeRunEvent } from "@/lib/server/agent/run-event-store";
 import { decodeWorkerEventPayload } from "@/lib/server/numo/worker-event-content";
+import { decodeNumoTurnEvent } from "@/lib/server/numo/turn-event-content";
 
 export async function GET(
   request: NextRequest,
@@ -97,12 +98,22 @@ export async function GET(
     delete readableInput.questions_encryption_version;
   }
 
-  const readableActivity = await Promise.all((activity ?? []).map(async (event) =>
-    event.type === "worker_completed" || event.type === "worker_failed" ||
-      event.type === "worker_input"
-      ? { ...event, payload: await decodeWorkerEventPayload(event.payload,
-          auth.user.id, event.id as string) }
-      : event));
+  let readableActivity;
+  try {
+    readableActivity = await Promise.all((activity ?? []).map(async (event) => ({
+      ...event,
+      payload: event.type === "worker_completed" || event.type === "worker_failed" ||
+        event.type === "worker_input"
+        ? await decodeWorkerEventPayload(event.payload, auth.user.id,
+            event.id as string)
+        : await decodeNumoTurnEvent(event.payload, {
+            userId: auth.user.id, turnId: turn!.id as string,
+            eventId: event.id as string,
+          }),
+    })));
+  } catch {
+    return Response.json({ error: "Unable to read activity" }, { status: 503 });
+  }
   return Response.json({
     status: turn?.status ?? conversation.status,
     error_message: turn?.error_message ?? conversation.error_message,

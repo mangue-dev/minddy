@@ -5208,6 +5208,11 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "payload_user_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -9723,6 +9728,24 @@
     "foreignKeys": []
   },
   "forge_mention_key_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "numo_event_content_scope": {
     "columns": {
       "id": {
         "type": "boolean",
