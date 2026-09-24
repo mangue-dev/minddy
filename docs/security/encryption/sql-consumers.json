@@ -707,6 +707,19 @@
         "can_access_project"
       ]
     },
+    "guard_agent_run_verdict()": {
+      "sha256": "157cd1d3a91b45098adb2f7816b2fbbb1cfc5027cfb4cc0565aed0d98e430367",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_verdict_encryption_scopes"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "rekey_deleted_auth_user()": {
       "sha256": "beed7d97cf2095bf777639fa615215ef9987455b99ced33fc3b6d8f67804fed3",
       "securityDefiner": true,
@@ -4109,6 +4122,21 @@
       ],
       "functionReferences": []
     },
+    "migrate_agent_run_verdict(uuid,uuid,jsonb,text,integer,text,integer)": {
+      "sha256": "39e6dcdfbb0a8d789972c372b62347d705ec3bdd4ae0fcc6e77fd178d563e22a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs"
+      ],
+      "protectedRelations": [
+        "agent_runs"
+      ],
+      "functionReferences": []
+    },
     "begin_numo_turn(uuid,uuid,uuid,uuid,jsonb,text,text,text,jsonb,jsonb)": {
       "sha256": "1471599cd3594e2c82bcac58583fa6695d64f9b2691628d6a37479a67277d981",
       "securityDefiner": true,
@@ -4893,6 +4921,10 @@
     "pages.pages_guard_database_parent": {
       "function": "guard_page_database_parent()",
       "definition": "CREATE TRIGGER pages_guard_database_parent BEFORE UPDATE OF parent_id ON pages FOR EACH ROW EXECUTE FUNCTION guard_page_database_parent()"
+    },
+    "agent_runs.agent_run_verdict_guard": {
+      "function": "guard_agent_run_verdict()",
+      "definition": "CREATE TRIGGER agent_run_verdict_guard BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_run_verdict()"
     },
     "agent_runs.trg_agent_run_sync_turn": {
       "function": "sync_agent_turn_from_run()",

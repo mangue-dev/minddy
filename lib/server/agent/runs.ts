@@ -51,6 +51,8 @@ import { decodeAgentCheckpoint, encodeAgentCheckpoint,
   shouldEncryptAgentCheckpoint } from "./run-checkpoint-content";
 import { decodeAgentDelegationInput, encodeAgentDelegationInput,
   shouldEncryptAgentDelegation } from "./run-delegation-content";
+import { decodeAgentVerdict, encodeAgentVerdict,
+  shouldEncryptAgentVerdict } from "./run-verdict-content";
 
 /**
  * Data access to code agent runs (MIN-46): creation, CAS claim,
@@ -382,6 +384,8 @@ export interface AgentRun {
   intent: AgentLaunchIntent | null;
   /** Verdict of a verification step (see `AgentRunVerdict`). */
   verdict: AgentRunVerdict | null;
+  verdict_ciphertext?: string | null;
+  verdict_encryption_version?: number;
   /**
    * REVOCATION identifier of the LLM key issued for this run (MIN-223) — the
    * `hash` from OpenRouter, never the secret. He lives on the line and not in the
@@ -702,8 +706,8 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
 }
 
 async function hydrateRun(row: AgentRun | null): Promise<AgentRun | null> {
-  return row ? decodeAgentDelegationInput(
-    await decodeAgentCheckpoint(await decodeAgentLaunch(row))) : null;
+  return row ? decodeAgentVerdict(await decodeAgentDelegationInput(
+    await decodeAgentCheckpoint(await decodeAgentLaunch(row)))) : null;
 }
 
 /** Atomic CAS claim (queued → running). Returns null when another worker won. */
@@ -1635,6 +1639,23 @@ export async function stampRunResult(
         ...await encodeAgentCheckpoint(checkpointProjectId, runId,
           storedFields.checkpoint as AgentCheckpoint | null) };
     }
+  }
+  if (Object.prototype.hasOwnProperty.call(fields, "verdict")) {
+    let projectId = checkpointProjectId;
+    if (!projectId) {
+      const { data: metadata, error: metadataError } = await service.from("agent_runs")
+        .select("project_id").eq("id", runId).maybeSingle();
+      if (metadataError || !metadata?.project_id) {
+        console.error("[agent-runs] verdict scope lookup failed");
+        return { run: null, failed: true };
+      }
+      projectId = metadata.project_id as string;
+    }
+    if (await shouldEncryptAgentVerdict(service, projectId)) {
+      storedFields = { ...storedFields,
+        ...await encodeAgentVerdict(projectId, runId, fields.verdict ?? null) };
+    }
+    checkpointProjectId = projectId;
   }
   let query = service
     .from("agent_runs")

@@ -4,6 +4,7 @@ import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { encodeAgentVerdict, shouldEncryptAgentVerdict } from "./run-verdict-content";
 import {
   assertIssueInProject,
   getIssue,
@@ -1190,19 +1191,24 @@ async function reportVerdict(
     .map((b) => b.trim().slice(0, VERDICT_BLOCKER_MAX_CHARS));
 
   const service = getServiceClient();
-  const { error } = await service
+  const verdict = {
+    ok: args.ok,
+    summary: summary.slice(0, VERDICT_SUMMARY_MAX_CHARS),
+    blockers,
+  };
+  const storedVerdict = await shouldEncryptAgentVerdict(service, ctx.projectId)
+    ? await encodeAgentVerdict(ctx.projectId, ctx.runId, verdict)
+    : { verdict };
+  const { data, error } = await service
     .from("agent_runs")
-    .update({
-      verdict: {
-        ok: args.ok,
-        summary: summary.slice(0, VERDICT_SUMMARY_MAX_CHARS),
-        blockers,
-      },
-    })
-    .eq("id", ctx.runId);
-  if (error) {
+    .update(storedVerdict)
+    .eq("id", ctx.runId)
+    .eq("project_id", ctx.projectId)
+    .select("id")
+    .maybeSingle();
+  if (error || !data) {
     return {
-      result: { error: `Verdict not saved: ${error.message}` },
+      result: { error: `Verdict not saved: ${error?.message ?? "run is unavailable"}` },
       success: false,
     };
   }

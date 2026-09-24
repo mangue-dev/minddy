@@ -26,6 +26,7 @@ const standaloneMessageTemplate = "minddy_min591_standalone_audit";
 const queueTemplate = "minddy_min591_queue_audit";
 const answerTemplate = "minddy_min591_answer_audit";
 const contextTemplate = "minddy_min591_context_audit";
+const verdictTemplate = "minddy_min591_verdict_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -1616,6 +1617,92 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
         scope, table: "agent_conversation_contexts", column: "snapshot",
         rowId: `${conversation}:issue:${rows[0].resource_id}`,
       })).rejects.toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
+
+  it("restores encrypted verdicts with run and turn references in separate batches", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_verdict_source_${suffix}`;
+    const restored = `minddy_min591_verdict_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID();
+    const runs = [randomUUID(), randomUUID()];
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(verdictTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${verdictTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Fixture project','AVD');`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      for (const [index, runId] of runs.entries()) {
+        if (index === 1) await keys.rotate(scope, 1);
+        const cipher = await store.encrypt({ ok: false,
+          summary: `Private verdict ${index + 1}`, blockers: ["Private blocker"] },
+        { scope, table: "agent_runs", column: "verdict", rowId: runId });
+        sql(source, `INSERT INTO public.agent_runs(id,project_id,created_by,
+          verdict_ciphertext,verdict_encryption_version)
+          VALUES(${quote(runId)},${quote(project)},${quote(actor)},
+            ${quote(cipher)},${store.versionOf(cipher)});`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "supabase_admin",
+        "-d", source, "--data-only", "--no-owner", "--no-privileges",
+        ...["auth.users", "public.projects", "public.envelope_data_keys",
+          "public.agent_conversations", "public.agent_runs", "public.agent_turns",
+          "public.agent_verdict_encryption_scopes"].map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("Private verdict");
+      expect(dump).not.toContain("Private blocker");
+      let dependencies = dump;
+      const batches = new Map<string, { header: string; lines: string[]; footer: string }>();
+      for (const table of ["agent_turns", "agent_runs", "agent_conversations"]) {
+        const match = dependencies.match(new RegExp(`(COPY public\\.${table}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`));
+        expect(match).not.toBeNull();
+        batches.set(table, { header: match![1], lines: match![2].trimEnd().split("\n").reverse(),
+          footer: match![3] });
+        dependencies = dependencies.replace(match![0], "");
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${dependencies}\nCOMMIT;`);
+      for (const table of ["agent_turns", "agent_runs", "agent_conversations"]) {
+        const copy = batches.get(table)!;
+        for (const line of copy.lines) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${copy.header}${line}\n${copy.footer}COMMIT;`);
+        }
+      }
+      const rows = JSON.parse(sql(restored, `SELECT json_agg(json_build_object(
+        'id',r.id,'verdict',r.verdict,'cipher',r.verdict_ciphertext,
+        'version',r.verdict_encryption_version) ORDER BY r.id)
+        FROM public.agent_runs r JOIN public.agent_conversations c
+          ON c.id=r.conversation_id AND c.project_id=r.project_id
+        JOIN public.agent_turns t ON t.run_id=r.id;`)) as Array<{
+          id: string; verdict: null; cipher: string; version: number;
+        }>;
+      expect(rows).toHaveLength(2);
+      expect(rows.map((row) => row.version).sort()).toEqual([1, 2]);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored), wrapper(root)));
+      for (const [index, runId] of runs.entries()) {
+        const row = rows.find((item) => item.id === runId)!;
+        expect(row.verdict).toBeNull();
+        const clear = await cold.decrypt(cold.fromDatabase<{ summary: string }>(row.cipher),
+          { scope, table: "agent_runs", column: "verdict", rowId: runId });
+        expect(clear.summary).toBe(`Private verdict ${index + 1}`);
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      await expect(wrong.decrypt(wrong.fromDatabase(rows[0].cipher),
+        { scope, table: "agent_runs", column: "verdict", rowId: rows[0].id }))
+        .rejects.toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();

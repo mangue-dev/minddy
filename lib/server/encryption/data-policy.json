@@ -507,7 +507,9 @@
         "encrypted_launch_content",
         "launch_encryption_version",
         "title_ciphertext",
-        "title_encryption_version"
+        "title_encryption_version",
+        "verdict_ciphertext",
+        "verdict_encryption_version"
       ],
       "routing_identity": [
         "chain_id",
@@ -548,7 +550,8 @@
         "started_at",
         "title_encryption_checked_at",
         "updated_at",
-        "window_started_at"
+        "window_started_at",
+        "verdict_encryption_checked_at"
       ]
     }
   },
@@ -3363,6 +3366,21 @@
       "timestamp": [
         "created_at",
         "updated_at"
+      ]
+    }
+  },
+  "agent_verdict_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   }

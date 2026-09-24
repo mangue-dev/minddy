@@ -925,3 +925,23 @@ key versions from cold caches and rejects a wrong root. Its two-row fixture
 does not measure staging latency. PR/forge copies, attachment objects,
 external outputs and feedback identities/objects remain open; the issue and
 agent boundaries are still incomplete. No production flags or data changed.
+
+## Agent verification verdict checkpoint
+
+`agent_runs.verdict` now uses a run-ID-bound project envelope. The agent tool
+and guarded run writer encrypt before persistence; run hydration and the legacy
+automation-chain reader decrypt after their existing scope checks. The SQL
+column becomes `NULL` and Numo views have no verdict projection. An activated
+project rejects obsolete plaintext verdict inserts and edits, identity changes
+that would break authentication, and key-version rollback. A service-only
+20-row compare-and-swap pass verifies historical conversion and rotation.
+
+The SQL regression checks plaintext absence, old-writer refusal, CAS,
+client privilege and Realtime exclusion. A real PostgreSQL dump/restore test
+loads turns, runs and conversations in separate child-first batches, recovers
+two key versions with cold caches and rejects a wrong root. Its two-row
+fixture cannot measure representative throughput or key/cache load. Other
+run results, errors, delegation results, branch/PR/runtime/artifact fields,
+Numo automation outcomes, issue PR/forge copies, attachment objects and
+feedback identities/objects remain open. Production flags are disabled; no
+production data migration or deployment occurred.
