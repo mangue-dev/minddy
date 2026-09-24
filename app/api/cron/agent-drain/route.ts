@@ -63,16 +63,15 @@ async function dueScopedRuns(service: SupabaseClient): Promise<QueuedRunRow[]> {
     console.error("[agent-drain] preview dispatch read failed:", error.message);
     return [];
   }
-  try {
-    return await Promise.all((data ?? []).map(async (row) => {
-      const decoded = await decodeAgentDeploymentUrl(row);
-      return { id: decoded.id, deployment_url: decoded.deployment_url,
-        not_before: decoded.not_before };
-    }));
-  } catch {
+  const decoded = await Promise.allSettled((data ?? []).map(async (row) => {
+    const clear = await decodeAgentDeploymentUrl(row);
+    return { id: clear.id, deployment_url: clear.deployment_url,
+      not_before: clear.not_before };
+  }));
+  if (decoded.some((result) => result.status === "rejected")) {
     console.error("[agent-drain] preview dispatch decryption failed");
-    return [];
   }
+  return decoded.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
 }
 
 /** Wakes A deployment preview. Best effort: production never executes these
