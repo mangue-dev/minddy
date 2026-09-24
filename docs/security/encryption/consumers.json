@@ -2513,6 +2513,13 @@
     "storage": false
   },
   {
+    "file": "lib/server/agent/run-queue-content.ts",
+    "operation": "from",
+    "resource": "agent_run_messages",
+    "line": 83,
+    "storage": false
+  },
+  {
     "file": "lib/server/agent/run-title-content.ts",
     "operation": "from",
     "resource": "agent_title_encryption_scopes",
@@ -2908,14 +2915,21 @@
     "file": "lib/server/agent/worker-parent-content.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 72,
+    "line": 73,
+    "storage": false
+  },
+  {
+    "file": "lib/server/agent/worker-parent-content.ts",
+    "operation": "from",
+    "resource": "assistant_messages",
+    "line": 77,
     "storage": false
   },
   {
     "file": "lib/server/agent/worker-parent-content.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 84,
+    "line": 90,
     "storage": false
   },
   {
