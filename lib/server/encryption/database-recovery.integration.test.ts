@@ -17,6 +17,7 @@ const draftTemplate = "minddy_min591_draft_audit";
 const feedbackTemplate = "minddy_min591_feedback_audit";
 const issueTemplate = "minddy_min591_issue_audit";
 const journalTemplate = "minddy_min591_journal_audit";
+const eventTemplate = "minddy_min591_event_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -522,18 +523,24 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
           .map((table) => `--table=${table}`)], { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
       for (const secret of ["Private issue", "Private description", "Private plan",
         "Private prompt", "example.test/private"]) expect(dump).not.toContain(secret);
-      // The data-only dump is a COPY stream. Deliberately reverse its issue
-      // rows so descendants precede ancestors during the restore.
-      let reversed = false;
+      // Restore descendants and ancestors in separate COPY statements, in
+      // reverse dependency order. A full restore adds FKs after data; the
+      // schema-only template already has them, so use the data-only restore's
+      // trigger suppression and then recreate the parent FK to validate it.
+      let separated = false;
       const shuffledDump = dump.replace(
         /(COPY public\.issues[^\n]*\n)([\s\S]*?)(\\\.\n)/,
         (_whole, header: string, body: string, footer: string) => {
-          reversed = true;
-          return header + body.trimEnd().split("\n").reverse().join("\n") + "\n" + footer;
+          separated = true;
+          return body.trimEnd().split("\n").reverse()
+            .map((line) => header + line + "\n" + footer).join("");
         },
       );
-      expect(reversed).toBe(true);
-      sql(restored, shuffledDump);
+      expect(separated).toBe(true);
+      sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${shuffledDump}\nCOMMIT;`);
+      sql(restored, `ALTER TABLE public.issues DROP CONSTRAINT issues_parent_id_fkey;
+        ALTER TABLE public.issues ADD CONSTRAINT issues_parent_id_fkey
+          FOREIGN KEY (parent_id) REFERENCES public.issues(id) ON DELETE SET NULL;`);
       const rows: StoredRow[] = JSON.parse(sql(restored, "SELECT json_agg(i ORDER BY number) FROM public.issues i;"));
       expect(rows.map((row) => row.encryption_version)).toEqual(tree.map((node) => node.keyVersion));
       expect(rows.map((row) => row.parent_id)).toEqual(tree.map((node) => node.parent));
@@ -642,6 +649,107 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       await expect(wrong.decrypt(wrong.fromDatabase(rows[0].payload),
         { scope, table: "agent_run_journal", column: "payload",
           rowId: JSON.stringify([run, "session", rows[0].payload_sha256]) })).rejects.toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
+
+  it("restores encrypted run events and their SQL-created summary and input copies", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_event_source_${suffix}`;
+    const restored = `minddy_min591_event_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID();
+    const conversation = randomUUID(), run = randomUUID();
+    const eventIds = [randomUUID(), randomUUID()];
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(eventTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${eventTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Fixture project','EVT');
+        INSERT INTO public.agent_conversations(id,project_id,owner_id)
+          VALUES(${quote(conversation)},${quote(project)},${quote(actor)});
+        INSERT INTO public.agent_runs(id,project_id,conversation_id,created_by)
+          VALUES(${quote(run)},${quote(project)},${quote(conversation)},${quote(actor)});`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      const payloads = [
+        { text: "Private summary from the agent" },
+        { question_id: "q1", call_id: "c1",
+          questions: [{ question: "Private question from the agent" }] },
+      ];
+      for (const [index, payload] of payloads.entries()) {
+        if (index === 1) await keys.rotate(scope, 1);
+        const encrypted = await store.encrypt(payload, {
+          scope, table: "agent_run_events", column: "payload",
+          rowId: JSON.stringify([run, eventIds[index]]),
+        });
+        sql(source, `INSERT INTO public.agent_run_events(
+          id,run_id,seq,type,payload,encrypted_content,encryption_version,
+          has_summary_text,question_id,call_id,has_questions
+        ) VALUES (
+          ${quote(eventIds[index])},${quote(run)},${index},
+          ${quote(index === 0 ? "summary" : "needs_input")},NULL,
+          ${quote(encrypted)},${store.versionOf(encrypted)},${index === 0},
+          ${index === 1 ? "'q1'" : "NULL"},${index === 1 ? "'c1'" : "NULL"},
+          ${index === 1}
+        );`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "supabase_admin",
+        "-d", source, "--data-only", "--no-owner", "--no-privileges",
+        ...["auth.users", "public.projects", "public.agent_conversations",
+          "public.agent_runs", "public.agent_turns", "public.envelope_data_keys",
+          "public.agent_event_encryption_scopes", "public.agent_run_events",
+          "public.agent_messages", "public.agent_run_input_requests"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("Private summary from the agent");
+      expect(dump).not.toContain("Private question from the agent");
+      expect(dump).not.toContain(root.toString("base64"));
+      // A full schema restore creates triggers after COPY. The schema-only
+      // template already has them, so suppress derived-copy triggers during COPY.
+      sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${dump}\nCOMMIT;`);
+      const rows = JSON.parse(sql(restored,
+        "SELECT json_agg(e ORDER BY seq) FROM public.agent_run_events e;")) as Array<{
+          id: string; encrypted_content: string; encryption_version: number; payload: unknown;
+        }>;
+      expect(rows.map((row) => row.encryption_version)).toEqual([1, 2]);
+      expect(rows.every((row) => row.payload === null)).toBe(true);
+      const copies = JSON.parse(sql(restored, `SELECT json_build_object(
+        'summary', (SELECT row_to_json(m) FROM public.agent_messages m
+          WHERE legacy_event_id=${quote(eventIds[0])}),
+        'input', (SELECT row_to_json(i) FROM public.agent_run_input_requests i
+          WHERE source_event_id=${quote(eventIds[1])}));`)) as {
+        summary: { content: string; content_encryption_version: number };
+        input: { questions: unknown; encrypted_questions: string; questions_encryption_version: number };
+      };
+      expect(copies.summary.content).toBe(rows[0].encrypted_content);
+      expect(copies.input.questions).toBeNull();
+      expect(copies.input.encrypted_questions).toBe(rows[1].encrypted_content);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored), wrapper(root)));
+      for (const [index, row] of rows.entries()) {
+        const clear = await cold.decrypt(cold.fromDatabase(row.encrypted_content), {
+          scope, table: "agent_run_events", column: "payload",
+          rowId: JSON.stringify([run, row.id]),
+        });
+        expect(clear).toEqual(payloads[index]);
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      await expect(wrong.decrypt(wrong.fromDatabase(rows[0].encrypted_content), {
+        scope, table: "agent_run_events", column: "payload",
+        rowId: JSON.stringify([run, rows[0].id]),
+      })).rejects.toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();

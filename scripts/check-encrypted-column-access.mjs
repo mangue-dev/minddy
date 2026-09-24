@@ -16,7 +16,21 @@ const rules = [
     access: /\.\s*from\s*\(\s*["'`]agent_run_events["'`]\s*\)/,
     allowed: new Set(["lib/server/agent/runs.ts",
       "lib/server/agent/run-event-store.ts",
+      "lib/server/encryption/agent-event-backfill.ts",
       "app/api/pull-requests/route.ts", "lib/server/retention.ts"]),
+  },
+  {
+    access: /\.\s*(?:from\s*\(\s*["'`]agent_event_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_agent_event_ciphertext["'`])/,
+    allowed: new Set(["lib/server/agent/run-event-store.ts",
+      "lib/server/encryption/agent-event-backfill.ts"]),
+  },
+  {
+    access: /\.\s*from\s*\(\s*["'`]agent_messages["'`]\s*\)/,
+    allowed: new Set(["lib/server/account-export.ts", "lib/server/account-import.ts"]),
+  },
+  {
+    access: /\.\s*from\s*\(\s*["'`]agent_run_messages["'`]\s*\)/,
+    allowed: new Set(["lib/server/agent/runs.ts", "lib/server/retention.ts"]),
   },
   {
     access: /\.\s*from\s*\(\s*["'`]agent_run_journal["'`]\s*\)/,

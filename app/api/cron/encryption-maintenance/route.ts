@@ -5,6 +5,7 @@ import { backfillProjectDraftsBatch } from "@/lib/server/encryption/project-draf
 import { backfillFeedbackPostsBatch } from "@/lib/server/encryption/feedback-post-backfill";
 import { backfillIssuesBatch } from "@/lib/server/encryption/issue-backfill";
 import { backfillAgentJournalBatch } from "@/lib/server/encryption/agent-journal-backfill";
+import { backfillAgentEventsBatch } from "@/lib/server/encryption/agent-event-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -30,6 +31,7 @@ export async function GET(request: NextRequest) {
   const contentEnabled = isContentEncryptionEnabled();
   const issuesEnabled = contentEnabled && process.env.MINDDY_ISSUE_SOURCE_ENCRYPTION_ENABLED === "true";
   const agentJournalEnabled = contentEnabled && process.env.MINDDY_AGENT_JOURNAL_ENCRYPTION_ENABLED === "true";
+  const agentEventsEnabled = contentEnabled && process.env.MINDDY_AGENT_EVENT_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -52,6 +54,7 @@ export async function GET(request: NextRequest) {
       contentEnabled ? backfillFeedbackPostsBatch(50, request.signal) : Promise.resolve(null),
       issuesEnabled ? backfillIssuesBatch(50, request.signal) : Promise.resolve(null),
       agentJournalEnabled ? backfillAgentJournalBatch(5, request.signal) : Promise.resolve(null),
+      agentEventsEnabled ? backfillAgentEventsBatch(20, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -66,12 +69,13 @@ export async function GET(request: NextRequest) {
     const feedbackPosts = outcomes[10];
     const issues = outcomes[11];
     const agentJournal = outcomes[12];
+    const agentEvents = outcomes[13];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -88,6 +92,7 @@ export async function GET(request: NextRequest) {
         feedback_posts: feedbackPosts.status === "fulfilled" ? feedbackPosts.value : { failed: true },
         ...(issuesEnabled ? { issues: issues.status === "fulfilled" ? issues.value : { failed: true } } : {}),
         ...(agentJournalEnabled ? { agent_journal: agentJournal.status === "fulfilled" ? agentJournal.value : { failed: true } } : {}),
+        ...(agentEventsEnabled ? { agent_events: agentEvents.status === "fulfilled" ? agentEvents.value : { failed: true } } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),
       ...(contentEnabled ? { statistics: statistics.status === "fulfilled" ? statistics.value : { failed: true } } : {}),

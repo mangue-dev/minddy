@@ -42,6 +42,7 @@ import {
   journalProject,
   shouldEncryptJournal,
 } from "./encrypted-journal";
+import { encodeRunEvent, shouldEncryptRunEvent } from "./run-event-store";
 
 /**
  * Data access to code agent runs (MIN-46): creation, CAS claim,
@@ -1886,17 +1887,10 @@ export async function pullPendingMessages(
     .eq("run_id", runId)
     .is("consumed_at", null)
     .select("id, content, mentions, created_at");
-  /**
-   * A DRAIN THAT FAILS IS SAYING. This `return []` means “no one has anything for you
-   * written » to the calling turn: a missing column (migration not yet
-   * thrust), EPIRB, failure — and user messages
-   * disappear silently, while they are STILL in line, uneaten.
-   * The symptom is the most confusing of the product: “it does not respond to me”, without
-   * a line nowhere.
-   */
+  // A failed claim cannot be reported as an empty queue: the worker would
+  // continue while the unconsumed user messages remain in storage.
   if (error) {
-    console.error("[agent-runs] pullPendingMessages failed:", error.message);
-    return [];
+    throw new Error("Unable to claim pending agent messages");
   }
   if (!data) return [];
   return (
@@ -2099,6 +2093,9 @@ export async function appendEvent(
 ): Promise<void> {
   try {
     const service = getServiceClient();
+    const projectId = await journalProject(runId);
+    const encrypt = await shouldEncryptRunEvent(service, projectId);
+    const clearPayload = stripUnstorable(payload);
     for (let attempt = 0; attempt < APPEND_EVENT_MAX_ATTEMPTS; attempt++) {
       const { data } = await service
         .from("agent_run_events")
@@ -2111,17 +2108,15 @@ export async function appendEvent(
       // supabase-js does not RISK on a refused insert (CHECK constraint, RLS…) — it
       // returns { error }. Without this log, a type of event not declared in the CHECK
       // of agent_run_events disappears in total silence (experienced on `question`, MIN-86).
+      const stored: Record<string, unknown> = encrypt
+        ? await encodeRunEvent(projectId, runId, nextSeq, type, clearPayload)
+        : { run_id: runId, seq: nextSeq, type, payload: clearPayload };
       const { data: row, error } = await service
         .from("agent_run_events")
         // Same guard as `stampRun`: the payload of a `tool_result` carries the
         // output of a model command, where a null byte slips in by itself.
-        .insert({
-          run_id: runId,
-          seq: nextSeq,
-          type,
-          payload: stripUnstorable(payload),
-        })
-        .select("id, seq, type, payload, created_at")
+        .insert(stored)
+        .select("id, seq, type, created_at")
         .single();
       if (error) {
         // `seq` already taken by another transmitter: we reread the max and try again.
@@ -2142,7 +2137,7 @@ export async function appendEvent(
       if (row) {
         broadcastRunEvent(
           runId,
-          row as Parameters<typeof broadcastRunEvent>[1],
+          { ...row, payload: clearPayload },
         );
       }
       return;

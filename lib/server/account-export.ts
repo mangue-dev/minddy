@@ -14,6 +14,7 @@ import {
 import { projectIconPaths } from "@/lib/server/project-storage";
 import { getScratchpadRow } from "@/lib/server/scratchpad";
 import { readStatEvents } from "@/lib/server/stat-events";
+import { hydrateAgentSummaryCopies } from "@/lib/server/agent/run-event-store";
 
 /**
  * Export of account data (MIN-119, GDPR art. 15 and 20).
@@ -395,7 +396,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     ? await Promise.all([
         service
           .from("agent_messages")
-          .select("conversation_id, turn_id, role, content, source, created_at")
+          .select("conversation_id, turn_id, role, content, source, legacy_event_id, created_at")
           .in("conversation_id", codeConversationIds)
           .order("created_at"),
         service
@@ -419,6 +420,17 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
 
   const codeRowsFor = (table: string, result: QueryResult, id: string): Row[] =>
     list(table, result).filter((row) => row.conversation_id === id);
+  const exportedCodeConversations = await Promise.all(codeConversationRows.map(async (c) => ({
+    ...c,
+    contexts: codeRowsFor("agent_conversation_contexts", codeContexts, c.id as string),
+    turns: codeRowsFor("agent_turns", codeTurns, c.id as string),
+    messages: (await hydrateAgentSummaryCopies(service, c.project_id as string,
+      codeRowsFor("agent_messages", codeMessages, c.id as string), userId)).map((row) => {
+      const exported = { ...row };
+      delete exported.legacy_event_id;
+      return exported;
+    }),
+  })));
 
   // A ticket from an owned project can also have been created by the person:
   // deduplicated so as not to output it twice.
@@ -509,12 +521,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       ...c,
       messages: messagesByConversation.get(c.id as string) ?? [],
     })),
-    code_agent_conversations: codeConversationRows.map((c) => ({
-      ...c,
-      contexts: codeRowsFor("agent_conversation_contexts", codeContexts, c.id as string),
-      turns: codeRowsFor("agent_turns", codeTurns, c.id as string),
-      messages: codeRowsFor("agent_messages", codeMessages, c.id as string),
-    })),
+    code_agent_conversations: exportedCodeConversations,
     notifications: list("notifications", notifications),
     push_devices: list("push_subscriptions", pushDevices),
     statistics,

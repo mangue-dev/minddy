@@ -734,6 +734,26 @@
       ],
       "functionReferences": []
     },
+    "guard_agent_event_copies()": {
+      "sha256": "309c4fa15b3102b6f53e864f93c2c2504bcb1da060497d4ec3fb1c0054660c5a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "agent_messages",
+        "agent_conversations",
+        "agent_event_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "agent_messages",
+        "agent_conversations"
+      ],
+      "functionReferences": []
+    },
     "guard_comment_encryption()": {
       "sha256": "45e9ceea3bd75c4904b3883085e507e9055acb4f7d39eb1a370ee8cb2c11af84",
       "securityDefiner": true,
@@ -1473,6 +1493,22 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_agent_event_encryption()": {
+      "sha256": "201822f38ee1d27e96d6b3d6b369a8cb28d7cc019caf3ac0fa50135b1517548a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "agent_event_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_runs"
+      ],
+      "functionReferences": []
+    },
     "guard_stat_events_encryption()": {
       "sha256": "01d3892fd9f74309f78ae37bd0df796adac33816074e90b5e79078b322f5af98",
       "securityDefiner": false,
@@ -1818,6 +1854,21 @@
       ],
       "functionReferences": []
     },
+    "guard_agent_event_parent_scope()": {
+      "sha256": "e4b2bd6db07d9fc02596baa2e67b49b26a6f96f3454177d47b393aaa332f7926",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_run_events"
+      ],
+      "protectedRelations": [
+        "agent_run_events"
+      ],
+      "functionReferences": []
+    },
     "guard_agent_journal_encryption()": {
       "sha256": "fdcf9c4a0e2412fa28959cf36ef9c6d2b627eb356c1395eaa5bec5deae20173e",
       "securityDefiner": true,
@@ -1982,7 +2033,7 @@
       ]
     },
     "capture_agent_assistant_message()": {
-      "sha256": "824ec2f79b3423edd3adffeeeb608a325c03cb4976afeabb0e58bafd46b0ebbf",
+      "sha256": "2384eec5bea506df10e97edd452ffd02c6c54525dce0b1cca5418626cd9b538b",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2003,7 +2054,7 @@
       "functionReferences": []
     },
     "capture_agent_run_input_request()": {
-      "sha256": "41c534de32f6e1cc657c83d70877f997b302733bea8a9fe22ad62909070720cc",
+      "sha256": "94f9d6d3b0518c50b165823cfa8cca1cd0fe2ae7266d90d6cec37ae916322a6c",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3548,6 +3599,25 @@
         "guard_project_actor"
       ]
     },
+    "migrate_agent_event_ciphertext(uuid,uuid,integer,text,integer)": {
+      "sha256": "c9b0d92985a5e5abb20dc9f42f5f433e24daab510d2a151b30b6b2639517a7f9",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_messages",
+        "agent_run_events",
+        "agent_run_input_requests"
+      ],
+      "protectedRelations": [
+        "agent_messages",
+        "agent_run_events",
+        "agent_run_input_requests"
+      ],
+      "functionReferences": []
+    },
     "migrate_issue_ciphertext(uuid,uuid,bigint,integer,integer,text)": {
       "sha256": "1b83ac34e13ceb302a8cc6af663f9028bcf38b0bb47647ed6f58525c9521dbd6",
       "securityDefiner": true,
@@ -4354,6 +4424,10 @@
       "function": "broadcast_agent_routine_row()",
       "definition": "CREATE TRIGGER agent_routines_broadcast AFTER INSERT OR DELETE OR UPDATE ON agent_routines FOR EACH ROW EXECUTE FUNCTION broadcast_agent_routine_row()"
     },
+    "agent_runs.agent_runs_event_scope_guard": {
+      "function": "guard_agent_event_parent_scope()",
+      "definition": "CREATE TRIGGER agent_runs_event_scope_guard BEFORE UPDATE OF project_id ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_event_parent_scope()"
+    },
     "categories.categories_freeze_project_id": {
       "function": "freeze_project_id()",
       "definition": "CREATE TRIGGER categories_freeze_project_id BEFORE UPDATE OF project_id ON categories FOR EACH ROW EXECUTE FUNCTION freeze_project_id()"
@@ -4514,6 +4588,14 @@
       "function": "broadcast_pull_request_row()",
       "definition": "CREATE TRIGGER pull_requests_broadcast_update AFTER UPDATE ON pull_requests FOR EACH ROW WHEN (old.state IS DISTINCT FROM new.state OR old.title IS DISTINCT FROM new.title OR old.url IS DISTINCT FROM new.url OR old.head_sha IS DISTINCT FROM new.head_sha OR old.issue_id IS DISTINCT FROM new.issue_id OR old.merged_at IS DISTINCT FROM new.merged_at) EXECUTE FUNCTION broadcast_pull_request_row()"
     },
+    "agent_messages.agent_message_event_copy_guard": {
+      "function": "guard_agent_event_copies()",
+      "definition": "CREATE TRIGGER agent_message_event_copy_guard BEFORE INSERT OR UPDATE ON agent_messages FOR EACH ROW EXECUTE FUNCTION guard_agent_event_copies()"
+    },
+    "agent_run_events.agent_event_encryption_guard": {
+      "function": "guard_agent_event_encryption()",
+      "definition": "CREATE TRIGGER agent_event_encryption_guard BEFORE INSERT OR UPDATE ON agent_run_events FOR EACH ROW EXECUTE FUNCTION guard_agent_event_encryption()"
+    },
     "agent_runs.trg_agent_run_cleanup_conversation": {
       "function": "cleanup_agent_run_conversation()",
       "definition": "CREATE TRIGGER trg_agent_run_cleanup_conversation AFTER DELETE ON agent_runs FOR EACH ROW EXECUTE FUNCTION cleanup_agent_run_conversation()"
@@ -4625,6 +4707,10 @@
     "agent_run_events.trg_agent_assistant_message_capture": {
       "function": "capture_agent_assistant_message()",
       "definition": "CREATE TRIGGER trg_agent_assistant_message_capture AFTER INSERT ON agent_run_events FOR EACH ROW EXECUTE FUNCTION capture_agent_assistant_message()"
+    },
+    "agent_run_input_requests.agent_input_event_copy_guard": {
+      "function": "guard_agent_event_copies()",
+      "definition": "CREATE TRIGGER agent_input_event_copy_guard BEFORE INSERT OR UPDATE ON agent_run_input_requests FOR EACH ROW EXECUTE FUNCTION guard_agent_event_copies()"
     },
     "agent_conversations.agent_conversations_set_updated_at": {
       "function": "set_updated_at()",

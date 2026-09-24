@@ -3696,6 +3696,11 @@
         "type": "uuid",
         "nullable": true,
         "generated": false
+      },
+      "content_encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -4771,6 +4776,11 @@
         "nullable": false,
         "generated": false
       },
+      "call_id": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
       "payload": {
         "type": "jsonb",
         "nullable": true,
@@ -4779,6 +4789,36 @@
       "created_at": {
         "type": "timestamp with time zone",
         "nullable": false,
+        "generated": false
+      },
+      "question_id": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "has_questions": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "has_summary_text": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "encrypted_content": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       }
     },
@@ -7630,7 +7670,7 @@
       },
       "questions": {
         "type": "jsonb",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       },
       "created_at": {
@@ -7648,14 +7688,29 @@
         "nullable": false,
         "generated": false
       },
+      "source_event_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
       "answer_message_id": {
         "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "encrypted_questions": {
+        "type": "text",
         "nullable": true,
         "generated": false
       },
       "parent_numo_turn_id": {
         "type": "uuid",
         "nullable": true,
+        "generated": false
+      },
+      "questions_encryption_version": {
+        "type": "integer",
+        "nullable": false,
         "generated": false
       }
     },
@@ -7671,6 +7726,11 @@
       {
         "table": "agent_runs",
         "column": "run_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "agent_run_events",
+        "column": "source_event_id",
         "targetColumn": "id"
       }
     ]
@@ -8499,6 +8559,30 @@
       "project_id"
     ],
     "foreignKeys": []
+  },
+  "agent_event_encryption_scopes": {
+    "columns": {
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "project_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
   },
   "assistant_active_conversation": {
     "columns": {

@@ -4,6 +4,7 @@ import type { NumoConversation, NumoConversationDetail, NumoLegacySource } from 
 import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { publicSkillsMetadata } from "@/lib/server/assistant/skills";
 import { issueStore } from "@/lib/server/issue-store";
+import { hydrateAgentSummaryCopies } from "@/lib/server/agent/run-event-store";
 
 export const NUMO_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const NUMO_CONVERSATIONS_PAGE_SIZE = 50;
@@ -119,7 +120,9 @@ async function collection(supabase: SupabaseClient, table: string, id: string) {
   }
 }
 
-export async function getNumoConversationDetail(supabase: SupabaseClient, id: string): Promise<NumoConversationDetail | null> {
+export async function getNumoConversationDetail(
+  supabase: SupabaseClient, id: string, actorId: string | null = null,
+): Promise<NumoConversationDetail | null> {
   const conversation = await getNumoConversation(supabase, id);
   if (!conversation) return null;
   const [config, messages, work, contexts, artifacts, turns, occurrenceResult] = await Promise.all([
@@ -133,7 +136,11 @@ export async function getNumoConversationDetail(supabase: SupabaseClient, id: st
       .maybeSingle(),
   ]);
   if (occurrenceResult.error) throw new Error(occurrenceResult.error.message);
-  const safeMessages: Record<string, unknown>[] = messages.map((m) => ({ ...m, metadata: publicSkillsMetadata(m.metadata) }));
+  // The invoker-scoped event policy authorizes each worker's own project;
+  // a delegated worker may belong to a different project from its parent thread.
+  const hydratedMessages = await hydrateAgentSummaryCopies(supabase, null, messages, actorId);
+  const safeMessages: Record<string, unknown>[] = hydratedMessages.map((m) =>
+    ({ ...m, metadata: publicSkillsMetadata(m.metadata) }));
   return {
     conversation: {
       ...conversation,

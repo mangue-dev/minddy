@@ -158,6 +158,9 @@
       "content"
     ],
     "clear": {
+      "encryption_metadata": [
+        "content_encryption_version"
+      ],
       "operational_configuration": [
         "role",
         "source"
@@ -243,17 +246,41 @@
     ],
     "clear": {
       "bounded_metadata": [
+        "has_questions",
+        "has_summary_text",
         "seq"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
       ],
       "operational_configuration": [
         "type"
       ],
       "routing_identity": [
+        "call_id",
         "id",
+        "question_id",
         "run_id"
       ],
       "timestamp": [
-        "created_at"
+        "created_at",
+        "encryption_checked_at"
+      ]
+    }
+  },
+  "agent_event_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   },
@@ -266,6 +293,10 @@
       "questions"
     ],
     "clear": {
+      "encryption_metadata": [
+        "encrypted_questions",
+        "questions_encryption_version"
+      ],
       "operational_configuration": [
         "status"
       ],
@@ -275,7 +306,8 @@
         "id",
         "parent_numo_turn_id",
         "question_id",
-        "run_id"
+        "run_id",
+        "source_event_id"
       ],
       "timestamp": [
         "answered_at",

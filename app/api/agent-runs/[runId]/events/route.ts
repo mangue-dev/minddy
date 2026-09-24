@@ -35,7 +35,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const service = getServiceClient();
   try {
     const events = await listRunEvents(service, run,
-      Number.isFinite(after) && after >= 0 ? { after } : {});
+      Number.isFinite(after) && after >= 0
+        ? { after, actorId: auth.user.id } : { actorId: auth.user.id });
     return NextResponse.json({ events });
   } catch {
     return NextResponse.json({ error: "Unable to read run events" }, { status: 503 });
