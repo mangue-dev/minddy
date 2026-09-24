@@ -37,7 +37,7 @@ vi.mock("@/lib/server/agent/runs", async (importOriginal) => ({
 vi.mock("@/lib/supabase-service", () => {
   const table = (rows: () => Array<Record<string, unknown>>) => {
     const q: Record<string, unknown> = {};
-    for (const verb of ["select", "eq", "gt", "order", "limit", "in", "not"]) {
+    for (const verb of ["select", "eq", "gt", "order", "limit", "in", "not", "or"]) {
       q[verb] = () => q;
     }
     q.then = (resolve: (v: unknown) => unknown) => resolve({ data: rows(), error: null });

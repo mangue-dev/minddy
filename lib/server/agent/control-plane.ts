@@ -1369,7 +1369,7 @@ async function runCreatePr(
     generatedAgentBranchName({
       runId: run.id,
       issueIdentifier: identifier,
-      conversationTitle: run.title,
+      conversationTitle: launch?.title ?? run.title,
       prompt: launch?.prompt ?? run.prompt,
       branchPrefix,
     });

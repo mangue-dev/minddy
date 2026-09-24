@@ -57,6 +57,21 @@
       ]
     }
   },
+  "agent_checkpoint_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "agent_conversation_contexts": {
     "scope": {
       "ancestor": "agent_conversations:conversation_id"
@@ -131,11 +146,31 @@
       "timestamp": [
         "archived_at",
         "created_at",
+        "title_encryption_checked_at",
         "updated_at"
+      ],
+      "encryption_metadata": [
+        "title_ciphertext",
+        "title_encryption_version"
       ]
     }
   },
-  "agent_launch_encryption_scopes": {
+  "agent_delegation_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "agent_event_encryption_scopes": {
     "scope": {
       "kind": "project",
       "column": "project_id"
@@ -151,6 +186,21 @@
     }
   },
   "agent_journal_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "agent_launch_encryption_scopes": {
     "scope": {
       "kind": "project",
       "column": "project_id"
@@ -284,21 +334,6 @@
       ]
     }
   },
-  "agent_event_encryption_scopes": {
-    "scope": {
-      "kind": "project",
-      "column": "project_id"
-    },
-    "encrypted": [],
-    "clear": {
-      "routing_identity": [
-        "project_id"
-      ],
-      "timestamp": [
-        "activated_at"
-      ]
-    }
-  },
   "agent_run_input_requests": {
     "scope": {
       "ancestor": "agent_runs:run_id"
@@ -359,8 +394,8 @@
         "created_at"
       ],
       "encryption_metadata": [
-        "encryption_version",
-        "encryption_checked_at"
+        "encryption_checked_at",
+        "encryption_version"
       ]
     }
   },
@@ -398,6 +433,7 @@
       "delegation_result",
       "deployment_url",
       "error_message",
+      "outcome",
       "pr_url",
       "prompt",
       "prompt_mentions",
@@ -428,7 +464,6 @@
         "intent",
         "key_mode",
         "model",
-        "outcome",
         "pr_state",
         "reasoning_level",
         "sandbox_billing",
@@ -438,8 +473,14 @@
         "worker_model_source"
       ],
       "encryption_metadata": [
+        "checkpoint_ciphertext",
+        "checkpoint_encryption_version",
+        "delegation_encryption_version",
+        "encrypted_delegation_input",
         "encrypted_launch_content",
-        "launch_encryption_version"
+        "launch_encryption_version",
+        "title_ciphertext",
+        "title_encryption_version"
       ],
       "routing_identity": [
         "chain_id",
@@ -467,8 +508,10 @@
         "sandbox_reap_claim"
       ],
       "timestamp": [
+        "checkpoint_encryption_checked_at",
         "completed_at",
         "created_at",
+        "delegation_encryption_checked_at",
         "last_activity_at",
         "launch_encryption_checked_at",
         "not_before",
@@ -476,6 +519,7 @@
         "sandbox_reap_claimed_at",
         "sandbox_stopped_at",
         "started_at",
+        "title_encryption_checked_at",
         "updated_at",
         "window_started_at"
       ]
@@ -507,10 +551,15 @@
         "sandbox_id"
       ],
       "timestamp": [
+        "checkpoint_encryption_checked_at",
         "created_at",
         "last_activity_at",
         "sandbox_stopped_at",
         "updated_at"
+      ],
+      "encryption_metadata": [
+        "checkpoint_ciphertext",
+        "checkpoint_encryption_version"
       ]
     }
   },
@@ -530,12 +579,28 @@
       ]
     }
   },
+  "agent_title_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "agent_turns": {
     "scope": {
       "ancestor": "agent_conversations:conversation_id"
     },
     "encrypted": [
-      "error_message"
+      "error_message",
+      "outcome"
     ],
     "clear": {
       "bounded_metadata": [
@@ -543,7 +608,6 @@
       ],
       "operational_configuration": [
         "model",
-        "outcome",
         "reasoning_level",
         "status"
       ],
@@ -848,9 +912,9 @@
       ],
       "encryption_metadata": [
         "encrypted_content",
-        "encryption_version",
+        "encryption_checked_at",
         "encryption_revision",
-        "encryption_checked_at"
+        "encryption_version"
       ]
     }
   },
@@ -889,9 +953,9 @@
       ],
       "encryption_metadata": [
         "encrypted_content",
-        "encryption_version",
+        "encryption_checked_at",
         "encryption_revision",
-        "encryption_checked_at"
+        "encryption_version"
       ]
     }
   },
@@ -1141,9 +1205,9 @@
     "clear": {
       "encryption_metadata": [
         "encrypted_content",
-        "encryption_version",
+        "encryption_checked_at",
         "encryption_revision",
-        "encryption_checked_at"
+        "encryption_version"
       ],
       "bounded_metadata": [
         "analysis_failures",
@@ -1783,12 +1847,12 @@
     "clear": {
       "bounded_metadata": [
         "smart_assign_ai",
+        "starts_work",
         "via_assistant",
         "via_automation",
         "via_mcp",
         "via_smart_assign",
-        "via_smart_fill",
-        "starts_work"
+        "via_smart_fill"
       ],
       "operational_configuration": [
         "field",
@@ -1811,9 +1875,9 @@
       ],
       "encryption_metadata": [
         "encrypted_content",
-        "encryption_version",
+        "encryption_checked_at",
         "encryption_revision",
-        "encryption_checked_at"
+        "encryption_version"
       ]
     }
   },
@@ -1905,9 +1969,9 @@
       ],
       "encryption_metadata": [
         "encrypted_content",
-        "encryption_version",
+        "encryption_checked_at",
         "encryption_revision",
-        "encryption_checked_at"
+        "encryption_version"
       ]
     }
   },
@@ -1979,7 +2043,8 @@
     "encrypted": [
       "checkpoint",
       "error_message",
-      "intent"
+      "intent",
+      "outcome"
     ],
     "clear": {
       "bounded_metadata": [
@@ -1989,7 +2054,6 @@
       ],
       "operational_configuration": [
         "model",
-        "outcome",
         "reasoning_level",
         "status"
       ],
@@ -2317,9 +2381,9 @@
       ],
       "encryption_metadata": [
         "encrypted_content",
-        "encryption_version",
+        "encryption_checked_at",
         "encryption_revision",
-        "encryption_checked_at"
+        "encryption_version"
       ]
     }
   },
@@ -2356,9 +2420,9 @@
       ],
       "encryption_metadata": [
         "encrypted_content",
-        "encryption_version",
+        "encryption_checked_at",
         "encryption_revision",
-        "encryption_checked_at"
+        "encryption_version"
       ]
     }
   },
@@ -2457,9 +2521,9 @@
       ],
       "encryption_metadata": [
         "encrypted_content",
-        "encryption_version",
+        "encryption_checked_at",
         "encryption_revision",
-        "encryption_checked_at"
+        "encryption_version"
       ]
     }
   },
@@ -2580,9 +2644,9 @@
     "clear": {
       "encryption_metadata": [
         "encrypted_content",
-        "encryption_version",
+        "encryption_checked_at",
         "encryption_revision",
-        "encryption_checked_at"
+        "encryption_version"
       ],
       "operational_configuration": [
         "step"

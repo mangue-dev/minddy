@@ -5,6 +5,7 @@ import type { AssistantMention } from "@/lib/assistant-types";
 import { auditDecryption } from "@/lib/server/encryption/audit";
 import { isContentEncryptionEnabled } from "@/lib/server/encryption/content-config";
 import { getEncryptedStore } from "@/lib/server/encryption/registry";
+import { decodeAgentTitle } from "./run-title-content";
 
 type LaunchContent = {
   prompt: string | null;
@@ -22,6 +23,9 @@ export type StoredLaunch = LaunchContent & {
   conversation_id?: string;
   encrypted_launch_content?: string | null;
   launch_encryption_version?: number;
+  title?: string | null;
+  title_ciphertext?: string | null;
+  title_encryption_version?: number;
 };
 
 function context(projectId: string, runId: string) {
@@ -63,7 +67,8 @@ export async function decodeAgentLaunch<T extends StoredLaunch>(
   const version = row.launch_encryption_version ?? 0;
   if (version === 0) {
     if (row.encrypted_launch_content != null) throw new Error("Invalid legacy agent launch");
-    return row;
+    return "title" in row
+      ? decodeAgentTitle(row as T & { title: string | null }, actorId) : row;
   }
   if (!Number.isSafeInteger(version) || version < 1 || row.prompt !== null ||
       row.prompt_mentions !== null || typeof row.encrypted_launch_content !== "string") {
@@ -80,7 +85,9 @@ export async function decodeAgentLaunch<T extends StoredLaunch>(
     throw new Error("Invalid agent launch content");
   }
   auditDecryption(binding, { actorId, reason: "repository_read" });
-  return { ...row, prompt: value.prompt, prompt_mentions: value.prompt_mentions };
+  const decoded = { ...row, prompt: value.prompt, prompt_mentions: value.prompt_mentions };
+  return "title" in decoded
+    ? decodeAgentTitle(decoded as T & { title: string | null }, actorId) : decoded;
 }
 
 /** Resolve only initial-message copies visible through the caller's RLS query. */

@@ -6,6 +6,7 @@ import { publicSkillsMetadata } from "@/lib/server/assistant/skills";
 import { issueStore } from "@/lib/server/issue-store";
 import { hydrateAgentSummaryCopies } from "@/lib/server/agent/run-event-store";
 import { hydrateAgentLaunchCopies, hydrateImportedAgentMessages } from "@/lib/server/agent/run-launch-content";
+import { decodeAgentTitle, legacyAgentTitleSchema } from "@/lib/server/agent/run-title-content";
 
 export const NUMO_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const NUMO_CONVERSATIONS_PAGE_SIZE = 50;
@@ -15,28 +16,81 @@ export const MAX_NUMO_CONVERSATIONS_PAGE_SIZE = 500;
 async function hydrateIssueTitles<T extends NumoConversation>(
   supabase: SupabaseClient, rows: T[],
 ): Promise<T[]> {
-  const pending = rows.filter((row) => row.source === "agent" && row.title == null &&
+  const conversationIds = [...new Set(rows.filter((row) => row.source === "agent" &&
+    typeof row.legacy_id === "string").map((row) => row.legacy_id as string))];
+  const decodedTitles = new Map<string, string | null>();
+  for (let offset = 0; offset < conversationIds.length; offset += 100) {
+    const ids = conversationIds.slice(offset, offset + 100);
+    const first = await supabase.from("agent_conversations")
+      .select("id,project_id,title,title_ciphertext,title_encryption_version")
+      .in("id", ids);
+    const response = legacyAgentTitleSchema(first.error)
+      ? await supabase.from("agent_conversations")
+          .select("id,project_id,title").in("id", ids)
+      : first;
+    if (response.error) throw new Error("Unable to read agent conversation titles");
+    for (const stored of response.data ?? []) {
+      const row = rows.find((candidate) => candidate.legacy_id === stored.id);
+      if (!row || row.project_id !== stored.project_id) continue;
+      const clear = await decodeAgentTitle(stored as { id: string; project_id: string;
+        title: string | null; title_ciphertext?: string | null;
+        title_encryption_version?: number });
+      decodedTitles.set(stored.id as string, clear.title);
+    }
+  }
+  const titledRows = rows.map((row) => row.source === "agent" &&
+    decodedTitles.get(row.legacy_id as string)
+      ? { ...row, title: decodedTitles.get(row.legacy_id as string)! } : row);
+  const pending = titledRows.filter((row) => row.source === "agent" && row.title == null &&
     typeof row.project_id === "string" && typeof row.latest_work_id === "string");
-  if (!pending.length) return rows;
+  if (!pending.length) return titledRows as T[];
   const runIds = [...new Set(pending.map((row) => row.latest_work_id as string))];
   const { data: runs, error: runError } = await supabase.from("agent_runs")
     .select("id, issue_id").in("id", runIds);
   if (runError) throw new Error("Unable to resolve issue history titles");
   const issueIds = [...new Set((runs ?? []).map((row) => row.issue_id)
     .filter((id): id is string => typeof id === "string"))];
-  if (!issueIds.length) return rows;
+  if (!issueIds.length) return titledRows as T[];
   const { data: issues, error: issueError } = await issueStore(supabase)
     .select("id, project_id, title").in("id", issueIds)
     .in("project_id", [...new Set(pending.map((row) => row.project_id as string))]);
   if (issueError) throw new Error("Unable to resolve issue history titles");
   const issueById = new Map((issues ?? []).map((row) => [row.id as string, row]));
   const runById = new Map((runs ?? []).map((row) => [row.id as string, row]));
-  return rows.map((row) => {
+  return titledRows.map((row) => {
     const issueId = runById.get(row.latest_work_id as string)?.issue_id as string | null;
     const issue = issueId ? issueById.get(issueId) : null;
     return row.title == null && issue?.project_id === row.project_id
       ? { ...row, title: issue.title as string } : row;
-  });
+  }) as T[];
+}
+
+async function hydrateWorkTitles(supabase: SupabaseClient,
+  work: Record<string, unknown>[], actorId: string | null) {
+  const ids = work.map((row) => row.id).filter((id): id is string => typeof id === "string");
+  if (!ids.length) return work;
+  const titles = new Map<string, string | null>();
+  for (let offset = 0; offset < ids.length; offset += 100) {
+    const first = await supabase.from("agent_runs")
+      .select("id,project_id,conversation_id,title,title_ciphertext,title_encryption_version")
+      .in("id", ids.slice(offset, offset + 100));
+    const response = legacyAgentTitleSchema(first.error)
+      ? await supabase.from("agent_runs")
+          .select("id,project_id,conversation_id,title")
+          .in("id", ids.slice(offset, offset + 100))
+      : first;
+    if (response.error) throw new Error("Unable to read agent work titles");
+    for (const stored of response.data ?? []) {
+      const workRow = work.find((candidate) => candidate.id === stored.id);
+      if (!workRow || workRow.project_id !== stored.project_id) continue;
+      const clear = await decodeAgentTitle(stored as { id: string; project_id: string;
+        conversation_id: string; title: string | null;
+        title_ciphertext?: string | null; title_encryption_version?: number }, actorId);
+      titles.set(stored.id as string, clear.title);
+    }
+  }
+  return work.map((row) => titles.has(row.id as string)
+    ? { ...row, title: titles.get(row.id as string) } : row);
 }
 
 /** Always pass the request's RLS client, including for legacy link resolution. */
@@ -151,7 +205,7 @@ export async function getNumoConversationDetail(
     },
     messages: safeMessages.filter((m) => m.kind !== "action"),
     actions: safeMessages.filter((m) => m.kind === "action"),
-    work, contexts, artifacts, turns,
+    work: await hydrateWorkTitles(supabase, work, actorId), contexts, artifacts, turns,
     routine_occurrence: occurrenceResult.data ?? null,
   } as unknown as NumoConversationDetail;
 }

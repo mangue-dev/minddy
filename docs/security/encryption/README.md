@@ -6,16 +6,16 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 118 application tables and 1,252 columns, their primary
+- `schema.json` records 123 application tables and 1,292 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
-  column exactly once. Its 187 encryption targets include the original content,
+  column exactly once. Its 190 encryption targets include the original content,
   derived copies, arbitrary user JSON, private identities, credentials and share
   tokens. This is a target policy, not evidence that those columns are encrypted.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 255 functions, ten views and 138 triggers. Function
+- `sql-consumers.json` records 270 functions, ten views and 149 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -535,7 +535,7 @@ content or sensitive related data in clear form:
 
 | Path | Remaining work |
 | --- | --- |
-| Agent state | `agent_runs.title/prompt/checkpoint` and related delegation fields, `agent_conversations.title`, initial/steering messages, input answers and runtime sessions still persist readable content. Durable replay batches and run events have separately gated encrypted paths; event-triggered summary and question copies follow the event ciphertext. The launch title generator can summarize an issue into remaining clear rows. Convert the rest of the agent boundary, its SQL title-sync trigger, reads, Realtime and historical rows together. |
+| Agent state | Run prompt, title, checkpoint and delegation input now have separately gated encrypted paths, with their conversation, initial-message and current-runtime copies protected. Steering and system messages, input answers, delegation results, outcome text, branch/PR metadata and other runtime fields still persist readable content. Durable replay batches and run events have separately gated encrypted paths; event-triggered summary and question copies follow the event ciphertext. Convert the remaining agent rows, SQL copies, Numo views, Realtime, imports and historical rows together. |
 | Forge and external delivery | `pull_requests.title`, branch/repository names and URLs, GitHub issue metadata/sidecars and forge relay payloads remain clear in the application database. GitHub/GitLab issue synchronization, PR publication, webhooks, push and downloaded exports deliberately disclose content to their recipients or providers; review authorization, retention and provider controls for each destination. |
 | Resources and objects | Issue attachment URLs, filenames, storage paths and file bytes remain clear. Direct upload/download, AI resource reads, account exports/imports, copy and orphan cleanup still need an authorized opaque-path object transport, migration and restore. MIME and size are currently classified as operational metadata. |
 | Search and SQL | Application issue search reads through the repository, but representative latency and key/cache load are unmeasured. The SQL consumer inventory is a candidate list, not proof that every function or RPC has a safe content flow. |
@@ -636,9 +636,9 @@ latency, event write throughput and project-key/cache load remain unmeasured;
 fixture timings cannot establish production behavior.
 
 This closes the event payload and its two event-triggered plaintext copies,
-not the agent or issue boundary. `agent_runs` titles, prompts, checkpoints and
-delegation data; `agent_conversations.title`; initial/steering messages,
-pending input answers, runtime sessions and Numo projections remain clear.
+not the agent or issue boundary. The later run-title, checkpoint and delegation
+input conversion is described below. Steering and system messages, pending
+input answers, delegation results and Numo projections remain clear.
 The next queue tranche has begun by making failed pending-message claims stop
 the worker instead of silently appearing empty. Feedback visitor identities,
 OTP email and feedback objects also remain clear. Production flags stay off;
@@ -671,12 +671,13 @@ two launch prompts and their copies across two project-key versions with empty
 caches; the wrong root fails. The issue restoration now commits children and
 parents in separate reverse-order batches before restoring its parent FK.
 
-**The agent boundary remains open.** Run and conversation titles, checkpoints,
-delegation fields, initial system content, steering and queued messages,
-input answers, runtime sessions, other Numo projections, and any content they
-copy remain readable in SQL. Imports of other agent message sources still need
-the general agent-message boundary; encryption of run-linked initial prompts
-does not establish that the whole transcript is protected. PR and forge data,
+**The agent boundary remains open.** The later run-title, checkpoint and
+delegation-input conversion is described below. Initial system content,
+steering and queued messages, input answers, delegation results, other runtime
+fields, Numo projections, and any content they copy remain readable in SQL.
+Imports of other agent message sources still need the general agent-message
+boundary; encryption of run-linked initial prompts does not establish that the
+whole transcript is protected. PR and forge data,
 files, feedback visitor identities, OTP email, and feedback objects remain
 clear as recorded above. No production deployment or migration occurred.
 
@@ -686,6 +687,66 @@ schema clones hold only synthetic one- and two-run fixtures and cannot estimate
 production search latency, write latency, or project-key/cache load. Those
 measurements remain outstanding until representative staging data and access
 exist. Production flags stay off.
+
+## Agent run title, checkpoint and delegation input — 24 September 2026
+
+Three new project-key gates extend the converted agent boundary. `agent_runs.title`
+and `agent_conversations.title` use ciphertext authenticated to the shared
+conversation ID. The run creation path, including its atomic managed-budget
+RPC, writes the title ciphertext before the SQL conversation trigger copies it.
+The title-sync trigger preserves ciphertext on updates. Authorized run, Numo,
+inbox, push and account-transfer readers decode the title after their existing
+access checks; SQL Numo views and Realtime do not expose a clear copy. The
+service-only migration RPC converts each run and its conversation copy under
+one compare-and-swap, and a second RPC covers conversation rows without a run.
+
+`agent_runs.checkpoint` uses a run-ID-bound envelope. The runtime-session
+trigger copies the same ciphertext into `agent_runtime_sessions` while a run
+owns the session; SQL resume checks now recognize ciphertext without examining
+its contents. The run write and bounded migration update the run and its
+current runtime copy in one transaction. Orphan runtime sessions have a
+separate bounded compare-and-swap path. Clearing a finished checkpoint removes
+both the clear value and ciphertext. Authorized run readers decrypt for resume.
+
+Delegated briefs and attachment metadata share a run-ID-bound envelope in
+`agent_runs.encrypted_delegation_input`; their clear SQL columns are null and
+an empty array. Both ordinary and atomic managed-budget launch paths accept
+the envelope. Run reads decode for the worker only after scope checks. A
+service-only bounded compare-and-swap converts and rotates historical delegated
+runs. Project activation markers and guards reject obsolete clear writers,
+scope changes and version downgrades for these three surfaces. The opt-in flags
+are `MINDDY_AGENT_TITLE_ENCRYPTION_ENABLED`,
+`MINDDY_AGENT_CHECKPOINT_ENCRYPTION_ENABLED` and
+`MINDDY_AGENT_DELEGATION_ENCRYPTION_ENABLED`, each requiring the global content
+flag. All remain disabled in production. A deployed binary must support these
+envelopes before enabling any gate; rolling back to a plaintext-only binary
+after activation will be rejected by the database.
+
+Isolated SQL regressions exercise clear-copy removal, old-writer rejection,
+managed-budget creation, compare-and-swap conflicts, Realtime exclusion and
+client privilege denial. Unit tests verify authenticated project and row
+bindings. Real PostgreSQL dumps restore run/conversation, run/runtime and
+delegation/parent-turn references with child rows loaded in independent earlier
+transactions, then revalidate their foreign keys. Two data-key versions
+decrypt with a cold cache; a different root fails. These fixtures contain at
+most two runs per test. The Supabase CLI lists one linked Minddy project and
+no identified staging project; representative staging search, write latency
+and key/cache-load measurements could not be run. Fixture timings do not
+establish those performance bounds. No production data or migration was used.
+
+The agent boundary remains open. `agent_messages.content` for `system` and
+`steering`, `agent_run_messages.content/mentions`, and
+`agent_run_input_requests.answer` remain clear, as do `agent_runs.delegation_result`,
+`outcome`, `error_message`, `verdict`, `base_branch`, `branch_name`, `pr_url`
+and `deployment_url`; `agent_runtime_sessions.base_branch/work_branch`,
+`agent_turns.error_message/outcome`, `agent_conversation_contexts.snapshot`,
+`agent_artifacts.ref/url` and related Numo, notification and forge copies need
+their own source-and-derived conversion. `numo_assistant_turns.outcome` and
+the two agent outcome fields were moved into the policy's encryption targets
+because they can contain authored summaries. The issues and feedback
+boundaries remain open; in particular `feedback_users.email/name/external_id`,
+`feedback_otp_codes.email`, feedback posts and their derived objects are still
+clear. MIN-591 must stay in progress.
 
 ## Root-key setup and recovery
 

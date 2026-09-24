@@ -1,6 +1,7 @@
 import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { feedbackPostStore } from "@/lib/server/feedback-post-store";
+import { decodeAgentTitle, legacyAgentTitleSchema } from "@/lib/server/agent/run-title-content";
 import "server-only";
 
 import { createTranslator } from "next-intl";
@@ -168,8 +169,17 @@ export async function loadPushContext(
       : Promise.resolve({ data: [] as { id: string; number: number; title: string }[],
         }),
     conversationIds.length
-      ? service.from("agent_conversations").select("id, title").in("id", conversationIds)
-      : Promise.resolve({ data: [] as { id: string; title: string | null }[] }),
+      ? (async () => {
+        const first = await service.from("agent_conversations")
+          .select("id, project_id, title, title_ciphertext, title_encryption_version")
+          .in("id", conversationIds);
+        return legacyAgentTitleSchema(first.error)
+          ? service.from("agent_conversations")
+              .select("id, project_id, title").in("id", conversationIds)
+          : first;
+      })()
+      : Promise.resolve({ data: [] as { id: string; project_id: string;
+          title: string | null }[] }),
     objectiveIds.length
       ? objectiveStore(service)
           .select("id, name")
@@ -214,7 +224,14 @@ export async function loadPushContext(
   for (const i of issues.data ?? []) {
     ctx.issues.set(i.id, { number: i.number, title: i.title });
   }
-  for (const c of agentConversations.data ?? []) ctx.agentConversations.set(c.id, c.title);
+  for (const c of agentConversations.data ?? []) {
+    if (!rows.some((row) => row.agent_conversation_id === c.id &&
+        row.project_id === c.project_id)) continue;
+    const decoded = await decodeAgentTitle(c as { id: string; project_id: string;
+      title: string | null; title_ciphertext?: string | null;
+      title_encryption_version?: number });
+    ctx.agentConversations.set(c.id, decoded.title);
+  }
   for (const o of objectives.data ?? []) ctx.objectives.set(o.id, o.name);
   for (const f of feedback.data ?? []) ctx.feedbackPosts.set(f.id, { projectId: f.project_id, title: f.title });
   for (const r of routines.data ?? []) ctx.routines.set(r.id, r.title);

@@ -1,6 +1,7 @@
 import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
+import { decodeAgentTitle, legacyAgentTitleSchema } from "@/lib/server/agent/run-title-content";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -163,11 +164,17 @@ export async function readInboxNotifications({
           }[],
         }),
     conversationIds.length && projectIds.length
-      ? service
+      ? (async () => {
+        const first = await service
           .from("agent_conversations")
-          .select("id, project_id, title")
+          .select("id, project_id, title, title_ciphertext, title_encryption_version")
           .in("id", conversationIds)
-          .in("project_id", projectIds)
+          .in("project_id", projectIds);
+        return legacyAgentTitleSchema(first.error)
+          ? service.from("agent_conversations").select("id, project_id, title")
+              .in("id", conversationIds).in("project_id", projectIds)
+          : first;
+      })()
       : Promise.resolve({
           data: [] as { id: string; project_id: string; title: string | null }[],
         }),
@@ -262,9 +269,10 @@ export async function readInboxNotifications({
   if (objectivesError) return { notifications: [], error: "Unable to read notification objectives" };
 
   const issueMap = new Map((issues ?? []).map((item) => [item.id, item]));
-  const conversationMap = new Map(
-    (agentConversations ?? []).map((item) => [item.id, item]),
-  );
+  const decodedConversations = await Promise.all((agentConversations ?? []).map((item) =>
+    decodeAgentTitle(item as { id: string; project_id: string; title: string | null;
+      title_ciphertext?: string | null; title_encryption_version?: number }, userId)));
+  const conversationMap = new Map(decodedConversations.map((item) => [item.id, item]));
   const objectiveMap = new Map(
     (objectives ?? []).map((item) => [item.id, item]),
   );

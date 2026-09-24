@@ -358,12 +358,16 @@ export async function launchAgentRun(
       .eq("parent_numo_tool_call_id", input.delegation.toolCallId)
       .maybeSingle();
     if (delivered) {
-      const run = delivered as AgentRun;
+      const candidate = delivered as AgentRun;
+      if (candidate.created_by !== input.userId ||
+          candidate.parent_numo_conversation_id !== input.delegation.parentConversationId ||
+          (input.projectId && candidate.project_id !== input.projectId)) {
+        return { ok: false, error: "continuationNotFound" };
+      }
+      const { decodeAgentDelegationInput } = await import("./run-delegation-content");
+      const run = await decodeAgentDelegationInput(candidate);
       if (
-        run.created_by !== input.userId
-        || run.parent_numo_conversation_id !== input.delegation.parentConversationId
-        || (input.projectId && run.project_id !== input.projectId)
-        || run.delegation_brief?.objective !== input.delegation.objective.trim()
+        run.delegation_brief?.objective !== input.delegation.objective.trim()
       ) {
         return { ok: false, error: "continuationNotFound" };
       }
@@ -700,7 +704,20 @@ export async function launchAgentRun(
           .eq("parent_numo_turn_id", input.delegation.parentTurnId)
           .eq("parent_numo_tool_call_id", input.delegation.toolCallId)
           .maybeSingle();
-        if (existing) return { ok: true, run: existing as AgentRun };
+        if (existing) {
+          const candidate = existing as AgentRun;
+          if (candidate.created_by !== input.userId ||
+              candidate.parent_numo_conversation_id !== input.delegation.parentConversationId ||
+              (input.projectId && candidate.project_id !== input.projectId)) {
+            return { ok: false, error: "continuationNotFound" };
+          }
+          const { decodeAgentDelegationInput } = await import("./run-delegation-content");
+          const run = await decodeAgentDelegationInput(candidate);
+          if (run.delegation_brief?.objective !== input.delegation.objective.trim()) {
+            return { ok: false, error: "continuationNotFound" };
+          }
+          return { ok: true, run };
+        }
       }
       const winner = reviewPr
         ? await activeRunForPullRequest(reviewPr.id)
@@ -762,11 +779,16 @@ export async function launchAgentRun(
       void generatedTitle
         .then(async (title) => {
           if (!title) return;
-          const { error } = await service
-            .from("agent_runs")
-            .update({ title })
-            .eq("id", run.id)
-            .is("title", null);
+          const { encodeAgentTitle } = await import("./run-title-content");
+          const values = run.title_encryption_version
+            ? await encodeAgentTitle(run.project_id, run.conversation_id, title)
+            : { title };
+          let update = service.from("agent_runs")
+            .update(values).eq("id", run.id).is("title", null);
+          update = run.title_encryption_version
+            ? update.eq("title_ciphertext", run.title_ciphertext)
+            : update.is("title_ciphertext", null);
+          const { error } = await update;
           if (error)
             console.error("[agent-launch] title update failed:", error.message);
         })

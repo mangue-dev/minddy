@@ -875,22 +875,28 @@ export async function importAccountTransfer(
   result.personalData += conversations.length;
 
   const codeConversationIds = new Map<string, string>();
-  const codeConversations = document.code_agent_conversations.flatMap((source) => {
+  const { encodeAgentTitle, shouldEncryptAgentTitle } = await import(
+    "@/lib/server/agent/run-title-content"
+  );
+  const codeConversations = (await Promise.all(document.code_agent_conversations.map(async (source) => {
     const id = uuidValue(source, "id");
     const projectId = mapId(source.project_id, projects.projectIds);
     if (!id || !projectId) return [];
     codeConversationIds.set(id, id);
+    const storedTitle = await shouldEncryptAgentTitle(service, projectId)
+      ? await encodeAgentTitle(projectId, id, source.title as string | null ?? null)
+      : { title: source.title ?? null };
     return [{
       id,
       project_id: projectId,
       owner_id: userId,
-      title: source.title ?? null,
+      ...storedTitle,
       visibility: source.visibility ?? "private",
       archived_at: source.archived_at ?? null,
       created_at: source.created_at,
       updated_at: source.updated_at,
     }];
-  });
+  }))).flat();
   await upsertRows(service, "agent_conversations", codeConversations);
   const codeTurnIds = new Map<string, string>();
   const codeTurns = document.code_agent_conversations.flatMap((conversation) => {

@@ -1425,9 +1425,19 @@
         "nullable": true,
         "generated": false
       },
+      "title_ciphertext": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
       "delegation_result": {
         "type": "jsonb",
         "nullable": true,
+        "generated": false
+      },
+      "has_launch_prompt": {
+        "type": "boolean",
+        "nullable": false,
         "generated": false
       },
       "window_started_at": {
@@ -1470,6 +1480,11 @@
         "nullable": true,
         "generated": false
       },
+      "checkpoint_ciphertext": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
       "continued_from_run_id": {
         "type": "uuid",
         "nullable": true,
@@ -1495,7 +1510,27 @@
         "nullable": true,
         "generated": false
       },
+      "encrypted_launch_content": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
       "parent_numo_tool_call_id": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "title_encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "launch_encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "encrypted_delegation_input": {
         "type": "text",
         "nullable": true,
         "generated": false
@@ -1505,27 +1540,37 @@
         "nullable": true,
         "generated": false
       },
+      "title_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "launch_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "checkpoint_encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "delegation_encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
       "local_issue_context_confirmed": {
         "type": "boolean",
         "nullable": false,
         "generated": false
       },
-      "has_launch_prompt": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "encrypted_launch_content": {
-        "type": "text",
+      "checkpoint_encryption_checked_at": {
+        "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
       },
-      "launch_encryption_version": {
-        "type": "integer",
-        "nullable": false,
-        "generated": false
-      },
-      "launch_encryption_checked_at": {
+      "delegation_encryption_checked_at": {
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
@@ -5937,6 +5982,21 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "title_ciphertext": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "title_encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "title_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -7092,6 +7152,21 @@
         "generated": false
       },
       "sandbox_stopped_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "checkpoint_ciphertext": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "checkpoint_encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "checkpoint_encryption_checked_at": {
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
@@ -8604,6 +8679,30 @@
       }
     ]
   },
+  "agent_title_encryption_scopes": {
+    "columns": {
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "project_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
   "assistant_active_conversation": {
     "columns": {
       "user_id": {
@@ -8634,6 +8733,30 @@
       {
         "table": "users",
         "column": "user_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "agent_launch_encryption_scopes": {
+    "columns": {
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "project_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
         "targetColumn": "id"
       }
     ]
@@ -8790,7 +8913,31 @@
       }
     ]
   },
-  "agent_launch_encryption_scopes": {
+  "agent_checkpoint_encryption_scopes": {
+    "columns": {
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "project_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "agent_delegation_encryption_scopes": {
     "columns": {
       "project_id": {
         "type": "uuid",

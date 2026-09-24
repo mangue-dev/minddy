@@ -44,6 +44,11 @@ import {
 } from "./encrypted-journal";
 import { encodeRunEvent, shouldEncryptRunEvent } from "./run-event-store";
 import { decodeAgentLaunch, encodeAgentLaunch, shouldEncryptAgentLaunch } from "./run-launch-content";
+import { encodeAgentTitle, shouldEncryptAgentTitle } from "./run-title-content";
+import { decodeAgentCheckpoint, encodeAgentCheckpoint,
+  shouldEncryptAgentCheckpoint } from "./run-checkpoint-content";
+import { decodeAgentDelegationInput, encodeAgentDelegationInput,
+  shouldEncryptAgentDelegation } from "./run-delegation-content";
 
 /**
  * Data access to code agent runs (MIN-46): creation, CAS claim,
@@ -297,9 +302,13 @@ export interface AgentRun {
   delegation_brief?: AgentDelegationBrief | null;
   delegation_result?: AgentDelegationResult | null;
   delegation_attachments?: AttachmentInput[] | null;
+  encrypted_delegation_input?: string | null;
+  delegation_encryption_version?: number;
   /** Short summary of the note, for the CARNET sessions. Null = no summary
    * (issue run, whose title is that of the ticket; or failed generation). */
   title: string | null;
+  title_ciphertext?: string | null;
+  title_encryption_version?: number;
   model: string | null;
   model_forced: boolean;
   /** Level of reasoning FROZEN at launch (MIN-122), like the model: one run
@@ -320,6 +329,8 @@ export interface AgentRun {
   sandbox_id: string | null;
   sandbox_billing?: SandboxBilling | null;
   checkpoint: AgentCheckpoint | null;
+  checkpoint_ciphertext?: string | null;
+  checkpoint_encryption_version?: number;
   continuations: number;
   attempts: number;
   not_before: string;
@@ -563,7 +574,10 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
   const engine = AGENT_ENGINE;
   const loopInVm = true;
   const encryptLaunch = await shouldEncryptAgentLaunch(service, input.projectId);
-  const id = encryptLaunch ? randomUUID() : null;
+  const encryptTitle = await shouldEncryptAgentTitle(service, input.projectId);
+  const encryptDelegation = input.delegationBrief &&
+    await shouldEncryptAgentDelegation(service, input.projectId);
+  const id = encryptLaunch || encryptTitle || encryptDelegation ? randomUUID() : null;
   const launchContent = {
     prompt: stripUnstorable(input.prompt ?? null),
     prompt_mentions: stripUnstorable(input.promptMentions ?? null),
@@ -571,6 +585,18 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
   const storedLaunch = encryptLaunch
     ? await encodeAgentLaunch(input.projectId, id!, launchContent)
     : launchContent;
+  const storedTitle = encryptTitle
+    ? await encodeAgentTitle(input.projectId, input.conversationId ?? id!, input.title ?? null)
+    : { title: input.title ?? null };
+  const storedDelegation = input.delegationBrief
+    ? encryptDelegation
+      ? await encodeAgentDelegationInput(input.projectId, id!, {
+          delegation_brief: input.delegationBrief,
+          delegation_attachments: input.delegationAttachments ?? [],
+        })
+      : { delegation_brief: input.delegationBrief,
+          delegation_attachments: input.delegationAttachments ?? [] }
+    : null;
   const values = {
     ...(id ? { id } : {}),
     ...(input.conversationId ? { conversation_id: input.conversationId } : {}),
@@ -592,11 +618,10 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
           parent_numo_turn_id: input.parentNumoTurnId,
           parent_numo_tool_call_id: input.parentNumoToolCallId,
           continued_from_run_id: input.continuedFromRunId ?? null,
-          delegation_brief: input.delegationBrief,
-          delegation_attachments: input.delegationAttachments ?? [],
+          ...storedDelegation,
         }
       : {}),
-    title: input.title ?? null,
+    ...storedTitle,
     model: input.model,
     model_forced: input.modelForced,
     reasoning_level: input.reasoningLevel,
@@ -671,11 +696,12 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     },
     groups: { project: input.projectId },
   });
-  return decodeAgentLaunch(data as AgentRun);
+  return decodeAgentDelegationInput(await decodeAgentLaunch(data as AgentRun));
 }
 
 async function hydrateRun(row: AgentRun | null): Promise<AgentRun | null> {
-  return row ? decodeAgentLaunch(row) : null;
+  return row ? decodeAgentDelegationInput(
+    await decodeAgentCheckpoint(await decodeAgentLaunch(row))) : null;
 }
 
 /** Atomic CAS claim (queued → running). Returns null when another worker won. */
@@ -1584,13 +1610,30 @@ export async function stampRunResult(
 ): Promise<{ run: AgentRun | null; failed: boolean }> {
   const service = getServiceClient();
   const guard = opts?.guard ?? ["running"];
+  let storedFields: Record<string, unknown> = { ...stripUnstorable(fields) };
+  let checkpointProjectId: string | null = null;
+  if (Object.prototype.hasOwnProperty.call(fields, "checkpoint")) {
+    const { data: metadata, error: metadataError } = await service.from("agent_runs")
+      .select("project_id").eq("id", runId).maybeSingle();
+    if (metadataError || !metadata?.project_id) {
+      console.error("[agent-runs] checkpoint scope lookup failed");
+      return { run: null, failed: true };
+    }
+    checkpointProjectId = metadata.project_id as string;
+    if (await shouldEncryptAgentCheckpoint(service, checkpointProjectId)) {
+      storedFields = { ...storedFields,
+        ...await encodeAgentCheckpoint(checkpointProjectId, runId,
+          storedFields.checkpoint as AgentCheckpoint | null) };
+    }
+  }
   let query = service
     .from("agent_runs")
     // What we write here comes from the model and its shell (checkpoint, summary,
     // error message): a null byte in it would cause the ENTIRE line to be refused.
-    .update(stripUnstorable(fields))
+    .update(storedFields)
     .eq("id", runId)
     .in("status", guard);
+  if (checkpointProjectId) query = query.eq("project_id", checkpointProjectId);
   for (const [column, expected] of Object.entries(opts?.expected ?? {})) {
     query =
       expected === null ? query.is(column, null) : query.eq(column, expected);

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { loadIssueTitles } from "@/lib/server/issue-store";
 import { decodeAgentLaunch, legacyAgentLaunchSchema } from "@/lib/server/agent/run-launch-content";
+import { decodeAgentTitle } from "@/lib/server/agent/run-title-content";
 import type { AssistantMention } from "@/lib/assistant-types";
 
 /**
@@ -47,6 +48,8 @@ interface RunRow {
   encrypted_launch_content: string | null;
   launch_encryption_version: number;
   title: string | null;
+  title_ciphertext?: string | null;
+  title_encryption_version?: number;
   pr_number: number | null;
   pr_url: string | null;
   pr_state: "draft" | "open" | "merged" | "closed" | null;
@@ -54,7 +57,8 @@ interface RunRow {
   updated_at: string;
   completed_at: string | null;
   awaiting_input: boolean;
-  conversation: { title: string | null; visibility: "private" | "project" } | null;
+  conversation: { title: string | null; title_ciphertext?: string | null;
+    title_encryption_version?: number; visibility: "private" | "project" } | null;
   issue: { id: string; number: number; title: string } | null;
   project: {
     id: string;
@@ -145,7 +149,11 @@ export async function GET(request: NextRequest) {
     .is("routine_id", null)
     .is("parent_numo_turn_id", null)
     .order("created_at", { ascending: false });
-  let { data, error } = await readRuns(`${baseColumns}, encrypted_launch_content, launch_encryption_version`);
+  const encryptedColumns = baseColumns.replace(
+    "conversation:agent_conversations(title, visibility)",
+    "conversation:agent_conversations(title, title_ciphertext, title_encryption_version, visibility)",
+  );
+  let { data, error } = await readRuns(`${encryptedColumns}, encrypted_launch_content, launch_encryption_version, title_ciphertext, title_encryption_version`);
   if (legacyAgentLaunchSchema(error)) ({ data, error } = await readRuns(baseColumns));
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -184,8 +192,14 @@ export async function GET(request: NextRequest) {
     visibleRows.map((row) => row.issue?.id).filter((id): id is string => !!id),
     visibleRows.map((row) => row.project?.id).filter((id): id is string => !!id),
     auth.user.id);
-  const decodedRows = await Promise.all(visibleRows.map((row) =>
-    decodeAgentLaunch(row, auth.user.id)));
+  const decodedRows = await Promise.all(visibleRows.map(async (row) => {
+    const run = await decodeAgentLaunch(row, auth.user.id);
+    const conversation = run.conversation
+      ? await decodeAgentTitle({ ...run.conversation, id: run.conversation_id,
+          project_id: run.project_id }, auth.user.id)
+      : null;
+    return { ...run, conversation };
+  }));
   const rows = decodedRows.map((row) => ({ ...row,
     issue: row.issue && titles.has(row.issue.id)
       ? { ...row.issue, title: titles.get(row.issue.id)! } : null,

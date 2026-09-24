@@ -83,14 +83,19 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const failedIds = visibleRuns
     .filter((run) => run.status === "failed")
     .map((run) => String(run.id));
-  const { data: checkpointRows } =
+  const checkpointLookup =
     failedIds.length > 0
       ? await service
           .from("agent_runs")
           .select("id")
           .in("id", failedIds)
-          .not("checkpoint", "is", null)
-      : { data: [] };
+          .or("checkpoint.not.is.null,checkpoint_ciphertext.not.is.null")
+      : { data: [], error: null };
+  const { data: checkpointRows } = checkpointLookup.error?.code === "42703" &&
+      process.env.MINDDY_AGENT_CHECKPOINT_ENCRYPTION_ENABLED !== "true"
+    ? await service.from("agent_runs").select("id").in("id", failedIds)
+        .not("checkpoint", "is", null)
+    : checkpointLookup;
   const failedWithCheckpoint = new Set(
     ((checkpointRows ?? []) as Array<{ id: string }>).map((run) => run.id),
   );

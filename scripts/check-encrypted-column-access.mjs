@@ -35,6 +35,21 @@ const rules = [
       "lib/server/encryption/agent-launch-backfill.ts"]),
   },
   {
+    access: /\.\s*(?:from\s*\(\s*["'`]agent_title_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_agent_(?:conversation_)?title_ciphertext["'`])/,
+    allowed: new Set(["lib/server/agent/run-title-content.ts",
+      "lib/server/encryption/agent-title-backfill.ts"]),
+  },
+  {
+    access: /\.\s*(?:from\s*\(\s*["'`]agent_checkpoint_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_(?:agent_checkpoint_ciphertext|orphan_agent_runtime_checkpoint)["'`])/,
+    allowed: new Set(["lib/server/agent/run-checkpoint-content.ts",
+      "lib/server/encryption/agent-checkpoint-backfill.ts"]),
+  },
+  {
+    access: /\.\s*(?:from\s*\(\s*["'`]agent_delegation_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_agent_delegation_input["'`])/,
+    allowed: new Set(["lib/server/agent/run-delegation-content.ts",
+      "lib/server/encryption/agent-delegation-backfill.ts"]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]agent_run_messages["'`]\s*\)/,
     allowed: new Set(["lib/server/agent/runs.ts", "lib/server/retention.ts"]),
   },

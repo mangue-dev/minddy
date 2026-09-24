@@ -384,14 +384,24 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     else messagesByConversation.set(key, [message]);
   }
 
-  const codeConversationRows = list(
-    "agent_conversations",
-    await service
-      .from("agent_conversations")
-      .select("id, project_id, title, visibility, archived_at, created_at, updated_at")
-      .eq("owner_id", userId)
-      .order("created_at"),
+  const { decodeAgentTitle, legacyAgentTitleSchema } = await import(
+    "@/lib/server/agent/run-title-content"
   );
+  const codeConversationQuery = await service.from("agent_conversations")
+    .select("id, project_id, title, title_ciphertext, title_encryption_version, visibility, archived_at, created_at, updated_at")
+    .eq("owner_id", userId).order("created_at");
+  const codeConversationRaw = legacyAgentTitleSchema(codeConversationQuery.error)
+    ? list("agent_conversations", await service.from("agent_conversations")
+      .select("id, project_id, title, visibility, archived_at, created_at, updated_at")
+      .eq("owner_id", userId).order("created_at"))
+    : list("agent_conversations", codeConversationQuery);
+  const codeConversationRows = await Promise.all(codeConversationRaw.map(async (row) => {
+    const decoded = await decodeAgentTitle(row as { id: string; project_id: string;
+      title: string | null; title_ciphertext?: string | null;
+      title_encryption_version?: number }, userId);
+    const { title_ciphertext: _cipher, title_encryption_version: _version, ...exported } = decoded;
+    return exported;
+  }));
   const codeConversationIds = codeConversationRows.map((c) => c.id as string);
   const [codeMessages, codeTurns, codeContexts] = codeConversationIds.length
     ? await Promise.all([

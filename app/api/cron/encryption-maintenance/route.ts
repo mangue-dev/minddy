@@ -7,6 +7,9 @@ import { backfillIssuesBatch } from "@/lib/server/encryption/issue-backfill";
 import { backfillAgentJournalBatch } from "@/lib/server/encryption/agent-journal-backfill";
 import { backfillAgentEventsBatch } from "@/lib/server/encryption/agent-event-backfill";
 import { backfillAgentLaunchBatch } from "@/lib/server/encryption/agent-launch-backfill";
+import { backfillAgentTitleBatch } from "@/lib/server/encryption/agent-title-backfill";
+import { backfillAgentCheckpointBatch } from "@/lib/server/encryption/agent-checkpoint-backfill";
+import { backfillAgentDelegationBatch } from "@/lib/server/encryption/agent-delegation-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -34,6 +37,9 @@ export async function GET(request: NextRequest) {
   const agentJournalEnabled = contentEnabled && process.env.MINDDY_AGENT_JOURNAL_ENCRYPTION_ENABLED === "true";
   const agentEventsEnabled = contentEnabled && process.env.MINDDY_AGENT_EVENT_ENCRYPTION_ENABLED === "true";
   const agentLaunchEnabled = contentEnabled && process.env.MINDDY_AGENT_LAUNCH_ENCRYPTION_ENABLED === "true";
+  const agentTitleEnabled = contentEnabled && process.env.MINDDY_AGENT_TITLE_ENCRYPTION_ENABLED === "true";
+  const agentCheckpointEnabled = contentEnabled && process.env.MINDDY_AGENT_CHECKPOINT_ENCRYPTION_ENABLED === "true";
+  const agentDelegationEnabled = contentEnabled && process.env.MINDDY_AGENT_DELEGATION_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -58,6 +64,9 @@ export async function GET(request: NextRequest) {
       agentJournalEnabled ? backfillAgentJournalBatch(5, request.signal) : Promise.resolve(null),
       agentEventsEnabled ? backfillAgentEventsBatch(20, request.signal) : Promise.resolve(null),
       agentLaunchEnabled ? backfillAgentLaunchBatch(20, request.signal) : Promise.resolve(null),
+      agentTitleEnabled ? backfillAgentTitleBatch(20, request.signal) : Promise.resolve(null),
+      agentCheckpointEnabled ? backfillAgentCheckpointBatch(5, request.signal) : Promise.resolve(null),
+      agentDelegationEnabled ? backfillAgentDelegationBatch(20, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -74,12 +83,15 @@ export async function GET(request: NextRequest) {
     const agentJournal = outcomes[12];
     const agentEvents = outcomes[13];
     const agentLaunch = outcomes[14];
+    const agentTitle = outcomes[15];
+    const agentCheckpoint = outcomes[16];
+    const agentDelegation = outcomes[17];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -98,6 +110,9 @@ export async function GET(request: NextRequest) {
         ...(agentJournalEnabled ? { agent_journal: agentJournal.status === "fulfilled" ? agentJournal.value : { failed: true } } : {}),
         ...(agentEventsEnabled ? { agent_events: agentEvents.status === "fulfilled" ? agentEvents.value : { failed: true } } : {}),
         ...(agentLaunchEnabled ? { agent_launch: agentLaunch.status === "fulfilled" ? agentLaunch.value : { failed: true } } : {}),
+        ...(agentTitleEnabled ? { agent_titles: agentTitle.status === "fulfilled" ? agentTitle.value : { failed: true } } : {}),
+        ...(agentCheckpointEnabled ? { agent_checkpoints: agentCheckpoint.status === "fulfilled" ? agentCheckpoint.value : { failed: true } } : {}),
+        ...(agentDelegationEnabled ? { agent_delegation: agentDelegation.status === "fulfilled" ? agentDelegation.value : { failed: true } } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),
       ...(contentEnabled ? { statistics: statistics.status === "fulfilled" ? statistics.value : { failed: true } } : {}),

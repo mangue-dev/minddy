@@ -99,6 +99,8 @@ async function failStalledRuns(service: SupabaseClient, ids: string[]): Promise<
       status: "failed",
       error_message: "Preview deployment unreachable",
       checkpoint: null,
+      checkpoint_ciphertext: null,
+      checkpoint_encryption_version: 0,
     })
     .in("id", ids)
     .eq("status", "queued")
