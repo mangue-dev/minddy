@@ -189,8 +189,10 @@ describe("getPublicPageBundle", () => {
 
   it("signe les fichiers de la page publiée, et efface les autres", async () => {
     db.files = [
-      { id: FILE_OK, page_id: "root", storage_path: `projects/${PROJECT}/pages/root/a.png` },
-      { id: FILE_HORS, page_id: "kid", storage_path: `projects/${PROJECT}/pages/kid/b.png` },
+      { id: FILE_OK, project_id: PROJECT, page_id: "root", file_name: "a.png",
+        mime_type: "image/png", storage_path: `projects/${PROJECT}/pages/root/a.png` },
+      { id: FILE_HORS, project_id: PROJECT, page_id: "kid", file_name: "b.png",
+        mime_type: "image/png", storage_path: `projects/${PROJECT}/pages/kid/b.png` },
     ];
     db.pages[0].content = {
       type: "doc",

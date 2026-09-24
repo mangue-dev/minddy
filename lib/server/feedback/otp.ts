@@ -9,6 +9,8 @@ import { authenticationProof } from "@/lib/server/encryption/auth-proof";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { sendOtpEmail } from "@/lib/server/feedback/otp-email";
 import { capability } from "@/lib/server/capabilities";
+import { encodeFeedbackOtpEmail, feedbackOtpEmailLookup,
+  shouldProtectFeedbackIdentity } from "./identity-content";
 
 /**
  * Email verification by OTP code (MIN-37). Six-digit codes are HMAC-protected
@@ -82,10 +84,14 @@ export async function requestFeedbackOtp(params: {
   const id = randomUUID();
   const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
   const now = new Date();
-  const { data: issued, error } = await service.rpc("issue_feedback_otp_code", {
+  const protect = await shouldProtectFeedbackIdentity(service);
+  const { data: issued, error } = await service.rpc(protect
+    ? "issue_feedback_otp_code_protected" : "issue_feedback_otp_code", {
     p_id: id,
     p_board_id: params.boardId,
-    p_email: email,
+    ...(protect ? { p_email_plain: email,
+      p_email_cipher: await encodeFeedbackOtpEmail(id, email),
+      p_email_lookup: await feedbackOtpEmailLookup(email) } : { p_email: email }),
     p_ip_hash: ipHash,
     p_code_hash: authenticationProof("feedback_otp", [id, code]),
     p_expires_at: new Date(now.getTime() + OTP_TTL_MS).toISOString(),
@@ -121,10 +127,13 @@ export async function verifyFeedbackOtp(params: {
   const service = getServiceClient();
   const email = params.email.trim().toLowerCase();
   const code = params.code.trim();
+  const protect = await shouldProtectFeedbackIdentity(service);
 
-  const { data, error } = await service.rpc("claim_feedback_otp_attempt", {
+  const { data, error } = await service.rpc(protect
+    ? "claim_feedback_otp_attempt_protected" : "claim_feedback_otp_attempt", {
     p_board_id: params.boardId,
-    p_email: email,
+    ...(protect ? { p_email_plain: email,
+      p_email_lookup: await feedbackOtpEmailLookup(email) } : { p_email: email }),
     p_now: new Date().toISOString(),
     p_max_attempts: OTP_MAX_ATTEMPTS,
   });

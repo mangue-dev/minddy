@@ -7,7 +7,11 @@ const getProjectAccess = vi.fn();
 const info = vi.fn();
 const download = vi.fn();
 const from = vi.fn(() => ({ info, download }));
-const service = { storage: { from } };
+const service = { storage: { from },
+  from: () => ({ select: () => ({ eq: () => ({ limit: () => ({
+    maybeSingle: async () => ({ data: null, error: null }),
+  }) }) }) }),
+};
 
 vi.mock("@/lib/server/api-auth", () => ({
   getAuthedUser: (...args: unknown[]) => getAuthedUser(...args),

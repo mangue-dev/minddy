@@ -11,6 +11,7 @@ import {
   ResourceScopeError,
 } from "@/lib/server/attachments";
 import { RESOURCE_SELECT } from "@/lib/server/resource-select";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -34,7 +35,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     console.error("[api/issues/:id/resources] list failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  return NextResponse.json(data ?? []);
+  return NextResponse.json(await Promise.all((data ?? []).map((row) =>
+    decodeAttachmentRow("attachments", row, auth.user.id))));
 }
 
 /** POST /api/issues/[id]/resources — register resources on an existing issue:

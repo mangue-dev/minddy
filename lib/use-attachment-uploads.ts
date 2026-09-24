@@ -5,7 +5,6 @@ import { createUuid } from "@/lib/create-uuid";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "mangue-ui";
-import { getSupabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/image-compress";
 import type { LinkResourceInput, ResourceInput, ResourceKind } from "@/lib/types";
 import { trackEvent } from "./analytics";
@@ -43,12 +42,6 @@ function isCompressible(type: string): boolean {
   );
 }
 
-/** Storage keys reject most exotic characters; the display name keeps them. */
-function sanitizeKeyPart(name: string): string {
-  const sanitized = name.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "");
-  return (sanitized || "fichier").slice(-140);
-}
-
 /** Align the display name's extension with the re-encoded blob (png → webp). */
 function renameForType(name: string, type: string): string {
   const ext = type === "image/webp" ? "webp" : type === "image/jpeg" ? "jpg" : null;
@@ -65,8 +58,8 @@ const PROJECT_PREFIX_RE = /^projects\/([0-9a-fA-F-]{36})$/;
  * Shared queue for every resource composer (comments, issue panel, create
  * dialog, Numo shell). The three forms are deliberately symmetric:
  *
- *  - a FILE goes DIRECTLY from the browser to the private `attachments` bucket
- *    (storage RLS gates the path prefix), then its descriptor lands here;
+ *  - a FILE goes through the authenticated upload route, which stores private
+ *    bytes under an opaque path, then its descriptor lands here;
  *  - a LINK goes to `/api/projects/{id}/link-preview`, which resolves its title
  *    and favicon, then its descriptor lands here the same way;
  *  - a PAGE (MIN-275) skips both: the picker already read its id and title from
@@ -137,12 +130,17 @@ export function useAttachmentUploads(
             const mime = blob.type || entry.mime_type;
             const fileName =
               blob !== file ? renameForType(entry.file_name, mime) : entry.file_name;
-            const path = `${prefix}/${localId}/${sanitizeKeyPart(fileName)}`;
-
-            const { error } = await getSupabase()
-              .storage.from("attachments")
-              .upload(path, blob, { contentType: mime });
-            if (error) throw error;
+            const form = new FormData();
+            form.set("prefix", prefix);
+            form.set("file", blob, fileName);
+            const response = await fetch("/api/attachments/upload", {
+              method: "POST", body: form,
+            });
+            if (!response.ok) throw new Error("Attachment upload failed");
+            const uploaded = await response.json() as {
+              storage_path: string; mime_type: string; size_bytes: number;
+            };
+            const path = uploaded.storage_path;
 
             setPending((prev) =>
               prev.map((p) =>
@@ -152,8 +150,8 @@ export function useAttachmentUploads(
                       status: "done",
                       storage_path: path,
                       file_name: fileName,
-                      mime_type: mime,
-                      size_bytes: blob.size,
+                      mime_type: uploaded.mime_type,
+                      size_bytes: uploaded.size_bytes,
                     }
                   : p
               )
@@ -172,8 +170,8 @@ export function useAttachmentUploads(
               {
                 storage_path: path,
                 file_name: fileName,
-                mime_type: mime,
-                size_bytes: blob.size,
+                mime_type: uploaded.mime_type,
+                size_bytes: uploaded.size_bytes,
               },
               localId
             );

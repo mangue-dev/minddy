@@ -1,7 +1,8 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { signedAttachmentUrl } from "@/lib/server/attachments";
+import { downloadAttachment, signedAttachmentUrl } from "@/lib/server/attachments";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import type { ChatContentPart } from "./loop";
 
 // ── Attachments → OpenRouter content parts ───────────────────────────────
@@ -26,6 +27,8 @@ const MAX_TEXT_CHARS = 4000;
  * was catching that before `catch` of run.
  */
 export type PromptAttachment = {
+  id?: string;
+  project_id?: string;
   kind?: "file" | "link" | "page" | null;
   storage_path: string | null;
   /** The link itself (kind: "link"). */
@@ -43,6 +46,8 @@ export function groupPromptAttachments(
   rows:
     | {
         comment_id?: unknown;
+        id?: unknown;
+        project_id?: unknown;
         kind?: unknown;
         storage_path?: unknown;
         url?: unknown;
@@ -59,6 +64,8 @@ export function groupPromptAttachments(
     const key = (row.comment_id as string | null) ?? null;
     const list = byComment.get(key) ?? [];
     list.push({
+      id: typeof row.id === "string" ? row.id : undefined,
+      project_id: typeof row.project_id === "string" ? row.project_id : undefined,
       kind: (row.kind as PromptAttachment["kind"]) ?? null,
       storage_path: (row.storage_path as string | null) ?? null,
       url: (row.url as string | null) ?? null,
@@ -75,7 +82,7 @@ export function groupPromptAttachments(
 /** The columns that `groupPromptAttachments` expects — a single source for @Numo's
  three `select()`. */
 export const PROMPT_ATTACHMENT_COLUMNS =
-  "comment_id, kind, storage_path, url, page_id, file_name, mime_type, size_bytes";
+  "id, project_id, comment_id, kind, storage_path, url, page_id, file_name, mime_type, size_bytes";
 
 function isLink(a: PromptAttachment): boolean {
   return a.kind === "link" || a.mime_type === "text/uri-list";
@@ -106,11 +113,7 @@ async function download(
   storagePath: string | null
 ): Promise<Buffer | null> {
   if (!storagePath) return null;
-  const { data, error } = await service.storage
-    .from("attachments")
-    .download(storagePath);
-  if (error || !data) return null;
-  return Buffer.from(await data.arrayBuffer());
+  return downloadAttachment(service, storagePath);
 }
 
 /**
@@ -138,7 +141,10 @@ export async function buildAttachmentParts(
 ): Promise<ChatContentPart[]> {
   const parts: ChatContentPart[] = [];
 
-  for (const a of attachments) {
+  for (const stored of attachments) {
+    const a = stored.id && stored.project_id
+      ? await decodeAttachmentRow("attachments", stored as
+        PromptAttachment & Record<string, unknown>) : stored;
     if (isLink(a)) {
       parts.push({
         type: "text",

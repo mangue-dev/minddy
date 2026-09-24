@@ -19,6 +19,7 @@ import {
   type IssueLinkedFeedback,
 } from "@/lib/server/feedback/team-queries";
 import { resourceSummary } from "@/lib/server/resource-select";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import type {
   IssueRelation,
   IssueRelationType,
@@ -601,7 +602,7 @@ export async function getIssue(
       ctx.db
         .from("attachments")
         .select(
-          "id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title, deleted_at)"
+          "id, project_id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title, deleted_at)"
         )
         .eq("issue_id", issue.id)
         .order("created_at", { ascending: true }),
@@ -634,7 +635,8 @@ export async function getIssue(
   const decodedSubIssues = await Promise.all(((subIssues ?? []) as Array<Record<string, unknown>>)
     .map((row) => decodeIssue(row, ctx.actorId ?? null)));
   const resourcesByComment = new Map<string | null, Record<string, unknown>[]>();
-  for (const row of attachmentRows ?? []) {
+  for (const stored of attachmentRows ?? []) {
+    const row = await decodeAttachmentRow("attachments", stored, ctx.actorId ?? null);
     const key = (row.comment_id as string | null) ?? null;
     const list = resourcesByComment.get(key) ?? [];
     list.push(resourceSummary(row));

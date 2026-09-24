@@ -608,7 +608,7 @@ export async function runFeedbackCommentMention(input: {
 
   const [{ data: comments, error: commentsError }, { data: attachments }, { data: root, error: rootError }] = await Promise.all([
     commentStore(service, "comments", actorId).select(
-      "id, author_id, body, via_assistant, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
+      "id, author_id, body, via_assistant, created_at, visibility, feedback_users!feedback_user_id (id, name, email, pseudonym)",
     ).eq("feedback_post_id", postId).or(`id.eq.${rootId},parent_id.eq.${rootId}`)
       .order("created_at", { ascending: false }).limit(20),
     service.from("attachments").select(PROMPT_ATTACHMENT_COLUMNS)

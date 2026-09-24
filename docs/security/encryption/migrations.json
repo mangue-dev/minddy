@@ -131,5 +131,12 @@
   "20270107340000_pull_request_content_encryption.sql": "ef6ebf5c88ef23e53b746815fc75f676773354d35ea0bd0d7ae25c32771bb7a2",
   "20270107350000_pr_comment_edit_encryption.sql": "13987eb735d724fb9c9e6490d3d10ff970e30c3d2b528034e2ae45eab7e04449",
   "20270107360000_forge_relay_delivery_encryption.sql": "c987a4c799993d548e6cfd03dd2077f4247b6e4a89dff7d8ed404f1298a1de26",
-  "20270107370000_forge_relay_audit_detail_removal.sql": "b34c97a98c5794095b6775af8912d7a89bca662bb68fe10adc3ab2f92940de64"
+  "20270107370000_forge_relay_audit_detail_removal.sql": "b34c97a98c5794095b6775af8912d7a89bca662bb68fe10adc3ab2f92940de64",
+  "20270107380000_agent_pr_artifact_ref_guard.sql": "4ac53c4772b4c629eae47b9a83bf2edfad92091de9217e9751c563c729ed262b",
+  "20270107390000_attachment_object_encryption.sql": "1470dc9670977d560f15dfe69a39bfe7dbcf381259935d3cd7592c67b8c0e8dc",
+  "20270107400000_encrypted_object_logical_size.sql": "878237248c5da38ca0e549a8c66b0874f22b68a15d89aa4cee5918147a18ccd8",
+  "20270107410000_attachment_metadata_encryption.sql": "d770c68ae19aa137b0c1800ddee71a2e02327d1369082dc44ebfd92f50fce593",
+  "20270107420000_attachment_object_attempt_queue.sql": "a5529453895500a5fa1eddd5af78472003811d15415edcfc64bd40cfc35456e9",
+  "20270107430000_feedback_identity_encryption.sql": "6e24aa3b983e917c00a8fa7ab65794e3b916d9c1c54e2659328c00872532f9f8",
+  "20270107440000_feedback_otp_private_lookup.sql": "9be0d2373bcb08b4300a17f17d6c5b728df0e3c45bb0f120ea95921a09c1b088"
 }

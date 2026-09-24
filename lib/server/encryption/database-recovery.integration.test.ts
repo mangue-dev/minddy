@@ -34,6 +34,7 @@ const resultTemplate = "minddy_min591_result_audit";
 const summaryTemplate = "minddy_min591_summary_audit";
 const prUrlTemplate = "minddy_min591_pr_url_audit";
 const sharedPrUrlTemplate = "minddy_min591_relay_audit_audit";
+const attachmentTemplate = "minddy_min591_attachment_metadata_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -2767,6 +2768,267 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
         scope: system, table: "forge_relay_deliveries", column: "payload",
         rowId: `${relayInstance}:github:delivery-1`,
       })).rejects.toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
+  it("restores attachment objects and encrypted metadata from independent child-first batches", async () => {
+    const suffix = randomUUID().replaceAll("-", "");
+    const source = `minddy_min591_attachment_${suffix}`;
+    const restored = `minddy_min591_attachment_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID(), issue = randomUUID();
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const ids = [randomUUID(), randomUUID()];
+    const paths = ids.map(() => `projects/${project}/${randomUUID()}`);
+    const payloads: string[] = [];
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(attachmentTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${attachmentTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Restore project','ATRC');
+        INSERT INTO public.issues(id,project_id,number,title)
+          VALUES(${quote(issue)},${quote(project)},1,'Restore issue');
+        INSERT INTO storage.buckets(id,name) VALUES('attachments','attachments')
+          ON CONFLICT DO NOTHING;
+        INSERT INTO public.attachment_object_encryption_scope(id) VALUES(true);`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      for (const [index, id] of ids.entries()) {
+        if (index) await keys.rotate(scope, 1);
+        const name = `Private attachment name ${index + 1}`;
+        const bytes = Buffer.from(`Private attachment bytes ${index + 1}`);
+        const wrap = async (column: "file_name", value: string) => {
+          const cipher = await store.encrypt(value, { scope, table: "attachments",
+            column, rowId: id });
+          return `mdya3:${store.versionOf(cipher)}:${Buffer.from(cipher).toString("base64url")}`;
+        };
+        const object = await store.encryptBytes(bytes, { scope,
+          table: "attachment_objects", column: "bytes", rowId: `${paths[index]}:0` });
+        payloads.push(`minddy-attachment-object-v3\n${JSON.stringify({
+          length: bytes.byteLength, chunks: [object],
+        })}`);
+        sql(source, `INSERT INTO public.attachment_object_encrypted(path)
+            VALUES(${quote(paths[index])});
+          INSERT INTO storage.objects(bucket_id,name,metadata,user_metadata)
+            VALUES('attachments',${quote(paths[index])},'{}'::jsonb,
+              '{"minddy_logical_size":${bytes.byteLength}}'::jsonb);
+          INSERT INTO public.attachments(id,project_id,issue_id,kind,
+            storage_path,file_name,mime_type,size_bytes)
+            VALUES(${quote(id)},${quote(project)},${quote(issue)},'file',
+              ${quote(paths[index])},${quote(await wrap("file_name",name))},
+              'text/plain',${bytes.byteLength});`);
+      }
+      sql(source, `INSERT INTO public.attachment_object_aliases(
+          old_path_digest,new_path) VALUES(${quote("a".repeat(64))},
+          ${quote(paths[0])});`);
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner", "--no-privileges",
+        ...["auth.users", "public.projects", "public.issues",
+          "public.envelope_data_keys", "storage.buckets", "storage.objects",
+          "public.attachment_object_encryption_scope",
+          "public.attachment_metadata_encryption_scope",
+          "public.attachment_object_encrypted",
+          "public.attachment_object_aliases", "public.attachments"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      for (const secret of ["Private attachment name", "Private attachment bytes"]) {
+        expect(dump).not.toContain(secret);
+        for (const payload of payloads) expect(payload).not.toContain(secret);
+      }
+      let dependencies = dump;
+      const children = new Map<string, { header: string; lines: string[]; footer: string }>();
+      for (const table of ["attachments", "attachment_object_aliases",
+        "attachment_object_encrypted", "objects"]) {
+        const schema = table === "objects" ? "storage" : "public";
+        const match = dependencies.match(new RegExp(
+          `(COPY ${schema}\\.${table}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`));
+        expect(match).not.toBeNull();
+        children.set(table, { header: match![1],
+          lines: match![2].trimEnd().split("\n").reverse(), footer: match![3] });
+        dependencies = dependencies.replace(match![0], "");
+      }
+      for (const table of ["attachments", "attachment_object_aliases",
+        "attachment_object_encrypted", "objects"]) {
+        const batch = children.get(table)!;
+        for (const line of batch.lines) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${batch.header}${line}\n${batch.footer}COMMIT;`);
+        }
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${dependencies}\nCOMMIT;`);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(root)));
+      for (const [index, id] of ids.entries()) {
+        const row = JSON.parse(sql(restored, `SELECT row_to_json(a) FROM
+          public.attachments a WHERE id=${quote(id)};`));
+        expect(row.storage_path).toBe(paths[index]);
+        expect(Number(row.file_name.split(":")[1])).toBe(index + 1);
+        for (const [column, expected] of [["file_name",
+          `Private attachment name ${index + 1}`]] as const) {
+          const value = row[column] as string;
+          const cipher = cold.fromDatabase<string>(Buffer.from(value.split(":")[2],
+            "base64url").toString("utf8"));
+          expect(await cold.decrypt(cipher, { scope, table: "attachments",
+            column, rowId: id })).toBe(expected);
+        }
+        const serialized = JSON.parse(payloads[index].split("\n").slice(1).join("\n"));
+        const object = cold.fromDatabase<Uint8Array>(serialized.chunks[0]);
+        expect(Buffer.from(await cold.decryptBytes(object, { scope,
+          table: "attachment_objects", column: "bytes", rowId: `${paths[index]}:0` }))
+          .toString()).toBe(`Private attachment bytes ${index + 1}`);
+      }
+      expect(sql(restored, `SELECT new_path FROM public.attachment_object_aliases
+        WHERE old_path_digest=${quote("a".repeat(64))};`)).toBe(paths[0]);
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const value = sql(restored, `SELECT file_name FROM public.attachments
+        WHERE id=${quote(ids[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase<string>(Buffer.from(
+        value.split(":")[2], "base64url").toString("utf8")), {
+        scope, table: "attachments", column: "file_name", rowId: ids[0],
+      })).rejects.toThrow();
+      expect(() => sql(restored, `INSERT INTO public.attachments(project_id,
+        issue_id,kind,file_name,mime_type,size_bytes)
+        VALUES(${quote(project)},${quote(issue)},'link','Old plaintext',
+          'text/uri-list',0);`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
+
+  it("restores private feedback identities and pending OTP emails across key versions", async () => {
+    const suffix = randomUUID().replaceAll("-", "");
+    const source = `minddy_min591_fbid_${suffix}`;
+    const restored = `minddy_min591_fbid_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID(), board = randomUUID();
+    const projectScope: EncryptionScope = { kind: "project", id: project };
+    const systemScope: EncryptionScope = { kind: "system",
+      id: "00000000-0000-0000-0000-000000000000" };
+    const users = [randomUUID(), randomUUID()];
+    const codes = [randomUUID(), randomUUID()];
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(attachmentTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${attachmentTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Feedback restore','FBRI');
+        INSERT INTO public.feedback_boards(id,project_id,token)
+          VALUES(${quote(board)},${quote(project)},'fixture-token');`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const systemKeys = new ManagedDataKeys(registry(source, "content"), wrapper(root));
+      const store = new EncryptedStore(keys);
+      const systemStore = new EncryptedStore(systemKeys);
+      for (const [index, user] of users.entries()) {
+        if (index) {
+          await keys.rotate(projectScope, 1);
+          await systemKeys.rotate(systemScope, 1);
+        }
+        const email = `private-visitor-${index + 1}@example.test`;
+        const name = `Private visitor name ${index + 1}`;
+        const wrap = async (table: string, column: string, rowId: string,
+          value: string, scope: EncryptionScope, currentStore: EncryptedStore) => {
+          const cipher = await currentStore.encrypt(value, { scope, table,
+            column, rowId });
+          return `mdyf3:${currentStore.versionOf(cipher)}:${Buffer.from(cipher).toString("base64url")}`;
+        };
+        sql(source, `INSERT INTO public.feedback_users(id,project_id,email,name,
+            email_lookup,pseudonym,verified_via)
+            VALUES(${quote(user)},${quote(project)},
+              ${quote(await wrap("feedback_users","email",user,email,projectScope,store))},
+              ${quote(await wrap("feedback_users","name",user,name,projectScope,store))},
+              ${quote(index ? "b".repeat(64) : "a".repeat(64))},
+              'Quiet Bird','email');
+          INSERT INTO public.feedback_otp_codes(id,board_id,email,email_lookup,
+            code_hash,expires_at)
+            VALUES(${quote(codes[index])},${quote(board)},
+              ${quote(await wrap("feedback_otp_codes","email",codes[index],
+                email,systemScope,systemStore))},
+              ${quote(index ? "d".repeat(64) : "c".repeat(64))},
+              'fixture-code',now()+interval '10 minutes');`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner", "--no-privileges",
+        ...["auth.users", "public.projects", "public.feedback_boards",
+          "public.envelope_data_keys", "public.feedback_identity_encryption_scope",
+          "public.feedback_users", "public.feedback_otp_codes"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("private-visitor-");
+      expect(dump).not.toContain("Private visitor name");
+      let dependencies = dump;
+      const children = new Map<string, { header: string; lines: string[]; footer: string }>();
+      for (const table of ["feedback_users", "feedback_otp_codes"]) {
+        const match = dependencies.match(new RegExp(
+          `(COPY public\\.${table}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`));
+        expect(match).not.toBeNull();
+        children.set(table, { header: match![1],
+          lines: match![2].trimEnd().split("\n").reverse(), footer: match![3] });
+        dependencies = dependencies.replace(match![0], "");
+      }
+      for (const table of ["feedback_otp_codes", "feedback_users"]) {
+        const batch = children.get(table)!;
+        for (const line of batch.lines) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${batch.header}${line}\n${batch.footer}COMMIT;`);
+        }
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${dependencies}\nCOMMIT;`);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(root)));
+      for (const [index, user] of users.entries()) {
+        const identity = JSON.parse(sql(restored, `SELECT row_to_json(u) FROM
+          public.feedback_users u WHERE id=${quote(user)};`));
+        const otp = JSON.parse(sql(restored, `SELECT row_to_json(c) FROM
+          public.feedback_otp_codes c WHERE id=${quote(codes[index])};`));
+        expect(Number(identity.email.split(":")[1])).toBe(index + 1);
+        expect(Number(otp.email.split(":")[1])).toBe(index + 1);
+        for (const [value, scope, table, column, rowId, expected] of [
+          [identity.email, projectScope, "feedback_users", "email", user,
+            `private-visitor-${index + 1}@example.test`],
+          [identity.name, projectScope, "feedback_users", "name", user,
+            `Private visitor name ${index + 1}`],
+          [otp.email, systemScope, "feedback_otp_codes", "email", codes[index],
+            `private-visitor-${index + 1}@example.test`],
+        ] as const) {
+          const cipher = cold.fromDatabase<string>(Buffer.from(value.split(":")[2],
+            "base64url").toString("utf8"));
+          expect(await cold.decrypt(cipher, { scope, table, column,
+            rowId })).toBe(expected);
+        }
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const value = sql(restored, `SELECT email FROM public.feedback_users
+        WHERE id=${quote(users[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase<string>(Buffer.from(
+        value.split(":")[2], "base64url").toString("utf8")), {
+        scope: projectScope, table: "feedback_users", column: "email",
+        rowId: users[0],
+      })).rejects.toThrow();
+      expect(() => sql(restored, `INSERT INTO public.feedback_users(project_id,
+        email,pseudonym,verified_via) VALUES(${quote(project)},
+          'old@example.test','Old Writer','email');`)).toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();

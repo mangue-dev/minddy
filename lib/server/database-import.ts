@@ -29,13 +29,15 @@ import {
   pageFileIdFromSrc,
   pageFileUrl,
   pageFileStoragePrefix,
-  sanitizeFileKey,
   MAX_PAGE_FILE_BYTES,
 } from "@/lib/page-files";
 import { resolveUploadedMimeType } from "@/lib/inline-safe";
 import { projectStorageAllowed } from "./storage-quota";
 import { queuePageBodyLinks } from "./page-links";
 import { queueSearchText } from "./pages-search";
+import { opaqueAttachmentPath, uploadPrivateAttachmentObject } from "./attachments";
+import { encodeAttachmentValue, shouldEncryptAttachmentMetadata } from
+  "./attachment-content";
 
 export async function importDatabase(args: {
   projectId: string;
@@ -288,12 +290,7 @@ export async function importDatabase(args: {
       throw new Error("importTooLarge");
     return {
       ...file,
-      storage_path:
-        pageFileStoragePrefix(projectId, file.page_id) +
-        "/" +
-        file.id +
-        "/" +
-        sanitizeFileKey(file.file_name),
+      storage_path: opaqueAttachmentPath(pageFileStoragePrefix(projectId, file.page_id)),
       mime_type: resolveUploadedMimeType(file.mime_type, bytes).slice(0, 120),
       size_bytes: bytes.length,
     };
@@ -306,12 +303,8 @@ export async function importDatabase(args: {
   const uploaded: string[] = [];
   try {
     for (const file of files) {
-      const { error } = await service.storage
-        .from("attachments")
-        .upload(file.storage_path, prepared.files[file.path], {
-          contentType: file.mime_type,
-        });
-      if (error) throw new Error("importFailed");
+      await uploadPrivateAttachmentObject(service, file.storage_path,
+        prepared.files[file.path], file.mime_type);
       uploaded.push(file.storage_path);
     }
   } catch (error) {
@@ -319,6 +312,12 @@ export async function importDatabase(args: {
       await service.storage.from("attachments").remove(uploaded);
     throw error;
   }
+  const protectFileNames = await shouldEncryptAttachmentMetadata(service);
+  const storedFiles = protectFileNames ? await Promise.all(files.map(async (file) => ({
+    ...file,
+    file_name: await encodeAttachmentValue("page_files", projectId, file.id,
+      "file_name", file.file_name),
+  }))) : files;
   const { data, error } = await service.rpc("import_page_database", {
     p_project: projectId,
     p_page: pageId,
@@ -326,7 +325,7 @@ export async function importDatabase(args: {
     p_request: args.requestId,
     p_revision: args.revision,
     p_pages: pages,
-    p_files: files,
+    p_files: storedFiles,
   });
   if (error) {
     // A transport failure can follow a successful commit. Keep its file bytes intact.

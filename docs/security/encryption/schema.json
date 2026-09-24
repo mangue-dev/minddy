@@ -1934,6 +1934,11 @@
         "type": "text",
         "nullable": false,
         "generated": false
+      },
+      "content_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -2181,6 +2186,11 @@
       },
       "feedback_post_id": {
         "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "content_encryption_checked_at": {
+        "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
       }
@@ -4358,9 +4368,24 @@
         "nullable": true,
         "generated": false
       },
+      "email_lookup": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
       "verified_via": {
         "type": "text",
         "nullable": false,
+        "generated": false
+      },
+      "external_id_lookup": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "content_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       }
     },
@@ -5816,6 +5841,16 @@
         "generated": false
       },
       "consumed_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "email_lookup": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "content_encryption_checked_at": {
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
@@ -8176,6 +8211,35 @@
       }
     ]
   },
+  "attachment_object_aliases": {
+    "columns": {
+      "new_path": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "old_path_digest": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "old_path_digest"
+    ],
+    "foreignKeys": [
+      {
+        "table": "attachment_object_encrypted",
+        "column": "new_path",
+        "targetColumn": "path"
+      }
+    ]
+  },
   "feedback_merge_rejections": {
     "columns": {
       "kind": {
@@ -8713,6 +8777,24 @@
         "targetColumn": "id"
       }
     ]
+  },
+  "attachment_object_encrypted": {
+    "columns": {
+      "path": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "path"
+    ],
+    "foreignKeys": []
   },
   "forge_relay_refresh_lineage": {
     "columns": {
@@ -9356,6 +9438,42 @@
       }
     ]
   },
+  "attachment_object_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "feedback_identity_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
   "agent_base_branch_encryption_scopes": {
     "columns": {
       "project_id": {
@@ -9400,6 +9518,48 @@
       {
         "table": "projects",
         "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "attachment_metadata_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "attachment_object_migration_attempts": {
+    "columns": {
+      "object_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "object_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "objects",
+        "column": "object_id",
         "targetColumn": "id"
       }
     ]

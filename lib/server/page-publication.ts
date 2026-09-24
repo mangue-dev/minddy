@@ -1,4 +1,5 @@
 import "server-only";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 
 import { pageDatabaseDocument, type DatabaseDocumentPage } from "@/lib/page-database-document";
 import { databaseDocumentNames } from "./page-database-document";
@@ -222,19 +223,21 @@ export async function signPublicFileUrls(
   const service = getServiceClient();
   const { data } = await service
     .from("page_files")
-    .select("id, page_id, storage_path, file_name, mime_type")
+    .select("id, project_id, page_id, storage_path, file_name, mime_type")
     .in("id", [...ids]);
 
   const signed = new Map<string, string>();
   type FileRow = {
     id: string;
+    project_id: string;
     page_id: string;
     storage_path: string;
     file_name: string;
     mime_type: string | null;
   };
   await Promise.all(
-    ((data ?? []) as FileRow[]).map(async (row) => {
+    ((data ?? []) as FileRow[]).map(async (stored) => {
+      const row = await decodeAttachmentRow("page_files", stored);
       if (!publishedPageIds.has(row.page_id)) return;
       const url = await signedAttachmentUrl(service, row.storage_path, {
         expiresIn: PUBLIC_FILE_URL_TTL_SECONDS,

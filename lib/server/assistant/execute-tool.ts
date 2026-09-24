@@ -3,6 +3,7 @@ import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 
 import { MCP_CLIENT_TOOL_NAMES, MCP_SETUP_TOOL_NAMES } from "@/lib/mcp-client-tools";
@@ -1284,7 +1285,9 @@ export async function executeTool(
           string,
           Record<string, unknown>[]
         >();
-        for (const row of attachmentRows ?? []) {
+        for (const stored of attachmentRows ?? []) {
+          const row = await decodeAttachmentRow("attachments", stored,
+            ctx.userId, projectId);
           const id = row.objective_id as string;
           const list = resourcesByObjective.get(id) ?? [];
           list.push(resourceSummary(row));
@@ -2768,7 +2771,7 @@ export async function executeTool(
           return toolError("Feedback post not found in this project.");
         const { data: comments, error: commentsError } = await commentStore(ctx.service, "comments", ctx.userId)
           .select(
-            "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
+            "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (id, name, email, pseudonym)",
           )
           .eq("feedback_post_id", postId)
           .order("created_at", { ascending: true });

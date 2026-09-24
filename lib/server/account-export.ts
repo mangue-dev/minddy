@@ -12,6 +12,9 @@ import {
   CURRENT_ACCOUNT_EXPORT_VERSION,
 } from "@/lib/account-transfer";
 import { projectIconPaths } from "@/lib/server/project-storage";
+import { downloadAttachment } from "@/lib/server/attachments";
+import { decodeAttachmentRow, type AttachmentTable } from
+  "@/lib/server/attachment-content";
 import { getScratchpadRow } from "@/lib/server/scratchpad";
 import { readStatEvents } from "@/lib/server/stat-events";
 import { hydrateAgentSummaryCopies } from "@/lib/server/agent/run-event-store";
@@ -83,20 +86,19 @@ function one(table: string, result: QueryResult): Row | null {
 async function includeStorageBytes(
   service: ReturnType<typeof getServiceClient>,
   rows: Row[],
+  table: AttachmentTable,
+  actorId: string,
 ): Promise<Row[]> {
   return Promise.all(
-    rows.map(async (row) => {
+    rows.map(async (stored) => {
+      const row = await decodeAttachmentRow(table, stored, actorId);
       const storagePath = row.storage_path;
       if (typeof storagePath !== "string" || !storagePath) return row;
-      const { data, error } = await service.storage
-        .from("attachments")
-        .download(storagePath);
-      if (error || !data) {
-        throw new Error(`attachments/${storagePath}: ${error?.message ?? "download failed"}`);
-      }
+      const data = await downloadAttachment(service, storagePath);
+      if (!data) throw new Error(`attachments/${storagePath}: download failed`);
       return {
         ...row,
-        storage_base64: Buffer.from(await data.arrayBuffer()).toString("base64"),
+        storage_base64: data.toString("base64"),
       };
     }),
   );
@@ -505,8 +507,10 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
   const exportedAttachments = await includeStorageBytes(
     service,
     list("attachments", attachments),
+    "attachments", userId,
   );
-  const exportedPageFiles = await includeStorageBytes(service, list("page_files", pageFiles));
+  const exportedPageFiles = await includeStorageBytes(service,
+    list("page_files", pageFiles), "page_files", userId);
 
   return {
     transfer_format: ACCOUNT_TRANSFER_FORMAT,

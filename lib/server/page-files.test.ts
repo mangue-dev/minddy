@@ -64,6 +64,11 @@ function fakeService(options: {
   };
 
   const from = (table: string) => {
+    if (table === "attachment_object_encryption_scope" ||
+        table === "attachment_metadata_encryption_scope") {
+      return { select: () => ({ eq: () => ({ maybeSingle: async () =>
+        ({ data: null, error: null }) }) }) };
+    }
     if (table === "page_files") {
       const filters: { before?: string } = {};
       const query = {
@@ -168,11 +173,10 @@ describe("createPageFile", () => {
 
     expect(service.uploaded).toHaveLength(1);
     expect(service.uploaded[0]).toMatch(
-      new RegExp(`^projects/${PROJECT}/pages/${PAGE}/[0-9a-f-]{36}/`)
+      new RegExp(`^projects/${PROJECT}/pages/${PAGE}/[0-9a-f-]{36}$`)
     );
-    // The object key is sanitized for Storage, while the row keeps the original
-    // display name with its spaces and apostrophe.
-    expect(service.uploaded[0].endsWith("Ma_capture_d_cran.png")).toBe(true);
+    // The object key is opaque, while the row returns the original display name.
+    expect(service.uploaded[0]).not.toContain("Ma_capture");
     expect(row.file_name).toBe("Ma capture d'écran.png");
     expect(row.size_bytes).toBe(args.data.byteLength);
   });

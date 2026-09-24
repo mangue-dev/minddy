@@ -2,6 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
+import { downloadAttachment, resolveAttachmentObjectPath } from
+  "@/lib/server/attachments";
+import { verifyAttachmentRead } from "@/lib/server/encryption/attachment-url-token";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import { attachmentPreviewKind } from "@/lib/attachment-preview";
 import {
   isInlineSafeMimeType,
@@ -44,9 +48,6 @@ function contentDisposition(inline: boolean, fileName: string): string {
  * iframe.
  */
 export async function GET(request: NextRequest) {
-  const auth = await getAuthedUser(request);
-  if (!auth.ok) return auth.response;
-
   const path = request.nextUrl.searchParams.get("path") ?? "";
   const download = request.nextUrl.searchParams.get("download") === "1";
   const preview = !download && request.nextUrl.searchParams.get("preview") === "1";
@@ -55,13 +56,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const params = request.nextUrl.searchParams;
+  const signed = params.has("sig") || params.has("expires") || params.has("version");
+  if (signed && !(await verifyAttachmentRead(path, params.get("expires") ?? "",
+      params.get("version") ?? "", download ? "1" : "0",
+      params.get("sig") ?? ""))) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  const auth = signed ? null : await getAuthedUser(request);
+  if (auth && !auth.ok) return auth.response;
+
   const [family, owner] = segments;
   if (family === "chat") {
-    if (owner !== auth.user.id) {
+    if (!signed && owner !== auth?.user.id) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
   } else if (family === "projects") {
-    if (!UUID_RE.test(owner) || !(await getProjectAccess(auth.user.id, owner))) {
+    if (!UUID_RE.test(owner) || (!signed &&
+        !(await getProjectAccess(auth!.user.id, owner)))) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
   } else {
@@ -69,19 +81,28 @@ export async function GET(request: NextRequest) {
   }
 
   const service = getServiceClient();
-  const bucket = service.storage.from("attachments");
-  const [{ data: info }, { data: file, error }] = await Promise.all([
-    bucket.info(path),
-    bucket.download(path),
+  const currentPath = await resolveAttachmentObjectPath(service, path);
+  const [{ data: info }, bytes] = await Promise.all([
+    service.storage.from("attachments").info(currentPath),
+    downloadAttachment(service, path),
   ]);
-  if (error || !file) {
+  if (!bytes) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const storedMimeType = normalizeMimeType(info?.contentType || file.type);
+  const { data: descriptor } = await service.from("attachments")
+    .select("id,project_id,file_name,mime_type")
+    .eq("storage_path", currentPath).limit(1).maybeSingle();
+  const { data: pageDescriptor } = descriptor ? { data: null } :
+    await service.from("page_files").select("id,project_id,file_name,mime_type")
+      .eq("storage_path", currentPath).limit(1).maybeSingle();
+  const attachment = descriptor ? await decodeAttachmentRow("attachments", descriptor) : null;
+  const pageFile = pageDescriptor ? await decodeAttachmentRow("page_files", pageDescriptor) : null;
+  const storedMimeType = normalizeMimeType(attachment?.mime_type ||
+    pageFile?.mime_type || info?.contentType);
   const mimeType = sniffMimeType(bytes) ?? storedMimeType;
-  const fileName = fileNameFromPath(path);
+  const fileName = attachment?.file_name || pageFile?.file_name ||
+    fileNameFromPath(path);
   const inline = preview
     ? attachmentPreviewKind(mimeType, fileName) !== null
     : !download && isInlineSafeMimeType(mimeType);
@@ -99,5 +120,5 @@ export async function GET(request: NextRequest) {
     headers["X-Frame-Options"] = "SAMEORIGIN";
   }
 
-  return new NextResponse(bytes, { headers });
+  return new NextResponse(new Uint8Array(bytes), { headers });
 }

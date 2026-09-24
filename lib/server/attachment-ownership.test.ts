@@ -53,7 +53,9 @@ function fake({
         .map((p) => ({ name: p, owner_id: owners[p] })),
       error: null,
     }),
-    from: (table: string) => ({
+    from: (table: string) => table === "attachment_metadata_encryption_scope"
+      ? ({ select: () => ({ eq: () => ({ maybeSingle: async () =>
+        ({ data: null, error: null }) }) }) }) : ({
       insert: (batch: Record<string, unknown>[]) => {
         inserted.push(...batch);
         return {

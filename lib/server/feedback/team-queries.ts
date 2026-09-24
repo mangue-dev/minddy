@@ -6,6 +6,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import type { FeedbackPostRow } from "@/lib/server/feedback/posts";
 import { FEEDBACK_POST_SELECT } from "@/lib/server/feedback/posts";
 import { feedbackPostStore } from "@/lib/server/feedback-post-store";
+import { decodeFeedbackIdentityRow } from "./identity-content";
 import {
   sortFeedbackResolvedLast,
   type FeedbackPostStatus,
@@ -85,12 +86,14 @@ export async function listTeamFeedback(
     projectId, rows.map((r) => r.suggested_merge_into_id).filter((x): x is string => !!x)
   );
 
-  const items = rows.map((row) => ({
+  const items = await Promise.all(rows.map(async (row) => ({
     ...flattenCategories(row),
+    author: row.author ? await decodeFeedbackIdentityRow(row.author,
+      projectId) : null,
     suggested_title: row.suggested_merge_into_id
       ? (suggestionTitles.get(row.suggested_merge_into_id) ?? null)
       : null,
-  }));
+  })));
   // Completed (delivered / refused) at the bottom of the list, sorting by votes kept within
   // of each group — like on the public board.
   return sortFeedbackResolvedLast(items, (item) => item.status);
@@ -143,6 +146,8 @@ export async function getTeamFeedbackDetail(
       author: TeamFeedbackAuthor | null;
     } & WithCategoryEmbed
   );
+  if (row.author) row.author = await decodeFeedbackIdentityRow(row.author,
+    projectId);
 
   const [mergedFromRes, eventsRes, suggestionTitles, issueRes] = await Promise.all([
     feedbackPostStore(service)

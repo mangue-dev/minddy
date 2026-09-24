@@ -964,6 +964,84 @@
       ]
     }
   },
+  "attachment_metadata_encryption_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "attachment_object_aliases": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "encryption_metadata": [
+        "old_path_digest"
+      ],
+      "routing_identity": [
+        "new_path"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "attachment_object_encrypted": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "path"
+      ],
+      "timestamp": [
+        "checked_at"
+      ]
+    }
+  },
+  "attachment_object_encryption_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "attachment_object_migration_attempts": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "object_id"
+      ],
+      "timestamp": [
+        "checked_at"
+      ]
+    }
+  },
   "attachments": {
     "scope": {
       "kind": "project",
@@ -972,7 +1050,6 @@
     "encrypted": [
       "file_name",
       "icon_data_url",
-      "storage_path",
       "url"
     ],
     "clear": {
@@ -991,9 +1068,11 @@
         "issue_id",
         "objective_id",
         "page_id",
-        "project_id"
+        "project_id",
+        "storage_path"
       ],
       "timestamp": [
+        "content_encryption_checked_at",
         "created_at"
       ]
     }
@@ -1256,6 +1335,21 @@
       ]
     }
   },
+  "feedback_identity_encryption_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "feedback_merge_events": {
     "scope": {
       "kind": "project",
@@ -1328,8 +1422,12 @@
       ],
       "timestamp": [
         "consumed_at",
+        "content_encryption_checked_at",
         "created_at",
         "expires_at"
+      ],
+      "encryption_metadata": [
+        "email_lookup"
       ]
     }
   },
@@ -1463,9 +1561,14 @@
         "project_id"
       ],
       "timestamp": [
+        "content_encryption_checked_at",
         "created_at",
         "erased_at",
         "updated_at"
+      ],
+      "encryption_metadata": [
+        "email_lookup",
+        "external_id_lookup"
       ]
     }
   },
@@ -1608,6 +1711,21 @@
         "delivered_at",
         "next_attempt_at",
         "content_encryption_checked_at"
+      ]
+    }
+  },
+  "forge_relay_delivery_encryption_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   },
@@ -2656,8 +2774,7 @@
       "column": "project_id"
     },
     "encrypted": [
-      "file_name",
-      "storage_path"
+      "file_name"
     ],
     "clear": {
       "bounded_metadata": [
@@ -2670,9 +2787,11 @@
         "created_by",
         "id",
         "page_id",
-        "project_id"
+        "project_id",
+        "storage_path"
       ],
       "timestamp": [
+        "content_encryption_checked_at",
         "created_at"
       ]
     }
@@ -3544,21 +3663,6 @@
       "timestamp": [
         "created_at",
         "updated_at"
-      ]
-    }
-  },
-  "forge_relay_delivery_encryption_scope": {
-    "scope": {
-      "kind": "system",
-      "id": "00000000-0000-0000-0000-000000000000"
-    },
-    "encrypted": [],
-    "clear": {
-      "bounded_metadata": [
-        "id"
-      ],
-      "timestamp": [
-        "activated_at"
       ]
     }
   }

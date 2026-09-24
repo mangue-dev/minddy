@@ -11,6 +11,8 @@ import {
 import { databasePropertyValue, databaseValueText } from "@/lib/page-databases";
 import { relativePath } from "@/lib/pages-export";
 import { pageFileUrl, sanitizeFileKey } from "@/lib/page-files";
+import { downloadAttachment } from "@/lib/server/attachments";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 
 /** Pair readable Markdown/CSV with exact schemas, bodies, metadata, and local file bytes. */
 export async function databaseArchiveFiles(
@@ -41,15 +43,14 @@ export async function databaseArchiveFiles(
         .order("id")
         .range(fileOffset, fileOffset + 499);
       if (error) throw new Error("Could not read database files");
-      for (const file of files ?? []) {
-        const { data, error: downloadError } = await service.storage
-          .from("attachments")
-          .download(file.storage_path);
-        if (downloadError || !data)
+      for (const stored of files ?? []) {
+        const file = await decodeAttachmentRow("page_files", stored, null, projectId);
+        const data = await downloadAttachment(service, file.storage_path);
+        if (!data)
           throw new Error("Could not export database file: " + file.file_name);
         const path =
           "__minddy_files__/" + file.id + "/" + sanitizeFileKey(file.file_name);
-        entries[path] = new Uint8Array(await data.arrayBuffer());
+        entries[path] = new Uint8Array(data);
         manifest.files.push({
           id: file.id,
           page_id: file.page_id,

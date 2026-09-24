@@ -7,6 +7,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { isContentEncryptionEnabled } from "./encryption/content-config";
 import { getEncryptedStore, SupabaseKeyRegistry } from "./encryption/registry";
 import { EncryptedRowCodec, type StoredRow } from "./encryption/row-codec";
+import { decodeAttachmentRow } from "./attachment-content";
+import { decodeFeedbackIdentityRow } from "./feedback/identity-content";
 
 export type CommentTable = "comments" | "page_comments";
 type Row = Record<string, unknown>;
@@ -40,11 +42,30 @@ function validate(table: CommentTable, row: Row) {
     throw new Error("Invalid comment content");
   }
 }
+async function decodeJoinedComment(row: Row,
+  actorId: string | null): Promise<Row> {
+  if (Array.isArray(row.attachments)) {
+    row.attachments = await Promise.all(row.attachments.map((attachment) =>
+      decodeAttachmentRow("attachments", attachment as Row, actorId,
+        typeof row.project_id === "string" ? row.project_id : null)));
+  }
+  if (row.feedback_users && typeof row.feedback_users === "object") {
+    const identity = row.feedback_users as Row;
+    if (!["email", "name", "external_id"].some((field) =>
+      Object.hasOwn(identity, field))) return row;
+    if (typeof row.project_id !== "string") {
+      throw new Error("Missing feedback identity owner");
+    }
+    row.feedback_users = await decodeFeedbackIdentityRow(
+      identity, row.project_id, actorId);
+  }
+  return row;
+}
 export async function decodeComment(table: CommentTable, row: Row, actorId: string | null = null): Promise<Row> {
   const { encryption_version, encrypted_content, encryption_revision: _revision, encryption_checked_at: _checked, ...plain } = row;
   if (encryption_version === undefined && encrypted_content === undefined || encryption_version === 0 && encrypted_content === null) {
     validate(table, plain);
-    return plain;
+    return decodeJoinedComment(plain, actorId);
   }
   if (typeof row.project_id !== "string") throw new Error("Missing comment owner");
   const decoded = await new EncryptedRowCodec(getEncryptedStore()).decode(row as StoredRow,
@@ -52,7 +73,7 @@ export async function decodeComment(table: CommentTable, row: Row, actorId: stri
   delete decoded.encryption_revision;
   delete decoded.encryption_checked_at;
   validate(table, decoded);
-  return decoded;
+  return decodeJoinedComment(decoded, actorId);
 }
 
 /** Resolve scope from a real parent, using the same authorization client as the write. */

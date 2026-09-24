@@ -1195,6 +1195,22 @@
       ],
       "functionReferences": []
     },
+    "guard_attachment_metadata()": {
+      "sha256": "8aa94ad1747f057d2e3dd9899c7677b3a320b46a3ade0485274f28fc45a5db62",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "attachments",
+        "attachment_metadata_encryption_scope"
+      ],
+      "protectedRelations": [
+        "attachments"
+      ],
+      "functionReferences": []
+    },
     "guard_category_encryption()": {
       "sha256": "be70c4403b3475a3450af31cc0b468277cba8cc00bb23c13d8a5a1f8eff5ec99",
       "securityDefiner": true,
@@ -1563,6 +1579,17 @@
       ],
       "functionReferences": []
     },
+    "guard_agent_pr_artifact_ref()": {
+      "sha256": "e5ed78063389aad32144df983dab4895ded408a4033753e9f60c96b50b37b7b8",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_agent_run_base_branch()": {
       "sha256": "ffbe6ac6387955a0808fcc252aa31226c98c97fb1daade2f38183d155d7c4ce8",
       "securityDefiner": true,
@@ -1732,7 +1759,7 @@
       "functionReferences": []
     },
     "enforce_storage_insert_quota()": {
-      "sha256": "ba6481ad0c3c184d200d0191293b7b3201b7f2579b06043000f310df9800d099",
+      "sha256": "8a4d37716cf2cd2374b92774865294329d673292f69ae1eb714b6c9fe8310ef2",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1743,7 +1770,8 @@
         "projects",
         "page_files",
         "attachments",
-        "project_storage_owners"
+        "project_storage_owners",
+        "attachment_object_encrypted"
       ],
       "protectedRelations": [
         "pages",
@@ -2611,6 +2639,22 @@
       ],
       "functionReferences": []
     },
+    "guard_feedback_private_identity()": {
+      "sha256": "62f8ee23e767d13e10e9992e1f3cf6b4acac1d32fe66cf9261d728a6b93ae593",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "feedback_users",
+        "feedback_identity_encryption_scope"
+      ],
+      "protectedRelations": [
+        "feedback_users"
+      ],
+      "functionReferences": []
+    },
     "guard_numo_worker_event_payload()": {
       "sha256": "f49c7f0c6f95be6e140d71982c50e1332d26085574d5cbc0b54c9fa7ec9b113b",
       "securityDefiner": true,
@@ -2866,6 +2910,33 @@
       "functionReferences": [
         "agent_queue_content_version"
       ]
+    },
+    "attachment_browser_upload_allowed()": {
+      "sha256": "9420add7834d43647f426b18b516d6b1be7567fd7b1cc5f74b44b3955a0d855d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "attachment_object_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "guard_attachment_object_reference()": {
+      "sha256": "32adcb14ef4e39b130bd5e389582ecee949d0c7e0515ac6ae29505ac80fc0d7a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "attachment_object_encrypted",
+        "attachment_object_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
     },
     "rekey_project_realtime_membership()": {
       "sha256": "a39e40cc3660e1d65f28bca96861aeeb1042727a09085d3db2c946b2ae39201b",
@@ -3516,6 +3587,21 @@
       ],
       "functionReferences": []
     },
+    "migrate_page_file_metadata(uuid,text,text)": {
+      "sha256": "c5b0e9a0a78802c707436b73980f18374bed578b8b7fe544b9603890dcfeaa8b",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "page_files"
+      ],
+      "protectedRelations": [
+        "page_files"
+      ],
+      "functionReferences": []
+    },
     "broadcast_private_realtime(text,text,jsonb)": {
       "sha256": "94065a6d7c6ca743e4d6c80fa2318569dad9b01eddc28e2e5a5ce8f8ef55c894",
       "securityDefiner": true,
@@ -3807,6 +3893,21 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "migrate_feedback_otp_email(uuid,text,text,text)": {
+      "sha256": "26ee1c080753b7b2147dbd0dd41ac09f0babd59ba8edbb70bf0a155feb3e6a9c",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "feedback_otp_codes"
+      ],
+      "protectedRelations": [
+        "feedback_otp_codes"
+      ],
+      "functionReferences": []
+    },
     "release_provider_operation(uuid,text,text,text)": {
       "sha256": "73aa7d0f0ed618a41f30afd3f87a476d51a9ffe5fe4f08a3b089ac5764af600a",
       "securityDefiner": true,
@@ -3853,6 +3954,22 @@
       ],
       "protectedRelations": [
         "numo_assistant_turns"
+      ],
+      "functionReferences": []
+    },
+    "record_attachment_object_migration_attempt(uuid)": {
+      "sha256": "00de4778d06c28c25f515626d31d6fc7cd986bd1b95a88efb91bd0c17303ef7d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "attachments",
+        "attachment_object_migration_attempts"
+      ],
+      "protectedRelations": [
+        "attachments"
       ],
       "functionReferences": []
     },
@@ -4085,6 +4202,23 @@
       ],
       "functionReferences": []
     },
+    "list_attachment_object_migration_candidates(integer)": {
+      "sha256": "377e9fa90bac36f75d43f067f5f97e17f9843aeacbcded1e3a7a7a7bf3ab02f4",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "attachments",
+        "attachment_object_encrypted",
+        "attachment_object_migration_attempts"
+      ],
+      "protectedRelations": [
+        "attachments"
+      ],
+      "functionReferences": []
+    },
     "migrate_agent_artifact_url(uuid,uuid,text,uuid,text)": {
       "sha256": "b3c686f9ce98b2cd9fa3d944f6916d48070004957e7c72494652f19a96463131",
       "securityDefiner": true,
@@ -4099,6 +4233,25 @@
       "protectedRelations": [
         "agent_artifacts",
         "agent_conversations"
+      ],
+      "functionReferences": []
+    },
+    "migrate_attachment_object_references(text,text,text)": {
+      "sha256": "f94beab6911314815d46e0047fee6c83e7a792a43746950536e8077153ec009f",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "page_files",
+        "attachments",
+        "attachment_object_aliases",
+        "attachment_object_encrypted"
+      ],
+      "protectedRelations": [
+        "page_files",
+        "attachments"
       ],
       "functionReferences": []
     },
@@ -4481,6 +4634,21 @@
       ],
       "protectedRelations": [
         "forge_relay_deliveries"
+      ],
+      "functionReferences": []
+    },
+    "migrate_attachment_metadata(uuid,text,text,text,text,text,text)": {
+      "sha256": "4f71ee10963a8b6d1edb7de0a82f456001b0afc3acaa3400b708327151c018e7",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "attachments"
+      ],
+      "protectedRelations": [
+        "attachments"
       ],
       "functionReferences": []
     },
@@ -5012,6 +5180,21 @@
       ],
       "functionReferences": []
     },
+    "migrate_feedback_user_identity(uuid,text,text,text,text,text,text,text,text)": {
+      "sha256": "7eff345361cadfeedc87c380a5d437f8e70204bb2680b7d25ede21fe0d305544",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "feedback_users"
+      ],
+      "protectedRelations": [
+        "feedback_users"
+      ],
+      "functionReferences": []
+    },
     "migrate_agent_context_snapshot(uuid,uuid,uuid,jsonb,text,integer,text,integer)": {
       "sha256": "11f88adc693f84276fee91ff7b154b5a2e135756edaed179c13f509458846286",
       "securityDefiner": true,
@@ -5114,6 +5297,21 @@
       ],
       "protectedRelations": [
         "agent_runs"
+      ],
+      "functionReferences": []
+    },
+    "claim_feedback_otp_attempt_protected(uuid,text,text,timestamp with time zone,integer)": {
+      "sha256": "97057dbfda67167af75aebbf3326ac403e6183432599b6b3dd56983b4d8a93c8",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "feedback_otp_codes"
+      ],
+      "protectedRelations": [
+        "feedback_otp_codes"
       ],
       "functionReferences": []
     },
@@ -5384,6 +5582,21 @@
         "resume_latest_agent_run_with_message"
       ]
     },
+    "issue_feedback_otp_code_protected(uuid,uuid,text,text,text,text,text,timestamp with time zone,timestamp with time zone,integer,integer,integer,integer)": {
+      "sha256": "92a90650e71f57035bee22382b0f3eb04b732c9908e8ef7dad843d933df99f38",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "feedback_otp_codes"
+      ],
+      "protectedRelations": [
+        "feedback_otp_codes"
+      ],
+      "functionReferences": []
+    },
     "sync_github_issue_comment_atomic(uuid,text,uuid,text,text,text,text,timestamp with time zone,timestamp with time zone,timestamp with time zone,uuid,integer,text)": {
       "sha256": "ea591830cea414efbec6fb627361d4fba7413602482419b4ee3905d2b3305c23",
       "securityDefiner": true,
@@ -5584,6 +5797,10 @@
       "function": "issues_sync_objective_status()",
       "definition": "CREATE TRIGGER issues_sync_objective_status AFTER INSERT OR DELETE OR UPDATE ON issues FOR EACH ROW EXECUTE FUNCTION issues_sync_objective_status()"
     },
+    "page_files.page_file_metadata_guard": {
+      "function": "guard_attachment_metadata()",
+      "definition": "CREATE TRIGGER page_file_metadata_guard BEFORE INSERT OR UPDATE ON page_files FOR EACH ROW EXECUTE FUNCTION guard_attachment_metadata()"
+    },
     "agent_runs.agent_runs_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER agent_runs_set_updated_at BEFORE UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
@@ -5619,6 +5836,10 @@
     "agent_runs.trg_agent_run_runtime_sync": {
       "function": "sync_agent_runtime_from_run()",
       "definition": "CREATE TRIGGER trg_agent_run_runtime_sync AFTER INSERT OR UPDATE OF repo_link_id, connection_id, base_branch, branch_name, sandbox_id, checkpoint, checkpoint_ciphertext, checkpoint_encryption_version, agent_engine, local_exec, local_worktree, provider_key_id, last_activity_at, sandbox_stopped_at, pr_number, pr_url, pr_state, updated_at ON agent_runs FOR EACH ROW EXECUTE FUNCTION sync_agent_runtime_from_run()"
+    },
+    "attachments.attachment_metadata_guard": {
+      "function": "guard_attachment_metadata()",
+      "definition": "CREATE TRIGGER attachment_metadata_guard BEFORE INSERT OR UPDATE ON attachments FOR EACH ROW EXECUTE FUNCTION guard_attachment_metadata()"
     },
     "comments.comments_guard_client_update": {
       "function": "guard_comment_client_update()",
@@ -5816,6 +6037,10 @@
       "function": "guard_agent_artifact_branch()",
       "definition": "CREATE TRIGGER agent_artifact_branch_guard BEFORE INSERT OR UPDATE ON agent_artifacts FOR EACH ROW EXECUTE FUNCTION guard_agent_artifact_branch()"
     },
+    "agent_artifacts.agent_pr_artifact_ref_guard": {
+      "function": "guard_agent_pr_artifact_ref()",
+      "definition": "CREATE TRIGGER agent_pr_artifact_ref_guard BEFORE INSERT OR UPDATE ON agent_artifacts FOR EACH ROW EXECUTE FUNCTION guard_agent_pr_artifact_ref()"
+    },
     "agent_runs.agent_runs_lock_anchor_on_insert": {
       "function": "lock_agent_run_anchor_on_insert()",
       "definition": "CREATE TRIGGER agent_runs_lock_anchor_on_insert BEFORE INSERT ON agent_runs FOR EACH ROW EXECUTE FUNCTION lock_agent_run_anchor_on_insert()"
@@ -5864,6 +6089,10 @@
       "function": "set_feedback_post_updated_at()",
       "definition": "CREATE TRIGGER feedback_posts_set_updated_at BEFORE UPDATE ON feedback_posts FOR EACH ROW EXECUTE FUNCTION set_feedback_post_updated_at()"
     },
+    "feedback_users.feedback_users_identity_guard": {
+      "function": "guard_feedback_private_identity()",
+      "definition": "CREATE TRIGGER feedback_users_identity_guard BEFORE INSERT OR UPDATE ON feedback_users FOR EACH ROW EXECUTE FUNCTION guard_feedback_private_identity()"
+    },
     "feedback_users.feedback_users_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER feedback_users_set_updated_at BEFORE UPDATE ON feedback_users FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
@@ -5875,6 +6104,10 @@
     "page_comments.page_comments_encryption_guard": {
       "function": "guard_comment_encryption()",
       "definition": "CREATE TRIGGER page_comments_encryption_guard BEFORE INSERT OR UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION guard_comment_encryption()"
+    },
+    "page_files.page_files_object_reference_guard": {
+      "function": "guard_attachment_object_reference()",
+      "definition": "CREATE TRIGGER page_files_object_reference_guard BEFORE INSERT OR UPDATE ON page_files FOR EACH ROW EXECUTE FUNCTION guard_attachment_object_reference()"
     },
     "page_versions.page_versions_encryption_guard": {
       "function": "guard_history_encryption()",
@@ -5932,9 +6165,17 @@
       "function": "guard_worker_parent_message()",
       "definition": "CREATE TRIGGER worker_parent_message_guard BEFORE INSERT OR UPDATE ON assistant_messages FOR EACH ROW EXECUTE FUNCTION guard_worker_parent_message()"
     },
+    "attachments.attachments_object_reference_guard": {
+      "function": "guard_attachment_object_reference()",
+      "definition": "CREATE TRIGGER attachments_object_reference_guard BEFORE INSERT OR UPDATE ON attachments FOR EACH ROW EXECUTE FUNCTION guard_attachment_object_reference()"
+    },
     "feedback_boards.feedback_boards_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER feedback_boards_set_updated_at BEFORE UPDATE ON feedback_boards FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    "feedback_otp_codes.feedback_otp_identity_guard": {
+      "function": "guard_feedback_private_identity()",
+      "definition": "CREATE TRIGGER feedback_otp_identity_guard BEFORE INSERT OR UPDATE ON feedback_otp_codes FOR EACH ROW EXECUTE FUNCTION guard_feedback_private_identity()"
     },
     "feedback_posts.feedback_posts_encryption_guard": {
       "function": "guard_feedback_post_encryption()",

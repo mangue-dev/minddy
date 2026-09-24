@@ -2,6 +2,7 @@ import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { addCommentToObjective } from "@/lib/server/add-comment";
@@ -280,7 +281,9 @@ async function readObjective(
 
   const total = (comments ?? []).length;
   const recent = (comments ?? []).slice(-COMMENTS_DEFAULT_LIMIT);
-  const resources = (attachmentRows ?? []).map((row) => agentResourceSummary(row));
+  const resources = (await Promise.all((attachmentRows ?? []).map((row) =>
+    decodeAttachmentRow("attachments", row, ctx.actorId ?? null,
+      ctx.projectId)))).map((row) => agentResourceSummary(row));
 
   return {
     result: {

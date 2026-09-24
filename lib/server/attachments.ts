@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
+import { SITE_URL } from "@/lib/site";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isInlineSafeMimeType, resolveUploadedMimeType } from "@/lib/inline-safe";
@@ -13,6 +14,16 @@ import type {
   ResourceInput,
 } from "@/lib/types";
 import { isLinkResource, isPageResource } from "@/lib/types";
+import { isContentEncryptionEnabled } from "@/lib/server/encryption/content-config";
+import { decodeAttachmentObject, encodeAttachmentObject,
+  isEncryptedAttachmentObject } from "@/lib/server/encryption/attachment-object-content";
+import { signAttachmentRead } from "@/lib/server/encryption/attachment-url-token";
+import { attachmentObjectScope } from
+  "@/lib/server/encryption/attachment-object-content";
+import { blindIndex } from "@/lib/server/encryption/store";
+import { getBlindIndexKeys } from "@/lib/server/encryption/registry";
+import { decodeAttachmentRow, encodeAttachmentValue,
+  shouldEncryptAttachmentMetadata } from "@/lib/server/attachment-content";
 
 /** Client-checked too (use-attachment-uploads) — keep the two in sync. */
 export const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024; // 20 MB
@@ -155,11 +166,71 @@ export function parseResourcesInput(
   return out;
 }
 
-/** Storage keys reject most exotic characters — mirror of the client-side
-    sanitizer in lib/use-attachment-uploads.ts. */
-function sanitizeKeyPart(name: string): string {
-  const sanitized = name.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "");
-  return (sanitized || "fichier").slice(-140);
+/** Storage keys contain only an opaque ID, not a user-supplied file name. */
+export function opaqueAttachmentPath(prefix: string): string {
+  if (!/^(projects|chat)\/[0-9a-f-]{36}(?:\/pages\/[0-9a-f-]{36})?$/.test(prefix)) {
+    throw new Error("Invalid attachment object prefix");
+  }
+  return `${prefix}/${crypto.randomUUID()}`;
+}
+
+async function protectAttachmentObjectWrites(service: SupabaseClient): Promise<boolean> {
+  if (isContentEncryptionEnabled() &&
+      process.env.MINDDY_ATTACHMENT_OBJECT_ENCRYPTION_ENABLED === "true") return true;
+  const { data, error } = await service.from("attachment_object_encryption_scope")
+    .select("id").eq("id", true).maybeSingle();
+  if (error && error.code !== "42P01" && error.code !== "PGRST205") {
+    throw new Error("Unable to resolve attachment object encryption state");
+  }
+  return !!data;
+}
+
+export async function attachmentPathDigest(path: string): Promise<string> {
+  attachmentObjectScope(path);
+  const scope = { kind: "system" as const,
+    id: "00000000-0000-0000-0000-000000000000" };
+  const initial = await getBlindIndexKeys().current(scope);
+  initial.bytes.fill(0);
+  const key = await getBlindIndexKeys().byVersion(scope, 1);
+  try {
+    return blindIndex(path, { scope, table: "attachment_object_aliases",
+      column: "old_path_digest" }, key.bytes);
+  } finally { key.bytes.fill(0); }
+}
+
+/** Follow a blind alias installed while moving historical named objects. */
+export async function resolveAttachmentObjectPath(service: SupabaseClient,
+  path: string): Promise<string> {
+  if (!process.env.MINDDY_DATA_ROOT_KEY) return path;
+  const digest = await attachmentPathDigest(path);
+  const { data, error } = await service.from("attachment_object_aliases")
+    .select("new_path").eq("old_path_digest", digest).maybeSingle();
+  if (error && error.code !== "42P01" && error.code !== "PGRST205") {
+    throw new Error("Unable to resolve attachment object alias");
+  }
+  return data?.new_path ?? path;
+}
+
+/** Server-only object write; the browser never supplies bytes to Storage. */
+export async function uploadPrivateAttachmentObject(service: SupabaseClient,
+  path: string, bytes: Uint8Array, mimeType: string,
+  upsert = false): Promise<void> {
+  const protect = await protectAttachmentObjectWrites(service);
+  if (protect) {
+    const activated = await service.from("attachment_object_encryption_scope")
+      .upsert({ id: true }, { onConflict: "id", ignoreDuplicates: true });
+    if (activated.error) throw new Error("Unable to activate attachment object encryption");
+  }
+  const stored = protect ? await encodeAttachmentObject(path, bytes) : bytes;
+  const { error } = await service.storage.from("attachments").upload(path, stored,
+    { contentType: protect ? "application/octet-stream" : mimeType, upsert,
+      ...(protect ? { metadata: { minddy_logical_size: bytes.byteLength } } : {}) });
+  if (error) throw new Error(`attachment upload failed: ${error.message}`);
+  if (protect) {
+    const marked = await service.from("attachment_object_encrypted")
+      .upsert({ path }, { onConflict: "path", ignoreDuplicates: true });
+    if (marked.error) throw new Error("Unable to register encrypted attachment object");
+  }
 }
 
 /**
@@ -191,14 +262,8 @@ export async function uploadAttachment(
   if (!(await projectStorageAllowed(service, args.projectId, args.data.byteLength))) {
     throw new Error("attachment upload refused: storage quota exceeded");
   }
-  const path = `projects/${args.projectId}/${crypto.randomUUID()}/${sanitizeKeyPart(
-    args.fileName
-  )}`;
-
-  const { error } = await service.storage
-    .from("attachments")
-    .upload(path, args.data, { contentType: mime });
-  if (error) throw new Error(`attachment upload failed: ${error.message}`);
+  const path = opaqueAttachmentPath(`projects/${args.projectId}`);
+  await uploadPrivateAttachmentObject(service, path, args.data, mime);
 
   try {
     const [row] = await insertAttachments(service, {
@@ -285,14 +350,18 @@ export async function copyResourcesToProject(
     }
     if (!canReach) continue;
 
-    const targetPath = `projects/${args.targetProjectId}/${crypto.randomUUID()}/${sanitizeKeyPart(
-      a.file_name
-    )}`;
-    const { error } = await service.storage
-      .from("attachments")
-      .copy(a.storage_path, targetPath);
-    if (error) {
-      console.error("[attachments] cross-project copy failed:", error.message);
+    const targetPath = opaqueAttachmentPath(`projects/${args.targetProjectId}`);
+    try {
+      const bytes = await downloadAttachment(service, a.storage_path);
+      if (!bytes) throw new Error("Source object missing");
+      if (!(await projectStorageAllowed(service, args.targetProjectId,
+        Math.ceil(bytes.byteLength * 1.4) + 4096))) {
+        throw new Error("Target storage quota exceeded");
+      }
+      await uploadPrivateAttachmentObject(service, targetPath, bytes, a.mime_type);
+    } catch (error) {
+      console.error("[attachments] cross-project copy failed:",
+        (error as Error).message);
       continue;
     }
     out.push({ ...a, storage_path: targetPath });
@@ -360,6 +429,23 @@ function attachmentRow(parent: AttachmentParent, a: ResourceInput) {
     file_name: a.file_name,
     mime_type: a.mime_type,
     size_bytes: a.size_bytes,
+  };
+}
+
+async function prepareAttachmentRow(parent: AttachmentParent, resource: ResourceInput,
+  id: string, protect: boolean) {
+  const row = { ...attachmentRow(parent, resource), id };
+  if (!protect) return row;
+  return {
+    ...row,
+    file_name: await encodeAttachmentValue("attachments", parent.projectId,
+      id, "file_name", row.file_name),
+    url: "url" in row && row.url
+      ? await encodeAttachmentValue("attachments", parent.projectId,
+        id, "url", row.url) : null,
+    icon_data_url: "icon_data_url" in row && row.icon_data_url
+      ? await encodeAttachmentValue("attachments", parent.projectId,
+        id, "icon_data_url", row.icon_data_url) : null,
   };
 }
 
@@ -473,10 +559,11 @@ export async function insertAttachments(
   if (args.resources.length === 0) return [];
   await assertPagesInProject(service, args.projectId, args.resources);
   await assertUploadedByActor(service, args.createdBy, args.resources);
-  const rows = args.resources.map((resource, index) => ({
-    ...attachmentRow(args, resource),
-    ...(args.idempotencyKey ? { id: commentResourceId(args.idempotencyKey, index) } : {}),
-  }));
+  const protect = await shouldEncryptAttachmentMetadata(service);
+  const rows = await Promise.all(args.resources.map((resource, index) =>
+    prepareAttachmentRow(args, resource,
+      args.idempotencyKey ? commentResourceId(args.idempotencyKey, index)
+        : crypto.randomUUID(), protect)));
   const table = service.from("attachments");
   // Only explicit comment retries use deterministic IDs. A lost response can
   // then retry the atomic resource batch without duplicating successful rows.
@@ -485,7 +572,8 @@ export async function insertAttachments(
     : table.insert(rows);
   const { data, error } = await insert.select("*");
   if (error) throw new Error(`resources insert failed: ${error.message}`);
-  return (data ?? []) as Attachment[];
+  return Promise.all((data ?? []).map((row) =>
+    decodeAttachmentRow("attachments", row))) as Promise<Attachment[]>;
 }
 
 /** Stable per-comment slot IDs keep concurrent attachment retries idempotent. */
@@ -530,9 +618,13 @@ export async function insertAttachmentsFor(
   for (const [createdBy, resources] of byActor) {
     await assertUploadedByActor(service, createdBy, resources);
   }
+  const protect = await shouldEncryptAttachmentMetadata(service);
+  const rows = await Promise.all(entries.map((entry) =>
+    prepareAttachmentRow(entry.parent, entry.resource,
+      crypto.randomUUID(), protect)));
   const { error } = await service
     .from("attachments")
-    .insert(entries.map((e) => attachmentRow(e.parent, e.resource)));
+    .insert(rows);
   if (error) throw new Error(`resources insert failed: ${error.message}`);
 }
 
@@ -576,6 +668,17 @@ export async function signedAttachmentUrl(
     mimeType?: string | null;
   } = {}
 ): Promise<string | null> {
+  if (await protectAttachmentObjectWrites(service)) {
+    const disposition = download ? "1" : "0";
+    const token = await signAttachmentRead(storagePath, expiresIn, disposition);
+    const url = new URL("/api/attachments/file", SITE_URL);
+    url.searchParams.set("path", storagePath);
+    url.searchParams.set("expires", String(token.expires));
+    url.searchParams.set("version", String(token.version));
+    url.searchParams.set("sig", token.sig);
+    if (download) url.searchParams.set("download", "1");
+    return url.toString();
+  }
   let disposition: string | boolean = download;
   if (!disposition) {
     const type = mimeType ?? (await storedContentType(service, storagePath));
@@ -595,11 +698,14 @@ export async function downloadAttachment(
   service: SupabaseClient,
   storagePath: string
 ): Promise<Buffer | null> {
+  const resolved = await resolveAttachmentObjectPath(service, storagePath);
   const { data, error } = await service.storage
     .from("attachments")
-    .download(storagePath);
+    .download(resolved);
   if (error || !data) return null;
-  return Buffer.from(await data.arrayBuffer());
+  const bytes = Buffer.from(await data.arrayBuffer());
+  return isEncryptedAttachmentObject(bytes)
+    ? decodeAttachmentObject(resolved, bytes) : bytes;
 }
 
 /**
@@ -666,9 +772,11 @@ export async function removeStorageObjects(
   service: SupabaseClient,
   paths: (string | null | undefined)[]
 ): Promise<void> {
-  const cleaned = [
+  const supplied = [
     ...new Set(paths.filter((p): p is string => typeof p === "string" && p !== "")),
   ];
+  const cleaned = [...new Set(await Promise.all(supplied.map((path) =>
+    resolveAttachmentObjectPath(service, path))))];
   if (cleaned.length === 0) return;
   const orphans = await unreferencedPaths(service, cleaned);
   if (orphans.length === 0) return;

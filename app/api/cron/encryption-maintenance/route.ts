@@ -43,6 +43,12 @@ import { backfillForgeRelayDeliveriesBatch } from
   "@/lib/server/encryption/forge-relay-delivery-backfill";
 import { scrubForgeRelayAuditBatch } from
   "@/lib/server/encryption/forge-relay-audit-backfill";
+import { backfillAttachmentObjectsBatch } from
+  "@/lib/server/encryption/attachment-object-backfill";
+import { backfillAttachmentMetadataBatch } from
+  "@/lib/server/encryption/attachment-metadata-backfill";
+import { backfillFeedbackIdentityBatch } from
+  "@/lib/server/encryption/feedback-identity-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -93,6 +99,12 @@ export async function GET(request: NextRequest) {
     process.env.MINDDY_PR_COMMENT_EDIT_ENCRYPTION_ENABLED === "true";
   const forgeRelayDeliveryEnabled = contentEnabled &&
     process.env.MINDDY_FORGE_RELAY_DELIVERY_ENCRYPTION_ENABLED === "true";
+  const attachmentObjectEnabled = contentEnabled &&
+    process.env.MINDDY_ATTACHMENT_OBJECT_ENCRYPTION_ENABLED === "true";
+  const attachmentMetadataEnabled = contentEnabled &&
+    process.env.MINDDY_ATTACHMENT_METADATA_ENCRYPTION_ENABLED === "true";
+  const feedbackIdentityEnabled = contentEnabled &&
+    process.env.MINDDY_FEEDBACK_IDENTITY_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -144,6 +156,11 @@ export async function GET(request: NextRequest) {
       prCommentEditEnabled ? backfillPrCommentEditsBatch(20, request.signal) : Promise.resolve(null),
       forgeRelayDeliveryEnabled ? backfillForgeRelayDeliveriesBatch(20, request.signal) : Promise.resolve(null),
       contentEnabled ? scrubForgeRelayAuditBatch(100, request.signal) : Promise.resolve(null),
+      attachmentObjectEnabled ? backfillAttachmentObjectsBatch(10, request.signal) : Promise.resolve(null),
+      attachmentMetadataEnabled ? backfillAttachmentMetadataBatch("attachments", 30, request.signal) : Promise.resolve(null),
+      attachmentMetadataEnabled ? backfillAttachmentMetadataBatch("page_files", 30, request.signal) : Promise.resolve(null),
+      feedbackIdentityEnabled ? backfillFeedbackIdentityBatch("feedback_users", 30, request.signal) : Promise.resolve(null),
+      feedbackIdentityEnabled ? backfillFeedbackIdentityBatch("feedback_otp_codes", 30, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -187,12 +204,17 @@ export async function GET(request: NextRequest) {
     const prCommentEdits = outcomes[39];
     const forgeRelayDeliveries = outcomes[40];
     const forgeRelayAudit = outcomes[41];
+    const attachmentObjects = outcomes[42];
+    const attachmentMetadata = outcomes[43];
+    const pageFileMetadata = outcomes[44];
+    const feedbackUsers = outcomes[45];
+    const feedbackOtp = outcomes[46];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -238,6 +260,15 @@ export async function GET(request: NextRequest) {
         ...(prCommentEditEnabled ? { pr_comment_edits: prCommentEdits.status === "fulfilled" ? prCommentEdits.value : { failed: true } } : {}),
         ...(forgeRelayDeliveryEnabled ? { forge_relay_deliveries: forgeRelayDeliveries.status === "fulfilled" ? forgeRelayDeliveries.value : { failed: true } } : {}),
         ...(contentEnabled ? { forge_relay_audit: forgeRelayAudit.status === "fulfilled" ? forgeRelayAudit.value : { failed: true } } : {}),
+        ...(attachmentObjectEnabled ? { attachment_objects: attachmentObjects.status === "fulfilled" ? attachmentObjects.value : { failed: true } } : {}),
+        ...(attachmentMetadataEnabled ? {
+          attachment_metadata: attachmentMetadata.status === "fulfilled" ? attachmentMetadata.value : { failed: true },
+          page_file_metadata: pageFileMetadata.status === "fulfilled" ? pageFileMetadata.value : { failed: true },
+        } : {}),
+        ...(feedbackIdentityEnabled ? {
+          feedback_users: feedbackUsers.status === "fulfilled" ? feedbackUsers.value : { failed: true },
+          feedback_otp: feedbackOtp.status === "fulfilled" ? feedbackOtp.value : { failed: true },
+        } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),
       ...(contentEnabled ? { statistics: statistics.status === "fulfilled" ? statistics.value : { failed: true } } : {}),

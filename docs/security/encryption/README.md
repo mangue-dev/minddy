@@ -6,24 +6,28 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 137 application tables and 1,363 columns, their primary
+- `schema.json` records 143 application tables and 1,383 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
-  column exactly once. Its 189 encryption targets include the original content,
+  column exactly once. Its 187 encryption targets include the original content,
   derived copies, arbitrary user JSON, private identities, credentials and share
   tokens. The relay audit detail target was removed by an action-specific SQL
-  guard and historical scrub, leaving 189 encryption targets. This is a target
+  guard and historical scrub; opaque attachment object paths replace two path
+  encryption targets. This is a target
   policy, not evidence that those columns are encrypted.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 335 functions, ten views and 184 triggers. Function
+- `sql-consumers.json` records 349 functions, ten views and 191 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
   until the schema audit is refreshed, and rejects changed access candidates
   until the consumer inventory is reviewed. Moving a call to another line alone
   does not invalidate the inventory.
+
+The dated checkpoint sections below record the state when each tranche landed;
+later checkpoints supersede their remaining-work statements.
 
 The first 104 migrations were replayed on the isolated local Supabase stack;
 the objective, category, project-draft and feedback-post migrations were applied
@@ -87,8 +91,8 @@ must be checked separately.
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
 | Forge data | Resolve ownership of repository data shared by several projects. Private repository names currently participate in primary/unique keys and lookup paths; introduce opaque/indexed identities before encrypting them. The generic row codec deliberately refuses sensitive primary keys. |
-| Files and images | Replace direct browser uploads and signed plaintext-object reads with authorized server paths. Use opaque object names; migrate attachments, page files and private project icons, including copies/imports/exports/AI downloads and orphan cleanup. Public avatars have an explicit public-use exception. |
-| Feedback and sharing | Encrypt private feedback identities/content/embeddings and recoverable share tokens, with lookup indexes and retention. Owner dialogs must still recover share URLs, so hashing the only stored share token would break the product. |
+| Files and images | Attachment and page-file server paths, opaque names, ciphertext bytes and metadata are implemented below; private project icons and any remaining object copies still need conversion. Public avatars have an explicit public-use exception. |
+| Feedback and sharing | Feedback posts and private visitor identities have repository and migration checkpoints below. Recoverable share tokens and remaining board copies still need conversion; owner dialogs must retain access to share URLs. |
 | Credentials and configuration | Migrate legacy environment-key envelopes and secret/configuration stores to the agreed protected boundary; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
 | Migration and recovery | Add restartable batches for every target and object, compare-and-swap against concurrent edits, verification counters, rejection of obsolete writers, a restoration rehearsal and retention of historical wrapped keys. Test mixed plaintext/encrypted tenants and old versions. |
 | Root key and operations | Provision a dedicated root key outside the database and rehearse key backup and restore. The offline root-key rewrap procedure is implemented and tested on isolated PostgreSQL; production rehearsal and application-scale latency remain. Production deployment and migration require a later explicit deployment request. |
@@ -446,14 +450,14 @@ published, public, non-spam posts before decryption. This preserves correctness
 without a plaintext vector index, but its full-scan latency and key/cache load
 must be measured on representative staging data before activation.
 
-This is **not a completed feedback domain**. `feedback_users.email/name/external_id`
-and the SQL/SSO equality paths still store private identities in clear; pending
-`feedback_otp_codes.email` is also clear. Feedback attachments still use unencrypted
-object transport. Promotion uses the shared issue creation path, which can now
-encode the new issue title and description only when the separate staging issue
+This is **not a completed feedback domain**. The later identity and attachment
+checkpoints replace the earlier clear identity and object paths described here.
+Recoverable share tokens and other board copies remain open. Promotion uses the
+shared issue creation path, which can encode the new issue title and description
+only when the separate staging issue
 source flag is enabled; production flags remain off and existing issues have not
-been migrated. These paths need coordinated repository, blind-index, object and issue
-conversion before the feedback boundary can be declared complete. The branch's
+been migrated. The remaining sharing, object and issue paths need conversion
+before the feedback boundary can be declared complete. The branch's
 staging content flag is not a production rollout flag; both production encryption
 flags remain disabled. No production data or objects were migrated.
 
@@ -1193,3 +1197,61 @@ regression verifies stale CAS, removal and old-writer refusal. The relay
 PostgreSQL restore loads audit rows independently before parent instances.
 Audit detail is classified as bounded metadata only under that SQL guard.
 Other forge and issue copies remain open.
+
+## Agent artifact reference boundary — 24 September 2026
+
+Branch refs and their runtime copies use the project-bound branch envelope and
+stable blind equality token described above. Pull-request artifact refs are
+only numeric forge PR identifiers; an additional SQL trigger now rejects
+arbitrary text from older writers and preserves the numeric equality key used
+by the runtime trigger. Its isolated SQL regression verifies refusal and the
+valid numeric path. Artifact URLs remain independently encrypted as described
+in the agent PR URL checkpoint.
+
+## Attachment object and metadata checkpoint — 24 September 2026
+
+Private attachment and page-file writes now use opaque paths and server-side
+byte encryption when `MINDDY_ATTACHMENT_OBJECT_ENCRYPTION_ENABLED=true` together
+with the global content flag. Browser uploads enter through an authenticated
+server route. An activated database marker rejects authenticated direct Storage
+uploads and SQL references to unregistered objects. Read paths, including AI,
+MCP, exports and public page files, decrypt after their existing authorization
+checks; expiring application URLs carry an authenticated path and disposition.
+Object bytes are stored in independently authenticated chunks. Storage quota
+uses the registered object's logical byte count. Legacy named objects move to
+opaque paths through a bounded worker; SQL references and a blind path alias
+swap atomically, and a per-object attempt queue prevents a failed object from
+starving later batches.
+
+`attachments.file_name`, link `url` and `icon_data_url`, plus
+`page_files.file_name`, use row- and project-bound envelopes when
+`MINDDY_ATTACHMENT_METADATA_ENCRYPTION_ENABLED=true`. Direct writers,
+imports and exports use the same codec. A bounded CAS worker rotates old values,
+and SQL guards reject changed clear metadata after activation. SQL regressions
+cover old-writer refusal, aliases, queue fairness and CAS. The isolated
+PostgreSQL dump/restore loads attachment rows and object registry records before
+parents in independent committed batches, recovers two project-key versions
+with cold caches and rejects a wrong root key. Its object archive is an
+in-memory ciphertext fixture; a representative Storage backup/restore and
+latency measurement remain production activation checks. Private project icons
+and other file surfaces in the table above remain open. Production flags remain
+disabled.
+
+## Feedback identity checkpoint — 24 September 2026
+
+`feedback_users.email`, `name` and `external_id` now have row- and
+project-bound envelopes. Purpose-separated version-one blind indexes retain
+email and external-ID lookup and uniqueness across content-key rotation.
+Pending `feedback_otp_codes.email` uses a separate system-bound envelope and
+blind index; protected issuance and claim RPCs retain atomic cooldown, quota,
+attempt and consumption behavior, including legacy rows during conversion.
+Feedback sessions, team readers, comments and erasure decode only after their
+existing access checks. Team search filters decrypted rows in ordered batches.
+A bounded CAS worker converts and rotates both tables. The SQL regression
+checks source and OTP copies, uniqueness controls, old-writer refusal and RPC
+privileges. A local PostgreSQL dump/restore loads feedback children before
+parent boards and projects in independent batches, recovers two key versions
+from cold caches and rejects the wrong root. This does not close the feedback
+or application-wide boundary: share tokens, private project icons, remaining
+SQL and object targets in the table above need conversion. Production flags
+remain disabled.

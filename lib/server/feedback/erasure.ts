@@ -2,6 +2,8 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getBoardForProject } from "@/lib/server/feedback/boards";
+import { decodeFeedbackIdentityRow, feedbackOtpEmailLookup,
+  shouldProtectFeedbackIdentity } from "./identity-content";
 
 /**
  * Deletion of a board participant (GDPR art. 17).
@@ -84,14 +86,17 @@ export async function eraseFeedbackUser(params: {
   // A pending code carries the address in plain text. It expires in ten minutes and the
   // night sweep picks it up — but “in ten minutes” is not a
   // response to a deletion request.
-  if (user.email) {
+  const identity = await decodeFeedbackIdentityRow(user, params.projectId);
+  if (identity.email) {
     const board = await getBoardForProject(params.projectId);
     if (board) {
-      await service
-        .from("feedback_otp_codes")
-        .delete()
-        .eq("board_id", board.id)
-        .eq("email", user.email);
+      if (await shouldProtectFeedbackIdentity(service)) {
+        const lookup = await feedbackOtpEmailLookup(identity.email);
+        await service.from("feedback_otp_codes").delete()
+          .eq("board_id", board.id).eq("email_lookup", lookup);
+      }
+      await service.from("feedback_otp_codes").delete()
+        .eq("board_id", board.id).eq("email", identity.email);
     }
   }
 
@@ -101,6 +106,8 @@ export async function eraseFeedbackUser(params: {
       email: null,
       name: null,
       external_id: null,
+      email_lookup: null,
+      external_id_lookup: null,
       erased_at: new Date().toISOString(),
     })
     .eq("id", params.userId);

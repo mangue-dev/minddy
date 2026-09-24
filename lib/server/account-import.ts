@@ -13,6 +13,9 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getScratchpad, setScratchpad } from "@/lib/server/scratchpad";
 import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 import { appendStatEvents, type StatEventRow } from "@/lib/server/stat-events";
+import { uploadPrivateAttachmentObject } from "@/lib/server/attachments";
+import { encodeAttachmentValue, shouldEncryptAttachmentMetadata } from
+  "@/lib/server/attachment-content";
 
 type Service = ReturnType<typeof getServiceClient>;
 
@@ -400,11 +403,6 @@ function pick(row: TransferRow, keys: string[]): TransferRow {
   );
 }
 
-function safeStorageName(value: unknown): string {
-  const name = typeof value === "string" ? value.trim() : "file";
-  return name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 200) || "file";
-}
-
 async function freeProjectKey(
   service: Service,
   sourceKey: string,
@@ -756,12 +754,18 @@ export async function importAccountTransfer(
   for (const row of pageFiles) {
     const source = document.page_files.find((item) => item.id === row.id);
     if (!source || typeof source.storage_base64 !== "string") continue;
-    const path = `projects/${row.project_id}/pages/${row.page_id}/${row.id}/${safeStorageName(row.file_name)}`;
-    const { error } = await service.storage
-      .from("attachments")
-      .upload(path, Buffer.from(source.storage_base64, "base64"), { contentType: String(row.mime_type ?? "application/octet-stream"), upsert: true });
-    if (error) throw new Error(`page_files/${row.id}: ${error.message}`);
+    const path = `projects/${row.project_id}/pages/${row.page_id}/${row.id}`;
+    await uploadPrivateAttachmentObject(service, path,
+      Buffer.from(source.storage_base64, "base64"),
+      String(row.mime_type ?? "application/octet-stream"), true);
     row.storage_path = path;
+  }
+  const protectAttachmentMetadata = await shouldEncryptAttachmentMetadata(service);
+  if (protectAttachmentMetadata) {
+    for (const row of pageFiles) {
+      row.file_name = await encodeAttachmentValue("page_files",
+        String(row.project_id), String(row.id), "file_name", String(row.file_name));
+    }
   }
   await upsertRows(service, "page_files", pageFiles);
   result.attachments += pageFiles.length;
@@ -811,12 +815,19 @@ export async function importAccountTransfer(
   for (const row of attachments) {
     const source = document.attachments.find((item) => item.id === row.id);
     if (source?.kind === "file" && typeof source.storage_base64 === "string") {
-      const path = `projects/${row.project_id}/${row.issue_id ?? row.objective_id ?? row.id}/${row.id}/${safeStorageName(row.file_name)}`;
-      const { error } = await service.storage
-        .from("attachments")
-        .upload(path, Buffer.from(source.storage_base64, "base64"), { contentType: String(row.mime_type ?? "application/octet-stream"), upsert: true });
-      if (error) throw new Error(`attachments/${row.id}: ${error.message}`);
+      const path = `projects/${row.project_id}/${row.id}`;
+      await uploadPrivateAttachmentObject(service, path,
+        Buffer.from(source.storage_base64, "base64"),
+        String(row.mime_type ?? "application/octet-stream"), true);
       row.storage_path = path;
+    }
+    if (protectAttachmentMetadata) {
+      for (const column of ["file_name", "url", "icon_data_url"] as const) {
+        if (typeof row[column] === "string") {
+          row[column] = await encodeAttachmentValue("attachments",
+            String(row.project_id), String(row.id), column, row[column]);
+        }
+      }
     }
   }
   await upsertRows(service, "attachments", attachments);

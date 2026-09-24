@@ -2,6 +2,7 @@ import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { encodeAgentVerdict, shouldEncryptAgentVerdict } from "./run-verdict-content";
@@ -377,7 +378,7 @@ async function readFeedback(
   const service = getServiceClient();
   const { data: rows, error: commentsError } = await commentStore(service, "comments", ctx.actorId)
     .select(
-      "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
+      "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (id, name, email, pseudonym)",
     )
     .eq("feedback_post_id", postId)
     .order("created_at", { ascending: true });
@@ -490,6 +491,8 @@ async function readResource(
       success: false,
     };
   }
+  Object.assign(row, await decodeAttachmentRow("attachments", row,
+    ctx.actorId ?? null, ctx.projectId));
 
   // A page from the wiki (MIN-275): its body reads `read_page`, which renders
   // markdown — copying it here would make a second door to hold. Reading in key

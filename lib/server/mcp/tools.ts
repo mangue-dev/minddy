@@ -4,6 +4,7 @@ import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import { readIssueEvents } from "@/lib/server/issue-event-store";
 import "server-only";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 
 import { z } from "zod";
 
@@ -1495,7 +1496,9 @@ export function registerMinddyTools(
       if (issuesError) return fail("database_error", issuesError.message);
 
       const resourcesByObjective = new Map<string, Record<string, unknown>[]>();
-      for (const row of attachmentRows ?? []) {
+      for (const stored of attachmentRows ?? []) {
+        const row = await decodeAttachmentRow("attachments", stored,
+          scope.userId, scope.access.project.id);
         const id = row.objective_id as string;
         const list = resourcesByObjective.get(id) ?? [];
         list.push(resourceMeta(row));
@@ -1660,7 +1663,9 @@ export function registerMinddyTools(
         string | null,
         Record<string, unknown>[]
       >();
-      for (const row of attachmentRows ?? []) {
+      for (const stored of attachmentRows ?? []) {
+        const row = await decodeAttachmentRow("attachments", stored,
+          scope.userId, scope.access.project.id);
         const key = (row.comment_id as string | null) ?? null;
         const list = resourcesByComment.get(key) ?? [];
         list.push(resourceMeta(row));
@@ -2795,6 +2800,8 @@ export function registerMinddyTools(
         .maybeSingle();
       if (error) return fail("database_error", error.message);
       if (!row) return fail("not_found", "Resource not found in this project.");
+      Object.assign(row, await decodeAttachmentRow("attachments", row,
+        scope.userId, scope.access.project.id));
 
       // A page either: its body is read by minddy_get_page, which renders
       // markdown — copying it here would make it a second door to hold.
@@ -4042,7 +4049,7 @@ export function registerMinddyTools(
       const service = getServiceClient();
       const { data: comments, error: commentsError } = await commentStore(service, "comments", scope.userId)
         .select(
-          "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
+          "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (id, name, email, pseudonym)",
         )
         .eq("feedback_post_id", args.feedback_post_id)
         .order("created_at", { ascending: true });

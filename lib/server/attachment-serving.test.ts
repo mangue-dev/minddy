@@ -56,7 +56,11 @@ function fakeStorage(options: { contentType?: string; infoFails?: boolean } = {}
       data: name === "project_storage_quota_allows" ? true : [],
       error: null,
     }),
-    from: () => ({
+    from: (name: string) => name === "attachment_object_encryption_scope" ||
+      name === "attachment_metadata_encryption_scope" ? ({
+        select: () => ({ eq: () => ({ maybeSingle: async () =>
+          ({ data: null, error: null }) }) }),
+      }) : ({
       insert: (batch: Record<string, unknown>[]) => {
         rows.push(...batch);
         return {

@@ -8,6 +8,8 @@ import { sha256Hex } from "@/lib/server/oauth/crypto";
 import { generatePseudonym } from "@/lib/feedback/pseudonym";
 import type { PublicIdentity } from "@/lib/feedback/types";
 import { afterOrNow } from "@/lib/server/after-safe";
+import { decodeFeedbackIdentityRow, encodeFeedbackIdentity,
+  feedbackIdentityLookup, shouldProtectFeedbackIdentity } from "./identity-content";
 
 /**
  * Board end user identities and sessions (MIN-37). Never
@@ -37,6 +39,43 @@ export interface FeedbackUserRow {
 
 const USER_SELECT = "id, project_id, external_id, email, name, pseudonym, verified_via";
 
+async function findFeedbackUser(projectId: string,
+  column: "external_id" | "email", value: string,
+  protect: boolean): Promise<FeedbackUserRow | null> {
+  const service = getServiceClient();
+  if (protect) {
+    const digest = await feedbackIdentityLookup(projectId, column, value);
+    const { data, error } = await service.from("feedback_users")
+      .select(USER_SELECT).eq("project_id", projectId)
+      .eq(`${column}_lookup`, digest).maybeSingle();
+    if (error) throw new Error("Unable to resolve feedback identity");
+    if (data) return decodeFeedbackIdentityRow(data as FeedbackUserRow,
+      projectId);
+  }
+  const { data, error } = await service.from("feedback_users")
+    .select(USER_SELECT).eq("project_id", projectId).eq(column, value)
+    .maybeSingle();
+  if (error) throw new Error("Unable to resolve legacy feedback identity");
+  return data ? decodeFeedbackIdentityRow(data as FeedbackUserRow, projectId) : null;
+}
+
+async function protectedFields(projectId: string, id: string,
+  fields: { external_id?: string | null; email?: string | null;
+    name?: string | null }, protect: boolean): Promise<Record<string, unknown>> {
+  const result: Record<string, unknown> = { ...fields };
+  if (!protect) return result;
+  for (const column of ["external_id", "email", "name"] as const) {
+    const value = fields[column];
+    if (typeof value !== "string") continue;
+    result[column] = await encodeFeedbackIdentity(projectId, id, column, value);
+    if (column !== "name") {
+      result[`${column}_lookup`] = await feedbackIdentityLookup(
+        projectId, column, value);
+    }
+  }
+  return result;
+}
+
 export interface UpsertFeedbackUserInput {
   projectId: string;
   externalId?: string | null;
@@ -56,35 +95,29 @@ export async function upsertFeedbackUser(
   const email = input.email?.trim().toLowerCase() || null;
   const name = input.name?.trim() || null;
   if (!externalId && !email) return null;
+  const protect = await shouldProtectFeedbackIdentity(service);
 
   if (externalId) {
-    const { data } = await service
-      .from("feedback_users")
-      .select(USER_SELECT)
-      .eq("project_id", input.projectId)
-      .eq("external_id", externalId)
-      .maybeSingle();
-    if (data) {
-      return applyIdentityPatches(data as FeedbackUserRow, { email, name });
+    const row = await findFeedbackUser(input.projectId, "external_id",
+      externalId, protect);
+    if (row) {
+      return applyIdentityPatches(row, { email, name }, protect);
     }
   }
 
   if (email) {
-    const { data } = await service
-      .from("feedback_users")
-      .select(USER_SELECT)
-      .eq("project_id", input.projectId)
-      .eq("email", email)
-      .maybeSingle();
-    if (data) {
-      const row = data as FeedbackUserRow;
+    const row = await findFeedbackUser(input.projectId, "email", email,
+      protect);
+    if (row) {
       // Upgrade: the email-only identity receives its external_id (SSO/API).
       const patches: Record<string, unknown> = {};
       if (externalId && !row.external_id) {
-        patches.external_id = externalId;
+        Object.assign(patches, await protectedFields(input.projectId,
+          row.id, { external_id: externalId }, protect));
         patches.verified_via = input.verifiedVia;
       }
-      if (name && !row.name) patches.name = name;
+      if (name && !row.name) Object.assign(patches, await protectedFields(
+        input.projectId, row.id, { name }, protect));
       if (Object.keys(patches).length === 0) return row;
       const { data: updated } = await service
         .from("feedback_users")
@@ -92,7 +125,8 @@ export async function upsertFeedbackUser(
         .eq("id", row.id)
         .select(USER_SELECT)
         .maybeSingle();
-      return (updated as FeedbackUserRow | null) ?? row;
+      return updated ? decodeFeedbackIdentityRow(updated as FeedbackUserRow,
+        input.projectId) : row;
     }
   }
 
@@ -103,20 +137,20 @@ export async function upsertFeedbackUser(
     .insert({
       id,
       project_id: input.projectId,
-      external_id: externalId,
-      email,
-      name,
+      ...(await protectedFields(input.projectId, id,
+        { external_id: externalId, email, name }, protect)),
       pseudonym: generatePseudonym(id),
       verified_via: input.verifiedVia,
     })
     .select(USER_SELECT)
     .maybeSingle();
-  if (!error) return (created as FeedbackUserRow | null) ?? null;
+  if (!error) return created ? decodeFeedbackIdentityRow(
+    created as FeedbackUserRow, input.projectId) : null;
 
   // Race on the unique partial: someone created the same identity between our
   // deux lectures — on relit.
   if (error.code === "23505") {
-    return upsertFeedbackUserRetry(input.projectId, externalId, email);
+    return upsertFeedbackUserRetry(input.projectId, externalId, email, protect);
   }
   console.error("[feedback-identity] insert failed:", error.message);
   return null;
@@ -124,12 +158,17 @@ export async function upsertFeedbackUser(
 
 async function applyIdentityPatches(
   row: FeedbackUserRow,
-  incoming: { email: string | null; name: string | null }
+  incoming: { email: string | null; name: string | null },
+  protect: boolean,
 ): Promise<FeedbackUserRow> {
   const service = getServiceClient();
   const patches: Record<string, unknown> = {};
-  if (incoming.email && !row.email) patches.email = incoming.email;
-  if (incoming.name && !row.name) patches.name = incoming.name;
+  if (incoming.email && !row.email) Object.assign(patches,
+    await protectedFields(row.project_id, row.id,
+      { email: incoming.email }, protect));
+  if (incoming.name && !row.name) Object.assign(patches,
+    await protectedFields(row.project_id, row.id,
+      { name: incoming.name }, protect));
   if (Object.keys(patches).length === 0) return row;
   const { data } = await service
     .from("feedback_users")
@@ -137,32 +176,24 @@ async function applyIdentityPatches(
     .eq("id", row.id)
     .select(USER_SELECT)
     .maybeSingle();
-  return (data as FeedbackUserRow | null) ?? row;
+  return data ? decodeFeedbackIdentityRow(data as FeedbackUserRow,
+    row.project_id) : row;
 }
 
 async function upsertFeedbackUserRetry(
   projectId: string,
   externalId: string | null,
-  email: string | null
+  email: string | null,
+  protect: boolean,
 ): Promise<FeedbackUserRow | null> {
-  const service = getServiceClient();
   if (externalId) {
-    const { data } = await service
-      .from("feedback_users")
-      .select(USER_SELECT)
-      .eq("project_id", projectId)
-      .eq("external_id", externalId)
-      .maybeSingle();
-    if (data) return data as FeedbackUserRow;
+    const row = await findFeedbackUser(projectId, "external_id", externalId,
+      protect);
+    if (row) return row;
   }
   if (email) {
-    const { data } = await service
-      .from("feedback_users")
-      .select(USER_SELECT)
-      .eq("project_id", projectId)
-      .eq("email", email)
-      .maybeSingle();
-    if (data) return data as FeedbackUserRow;
+    const row = await findFeedbackUser(projectId, "email", email, protect);
+    if (row) return row;
   }
   return null;
 }
@@ -210,7 +241,9 @@ export async function getFeedbackSession(
     .maybeSingle();
   if (!data || data.board_id !== boardId) return null;
   if (new Date(data.expires_at as string) <= new Date()) return null;
-  const user = data.feedback_users as unknown as FeedbackUserRow | null;
+  const storedUser = data.feedback_users as unknown as FeedbackUserRow | null;
+  const user = storedUser ? await decodeFeedbackIdentityRow(storedUser,
+    storedUser.project_id) : null;
   if (!user) return null;
 
   const remaining = new Date(data.expires_at as string).getTime() - Date.now();

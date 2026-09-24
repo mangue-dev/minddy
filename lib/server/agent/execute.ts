@@ -1,4 +1,5 @@
 import "server-only";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 
 import { resolveAgentExecutionBackend } from "@/lib/capabilities";
 import { workerModelSurfaceForAgentRun } from "@/lib/ai-surfaces";
@@ -300,6 +301,8 @@ async function loadIssueContext(
     ]);
   const key = (project as { key?: string } | null)?.key ?? "ISSUE";
   const number = (issue as { number?: number } | null)?.number ?? 0;
+  const decodedAttachmentRows = await Promise.all((attachmentRows ?? []).map((row) =>
+    decodeAttachmentRow("attachments", row, null, run.project_id)));
   return {
     identifier: `${key}-${number}`,
     title: (issue as { title?: string } | null)?.title ?? "Untitled",
@@ -309,7 +312,7 @@ async function loadIssueContext(
     projectName: (project as { name?: string } | null)?.name ?? null,
     projectKey: key,
     resources: (
-      (attachmentRows ?? []) as Array<{
+      decodedAttachmentRows as Array<{
         id: string;
         kind: string | null;
         page_id: string | null;
