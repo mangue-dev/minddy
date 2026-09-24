@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const rpc = vi.fn();
+const keyState = vi.hoisted(() => ({ protect: false }));
+
+vi.mock("@/lib/server/encryption/provider-resource-key", () => ({
+  shouldIndexProviderResource: async () => keyState.protect,
+  providerResourceIndex: async () => `mdyp1:${"a".repeat(64)}`,
+}));
 
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({ rpc }),
@@ -22,6 +28,7 @@ const input = {
 
 beforeEach(() => {
   rpc.mockReset();
+  keyState.protect = false;
 });
 
 describe("reserveProviderOperation", () => {
@@ -99,5 +106,27 @@ describe("releaseProviderOperation", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     rpc.mockResolvedValue({ data: null, error: { message: "database unavailable" } });
     await expect(releaseProviderOperation(input)).resolves.toBe(false);
+  });
+});
+
+describe("protected provider resource identity", () => {
+  it("uses the indexed RPC while passing the old identity only for migration", async () => {
+    keyState.protect = true;
+    rpc.mockResolvedValueOnce({ data: { state: "reserved" }, error: null })
+      .mockResolvedValueOnce({ data: true, error: null });
+    await expect(reserveProviderOperation(input)).resolves.toEqual({
+      state: "reserved", retryAfter: 0,
+    });
+    await expect(releaseProviderOperation(input)).resolves.toBe(true);
+    expect(rpc).toHaveBeenNthCalledWith(1,
+      "reserve_provider_operation_protected", expect.objectContaining({
+        p_legacy_resource_key: input.resourceKey,
+        p_indexed_resource_key: `mdyp1:${"a".repeat(64)}`,
+      }));
+    expect(rpc).toHaveBeenNthCalledWith(2,
+      "release_provider_operation_protected", expect.objectContaining({
+        p_legacy_resource_key: input.resourceKey,
+        p_indexed_resource_key: `mdyp1:${"a".repeat(64)}`,
+      }));
   });
 });

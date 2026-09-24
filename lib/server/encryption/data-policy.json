@@ -3202,9 +3202,7 @@
       "kind": "system",
       "id": "00000000-0000-0000-0000-000000000000"
     },
-    "encrypted": [
-      "resource_key"
-    ],
+    "encrypted": [],
     "clear": {
       "operational_configuration": [
         "operation",
@@ -3217,6 +3215,24 @@
       "timestamp": [
         "created_at",
         "lease_expires_at"
+      ],
+      "token_digest": [
+        "resource_key"
+      ]
+    }
+  },
+  "provider_operation_resource_encryption_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   },

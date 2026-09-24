@@ -6,20 +6,20 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 148 application tables and 1,398 columns, their primary
+- `schema.json` records 149 application tables and 1,400 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
-  column exactly once. Its 186 encryption targets include the original content,
+  column exactly once. Its 185 encryption targets include the original content,
   derived copies, arbitrary user JSON, private identities, credentials and share
   tokens. The relay audit detail target was removed by an action-specific SQL
   guard and historical scrub; opaque attachment object paths replace two path
-  encryption targets; the forge mention throttle identity now uses a
-  purpose-separated one-way equality digest. This is a target
+  encryption targets; forge mention and provider-operation resource identities
+  now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 362 functions, ten views and 196 triggers. Function
+- `sql-consumers.json` records 367 functions, ten views and 197 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -1337,3 +1337,19 @@ caches and a wrong-root rejection. Other Numo message, turn, tool-operation and
 conversation fields remain open, including copies of some activity content.
 Production flags remain disabled; representative search, latency and key/cache
 measurements precede production activation.
+
+## Provider operation resource identity checkpoint — 25 September 2026
+
+`provider_operation_reservations.resource_key` now stores a purpose-separated
+system blind index pinned to search-key version one. The protected reservation
+RPC checks active legacy and indexed leases under the original actor/resource
+lock order, so duplicate suppression and sliding-window quotas continue during
+migration. The protected release converts an old active lease in the same
+transaction. A bounded service-only CAS pass converts remaining rows without
+granting direct table reads to the service role. The database refuses new clear
+keys and obsolete clear writers after activation. SQL regression checks quota
+and lease continuity, source plaintext absence, CAS, client privileges and old
+writer rejection. The PostgreSQL rehearsal restores reservations before their
+owner and key registry, checks both blind-index key versions with cold caches
+and rejects a wrong root. Production flags remain disabled; other private
+forge repository paths still need conversion.

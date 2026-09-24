@@ -3459,4 +3459,82 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       }
     }
   }, 60_000);
+
+  it("restores provider lease identities before their owner and index keys", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_provider_resource_${suffix}`;
+    const restored = `minddy_min591_provider_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID();
+    const scope: EncryptionScope = { kind: "system",
+      id: "00000000-0000-0000-0000-000000000000" };
+    const clear = ["github:private-org/private-repo:issue-591",
+      "gitlab:private-org/private-repo:pr-3"];
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(attachmentTemplate, "SELECT count(*) FROM auth.users;"))
+        .toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${attachmentTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});`);
+      const keys = new ManagedDataKeys(registry(source, "blind_index"),
+        wrapper(root, "blind_index"));
+      const historical = await keys.current(scope);
+      const indexed = clear.map((value) => `mdyp1:${blindIndex(value, {
+        scope, table: "provider_operation_reservations", column: "resource_key",
+      }, historical.bytes)}`);
+      historical.bytes.fill(0);
+      await keys.rotate(scope, 1);
+      for (const [index, resource] of indexed.entries()) {
+        sql(source, `INSERT INTO public.provider_operation_reservations(
+          id,actor_id,provider,operation,resource_key,lease_expires_at)
+          VALUES(${index + 1},${quote(actor)},'github','review',
+          ${quote(resource)},now()+interval '1 minute');`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["auth.users", "public.envelope_data_keys",
+          "public.provider_operation_resource_encryption_scope",
+          "public.provider_operation_reservations"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("private-repo");
+      const match = dump.match(/(COPY public\.provider_operation_reservations[^\n]*\n)([\s\S]*?)(\\\.\n)/);
+      expect(match).not.toBeNull();
+      const dependencies = dump.replace(match![0], "");
+      for (const line of match![2].trimEnd().split("\n").reverse()) {
+        sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${match![1]}${line}\n${match![3]}COMMIT;`);
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${dependencies}\nCOMMIT;`);
+      const cold = new ManagedDataKeys(registry(restored, "blind_index"),
+        wrapper(root, "blind_index"));
+      const first = await cold.byVersion(scope, 1);
+      for (const [index, value] of clear.entries()) {
+        const digest = `mdyp1:${blindIndex(value, { scope,
+          table: "provider_operation_reservations", column: "resource_key",
+        }, first.bytes)}`;
+        expect(digest).toBe(indexed[index]);
+        expect(sql(restored, `SELECT count(*) FROM
+          public.provider_operation_reservations
+          WHERE resource_key=${quote(digest)};`)).toBe("1");
+      }
+      first.bytes.fill(0);
+      const wrong = new ManagedDataKeys(registry(restored, "blind_index"),
+        wrapper(randomBytes(32), "blind_index"));
+      await expect(wrong.byVersion(scope, 1)).rejects.toThrow();
+      expect(() => sql(restored, `SELECT public.reserve_provider_operation(
+        ${quote(actor)},'github','review',${quote(clear[0])},10,3600,60);`))
+        .toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
 });

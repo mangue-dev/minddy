@@ -3004,6 +3004,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_provider_operation_resource()": {
+      "sha256": "ef54e5f6f74a48c7ae4d5f2ee71a29d1d5fd51a8fc014d2f0941ce70a8f36bfa",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "provider_operation_resource_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "rekey_project_realtime_membership()": {
       "sha256": "a39e40cc3660e1d65f28bca96861aeeb1042727a09085d3db2c946b2ae39201b",
       "securityDefiner": true,
@@ -4031,9 +4044,7 @@
       "relations": [
         "provider_operation_reservations"
       ],
-      "protectedRelations": [
-        "provider_operation_reservations"
-      ],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "rotate_project_realtime_generation(uuid,uuid[])": {
@@ -4360,6 +4371,19 @@
       "protectedRelations": [
         "attachments"
       ],
+      "functionReferences": []
+    },
+    "list_provider_operation_resource_candidates(integer)": {
+      "sha256": "5ce1593c80ac05405347f3c0fc20b6f61f85b15e53ff6e8ec0bf415eefd9292a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "provider_operation_reservations"
+      ],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "migrate_agent_artifact_url(uuid,uuid,text,uuid,text)": {
@@ -4795,6 +4819,20 @@
       ],
       "functionReferences": []
     },
+    "release_provider_operation_protected(uuid,text,text,text,text)": {
+      "sha256": "432a21280ed18a093bbf160139c27217b56cb81c03d53ee825e7eb2e1733f4cc",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "provider_operation_reservations",
+        "provider_operation_resource_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "migrate_attachment_metadata(uuid,text,text,text,text,text,text)": {
       "sha256": "4f71ee10963a8b6d1edb7de0a82f456001b0afc3acaa3400b708327151c018e7",
       "securityDefiner": true,
@@ -5194,9 +5232,7 @@
       "relations": [
         "provider_operation_reservations"
       ],
-      "protectedRelations": [
-        "provider_operation_reservations"
-      ],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "complete_numo_tool_operation(uuid,uuid,text,boolean,jsonb,jsonb,boolean)": {
@@ -5385,6 +5421,19 @@
       ],
       "functionReferences": []
     },
+    "migrate_provider_operation_resource(bigint,text,text,timestamp with time zone)": {
+      "sha256": "ca3fa4ad613df18c073466093b7364e97645e4cf15c205c2d7c07d25116d7f8a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "provider_operation_reservations"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "rekey_forge_mention_counter(text,text,integer,timestamp with time zone,integer)": {
       "sha256": "92d4d50fbb356732e6b777cb9682941d0261b05320834433398188e4c5f13d70",
       "securityDefiner": true,
@@ -5515,6 +5564,22 @@
         "agent_conversations"
       ],
       "functionReferences": []
+    },
+    "reserve_provider_operation_protected(uuid,text,text,text,text,integer,integer,integer)": {
+      "sha256": "1b43327cd9ddaeeb355ea56f043ed945ffd5794b35b874b8ebb8a6e4f4534084",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "provider_operation_reservations",
+        "provider_operation_resource_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": [
+        "reserve_provider_operation"
+      ]
     },
     "ensure_numo_automation_operation(uuid,integer,text,text,uuid,text,uuid,text,text,jsonb)": {
       "sha256": "48d51325ff68d4bf54afb09db93e597440b52eef458c28594cc70d4ad2ea0140",
@@ -6590,6 +6655,10 @@
     "numo_routine_occurrences.numo_routine_occurrences_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER numo_routine_occurrences_set_updated_at BEFORE UPDATE ON numo_routine_occurrences FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    "provider_operation_reservations.provider_operation_resource_guard": {
+      "function": "guard_provider_operation_resource()",
+      "definition": "CREATE TRIGGER provider_operation_resource_guard BEFORE INSERT OR UPDATE ON provider_operation_reservations FOR EACH ROW EXECUTE FUNCTION guard_provider_operation_resource()"
     },
     "numo_automation_operations.numo_automation_operations_set_updated_at": {
       "function": "set_updated_at()",

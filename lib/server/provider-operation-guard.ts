@@ -1,6 +1,8 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { providerResourceIndex,
+  shouldIndexProviderResource } from "@/lib/server/encryption/provider-resource-key";
 
 export type ProviderOperationReservation =
   | { state: "reserved"; retryAfter: 0 }
@@ -21,15 +23,32 @@ export async function reserveProviderOperation(input: {
   windowSeconds: number;
   dedupeSeconds?: number;
 }): Promise<ProviderOperationReservation> {
-  const { data, error } = await getServiceClient().rpc("reserve_provider_operation", {
-    p_actor_id: input.actorId,
-    p_provider: input.provider,
-    p_operation: input.operation,
-    p_resource_key: input.resourceKey,
-    p_limit: input.limit,
-    p_window_seconds: input.windowSeconds,
-    p_dedupe_seconds: input.dedupeSeconds ?? 0,
-  });
+  let data: unknown;
+  let error: { message: string } | null;
+  try {
+    const service = getServiceClient();
+    const protectedKey = await shouldIndexProviderResource(service);
+    const response = protectedKey
+      ? await service.rpc("reserve_provider_operation_protected", {
+          p_actor_id: input.actorId, p_provider: input.provider,
+          p_operation: input.operation,
+          p_legacy_resource_key: input.resourceKey,
+          p_indexed_resource_key: await providerResourceIndex(input.resourceKey),
+          p_limit: input.limit, p_window_seconds: input.windowSeconds,
+          p_dedupe_seconds: input.dedupeSeconds ?? 0,
+        })
+      : await service.rpc("reserve_provider_operation", {
+          p_actor_id: input.actorId, p_provider: input.provider,
+          p_operation: input.operation, p_resource_key: input.resourceKey,
+          p_limit: input.limit, p_window_seconds: input.windowSeconds,
+          p_dedupe_seconds: input.dedupeSeconds ?? 0,
+        });
+    data = response.data;
+    error = response.error;
+  } catch {
+    console.error("[provider-operation-guard] reservation unavailable");
+    return { state: "unavailable", retryAfter: 0 };
+  }
   if (error) {
     console.error("[provider-operation-guard] reservation failed:", error.message);
     return { state: "unavailable", retryAfter: 0 };
@@ -60,12 +79,28 @@ export async function releaseProviderOperation(input: {
   operation: string;
   resourceKey: string;
 }): Promise<boolean> {
-  const { data, error } = await getServiceClient().rpc("release_provider_operation", {
-    p_actor_id: input.actorId,
-    p_provider: input.provider,
-    p_operation: input.operation,
-    p_resource_key: input.resourceKey,
-  });
+  let data: unknown;
+  let error: { message: string } | null;
+  try {
+    const service = getServiceClient();
+    const protectedKey = await shouldIndexProviderResource(service);
+    const response = protectedKey
+      ? await service.rpc("release_provider_operation_protected", {
+          p_actor_id: input.actorId, p_provider: input.provider,
+          p_operation: input.operation,
+          p_legacy_resource_key: input.resourceKey,
+          p_indexed_resource_key: await providerResourceIndex(input.resourceKey),
+        })
+      : await service.rpc("release_provider_operation", {
+          p_actor_id: input.actorId, p_provider: input.provider,
+          p_operation: input.operation, p_resource_key: input.resourceKey,
+        });
+    data = response.data;
+    error = response.error;
+  } catch {
+    console.error("[provider-operation-guard] lease release unavailable");
+    return false;
+  }
   if (error) {
     console.error("[provider-operation-guard] lease release failed:", error.message);
     return false;
