@@ -5285,6 +5285,20 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/numo-surface-destination-backfill.ts",
+    "operation": "from",
+    "resource": "numo_surface_events",
+    "line": 21,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/numo-surface-destination-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_numo_surface_destination",
+    "line": 48,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/objective-backfill.ts",
     "operation": "from",
     "resource": "objectives",
@@ -7899,112 +7913,119 @@
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "numo_surface_threads",
-    "line": 60,
+    "line": 70,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 83,
+    "line": 93,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "numo_surface_threads",
-    "line": 96,
+    "line": 106,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 111,
+    "line": 121,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 129,
+    "line": 142,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 143,
+    "line": 158,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 159,
+    "line": 175,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 171,
+    "line": 187,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 182,
+    "line": 198,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-conversations.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 204,
+    "line": 220,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/surface-destination-content.ts",
+    "operation": "from",
+    "resource": "numo_surface_destination_encryption_scope",
+    "line": 33,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 59,
+    "line": 60,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 78,
+    "line": 79,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 166,
+    "line": 168,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 184,
+    "line": 186,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 224,
+    "line": 226,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 265,
+    "line": 267,
     "storage": false
   },
   {

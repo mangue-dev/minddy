@@ -2512,7 +2512,8 @@
         "created_at",
         "notified_at",
         "projected_at",
-        "updated_at"
+        "updated_at",
+        "destination_encryption_checked_at"
       ]
     }
   },
@@ -3668,6 +3669,20 @@
     }
   },
   "view_share_token_encryption_scope": {
+    "scope": {
+      "kind": "system"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "numo_surface_destination_encryption_scope": {
     "scope": {
       "kind": "system"
     },

@@ -1,6 +1,9 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
+import { decodeSurfaceDestination, encodeSurfaceDestination,
+  type StoredSurfaceDestination } from "./surface-destination-content";
 
 export type NumoSurface =
   | "issue_comment"
@@ -51,6 +54,14 @@ export interface NumoSurfaceEvent {
   projected_at: string | null;
   notified_at: string | null;
   created_at: string;
+}
+
+export async function decodeNumoSurfaceEvent(
+  row: Omit<NumoSurfaceEvent, "destination"> & {
+    destination: StoredSurfaceDestination },
+): Promise<NumoSurfaceEvent> {
+  return { ...row, destination: await decodeSurfaceDestination(
+    row.actor_id, row.id, row.destination) };
 }
 
 async function findSurfaceThread(
@@ -126,18 +137,23 @@ export async function reserveNumoSurfaceEvent(input: {
   actorId: string;
   destination: NumoSurfaceDestination;
 }): Promise<{ event: NumoSurfaceEvent; created: boolean }> {
+  const id = randomUUID();
+  const destination = await encodeSurfaceDestination(input.actorId, id,
+    input.destination, input.service);
   const { data, error } = await input.service
     .from("numo_surface_events")
     .insert({
+      id,
       thread_id: input.threadId,
       source_event_id: input.sourceEventId,
       actor_id: input.actorId,
-      destination: input.destination,
+      destination,
     })
     .select("*")
     .single();
   if (!error && data) {
-    return { event: data as NumoSurfaceEvent, created: true };
+    return { event: await decodeNumoSurfaceEvent(data as NumoSurfaceEvent),
+      created: true };
   }
 
   const { data: existing, error: readError } = await input.service
@@ -148,7 +164,8 @@ export async function reserveNumoSurfaceEvent(input: {
     .maybeSingle();
   if (readError) throw new Error(readError.message);
   if (!existing) throw new Error(error?.message ?? "Unable to reserve surface event");
-  return { event: existing as NumoSurfaceEvent, created: false };
+  return { event: await decodeNumoSurfaceEvent(existing as NumoSurfaceEvent),
+    created: false };
 }
 
 export async function setNumoSurfaceEventResponse(input: {

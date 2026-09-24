@@ -2367,6 +2367,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_numo_surface_destination()": {
+      "sha256": "4b69b03b59b376881d7d7a1aa9ff7b97f10d12735d07ecabd989cd7c5cadf969",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_surface_destination_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_project_draft_encryption()": {
       "sha256": "d7d56584e24c2973560bbf53ee6e2ea7788ed038e70163933c2c75cbaf42792b",
       "securityDefiner": true,
@@ -4128,6 +4141,21 @@
       "protectedRelations": [
         "agent_runs",
         "agent_artifacts"
+      ],
+      "functionReferences": []
+    },
+    "migrate_numo_surface_destination(uuid,jsonb,jsonb)": {
+      "sha256": "454a89cb63ffdaec861e59036fb1ba4f4d39b2882495e8740fc55661c8d83d7e",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_surface_events"
+      ],
+      "protectedRelations": [
+        "numo_surface_events"
       ],
       "functionReferences": []
     },
@@ -6327,6 +6355,10 @@
     "agent_run_messages.trg_agent_queue_message_capture": {
       "function": "capture_agent_queue_message()",
       "definition": "CREATE TRIGGER trg_agent_queue_message_capture AFTER INSERT ON agent_run_messages FOR EACH ROW EXECUTE FUNCTION capture_agent_queue_message()"
+    },
+    "numo_surface_events.numo_surface_destination_guard": {
+      "function": "guard_numo_surface_destination()",
+      "definition": "CREATE TRIGGER numo_surface_destination_guard BEFORE INSERT OR UPDATE ON numo_surface_events FOR EACH ROW EXECUTE FUNCTION guard_numo_surface_destination()"
     },
     "project_git_links.project_git_links_authority_lock": {
       "function": "lock_project_authority_mutation()",

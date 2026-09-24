@@ -6,7 +6,7 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 144 application tables and 1,387 columns, their primary
+- `schema.json` records 145 application tables and 1,390 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 187 encryption targets include the original content,
@@ -18,7 +18,7 @@ production migration on the strength of crypto unit tests or this inventory.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 352 functions, ten views and 192 triggers. Function
+- `sql-consumers.json` records 354 functions, ten views and 193 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -87,7 +87,7 @@ must be checked separately.
 | Surface | Required work and proof of completion |
 | --- | --- |
 | Projects, issues, pages and views | Convert every server repository read/write and all imports, exports, MCP and AI consumers; add ciphertext/version storage and reject older plaintext writers. Preserve access checks before decryption and existing concurrency semantics. Objectives and category names now have converted repositories and bounded migrations; they still need representative staging validation before activation. |
-| Histories and derived copies | Page versions, issue events, statistics, durable agent replay journals and run event payloads now have converted repositories and migration. The event-triggered assistant summary and pending question copies are protected with their event. Initial prompts, steering messages, answers, other checkpoints, conversation content and surface projections remain to be converted with their source rows. |
+| Histories and derived copies | Page versions, issue events, statistics, durable agent replay journals and run event payloads now have converted repositories and migration. The event-triggered assistant summary and pending question copies are protected with their event. Numo surface destinations are protected with their event; other surface projections, initial prompts, steering messages, answers, checkpoints and conversation content remain to be converted with their source rows. |
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
 | Forge data | Resolve ownership of repository data shared by several projects. Private repository names currently participate in primary/unique keys and lookup paths; introduce opaque/indexed identities before encrypting them. The generic row codec deliberately refuses sensitive primary keys. |
@@ -1274,3 +1274,17 @@ projects, then recovers two key versions with cold caches and rejects a wrong
 root. Representative search, latency, key-cache and load measurements remain
 checks before production activation, not blockers for code review. Production
 flags remain disabled.
+
+## Numo surface destination checkpoint — 24 September 2026
+
+`numo_surface_events.destination` is now encrypted with the actor's user key
+and authenticated to the event ID when the surface destination flag and global
+content flag are enabled. Reservation creates the event ID before sealing;
+idempotent replay and the live projection decode the stored destination through
+the same repository. A bounded CAS worker converts and rotates older JSON
+destinations. The database rejects new clear JSON once the first ciphertext is
+written. The SQL regression checks old-writer refusal and stale CAS. An isolated
+PostgreSQL restore loads events before threads and conversations in independent
+batches, reads two key versions with cold caches and rejects a wrong root.
+Other Numo operation, message and conversation content in the remaining-work
+table still needs conversion. No production flag was enabled.

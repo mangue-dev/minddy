@@ -3120,4 +3120,95 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       }
     }
   }, 60_000);
+
+  it("restores Numo surface destinations before their thread and conversation", async () => {
+    const suffix = randomUUID().replaceAll("-", "");
+    const source = `minddy_min591_surface_${suffix}`;
+    const restored = `minddy_min591_surface_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID();
+    const conversation = randomUUID(), thread = randomUUID();
+    const events = [randomUUID(), randomUUID()];
+    const scope: EncryptionScope = { kind: "user", id: actor };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(attachmentTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${attachmentTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Surface restore','SFRS');
+        INSERT INTO public.conversations(id,user_id,title)
+          VALUES(${quote(conversation)},${quote(actor)},'Fixture');
+        INSERT INTO public.numo_surface_threads(id,surface,source_thread_id,
+          actor_id,project_id,conversation_id) VALUES(${quote(thread)},
+          'issue_comment','fixture-source',${quote(actor)},${quote(project)},
+          ${quote(conversation)});`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      for (const [index, eventId] of events.entries()) {
+        if (index) await keys.rotate(scope, 1);
+        const destination = { kind: "pull_request",
+          pullRequestId: `private-pr-${index + 1}` };
+        const cipher = await store.encrypt(destination, { scope,
+          table: "numo_surface_events", column: "destination", rowId: eventId });
+        const stored = { ciphertext: `mdyn3:${store.versionOf(cipher)}:${Buffer
+          .from(cipher).toString("base64url")}` };
+        sql(source, `INSERT INTO public.numo_surface_events(id,thread_id,
+          source_event_id,actor_id,destination) VALUES(${quote(eventId)},
+          ${quote(thread)},${quote(`source-${index}`)},${quote(actor)},
+          ${quote(JSON.stringify(stored))}::jsonb);`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["auth.users", "public.projects",
+          "public.conversations", "public.numo_surface_threads",
+          "public.envelope_data_keys",
+          "public.numo_surface_destination_encryption_scope",
+          "public.numo_surface_events"].map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("private-pr-");
+      const match = dump.match(/(COPY public\.numo_surface_events[^\n]*\n)([\s\S]*?)(\\\.\n)/);
+      expect(match).not.toBeNull();
+      const dependencies = dump.replace(match![0], "");
+      for (const line of match![2].trimEnd().split("\n").reverse()) {
+        sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${match![1]}${line}\n${match![3]}COMMIT;`);
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${dependencies}\nCOMMIT;`);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(root)));
+      for (const [index, eventId] of events.entries()) {
+        const row = JSON.parse(sql(restored, `SELECT destination FROM
+          public.numo_surface_events WHERE id=${quote(eventId)};`));
+        expect(row.ciphertext).toMatch(new RegExp(`^mdyn3:${index + 1}:`));
+        const cipher = cold.fromDatabase<Record<string, string>>(Buffer.from(
+          row.ciphertext.split(":")[2], "base64url").toString("utf8"));
+        expect(await cold.decrypt(cipher, { scope, table: "numo_surface_events",
+          column: "destination", rowId: eventId })).toEqual({
+          kind: "pull_request", pullRequestId: `private-pr-${index + 1}`,
+        });
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const row = JSON.parse(sql(restored, `SELECT destination FROM
+        public.numo_surface_events WHERE id=${quote(events[0])};`));
+      await expect(wrong.decrypt(wrong.fromDatabase(Buffer.from(
+        row.ciphertext.split(":")[2], "base64url").toString("utf8")),
+      { scope, table: "numo_surface_events", column: "destination",
+        rowId: events[0] })).rejects.toThrow();
+      expect(() => sql(restored, `INSERT INTO public.numo_surface_events(
+        thread_id,source_event_id,actor_id,destination) VALUES(
+        ${quote(thread)},'old-writer',${quote(actor)},'{}'::jsonb);`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
 });

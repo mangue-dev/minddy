@@ -1,4 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const encryption = vi.hoisted(() => ({ enabled: false }));
+vi.mock("./surface-destination-content", () => ({
+  encodeSurfaceDestination: async (_actor: string, _id: string,
+    value: unknown) => encryption.enabled
+    ? { ciphertext: `mdyn3:1:${Buffer.from(JSON.stringify(value))
+      .toString("base64url")}` } : value,
+  decodeSurfaceDestination: async (_actor: string, _id: string,
+    value: { ciphertext?: string }) => value.ciphertext
+    ? JSON.parse(Buffer.from(value.ciphertext.split(":")[2], "base64url")
+      .toString("utf8")) : value,
+}));
 
 import {
   pendingSurfaceWorkerInput,
@@ -7,9 +19,15 @@ import {
 
 describe("Numo shared-surface event admission", () => {
   it("returns the durable event instead of admitting a repeated webhook twice", async () => {
+    encryption.enabled = true;
     const events = new Map<string, Record<string, unknown>>();
     const service = {
       from(table: string) {
+        if (table === "numo_surface_destination_encryption_scope") {
+          const scope = { select: () => scope, eq: () => scope,
+            maybeSingle: async () => ({ data: null, error: null }) };
+          return scope;
+        }
         expect(table).toBe("numo_surface_events");
         let insert: Record<string, unknown> | null = null;
         const filters: Record<string, unknown> = {};
@@ -70,6 +88,11 @@ describe("Numo shared-surface event admission", () => {
     expect(replay.created).toBe(false);
     expect(replay.event.id).toBe(first.event.id);
     expect(events).toHaveLength(1);
+    const stored = [...events.values()][0];
+    expect(stored.destination).toHaveProperty("ciphertext");
+    expect(JSON.stringify(stored.destination)).not.toContain("pull_request");
+    expect(first.event.destination).toEqual(input.destination);
+    encryption.enabled = false;
   });
 
   it("returns the exact pending worker correlation for a subsequent reply", async () => {
