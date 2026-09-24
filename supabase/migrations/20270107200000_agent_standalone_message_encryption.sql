@@ -26,7 +26,7 @@ BEGIN
   END IF;
   IF NOT protected_new AND NOT protected_old THEN RETURN NEW; END IF;
   SELECT c.project_id INTO project FROM public.agent_conversations c
-    WHERE c.id = NEW.conversation_id;
+    WHERE c.id = NEW.conversation_id FOR SHARE;
   IF project IS NULL THEN
     RAISE EXCEPTION 'agent_message_conversation_missing' USING ERRCODE = '23503';
   END IF;
@@ -71,8 +71,15 @@ BEGIN
     SELECT 1 FROM public.agent_messages m WHERE m.conversation_id = OLD.id
       AND m.legacy_event_id IS NULL AND m.legacy_queue_message_id IS NULL
       AND (m.run_id IS NULL OR m.source = 'system')
+  ) AND (EXISTS (
+    SELECT 1 FROM public.agent_launch_encryption_scopes
+      WHERE project_id IN (OLD.project_id, NEW.project_id)
+  ) OR EXISTS (
+    SELECT 1 FROM public.agent_messages m WHERE m.conversation_id = OLD.id
+      AND m.legacy_event_id IS NULL AND m.legacy_queue_message_id IS NULL
+      AND (m.run_id IS NULL OR m.source = 'system')
       AND m.content_encryption_version > 0
-  ) THEN
+  )) THEN
     RAISE EXCEPTION 'agent_message_project_is_immutable' USING ERRCODE = '23514';
   END IF;
   RETURN NEW;
@@ -93,7 +100,7 @@ DECLARE current_row public.agent_messages;
   prior text := current_setting('minddy.encryption_maintenance', true);
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.agent_conversations c
-      WHERE c.id = p_conversation_id AND c.project_id = p_project_id) THEN
+      WHERE c.id = p_conversation_id AND c.project_id = p_project_id FOR SHARE) THEN
     RETURN false;
   END IF;
   SELECT * INTO current_row FROM public.agent_messages m

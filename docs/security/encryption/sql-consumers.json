@@ -1948,7 +1948,7 @@
       "functionReferences": []
     },
     "guard_agent_standalone_message()": {
-      "sha256": "97b26031de4542f6032132d8b8951877e24da365dd78d370b70f4053e144cd22",
+      "sha256": "0d6d22a5b1c03e8f9474b40cd301a69c02e41fe92f198ddcd6118988ed575a94",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2695,14 +2695,15 @@
       "functionReferences": []
     },
     "guard_agent_message_conversation_scope()": {
-      "sha256": "f06f71370aeb3504065674de7b06b0007d6371a9347acc696299700378951e5a",
+      "sha256": "acd5497de5a48573a614057d7a123755b7cb7132dd3765c08354ce0aca2705b5",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
       "relations": [
-        "agent_messages"
+        "agent_messages",
+        "agent_launch_encryption_scopes"
       ],
       "protectedRelations": [
         "agent_messages"
@@ -4040,7 +4041,7 @@
       "functionReferences": []
     },
     "migrate_agent_standalone_message(uuid,uuid,uuid,text,integer,text,integer)": {
-      "sha256": "0941830d3db19864148aa0e268b32f6902ac3c01dabf7d5d48528206ce1d84fe",
+      "sha256": "169f28fc8d92bebfa84a03f82277c33dd772a3c372d9aecbba98614dca3dcf81",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""

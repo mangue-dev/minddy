@@ -10,6 +10,7 @@ DO $test$
 DECLARE
   actor uuid := gen_random_uuid(); project uuid := gen_random_uuid();
   other_project uuid := gen_random_uuid(); conversation uuid := gen_random_uuid();
+  legacy_conversation uuid := gen_random_uuid(); old_message uuid := gen_random_uuid();
   legacy_id uuid := gen_random_uuid(); encrypted_id uuid := gen_random_uuid();
   run_id uuid := gen_random_uuid(); run_system_id uuid := gen_random_uuid();
   cipher text := '{"format":3,"keyVersion":1,"data":"test-only-placeholder"}';
@@ -20,7 +21,9 @@ BEGIN
     VALUES(project,actor,'Fixture project','ASM'),
       (other_project,actor,'Other fixture project','ASO');
   INSERT INTO public.agent_conversations(id,project_id,owner_id)
-    VALUES(conversation,project,actor);
+    VALUES(conversation,project,actor),(legacy_conversation,project,actor);
+  INSERT INTO public.agent_messages(id,conversation_id,role,content,source)
+    VALUES(old_message,legacy_conversation,'system','Legacy protected scope','system');
   INSERT INTO public.agent_runs(id,project_id,conversation_id,created_by)
     VALUES(run_id,project,conversation,actor);
   INSERT INTO public.agent_messages(id,conversation_id,role,content,source)
@@ -55,6 +58,12 @@ BEGIN
       WHERE id=legacy_id;
   EXCEPTION WHEN check_violation THEN rejected := true; END;
   IF NOT rejected THEN RAISE EXCEPTION 'obsolete legacy edit accepted'; END IF;
+  rejected := false;
+  BEGIN
+    UPDATE public.agent_conversations SET project_id=other_project
+      WHERE id=legacy_conversation;
+  EXCEPTION WHEN check_violation THEN rejected := true; END;
+  IF NOT rejected THEN RAISE EXCEPTION 'legacy transcript escaped activated scope'; END IF;
   IF NOT public.migrate_agent_standalone_message(
       legacy_id,conversation,project,'Private system instruction',0)
      OR NOT public.migrate_agent_standalone_message(
@@ -67,12 +76,16 @@ BEGIN
       run_system_id,conversation,project,'Private run instruction',0,cipher,1) THEN
     RAISE EXCEPTION 'run system migration failed';
   END IF;
+  IF NOT public.migrate_agent_standalone_message(
+      old_message,legacy_conversation,project,'Legacy protected scope',0,cipher,1) THEN
+    RAISE EXCEPTION 'legacy scope migration failed';
+  END IF;
   IF EXISTS(SELECT 1 FROM public.agent_messages
-      WHERE id IN (legacy_id,encrypted_id,run_system_id)
-      AND content LIKE '%Private%') OR
+      WHERE id IN (legacy_id,encrypted_id,run_system_id,old_message)
+      AND (content LIKE '%Private%' OR content LIKE '%Legacy protected%')) OR
      EXISTS(SELECT 1 FROM public.numo_messages
-      WHERE id IN (legacy_id,encrypted_id,run_system_id)
-      AND content LIKE '%Private%') THEN
+      WHERE id IN (legacy_id,encrypted_id,run_system_id,old_message)
+      AND (content LIKE '%Private%' OR content LIKE '%Legacy protected%')) THEN
     RAISE EXCEPTION 'converted transcript retained plaintext';
   END IF;
   rejected := false;
