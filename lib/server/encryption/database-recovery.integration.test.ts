@@ -22,6 +22,7 @@ const launchTemplate = "minddy_min591_launch_audit";
 const titleTemplate = "minddy_min591_title_audit";
 const checkpointTemplate = "minddy_min591_checkpoint_audit";
 const delegationTemplate = "minddy_min591_delegation_audit";
+const standaloneMessageTemplate = "minddy_min591_standalone_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -840,6 +841,93 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
         wrapper(randomBytes(32))));
       await expect(wrong.decrypt(wrong.fromDatabase(rows[0].encrypted_launch_content), {
         scope, table: "agent_runs", column: "launch_content", rowId: rows[0].id,
+      })).rejects.toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
+
+  it("restores standalone transcript messages before their parent conversation in independent batches", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_message_source_${suffix}`;
+    const restored = `minddy_min591_message_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID(), conversation = randomUUID();
+    const messages = [randomUUID(), randomUUID()];
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(standaloneMessageTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${standaloneMessageTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Fixture project','MSG');
+        INSERT INTO public.agent_conversations(id,project_id,owner_id)
+          VALUES(${quote(conversation)},${quote(project)},${quote(actor)});`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      for (const [index, message] of messages.entries()) {
+        if (index === 1) await keys.rotate(scope, 1);
+        const cipher = await store.encrypt(`Private transcript ${index + 1}`, {
+          scope, table: "agent_messages", column: "content", rowId: message,
+        });
+        sql(source, `INSERT INTO public.agent_messages(id,conversation_id,role,source,
+          content,content_encryption_version) VALUES(${quote(message)},
+          ${quote(conversation)},${quote(index ? "user" : "system")},
+          ${quote(index ? "steering" : "system")},${quote(cipher)},${store.versionOf(cipher)});`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "supabase_admin",
+        "-d", source, "--data-only", "--no-owner", "--no-privileges",
+        ...["auth.users", "public.projects", "public.envelope_data_keys",
+          "public.agent_launch_encryption_scopes", "public.agent_conversations",
+          "public.agent_messages"].map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("Private transcript");
+      expect(dump).not.toContain(root.toString("base64"));
+      let dependencies = dump;
+      const copies = new Map<string, { header: string; lines: string[]; footer: string }>();
+      for (const table of ["agent_messages", "agent_conversations"]) {
+        const match = dependencies.match(new RegExp(`(COPY public\\.${table}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`));
+        expect(match).not.toBeNull();
+        copies.set(table, { header: match![1], lines: match![2].trimEnd().split("\n").reverse(),
+          footer: match![3] });
+        dependencies = dependencies.replace(match![0], "");
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${dependencies}\nCOMMIT;`);
+      for (const table of ["agent_messages", "agent_conversations"]) {
+        const copy = copies.get(table)!;
+        for (const line of copy.lines) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${copy.header}${line}\n${copy.footer}COMMIT;`);
+        }
+      }
+      sql(restored, `ALTER TABLE public.agent_messages DROP CONSTRAINT agent_messages_conversation_id_fkey;
+        ALTER TABLE public.agent_messages ADD CONSTRAINT agent_messages_conversation_id_fkey
+          FOREIGN KEY (conversation_id) REFERENCES public.agent_conversations(id) ON DELETE CASCADE;`);
+      const rows = JSON.parse(sql(restored,
+        "SELECT json_agg(m) FROM public.agent_messages m;")) as Array<{
+          id: string; conversation_id: string; content: string; content_encryption_version: number;
+        }>;
+      expect(rows).toHaveLength(2);
+      expect(rows.every((row) => row.conversation_id === conversation)).toBe(true);
+      expect(rows.map((row) => row.content_encryption_version).sort()).toEqual([1, 2]);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored), wrapper(root)));
+      for (const [index, message] of messages.entries()) {
+        const row = rows.find((item) => item.id === message)!;
+        expect(await cold.decrypt(cold.fromDatabase(row.content), {
+          scope, table: "agent_messages", column: "content", rowId: message,
+        })).toBe(`Private transcript ${index + 1}`);
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      await expect(wrong.decrypt(wrong.fromDatabase(rows[0].content), {
+        scope, table: "agent_messages", column: "content", rowId: rows[0].id,
       })).rejects.toThrow();
     } finally {
       root.fill(0);

@@ -148,6 +148,26 @@ export async function encodeImportedAgentMessage(
   return { content: encrypted, content_encryption_version: store.versionOf(encrypted) };
 }
 
+export async function decodeImportedAgentMessage<T extends {
+  id: string; content: string; content_encryption_version?: number;
+}>(projectId: string, row: T, actorId: string | null = null): Promise<T> {
+  const version = row.content_encryption_version ?? 0;
+  if (version === 0) return row;
+  if (!Number.isSafeInteger(version) || version < 1) {
+    throw new Error("Invalid imported agent message version");
+  }
+  const binding = importedMessageContext(projectId, row.id);
+  const store = getEncryptedStore();
+  const encrypted = store.fromDatabase<string>(row.content);
+  if (store.versionOf(encrypted) !== version) {
+    throw new Error("Imported agent message key version mismatch");
+  }
+  const clear = await store.decrypt(encrypted, binding);
+  if (typeof clear !== "string") throw new Error("Invalid imported agent message");
+  auditDecryption(binding, { actorId, reason: "repository_read" });
+  return { ...row, content: clear };
+}
+
 /** Imported transcript entries have no source run or event to hydrate. */
 export async function hydrateImportedAgentMessages<T extends Record<string, unknown>>(
   client: SupabaseClient, rows: T[], actorId: string | null = null,
@@ -155,8 +175,10 @@ export async function hydrateImportedAgentMessages<T extends Record<string, unkn
 ): Promise<T[]> {
   const ids = [...new Set(rows.filter((row) =>
     (row.source === "agent" || ["initial_prompt", "steering", "system", "assistant_summary"]
-      .includes(String(row.source))) && row.run_id == null &&
-    row.legacy_event_id == null && typeof row.id === "string")
+      .includes(String(row.source))) &&
+    (row.run_id == null || row.source === "system" || row.worker_source === "system") &&
+    row.legacy_event_id == null && row.legacy_queue_message_id == null &&
+    typeof row.id === "string")
     .map((row) => row.id as string))];
   if (!ids.length) return rows;
   type MessageRow = { id: string; content: string; content_encryption_version?: number;
@@ -187,16 +209,7 @@ export async function hydrateImportedAgentMessages<T extends Record<string, unkn
         message.content !== row.content) {
       throw new Error("Imported agent message is not authorized");
     }
-    if (!message.content_encryption_version) return row;
-    const binding = importedMessageContext(projectId, row.id);
-    const store = getEncryptedStore();
-    const encrypted = store.fromDatabase<string>(message.content);
-    if (store.versionOf(encrypted) !== message.content_encryption_version) {
-      throw new Error("Imported agent message key version mismatch");
-    }
-    const clear = await store.decrypt(encrypted, binding);
-    if (typeof clear !== "string") throw new Error("Invalid imported agent message");
-    auditDecryption(binding, { actorId, reason: "repository_read" });
-    return { ...row, content: clear };
+    const decoded = await decodeImportedAgentMessage(projectId, message, actorId);
+    return { ...row, content: decoded.content };
   }));
 }

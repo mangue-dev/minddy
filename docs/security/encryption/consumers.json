@@ -2145,14 +2145,14 @@
     "file": "lib/server/agent/launch.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 698,
+    "line": 701,
     "storage": false
   },
   {
     "file": "lib/server/agent/launch.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 773,
+    "line": 786,
     "storage": false
   },
   {
@@ -2488,14 +2488,14 @@
     "file": "lib/server/agent/run-launch-content.ts",
     "operation": "from",
     "resource": "agent_messages",
-    "line": 167,
+    "line": 187,
     "storage": false
   },
   {
     "file": "lib/server/agent/run-launch-content.ts",
     "operation": "from",
     "resource": "agent_messages",
-    "line": 173,
+    "line": 193,
     "storage": false
   },
   {
@@ -4295,6 +4295,27 @@
     "operation": "rpc",
     "resource": "migrate_agent_launch_ciphertext",
     "line": 61,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/agent-standalone-message-backfill.ts",
+    "operation": "from",
+    "resource": "agent_messages",
+    "line": 24,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/agent-standalone-message-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_agent_standalone_message",
+    "line": 44,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/agent-standalone-message-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_agent_standalone_message",
+    "line": 64,
     "storage": false
   },
   {

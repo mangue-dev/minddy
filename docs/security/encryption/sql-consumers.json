@@ -1947,6 +1947,22 @@
       ],
       "functionReferences": []
     },
+    "guard_agent_standalone_message()": {
+      "sha256": "97b26031de4542f6032132d8b8951877e24da365dd78d370b70f4053e144cd22",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_conversations",
+        "agent_launch_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_conversations"
+      ],
+      "functionReferences": []
+    },
     "guard_feedback_post_encryption()": {
       "sha256": "c3d25f3dddc47f3f98d9797558600ecadcbdd964d29d14d302f98ee11b1c2526",
       "securityDefiner": true,
@@ -2675,6 +2691,21 @@
       ],
       "protectedRelations": [
         "feedback_posts"
+      ],
+      "functionReferences": []
+    },
+    "guard_agent_message_conversation_scope()": {
+      "sha256": "f06f71370aeb3504065674de7b06b0007d6371a9347acc696299700378951e5a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_messages"
+      ],
+      "protectedRelations": [
+        "agent_messages"
       ],
       "functionReferences": []
     },
@@ -4008,6 +4039,23 @@
       ],
       "functionReferences": []
     },
+    "migrate_agent_standalone_message(uuid,uuid,uuid,text,integer,text,integer)": {
+      "sha256": "0941830d3db19864148aa0e268b32f6902ac3c01dabf7d5d48528206ce1d84fe",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_messages",
+        "agent_conversations"
+      ],
+      "protectedRelations": [
+        "agent_messages",
+        "agent_conversations"
+      ],
+      "functionReferences": []
+    },
     "get_user_usage_history(uuid,timestamp with time zone,text[],integer,integer)": {
       "sha256": "9af6a2f2a5e4562d78557c288c2abaef8e7d068dff3d39a45abd4aec2d765be9",
       "securityDefiner": true,
@@ -4786,6 +4834,10 @@
       "function": "guard_agent_event_copies()",
       "definition": "CREATE TRIGGER agent_message_event_copy_guard BEFORE INSERT OR UPDATE ON agent_messages FOR EACH ROW EXECUTE FUNCTION guard_agent_event_copies()"
     },
+    "agent_messages.agent_standalone_message_guard": {
+      "function": "guard_agent_standalone_message()",
+      "definition": "CREATE TRIGGER agent_standalone_message_guard BEFORE INSERT OR UPDATE ON agent_messages FOR EACH ROW EXECUTE FUNCTION guard_agent_standalone_message()"
+    },
     "agent_run_events.agent_event_encryption_guard": {
       "function": "guard_agent_event_encryption()",
       "definition": "CREATE TRIGGER agent_event_encryption_guard BEFORE INSERT OR UPDATE ON agent_run_events FOR EACH ROW EXECUTE FUNCTION guard_agent_event_encryption()"
@@ -4941,6 +4993,10 @@
     "project_invitations.project_invitations_freeze_project_id": {
       "function": "freeze_project_id()",
       "definition": "CREATE TRIGGER project_invitations_freeze_project_id BEFORE UPDATE OF project_id ON project_invitations FOR EACH ROW EXECUTE FUNCTION freeze_project_id()"
+    },
+    "agent_conversations.agent_message_conversation_scope_guard": {
+      "function": "guard_agent_message_conversation_scope()",
+      "definition": "CREATE TRIGGER agent_message_conversation_scope_guard BEFORE UPDATE OF project_id ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_agent_message_conversation_scope()"
     },
     "feedback_post_categories.feedback_post_categories_broadcast": {
       "function": "broadcast_feedback_child()",

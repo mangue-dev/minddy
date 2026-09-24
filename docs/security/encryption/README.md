@@ -774,3 +774,38 @@ processes are stopped. An isolated database test covers rollback on mismatch,
 content recovery with the new root and rejection of the old root. A production
 rehearsal and backup recovery check are still required. The scheduled 90-day
 data-key rotation is separate and does not replace root-key rotation.
+
+## Standalone agent transcript checkpoint — 24 September 2026
+
+Imported transcript messages without a run, event or queue parent, plus
+run-linked `system` messages without a source event or queue entry, now use the
+project-key envelope already bound to `agent_messages.id`. Account import
+encodes them; authorized Numo and account-export reads decode after scope
+checks. A project marker rejects new plaintext messages and edits by obsolete
+writers. A 20-row maintenance pass verifies and compare-and-swaps legacy rows,
+then revisits old key and envelope versions. SQL also prevents moving a
+conversation with encrypted messages to another project. The Numo view retains
+only ciphertext for converted messages, and `agent_messages` is not published
+to Realtime.
+
+An isolated SQL regression checks stale-writer rejection, compare-and-swap,
+scope immutability and the absence of clear message text in the source and
+Numo projection. A real PostgreSQL dump and restore recovers two key versions
+with cold caches, rejects the wrong root, and loads child messages before
+their parent conversation in separate committed batches. These fixtures have
+two messages and do not measure representative search, latency or key-cache
+load. `supabase projects list` identifies one linked Minddy project and no
+Minddy staging project; no staging credentials are present in the environment.
+
+The agent boundary is **still open**. Queue-backed `agent_messages.content`
+for `steering`, `agent_run_messages.content/mentions`, and
+`agent_run_input_requests.answer` remain clear, as do
+`agent_runs.delegation_result/outcome/error_message/verdict/base_branch/
+branch_name/pr_url/deployment_url`, `agent_runtime_sessions.base_branch/
+work_branch`, `agent_turns.error_message/outcome`,
+`agent_conversation_contexts.snapshot`, `agent_artifacts.ref/url`, and
+their Numo, notification, forge and account-transfer copies. PR/forge data,
+attachment objects, feedback identities (`feedback_users.email/name/
+external_id`), `feedback_otp_codes.email` and feedback objects remain open.
+No production flag was enabled, and no production deployment or data migration
+was performed.

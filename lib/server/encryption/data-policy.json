@@ -240,7 +240,8 @@
         "turn_id"
       ],
       "timestamp": [
-        "created_at"
+        "created_at",
+        "standalone_encryption_checked_at"
       ]
     }
   },

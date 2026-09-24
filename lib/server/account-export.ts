@@ -407,7 +407,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     ? await Promise.all([
         service
           .from("agent_messages")
-          .select("id, conversation_id, turn_id, run_id, role, content, source, legacy_event_id, created_at")
+          .select("id, conversation_id, turn_id, run_id, role, content, source, legacy_event_id, legacy_queue_message_id, created_at")
           .in("conversation_id", codeConversationIds)
           .order("created_at"),
         service
@@ -444,6 +444,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       const exported = { ...row };
       delete exported.id;
       delete exported.legacy_event_id;
+      delete exported.legacy_queue_message_id;
       delete exported.run_id;
       return exported;
     }),

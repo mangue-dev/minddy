@@ -3766,6 +3766,11 @@
         "type": "integer",
         "nullable": false,
         "generated": false
+      },
+      "standalone_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [

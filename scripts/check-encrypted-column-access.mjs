@@ -27,7 +27,12 @@ const rules = [
   {
     access: /\.\s*from\s*\(\s*["'`]agent_messages["'`]\s*\)/,
     allowed: new Set(["lib/server/account-export.ts", "lib/server/account-import.ts",
-      "lib/server/agent/run-launch-content.ts"]),
+      "lib/server/agent/run-launch-content.ts",
+      "lib/server/encryption/agent-standalone-message-backfill.ts"]),
+  },
+  {
+    access: /\.\s*rpc\s*\(\s*["'`]migrate_agent_standalone_message["'`]/,
+    allowed: new Set(["lib/server/encryption/agent-standalone-message-backfill.ts"]),
   },
   {
     access: /\.\s*(?:from\s*\(\s*["'`]agent_launch_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_agent_launch_ciphertext["'`])/,
