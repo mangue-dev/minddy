@@ -162,7 +162,8 @@ async function pinnedRow(
   let pr = prId ? await findPullRequest(prId) : null;
   if (!pr && runId) {
     const run = await getRun(runId, { decode: false });
-    pr = run ? await resolvePrForRun(run) : null;
+    pr = run && repos.some((repo) => repo.project.id === run.project_id)
+      ? await resolvePrForRun(run) : null;
   }
   if (!pr) return null;
   const found = pr;

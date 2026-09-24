@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
   await getServiceClient().from("forge_relay_audit").insert({
     instance_id: verification.instance.id,
     action: "webhook_secret_registered",
-    detail: { webhookUrl: acceptedWebhookUrl },
+    detail: {},
   });
   return NextResponse.json({ ok: true });
 }

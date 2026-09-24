@@ -1,7 +1,10 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import type { RepoProviderId } from "@/lib/repo-providers";
+import { decodePrCommentEdit, encodePrCommentEdit,
+  shouldEncryptPrCommentEdit } from "./pr-comment-edit-content";
 
 /**
  * Previous versions of PR thread comments (MIN-548): one row per edit, the
@@ -52,22 +55,27 @@ export async function recordPrCommentEditQuiet(input: {
   // duplicate read as a gap is better than a lost version).
   const { data: newest } = await getServiceClient()
     .from("pr_comment_edits")
-    .select("body")
+    .select("id,body")
     .eq("provider", input.provider)
     .eq("repo_full_name", input.repoFullName)
     .eq("pr_number", input.prNumber)
     .eq("comment_id", input.commentId)
     .order("created_at", { ascending: false })
     .limit(1);
-  if (newest?.length === 1 && newest[0].body === input.body) return;
+  if (newest?.length === 1 &&
+      await decodePrCommentEdit(newest[0].id, newest[0].body) === input.body) return;
+  const id = randomUUID();
+  const body = await shouldEncryptPrCommentEdit()
+    ? await encodePrCommentEdit(id, input.body) : input.body;
   const { error } = await getServiceClient()
     .from("pr_comment_edits")
     .insert({
+      id,
       provider: input.provider,
       repo_full_name: input.repoFullName,
       pr_number: input.prNumber,
       comment_id: input.commentId,
-      body: input.body,
+      body,
       edited_by: input.editedBy,
     });
   if (error) {
@@ -84,16 +92,17 @@ export async function listPrCommentEdits(input: {
 }): Promise<PrCommentEditRow[]> {
   const { data } = await getServiceClient()
     .from("pr_comment_edits")
-    .select("body, edited_by, created_at")
+    .select("id, body, edited_by, created_at")
     .eq("provider", input.provider)
     .eq("repo_full_name", input.repoFullName)
     .eq("pr_number", input.prNumber)
     .eq("comment_id", input.commentId)
     .order("created_at", { ascending: true })
     .limit(100);
-  return ((data ?? []) as PrCommentEditRow[]).map((row) => ({
-    body: row.body ?? "",
+  return Promise.all(((data ?? []) as (PrCommentEditRow & { id: string })[])
+    .map(async (row) => ({
+    body: await decodePrCommentEdit(row.id, row.body ?? ""),
     edited_by: row.edited_by ?? null,
     created_at: row.created_at,
-  }));
+  })));
 }

@@ -54,14 +54,13 @@ import {
 } from "@/lib/server/assistant/loop";
 import type { ToolExecution } from "@/lib/server/assistant/execute-tool";
 import { parseAgentDelegationResult } from "@/lib/server/agent/agent-contract";
-import { finalizeAgentDelegationResult } from "@/lib/server/agent/delegation";
 import {
   deliverAgentDelegationResult,
   getRun,
   notifyDelegatedAgentRun,
-  type AgentRun,
 } from "@/lib/server/agent/runs";
 import { withoutWebSearch } from "@/lib/server/web-search";
+import { decodeWorkerEventPayload, encodeWorkerEventPayload } from "./worker-event-content";
 import type { SafeEmitter } from "@/lib/server/assistant/sse";
 import {
   failNumoSurfaceProjection,
@@ -591,7 +590,9 @@ async function buildExecutionInput(input: {
     });
   }
   const workerEvent = turn.checkpoint?.phase === "worker_result"
-    ? turn.checkpoint.worker_event
+    ? { ...turn.checkpoint.worker_event,
+        payload: await decodeWorkerEventPayload(turn.checkpoint.worker_event.payload,
+          turn.user_id, null, turn.active_run_id) }
     : null;
   let workerInput: WorkerInputCorrelation | undefined;
   if (workerEvent) {
@@ -1215,15 +1216,18 @@ export async function executeNumoTurn(input: {
 
 export async function resumeNumoTurnFromWorker(input: {
   runId: string;
+  projectId: string;
   eventId: string;
   type: "worker_completed" | "worker_failed" | "worker_input";
   payload: Record<string, unknown>;
 }): Promise<"queued" | "duplicate" | "ignored"> {
-  const { data, error } = await getServiceClient().rpc("resume_numo_turn_from_worker", {
+  const service = getServiceClient();
+  const payload = await encodeWorkerEventPayload(service, input);
+  const { data, error } = await service.rpc("resume_numo_turn_from_worker", {
     p_run_id: input.runId,
     p_event_id: input.eventId,
     p_type: input.type,
-    p_payload: input.payload,
+    p_payload: payload,
   });
   if (error) throw new Error(error.message);
   return data as "queued" | "duplicate" | "ignored";
@@ -1253,15 +1257,19 @@ export async function drainNumoTurns(options?: { limit?: number }) {
     "@/lib/server/routine-occurrences"
   );
   await recoverPendingRoutineOccurrences(options?.limit ?? 10);
-  const { data: terminalWorkers, error: terminalWorkersError } = await service
-    .from("agent_runs")
-    .select("*")
-    .not("parent_numo_turn_id", "is", null)
-    .is("delegation_result", null)
-    .in("status", ["completed", "failed", "canceled"]);
-  if (terminalWorkersError) throw new Error(terminalWorkersError.message);
-  for (const worker of (terminalWorkers ?? []) as AgentRun[]) {
-    await finalizeAgentDelegationResult(service, worker);
+  const { data: waitingWorkers, error: waitingWorkersError } = await service
+    .from("numo_assistant_turns")
+    .select("active_run_id")
+    .eq("status", "waiting_work")
+    .not("active_run_id", "is", null)
+    .order("updated_at", { ascending: true })
+    .limit(options?.limit ?? 10);
+  if (waitingWorkersError) throw new Error(waitingWorkersError.message);
+  for (const waiting of waitingWorkers ?? []) {
+    const worker = await getRun(waiting.active_run_id as string);
+    if (worker && ["completed", "failed", "canceled"].includes(worker.status)) {
+      await deliverAgentDelegationResult(worker);
+    }
   }
   const { error: recoveryError } = await service.rpc("recover_stale_numo_turns");
   if (recoveryError) throw new Error(recoveryError.message);

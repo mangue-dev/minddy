@@ -12,6 +12,7 @@ const h = vi.hoisted(() => ({
   queuedTurns: [] as Array<Record<string, unknown>>,
   claims: [] as Array<Record<string, unknown>>,
   terminalWorkers: [] as Array<Record<string, unknown>>,
+  waitingWorkers: [] as Array<Record<string, unknown>>,
   interruptions: [] as string[],
   failActivity: false,
   managedAi: false,
@@ -23,7 +24,7 @@ const h = vi.hoisted(() => ({
   },
   processChat: vi.fn(),
   recordAiUsage: vi.fn(),
-  finalizeAgentDelegationResult: vi.fn(),
+  deliverAgentDelegationResult: vi.fn(),
 }));
 
 function queryFor(table: string) {
@@ -69,7 +70,7 @@ function queryFor(table: string) {
       data: table === "assistant_messages"
         ? h.messages
         : table === "numo_assistant_turns"
-          ? h.queuedTurns
+          ? filters.status === "waiting_work" ? h.waitingWorkers : h.queuedTurns
           : table === "agent_runs"
             ? h.terminalWorkers
             : [],
@@ -184,8 +185,11 @@ vi.mock("@/lib/managed-services", () => ({
   isManagedAiEnabled: () => h.managedAi,
 }));
 vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: vi.fn() }));
-vi.mock("@/lib/server/ai-runtime", () => ({ resolveAiRuntime: vi.fn() }));vi.mock("@/lib/server/agent/delegation", () => ({
-  finalizeAgentDelegationResult: (...args: unknown[]) => h.finalizeAgentDelegationResult(...args),
+vi.mock("@/lib/server/ai-runtime", () => ({ resolveAiRuntime: vi.fn() }));
+vi.mock("@/lib/server/agent/runs", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/server/agent/runs")>(),
+  getRun: async (id: string) => h.terminalWorkers.find((run) => run.id === id) ?? null,
+  deliverAgentDelegationResult: (...args: unknown[]) => h.deliverAgentDelegationResult(...args),
 }));
 
 const { createDurableNumoEmitter, drainNumoTurns, executeNumoTurn } = await import("./turns");
@@ -238,6 +242,7 @@ beforeEach(() => {
   h.queuedTurns.length = 0;
   h.claims.length = 0;
   h.terminalWorkers.length = 0;
+  h.waitingWorkers.length = 0;
   h.interruptions.length = 0;
   h.failActivity = false;
   h.managedAi = false;
@@ -260,7 +265,7 @@ beforeEach(() => {
   });
   h.processChat.mockReset();
   h.recordAiUsage.mockReset();
-  h.finalizeAgentDelegationResult.mockReset();
+  h.deliverAgentDelegationResult.mockReset();
   vi.mocked(resolveAiRuntime).mockResolvedValue(runtime as never);
   h.processChat.mockResolvedValue({
     fullContent: "Done without code.",
@@ -610,20 +615,18 @@ describe("durable Numo execution", () => {
     expect(h.processChat).toHaveBeenCalled();
   });
 
-  it("finalizes terminal worker handoffs before recovering stale parent turns", async () => {
+  it("delivers terminal worker handoffs before recovering stale parent turns", async () => {
     h.terminalWorkers.push({
       id: "51600000-0000-4000-8000-000000000006",
       status: "completed",
       parent_numo_turn_id: h.turn!.id,
       delegation_result: null,
     });
+    h.waitingWorkers.push({ active_run_id: h.terminalWorkers[0].id });
 
     await drainNumoTurns({ limit: 1 });
 
-    expect(h.finalizeAgentDelegationResult).toHaveBeenCalledWith(
-      service,
-      h.terminalWorkers[0],
-    );
+    expect(h.deliverAgentDelegationResult).toHaveBeenCalledWith(h.terminalWorkers[0]);
   });
 
   it("preserves the latest tool checkpoint when execution fails", async () => {

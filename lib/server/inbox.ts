@@ -357,6 +357,14 @@ export async function readInboxNotifications({
       ? item
       : undefined;
   };
+  for (const notification of readable) {
+    const pr = pullRequestFor(notification);
+    if (!pr || !pr.title || !pr.title.startsWith("mdym3:")) continue;
+    const { decodePullRequestContent } = await import(
+      "@/lib/server/agent/pull-request-content");
+    pullRequestMap.set(pr.id, { ...pr,
+      title: await decodePullRequestContent(pr.id, "title", pr.title, userId) });
+  }
 
   // Null data denotes a failed hydration and preserves the historical row. An
   // empty or cross-project result is authoritative and removes the confused

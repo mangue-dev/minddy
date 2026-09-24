@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     const { error: auditError } = await supabase.from("forge_relay_audit").insert({
       instance_id: inserted.id as string,
       action: "instance_registered",
-      detail: { name, selfService: true },
+      detail: {},
     });
     if (auditError) {
       console.error("[relay/register] audit insert failed:", auditError.message);

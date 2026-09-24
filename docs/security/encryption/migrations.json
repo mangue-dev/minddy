@@ -122,5 +122,14 @@
   "20270107250000_github_issue_comment_url_encryption.sql": "f43c13d809b1b70dff10d6b472d2d03b95a5aad361d96d323dfd5e2e9e2151bc",
   "20270107260000_agent_verdict_encryption.sql": "be62e89794d2bc539d53ad8ab200a2beee3adab3634c1b109c0cd5715c281e1f",
   "20270107270000_agent_deployment_url_encryption.sql": "bfba40947f27ce62e4df40147b212d3a69bba7d5a7567fcf43a6cee2564f532c",
-  "20270107280000_agent_base_branch_encryption.sql": "85ca6c55aa0e6eee04afb0147116cb9054b91d2dc82f0e37c850e4640b9b8000"
+  "20270107280000_agent_base_branch_encryption.sql": "85ca6c55aa0e6eee04afb0147116cb9054b91d2dc82f0e37c850e4640b9b8000",
+  "20270107290000_agent_work_branch_encryption.sql": "7854ed1147f8dd316d88003e6709e9e443d2bfd524182c85e7a603cbb9677b58",
+  "20270107300000_agent_delegation_result_encryption.sql": "13f202ffe4c63a6216c166b95b8c96ab2a1540e2c109abd8855dee2fe5861261",
+  "20270107310000_agent_run_summary_encryption.sql": "008aae8fd1cb335bee06410eaf14c9b6c40c8f9d942313b5ca8ba326c9dbac6f",
+  "20270107320000_agent_pr_url_encryption.sql": "f22d4c429e4a3d2616f2438a8b56e068a1b9c163a14b9256597ec7721e949483",
+  "20270107330000_pull_request_url_encryption.sql": "12bfaec6a4ef884743724b992fb13431aed6c890042e0da1113d926f68b1c43f",
+  "20270107340000_pull_request_content_encryption.sql": "ef6ebf5c88ef23e53b746815fc75f676773354d35ea0bd0d7ae25c32771bb7a2",
+  "20270107350000_pr_comment_edit_encryption.sql": "13987eb735d724fb9c9e6490d3d10ff970e30c3d2b528034e2ae45eab7e04449",
+  "20270107360000_forge_relay_delivery_encryption.sql": "c987a4c799993d548e6cfd03dd2077f4247b6e4a89dff7d8ed404f1298a1de26",
+  "20270107370000_forge_relay_audit_detail_removal.sql": "b34c97a98c5794095b6775af8912d7a89bca662bb68fe10adc3ab2f92940de64"
 }

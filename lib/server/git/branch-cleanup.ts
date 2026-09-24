@@ -7,6 +7,7 @@ import type { RepoProviderId } from "@/lib/repo-providers";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { forgeFor } from "@/lib/server/agent/forge";
 import { selectAgentBranches, type AgentBranch } from "./branch-cleanup-core";
+import { decodeAgentWorkBranch } from "@/lib/server/agent/run-work-branch-content";
 
 /**
  * Agent branch management (MIN-102): list ALL branches that the project runs have pushed and which still live on the repository — merged PR,
@@ -52,6 +53,8 @@ export interface BranchDeletionResult {
 }
 
 interface RunRow {
+  id: string;
+  project_id: string;
   branch_name: string | null;
   issue_id: string | null;
   issues: { id: string; number: number } | null;
@@ -75,7 +78,7 @@ export async function listAgentBranchesForProject(
     supabase.from("projects").select("key").eq("id", projectId).maybeSingle(),
     supabase
       .from("agent_runs")
-      .select("branch_name, issue_id, issues(id, number)")
+      .select("id, project_id, branch_name, issue_id, issues(id, number)")
       .eq("project_id", projectId)
       .not("branch_name", "is", null)
       .order("created_at", { ascending: false }),
@@ -87,7 +90,7 @@ export async function listAgentBranchesForProject(
     [projectId]);
   const map = new Map<string, BranchIssueRef | null>();
   for (const row of (runs ?? []) as unknown as RunRow[]) {
-    const branch = row.branch_name;
+    const branch = (await decodeAgentWorkBranch(row)).branch_name;
     if (!branch || map.has(branch)) continue;
     const issue = row.issues;
     map.set(

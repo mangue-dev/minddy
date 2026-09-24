@@ -45,6 +45,7 @@ import {
   type InheritableWork,
 } from "./runs";
 import { decodeAgentBaseBranch } from "./run-base-branch-content";
+import { decodeAgentWorkBranch } from "./run-work-branch-content";
 import { requestedRunReservationUsd } from "./run-key";
 import { drainAgentRuns } from "./drain";
 import { capability } from "@/lib/server/capabilities";
@@ -637,7 +638,7 @@ export async function launchAgentRun(
       })) ?? (await currentWritablePrWork(continuePr, input.userId)))
     : continuedRun
       ? {
-          branchName: continuedRun.branch_name,
+          branchName: (await decodeAgentWorkBranch(continuedRun)).branch_name,
           baseBranch: (await decodeAgentBaseBranch(continuedRun)).base_branch,
           prNumber: continuedRun.pr_number,
           prUrl: continuedRun.pr_url,

@@ -2,12 +2,17 @@ import { issueStore, loadIssueTitles } from "@/lib/server/issue-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { isRepoProviderId, type RepoProviderId } from "@/lib/repo-providers";
 import { forgeFor } from "./forge";
 import { issueRefFromPr, parseIssueRef } from "./pr-ingest-core";
 import type { PullRequestRef } from "./pr";
+import { decodePullRequestUrlRow, encodePullRequestUrl,
+  shouldEncryptPullRequestUrl } from "./pull-request-url-content";
+import { decodePullRequestContentRow, encodePullRequestContent,
+  PR_CONTENT_FIELDS, shouldEncryptPullRequestContent } from "./pull-request-content";
 
 /**
  * Data access from table `pull_requests` (MIN-143) — the passage point
@@ -102,7 +107,9 @@ export interface PullRequestUpsertOutcome {
  *
  * Only `provider` / `repo_full_name` / `number` (identity) and `state` * are mandatory — you don't update a PR without knowing what state it is in.
  */
-function toRow(input: PullRequestUpsert): Record<string, unknown> {
+function toRow(input: PullRequestUpsert, id?: string,
+  encryptedUrl?: string | null,
+  encryptedContent?: Record<string, string>): Record<string, unknown> {
   const row: Record<string, unknown> = {
     provider: input.provider,
     repo_full_name: input.repoFullName,
@@ -113,8 +120,9 @@ function toRow(input: PullRequestUpsert): Record<string, unknown> {
     updated_at: input.updatedAt ?? new Date().toISOString(),
     synced_at: new Date().toISOString(),
   };
+  if (id) row.id = id;
   const optional: Array<[string, unknown]> = [
-    ["url", input.url],
+    ["url", encryptedUrl === undefined ? input.url : encryptedUrl],
     ["title", input.title],
     ["author_login", input.authorLogin],
     ["author_avatar_url", input.authorAvatarUrl],
@@ -128,7 +136,12 @@ function toRow(input: PullRequestUpsert): Record<string, unknown> {
   for (const [column, value] of optional) {
     if (value !== undefined) row[column] = value;
   }
+  Object.assign(row, encryptedContent);
   return row;
+}
+
+async function decodeStoredPr<T extends PullRequestRow>(row: T): Promise<T> {
+  return decodePullRequestContentRow(await decodePullRequestUrlRow(row));
 }
 
 /**
@@ -140,17 +153,51 @@ export async function upsertPullRequestWithOutcome(
   input: PullRequestUpsert,
 ): Promise<PullRequestUpsertOutcome | null> {
   const service = getServiceClient();
-  const { data, error } = await service.rpc("upsert_pull_request_monotonic", {
-    p_values: toRow(input),
-  });
-  if (error) {
-    console.error("[pull-requests] upsert failed:", error.message);
-    return null;
+  const content = { title: input.title, head_branch: input.headBranch,
+    base_branch: input.baseBranch };
+  const [encryptUrl, encryptContent] = await Promise.all([
+    input.url != null && shouldEncryptPullRequestUrl(),
+    Object.values(content).some((value) => value != null) &&
+      shouldEncryptPullRequestContent(),
+  ]);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let id: string | undefined;
+    let url: string | null | undefined;
+    const protectedFields: Record<string, string> = {};
+    if (encryptUrl || encryptContent) {
+      const existing = await service.from("pull_requests").select("id")
+        .eq("provider", input.provider).eq("repo_full_name", input.repoFullName)
+        .eq("number", input.number).maybeSingle();
+      if (existing.error) throw new Error("Unable to resolve pull request URL identity");
+      id = existing.data?.id ?? randomUUID();
+      if (encryptUrl) url = await encodePullRequestUrl(id!, input.url!);
+      if (encryptContent) {
+        for (const column of PR_CONTENT_FIELDS) {
+          const value = content[column];
+          if (value != null) {
+            protectedFields[column] = await encodePullRequestContent(id!,
+              column, value);
+          }
+        }
+      }
+    }
+    const { data, error } = await service.rpc("upsert_pull_request_monotonic", {
+      p_values: toRow(input, id, url, protectedFields),
+    });
+    if (error?.message.includes("pull_request_id_changed") && attempt === 0) {
+      continue;
+    }
+    if (error) {
+      console.error("[pull-requests] upsert failed:", error.message);
+      return null;
+    }
+    const result = data as { row?: PullRequestRow; applied?: boolean } | null;
+    return result?.row
+      ? { row: await decodeStoredPr(result.row),
+        applied: result.applied === true }
+      : null;
   }
-  const result = data as { row?: PullRequestRow; applied?: boolean } | null;
-  return result?.row
-    ? { row: result.row, applied: result.applied === true }
-    : null;
+  return null;
 }
 
 export async function upsertPullRequest(
@@ -169,7 +216,7 @@ export async function findPullRequest(
     .select(PR_COLUMNS)
     .eq("id", prId)
     .maybeSingle();
-  return (data as PullRequestRow | null) ?? null;
+  return data ? decodeStoredPr(data as unknown as PullRequestRow) : null;
 }
 
 /** Pull request by its natural key — the resolution run → PR of the facades. */
@@ -186,7 +233,7 @@ export async function findPullRequestByNumber(opts: {
     .eq("repo_full_name", opts.repoFullName)
     .eq("number", opts.number)
     .maybeSingle();
-  return (data as PullRequestRow | null) ?? null;
+  return data ? decodeStoredPr(data as unknown as PullRequestRow) : null;
 }
 
 /**
@@ -210,7 +257,8 @@ export async function findPullRequestsByHeadSha(opts: {
     .eq("provider", opts.provider)
     .eq("repo_full_name", opts.repoFullName)
     .eq("head_sha", opts.headSha);
-  return (data ?? []) as unknown as PullRequestRow[];
+  return Promise.all(((data ?? []) as unknown as PullRequestRow[])
+    .map((row) => decodeStoredPr(row)));
 }
 
 export interface RepoRef {
@@ -271,6 +319,7 @@ export async function repoForRun(run: {
  * deep-link `?run=` would fall on a 404 for a PR which exists.
  */
 export async function resolvePrForRun(run: {
+  id: string;
   repo_link_id: string | null;
   project_id: string;
   issue_id: string | null;
@@ -288,14 +337,19 @@ export async function resolvePrForRun(run: {
     number: run.pr_number,
   });
   if (existing) return existing;
+  const { decodeAgentWorkBranch } = await import("./run-work-branch-content");
+  const { decodeAgentBaseBranch } = await import("./run-base-branch-content");
+  const { decodeAgentPrUrl } = await import("./run-pr-url-content");
+  const clearRun = await decodeAgentPrUrl(await decodeAgentWorkBranch(
+    await decodeAgentBaseBranch(run)));
   return upsertPullRequest({
     provider: repo.provider,
     repoFullName: repo.repoFullName,
     number: run.pr_number,
     state: run.pr_state ?? "open",
-    url: run.pr_url,
-    headBranch: run.branch_name,
-    baseBranch: run.base_branch,
+    url: clearRun.pr_url,
+    headBranch: clearRun.branch_name,
+    baseBranch: clearRun.base_branch,
     issueId: run.issue_id,
   });
 }
@@ -384,11 +438,12 @@ export async function findPullRequestForIssue(
     .eq("issue_id", issueId)
     .order("updated_at", { ascending: false });
   const rows = (data ?? []) as unknown as PullRequestRow[];
-  return (
+  const chosen = (
     rows.find((r) => r.state === "draft" || r.state === "open") ??
     rows[0] ??
     null
   );
+  return chosen ? decodeStoredPr(chosen) : null;
 }
 
 // ── Rattachement au ticket ───────────────────────────────────────────────────
@@ -848,9 +903,12 @@ export async function listPullRequestsForUser(
   const titles = await loadIssueTitles(supabase,
     rows.map((row) => row.issue?.id).filter((id): id is string => !!id),
     repos.map((repo) => repo.project.id));
-  return rows.map((row) => ({ ...row,
+  return Promise.all(rows.map(async (raw) => {
+    const row = await decodeStoredPr(raw);
+    return { ...row,
     issue: row.issue && titles.has(row.issue.id)
       ? { ...row.issue, title: titles.get(row.issue.id)! } : null,
+    };
   }));
 }
 

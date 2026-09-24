@@ -31,6 +31,8 @@ import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { forgeFor, isForgeApiError, type Forge, type MergeMethod } from "./forge";
+import { encodePullRequestContent, shouldEncryptPullRequestContent } from
+  "./pull-request-content";
 import {
   lastReviewedShaForPullRequest,
   latestRunForPullRequest,
@@ -2560,9 +2562,12 @@ export async function prMaintenanceActionResponse(
     const updated = await withPrOperation(`${scope.pr.id}:update-title`, () =>
       scope.forge.updatePullRequestTitle({ ...call, title }),
     );
+    const storedTitle = await shouldEncryptPullRequestContent()
+      ? await encodePullRequestContent(scope.pr.id, "title", updated.title ?? title)
+      : updated.title ?? title;
     await getServiceClient()
       .from("pull_requests")
-      .update({ title: updated.title ?? title, updated_at: new Date().toISOString() })
+      .update({ title: storedTitle, updated_at: new Date().toISOString() })
       .eq("id", scope.pr.id);
     broadcastPrChanged(scope.pr.id, ["pr", "conversation"]);
     return NextResponse.json({ ok: true, title: updated.title ?? title });

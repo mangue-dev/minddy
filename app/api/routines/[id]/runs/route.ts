@@ -9,6 +9,7 @@ import { routineRunUsagePercent } from "@/lib/routine-run-metrics";
 import { occurrencesForRoutine } from "@/lib/server/routine-occurrences";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { NumoTurnStatus } from "@/lib/assistant-types";
+import { decodeAgentPrUrl } from "@/lib/server/agent/run-pr-url-content";
 
 /**
  * Routine execution history. New rows summarize the complete Numo occurrence;
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
   const [workerResult, usageResult] = await Promise.all([
     turnIds.length
       ? service.from("agent_runs")
-          .select("id, parent_numo_turn_id, conversation_id, pr_number, pr_url, pr_state")
+          .select("id, project_id, parent_numo_turn_id, conversation_id, pr_number, pr_url, pr_state")
           .in("parent_numo_turn_id", turnIds)
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
@@ -131,7 +132,12 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     if (!turns.has(conversationId)) turns.set(conversationId, turn);
   }
   const workers = new Map<string, Record<string, unknown>>();
-  for (const worker of (workerResult.data ?? []) as Array<Record<string, unknown>>) {
+  for (const stored of (workerResult.data ?? []) as Array<Record<string, unknown>>) {
+    if (stored.project_id !== found.routine.project_id) continue;
+    const worker = await decodeAgentPrUrl(stored as Record<string, unknown> & {
+      id: string; project_id: string; pr_url: string | null;
+      parent_numo_turn_id: string | null;
+    }, auth.user.id);
     const conversationId = turnConversation.get(worker.parent_numo_turn_id as string);
     if (conversationId && !workers.has(conversationId)) {
       workers.set(conversationId, worker);

@@ -16,6 +16,7 @@ const state = vi.hoisted(() => ({
   projectDrafts: vi.fn(),
   feedbackPosts: vi.fn(),
   issues: vi.fn(),
+  forgeRelayAudit: vi.fn(),
 }));
 
 vi.mock("@/lib/server/encryption/invitation-email", () => ({
@@ -37,6 +38,9 @@ vi.mock("@/lib/server/encryption/category-backfill", () => ({ backfillCategories
 vi.mock("@/lib/server/encryption/project-draft-backfill", () => ({ backfillProjectDraftsBatch: state.projectDrafts }));
 vi.mock("@/lib/server/encryption/feedback-post-backfill", () => ({ backfillFeedbackPostsBatch: state.feedbackPosts }));
 vi.mock("@/lib/server/encryption/issue-backfill", () => ({ backfillIssuesBatch: state.issues }));
+vi.mock("@/lib/server/encryption/forge-relay-audit-backfill", () => ({
+  scrubForgeRelayAuditBatch: state.forgeRelayAudit,
+}));
 
 const { GET } = await import("@/app/api/cron/encryption-maintenance/route");
 const secret = "x".repeat(32);
@@ -62,6 +66,7 @@ beforeEach(() => {
   state.projectDrafts.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.feedbackPosts.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.issues.mockReset().mockResolvedValue({ scanned: 0, migrated: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
+  state.forgeRelayAudit.mockReset().mockResolvedValue({ scanned: 0, scrubbed: 0, unchanged: 0, conflicted: 0, failed: 0, interrupted: false });
   state.rotate.mockReset().mockResolvedValue({ scanned: 0, advanced: 0, failed: 0 });
 });
 

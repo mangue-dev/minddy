@@ -417,7 +417,7 @@ describe("admin instance registry", () => {
       expect.objectContaining({
         id: "delivery-pending",
         status: "dead",
-        last_error: "relay instance revoked",
+        last_error: null,
       }),
       expect.objectContaining({ id: "delivery-complete", status: "delivered" }),
     ]);

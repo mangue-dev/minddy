@@ -29,6 +29,11 @@ const contextTemplate = "minddy_min591_context_audit";
 const verdictTemplate = "minddy_min591_verdict_audit";
 const deploymentTemplate = "minddy_min591_deployment_audit";
 const baseBranchTemplate = "minddy_min591_base_branch_audit";
+const workBranchTemplate = "minddy_min591_work_branch_audit";
+const resultTemplate = "minddy_min591_result_audit";
+const summaryTemplate = "minddy_min591_summary_audit";
+const prUrlTemplate = "minddy_min591_pr_url_audit";
+const sharedPrUrlTemplate = "minddy_min591_relay_audit_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -1931,6 +1936,473 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
     }
   }, 60_000);
 
+  it("restores encrypted run, runtime and artifact work branches across key versions", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_work_source_${suffix}`;
+    const restored = `minddy_min591_work_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID();
+    const runs = [randomUUID(), randomUUID()];
+    const branches = ["private/issue-591-first", "private/issue-591-second"];
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const system: EncryptionScope = { kind: "system",
+      id: "00000000-0000-0000-0000-000000000000" };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(workBranchTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${workBranchTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Fixture project','AWB');`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const indexKeys = new ManagedDataKeys(registry(source, "blind_index"),
+        wrapper(root, "blind_index"));
+      const store = new EncryptedStore(keys);
+      const index = await indexKeys.current(system);
+      for (const [position, runId] of runs.entries()) {
+        if (position === 1) await keys.rotate(scope, 1);
+        const branch = branches[position];
+        const digest = blindIndex(branch, { scope: system,
+          table: "agent_runs", column: "branch_name" }, index.bytes);
+        const cipher = await store.encrypt(branch, {
+          scope, table: "agent_runs", column: "branch_name", rowId: runId,
+        });
+        const encoded = `mdyw3:${digest}:${store.versionOf(cipher)}:${Buffer.from(cipher).toString("base64url")}`;
+        sql(source, `INSERT INTO public.agent_runs(id,project_id,created_by,branch_name)
+          VALUES(${quote(runId)},${quote(project)},${quote(actor)},${quote(encoded)});`);
+      }
+      index.bytes.fill(0);
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "supabase_admin",
+        "-d", source, "--data-only", "--no-owner", "--no-privileges",
+        ...["auth.users", "public.projects", "public.envelope_data_keys",
+          "public.agent_conversations", "public.agent_runs", "public.agent_turns",
+          "public.agent_runtime_sessions", "public.agent_artifacts",
+          "public.agent_work_branch_encryption_scopes"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      for (const branch of branches) expect(dump).not.toContain(branch);
+      let dependencies = dump;
+      const batches = new Map<string, { header: string; lines: string[]; footer: string }>();
+      for (const table of ["agent_artifacts", "agent_runtime_sessions", "agent_turns",
+        "agent_runs", "agent_conversations"]) {
+        const match = dependencies.match(new RegExp(`(COPY public\\.${table}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`));
+        expect(match).not.toBeNull();
+        batches.set(table, { header: match![1], lines: match![2].trimEnd().split("\n").reverse(),
+          footer: match![3] });
+        dependencies = dependencies.replace(match![0], "");
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${dependencies}\nCOMMIT;`);
+      for (const table of ["agent_artifacts", "agent_runtime_sessions", "agent_turns",
+        "agent_runs", "agent_conversations"]) {
+        const copy = batches.get(table)!;
+        for (const line of copy.lines) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${copy.header}${line}\n${copy.footer}COMMIT;`);
+        }
+      }
+      sql(restored, `ALTER TABLE public.agent_artifacts
+        DROP CONSTRAINT agent_artifacts_run_id_fkey;
+        ALTER TABLE public.agent_artifacts ADD CONSTRAINT agent_artifacts_run_id_fkey
+          FOREIGN KEY(run_id) REFERENCES public.agent_runs(id) ON DELETE SET NULL;
+        ALTER TABLE public.agent_runtime_sessions
+        DROP CONSTRAINT agent_runtime_sessions_current_run_id_fkey;
+        ALTER TABLE public.agent_runtime_sessions ADD CONSTRAINT agent_runtime_sessions_current_run_id_fkey
+          FOREIGN KEY(current_run_id) REFERENCES public.agent_runs(id) ON DELETE SET NULL;`);
+      const rows = JSON.parse(sql(restored, `SELECT json_agg(json_build_object(
+        'id',r.id,'encoded',r.branch_name,'runtime',s.work_branch,
+        'artifact_ref',a.ref,'artifact_cipher',a.ref_ciphertext) ORDER BY r.id)
+        FROM public.agent_runs r JOIN public.agent_runtime_sessions s
+          ON s.current_run_id=r.id AND s.conversation_id=r.conversation_id
+        JOIN public.agent_artifacts a ON a.run_id=r.id AND a.kind='branch';`)) as Array<{
+          id: string; encoded: string; runtime: string; artifact_ref: string;
+          artifact_cipher: string;
+        }>;
+      expect(rows).toHaveLength(2);
+      expect(rows.map((row) => Number(row.encoded.split(":")[2])).sort()).toEqual([1, 2]);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored), wrapper(root)));
+      const recoveredIndex = new ManagedDataKeys(registry(restored, "blind_index"),
+        wrapper(root, "blind_index"));
+      const indexKey = await recoveredIndex.current(system);
+      for (const row of rows) {
+        expect(row.runtime).toBe(row.encoded);
+        expect(row.artifact_cipher).toBe(row.encoded);
+        expect(row.artifact_ref).toBe(row.encoded.split(":").slice(0, 2).join(":"));
+        const serialized = Buffer.from(row.encoded.split(":")[3], "base64url").toString("utf8");
+        const clear = await cold.decrypt(cold.fromDatabase<string>(serialized),
+          { scope, table: "agent_runs", column: "branch_name", rowId: row.id });
+        expect(branches).toContain(clear);
+        expect(blindIndex(clear, { scope: system, table: "agent_runs",
+          column: "branch_name" }, indexKey.bytes)).toBe(row.encoded.split(":")[1]);
+      }
+      indexKey.bytes.fill(0);
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      await expect(wrong.decrypt(wrong.fromDatabase<string>(Buffer.from(
+        rows[0].encoded.split(":")[3], "base64url").toString("utf8")),
+      { scope, table: "agent_runs", column: "branch_name", rowId: rows[0].id }))
+        .rejects.toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
+
+  it("restores encrypted agent results and Numo event/checkpoint copies loaded child first", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_result_source_${suffix}`;
+    const restored = `minddy_min591_result_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID();
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(resultTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${resultTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Fixture project','ARS');`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      const identifiers: Array<{ run: string; turn: string; event: string; conversation: string }> = [];
+      for (const number of [1, 2]) {
+        if (number === 2) await keys.rotate(scope, 1);
+        const run = randomUUID(), turn = randomUUID(), event = randomUUID(), conversation = randomUUID();
+        identifiers.push({ run, turn, event, conversation });
+        const result = { version: 1, status: "completed", summary: `Private result ${number}`,
+          changedFiles: [], verificationPerformed: [], artifacts: [], unresolvedDecisions: [] };
+        const resultCipher = await store.encrypt(result, {
+          scope, table: "agent_runs", column: "delegation_result", rowId: run,
+        });
+        sql(source, `INSERT INTO public.agent_runs(id,project_id,created_by,
+          delegation_result_ciphertext,delegation_result_encryption_version)
+          VALUES(${quote(run)},${quote(project)},${quote(actor)},
+            ${quote(resultCipher)},${store.versionOf(resultCipher)});
+          INSERT INTO public.conversations(id,user_id,project_id)
+          VALUES(${quote(conversation)},${quote(actor)},${quote(project)});
+          INSERT INTO public.numo_assistant_turns(id,conversation_id,user_id,
+            request_id,run_id,status,active_run_id)
+          VALUES(${quote(turn)},${quote(conversation)},${quote(actor)},
+            ${quote(randomUUID())},${quote(randomUUID())},'waiting_work',${quote(run)});`);
+        const worker = { run_id: run, status: "completed", result };
+        const eventCipher = await store.encrypt(worker, {
+          scope, table: "numo_turn_events", column: "payload", rowId: event,
+        });
+        const payload = { encrypted_worker_payload: eventCipher,
+          encryption_version: store.versionOf(eventCipher), project_id: project,
+          event_id: event, run_id: run };
+        sql(source, `INSERT INTO public.numo_turn_events(id,turn_id,seq,type,payload)
+          VALUES(${quote(event)},${quote(turn)},1,'worker_completed',${quote(JSON.stringify(payload))}::jsonb);
+          UPDATE public.numo_assistant_turns SET checkpoint=${quote(JSON.stringify({
+            phase: "worker_result", worker_event: { type: "worker_completed", payload },
+          }))}::jsonb WHERE id=${quote(turn)};`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "supabase_admin",
+        "-d", source, "--data-only", "--no-owner", "--no-privileges",
+        ...["auth.users", "public.projects", "public.envelope_data_keys",
+          "public.agent_runs", "public.conversations", "public.numo_assistant_turns",
+          "public.numo_turn_events", "public.agent_result_encryption_scopes"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("Private result");
+      expect(dump).not.toContain(root.toString("base64"));
+      let remainder = dump;
+      const batches = new Map<string, { header: string; lines: string[]; footer: string }>();
+      for (const table of ["numo_turn_events", "numo_assistant_turns", "agent_runs",
+        "conversations", "projects", "users"]) {
+        const schema = table === "users" ? "auth" : "public";
+        const match = remainder.match(new RegExp(`(COPY ${schema}\\.${table}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`));
+        expect(match).not.toBeNull();
+        batches.set(table, { header: match![1], lines: match![2].trimEnd().split("\n").reverse(),
+          footer: match![3] });
+        remainder = remainder.replace(match![0], "");
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${remainder}\nCOMMIT;`);
+      for (const table of ["numo_turn_events", "numo_assistant_turns", "agent_runs",
+        "conversations", "projects", "users"]) {
+        const batch = batches.get(table)!;
+        for (const line of batch.lines) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${batch.header}${line}\n${batch.footer}COMMIT;`);
+        }
+      }
+      sql(restored, `ALTER TABLE public.numo_turn_events
+        DROP CONSTRAINT numo_turn_events_turn_id_fkey;
+        ALTER TABLE public.numo_turn_events ADD CONSTRAINT numo_turn_events_turn_id_fkey
+          FOREIGN KEY(turn_id) REFERENCES public.numo_assistant_turns(id) ON DELETE CASCADE;
+        ALTER TABLE public.numo_assistant_turns
+        DROP CONSTRAINT numo_assistant_turns_active_run_id_fkey;
+        ALTER TABLE public.numo_assistant_turns ADD CONSTRAINT numo_assistant_turns_active_run_id_fkey
+          FOREIGN KEY(active_run_id) REFERENCES public.agent_runs(id) ON DELETE SET NULL;`);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored), wrapper(root)));
+      for (const [index, ids] of identifiers.entries()) {
+        const run = JSON.parse(sql(restored, `SELECT row_to_json(r) FROM public.agent_runs r
+          WHERE id=${quote(ids.run)};`));
+        const event = JSON.parse(sql(restored, `SELECT row_to_json(e) FROM public.numo_turn_events e
+          WHERE id=${quote(ids.event)};`));
+        const turn = JSON.parse(sql(restored, `SELECT row_to_json(t) FROM public.numo_assistant_turns t
+          WHERE id=${quote(ids.turn)};`));
+        expect(run.delegation_result).toBeNull();
+        expect(run.delegation_result_encryption_version).toBe(index + 1);
+        expect(event.payload).toEqual(turn.checkpoint.worker_event.payload);
+        keys.invalidate(scope);
+        expect((await cold.decrypt(cold.fromDatabase<typeof event.payload>(
+          run.delegation_result_ciphertext), { scope, table: "agent_runs",
+          column: "delegation_result", rowId: ids.run })).summary)
+          .toBe(`Private result ${index + 1}`);
+        expect((await cold.decrypt(cold.fromDatabase<typeof event.payload>(
+          event.payload.encrypted_worker_payload), { scope, table: "numo_turn_events",
+          column: "payload", rowId: ids.event })).result.summary)
+          .toBe(`Private result ${index + 1}`);
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const first = identifiers[0];
+      const cipher = sql(restored, `SELECT delegation_result_ciphertext FROM public.agent_runs
+        WHERE id=${quote(first.run)};`);
+      await expect(wrong.decrypt(wrong.fromDatabase(cipher), { scope,
+        table: "agent_runs", column: "delegation_result", rowId: first.run }))
+        .rejects.toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
+
+  it("restores encrypted run and turn summaries including archived imported turns", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_summary_source_${suffix}`;
+    const restored = `minddy_min591_summary_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID(), conversation = randomUUID();
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const runs: string[] = [];
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(summaryTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${summaryTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Fixture project','SUM');
+        INSERT INTO public.agent_conversations(id,project_id,owner_id)
+          VALUES(${quote(conversation)},${quote(project)},${quote(actor)});`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      const encoded = async (table: string, rowId: string, field: string, value: string) => {
+        const cipher = await store.encrypt(value, { scope, table, column: field, rowId });
+        return `mdys3:${store.versionOf(cipher)}:${Buffer.from(cipher).toString("base64url")}`;
+      };
+      for (const number of [1, 2]) {
+        if (number === 2) await keys.rotate(scope, 1);
+        const run = randomUUID();
+        runs.push(run);
+        const outcome = await encoded("agent_runs", run, "outcome", `Private outcome ${number}`);
+        const error = await encoded("agent_runs", run, "error_message", `Private error ${number}`);
+        sql(source, `INSERT INTO public.agent_runs(id,project_id,conversation_id,created_by,
+          outcome,error_message) VALUES(${quote(run)},${quote(project)},${quote(conversation)},
+          ${quote(actor)},${quote(outcome)},${quote(error)});`);
+      }
+      const archived = randomUUID();
+      const archivedOutcome = await encoded("agent_turns", archived, "outcome",
+        "Private archived outcome");
+      sql(source, `INSERT INTO public.agent_turns(id,conversation_id,run_id,status,outcome)
+        VALUES(${quote(archived)},${quote(conversation)},NULL,'completed',
+          ${quote(archivedOutcome)});`);
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "supabase_admin",
+        "-d", source, "--data-only", "--no-owner", "--no-privileges",
+        ...["auth.users", "public.projects", "public.envelope_data_keys",
+          "public.agent_conversations", "public.agent_runs", "public.agent_turns",
+          "public.agent_summary_encryption_scopes"].map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("Private outcome");
+      expect(dump).not.toContain("Private error");
+      expect(dump).not.toContain("Private archived outcome");
+      expect(dump).not.toContain(root.toString("base64"));
+      let remainder = dump;
+      const batches = new Map<string, { header: string; lines: string[]; footer: string }>();
+      for (const table of ["agent_turns", "agent_runs", "agent_conversations", "projects", "users"]) {
+        const schema = table === "users" ? "auth" : "public";
+        const match = remainder.match(new RegExp(`(COPY ${schema}\\.${table}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`));
+        expect(match).not.toBeNull();
+        batches.set(table, { header: match![1], lines: match![2].trimEnd().split("\n").reverse(),
+          footer: match![3] });
+        remainder = remainder.replace(match![0], "");
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${remainder}\nCOMMIT;`);
+      for (const table of ["agent_turns", "agent_runs", "agent_conversations", "projects", "users"]) {
+        const batch = batches.get(table)!;
+        for (const line of batch.lines) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${batch.header}${line}\n${batch.footer}COMMIT;`);
+        }
+      }
+      sql(restored, `ALTER TABLE public.agent_turns DROP CONSTRAINT agent_turns_run_id_fkey;
+        ALTER TABLE public.agent_turns ADD CONSTRAINT agent_turns_run_id_fkey
+          FOREIGN KEY(run_id) REFERENCES public.agent_runs(id) ON DELETE CASCADE;
+        ALTER TABLE public.agent_runs DROP CONSTRAINT agent_runs_conversation_project_fkey;
+        ALTER TABLE public.agent_runs ADD CONSTRAINT agent_runs_conversation_project_fkey
+          FOREIGN KEY(conversation_id,project_id)
+          REFERENCES public.agent_conversations(id,project_id);`);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored), wrapper(root)));
+      for (const [index, run] of runs.entries()) {
+        const row = JSON.parse(sql(restored, `SELECT row_to_json(r) FROM public.agent_runs r
+          WHERE id=${quote(run)};`));
+        const turn = JSON.parse(sql(restored, `SELECT row_to_json(t) FROM public.agent_turns t
+          WHERE run_id=${quote(run)};`));
+        expect(turn.outcome).toBe(row.outcome);
+        expect(turn.error_message).toBe(row.error_message);
+        const cipher = cold.fromDatabase<string>(Buffer.from(row.outcome.split(":")[2],
+          "base64url").toString("utf8"));
+        expect(await cold.decrypt(cipher, { scope, table: "agent_runs", column: "outcome",
+          rowId: run })).toBe(`Private outcome ${index + 1}`);
+        expect(Number(row.outcome.split(":")[1])).toBe(index + 1);
+      }
+      const archivedRow = JSON.parse(sql(restored, `SELECT row_to_json(t) FROM public.agent_turns t
+        WHERE id=${quote(archived)};`));
+      expect(archivedRow.run_id).toBeNull();
+      expect(await cold.decrypt(cold.fromDatabase<string>(Buffer.from(
+        archivedRow.outcome.split(":")[2], "base64url").toString("utf8")),
+      { scope, table: "agent_turns", column: "outcome", rowId: archived }))
+        .toBe("Private archived outcome");
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const first = sql(restored, `SELECT outcome FROM public.agent_runs WHERE id=${quote(runs[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase<string>(Buffer.from(first.split(":")[2],
+        "base64url").toString("utf8")),
+      { scope, table: "agent_runs", column: "outcome", rowId: runs[0] }))
+        .rejects.toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
+
+  it("restores encrypted PR URLs and artifact copies across run deletion", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_prurl_source_${suffix}`;
+    const restored = `minddy_min591_prurl_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID(), conversation = randomUUID();
+    const runs = [randomUUID(), randomUUID()];
+    const urls = ["https://example.invalid/private/repo/pull/11",
+      "https://example.invalid/private/repo/pull/12"];
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(prUrlTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${prUrlTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Fixture project','PURL');
+        INSERT INTO public.agent_conversations(id,project_id,owner_id)
+          VALUES(${quote(conversation)},${quote(project)},${quote(actor)});`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      for (const [index, run] of runs.entries()) {
+        if (index === 1) await keys.rotate(scope, 1);
+        const cipher = await store.encrypt(urls[index], {
+          scope, table: "agent_runs", column: "pr_url", rowId: run,
+        });
+        const stored = `mdyp3:${store.versionOf(cipher)}:${Buffer.from(cipher).toString("base64url")}`;
+        sql(source, `INSERT INTO public.agent_runs(id,project_id,conversation_id,created_by,
+          pr_number,pr_url) VALUES(${quote(run)},${quote(project)},${quote(conversation)},
+          ${quote(actor)},${index + 11},${quote(stored)});`);
+      }
+      const orphan = randomUUID();
+      const orphanCipher = await store.encrypt("https://example.invalid/private/orphan", {
+        scope, table: "agent_artifacts", column: "url", rowId: orphan,
+      });
+      const orphanUrl = `mdyp3:${store.versionOf(orphanCipher)}:${Buffer.from(orphanCipher).toString("base64url")}`;
+      sql(source, `INSERT INTO public.agent_artifacts(id,conversation_id,kind,ref,url)
+        VALUES(${quote(orphan)},${quote(conversation)},'pull_request','99',
+          ${quote(orphanUrl)});`);
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "supabase_admin",
+        "-d", source, "--data-only", "--no-owner", "--no-privileges",
+        ...["auth.users", "public.projects", "public.envelope_data_keys",
+          "public.agent_conversations", "public.agent_runs", "public.agent_turns",
+          "public.agent_runtime_sessions", "public.agent_artifacts",
+          "public.agent_pr_url_encryption_scopes"].map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("private/repo");
+      expect(dump).not.toContain("private/orphan");
+      expect(dump).not.toContain(root.toString("base64"));
+      let remainder = dump;
+      const batches = new Map<string, { header: string; lines: string[]; footer: string }>();
+      for (const table of ["agent_artifacts", "agent_runtime_sessions", "agent_turns",
+        "agent_runs", "agent_conversations", "projects", "users"]) {
+        const schema = table === "users" ? "auth" : "public";
+        const match = remainder.match(new RegExp(`(COPY ${schema}\\.${table}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`));
+        expect(match).not.toBeNull();
+        batches.set(table, { header: match![1], lines: match![2].trimEnd().split("\n").reverse(),
+          footer: match![3] });
+        remainder = remainder.replace(match![0], "");
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${remainder}\nCOMMIT;`);
+      for (const table of ["agent_artifacts", "agent_runtime_sessions", "agent_turns",
+        "agent_runs", "agent_conversations", "projects", "users"]) {
+        const batch = batches.get(table)!;
+        for (const line of batch.lines) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role = replica;\n${batch.header}${line}\n${batch.footer}COMMIT;`);
+        }
+      }
+      sql(restored, `ALTER TABLE public.agent_artifacts
+        DROP CONSTRAINT agent_artifacts_run_id_fkey;
+        ALTER TABLE public.agent_artifacts ADD CONSTRAINT agent_artifacts_run_id_fkey
+          FOREIGN KEY(run_id) REFERENCES public.agent_runs(id) ON DELETE SET NULL;`);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored), wrapper(root)));
+      for (const [index, run] of runs.entries()) {
+        const row = JSON.parse(sql(restored, `SELECT row_to_json(r) FROM public.agent_runs r
+          WHERE id=${quote(run)};`));
+        const artifact = JSON.parse(sql(restored, `SELECT row_to_json(a) FROM public.agent_artifacts a
+          WHERE run_id=${quote(run)} AND kind='pull_request';`));
+        expect(artifact.url).toBe(row.pr_url);
+        expect(artifact.url_bound_run_id).toBe(run);
+        expect(Number(row.pr_url.split(":")[1])).toBe(index + 1);
+        const cipher = cold.fromDatabase<string>(Buffer.from(row.pr_url.split(":")[2],
+          "base64url").toString("utf8"));
+        expect(await cold.decrypt(cipher, { scope, table: "agent_runs", column: "pr_url",
+          rowId: run })).toBe(urls[index]);
+      }
+      const orphanRow = JSON.parse(sql(restored, `SELECT row_to_json(a) FROM public.agent_artifacts a
+        WHERE id=${quote(orphan)};`));
+      expect(orphanRow.url_bound_run_id).toBeNull();
+      expect(await cold.decrypt(cold.fromDatabase<string>(Buffer.from(
+        orphanRow.url.split(":")[2], "base64url").toString("utf8")),
+      { scope, table: "agent_artifacts", column: "url", rowId: orphan }))
+        .toBe("https://example.invalid/private/orphan");
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const first = sql(restored, `SELECT pr_url FROM public.agent_runs WHERE id=${quote(runs[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase<string>(Buffer.from(first.split(":")[2],
+        "base64url").toString("utf8")),
+      { scope, table: "agent_runs", column: "pr_url", rowId: runs[0] }))
+        .rejects.toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
+
   it("restores GitHub issue sidecars before encrypted issue parents in independent batches", async () => {
     const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
     const source = `minddy_min591_sidecar_source_${suffix}`;
@@ -2082,6 +2554,226 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       vi.unstubAllEnvs();
       log.mockRestore();
       for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
+  it("restores shared forge URLs and project run copies in independent batches", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_sharedpr_source_${suffix}`;
+    const restored = `minddy_min591_sharedpr_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID(), connection = randomUUID();
+    const link = randomUUID();
+    const prs = [randomUUID(), randomUUID()];
+    const edits = [randomUUID(), randomUUID()];
+    const relayInstance = randomUUID();
+    const deliveryIds = [randomUUID(), randomUUID()];
+    const runs = [randomUUID(), randomUUID()];
+    const conversations = [randomUUID(), randomUUID()];
+    const urls = ["https://example.invalid/private/repo/pull/1",
+      "https://example.invalid/private/repo/pull/2"];
+    const system: EncryptionScope = { kind: "system",
+      id: "00000000-0000-0000-0000-000000000000" };
+    const projectScope: EncryptionScope = { kind: "project", id: project };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(sharedPrUrlTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${sharedPrUrlTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.forge_relay_instances(id,name,public_key)
+          VALUES(${quote(relayInstance)},'Restore relay','test-public-key');
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Fixture project','SHPR');
+        INSERT INTO public.git_connections(id,user_id,provider)
+          VALUES(${quote(connection)},${quote(actor)},'github');
+        INSERT INTO public.project_git_links(id,project_id,connection_id,provider,
+          external_repo_id,repo_full_name) VALUES(${quote(link)},${quote(project)},
+            ${quote(connection)},'github','shared-pr-restore','private/repo');`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      for (const [index, prId] of prs.entries()) {
+        if (index === 1) {
+          await keys.rotate(system, 1);
+          await keys.rotate(projectScope, 1);
+        }
+        const forge = await store.encrypt(urls[index], {
+          scope: system, table: "pull_requests", column: "url", rowId: prId,
+        });
+        const run = await store.encrypt(urls[index], {
+          scope: projectScope, table: "agent_runs", column: "pr_url",
+          rowId: runs[index],
+        });
+        const title = await store.encrypt(`Private PR title ${index + 1}`, {
+          scope: system, table: "pull_requests", column: "title", rowId: prId,
+        });
+        const head = await store.encrypt(`private/head-${index + 1}`, {
+          scope: system, table: "pull_requests", column: "head_branch", rowId: prId,
+        });
+        const base = await store.encrypt("private/base", {
+          scope: system, table: "pull_requests", column: "base_branch", rowId: prId,
+        });
+        const edit = await store.encrypt(`Private prior comment ${index + 1}`, {
+          scope: system, table: "pr_comment_edits", column: "body",
+          rowId: edits[index],
+        });
+        const deliveryIdentity = `${relayInstance}:github:delivery-${index + 1}`;
+        const payload = await store.encrypt(`Private relay issue ${index + 1}`, {
+          scope: system, table: "forge_relay_deliveries", column: "payload",
+          rowId: deliveryIdentity,
+        });
+        const diagnostic = await store.encrypt(`Private relay error ${index + 1}`, {
+          scope: system, table: "forge_relay_deliveries", column: "last_error",
+          rowId: deliveryIdentity,
+        });
+        const forgeValue = `mdyq3:${store.versionOf(forge)}:${Buffer.from(forge).toString("base64url")}`;
+        const runValue = `mdyp3:${store.versionOf(run)}:${Buffer.from(run).toString("base64url")}`;
+        const contentValue = (cipher: typeof title) =>
+          `mdym3:${store.versionOf(cipher)}:${Buffer.from(cipher).toString("base64url")}`;
+        sql(source, `INSERT INTO public.pull_requests(id,provider,repo_full_name,
+            number,url,title,head_branch,base_branch)
+            VALUES(${quote(prId)},'github','private/repo',${index + 1},
+              ${quote(forgeValue)},${quote(contentValue(title))},
+              ${quote(contentValue(head))},${quote(contentValue(base))});
+          INSERT INTO public.pr_comment_edits(id,provider,repo_full_name,
+            pr_number,comment_id,body) VALUES(${quote(edits[index])},
+              'github','private/repo',${index + 1},${index + 1},
+              ${quote(`mdye3:${store.versionOf(edit)}:${Buffer.from(edit).toString("base64url")}`)});
+          INSERT INTO public.forge_relay_deliveries(id,instance_id,provider,
+            delivery_guid,payload,last_error) VALUES(${quote(deliveryIds[index])},
+              ${quote(relayInstance)},'github',${quote(`delivery-${index + 1}`)},
+              ${quote(`mdyd3:${store.versionOf(payload)}:${Buffer.from(payload).toString("base64url")}`)},
+              ${quote(`mdyd3:${store.versionOf(diagnostic)}:${Buffer.from(diagnostic).toString("base64url")}`)});
+          INSERT INTO public.forge_relay_audit(instance_id,action,detail)
+            VALUES(${quote(relayInstance)},'webhook_secret_registered','{}'::jsonb);
+          INSERT INTO public.agent_conversations(id,project_id,owner_id)
+            VALUES(${quote(conversations[index])},${quote(project)},${quote(actor)});
+          INSERT INTO public.agent_runs(id,project_id,conversation_id,created_by,
+            repo_link_id,connection_id,repo_provider,repo_external_id,
+            pr_number,pr_url) VALUES(${quote(runs[index])},${quote(project)},
+              ${quote(conversations[index])},${quote(actor)},${quote(link)},
+              ${quote(connection)},'github','shared-pr-restore',${index + 1},
+              ${quote(runValue)});`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner", "--no-privileges",
+        ...["auth.users", "public.projects", "public.envelope_data_keys",
+          "public.git_connections", "public.project_git_links",
+          "public.pull_request_url_encryption_scope",
+          "public.pull_request_content_encryption_scope",
+          "public.pr_comment_edit_encryption_scope", "public.pr_comment_edits",
+          "public.forge_relay_delivery_encryption_scope",
+          "public.forge_relay_instances", "public.forge_relay_deliveries",
+          "public.forge_relay_audit",
+          "public.agent_pr_url_encryption_scopes", "public.agent_conversations",
+          "public.pull_requests", "public.agent_runs", "public.agent_artifacts",
+          "public.agent_runtime_sessions"].map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      for (const url of urls) expect(dump).not.toContain(url);
+      for (const secret of ["Private PR title", "private/head-", "private/base",
+        "Private prior comment", "Private relay issue", "Private relay error"])
+        expect(dump).not.toContain(secret);
+      expect(dump).not.toContain("private.example");
+      let dependencies = dump;
+      const batches = new Map<string, { header: string; lines: string[];
+        footer: string }>();
+      for (const table of ["forge_relay_audit", "forge_relay_deliveries", "pr_comment_edits", "agent_artifacts",
+        "agent_runtime_sessions", "agent_runs", "pull_requests"]) {
+        const match = dependencies.match(new RegExp(
+          `(COPY public\\.${table}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`));
+        expect(match).not.toBeNull();
+        batches.set(table, { header: match![1],
+          lines: match![2].trimEnd().split("\n").reverse(), footer: match![3] });
+        dependencies = dependencies.replace(match![0], "");
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${dependencies}\nCOMMIT;`);
+      for (const table of ["forge_relay_audit", "forge_relay_deliveries", "pr_comment_edits", "agent_artifacts",
+        "agent_runtime_sessions", "agent_runs", "pull_requests"]) {
+        const batch = batches.get(table)!;
+        for (const line of batch.lines) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${batch.header}${line}\n${batch.footer}COMMIT;`);
+        }
+      }
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(root)));
+      for (const [index, prId] of prs.entries()) {
+        const forge = sql(restored, `SELECT url FROM public.pull_requests
+          WHERE id=${quote(prId)};`);
+        const content = JSON.parse(sql(restored, `SELECT row_to_json(p)
+          FROM public.pull_requests p WHERE id=${quote(prId)};`));
+        const run = sql(restored, `SELECT pr_url FROM public.agent_runs
+          WHERE id=${quote(runs[index])};`);
+        const artifact = JSON.parse(sql(restored, `SELECT row_to_json(a)
+          FROM public.agent_artifacts a WHERE run_id=${quote(runs[index])}
+            AND kind='pull_request';`));
+        expect(artifact.url).toBe(run);
+        expect(artifact.url_bound_run_id).toBe(runs[index]);
+        expect(Number(forge.split(":")[1])).toBe(index + 1);
+        expect(Number(run.split(":")[1])).toBe(index + 1);
+        for (const [value, context] of [[forge, { scope: system,
+          table: "pull_requests", column: "url", rowId: prId }],
+        [run, { scope: projectScope, table: "agent_runs", column: "pr_url",
+          rowId: runs[index] }]] as const) {
+          const cipher = cold.fromDatabase<string>(Buffer.from(value.split(":")[2],
+            "base64url").toString("utf8"));
+          expect(await cold.decrypt(cipher, context)).toBe(urls[index]);
+        }
+        for (const [column, expected] of [["title", `Private PR title ${index + 1}`],
+          ["head_branch", `private/head-${index + 1}`],
+          ["base_branch", "private/base"]] as const) {
+          const value = content[column] as string;
+          expect(Number(value.split(":")[1])).toBe(index + 1);
+          const cipher = cold.fromDatabase<string>(Buffer.from(value.split(":")[2],
+            "base64url").toString("utf8"));
+          expect(await cold.decrypt(cipher, { scope: system, table: "pull_requests",
+            column, rowId: prId })).toBe(expected);
+        }
+        const editValue = sql(restored, `SELECT body FROM public.pr_comment_edits
+          WHERE id=${quote(edits[index])};`);
+        expect(Number(editValue.split(":")[1])).toBe(index + 1);
+        const editCipher = cold.fromDatabase<string>(Buffer.from(
+          editValue.split(":")[2], "base64url").toString("utf8"));
+        expect(await cold.decrypt(editCipher, { scope: system,
+          table: "pr_comment_edits", column: "body", rowId: edits[index] }))
+          .toBe(`Private prior comment ${index + 1}`);
+        const delivery = JSON.parse(sql(restored, `SELECT row_to_json(d)
+          FROM public.forge_relay_deliveries d
+          WHERE id=${quote(deliveryIds[index])};`));
+        for (const [column, expected] of [["payload", `Private relay issue ${index + 1}`],
+          ["last_error", `Private relay error ${index + 1}`]] as const) {
+          const value = delivery[column] as string;
+          expect(Number(value.split(":")[1])).toBe(index + 1);
+          const cipher = cold.fromDatabase<string>(Buffer.from(value.split(":")[2],
+            "base64url").toString("utf8"));
+          expect(await cold.decrypt(cipher, { scope: system,
+            table: "forge_relay_deliveries", column,
+            rowId: `${relayInstance}:github:delivery-${index + 1}` })).toBe(expected);
+        }
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const forge = sql(restored, `SELECT url FROM public.pull_requests
+        WHERE id=${quote(prs[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase<string>(Buffer.from(
+        forge.split(":")[2], "base64url").toString("utf8")), {
+        scope: system, table: "pull_requests", column: "url", rowId: prs[0],
+      })).rejects.toThrow();
+      const delivery = sql(restored, `SELECT payload FROM public.forge_relay_deliveries
+        WHERE id=${quote(deliveryIds[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase<string>(Buffer.from(
+        delivery.split(":")[2], "base64url").toString("utf8")), {
+        scope: system, table: "forge_relay_deliveries", column: "payload",
+        rowId: `${relayInstance}:github:delivery-1`,
+      })).rejects.toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
     }
   }, 60_000);
 });

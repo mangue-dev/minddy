@@ -71,7 +71,7 @@
       ]
     },
     "numo_conversation_history": {
-      "sha256": "d83299c94a670e55091c910e4b99d4b2932e3606cdb0361c879a0a7e7fe47481",
+      "sha256": "4b9edad52f0cc279d3df70317a5a7aa0656c86d695ad7883a7d16e0c40cccbb7",
       "relations": [
         "issues",
         "projects",
@@ -585,6 +585,22 @@
       ],
       "functionReferences": []
     },
+    "guard_agent_run_pr_url()": {
+      "sha256": "8a348cd00e23c82f47c7659e911c87b06ef0c95f797f85fd94a59533fde40f80",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_artifacts",
+        "agent_pr_url_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_artifacts"
+      ],
+      "functionReferences": []
+    },
     "guard_issue_encryption()": {
       "sha256": "65c522aaf521904d5ec49998b218b5c86aea812b933f24f293fb6eeaef42be39",
       "securityDefiner": true,
@@ -606,6 +622,19 @@
       ],
       "acl": "{postgres=X/postgres}",
       "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "guard_pull_request_url()": {
+      "sha256": "a4580e274b3e48eff8c2c11c3ec50d85a2547b176c5b8a63f4609f7f04cc9388",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pull_request_url_encryption_scope"
+      ],
       "protectedRelations": [],
       "functionReferences": []
     },
@@ -707,6 +736,19 @@
         "can_access_project"
       ]
     },
+    "guard_agent_run_summary()": {
+      "sha256": "6bbd6fff9103ec749efd100d5c3ab67a69fa55d179abc77dc567219b9fbe71e7",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_summary_encryption_scopes"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_agent_run_verdict()": {
       "sha256": "157cd1d3a91b45098adb2f7816b2fbbb1cfc5027cfb4cc0565aed0d98e430367",
       "securityDefiner": true,
@@ -802,6 +844,24 @@
       ],
       "functionReferences": []
     },
+    "guard_agent_artifact_url()": {
+      "sha256": "6fea048cf0e7c1d0c7f9de6429d78c6f73bdac4531fd6606773f3cfb40f02943",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "agent_conversations",
+        "agent_pr_url_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "agent_conversations"
+      ],
+      "functionReferences": []
+    },
     "guard_agent_event_copies()": {
       "sha256": "309c4fa15b3102b6f53e864f93c2c2504bcb1da060497d4ec3fb1c0054660c5a",
       "securityDefiner": true,
@@ -835,6 +895,24 @@
       ],
       "protectedRelations": [
         "agent_runs"
+      ],
+      "functionReferences": []
+    },
+    "guard_agent_turn_summary()": {
+      "sha256": "473b2ef8f8e472669f7525fad0bcc8b6ac735b3357c72ec4e5e69743ac72fb13",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "agent_conversations",
+        "agent_summary_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "agent_conversations"
       ],
       "functionReferences": []
     },
@@ -903,7 +981,7 @@
       "functionReferences": []
     },
     "recover_stale_numo_turns()": {
-      "sha256": "5b7f7ae155eb9c991aece708c7b343704694abe0c6562a5fff02c75c46d13ff9",
+      "sha256": "de7e5eb0ffc379800207939d4322ff89d4e49b30c9ea00cf34e656665ca2c3bf",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -919,9 +997,7 @@
         "conversations",
         "numo_assistant_turns"
       ],
-      "functionReferences": [
-        "resume_numo_turn_from_worker"
-      ]
+      "functionReferences": []
     },
     "rekey_pull_request_scope()": {
       "sha256": "f5e799b81bbb7cd2520dadaa1da0d2c4bc3f267b96a76b6d5a4ad645a1330016",
@@ -1285,6 +1361,32 @@
       ],
       "functionReferences": []
     },
+    "guard_pr_comment_edit_body()": {
+      "sha256": "92a80ac825d9b7f95faaff49b4aa4a979af6e796d4b3427e726897364f258554",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pr_comment_edit_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "guard_pull_request_content()": {
+      "sha256": "0a776943ea372ab06177f982466a22d18653fb7106e04a8861058d53314c57c7",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pull_request_content_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "register_numo_conversation()": {
       "sha256": "8000bddbe8e688000bac855df0057d451380320913310fd6346b5c8b9b4319be",
       "securityDefiner": true,
@@ -1443,6 +1545,24 @@
       ],
       "functionReferences": []
     },
+    "guard_agent_artifact_branch()": {
+      "sha256": "2815d7d89ac63badb8b5f165ebc18c8e146874462e4e161aa4a2e0f16a4167d0",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "agent_conversations",
+        "agent_work_branch_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "agent_conversations"
+      ],
+      "functionReferences": []
+    },
     "guard_agent_run_base_branch()": {
       "sha256": "ffbe6ac6387955a0808fcc252aa31226c98c97fb1daade2f38183d155d7c4ce8",
       "securityDefiner": true,
@@ -1454,6 +1574,22 @@
         "agent_base_branch_encryption_scopes"
       ],
       "protectedRelations": [],
+      "functionReferences": []
+    },
+    "guard_agent_run_work_branch()": {
+      "sha256": "3d79a33b3aae9153596e872fd4ff3db766b672eb20e36fae479af600f99978dc",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_artifacts",
+        "agent_work_branch_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_artifacts"
+      ],
       "functionReferences": []
     },
     "guard_comment_client_update()": {
@@ -1547,7 +1683,7 @@
       "functionReferences": []
     },
     "sync_agent_runtime_from_run()": {
-      "sha256": "526e424b1db790bdf561ce2b646caf1d21021cc3cad7adbcc0c08c0f384a2af3",
+      "sha256": "05ea58e7962090fbb73a4cab93c5431ac359501db4cac81eb9406bbe9a64526a",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1696,6 +1832,25 @@
       ],
       "protectedRelations": [
         "agent_runs"
+      ],
+      "functionReferences": []
+    },
+    "guard_numo_worker_checkpoint()": {
+      "sha256": "6a6c1de1cec526d9a735bf3d5de1bd877bd5eb03ac4e238c599267e2bd4b7b63",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "conversations",
+        "agent_result_encryption_scopes",
+        "agent_work_branch_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "conversations"
       ],
       "functionReferences": []
     },
@@ -1892,6 +2047,20 @@
       "relations": [
         "ai_usage",
         "fx_rates"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "guard_agent_delegation_result()": {
+      "sha256": "7e0c20fb0bae6ccba2fe63626af9aea62ce726f046c3349aebcdd212cfbe778c",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_result_encryption_scopes",
+        "agent_work_branch_encryption_scopes"
       ],
       "protectedRelations": [],
       "functionReferences": []
@@ -2146,6 +2315,17 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_forge_relay_audit_detail()": {
+      "sha256": "38341d7fa498544a5c59f983f1625704fb950fdec483852da2a6d21d14124825",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_project_draft_encryption()": {
       "sha256": "d7d56584e24c2973560bbf53ee6e2ea7788ed038e70163933c2c75cbaf42792b",
       "securityDefiner": true,
@@ -2379,6 +2559,22 @@
       ],
       "functionReferences": []
     },
+    "guard_agent_pr_url_parent_scope()": {
+      "sha256": "316b53d9414bb3952f792ff7a87d39c7527f452e49fdb2a5a15f22c34681e303",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_artifacts",
+        "agent_pr_url_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_artifacts"
+      ],
+      "functionReferences": []
+    },
     "guard_agent_runtime_base_branch()": {
       "sha256": "5dd36dbc327699db88f2d910e96c982beb4810bedb5b8e5d992d082b2a731461",
       "securityDefiner": true,
@@ -2394,6 +2590,45 @@
       "protectedRelations": [
         "agent_runs",
         "agent_conversations"
+      ],
+      "functionReferences": []
+    },
+    "guard_agent_runtime_work_branch()": {
+      "sha256": "592e410df152107952f2e5bc3bd722ed5a6f09309da2d42918676cd56224c6f0",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "agent_conversations",
+        "agent_work_branch_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "agent_conversations"
+      ],
+      "functionReferences": []
+    },
+    "guard_numo_worker_event_payload()": {
+      "sha256": "f49c7f0c6f95be6e140d71982c50e1332d26085574d5cbc0b54c9fa7ec9b113b",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "conversations",
+        "numo_assistant_turns",
+        "agent_result_encryption_scopes",
+        "agent_work_branch_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "conversations",
+        "numo_assistant_turns"
       ],
       "functionReferences": []
     },
@@ -2690,6 +2925,19 @@
       ],
       "functionReferences": []
     },
+    "guard_forge_relay_delivery_content()": {
+      "sha256": "b5e88170d8fe9250a7654ce3aae6df9969b7c1115e73110e064efb9da582b731",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "forge_relay_delivery_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "remove_deleted_database_properties()": {
       "sha256": "564bd6439140f22f21b53527696732a2e7dc969d33bc450b57ce790c9ac701a8",
       "securityDefiner": false,
@@ -2706,7 +2954,7 @@
       "functionReferences": []
     },
     "upsert_pull_request_monotonic(jsonb)": {
-      "sha256": "703e553b1fb0a3ef95d78777e71781f50dfcd1d70f98eba87a27d06610e6b3bc",
+      "sha256": "e1ef54475bd13dc498e37936529ab6dcf146814c107e466ea8a19b61f7a331f7",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2834,6 +3082,24 @@
       ],
       "functionReferences": []
     },
+    "guard_agent_work_branch_parent_scope()": {
+      "sha256": "bd7c384cb241316564e1960e2d1b78c53902b2d3d3e4d3417890ac5412a887f8",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_artifacts",
+        "agent_runtime_sessions",
+        "agent_work_branch_encryption_scopes"
+      ],
+      "protectedRelations": [
+        "agent_artifacts",
+        "agent_runtime_sessions"
+      ],
+      "functionReferences": []
+    },
     "guard_project_actor(uuid,uuid,boolean)": {
       "sha256": "4c008dbea4231232300868c240967b5876fc7c086e0db91d4622271d24ee58c1",
       "securityDefiner": true,
@@ -2877,7 +3143,6 @@
         "forge_relay_instances"
       ],
       "protectedRelations": [
-        "forge_relay_audit",
         "forge_relay_instances"
       ],
       "functionReferences": []
@@ -2981,6 +3246,21 @@
         "project_realtime_generations"
       ],
       "protectedRelations": [],
+      "functionReferences": []
+    },
+    "migrate_pull_request_url(uuid,text,text)": {
+      "sha256": "5b858e06d1341c703a0074b4bbd6b63aea4e6b6e59cfe45e0a0f06883f9be7e3",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pull_requests"
+      ],
+      "protectedRelations": [
+        "pull_requests"
+      ],
       "functionReferences": []
     },
     "soft_delete_objective_guarded(uuid,uuid)": {
@@ -3249,6 +3529,23 @@
         "current_realtime_topic"
       ]
     },
+    "migrate_numo_worker_event(uuid,jsonb,jsonb)": {
+      "sha256": "94d5eee79a00bff3a10fe9bbbd2359f52103ced616da6d85cb27b9e3bdb5a3f5",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_turn_events",
+        "numo_assistant_turns"
+      ],
+      "protectedRelations": [
+        "numo_turn_events",
+        "numo_assistant_turns"
+      ],
+      "functionReferences": []
+    },
     "release_issue_remote_status_push(uuid,uuid)": {
       "sha256": "2b857570cab7c07e54dfdae9dd59934f71025641c9cae5e2f137ccb615668c21",
       "securityDefiner": true,
@@ -3307,6 +3604,34 @@
       ],
       "functionReferences": []
     },
+    "migrate_pr_comment_edit_body(uuid,text,text)": {
+      "sha256": "ae24f251963dad60287e70effad03bb25960f6a159711d8042ad9ea6c1367a4e",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pr_comment_edits"
+      ],
+      "protectedRelations": [
+        "pr_comment_edits"
+      ],
+      "functionReferences": []
+    },
+    "scrub_forge_relay_audit_detail(bigint,jsonb)": {
+      "sha256": "5b943eb3f6b5ba34d3327c784f53fda0800233c90a41d43586ef0d94055cb7bb",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "forge_relay_audit"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "write_feedback_sso_secret(uuid,text,boolean)": {
       "sha256": "0316db4451f67c34d5436cf99862f6da896abc822cde6e2ee7b42218ea7d212f",
       "securityDefiner": true,
@@ -3345,6 +3670,21 @@
         "objectives",
         "stat_events",
         "issue_events"
+      ],
+      "functionReferences": []
+    },
+    "migrate_agent_run_pr_url(uuid,uuid,text,text)": {
+      "sha256": "dc7be28fd712b262e7584d54225136dba78b855e22eeb03a331b0e7bfa413639",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs"
+      ],
+      "protectedRelations": [
+        "agent_runs"
       ],
       "functionReferences": []
     },
@@ -3501,6 +3841,21 @@
       ],
       "functionReferences": []
     },
+    "migrate_numo_worker_checkpoint(uuid,jsonb,jsonb)": {
+      "sha256": "82ec939192d0ad3c67e625ee39278ba7691db341dc89e88b995c2bafb8d6e0b9",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_assistant_turns"
+      ],
+      "protectedRelations": [
+        "numo_assistant_turns"
+      ],
+      "functionReferences": []
+    },
     "notification_targets_match_project(notifications)": {
       "sha256": "4d4d2f93108232130233e318c0b081fb594525d7d9c808cbabf96b86e7a3311a",
       "securityDefiner": true,
@@ -3614,6 +3969,23 @@
       ],
       "functionReferences": []
     },
+    "migrate_agent_run_work_branch(uuid,uuid,text,text)": {
+      "sha256": "bceadce01a1ce3c15397fe93c9708414ffc9eba2390d903b6fa7ceddf16e867c",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "agent_artifacts"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "agent_artifacts"
+      ],
+      "functionReferences": []
+    },
     "resume_numo_turn_from_worker(uuid,uuid,text,jsonb)": {
       "sha256": "8ff45fd71f101efc1c1d2cdaae5bbbd32539e275e20cb085882446e76e721dc4",
       "securityDefiner": true,
@@ -3713,8 +4085,25 @@
       ],
       "functionReferences": []
     },
+    "migrate_agent_artifact_url(uuid,uuid,text,uuid,text)": {
+      "sha256": "b3c686f9ce98b2cd9fa3d944f6916d48070004957e7c72494652f19a96463131",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_artifacts",
+        "agent_conversations"
+      ],
+      "protectedRelations": [
+        "agent_artifacts",
+        "agent_conversations"
+      ],
+      "functionReferences": []
+    },
     "sync_agent_runs_from_pull_request(text,text,integer)": {
-      "sha256": "5b56a9f6e4e27b445591852698b7fe7c3e80efdb21c79a0946534169f0e45138",
+      "sha256": "379fbfc21673e0809007d34b8d76f9a79ca1a6b2c070b16a39d102a821320148",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4080,6 +4469,21 @@
       ],
       "functionReferences": []
     },
+    "migrate_forge_relay_delivery_content(uuid,text,text,text,text)": {
+      "sha256": "68ffe60b2636cddec1a5af1d6cf0156cbff6af7420d12737cea0ac6940e2558b",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "forge_relay_deliveries"
+      ],
+      "protectedRelations": [
+        "forge_relay_deliveries"
+      ],
+      "functionReferences": []
+    },
     "migrate_issue_ciphertext(uuid,uuid,bigint,integer,integer,text)": {
       "sha256": "1b83ac34e13ceb302a8cc6af663f9028bcf38b0bb47647ed6f58525c9521dbd6",
       "securityDefiner": true,
@@ -4092,6 +4496,36 @@
       ],
       "protectedRelations": [
         "issues"
+      ],
+      "functionReferences": []
+    },
+    "migrate_agent_run_summary(uuid,uuid,text,text,text,text,boolean)": {
+      "sha256": "3882442673c59f0a3a0edaf8669b33dae1a896383007c3bf1187bf896a77b180",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs"
+      ],
+      "protectedRelations": [
+        "agent_runs"
+      ],
+      "functionReferences": []
+    },
+    "migrate_pull_request_content(uuid,text,text,text,text,text,text)": {
+      "sha256": "f2cb01ac8327026993590a85c95b8ac8b2289fce23c409147525524d8a56880f",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pull_requests"
+      ],
+      "protectedRelations": [
+        "pull_requests"
       ],
       "functionReferences": []
     },
@@ -4142,6 +4576,40 @@
       ],
       "functionReferences": []
     },
+    "migrate_agent_artifact_branch(uuid,uuid,text,text,uuid,text,text)": {
+      "sha256": "8bd1c7309a83cbdd602438dc07b47016b15703db0e047fb60057ee9806d69d19",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_artifacts",
+        "agent_conversations"
+      ],
+      "protectedRelations": [
+        "agent_artifacts",
+        "agent_conversations"
+      ],
+      "functionReferences": []
+    },
+    "migrate_agent_turn_summary(uuid,uuid,text,text,text,text,boolean)": {
+      "sha256": "3b2c653dff1b392f04f091ec6d2614f08a57c18580adf4884c1039b9bd305ec7",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_turns",
+        "agent_conversations"
+      ],
+      "protectedRelations": [
+        "agent_turns",
+        "agent_conversations"
+      ],
+      "functionReferences": []
+    },
     "migrate_category_ciphertext(uuid,uuid,bigint,integer,integer,text)": {
       "sha256": "e5f664dd3a3fac4cd8faa3c8c390300fbcbf5fa0e18de6770de580dfbeba76f7",
       "securityDefiner": true,
@@ -4159,6 +4627,23 @@
     },
     "migrate_orphan_agent_runtime_base_branch(uuid,uuid,text,uuid,text)": {
       "sha256": "4423b3ae6d254f806419b04cb7c8dc2fccdff47c170c43bf4d35e1695bcee20d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_conversations",
+        "agent_runtime_sessions"
+      ],
+      "protectedRelations": [
+        "agent_conversations",
+        "agent_runtime_sessions"
+      ],
+      "functionReferences": []
+    },
+    "migrate_orphan_agent_runtime_work_branch(uuid,uuid,text,uuid,text)": {
+      "sha256": "972107ab30274ba3e6baa5ec4bf4a7eed9ca747513924b28d96893ca68fb4b3a",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4407,6 +4892,25 @@
       ],
       "functionReferences": []
     },
+    "sync_agent_run_pr_url(uuid,timestamp with time zone,text,uuid,text,text)": {
+      "sha256": "8c3f59126370fa53e354dc0dd72e4298f1c6704466f91086e3af64842061b643",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "pull_requests",
+        "project_git_links"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "pull_requests",
+        "project_git_links"
+      ],
+      "functionReferences": []
+    },
     "save_project_draft_guarded(uuid,uuid,text,text,jsonb,integer,text,bigint)": {
       "sha256": "f39e641b85eea4849f689f285fcc573478481a29dfcffaca7e52073e36cd99d8",
       "securityDefiner": true,
@@ -4419,6 +4923,21 @@
       ],
       "protectedRelations": [
         "project_drafts"
+      ],
+      "functionReferences": []
+    },
+    "migrate_agent_delegation_result(uuid,uuid,jsonb,text,integer,text,integer)": {
+      "sha256": "f811d5da6d0dd7b6384b396c72df59508ba0e44b0c2e9b78966f05acea466dd9",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs"
+      ],
+      "protectedRelations": [
+        "agent_runs"
       ],
       "functionReferences": []
     },
@@ -5021,6 +5540,10 @@
       "function": "guard_agent_launch_encryption()",
       "definition": "CREATE TRIGGER agent_run_launch_guard BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_launch_encryption()"
     },
+    "agent_runs.agent_run_pr_url_guard": {
+      "function": "guard_agent_run_pr_url()",
+      "definition": "CREATE TRIGGER agent_run_pr_url_guard BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_run_pr_url()"
+    },
     "attachments.attachments_broadcast": {
       "function": "broadcast_project_scoped()",
       "definition": "CREATE TRIGGER attachments_broadcast AFTER INSERT OR DELETE OR UPDATE ON attachments FOR EACH ROW EXECUTE FUNCTION broadcast_project_scoped()"
@@ -5028,6 +5551,10 @@
     "pages.pages_guard_database_parent": {
       "function": "guard_page_database_parent()",
       "definition": "CREATE TRIGGER pages_guard_database_parent BEFORE UPDATE OF parent_id ON pages FOR EACH ROW EXECUTE FUNCTION guard_page_database_parent()"
+    },
+    "agent_runs.agent_run_summary_guard": {
+      "function": "guard_agent_run_summary()",
+      "definition": "CREATE TRIGGER agent_run_summary_guard BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_run_summary()"
     },
     "agent_runs.agent_run_verdict_guard": {
       "function": "guard_agent_run_verdict()",
@@ -5065,6 +5592,10 @@
       "function": "create_agent_turn_for_run()",
       "definition": "CREATE TRIGGER trg_agent_run_create_turn AFTER INSERT ON agent_runs FOR EACH ROW EXECUTE FUNCTION create_agent_turn_for_run()"
     },
+    "agent_turns.agent_turn_summary_guard": {
+      "function": "guard_agent_turn_summary()",
+      "definition": "CREATE TRIGGER agent_turn_summary_guard BEFORE INSERT OR UPDATE ON agent_turns FOR EACH ROW EXECUTE FUNCTION guard_agent_turn_summary()"
+    },
     "conversations.register_numo_identity": {
       "function": "register_numo_conversation()",
       "definition": "CREATE TRIGGER register_numo_identity AFTER INSERT ON conversations FOR EACH ROW EXECUTE FUNCTION register_numo_conversation()"
@@ -5076,6 +5607,10 @@
     "projects.projects_sync_storage_owner": {
       "function": "sync_project_storage_owner()",
       "definition": "CREATE TRIGGER projects_sync_storage_owner AFTER INSERT OR UPDATE OF owner_id ON projects FOR EACH ROW EXECUTE FUNCTION sync_project_storage_owner()"
+    },
+    "pull_requests.pull_request_url_guard": {
+      "function": "guard_pull_request_url()",
+      "definition": "CREATE TRIGGER pull_request_url_guard BEFORE INSERT OR UPDATE ON pull_requests FOR EACH ROW EXECUTE FUNCTION guard_pull_request_url()"
     },
     "agent_messages.agent_queue_copy_guard": {
       "function": "guard_agent_queue_copy()",
@@ -5108,6 +5643,10 @@
     "agent_runs.agent_run_queue_scope_guard": {
       "function": "guard_agent_queue_parent_scope()",
       "definition": "CREATE TRIGGER agent_run_queue_scope_guard BEFORE UPDATE OF project_id ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_queue_parent_scope()"
+    },
+    "agent_runs.agent_run_work_branch_guard": {
+      "function": "guard_agent_run_work_branch()",
+      "definition": "CREATE TRIGGER agent_run_work_branch_guard BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_run_work_branch()"
     },
     "agent_runs.agent_runs_broadcast_insert": {
       "function": "broadcast_agent_run_row()",
@@ -5181,9 +5720,17 @@
       "function": "rekey_deleted_project()",
       "definition": "CREATE TRIGGER projects_rekey_realtime_delete BEFORE DELETE ON projects FOR EACH ROW EXECUTE FUNCTION rekey_deleted_project()"
     },
+    "agent_artifacts.agent_artifact_url_guard": {
+      "function": "guard_agent_artifact_url()",
+      "definition": "CREATE TRIGGER agent_artifact_url_guard BEFORE INSERT OR UPDATE ON agent_artifacts FOR EACH ROW EXECUTE FUNCTION guard_agent_artifact_url()"
+    },
     "agent_chains.agent_chains_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER agent_chains_set_updated_at BEFORE UPDATE ON agent_chains FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    "agent_runs.agent_delegation_result_guard": {
+      "function": "guard_agent_delegation_result()",
+      "definition": "CREATE TRIGGER agent_delegation_result_guard BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_delegation_result()"
     },
     "agent_runs.zz_agent_run_checkpoint_guard": {
       "function": "guard_agent_checkpoint()",
@@ -5192,6 +5739,10 @@
     "agent_runs.zz_agent_run_delegation_guard": {
       "function": "guard_agent_delegation_input()",
       "definition": "CREATE TRIGGER zz_agent_run_delegation_guard BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_delegation_input()"
+    },
+    "pull_requests.pull_request_content_guard": {
+      "function": "guard_pull_request_content()",
+      "definition": "CREATE TRIGGER pull_request_content_guard BEFORE INSERT OR UPDATE ON pull_requests FOR EACH ROW EXECUTE FUNCTION guard_pull_request_content()"
     },
     "stat_events.stat_events_encryption_guard": {
       "function": "guard_stat_events_encryption()",
@@ -5261,6 +5812,10 @@
       "function": "validate_page_comment_scope()",
       "definition": "CREATE TRIGGER page_comments_validate_scope BEFORE INSERT OR UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION validate_page_comment_scope()"
     },
+    "agent_artifacts.agent_artifact_branch_guard": {
+      "function": "guard_agent_artifact_branch()",
+      "definition": "CREATE TRIGGER agent_artifact_branch_guard BEFORE INSERT OR UPDATE ON agent_artifacts FOR EACH ROW EXECUTE FUNCTION guard_agent_artifact_branch()"
+    },
     "agent_runs.agent_runs_lock_anchor_on_insert": {
       "function": "lock_agent_run_anchor_on_insert()",
       "definition": "CREATE TRIGGER agent_runs_lock_anchor_on_insert BEFORE INSERT ON agent_runs FOR EACH ROW EXECUTE FUNCTION lock_agent_run_anchor_on_insert()"
@@ -5280,6 +5835,10 @@
     "page_files.page_files_enforce_storage_quota": {
       "function": "enforce_storage_insert_quota()",
       "definition": "CREATE TRIGGER page_files_enforce_storage_quota BEFORE INSERT OR UPDATE OF page_id, project_id, storage_path, size_bytes ON page_files FOR EACH ROW EXECUTE FUNCTION enforce_storage_insert_quota()"
+    },
+    "pr_comment_edits.pr_comment_edit_body_guard": {
+      "function": "guard_pr_comment_edit_body()",
+      "definition": "CREATE TRIGGER pr_comment_edit_body_guard BEFORE INSERT OR UPDATE ON pr_comment_edits FOR EACH ROW EXECUTE FUNCTION guard_pr_comment_edit_body()"
     },
     "agent_routines.agent_routines_set_updated_at": {
       "function": "set_updated_at()",
@@ -5429,6 +5988,14 @@
       "function": "guard_agent_journal_encryption()",
       "definition": "CREATE TRIGGER agent_journal_encryption_guard BEFORE INSERT OR UPDATE ON agent_run_journal FOR EACH ROW EXECUTE FUNCTION guard_agent_journal_encryption()"
     },
+    "forge_relay_audit.forge_relay_audit_detail_guard": {
+      "function": "guard_forge_relay_audit_detail()",
+      "definition": "CREATE TRIGGER forge_relay_audit_detail_guard BEFORE INSERT OR UPDATE ON forge_relay_audit FOR EACH ROW EXECUTE FUNCTION guard_forge_relay_audit_detail()"
+    },
+    "numo_turn_events.numo_worker_event_payload_guard": {
+      "function": "guard_numo_worker_event_payload()",
+      "definition": "CREATE TRIGGER numo_worker_event_payload_guard BEFORE INSERT OR UPDATE ON numo_turn_events FOR EACH ROW EXECUTE FUNCTION guard_numo_worker_event_payload()"
+    },
     "project_members.project_members_auth_insert_lock": {
       "function": "lock_project_member_auth_insert()",
       "definition": "CREATE TRIGGER project_members_auth_insert_lock BEFORE INSERT ON project_members FOR EACH ROW EXECUTE FUNCTION lock_project_member_auth_insert()"
@@ -5453,6 +6020,10 @@
       "function": "validate_notification_target_scope()",
       "definition": "CREATE TRIGGER notifications_validate_target_scope BEFORE INSERT OR UPDATE OF user_id, project_id, issue_id, objective_id, feedback_post_id, routine_id, page_id, agent_conversation_id, comment_id, pull_request_id ON notifications FOR EACH ROW EXECUTE FUNCTION validate_notification_target_scope()"
     },
+    "numo_assistant_turns.numo_worker_checkpoint_guard": {
+      "function": "guard_numo_worker_checkpoint()",
+      "definition": "CREATE TRIGGER numo_worker_checkpoint_guard BEFORE INSERT OR UPDATE OF checkpoint ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION guard_numo_worker_checkpoint()"
+    },
     "project_invitations.project_invitations_broadcast": {
       "function": "broadcast_invitations_row()",
       "definition": "CREATE TRIGGER project_invitations_broadcast AFTER INSERT OR DELETE OR UPDATE ON project_invitations FOR EACH ROW EXECUTE FUNCTION broadcast_invitations_row()"
@@ -5472,6 +6043,10 @@
     "project_git_links.project_git_links_authority_lock": {
       "function": "lock_project_authority_mutation()",
       "definition": "CREATE TRIGGER project_git_links_authority_lock AFTER INSERT OR DELETE OR UPDATE ON project_git_links FOR EACH ROW EXECUTE FUNCTION lock_project_authority_mutation()"
+    },
+    "agent_conversations.agent_pr_url_parent_scope_guard": {
+      "function": "guard_agent_pr_url_parent_scope()",
+      "definition": "CREATE TRIGGER agent_pr_url_parent_scope_guard BEFORE UPDATE OF project_id ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_agent_pr_url_parent_scope()"
     },
     "github_issue_comment_syncs.github_comment_url_guard": {
       "function": "guard_github_comment_url()",
@@ -5501,6 +6076,10 @@
       "function": "guard_agent_runtime_base_branch()",
       "definition": "CREATE TRIGGER agent_runtime_base_branch_guard BEFORE INSERT OR UPDATE ON agent_runtime_sessions FOR EACH ROW EXECUTE FUNCTION guard_agent_runtime_base_branch()"
     },
+    "agent_runtime_sessions.agent_runtime_work_branch_guard": {
+      "function": "guard_agent_runtime_work_branch()",
+      "definition": "CREATE TRIGGER agent_runtime_work_branch_guard BEFORE INSERT OR UPDATE ON agent_runtime_sessions FOR EACH ROW EXECUTE FUNCTION guard_agent_runtime_work_branch()"
+    },
     "github_issue_sync_metadata.github_issue_metadata_guard": {
       "function": "guard_github_issue_metadata()",
       "definition": "CREATE TRIGGER github_issue_metadata_guard BEFORE INSERT OR UPDATE ON github_issue_sync_metadata FOR EACH ROW EXECUTE FUNCTION guard_github_issue_metadata()"
@@ -5521,9 +6100,17 @@
       "function": "guard_agent_base_branch_parent_scope()",
       "definition": "CREATE TRIGGER agent_base_branch_parent_scope_guard BEFORE UPDATE OF project_id ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_agent_base_branch_parent_scope()"
     },
+    "agent_conversations.agent_work_branch_parent_scope_guard": {
+      "function": "guard_agent_work_branch_parent_scope()",
+      "definition": "CREATE TRIGGER agent_work_branch_parent_scope_guard BEFORE UPDATE OF project_id ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_agent_work_branch_parent_scope()"
+    },
     "project_git_links.project_git_links_rekey_realtime_after": {
       "function": "rekey_project_git_link_after()",
       "definition": "CREATE TRIGGER project_git_links_rekey_realtime_after AFTER INSERT OR DELETE OR UPDATE ON project_git_links FOR EACH ROW EXECUTE FUNCTION rekey_project_git_link_after()"
+    },
+    "forge_relay_deliveries.forge_relay_delivery_content_guard": {
+      "function": "guard_forge_relay_delivery_content()",
+      "definition": "CREATE TRIGGER forge_relay_delivery_content_guard BEFORE INSERT OR UPDATE ON forge_relay_deliveries FOR EACH ROW EXECUTE FUNCTION guard_forge_relay_delivery_content()"
     },
     "git_connections.git_connections_single_installation_owner": {
       "function": "enforce_github_installation_single_owner()",

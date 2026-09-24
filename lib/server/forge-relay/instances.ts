@@ -101,7 +101,7 @@ export async function revokeRelayInstance(instanceId: string): Promise<Revocatio
 
   const { error: deliveriesError } = await supabase
     .from("forge_relay_deliveries")
-    .update({ status: "dead", last_error: "relay instance revoked" })
+    .update({ status: "dead", last_error: null })
     .eq("instance_id", instanceId)
     .eq("status", "pending");
   if (deliveriesError) {

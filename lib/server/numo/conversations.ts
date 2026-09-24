@@ -11,6 +11,13 @@ import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-cont
 import { decodeAgentTitle, legacyAgentTitleSchema } from "@/lib/server/agent/run-title-content";
 import { decodeAgentContextSnapshot, legacyAgentContextSchema } from
   "@/lib/server/agent/context-snapshot-content";
+import { decodeWorkBranchValue, isEncryptedWorkBranch,
+  workBranchArtifactRef } from "@/lib/server/agent/run-work-branch-content";
+import { decodeTurnSummaryValue, isEncryptedRunSummary } from
+  "@/lib/server/agent/run-summary-content";
+import { decodeAgentPrUrl, decodeAgentPrUrlValue,
+  isEncryptedAgentPrUrl } from "@/lib/server/agent/run-pr-url-content";
+import { decodePullRequestContent } from "@/lib/server/agent/pull-request-content";
 
 export const NUMO_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const NUMO_CONVERSATIONS_PAGE_SIZE = 50;
@@ -50,22 +57,38 @@ async function hydrateIssueTitles<T extends NumoConversation>(
   if (!pending.length) return titledRows as T[];
   const runIds = [...new Set(pending.map((row) => row.latest_work_id as string))];
   const { data: runs, error: runError } = await supabase.from("agent_runs")
-    .select("id, issue_id").in("id", runIds);
+    .select("id, project_id, issue_id, pull_request_id").in("id", runIds);
   if (runError) throw new Error("Unable to resolve issue history titles");
   const issueIds = [...new Set((runs ?? []).map((row) => row.issue_id)
     .filter((id): id is string => typeof id === "string"))];
-  if (!issueIds.length) return titledRows as T[];
-  const { data: issues, error: issueError } = await issueStore(supabase)
-    .select("id, project_id, title").in("id", issueIds)
-    .in("project_id", [...new Set(pending.map((row) => row.project_id as string))]);
+  const { data: issues, error: issueError } = issueIds.length
+    ? await issueStore(supabase).select("id, project_id, title").in("id", issueIds)
+        .in("project_id", [...new Set(pending.map((row) => row.project_id as string))])
+    : { data: [], error: null };
   if (issueError) throw new Error("Unable to resolve issue history titles");
   const issueById = new Map((issues ?? []).map((row) => [row.id as string, row]));
+  const prIds = [...new Set((runs ?? []).filter((row) => !row.issue_id)
+    .map((row) => row.pull_request_id)
+    .filter((id): id is string => typeof id === "string"))];
+  const { data: prs, error: prError } = prIds.length
+    ? await supabase.from("pull_requests").select("id,title").in("id", prIds)
+    : { data: [], error: null };
+  if (prError) throw new Error("Unable to resolve pull request history titles");
+  const prTitles = new Map<string, string | null>();
+  for (const pr of prs ?? []) {
+    prTitles.set(pr.id, await decodePullRequestContent(pr.id, "title", pr.title));
+  }
   const runById = new Map((runs ?? []).map((row) => [row.id as string, row]));
   return titledRows.map((row) => {
-    const issueId = runById.get(row.latest_work_id as string)?.issue_id as string | null;
+    const run = runById.get(row.latest_work_id as string);
+    if (run?.project_id !== row.project_id) return row;
+    const issueId = run?.issue_id as string | null;
     const issue = issueId ? issueById.get(issueId) : null;
-    return row.title == null && issue?.project_id === row.project_id
-      ? { ...row, title: issue.title as string } : row;
+    const fallback = issue?.project_id === row.project_id
+      ? issue.title as string
+      : !issueId && run?.pull_request_id
+        ? prTitles.get(run.pull_request_id) ?? null : null;
+    return row.title == null && fallback ? { ...row, title: fallback } : row;
   }) as T[];
 }
 
@@ -74,13 +97,14 @@ async function hydrateWorkTitles(supabase: SupabaseClient,
   const ids = work.map((row) => row.id).filter((id): id is string => typeof id === "string");
   if (!ids.length) return work;
   const titles = new Map<string, string | null>();
+  const urls = new Map<string, string | null>();
   for (let offset = 0; offset < ids.length; offset += 100) {
     const first = await supabase.from("agent_runs")
-      .select("id,project_id,conversation_id,title,title_ciphertext,title_encryption_version")
+      .select("id,project_id,conversation_id,title,title_ciphertext,title_encryption_version,pr_url")
       .in("id", ids.slice(offset, offset + 100));
     const response = legacyAgentTitleSchema(first.error)
       ? await supabase.from("agent_runs")
-          .select("id,project_id,conversation_id,title")
+          .select("id,project_id,conversation_id,title,pr_url")
           .in("id", ids.slice(offset, offset + 100))
       : first;
     if (response.error) throw new Error("Unable to read agent work titles");
@@ -91,10 +115,15 @@ async function hydrateWorkTitles(supabase: SupabaseClient,
         conversation_id: string; title: string | null;
         title_ciphertext?: string | null; title_encryption_version?: number }, actorId);
       titles.set(stored.id as string, clear.title);
+      urls.set(stored.id as string, (await decodeAgentPrUrl({
+        id: stored.id as string, project_id: stored.project_id as string,
+        pr_url: stored.pr_url as string | null,
+      }, actorId)).pr_url);
     }
   }
   return work.map((row) => titles.has(row.id as string)
-    ? { ...row, title: titles.get(row.id as string) } : row);
+    ? { ...row, title: titles.get(row.id as string),
+        pr_url: urls.get(row.id as string) } : row);
 }
 
 /** Always pass the request's RLS client, including for legacy link resolution. */
@@ -246,9 +275,89 @@ export async function getNumoConversationDetail(
     actions: safeMessages.filter((m) => m.kind === "action"),
     work: await hydrateWorkTitles(supabase, work, actorId),
     contexts: await hydrateContextSnapshots(supabase, contexts, actorId),
-    artifacts, turns,
+    artifacts: await hydrateAgentArtifacts(supabase, artifacts, actorId),
+    turns: await hydrateAgentTurnSummaries(supabase, turns, actorId),
     routine_occurrence: occurrenceResult.data ?? null,
   } as unknown as NumoConversationDetail;
+}
+
+async function hydrateAgentArtifacts(supabase: SupabaseClient,
+  rows: Record<string, unknown>[], actorId: string | null) {
+  const pending = rows.filter((row) =>
+    (row.kind === "branch" && isEncryptedWorkBranch(row.ref as string | null)) ||
+    isEncryptedAgentPrUrl(row.url as string | null));
+  if (!pending.length) return rows;
+  const replacements = new Map<string, { ref: string; url: string | null }>();
+  for (let offset = 0; offset < pending.length; offset += 100) {
+    const ids = pending.slice(offset, offset + 100).map((row) => row.id as string);
+    const { data, error } = await supabase.from("agent_artifacts")
+      .select("id,conversation_id,kind,ref,ref_ciphertext,ref_bound_run_id,url,url_bound_run_id,conversation:agent_conversations!inner(project_id)")
+      .in("id", ids);
+    if (error) throw new Error("Unable to read protected agent artifacts");
+    for (const stored of data ?? []) {
+      const shown = pending.find((row) => row.id === stored.id);
+      const conversation = Array.isArray(stored.conversation)
+        ? stored.conversation[0] : stored.conversation;
+      if (!shown || shown.ref !== stored.ref || shown.url !== stored.url ||
+          !conversation?.project_id) {
+        throw new Error("Agent artifact access changed");
+      }
+      let ref = stored.ref as string;
+      if (stored.kind === "branch" && isEncryptedWorkBranch(ref)) {
+        if (!stored.ref_ciphertext ||
+            workBranchArtifactRef(stored.ref_ciphertext) !== ref) {
+          throw new Error("Invalid encrypted branch artifact");
+        }
+        ref = await decodeWorkBranchValue(conversation.project_id as string,
+          stored.ref_bound_run_id as string | null, stored.id as string,
+          stored.ref_ciphertext as string, actorId);
+      }
+      const url = await decodeAgentPrUrlValue(conversation.project_id as string,
+        stored.url_bound_run_id as string | null, stored.id as string,
+        stored.url as string | null, actorId);
+      replacements.set(stored.id as string, { ref, url });
+    }
+  }
+  if (replacements.size !== pending.length) throw new Error("Agent artifact access changed");
+  return rows.map((row) => replacements.has(row.id as string)
+    ? { ...row, ...replacements.get(row.id as string) } : row);
+}
+
+async function hydrateAgentTurnSummaries(supabase: SupabaseClient,
+  turns: Record<string, unknown>[], actorId: string | null) {
+  const pending = turns.filter((turn) => isEncryptedRunSummary(turn.outcome as string | null) ||
+    isEncryptedRunSummary(turn.error_message as string | null));
+  const turnIds = [...new Set(pending.map((turn) => turn.id as string))];
+  const scopes = new Map<string, { projectId: string; runId: string | null }>();
+  for (let offset = 0; offset < turnIds.length; offset += 100) {
+    const { data, error } = await supabase.from("agent_turns")
+      .select("id,run_id,conversation:agent_conversations!inner(project_id)")
+      .in("id", turnIds.slice(offset, offset + 100));
+    if (error) throw new Error("Unable to read agent turn scopes");
+    for (const row of data ?? []) {
+      const linked = row.conversation as unknown;
+      const conversation = Array.isArray(linked)
+        ? linked[0] as { project_id: string } | undefined
+        : linked as { project_id: string } | null;
+      if (conversation?.project_id) scopes.set(row.id as string, {
+        projectId: conversation.project_id, runId: row.run_id as string | null,
+      });
+    }
+  }
+  return Promise.all(turns.map(async (turn) => {
+    const scope = scopes.get(turn.id as string);
+    if (!scope) {
+      if (pending.includes(turn)) throw new Error("Agent turn access changed");
+      return turn;
+    }
+    const [outcome, error] = await Promise.all([
+      decodeTurnSummaryValue(scope.projectId, turn.id as string, scope.runId, "outcome",
+        turn.outcome as string | null, actorId),
+      decodeTurnSummaryValue(scope.projectId, turn.id as string, scope.runId,
+        "error_message", turn.error_message as string | null, actorId),
+    ]);
+    return { ...turn, outcome, error_message: error };
+  }));
 }
 
 export function validNumoPatch(value: unknown): value is Record<string, unknown> {

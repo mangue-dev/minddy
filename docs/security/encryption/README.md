@@ -6,16 +6,18 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 123 application tables and 1,292 columns, their primary
+- `schema.json` records 137 application tables and 1,363 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
-  column exactly once. Its 190 encryption targets include the original content,
+  column exactly once. Its 189 encryption targets include the original content,
   derived copies, arbitrary user JSON, private identities, credentials and share
-  tokens. This is a target policy, not evidence that those columns are encrypted.
+  tokens. The relay audit detail target was removed by an action-specific SQL
+  guard and historical scrub, leaving 189 encryption targets. This is a target
+  policy, not evidence that those columns are encrypted.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 270 functions, ten views and 149 triggers. Function
+- `sql-consumers.json` records 335 functions, ten views and 184 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -1002,3 +1004,192 @@ staging latency or key/cache load. `branch_name`, `pr_url`, turn outcomes,
 delegation results, artifacts and Numo copies, as well as issue PR/forge and
 attachment copies and feedback identities/objects, remain open. Production
 flags are disabled; no production data was changed.
+
+## Agent work branch and delegated result checkpoints — 24 September 2026
+
+`agent_runs.branch_name` now uses a run-bound project envelope and a
+purpose-separated system blind index for equality lookup. Its current runtime
+copy carries the same ciphertext; branch artifact refs contain only the blind
+index and retain a bound run ID for recovery after run deletion. Detached
+runtime and artifact rows use their own stable IDs for encryption. The live
+run, PR inheritance, Numo detail, delegation and account-transfer readers
+decrypt only after resolving the authorized project. SQL sync writes the
+encrypted run value to its copies in the same transaction. A project marker
+rejects new plaintext branches and invalid copy writes. Bounded service-only
+compare-and-swap passes convert and rotate run, runtime and artifact rows.
+
+`agent_runs.delegation_result` now stores a run-bound ciphertext. The
+worker-result event and its turn checkpoint carry an event-bound ciphertext
+with clear run, event and project routing IDs. Bounded compare-and-swap
+passes cover historical results, events and checkpoints, including a
+checkpoint whose event row has been removed. The event pass updates an exact
+matching checkpoint in the same transaction. The Numo reader decrypts after
+the authorized turn read. The stale-turn recovery routine now resumes
+terminal workers through the application repository so SQL does not rebuild
+a plaintext worker result from protected run columns. An activated project
+rejects plaintext worker payloads and clear sidecars on new writes.
+
+Isolated SQL regressions check copy equivalence, compare-and-swap conflicts,
+stale-writer rejection and the Numo view. PostgreSQL dump/restore rehearsals
+recover two project-key versions with cold caches, child-first committed
+batches and a wrong-root rejection. They do not measure representative search,
+latency or key/cache load; those measurements are a prerequisite to production
+activation, not to review of this code. Production flags remain disabled and
+no production migration or deployment has run.
+
+The agent boundary remains open. In particular, run and turn outcomes/errors,
+`agent_runs.pr_url`, non-branch artifact refs and artifact URLs, PR/forge
+copies, and the other targets listed above still require coordinated
+conversion. Issue attachment links and bytes, feedback identities and
+feedback objects also remain plaintext. The code PR must remain a draft until
+these conversions and their proofs are complete.
+
+## Agent run and turn summary checkpoint — 24 September 2026
+
+`agent_runs.outcome/error_message` now use run-bound project envelopes in
+their existing columns. The turn synchronization trigger copies the same
+ciphertext atomically into the latest `agent_turns` row. Earlier turn values
+retain their own encrypted values under the same run binding. Archived turns
+imported without a live run use a turn-ID binding; the import now stores them
+with a nullable `run_id` instead of failing the old non-null constraint.
+Authorized run, issue-panel, Numo-detail and account-export readers decrypt
+after access checks. The status writer and stalled-preview writer encrypt
+before updating a run. A project marker rejects obsolete plaintext run and
+turn edits; guarded, bounded compare-and-swap workers convert and rotate both
+tables.
+
+The isolated SQL regression checks the source, turn and Numo projection,
+old-writer refusal, archived-turn import and stale CAS rejection. A real
+PostgreSQL dump/restore loads turns before runs and conversations in separate
+committed batches, revalidates foreign keys, recovers two key versions with
+cold caches and rejects a wrong root. Representative latency and key/cache
+measurements remain a prerequisite to production activation. Other agent
+fields and the issue, forge, attachment and feedback boundaries remain open;
+production flags remain disabled.
+
+## Agent pull-request URL checkpoint — 24 September 2026
+
+`agent_runs.pr_url` now uses a run-bound project envelope. The SQL runtime
+trigger copies that ciphertext into the current pull-request artifact in the
+same transaction, and the artifact retains the bound run ID if the run is
+deleted. Detached artifacts use their own ID binding. A project marker rejects
+obsolete plaintext run and artifact URL writers, key-version rollback and
+scope moves. The artifact and run compare-and-swap workers operate in bounded
+batches; the artifact pass runs first so a clear copy cannot survive a run
+conversion. Authorized run lists, issue panels, Numo work and artifact views,
+delegation output and routine history decrypt after their access checks.
+
+The isolated SQL regression checks the run, artifact and Numo copy, old-writer
+refusal and CAS. A PostgreSQL dump/restore loads artifacts before runs and
+conversations in independent committed batches, revalidates a foreign key,
+recovers two project-key versions from cold caches and rejects a wrong root.
+This does not convert the separate `pull_requests` table, forge sidecars or
+external provider URLs. Those issue-bound copies and the remaining agent
+references still require conversion. Production flags remain disabled; no
+production migration or deployment occurred.
+
+## Shared pull-request URL checkpoint — 24 September 2026
+
+`pull_requests.url` now uses a system-key envelope bound to the stable PR ID.
+The monotonic forge upsert supplies that ID before encryption, checks for an
+existing row and retries a concurrent first insert with its established ID.
+Repository renames keep the ID and therefore preserve decryption. An activated
+global marker rejects obsolete clear URL inserts and updates. A bounded
+service-only compare-and-swap pass converts and rotates existing PR URLs.
+Authorized PR repositories, review-run context, the project PR tool and agent
+list decode after their access checks. Realtime receives ciphertext.
+
+The old SQL PR-to-run state synchronization no longer copies a system-bound
+PR cipher into a project-bound run. It keeps the state update transactional.
+The application decrypts the current PR URL, binds it separately to each run
+and calls a service-only CAS operation that checks the current PR version,
+repository link and prior run value. That operation updates the run and its
+artifact copy in one transaction. SQL regression checks source, run, artifact
+and Numo projection, stale observations, old writers and client privileges.
+A PostgreSQL dump/restore loads artifacts and runtime rows before runs and
+shared PR rows in independent batches, recovers two system and project key
+versions with cold caches, and rejects a wrong root.
+
+This checkpoint does not convert shared PR titles, branch or repository names,
+other forge sidecars, issue attachment objects or feedback identities and
+objects. Those remain open in MIN-591. Representative search, latency and
+key/cache-load measurements are required before production activation, not
+before code review. Production flags remain disabled and no production data
+migration or deployment has run.
+
+## Shared pull-request title and branch checkpoint — 24 September 2026
+
+`pull_requests.title`, `head_branch` and `base_branch` now use separate
+system-key envelopes bound to the stable PR ID and column. The monotonic
+upsert encrypts supplied fields before its timestamp-guarded transaction;
+the direct title-update path does the same. An activated global marker refuses
+new clear values and changed clear values from obsolete writers while leaving
+unchanged historical fields readable during a bounded migration. One
+service-only compare-and-swap pass converts or rotates all three columns
+under a single row lock. Authorized PR lists, review runs, agent lists,
+inbox/push hydration, assistant context and project tools decrypt after their
+access checks. The Numo history view no longer projects a shared PR title;
+its authorized reader resolves the title from the linked run and PR instead.
+Realtime carries only stored ciphertext for converted fields.
+
+The SQL regression verifies source and Numo projection, stale CAS and old
+writer refusal. The shared PR PostgreSQL restore also recovers title and
+branch fields over two system-key versions with cold caches, child-first
+independent batches and a wrong-root rejection. Repository names, issue
+attachment links and bytes, remaining forge sidecars, feedback identities
+and objects are still clear. These and the rest of the remaining-implementation
+table must be closed before the global boundary can be declared converted.
+Representative search, latency and key/cache-load measures remain a
+production-activation prerequisite; no production flag, migration or deploy
+was run.
+
+## Pull-request comment edit checkpoint — 24 September 2026
+
+`pr_comment_edits.body` now uses a system-key envelope bound to its stable edit
+ID. The forge webhook and Minddy edit paths share the same writer. That writer
+decrypts the latest authorized snapshot before deduplicating an echo, assigns
+the new ID before encryption and stores only ciphertext after activation. The
+authorized history route decrypts after resolving PR access. A global marker
+rejects old clear inserts and updates, and a bounded service-only CAS worker
+converts or rotates historical bodies.
+
+The isolated SQL regression checks source plaintext absence, CAS and old
+writer rejection. The shared PR dump/restore loads edit rows in an independent
+batch before their PR and agent rows, recovers two key versions with cold
+caches, and rejects a wrong root. Repository names and the other forge,
+attachment and feedback surfaces in the remaining-implementation table are
+still open. No production flag, data migration or deploy was run.
+
+## Forge relay delivery checkpoint — 24 September 2026
+
+`forge_relay_deliveries.payload` and `last_error` now use separate system-key
+envelopes bound to the stable instance, provider and delivery GUID. The enqueue
+path encrypts before its idempotent insert. The worker checks the instance is
+still active before decrypting and forwarding the payload to that authorized
+endpoint. Retry diagnostics are encrypted; the admin reader decrypts them.
+Instance revocation marks pending deliveries dead and clears their diagnostic.
+An activated global marker rejects obsolete clear inserts and changed clear
+updates. A bounded service-only row CAS converts and rotates both columns.
+
+The isolated SQL regression checks the source, duplicate enqueue, stale CAS,
+old-writer rejection and RPC privileges. The shared PR PostgreSQL dump/restore
+loads deliveries before their parent instances in independent batches, recovers
+two system-key versions from a cold cache, and rejects a wrong root key.
+Repository names, relay audit and link copies, attachments and feedback remain
+open. Representative search, latency and key/cache-load measurements are a
+prerequisite to production activation. No production flag, data migration or
+deployment was run.
+
+## Forge relay audit copy removal — 24 September 2026
+
+The audit ledger retains action, instance and timestamp, which are sufficient
+for mint quotas and incident correlation. Its arbitrary `detail` JSON previously
+copied private webhook URLs, instance names and unbounded upstream errors.
+Application writers now submit an empty object. A database guard permits only
+an empty object or the SQL mint reservation's fixed `{ "state": "reserved" }`
+metadata; it rejects older arbitrary detail writers. A bounded service-only
+CAS pass removes historical detail without changing quota timestamps. The SQL
+regression verifies stale CAS, removal and old-writer refusal. The relay
+PostgreSQL restore loads audit rows independently before parent instances.
+Audit detail is classified as bounded metadata only under that SQL guard.
+Other forge and issue copies remain open.

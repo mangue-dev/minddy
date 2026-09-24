@@ -11,6 +11,8 @@ import {
 } from "@/lib/server/agent/deployment";
 import { notifyAgentRun } from "@/lib/server/agent/runs";
 import { decodeAgentDeploymentUrl } from "@/lib/server/agent/run-deployment-content";
+import { encodeRunSummary, shouldEncryptAgentSummary } from
+  "@/lib/server/agent/run-summary-content";
 
 /**
  * LAUNCHER of agent runs (MIN-46, reduced to this profession in MIN-225). He doesn't
@@ -102,29 +104,32 @@ async function kickDeployment(url: string, secret: string): Promise<void> {
  */
 async function failStalledRuns(service: SupabaseClient, ids: string[]): Promise<void> {
   if (ids.length === 0) return;
-  const { data, error } = await service
+  const { data: candidates, error: lookupError } = await service
     .from("agent_runs")
-    .update({
-      status: "failed",
-      error_message: "Preview deployment unreachable",
-      checkpoint: null,
-      checkpoint_ciphertext: null,
-      checkpoint_encryption_version: 0,
-    })
+    .select("id, project_id")
     .in("id", ids)
-    .eq("status", "queued")
-    .select("id, created_by, project_id, issue_id, conversation_id");
-  if (error) {
-    console.error("[agent-drain] stalled preview fail failed:", error.message);
+    .eq("status", "queued");
+  if (lookupError) {
+    console.error("[agent-drain] stalled preview lookup failed:", lookupError.message);
     return;
   }
-  const rows = (data ?? []) as Array<{
-    created_by: string | null;
-    project_id: string;
-    issue_id: string | null;
-    conversation_id: string;
-  }>;
-  for (const row of rows) await notifyAgentRun(row, "agent_failed");
+  for (const candidate of candidates ?? []) {
+    const message = await shouldEncryptAgentSummary(service, candidate.project_id)
+      ? await encodeRunSummary(candidate.project_id, candidate.id,
+          "error_message", "Preview deployment unreachable")
+      : "Preview deployment unreachable";
+    const { data, error } = await service.from("agent_runs").update({
+      status: "failed", error_message: message, checkpoint: null,
+      checkpoint_ciphertext: null, checkpoint_encryption_version: 0,
+    }).eq("id", candidate.id).eq("project_id", candidate.project_id)
+      .eq("status", "queued")
+      .select("id, created_by, project_id, issue_id, conversation_id").maybeSingle();
+    if (error) {
+      console.error("[agent-drain] stalled preview fail failed:", error.message);
+      continue;
+    }
+    if (data) await notifyAgentRun(data, "agent_failed");
+  }
 }
 
 async function handle(request: NextRequest) {

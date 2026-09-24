@@ -901,20 +901,33 @@ export async function importAccountTransfer(
   }))).flat();
   await upsertRows(service, "agent_conversations", codeConversations);
   const codeTurnIds = new Map<string, string>();
-  const codeTurns = document.code_agent_conversations.flatMap((conversation) => {
+  const { encodeTurnSummary, shouldEncryptAgentSummary } = await import(
+    "@/lib/server/agent/run-summary-content"
+  );
+  const codeTurns = (await Promise.all(document.code_agent_conversations.map(async (conversation) => {
     const conversationId = uuidValue(conversation, "id");
-    if (!conversationId || !codeConversationIds.has(conversationId)) return [];
+    const projectId = codeConversations.find((row) => row.id === conversationId)
+      ?.project_id as string | undefined;
+    if (!conversationId || !codeConversationIds.has(conversationId) || !projectId) return [];
     return Array.isArray(conversation.turns)
-      ? (conversation.turns as unknown[]).flatMap((turn) => {
+      ? (await Promise.all((conversation.turns as unknown[]).map(async (turn) => {
           if (!turn || typeof turn !== "object") return [];
           const row = turn as TransferRow;
           const id = uuidValue(row, "id");
           if (!id) return [];
           codeTurnIds.set(id, id);
-          return [{ ...pick(row, ["id", "status", "model", "reasoning_level", "cost_usd", "outcome", "error_message", "started_at", "completed_at", "created_at"]), id, conversation_id: conversationId }];
-        })
+          const protectedSummary = await shouldEncryptAgentSummary(service, projectId);
+          const content = protectedSummary ? {
+            outcome: await encodeTurnSummary(projectId, id, null, "outcome",
+              row.outcome as string | null ?? null),
+            error_message: await encodeTurnSummary(projectId, id, null,
+              "error_message", row.error_message as string | null ?? null),
+          } : { outcome: row.outcome ?? null, error_message: row.error_message ?? null };
+          return [{ ...pick(row, ["id", "status", "model", "reasoning_level", "cost_usd", "started_at", "completed_at", "created_at"]),
+            ...content, id, conversation_id: conversationId }];
+        }))).flat()
       : [];
-  });
+  }))).flat();
   await upsertRows(service, "agent_turns", codeTurns);
   const codeMessages = await Promise.all(document.code_agent_conversations.flatMap((conversation) => {
     const conversationId = uuidValue(conversation, "id");

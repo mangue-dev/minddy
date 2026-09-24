@@ -4,6 +4,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import { getRun } from "@/lib/server/agent/runs";
 import { decodeAgentBaseBranch } from "@/lib/server/agent/run-base-branch-content";
+import { decodeAgentWorkBranch } from "@/lib/server/agent/run-work-branch-content";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { forgeFor, isForgeApiError } from "@/lib/server/agent/forge";
 import { getAgentSandboxByName, sandboxHost } from "@/lib/server/agent/sandbox";
@@ -53,6 +54,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
   const baseBranch = (await decodeAgentBaseBranch(run, auth.user.id)).base_branch;
+  const workBranch = (await decodeAgentWorkBranch(run, auth.user.id)).branch_name;
 
   const patches = request.nextUrl.searchParams.get("stat") !== "1";
 
@@ -68,7 +70,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   }
 
   // Neither PR nor stamped branch (run barely launched): empty diff, not an error.
-  const head = run.branch_name;
+  const head = workBranch;
   if (run.pr_number == null && !head) {
     return NextResponse.json({ files: [], url: null });
   }

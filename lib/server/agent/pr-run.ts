@@ -10,6 +10,8 @@ import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import type { Forge } from "./forge";
 import { toPrLineThreads, type PrReviewIssueContext, type PrReviewNote } from "./prompt";
 import type { PullRequestState } from "./pull-requests";
+import { decodePullRequestUrlRow } from "./pull-request-url-content";
+import { decodePullRequestContentRow } from "./pull-request-content";
 
 /**
  * The PULL REQUEST anchor of an agent run (MIN-168), resolved ONE time and served
@@ -86,7 +88,8 @@ export async function loadPrRunContext(pullRequestId: string): Promise<PrRunCont
     .select(PR_RUN_COLUMNS)
     .eq("id", pullRequestId)
     .maybeSingle();
-  return data ? toContext(data as PrRunRow) : null;
+  return data ? toContext(await decodePullRequestContentRow(
+    await decodePullRequestUrlRow(data as PrRunRow))) : null;
 }
 
 /**

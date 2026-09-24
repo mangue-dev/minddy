@@ -67,12 +67,26 @@ describe("Numo conversation adapter", () => {
       latest_work_id: "work-1" };
     const db = database({
       numo_user_conversation_history: [agent],
-      agent_runs: [{ id: "work-1", issue_id: "issue-1" }],
+      agent_runs: [{ id: "work-1", project_id: "project", issue_id: "issue-1" }],
       issues: [{ id: "issue-1", project_id: "project", title: "Private issue" }],
     });
     expect((await listNumoConversations(db.client)).conversations[0].title).toBe("Private issue");
     expect(db.from).toHaveBeenCalledWith("agent_runs");
     expect(db.from).toHaveBeenCalledWith("issues");
+  });
+
+  it("hydrates a PR title only after matching the authorized run project", async () => {
+    const agent = { id, source: "agent", project_id: "project", title: null,
+      latest_work_id: "work-1" };
+    const db = database({
+      numo_user_conversation_history: [agent],
+      agent_runs: [{ id: "work-1", project_id: "project", issue_id: null,
+        pull_request_id: "pr-1" }],
+      pull_requests: [{ id: "pr-1", title: "Private pull request" }],
+    });
+    expect((await listNumoConversations(db.client)).conversations[0].title)
+      .toBe("Private pull request");
+    expect(db.from).toHaveBeenCalledWith("pull_requests");
   });
 
   it("does not read content for a missing or inaccessible common identity", async () => {

@@ -392,6 +392,9 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
   const { decodeAgentTitle, legacyAgentTitleSchema } = await import(
     "@/lib/server/agent/run-title-content"
   );
+  const { decodeTurnSummaryValue } = await import(
+    "@/lib/server/agent/run-summary-content"
+  );
   const codeConversationQuery = await service.from("agent_conversations")
     .select("id, project_id, title, title_ciphertext, title_encryption_version, visibility, archived_at, created_at, updated_at")
     .eq("owner_id", userId).order("created_at");
@@ -418,7 +421,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
         service
           .from("agent_turns")
           .select(
-            "id, conversation_id, status, model, reasoning_level, cost_usd, outcome, error_message, started_at, completed_at, created_at",
+            "id, conversation_id, run_id, status, model, reasoning_level, cost_usd, outcome, error_message, started_at, completed_at, created_at",
           )
           .in("conversation_id", codeConversationIds)
           .order("created_at"),
@@ -453,7 +456,18 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
         ...exported } = decoded;
       return exported;
     })),
-    turns: codeRowsFor("agent_turns", codeTurns, c.id as string),
+    turns: await Promise.all(codeRowsFor("agent_turns", codeTurns, c.id as string)
+      .map(async (turn) => {
+        const [outcome, error] = await Promise.all([
+          decodeTurnSummaryValue(c.project_id as string, turn.id as string,
+            turn.run_id as string | null, "outcome", turn.outcome as string | null, userId),
+          decodeTurnSummaryValue(c.project_id as string, turn.id as string,
+            turn.run_id as string | null, "error_message",
+            turn.error_message as string | null, userId),
+        ]);
+        const { run_id: _runId, ...exported } = turn;
+        return { ...exported, outcome, error_message: error };
+      })),
     messages: (await hydrateImportedAgentMessages(service,
       await hydrateAgentQueueCopies(service,
         await hydrateAgentLaunchCopies(service,

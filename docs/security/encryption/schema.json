@@ -1460,6 +1460,11 @@
         "nullable": true,
         "generated": false
       },
+      "verdict_ciphertext": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
       "interrupt_requested": {
         "type": "boolean",
         "nullable": false,
@@ -1535,6 +1540,11 @@
         "nullable": true,
         "generated": false
       },
+      "verdict_encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
       "parent_numo_conversation_id": {
         "type": "uuid",
         "nullable": true,
@@ -1545,7 +1555,17 @@
         "nullable": true,
         "generated": false
       },
+      "delegation_result_ciphertext": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
       "launch_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "pr_url_encryption_checked_at": {
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
@@ -1565,6 +1585,16 @@
         "nullable": false,
         "generated": false
       },
+      "summary_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "verdict_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
       "checkpoint_encryption_checked_at": {
         "type": "timestamp with time zone",
         "nullable": true,
@@ -1575,27 +1605,27 @@
         "nullable": true,
         "generated": false
       },
-      "verdict_ciphertext": {
-        "type": "text",
-        "nullable": true,
-        "generated": false
-      },
-      "verdict_encryption_version": {
-        "type": "integer",
-        "nullable": false,
-        "generated": false
-      },
-      "verdict_encryption_checked_at": {
-        "type": "timestamp with time zone",
-        "nullable": true,
-        "generated": false
-      },
       "deployment_encryption_checked_at": {
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
       },
       "base_branch_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "work_branch_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "delegation_result_encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "delegation_result_encryption_checked_at": {
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
@@ -1987,7 +2017,7 @@
       },
       "run_id": {
         "type": "uuid",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       },
       "status": {
@@ -2042,6 +2072,11 @@
       },
       "reasoning_level": {
         "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "summary_encryption_checked_at": {
+        "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
       }
@@ -3717,6 +3752,16 @@
         "type": "text",
         "nullable": true,
         "generated": false
+      },
+      "url_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "content_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -4476,9 +4521,34 @@
         "nullable": false,
         "generated": false
       },
+      "ref_ciphertext": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
       "conversation_id": {
         "type": "uuid",
         "nullable": false,
+        "generated": false
+      },
+      "ref_bound_run_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "url_bound_run_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "ref_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "url_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       }
     },
@@ -5093,6 +5163,11 @@
         "type": "timestamp with time zone",
         "nullable": false,
         "generated": false
+      },
+      "payload_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -5146,6 +5221,11 @@
       "repo_full_name": {
         "type": "text",
         "nullable": false,
+        "generated": false
+      },
+      "body_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       }
     },
@@ -5311,6 +5391,11 @@
       },
       "instance_id": {
         "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "detail_checked_at": {
+        "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
       }
@@ -6576,6 +6661,11 @@
         "type": "numeric(12,6)",
         "nullable": true,
         "generated": false
+      },
+      "worker_checkpoint_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -7211,6 +7301,16 @@
         "nullable": true,
         "generated": false
       },
+      "base_branch_bound_run_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "work_branch_bound_run_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
       "checkpoint_encryption_version": {
         "type": "integer",
         "nullable": false,
@@ -7226,8 +7326,8 @@
         "nullable": true,
         "generated": false
       },
-      "base_branch_bound_run_id": {
-        "type": "uuid",
+      "work_branch_encryption_checked_at": {
+        "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
       }
@@ -7346,6 +7446,11 @@
       "next_attempt_at": {
         "type": "timestamp with time zone",
         "nullable": false,
+        "generated": false
+      },
+      "content_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       }
     },
@@ -8871,6 +8976,54 @@
       }
     ]
   },
+  "agent_pr_url_encryption_scopes": {
+    "columns": {
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "project_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "agent_result_encryption_scopes": {
+    "columns": {
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "project_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
   "issue_remote_status_push_locks": {
     "columns": {
       "claim_id": {
@@ -8998,6 +9151,54 @@
       }
     ]
   },
+  "agent_summary_encryption_scopes": {
+    "columns": {
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "project_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "agent_verdict_encryption_scopes": {
+    "columns": {
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "project_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
   "provider_operation_reservations": {
     "columns": {
       "id": {
@@ -9047,6 +9248,42 @@
       }
     ]
   },
+  "pr_comment_edit_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "pull_request_url_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
   "agent_checkpoint_encryption_scopes": {
     "columns": {
       "project_id": {
@@ -9095,78 +9332,6 @@
       }
     ]
   },
-  "github_issue_metadata_encryption_scopes": {
-    "columns": {
-      "project_id": {
-        "type": "uuid",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "project_id"
-    ],
-    "foreignKeys": [
-      {
-        "table": "projects",
-        "column": "project_id",
-        "targetColumn": "id"
-      }
-    ]
-  },
-  "github_issue_comment_url_encryption_scopes": {
-    "columns": {
-      "project_id": {
-        "type": "uuid",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "project_id"
-    ],
-    "foreignKeys": [
-      {
-        "table": "projects",
-        "column": "project_id",
-        "targetColumn": "id"
-      }
-    ]
-  },
-  "agent_verdict_encryption_scopes": {
-    "columns": {
-      "project_id": {
-        "type": "uuid",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "project_id"
-    ],
-    "foreignKeys": [
-      {
-        "table": "projects",
-        "column": "project_id",
-        "targetColumn": "id"
-      }
-    ]
-  },
   "agent_deployment_encryption_scopes": {
     "columns": {
       "project_id": {
@@ -9192,6 +9357,114 @@
     ]
   },
   "agent_base_branch_encryption_scopes": {
+    "columns": {
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "project_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "agent_work_branch_encryption_scopes": {
+    "columns": {
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "project_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "forge_relay_delivery_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "pull_request_content_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "github_issue_metadata_encryption_scopes": {
+    "columns": {
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "project_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "github_issue_comment_url_encryption_scopes": {
     "columns": {
       "project_id": {
         "type": "uuid",

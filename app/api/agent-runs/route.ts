@@ -3,6 +3,9 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { loadIssueTitles } from "@/lib/server/issue-store";
 import { decodeAgentLaunch, legacyAgentLaunchSchema } from "@/lib/server/agent/run-launch-content";
 import { decodeAgentTitle } from "@/lib/server/agent/run-title-content";
+import { decodeAgentPrUrl } from "@/lib/server/agent/run-pr-url-content";
+import { decodePullRequestUrlRow } from "@/lib/server/agent/pull-request-url-content";
+import { decodePullRequestContentRow } from "@/lib/server/agent/pull-request-content";
 import type { AssistantMention } from "@/lib/assistant-types";
 
 /**
@@ -193,12 +196,17 @@ export async function GET(request: NextRequest) {
     visibleRows.map((row) => row.project?.id).filter((id): id is string => !!id),
     auth.user.id);
   const decodedRows = await Promise.all(visibleRows.map(async (row) => {
-    const run = await decodeAgentLaunch(row, auth.user.id);
+    const run = await decodeAgentPrUrl(
+      await decodeAgentLaunch(row, auth.user.id), auth.user.id);
     const conversation = run.conversation
       ? await decodeAgentTitle({ ...run.conversation, id: run.conversation_id,
           project_id: run.project_id }, auth.user.id)
       : null;
-    return { ...run, conversation };
+    return { ...run, conversation,
+      pull_request: run.pull_request
+        ? await decodePullRequestContentRow(
+            await decodePullRequestUrlRow(run.pull_request, auth.user.id),
+            auth.user.id) : null };
   }));
   const rows = decodedRows.map((row) => ({ ...row,
     issue: row.issue && titles.has(row.issue.id)

@@ -2,6 +2,7 @@ import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import { decodeAgentTitle, legacyAgentTitleSchema } from "@/lib/server/agent/run-title-content";
+import { decodePullRequestContent } from "@/lib/server/agent/pull-request-content";
 import "server-only";
 
 import { createTranslator } from "next-intl";
@@ -236,7 +237,8 @@ export async function loadPushContext(
   for (const f of feedback.data ?? []) ctx.feedbackPosts.set(f.id, { projectId: f.project_id, title: f.title });
   for (const r of routines.data ?? []) ctx.routines.set(r.id, r.title);
   for (const p of pullRequests.data ?? []) {
-    ctx.pullRequests.set(p.id, { number: p.number, title: p.title });
+    ctx.pullRequests.set(p.id, { number: p.number,
+      title: await decodePullRequestContent(p.id, "title", p.title) });
   }
   for (const p of pages.data ?? []) ctx.pages.set(p.id, p.title);
   for (const p of projects.data ?? []) ctx.projectKeys.set(p.id, p.key);

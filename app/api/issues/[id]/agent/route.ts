@@ -12,12 +12,17 @@ import {
 import { agentRunCanResume } from "@/lib/agent-run-resumability";
 import { decodeAgentLaunch, legacyAgentLaunchSchema } from "@/lib/server/agent/run-launch-content";
 import { decodeAgentBaseBranch } from "@/lib/server/agent/run-base-branch-content";
+import { decodeAgentWorkBranch } from "@/lib/server/agent/run-work-branch-content";
+import { decodeRunSummary } from "@/lib/server/agent/run-summary-content";
+import { decodeAgentPrUrl } from "@/lib/server/agent/run-pr-url-content";
 
 /** The `RUN_COLUMNS` columns this file needs to slice. */
 type RunRow = RunAnchors & {
   id: string;
   project_id: string;
   base_branch: string | null;
+  branch_name: string | null;
+  pr_url: string | null;
   created_by: string | null;
   conversation: Pick<ConversationAccessRecord, "owner_id" | "visibility"> | null;
 } & Record<string, unknown>;
@@ -103,9 +108,14 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const failedWithCheckpoint = new Set(
     ((checkpointRows ?? []) as Array<{ id: string }>).map((run) => run.id),
   );
-  const decodedRuns = await Promise.all(visibleRuns.map(async (run) =>
-    decodeAgentBaseBranch(await decodeAgentLaunch(
-      run as RunRow & Parameters<typeof decodeAgentLaunch>[0], auth.user.id), auth.user.id)));
+  const decodedRuns = await Promise.all(visibleRuns.map(async (run) => {
+    const launched = await decodeAgentLaunch(
+      run as RunRow & Parameters<typeof decodeAgentLaunch>[0], auth.user.id);
+    const based = await decodeAgentBaseBranch(launched, auth.user.id);
+    return decodeAgentPrUrl(await decodeRunSummary(
+      await decodeAgentWorkBranch(based, auth.user.id), auth.user.id),
+    auth.user.id);
+  }));
   const runs = decodedRuns.map(
     ({
       created_by: _c,

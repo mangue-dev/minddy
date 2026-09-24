@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { NUMO_UUID } from "@/lib/server/numo/conversations";
 import { decodeRunEvent } from "@/lib/server/agent/run-event-store";
+import { decodeWorkerEventPayload } from "@/lib/server/numo/worker-event-content";
 
 export async function GET(
   request: NextRequest,
@@ -96,6 +97,12 @@ export async function GET(
     delete readableInput.questions_encryption_version;
   }
 
+  const readableActivity = await Promise.all((activity ?? []).map(async (event) =>
+    event.type === "worker_completed" || event.type === "worker_failed" ||
+      event.type === "worker_input"
+      ? { ...event, payload: await decodeWorkerEventPayload(event.payload,
+          auth.user.id, event.id as string) }
+      : event));
   return Response.json({
     status: turn?.status ?? conversation.status,
     error_message: turn?.error_message ?? conversation.error_message,
@@ -103,6 +110,6 @@ export async function GET(
     last_event_seq: turn?.last_event_seq ?? -1,
     active_run_id: turn?.active_run_id ?? null,
     pending_input: readableInput ?? null,
-    activity: activity ?? [],
+    activity: readableActivity,
   });
 }

@@ -109,16 +109,16 @@ export type MintResult =
   | { ok: true; token: string; expiresAt: string }
   | { ok: false; status: number; error: string };
 
-/** Append-only trace of a relay action. Best-effort: the action already happened. */
+/** Append-only trace of a relay action. Caller detail is excluded from storage. */
 async function recordRelayAudit(
   instanceId: string,
   action: string,
-  detail: Record<string, unknown>,
+  _detail: Record<string, unknown>,
 ): Promise<void> {
   try {
     const { error } = await getServiceClient()
       .from("forge_relay_audit")
-      .insert({ instance_id: instanceId, action, detail });
+      .insert({ instance_id: instanceId, action, detail: {} });
     if (error) throw error;
   } catch (err) {
     console.error("[forge-relay] audit write failed:", (err as Error).message);

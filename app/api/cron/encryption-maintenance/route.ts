@@ -17,6 +17,32 @@ import { backfillGithubIssueMetadataBatch } from "@/lib/server/encryption/github
 import { backfillGithubCommentUrlsBatch } from "@/lib/server/encryption/github-comment-url-backfill";
 import { backfillAgentVerdictsBatch } from "@/lib/server/encryption/agent-verdict-backfill";
 import { backfillAgentDeploymentUrlsBatch } from "@/lib/server/encryption/agent-deployment-backfill";
+import { backfillAgentRunBaseBranchesBatch,
+  backfillOrphanRuntimeBaseBranchesBatch } from "@/lib/server/encryption/agent-base-branch-backfill";
+import { backfillAgentArtifactBranchesBatch,
+  backfillAgentRunWorkBranchesBatch,
+  backfillOrphanRuntimeWorkBranchesBatch } from "@/lib/server/encryption/agent-work-branch-backfill";
+import { backfillAgentDelegationResultsBatch } from
+  "@/lib/server/encryption/agent-delegation-result-backfill";
+import { backfillNumoWorkerEventsBatch,
+  backfillNumoWorkerCheckpointsBatch } from
+  "@/lib/server/encryption/agent-numo-worker-backfill";
+import { backfillAgentRunSummariesBatch,
+  backfillAgentTurnSummariesBatch } from
+  "@/lib/server/encryption/agent-run-summary-backfill";
+import { backfillAgentArtifactUrlsBatch,
+  backfillAgentRunPrUrlsBatch } from
+  "@/lib/server/encryption/agent-pr-url-backfill";
+import { backfillPullRequestUrlsBatch } from
+  "@/lib/server/encryption/pull-request-url-backfill";
+import { backfillPullRequestContentBatch } from
+  "@/lib/server/encryption/pull-request-content-backfill";
+import { backfillPrCommentEditsBatch } from
+  "@/lib/server/encryption/pr-comment-edit-backfill";
+import { backfillForgeRelayDeliveriesBatch } from
+  "@/lib/server/encryption/forge-relay-delivery-backfill";
+import { scrubForgeRelayAuditBatch } from
+  "@/lib/server/encryption/forge-relay-audit-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -51,6 +77,22 @@ export async function GET(request: NextRequest) {
   const issueSidecarEnabled = contentEnabled && process.env.MINDDY_ISSUE_SIDECAR_ENCRYPTION_ENABLED === "true";
   const agentVerdictEnabled = contentEnabled && process.env.MINDDY_AGENT_VERDICT_ENCRYPTION_ENABLED === "true";
   const agentDeploymentEnabled = contentEnabled && process.env.MINDDY_AGENT_DEPLOYMENT_ENCRYPTION_ENABLED === "true";
+  const agentBaseBranchEnabled = contentEnabled && process.env.MINDDY_AGENT_BASE_BRANCH_ENCRYPTION_ENABLED === "true";
+  const agentWorkBranchEnabled = contentEnabled && process.env.MINDDY_AGENT_WORK_BRANCH_ENCRYPTION_ENABLED === "true";
+  const agentResultEnabled = contentEnabled &&
+    (process.env.MINDDY_AGENT_RESULT_ENCRYPTION_ENABLED === "true" || agentWorkBranchEnabled);
+  const agentSummaryEnabled = contentEnabled &&
+    process.env.MINDDY_AGENT_SUMMARY_ENCRYPTION_ENABLED === "true";
+  const agentPrUrlEnabled = contentEnabled &&
+    process.env.MINDDY_AGENT_PR_URL_ENCRYPTION_ENABLED === "true";
+  const pullRequestUrlEnabled = contentEnabled &&
+    process.env.MINDDY_PULL_REQUEST_URL_ENCRYPTION_ENABLED === "true";
+  const pullRequestContentEnabled = contentEnabled &&
+    process.env.MINDDY_PULL_REQUEST_CONTENT_ENCRYPTION_ENABLED === "true";
+  const prCommentEditEnabled = contentEnabled &&
+    process.env.MINDDY_PR_COMMENT_EDIT_ENCRYPTION_ENABLED === "true";
+  const forgeRelayDeliveryEnabled = contentEnabled &&
+    process.env.MINDDY_FORGE_RELAY_DELIVERY_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -85,6 +127,23 @@ export async function GET(request: NextRequest) {
       issueSidecarEnabled ? backfillGithubCommentUrlsBatch(20, request.signal) : Promise.resolve(null),
       agentVerdictEnabled ? backfillAgentVerdictsBatch(20, request.signal) : Promise.resolve(null),
       agentDeploymentEnabled ? backfillAgentDeploymentUrlsBatch(20, request.signal) : Promise.resolve(null),
+      agentBaseBranchEnabled ? backfillAgentRunBaseBranchesBatch(20, request.signal) : Promise.resolve(null),
+      agentBaseBranchEnabled ? backfillOrphanRuntimeBaseBranchesBatch(20, request.signal) : Promise.resolve(null),
+      agentWorkBranchEnabled ? backfillAgentArtifactBranchesBatch(20, request.signal) : Promise.resolve(null),
+      agentWorkBranchEnabled ? backfillAgentRunWorkBranchesBatch(20, request.signal) : Promise.resolve(null),
+      agentWorkBranchEnabled ? backfillOrphanRuntimeWorkBranchesBatch(20, request.signal) : Promise.resolve(null),
+      agentResultEnabled ? backfillAgentDelegationResultsBatch(20, request.signal) : Promise.resolve(null),
+      agentResultEnabled ? backfillNumoWorkerEventsBatch(20, request.signal) : Promise.resolve(null),
+      agentResultEnabled ? backfillNumoWorkerCheckpointsBatch(20, request.signal) : Promise.resolve(null),
+      agentSummaryEnabled ? backfillAgentRunSummariesBatch(20, request.signal) : Promise.resolve(null),
+      agentSummaryEnabled ? backfillAgentTurnSummariesBatch(20, request.signal) : Promise.resolve(null),
+      agentPrUrlEnabled ? backfillAgentArtifactUrlsBatch(20, request.signal) : Promise.resolve(null),
+      agentPrUrlEnabled ? backfillAgentRunPrUrlsBatch(20, request.signal) : Promise.resolve(null),
+      pullRequestUrlEnabled ? backfillPullRequestUrlsBatch(20, request.signal) : Promise.resolve(null),
+      pullRequestContentEnabled ? backfillPullRequestContentBatch(20, request.signal) : Promise.resolve(null),
+      prCommentEditEnabled ? backfillPrCommentEditsBatch(20, request.signal) : Promise.resolve(null),
+      forgeRelayDeliveryEnabled ? backfillForgeRelayDeliveriesBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? scrubForgeRelayAuditBatch(100, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -111,12 +170,29 @@ export async function GET(request: NextRequest) {
     const githubCommentUrls = outcomes[22];
     const agentVerdicts = outcomes[23];
     const agentDeployments = outcomes[24];
+    const agentBaseBranches = outcomes[25];
+    const orphanRuntimeBaseBranches = outcomes[26];
+    const agentBranchArtifacts = outcomes[27];
+    const agentWorkBranches = outcomes[28];
+    const orphanRuntimeWorkBranches = outcomes[29];
+    const agentDelegationResults = outcomes[30];
+    const numoWorkerEvents = outcomes[31];
+    const numoWorkerCheckpoints = outcomes[32];
+    const agentRunSummaries = outcomes[33];
+    const agentTurnSummaries = outcomes[34];
+    const agentArtifactUrls = outcomes[35];
+    const agentRunPrUrls = outcomes[36];
+    const pullRequestUrls = outcomes[37];
+    const pullRequestContent = outcomes[38];
+    const prCommentEdits = outcomes[39];
+    const forgeRelayDeliveries = outcomes[40];
+    const forgeRelayAudit = outcomes[41];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -145,6 +221,23 @@ export async function GET(request: NextRequest) {
         ...(issueSidecarEnabled ? { github_comment_urls: githubCommentUrls.status === "fulfilled" ? githubCommentUrls.value : { failed: true } } : {}),
         ...(agentVerdictEnabled ? { agent_verdicts: agentVerdicts.status === "fulfilled" ? agentVerdicts.value : { failed: true } } : {}),
         ...(agentDeploymentEnabled ? { agent_deployments: agentDeployments.status === "fulfilled" ? agentDeployments.value : { failed: true } } : {}),
+        ...(agentBaseBranchEnabled ? { agent_base_branches: agentBaseBranches.status === "fulfilled" ? agentBaseBranches.value : { failed: true },
+          orphan_runtime_base_branches: orphanRuntimeBaseBranches.status === "fulfilled" ? orphanRuntimeBaseBranches.value : { failed: true } } : {}),
+        ...(agentWorkBranchEnabled ? { agent_branch_artifacts: agentBranchArtifacts.status === "fulfilled" ? agentBranchArtifacts.value : { failed: true },
+          agent_work_branches: agentWorkBranches.status === "fulfilled" ? agentWorkBranches.value : { failed: true },
+          orphan_runtime_work_branches: orphanRuntimeWorkBranches.status === "fulfilled" ? orphanRuntimeWorkBranches.value : { failed: true } } : {}),
+        ...(agentResultEnabled ? { agent_delegation_results: agentDelegationResults.status === "fulfilled" ? agentDelegationResults.value : { failed: true } } : {}),
+        ...(agentResultEnabled ? { numo_worker_events: numoWorkerEvents.status === "fulfilled" ? numoWorkerEvents.value : { failed: true },
+          numo_worker_checkpoints: numoWorkerCheckpoints.status === "fulfilled" ? numoWorkerCheckpoints.value : { failed: true } } : {}),
+        ...(agentSummaryEnabled ? { agent_run_summaries: agentRunSummaries.status === "fulfilled" ? agentRunSummaries.value : { failed: true },
+          agent_turn_summaries: agentTurnSummaries.status === "fulfilled" ? agentTurnSummaries.value : { failed: true } } : {}),
+        ...(agentPrUrlEnabled ? { agent_artifact_urls: agentArtifactUrls.status === "fulfilled" ? agentArtifactUrls.value : { failed: true },
+          agent_run_pr_urls: agentRunPrUrls.status === "fulfilled" ? agentRunPrUrls.value : { failed: true } } : {}),
+        ...(pullRequestUrlEnabled ? { pull_request_urls: pullRequestUrls.status === "fulfilled" ? pullRequestUrls.value : { failed: true } } : {}),
+        ...(pullRequestContentEnabled ? { pull_request_content: pullRequestContent.status === "fulfilled" ? pullRequestContent.value : { failed: true } } : {}),
+        ...(prCommentEditEnabled ? { pr_comment_edits: prCommentEdits.status === "fulfilled" ? prCommentEdits.value : { failed: true } } : {}),
+        ...(forgeRelayDeliveryEnabled ? { forge_relay_deliveries: forgeRelayDeliveries.status === "fulfilled" ? forgeRelayDeliveries.value : { failed: true } } : {}),
+        ...(contentEnabled ? { forge_relay_audit: forgeRelayAudit.status === "fulfilled" ? forgeRelayAudit.value : { failed: true } } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),
       ...(contentEnabled ? { statistics: statistics.status === "fulfilled" ? statistics.value : { failed: true } } : {}),

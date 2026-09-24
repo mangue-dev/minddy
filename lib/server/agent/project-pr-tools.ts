@@ -7,6 +7,8 @@ import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { forgeFor, isForgeApiError, type MergeMethod } from "./forge";
 import { AI_REVIEW_MAX_INLINE_COMMENTS } from "./tools";
 import { resolvePrCommentAnchor, signReviewBody } from "./pr-tools";
+import { decodePullRequestUrlRow } from "./pull-request-url-content";
+import { decodePullRequestContentRow } from "./pull-request-content";
 import {
   needsRepoSync,
   readRepoSyncStates,
@@ -165,6 +167,7 @@ async function refreshIfStale(target: ProjectRepoTarget): Promise<void> {
 }
 
 interface ListedRow {
+  id: string;
   number: number;
   title: string | null;
   state: PullRequestState;
@@ -220,7 +223,7 @@ async function listPullRequests(
   let query = getServiceClient()
     .from("pull_requests")
     .select(
-      "number, title, state, url, author_login, head_branch, base_branch, opened_at, merged_at, updated_at, " +
+      "id, number, title, state, url, author_login, head_branch, base_branch, opened_at, merged_at, updated_at, " +
         "issue:issues(id, number, project:projects(key))",
     )
     .eq("provider", target.provider)
@@ -234,7 +237,9 @@ async function listPullRequests(
   const { data, error } = await query;
   if (error) return { result: { error: error.message }, success: false };
 
-  const rows = (data ?? []) as unknown as ListedRow[];
+  const rows = await Promise.all(((data ?? []) as unknown as ListedRow[])
+    .map(async (row) => decodePullRequestContentRow(
+      await decodePullRequestUrlRow(row))));
   const titles = await loadIssueTitles(getServiceClient(),
     rows.map((row) => row.issue?.id).filter((id): id is string => !!id),
     [ctx.projectId]);

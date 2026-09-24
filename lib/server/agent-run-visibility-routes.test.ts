@@ -73,6 +73,7 @@ const issueAgent = () =>
 
 const runRow = (over: Record<string, unknown>) => ({
   id: "r",
+  project_id: "proj-1",
   created_by: "user-1",
   routine_id: null,
   chain_id: null,
