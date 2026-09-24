@@ -1,6 +1,6 @@
 import "server-only";
 
-import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
   detachDomainFromVercelOnly,
@@ -8,14 +8,16 @@ import {
 } from "@/lib/server/custom-domains";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { authenticationProof } from "@/lib/server/encryption/auth-proof";
+import { decodeShareToken, encodeShareToken, shareTokenLookup,
+  shouldProtectShareTokens } from "@/lib/server/encryption/share-token-content";
 import { MIN_SHARE_PASSWORD_LENGTH } from "@/lib/share-password";
 import type { PageShare, View, ViewShare } from "@/lib/types";
 import type { Page } from "@/lib/pages";
 
 /**
  * Public-link sharing of a saved view (MIN-26). One share per view, opt-in:
- * no row = private. The row holds the URL token (plaintext — it must be
- * re-displayed by the owner dialog) and, for the "password" level, a
+ * no row = private. The owner dialog receives the decrypted URL token and,
+ * for the "password" level, the row holds a
  * scrypt(salt) hash of the password.
  *
  * view_shares is RLS deny-all: every read/write goes through the service
@@ -27,8 +29,7 @@ import type { Page } from "@/lib/pages";
  *
  * The same table, the same `token` column, the same scrypt hash, the same
  * unlocking cookie: a published page only brings its target
- * (`page_id`) and the only setting that only makes sense for her
- * (`include_children`). Tout ce qui touche au SECRET —
+ * (`page_id`) and its page-specific setting (`include_children`). Secret
  * hash, verify, unlock — is written only once below and
  * serves both; this is the reason for enlargement, and the only thing
  * never duplicate if a third target one day appears.
@@ -80,14 +81,14 @@ export function unlockCookieMatches(
   return provided.length === expected.length && timingSafeEqual(provided, expected);
 }
 
-/** Longueur minimale d'un mot de passe de partage (MIN-347).
+/** Minimum share password length (MIN-347).
 
     A protected share is an ANONYMOUS door: no one is identified behind it,
     and the only secret is this password. He had none, so “1”
     was an acceptable setting — that is, a share declared as protected
     and open in fact. Eight characters against a salty scrypt, with the counter
     persistent of `share_unlock_attempts` on top: this is what makes the
-    balayage en ligne sans objet.
+    online guessing impractical.
 
     Value lives in an isomorphic module: the dialogues announce it, this
     function enforces it. */
@@ -195,7 +196,7 @@ export async function resolveShareForDomain(
   }
   return {
     ok: true,
-    share: (share as { id: string; token: string } | null) ?? null,
+    share: share ? { id: share.id, token: await decodeShareToken(share.id, share.token) } : null,
     isOwner: access.isOwner,
   };
 }
@@ -218,7 +219,8 @@ export async function getViewShare(
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
   const row = data as ShareRow | null;
-  return { ok: true, share: row ? { level: row.level, token: row.token } : null };
+  return { ok: true, share: row ? { level: row.level,
+    token: await decodeShareToken(row.id, row.token) } : null };
 }
 
 export async function upsertViewShare({
@@ -250,15 +252,23 @@ export async function upsertViewShare({
     }
   }
 
+  const service = getServiceClient();
+  const protectedTokens = await shouldProtectShareTokens(service);
+  const id = randomUUID();
   const token = randomBytes(16).toString("base64url");
-  const { data, error } = await getServiceClient().rpc("upsert_view_share_guarded", {
-    p_view_id: viewId,
-    p_level: level,
-    p_token: token,
-    p_password_salt: password_salt,
-    p_password_hash: password_hash,
-    p_created_by: actorId,
-  });
+  const { data, error } = protectedTokens
+    ? await service.rpc("upsert_view_share_guarded_protected", {
+        p_id: id, p_view_id: viewId, p_level: level,
+        p_token_cipher: await encodeShareToken(id, token),
+        p_token_lookup: await shareTokenLookup(token),
+        p_password_salt: password_salt, p_password_hash: password_hash,
+        p_created_by: actorId,
+      })
+    : await service.rpc("upsert_view_share_guarded", {
+        p_view_id: viewId, p_level: level, p_token: token,
+        p_password_salt: password_salt, p_password_hash: password_hash,
+        p_created_by: actorId,
+      });
   if (error) {
     console.error("[view-shares] upsert failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
@@ -272,7 +282,8 @@ export async function upsertViewShare({
     console.error("[view-shares] invalid guarded upsert response");
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  return { ok: true, share: { level: row.level, token: row.token } };
+  return { ok: true, share: { level: row.level,
+    token: await decodeShareToken(row.id, row.token) } };
 }
 
 export async function deleteViewShare(
@@ -363,16 +374,27 @@ export async function getPublicShareTarget(
   if (!token) return null;
   const service = getServiceClient();
 
-  const { data: row } = await service
-    .from("view_shares")
-    .select(`${SHARE_SELECT}, view_id, page_id`)
-    .eq("token", token)
-    .maybeSingle();
+  const select = `${SHARE_SELECT}, view_id, page_id`;
+  const protectedTokens = await shouldProtectShareTokens(service);
+  const indexed = protectedTokens
+    ? await service.from("view_shares").select(select)
+        .eq("token_lookup", await shareTokenLookup(token)).maybeSingle()
+    : { data: null, error: null };
+  if (indexed.error) throw indexed.error;
+  const legacy = indexed.data ? null : await service.from("view_shares")
+    .select(select).eq("token", token).maybeSingle();
+  if (legacy?.error) throw legacy.error;
+  const row = indexed.data ?? legacy?.data;
   if (!row) return null;
-  const share = row as ShareRow;
+  const clearToken = await decodeShareToken(row.id as string, row.token as string);
+  const supplied = Buffer.from(token);
+  const expected = Buffer.from(clearToken);
+  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected))
+    return null;
+  const share = { ...(row as ShareRow), token: clearToken };
 
   if (row.page_id) {
-    // A page in the CORBEILLE ceases to be public by the second: the link
+    // A trashed page ceases to be public immediately: the link
     // responds 404 without having to unpublish manually. The dividing line,
     // it survives — restoring the page returns the link, with the same token.
     const { data: page } = await service
@@ -491,7 +513,8 @@ export async function getPageShare(
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
   const row = data as ShareRow | null;
-  return { ok: true, share: row ? toPageShare(row) : null };
+  return { ok: true, share: row ? toPageShare({ ...row,
+    token: await decodeShareToken(row.id, row.token) }) : null };
 }
 
 /**
@@ -549,7 +572,11 @@ export async function upsertPageShare({
   }
 
   const include_children = includeChildren ?? existing?.include_children ?? false;
-  const token = existing?.token ?? randomBytes(16).toString("base64url");
+  const token = existing
+    ? await decodeShareToken(existing.id, existing.token)
+    : randomBytes(16).toString("base64url");
+  const protectNewToken = !existing && await shouldProtectShareTokens(service);
+  const id = protectNewToken ? randomUUID() : null;
 
   const { error } = existing
     ? await service
@@ -559,7 +586,8 @@ export async function upsertPageShare({
     : await service.from("view_shares").insert({
         page_id: pageId,
         level,
-        token,
+        ...(id ? { id, token: await encodeShareToken(id, token),
+          token_lookup: await shareTokenLookup(token) } : { token }),
         password_salt,
         password_hash,
         include_children,

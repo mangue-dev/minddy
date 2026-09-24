@@ -92,11 +92,13 @@ export async function eraseFeedbackUser(params: {
     if (board) {
       if (await shouldProtectFeedbackIdentity(service)) {
         const lookup = await feedbackOtpEmailLookup(identity.email);
-        await service.from("feedback_otp_codes").delete()
+        const { error: protectedDeleteError } = await service.from("feedback_otp_codes").delete()
           .eq("board_id", board.id).eq("email_lookup", lookup);
+        if (protectedDeleteError) return { ok: false, error: "failed" };
       }
-      await service.from("feedback_otp_codes").delete()
+      const { error: legacyDeleteError } = await service.from("feedback_otp_codes").delete()
         .eq("board_id", board.id).eq("email", identity.email);
+      if (legacyDeleteError) return { ok: false, error: "failed" };
     }
   }
 

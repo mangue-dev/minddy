@@ -5446,6 +5446,27 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/share-token-backfill.ts",
+    "operation": "from",
+    "resource": "view_shares",
+    "line": 23,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/share-token-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_view_share_token",
+    "line": 47,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/share-token-content.ts",
+    "operation": "from",
+    "resource": "view_share_token_encryption_scope",
+    "line": 25,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/stat-events-backfill.ts",
     "operation": "from",
     "resource": "stat_events",
@@ -5694,21 +5715,21 @@
     "file": "lib/server/feedback/erasure.ts",
     "operation": "from",
     "resource": "feedback_otp_codes",
-    "line": 98,
+    "line": 99,
     "storage": false
   },
   {
     "file": "lib/server/feedback/erasure.ts",
     "operation": "from",
     "resource": "feedback_users",
-    "line": 103,
+    "line": 105,
     "storage": false
   },
   {
     "file": "lib/server/feedback/erasure.ts",
     "operation": "from",
     "resource": null,
-    "line": 141,
+    "line": 143,
     "storage": false
   },
   {
@@ -9789,112 +9810,126 @@
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "views",
-    "line": 138,
+    "line": 139,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "views",
-    "line": 172,
+    "line": 173,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 187,
+    "line": 188,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 211,
+    "line": 212,
+    "storage": false
+  },
+  {
+    "file": "lib/server/view-shares.ts",
+    "operation": "rpc",
+    "resource": "upsert_view_share_guarded_protected",
+    "line": 260,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "rpc",
     "resource": "upsert_view_share_guarded",
-    "line": 254,
+    "line": 267,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "rpc",
     "resource": "revoke_view_share_guarded",
-    "line": 297,
+    "line": 308,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 366,
+    "line": 380,
+    "storage": false
+  },
+  {
+    "file": "lib/server/view-shares.ts",
+    "operation": "from",
+    "resource": "view_shares",
+    "line": 384,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 378,
+    "line": 400,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "views",
-    "line": 390,
+    "line": 412,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 421,
+    "line": 443,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 465,
+    "line": 487,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 484,
+    "line": 506,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 522,
+    "line": 545,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 555,
+    "line": 582,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 559,
+    "line": 586,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 583,
+    "line": 611,
     "storage": false
   },
   {

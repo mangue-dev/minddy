@@ -24,6 +24,10 @@ export type DomainTarget = {
   projectId: string;
 };
 
+async function shareTokenCodec() {
+  return import("@/lib/server/encryption/share-token-content");
+}
+
 const CACHE_TTL_MS = 60_000;
 const CACHE_MAX_ENTRIES = 1_000;
 
@@ -114,13 +118,14 @@ async function fetchTarget(host: string): Promise<DomainTarget | null> {
   const rows = await restRows<{
     feedback_boards: { token: string; project_id: string } | null;
     view_shares: {
+      id: string;
       token: string;
       views: { project_id: string } | null;
       pages: { project_id: string } | null;
     } | null;
   }>(
     `custom_domains?domain=eq.${encodeURIComponent(host)}&status=eq.verified` +
-      `&select=feedback_boards(token,project_id),view_shares(token,views(project_id),pages(project_id))&limit=1`,
+      `&select=feedback_boards(token,project_id),view_shares(id,token,views(project_id),pages(project_id))&limit=1`,
     `host ${host}`,
   );
   const row = rows?.[0];
@@ -133,7 +138,14 @@ async function fetchTarget(host: string): Promise<DomainTarget | null> {
   const share = row.view_shares;
   const shareProject = share?.views?.project_id ?? share?.pages?.project_id;
   if (share?.token && shareProject) {
-    return { kind: "share", token: share.token, projectId: shareProject };
+    try {
+      const { decodeShareToken } = await shareTokenCodec();
+      return { kind: "share", token: await decodeShareToken(share.id,
+        share.token), projectId: shareProject };
+    } catch {
+      console.error("[custom-domains] share token decryption failed");
+      return null;
+    }
   }
   return null;
 }
@@ -147,13 +159,31 @@ async function fetchBoardProject(token: string): Promise<string | null> {
 }
 
 async function fetchShareProject(token: string): Promise<string | null> {
-  const rows = await restRows<{
+  const selection = "views(project_id),pages(project_id)";
+  const legacy = await restRows<{
     views: { project_id: string } | null;
     pages: { project_id: string } | null;
   }>(
-    `view_shares?token=eq.${encodeURIComponent(token)}&select=views(project_id),pages(project_id)&limit=1`,
-    "share token",
+    `view_shares?token=eq.${encodeURIComponent(token)}&select=${selection}&limit=1`,
+    "legacy share token",
   );
-  const row = rows?.[0];
+  if (legacy?.length) {
+    const row = legacy[0];
+    return row.views?.project_id ?? row.pages?.project_id ?? null;
+  }
+  let lookup: string;
+  try {
+    const { shareTokenLookup } = await shareTokenCodec();
+    lookup = await shareTokenLookup(token);
+  } catch {
+    console.error("[custom-domains] share token lookup failed");
+    return null;
+  }
+  const indexed = await restRows<{
+    views: { project_id: string } | null;
+    pages: { project_id: string } | null;
+  }>(`view_shares?token_lookup=eq.${lookup}&select=${selection}&limit=1`,
+    "share token");
+  const row = indexed?.[0];
   return row?.views?.project_id ?? row?.pages?.project_id ?? null;
 }

@@ -3038,4 +3038,86 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       }
     }
   }, 60_000);
+
+  it("restores encrypted share tokens after child-first batches with cold keys", async () => {
+    const suffix = randomUUID().replaceAll("-", "");
+    const source = `minddy_min591_share_${suffix}`;
+    const restored = `minddy_min591_share_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const scope: EncryptionScope = { kind: "system",
+      id: "00000000-0000-0000-0000-000000000000" };
+    const actor = randomUUID(), project = randomUUID();
+    const views = [randomUUID(), randomUUID()];
+    const shares = [randomUUID(), randomUUID()];
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(attachmentTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${attachmentTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Share restore','SHRS');
+        INSERT INTO public.views(id,project_id,name) VALUES
+          (${quote(views[0])},${quote(project)},'First'),
+          (${quote(views[1])},${quote(project)},'Second');`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      for (const [index, id] of shares.entries()) {
+        if (index) await keys.rotate(scope, 1);
+        const clear = `private-share-${index + 1}`;
+        const cipher = await store.encrypt(clear, { scope,
+          table: "view_shares", column: "token", rowId: id });
+        const stored = `mdys3:${store.versionOf(cipher)}:${Buffer.from(cipher)
+          .toString("base64url")}`;
+        sql(source, `INSERT INTO public.view_shares(id,view_id,level,token,
+          token_lookup) VALUES(${quote(id)},${quote(views[index])},'public',
+          ${quote(stored)},${quote(index ? "b".repeat(64) : "a".repeat(64))});`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["auth.users", "public.projects", "public.views",
+          "public.envelope_data_keys", "public.view_share_token_encryption_scope",
+          "public.view_shares"].map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("private-share-");
+      const match = dump.match(/(COPY public\.view_shares[^\n]*\n)([\s\S]*?)(\\\.\n)/);
+      expect(match).not.toBeNull();
+      const dependencies = dump.replace(match![0], "");
+      for (const line of match![2].trimEnd().split("\n").reverse()) {
+        sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${match![1]}${line}\n${match![3]}COMMIT;`);
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${dependencies}\nCOMMIT;`);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(root)));
+      for (const [index, id] of shares.entries()) {
+        const value = sql(restored, `SELECT token FROM public.view_shares
+          WHERE id=${quote(id)};`);
+        expect(value).toMatch(new RegExp(`^mdys3:${index + 1}:`));
+        const cipher = cold.fromDatabase<string>(Buffer.from(value.split(":")[2],
+          "base64url").toString("utf8"));
+        expect(await cold.decrypt(cipher, { scope, table: "view_shares",
+          column: "token", rowId: id })).toBe(`private-share-${index + 1}`);
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const value = sql(restored, `SELECT token FROM public.view_shares
+        WHERE id=${quote(shares[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase<string>(Buffer.from(
+        value.split(":")[2], "base64url").toString("utf8")), { scope,
+        table: "view_shares", column: "token", rowId: shares[0] }))
+        .rejects.toThrow();
+      expect(() => sql(restored, `INSERT INTO public.view_shares(view_id,level,
+        token) VALUES(${quote(views[0])},'public','old-plaintext');`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
 });

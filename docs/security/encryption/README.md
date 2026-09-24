@@ -6,7 +6,7 @@ production migration on the strength of crypto unit tests or this inventory.
 
 ## Inventory and reproducibility
 
-- `schema.json` records 143 application tables and 1,383 columns, their primary
+- `schema.json` records 144 application tables and 1,387 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 187 encryption targets include the original content,
@@ -18,7 +18,7 @@ production migration on the strength of crypto unit tests or this inventory.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 349 functions, ten views and 191 triggers. Function
+- `sql-consumers.json` records 352 functions, ten views and 192 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -92,7 +92,7 @@ must be checked separately.
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
 | Forge data | Resolve ownership of repository data shared by several projects. Private repository names currently participate in primary/unique keys and lookup paths; introduce opaque/indexed identities before encrypting them. The generic row codec deliberately refuses sensitive primary keys. |
 | Files and images | Attachment and page-file server paths, opaque names, ciphertext bytes and metadata are implemented below; private project icons and any remaining object copies still need conversion. Public avatars have an explicit public-use exception. |
-| Feedback and sharing | Feedback posts and private visitor identities have repository and migration checkpoints below. Recoverable share tokens and remaining board copies still need conversion; owner dialogs must retain access to share URLs. |
+| Feedback and sharing | Feedback posts, private visitor identities and recoverable share tokens have repository and migration checkpoints below. Remaining board copies still need conversion; owner dialogs must retain access to share URLs. |
 | Credentials and configuration | Migrate legacy environment-key envelopes and secret/configuration stores to the agreed protected boundary; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
 | Migration and recovery | Add restartable batches for every target and object, compare-and-swap against concurrent edits, verification counters, rejection of obsolete writers, a restoration rehearsal and retention of historical wrapped keys. Test mixed plaintext/encrypted tenants and old versions. |
 | Root key and operations | Provision a dedicated root key outside the database and rehearse key backup and restore. The offline root-key rewrap procedure is implemented and tested on isolated PostgreSQL; production rehearsal and application-scale latency remain. Production deployment and migration require a later explicit deployment request. |
@@ -1252,6 +1252,25 @@ checks source and OTP copies, uniqueness controls, old-writer refusal and RPC
 privileges. A local PostgreSQL dump/restore loads feedback children before
 parent boards and projects in independent batches, recovers two key versions
 from cold caches and rejects the wrong root. This does not close the feedback
-or application-wide boundary: share tokens, private project icons, remaining
+or application-wide boundary: private project icons, remaining
 SQL and object targets in the table above need conversion. Production flags
 remain disabled.
+
+## Recoverable share token checkpoint — 24 September 2026
+
+When `MINDDY_SHARE_TOKEN_ENCRYPTION_ENABLED=true` together with the global
+content flag, new `view_shares.token` values use a system-bound, row-authenticated
+envelope. A purpose-separated version-one blind index supports public token
+lookup without exposing the bearer secret in SQL. Authorized owner dialogs,
+public share routes and custom-domain routing decode at the application
+boundary. The guarded view-share RPC retains its row lock and password update
+semantics; page publishing creates an opaque row identity before encryption.
+Legacy shares remain readable during conversion. A bounded CAS worker rotates
+them and records attempts in a fair queue. After activation the trigger rejects
+new clear tokens from old RPC and page writers. The isolated SQL regression
+verifies the source, CAS and old-writer refusal. The PostgreSQL dump/restore
+loads share children in independent transactions before their parent views and
+projects, then recovers two key versions with cold caches and rejects a wrong
+root. Representative search, latency, key-cache and load measurements remain
+checks before production activation, not blockers for code review. Production
+flags remain disabled.

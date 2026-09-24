@@ -49,6 +49,8 @@ import { backfillAttachmentMetadataBatch } from
   "@/lib/server/encryption/attachment-metadata-backfill";
 import { backfillFeedbackIdentityBatch } from
   "@/lib/server/encryption/feedback-identity-backfill";
+import { backfillShareTokensBatch } from
+  "@/lib/server/encryption/share-token-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -105,6 +107,8 @@ export async function GET(request: NextRequest) {
     process.env.MINDDY_ATTACHMENT_METADATA_ENCRYPTION_ENABLED === "true";
   const feedbackIdentityEnabled = contentEnabled &&
     process.env.MINDDY_FEEDBACK_IDENTITY_ENCRYPTION_ENABLED === "true";
+  const shareTokenEnabled = contentEnabled &&
+    process.env.MINDDY_SHARE_TOKEN_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -161,6 +165,7 @@ export async function GET(request: NextRequest) {
       attachmentMetadataEnabled ? backfillAttachmentMetadataBatch("page_files", 30, request.signal) : Promise.resolve(null),
       feedbackIdentityEnabled ? backfillFeedbackIdentityBatch("feedback_users", 30, request.signal) : Promise.resolve(null),
       feedbackIdentityEnabled ? backfillFeedbackIdentityBatch("feedback_otp_codes", 30, request.signal) : Promise.resolve(null),
+      shareTokenEnabled ? backfillShareTokensBatch(30, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -209,12 +214,13 @@ export async function GET(request: NextRequest) {
     const pageFileMetadata = outcomes[44];
     const feedbackUsers = outcomes[45];
     const feedbackOtp = outcomes[46];
+    const shareTokens = outcomes[47];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -268,6 +274,9 @@ export async function GET(request: NextRequest) {
         ...(feedbackIdentityEnabled ? {
           feedback_users: feedbackUsers.status === "fulfilled" ? feedbackUsers.value : { failed: true },
           feedback_otp: feedbackOtp.status === "fulfilled" ? feedbackOtp.value : { failed: true },
+        } : {}),
+        ...(shareTokenEnabled ? {
+          share_tokens: shareTokens.status === "fulfilled" ? shareTokens.value : { failed: true },
         } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),

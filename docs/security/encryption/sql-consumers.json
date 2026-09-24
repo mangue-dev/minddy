@@ -638,6 +638,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_view_share_token()": {
+      "sha256": "488d02831114c1a0609a1c312b16199e83b0ea81a30d387065722ad3e83059a6",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "view_share_token_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "set_comment_updated_at()": {
       "sha256": "d8d7e3b097a2dfb0d7079faa14888c727a95211028c82396fdba5094c3e1dd7f",
       "securityDefiner": false,
@@ -3774,6 +3787,21 @@
       ],
       "functionReferences": []
     },
+    "migrate_view_share_token(uuid,text,text,text)": {
+      "sha256": "308a8414409c2b16d335f6591400db44d80d5b5b9b66187a597046f10a96afdd",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "view_shares"
+      ],
+      "protectedRelations": [
+        "view_shares"
+      ],
+      "functionReferences": []
+    },
     "reserve_agent_pr_inline_comment(uuid,integer)": {
       "sha256": "649ed4393de351eee9cc506fa079ec1db612cf50c8a094310a5a7a8fec08c516",
       "securityDefiner": true,
@@ -5195,6 +5223,21 @@
       ],
       "functionReferences": []
     },
+    "upsert_view_share_guarded_protected(uuid,uuid,text,text,text,text,text,uuid)": {
+      "sha256": "1ce4aa791a4e84eb3fb340b86697db434a4c283bbefec51560be13f4541c30f3",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "view_shares"
+      ],
+      "protectedRelations": [
+        "view_shares"
+      ],
+      "functionReferences": []
+    },
     "migrate_agent_context_snapshot(uuid,uuid,uuid,jsonb,text,integer,text,integer)": {
       "sha256": "11f88adc693f84276fee91ff7b154b5a2e135756edaed179c13f509458846286",
       "securityDefiner": true,
@@ -5780,6 +5823,10 @@
     "comments.comments_encryption_guard": {
       "function": "guard_comment_encryption()",
       "definition": "CREATE TRIGGER comments_encryption_guard BEFORE INSERT OR UPDATE ON comments FOR EACH ROW EXECUTE FUNCTION guard_comment_encryption()"
+    },
+    "view_shares.view_share_token_guard": {
+      "function": "guard_view_share_token()",
+      "definition": "CREATE TRIGGER view_share_token_guard BEFORE INSERT OR UPDATE ON view_shares FOR EACH ROW EXECUTE FUNCTION guard_view_share_token()"
     },
     "agent_runs.zz_agent_run_title_guard": {
       "function": "guard_agent_title()",

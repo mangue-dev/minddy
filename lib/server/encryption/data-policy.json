@@ -3598,10 +3598,7 @@
   },
   "view_shares": {
     "scope": {
-      "ancestors": [
-        "views:view_id",
-        "pages:page_id"
-      ]
+      "kind": "system"
     },
     "encrypted": [
       "token"
@@ -3625,7 +3622,11 @@
       ],
       "timestamp": [
         "created_at",
-        "updated_at"
+        "updated_at",
+        "content_encryption_checked_at"
+      ],
+      "token_digest": [
+        "token_lookup"
       ]
     }
   },
@@ -3663,6 +3664,20 @@
       "timestamp": [
         "created_at",
         "updated_at"
+      ]
+    }
+  },
+  "view_share_token_encryption_scope": {
+    "scope": {
+      "kind": "system"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   }
