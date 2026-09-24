@@ -33,6 +33,7 @@ describe("encrypted access CI guard", () => {
     ["lib/server/export.ts", 'service.from("stat_events").select("*")'],
     ["lib/server/export.ts", 'service.from("categories").select("name")'],
     ["lib/server/export.ts", 'service.from("issues").select("title")'],
+    ["app/unsafe.ts", 'service.from("agent_runs").select("issue:issues(id, title)")'],
     ["app/unsafe.ts", 'service.rpc("migrate_issue_ciphertext", params)'],
     ["lib/server/export.ts", 'service.rpc("delete_category_guarded", params)'],
     ["app/unsafe.ts", 'service.from("stat_events").insert(rows)'],

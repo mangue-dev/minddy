@@ -5,6 +5,7 @@ import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { getProjectAccess } from "@/lib/server/project-access";
 import { getProjectLink } from "@/lib/server/git/repo-links";
 import { REPO_PROVIDERS, isRepoProviderId } from "@/lib/repo-providers";
 import { insertEvents } from "@/lib/server/issue-events";
@@ -405,13 +406,20 @@ export async function launchAgentRun(
     if (!reviewLink) return { ok: false, error: "prNotFound" };
     projectId = reviewLink.projectId;
   } else if (issueId) {
-    const { data: issue } = await issueStore(service).select("id, project_id, title")
+    const { data: anchor } = await issueStore(service).select("id, project_id")
       .is("deleted_at", null)
       .eq("id", issueId)
       .maybeSingle();
+    if (!anchor || input.projectId && input.projectId !== anchor.project_id ||
+        !await getProjectAccess(input.userId, anchor.project_id as string)) {
+      return { ok: false, error: "issueNotFound" };
+    }
+    projectId = anchor.project_id as string;
+    const { data: issue } = await issueStore(service, input.userId)
+      .select("title").eq("id", issueId).eq("project_id", projectId)
+      .is("deleted_at", null).maybeSingle();
     if (!issue) return { ok: false, error: "issueNotFound" };
-    projectId = (issue as { project_id: string }).project_id;
-    issueTitle = (issue as { title: string | null }).title;
+    issueTitle = issue.title as string;
     if (continuePrId) {
       continuePr = await loadPrRunContext(continuePrId);
       // The PR comes from the same server gesture as the ticket. Refuse an anchor

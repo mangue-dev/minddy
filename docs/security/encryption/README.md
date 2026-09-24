@@ -508,6 +508,44 @@ the issue flag or describe the domain as converted until those paths and the
 remaining SQL/RPC, imports/exports and old-writer checks are closed. Feedback
 visitor identities, OTP email and files remain clear as above.
 
+### Issue boundary follow-up — 24 September 2026
+
+Service-role issue reads now bind the known project before decoding in Smart
+Assign, automations, agent plan synchronization, PR review context and push
+hydration. An interactive issue-anchored agent launch first reads only routing
+metadata, confirms the user's current project access, then decodes the title in
+that project. Account export now limits created/assigned issue content to projects
+the exporting user currently owns or belongs to. PR review comments are decoded
+only after the linked issue has been found in the run's project.
+
+Nested PostgREST joins no longer request `issues.title` in agent-run lists,
+agent-branch cleanup, project PR tools or the user PR list. These callers batch
+up to 200 issue IDs and 100 authorized project IDs through `issueStore` before
+displaying titles. Missing or foreign issue titles do not become a visible
+linked issue. The encrypted-access CI guard rejects new nested selections of
+protected issue columns. Capture-world issue seeds now fail before their legacy
+plaintext writes when the target project has an active issue encryption marker.
+The database guard continues to reject stale application writers. The isolated
+issue SQL regression passed again; the PostgreSQL dump/restore rehearsal now
+recovers two roots and five children across two key versions, with cold caches
+and a wrong-root rejection.
+
+**The issue boundary is still open.** The following paths can retain issue
+content or sensitive related data in clear form:
+
+| Path | Remaining work |
+| --- | --- |
+| Agent state | `agent_runs.title/prompt/checkpoint` and related delegation fields, `agent_conversations.title`, messages, journals and tool results still persist readable content. The launch title generator can summarize an issue into these rows. Convert this agent boundary, its SQL title-sync trigger, reads, Realtime and historical rows together. |
+| Forge and external delivery | `pull_requests.title`, branch/repository names and URLs, GitHub issue metadata/sidecars and forge relay payloads remain clear in the application database. GitHub/GitLab issue synchronization, PR publication, webhooks, push and downloaded exports deliberately disclose content to their recipients or providers; review authorization, retention and provider controls for each destination. |
+| Resources and objects | Issue attachment URLs, filenames, storage paths and file bytes remain clear. Direct upload/download, AI resource reads, account exports/imports, copy and orphan cleanup still need an authorized opaque-path object transport, migration and restore. MIME and size are currently classified as operational metadata. |
+| Search and SQL | Application issue search reads through the repository, but representative latency and key/cache load are unmeasured. The SQL consumer inventory is a candidate list, not proof that every function or RPC has a safe content flow. |
+| Recovery and rollout | The seven-node fixture exercises the schema's supported one-level parent hierarchy only. `pg_dump` warns about self-referential issue foreign keys in data-only restores; a full application restore with arbitrary row order, all linked tables and objects remains unverified. No representative staging database or staging credentials were available in this session. |
+
+The source flag and global content flag remain disabled in production. This
+follow-up does not convert agent, forge, object or page sources, and is not an
+issue-domain completion claim. Feedback visitor identities, pending OTP email
+and feedback objects remain clear. No production data was migrated or deployed.
+
 ## Root-key setup and recovery
 
 `MINDDY_DATA_ROOT_KEY` is a dedicated 32-byte random key encoded as 64 hex

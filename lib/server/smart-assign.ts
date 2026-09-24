@@ -134,6 +134,7 @@ export async function runSmartAssign(
       issueStore(service).select("id, title, description, status, priority, effort, assignee_id")
         .is("deleted_at", null)
         .eq("id", params.issueId)
+        .eq("project_id", params.projectId)
         .maybeSingle(),
       service
         .from("project_members")
@@ -271,6 +272,7 @@ async function claimForSmartAssign(
     .update({ assignee_id: chosen })
     .is("deleted_at", null)
     .eq("id", params.issueId)
+    .eq("project_id", params.projectId)
     .is("assignee_id", null)
     .select("id")
     .maybeSingle();

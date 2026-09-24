@@ -1167,6 +1167,7 @@ export async function executeAgentRun(
               number: prRun.number,
             },
             pr: prRun,
+            projectId: run.project_id,
           })
         : null;
       // The SHA ACTUALLY reviewed, as just returned by the forge: the one stored at

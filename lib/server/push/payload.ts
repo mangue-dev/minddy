@@ -160,9 +160,10 @@ export async function loadPushContext(
     keyActors,
   ] =
     await Promise.all([
-    issueIds.length
+    issueIds.length && projectIds.length
       ? issueStore(service).select("id, number, title")
           .in("id", issueIds)
+          .in("project_id", projectIds)
           .is("deleted_at", null)
       : Promise.resolve({ data: [] as { id: string; number: number; title: string }[],
         }),

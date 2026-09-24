@@ -26,8 +26,8 @@ import { readStatEvents } from "@/lib/server/stat-events";
  * Concretely:
  * • the ENTIRE content of the projects it owns — these are those
  * that the deletion of the account takes away, members included;
- * • her contributions in the projects of others — tickets that she created or
- * that are assigned to her, comments that she wrote;
+ * • tickets she created or was assigned in projects she can currently access,
+ *   plus comments that she wrote;
  * • everything that is strictly personal: cycles, notepads, conversations
  * with the assistant, notifications, statistics, preferences.
  *
@@ -200,6 +200,11 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
   );
   const exportedProjects = await includeProjectIcons(service, ownedProjects);
   const ownedIds = exportedProjects.map((p) => p.id as string);
+  const membershipsResult = await service.from("project_members")
+    .select("project_id, role, created_at").eq("user_id", userId);
+  const memberIds = list("project_members", membershipsResult)
+    .map((membership) => membership.project_id as string);
+  const readableIssueProjectIds = [...new Set([...ownedIds, ...memberIds])];
 
   const [
     preferences,
@@ -228,12 +233,15 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     modelKeys,
   ] = await Promise.all([
     service.from("user_agent_preferences").select("*").eq("user_id", userId).maybeSingle(),
-    service.from("project_members").select("project_id, role, created_at").eq("user_id", userId),
+    Promise.resolve(membershipsResult),
     ownedIds.length
       ? issueStore(service).select(ISSUE_COLUMNS).in("project_id", ownedIds)
       : Promise.resolve({ data: [] as Row[], error: null }),
-    issueStore(service).select(ISSUE_COLUMNS)
-      .or(`created_by.eq.${userId},assignee_id.eq.${userId}`),
+    readableIssueProjectIds.length
+      ? issueStore(service).select(ISSUE_COLUMNS)
+          .in("project_id", readableIssueProjectIds)
+          .or(`created_by.eq.${userId},assignee_id.eq.${userId}`)
+      : Promise.resolve({ data: [] as Row[], error: null }),
     commentStore(service, "comments", userId)
       .select(
         "id, issue_id, parent_id, body, via_assistant, via_mcp, created_at, updated_at"

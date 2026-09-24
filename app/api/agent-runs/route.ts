@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { loadIssueTitles } from "@/lib/server/issue-store";
 
 /**
  * GLOBAL list of code agent (Numo) conversations, all projects
@@ -131,7 +132,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await auth.supabase
     .from("agent_runs")
     .select(
-      "id, conversation_id, parent_numo_turn_id, issue_id, pull_request_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, conversation:agent_conversations(title, visibility), issue:issues(id, number, title), project:projects(id, key, name, icon_url, orb_seed, deleted_at), pull_request:pull_requests(id, number, title, url)",
+      "id, conversation_id, parent_numo_turn_id, issue_id, pull_request_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, conversation:agent_conversations(title, visibility), issue:issues(id, number), project:projects(id, key, name, icon_url, orb_seed, deleted_at), pull_request:pull_requests(id, number, title, url)",
     )
     // Routine passages and Numo-owned workers are not standalone conversations:
     // the former live in routine history and the latter are mediated only in
@@ -166,12 +167,20 @@ export async function GET(request: NextRequest) {
   // although its sessions reappeared in the list — under a header bearing the
   // name of a project that the user no longer sees anywhere else. THE
   // restoring brings them back, like the rest of its contents.
-  const rows = ((data ?? []) as unknown as RunRow[]).filter(
+  const visibleRows = ((data ?? []) as unknown as RunRow[]).filter(
     (r) =>
       (r.issue_id === null || r.issue !== null) &&
       (r.pull_request_id === null || r.pull_request !== null) &&
       !r.project?.deleted_at,
   );
+  const titles = await loadIssueTitles(auth.supabase,
+    visibleRows.map((row) => row.issue?.id).filter((id): id is string => !!id),
+    visibleRows.map((row) => row.project?.id).filter((id): id is string => !!id),
+    auth.user.id);
+  const rows = visibleRows.map((row) => ({ ...row,
+    issue: row.issue && titles.has(row.issue.id)
+      ? { ...row.issue, title: titles.get(row.issue.id)! } : null,
+  })).filter((row) => row.issue_id === null || row.issue !== null);
   // One run, one conversation — no regrouping. What was once read on
   // the representative of a ticket (the status of its last run, its PR, its end) reads
   // now on each line, for this run and him alone.

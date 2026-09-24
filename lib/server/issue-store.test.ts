@@ -14,7 +14,7 @@ vi.mock("./encryption/registry", () => ({
   SupabaseKeyRegistry: class { loadCurrent() { return Promise.resolve(state.hasKey ? { version: 1 } : null); } },
 }));
 
-import { decodeIssue, encodeIssue, issueStore } from "./issue-store";
+import { decodeIssue, encodeIssue, issueStore, loadIssueTitles } from "./issue-store";
 
 const source = {
   id: "issue-1", project_id: "project-1", number: 42,
@@ -30,6 +30,8 @@ function client(rows: Record<string, unknown>[], selections: string[]): Supabase
     const query = {
       select(columns: string) { selections.push(columns); return query; },
       eq(column: string, value: unknown) { filters.push((row) => row[column] === value); return query; },
+      in(column: string, values: unknown[]) { filters.push((row) => values.includes(row[column])); return query; },
+      is(column: string, value: unknown) { filters.push((row) => (row[column] ?? null) === value); return query; },
       then(resolve: (result: unknown) => unknown) {
         return Promise.resolve({ data: rows.filter((row) => filters.every((filter) => filter(row))), error: null }).then(resolve);
       },
@@ -71,6 +73,14 @@ describe("issue source content", () => {
     expect(data).toEqual([{ id: "issue-1", title: "Private issue", plan: "Private plan" }]);
     expect(selections).toEqual(["*"]);
     expect(JSON.stringify(data)).not.toContain("encrypted_content");
+  });
+
+  it("loads joined titles only from the authorized project", async () => {
+    const first = await encodeIssue(source);
+    const foreign = await encodeIssue({ ...source, id: "issue-2", project_id: "project-2" });
+    const titles = await loadIssueTitles(client([first, foreign], []),
+      ["issue-1", "issue-2"], ["project-1"]);
+    expect([...titles]).toEqual([["issue-1", "Private issue"]]);
   });
 
   it("rejects SQL content filters and keeps writes encrypted after the flag is disabled", async () => {

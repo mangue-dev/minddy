@@ -837,6 +837,7 @@ export async function handleControlPlaneRequest(opts: {
       await syncIssuePlanStates(
         run.issue_id,
         steps as Parameters<typeof syncIssuePlanStates>[1],
+        run.project_id,
       );
     }
     return ok();

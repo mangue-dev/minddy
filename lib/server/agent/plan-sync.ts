@@ -19,7 +19,8 @@ import { planStateChanges } from "./plan-sync-core";
  */
 export async function syncIssuePlanStates(
   issueId: string,
-  steps: Array<{ step: string; status: PlanTaskState }>
+  steps: Array<{ step: string; status: PlanTaskState }>,
+  projectId: string,
 ): Promise<void> {
   try {
     if (!issueId || steps.length === 0) return;
@@ -33,6 +34,7 @@ export async function syncIssuePlanStates(
       const { data } = await issueStore(service).select("plan")
         .is("deleted_at", null)
         .eq("id", issueId)
+        .eq("project_id", projectId)
         .maybeSingle();
 
       const plan = (data as { plan?: string | null } | null)?.plan;
@@ -54,7 +56,7 @@ export async function syncIssuePlanStates(
       if (next === plan) return;
 
       // Compare the complete source revision; ciphertext cannot be a plan CAS.
-      if (await saveIssuePlanSnapshot(service, issueId, plan, next)) return;
+      if (await saveIssuePlanSnapshot(service, issueId, projectId, plan, next)) return;
     }
   } catch (err) {
     // Non-blocking: a sync failure should never cause the run to fail.

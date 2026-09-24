@@ -13,6 +13,10 @@ const allowedInvitationAccess = new Set([
 
 const rules = [
   {
+    access: /\bissues(?:![\w]+)?\([^\r\n)]*\b(?:title|description|plan|remote_url|automation_override)\b/,
+    allowed: new Set(),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]issues["'`]\s*\)/,
     allowed: new Set([
       "lib/server/issue-store.ts", "lib/server/encryption/issue-backfill.ts",
@@ -30,7 +34,8 @@ const rules = [
   },
   {
     access: /\.\s*(?:from\s*\(\s*["'`]issue_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_issue_ciphertext["'`])/,
-    allowed: new Set(["lib/server/issue-store.ts", "lib/server/encryption/issue-backfill.ts"]),
+    allowed: new Set(["lib/server/issue-store.ts", "lib/server/encryption/issue-backfill.ts",
+      "captures/world/seed/_issues.mjs"]),
   },
   {
     access: /\.\s*from\s*\(\s*["'`]feedback_posts["'`]\s*\)/,

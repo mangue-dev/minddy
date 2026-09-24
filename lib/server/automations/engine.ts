@@ -306,6 +306,7 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
       "id, number, title, plan, status, priority, effort, assignee_id, automation_override",
     )
     .eq("id", params.issueId)
+    .eq("project_id", params.projectId)
     .is("deleted_at", null)
     .maybeSingle();
   // Ticket in the trash: same reason, same remedy. And without that, a

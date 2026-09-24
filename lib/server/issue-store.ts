@@ -215,12 +215,38 @@ export function issueStore(client: SupabaseClient, actorId: string | null = null
   return new IssueQuery(client, actorId);
 }
 
+/** Resolve issue titles only within the caller's already authorized projects. */
+export async function loadIssueTitles(
+  client: SupabaseClient,
+  issueIds: readonly string[],
+  projectIds: readonly string[],
+  actorId: string | null = null,
+): Promise<Map<string, string>> {
+  const titles = new Map<string, string>();
+  if (issueIds.length === 0 || projectIds.length === 0) return titles;
+  const ids = [...new Set(issueIds)];
+  const projects = [...new Set(projectIds)];
+  for (let offset = 0; offset < ids.length; offset += 200) {
+    for (let projectOffset = 0; projectOffset < projects.length; projectOffset += 100) {
+      const { data, error } = await issueStore(client, actorId).select("id, title")
+        .in("id", ids.slice(offset, offset + 200))
+        .in("project_id", projects.slice(projectOffset, projectOffset + 100))
+        .is("deleted_at", null);
+      if (error) throw new Error("Unable to load issue titles");
+      for (const row of data ?? []) titles.set(row.id as string, row.title as string);
+    }
+  }
+  return titles;
+}
+
 /** Internal checklist sync: compare the complete row before changing its plan. */
 export async function saveIssuePlanSnapshot(
-  client: SupabaseClient, issueId: string, expectedPlan: string, nextPlan: string,
+  client: SupabaseClient, issueId: string, projectId: string,
+  expectedPlan: string, nextPlan: string,
 ): Promise<boolean> {
   const { data: stored, error } = await client.from("issues").select("*")
-    .eq("id", issueId).is("deleted_at", null).maybeSingle();
+    .eq("id", issueId).eq("project_id", projectId)
+    .is("deleted_at", null).maybeSingle();
   if (error || !stored) return false;
   const current = await decodeIssue(stored);
   if (current.plan !== expectedPlan) return false;
@@ -232,7 +258,7 @@ export async function saveIssuePlanSnapshot(
     updates.encrypted_content = encoded.encrypted_content;
   }
   let query = client.from("issues").update(updates)
-    .eq("id", issueId).is("deleted_at", null);
+    .eq("id", issueId).eq("project_id", projectId).is("deleted_at", null);
   if (stored.encryption_revision !== undefined) {
     query = query.eq("encryption_revision", stored.encryption_revision);
   } else {
