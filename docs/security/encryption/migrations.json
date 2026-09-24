@@ -114,5 +114,7 @@
   "20270107170000_agent_title_encryption.sql": "2b02e1a06a64deded28c857db7817aaa6d14b0f4899ff8693f2e07b15b5cb3d5",
   "20270107180000_agent_checkpoint_encryption.sql": "75eef242e26de22145e675a912520a3662fd8bc9c9b7198742128aab2e7d4bcf",
   "20270107190000_agent_delegation_input_encryption.sql": "6764ef526b74bf0bb62c78c27c004e2f5713fa92303e759ff08d9f30d15850e7",
-  "20270107200000_agent_standalone_message_encryption.sql": "5490fdb440b4ec3a0dd08c973224033e91391b79207f2575a9c0510639e620cf"
+  "20270107200000_agent_standalone_message_encryption.sql": "5490fdb440b4ec3a0dd08c973224033e91391b79207f2575a9c0510639e620cf",
+  "20270107210000_agent_queue_encryption.sql": "597f659711847f726cf60c5253c65bcd5eb11ec6f61026eb016bcc908805dedf",
+  "20270107220000_agent_worker_answer_encryption.sql": "ec37ef00d5bea8c564da6e657ba1ad3ea928f8f6f736592edade40508f92437b"
 }

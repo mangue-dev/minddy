@@ -56,7 +56,19 @@ const rules = [
   },
   {
     access: /\.\s*from\s*\(\s*["'`]agent_run_messages["'`]\s*\)/,
-    allowed: new Set(["lib/server/agent/runs.ts", "lib/server/retention.ts"]),
+    allowed: new Set(["lib/server/agent/runs.ts", "lib/server/retention.ts",
+      "lib/server/agent/run-queue-content.ts",
+      "lib/server/encryption/agent-queue-backfill.ts"]),
+  },
+  {
+    access: /\.\s*rpc\s*\(\s*["'`]migrate_agent_queue_bundle["'`]/,
+    allowed: new Set(["lib/server/encryption/agent-queue-backfill.ts"]),
+  },
+  {
+    access: /\.\s*from\s*\(\s*["'`]agent_run_input_requests["'`]\s*\)/,
+    allowed: new Set(["app/api/assistant/conversations/[id]/status/route.ts",
+      "lib/server/numo/worker-mediation.ts",
+      "lib/server/encryption/agent-queue-backfill.ts"]),
   },
   {
     access: /\.\s*from\s*\(\s*["'`]agent_run_journal["'`]\s*\)/,

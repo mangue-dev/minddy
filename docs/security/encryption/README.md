@@ -809,3 +809,48 @@ attachment objects, feedback identities (`feedback_users.email/name/
 external_id`), `feedback_otp_codes.email` and feedback objects remain open.
 No production flag was enabled, and no production deployment or data migration
 was performed.
+
+## Queued steering and mediated answer checkpoint
+
+Queued `agent_run_messages.content/mentions` now use a project-key envelope
+bound to the queue message ID. The SQL capture trigger copies the same
+ciphertext and key version into `agent_messages.content`. Direct writes and the
+atomic latest-run/resume RPCs persist the protected version; an activated
+project refuses old plaintext writers. Claims decode after resolving the run's
+project, and Numo plus account export hydrate the SQL copy after authorized
+reads.
+
+Mediated Numo steering and answers also protect the parent
+`assistant_messages` copy, including its context and non-routing metadata.
+`agent_run_input_requests.answer` uses a separate request-ID-bound envelope.
+The resume and steering RPCs keep their status, budget and message
+transactions while accepting ciphertext. One service-only compare-and-swap
+operation converts or rotates the queue row, transcript copy, answered
+request and parent message together, refusing missing or changed copies. A
+bounded 20-row maintenance pass verifies replacements. Parent conversation,
+AI history, attachment lookup, routine transcript, Numo detail and account
+export decrypt after their authorization checks. The parent row retains only
+the worker run/question routing marker in JSON metadata. SQL guards reject
+plaintext worker copies and version rollback after project activation.
+
+The isolated SQL regressions check copy equality, stale-writer refusal, scope
+immutability, compare-and-swap conflicts, SQL and Numo plaintext absence,
+and atomic mediated RPC writes. Real PostgreSQL dump/restore fixtures recover
+queue and answer copies under two project-key versions with cold caches and
+wrong-root rejection. They commit transcript, queue, answer, parent assistant,
+run and conversation rows in independent child-first batches and revalidate
+selected foreign keys. These fixtures contain only two messages and cannot
+estimate search latency, write latency or key/cache load. `supabase projects
+list` still shows one linked Minddy project and no identified Minddy staging
+project; no staging credentials are available in the environment. Production
+encryption flags remain disabled; no production deployment or data migration
+occurred.
+
+The agent boundary remains open: `agent_runs.delegation_result/outcome/
+error_message/verdict/base_branch/branch_name/pr_url/deployment_url`,
+`agent_runtime_sessions.base_branch/work_branch`, `agent_turns.outcome/
+error_message`, conversation contexts, artifacts and their Numo projections
+are still plaintext. Other PR/forge copies and attachment object bytes are
+unconverted. Feedback identities (`feedback_users.email/name/external_id`),
+`feedback_otp_codes.email` and feedback objects remain plaintext. The issue
+boundary and MIN-591 remain in progress, and PR #289 remains a draft.

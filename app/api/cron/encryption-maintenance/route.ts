@@ -11,6 +11,7 @@ import { backfillAgentTitleBatch } from "@/lib/server/encryption/agent-title-bac
 import { backfillAgentCheckpointBatch } from "@/lib/server/encryption/agent-checkpoint-backfill";
 import { backfillAgentDelegationBatch } from "@/lib/server/encryption/agent-delegation-backfill";
 import { backfillAgentStandaloneMessages } from "@/lib/server/encryption/agent-standalone-message-backfill";
+import { backfillAgentQueueBatch } from "@/lib/server/encryption/agent-queue-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
       agentCheckpointEnabled ? backfillAgentCheckpointBatch(5, request.signal) : Promise.resolve(null),
       agentDelegationEnabled ? backfillAgentDelegationBatch(20, request.signal) : Promise.resolve(null),
       agentLaunchEnabled ? backfillAgentStandaloneMessages(20, request.signal) : Promise.resolve(null),
+      agentLaunchEnabled ? backfillAgentQueueBatch(20, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -89,12 +91,13 @@ export async function GET(request: NextRequest) {
     const agentCheckpoint = outcomes[16];
     const agentDelegation = outcomes[17];
     const agentStandaloneMessages = outcomes[18];
+    const agentQueueMessages = outcomes[19];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -117,6 +120,7 @@ export async function GET(request: NextRequest) {
         ...(agentCheckpointEnabled ? { agent_checkpoints: agentCheckpoint.status === "fulfilled" ? agentCheckpoint.value : { failed: true } } : {}),
         ...(agentDelegationEnabled ? { agent_delegation: agentDelegation.status === "fulfilled" ? agentDelegation.value : { failed: true } } : {}),
         ...(agentLaunchEnabled ? { agent_standalone_messages: agentStandaloneMessages.status === "fulfilled" ? agentStandaloneMessages.value : { failed: true } } : {}),
+        ...(agentLaunchEnabled ? { agent_queue_messages: agentQueueMessages.status === "fulfilled" ? agentQueueMessages.value : { failed: true } } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),
       ...(contentEnabled ? { statistics: statistics.status === "fulfilled" ? statistics.value : { failed: true } } : {}),

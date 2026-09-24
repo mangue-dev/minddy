@@ -1,4 +1,5 @@
 import "server-only";
+import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -193,14 +194,15 @@ export async function routineOccurrenceDetail(input: {
 
   const { data, error } = await input.readClient
     .from("numo_messages")
-    .select("role, kind, content, tool_name, created_at")
+    .select("id, source, role, kind, content, metadata, tool_name, created_at")
     .eq("conversation_id", identity.id as string)
     .eq("source", "assistant")
     .neq("role", "tool")
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
   if (error) throw new Error(error.message);
-  const rows = (data ?? []) as Array<Record<string, unknown>>;
+  const rows = await hydrateWorkerParentCopies(input.readClient,
+    (data ?? []) as Array<Record<string, unknown>>);
   const messages = rows
     .filter((row) => row.kind !== "action")
     .map((row) => ({

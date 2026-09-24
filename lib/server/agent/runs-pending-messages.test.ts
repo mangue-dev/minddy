@@ -7,7 +7,10 @@ const query = {
   select: async () => ({ data: null, error: { message: "storage unavailable" } }),
 };
 vi.mock("@/lib/supabase-service", () => ({
-  getServiceClient: () => ({ from: () => query }),
+  getServiceClient: () => ({ from: (table: string) => table === "agent_runs"
+    ? { select: () => ({ eq: () => ({ maybeSingle: async () =>
+      ({ data: { project_id: "project-1" }, error: null }) }) }) }
+    : query }),
 }));
 vi.mock("@/lib/server/notifications", () => ({ insertNotifications: vi.fn() }));
 vi.mock("@/lib/server/posthog", () => ({ captureServerEvent: vi.fn() }));

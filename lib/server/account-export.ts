@@ -16,6 +16,8 @@ import { getScratchpadRow } from "@/lib/server/scratchpad";
 import { readStatEvents } from "@/lib/server/stat-events";
 import { hydrateAgentSummaryCopies } from "@/lib/server/agent/run-event-store";
 import { hydrateAgentLaunchCopies, hydrateImportedAgentMessages } from "@/lib/server/agent/run-launch-content";
+import { hydrateAgentQueueCopies } from "@/lib/server/agent/run-queue-content";
+import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 
 /**
  * Export of account data (MIN-119, GDPR art. 15 and 20).
@@ -366,14 +368,15 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
   const conversationRows = list("conversations", conversations);
   const conversationIds = conversationRows.map((c) => c.id as string);
   const messages = conversationIds.length
-    ? list(
+    ? (await hydrateWorkerParentCopies(service, list(
         "assistant_messages",
         await service
           .from("assistant_messages")
-          .select("conversation_id, role, content, tool_name, created_at")
+          .select("id, conversation_id, role, content, tool_name, created_at, metadata")
           .in("conversation_id", conversationIds)
           .order("created_at")
-      )
+      ))).map(({ conversation_id, role, content, tool_name, created_at }) =>
+        ({ conversation_id, role, content, tool_name, created_at }))
     : [];
 
   const messagesByConversation = new Map<string, Row[]>();
@@ -436,9 +439,11 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     contexts: codeRowsFor("agent_conversation_contexts", codeContexts, c.id as string),
     turns: codeRowsFor("agent_turns", codeTurns, c.id as string),
     messages: (await hydrateImportedAgentMessages(service,
-      await hydrateAgentLaunchCopies(service,
-        await hydrateAgentSummaryCopies(service, c.project_id as string,
-          codeRowsFor("agent_messages", codeMessages, c.id as string), userId),
+      await hydrateAgentQueueCopies(service,
+        await hydrateAgentLaunchCopies(service,
+          await hydrateAgentSummaryCopies(service, c.project_id as string,
+            codeRowsFor("agent_messages", codeMessages, c.id as string), userId),
+          userId, c.project_id as string),
         userId, c.project_id as string),
       userId, c.project_id as string)).map((row) => {
       const exported = { ...row };

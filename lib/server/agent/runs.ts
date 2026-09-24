@@ -43,7 +43,9 @@ import {
   shouldEncryptJournal,
 } from "./encrypted-journal";
 import { encodeRunEvent, shouldEncryptRunEvent } from "./run-event-store";
-import { decodeAgentLaunch, encodeAgentLaunch, shouldEncryptAgentLaunch } from "./run-launch-content";
+import { decodeAgentLaunch, encodeAgentLaunch, legacyAgentLaunchSchema,
+  shouldEncryptAgentLaunch } from "./run-launch-content";
+import { decodeQueueMessage, queueMessageValues } from "./run-queue-content";
 import { encodeAgentTitle, shouldEncryptAgentTitle } from "./run-title-content";
 import { decodeAgentCheckpoint, encodeAgentCheckpoint,
   shouldEncryptAgentCheckpoint } from "./run-checkpoint-content";
@@ -821,14 +823,19 @@ export async function insertLatestRunMessage(
   | "superseded"
   | "message_id_conflict"
 > {
-  const { data, error } = await getServiceClient().rpc(
+  const service = getServiceClient();
+  const values = await queueMessageValues(service, runId, messageId, {
+    content: stripUnstorable(content),
+    mentions: mentions?.length ? stripUnstorable(mentions) : null,
+  });
+  const { data, error } = await service.rpc(
     "insert_latest_agent_run_message",
     {
       p_run_id: runId,
       p_message_id: messageId,
       p_user_id: userId,
-      p_content: stripUnstorable(content),
-      p_mentions: mentions?.length ? stripUnstorable(mentions) : null,
+      p_content: values.content,
+      p_mentions: values.mentions,
     },
   );
   if (error) throw new Error(`agent_run_messages insert failed: ${error.message}`);
@@ -865,17 +872,20 @@ export async function resumeLatestRunWithMessage(input: {
   | "superseded"
   | "message_id_conflict"
 > {
-  const { data, error } = await getServiceClient().rpc(
+  const service = getServiceClient();
+  const values = await queueMessageValues(service, input.runId, input.messageId, {
+    content: stripUnstorable(input.content),
+    mentions: input.mentions?.length ? stripUnstorable(input.mentions) : null,
+  });
+  const { data, error } = await service.rpc(
     "resume_latest_agent_run_with_message",
     {
       p_run_id: input.runId,
       p_owner_id: input.ownerId,
       p_actor_id: input.actorId,
       p_message_id: input.messageId,
-      p_content: stripUnstorable(input.content),
-      p_mentions: input.mentions?.length
-        ? stripUnstorable(input.mentions)
-        : null,
+      p_content: values.content,
+      p_mentions: values.mentions,
       p_not_before: input.notBefore,
       p_usage_since: input.usageSince,
       p_budget_cap: input.budgetCap,
@@ -1911,16 +1921,16 @@ export async function insertRunMessage(
   messageId: string = randomUUID(),
 ): Promise<string> {
   const service = getServiceClient();
+  const values = await queueMessageValues(service, runId, messageId, {
+    content: stripUnstorable(content),
+    mentions: mentions?.length ? stripUnstorable(mentions) : null,
+  });
   const { error } = await service.from("agent_run_messages").upsert(
     {
       id: messageId,
       run_id: runId,
       created_by: userId,
-      content: stripUnstorable(content),
-      // The labels of mentions come from titles and names: they go through
-      // the same filter as the text, otherwise a null byte in it would cause it to be refused
-      // the jsonb insert — and the message with it.
-      ...(mentions?.length ? { mentions: stripUnstorable(mentions) } : {}),
+      ...values,
     },
     { onConflict: "id", ignoreDuplicates: true },
   );
@@ -1943,27 +1953,30 @@ export async function pullPendingMessages(
   runId: string,
 ): Promise<AgentUserMessage[]> {
   const service = getServiceClient();
-  const { data, error } = await service
+  const { data: run, error: runError } = await service.from("agent_runs")
+    .select("project_id").eq("id", runId).maybeSingle();
+  if (runError || !run?.project_id) throw new Error("Unable to resolve agent queue project");
+  const first = await service
     .from("agent_run_messages")
     .update({ consumed_at: new Date().toISOString() })
     .eq("run_id", runId)
     .is("consumed_at", null)
-    .select("id, content, mentions, created_at");
+    .select("id, run_id, content, mentions, content_encryption_version, created_at");
+  const { data, error } = legacyAgentLaunchSchema(first.error)
+    ? await service.from("agent_run_messages")
+        .update({ consumed_at: new Date().toISOString() })
+        .eq("run_id", runId).is("consumed_at", null)
+        .select("id, run_id, content, mentions, created_at")
+    : first;
   // A failed claim cannot be reported as an empty queue: the worker would
   // continue while the unconsumed user messages remain in storage.
   if (error) {
     throw new Error("Unable to claim pending agent messages");
   }
   if (!data) return [];
-  return (
-    data as Array<{
-      id: string;
-      content: string;
-      mentions?: AssistantMention[] | null;
-      created_at: string;
-    }>
-  )
-    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+  const decoded = await Promise.all(data.map((row) =>
+    decodeQueueMessage(run.project_id, row, null)));
+  return decoded.sort((a, b) => a.created_at.localeCompare(b.created_at))
     .map((r) => ({
       id: r.id,
       text: r.content,

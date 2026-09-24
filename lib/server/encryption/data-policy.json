@@ -345,6 +345,8 @@
     ],
     "clear": {
       "encryption_metadata": [
+        "answer_encryption_version",
+        "answer_encryption_checked_at",
         "encrypted_questions",
         "questions_encryption_version"
       ],
@@ -417,6 +419,10 @@
       "timestamp": [
         "consumed_at",
         "created_at"
+      ],
+      "encryption_metadata": [
+        "content_encryption_version",
+        "encryption_checked_at"
       ]
     }
   },
@@ -791,6 +797,10 @@
       "tool_calls"
     ],
     "clear": {
+      "encryption_metadata": [
+        "worker_content_encryption_checked_at",
+        "worker_content_encryption_version"
+      ],
       "operational_configuration": [
         "role",
         "tool_name"

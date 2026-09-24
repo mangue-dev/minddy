@@ -5500,6 +5500,16 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "content_encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -5573,6 +5583,16 @@
       "conversation_id": {
         "type": "uuid",
         "nullable": false,
+        "generated": false
+      },
+      "worker_content_encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "worker_content_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       }
     },
@@ -7805,6 +7825,16 @@
       },
       "parent_numo_turn_id": {
         "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "answer_encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "answer_encryption_checked_at": {
+        "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
       },

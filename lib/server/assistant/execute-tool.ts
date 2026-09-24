@@ -3,6 +3,7 @@ import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
+import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 
 import { MCP_CLIENT_TOOL_NAMES, MCP_SETUP_TOOL_NAMES } from "@/lib/mcp-client-tools";
 import { executeMcpTool } from "@/lib/server/mcp-client";
@@ -418,11 +419,12 @@ function delegationAuthorizations(raw: unknown): AgentDelegationAuthorization[] 
 async function parentTurnAttachments(ctx: ToolContext): Promise<AttachmentInput[]> {
   if (!ctx.turnId) return [];
   const { data } = await ctx.service.from("assistant_messages")
-    .select("metadata")
+    .select("id,content,metadata")
     .eq("turn_id", ctx.turnId)
     .eq("role", "user")
     .maybeSingle();
-  const raw = (data?.metadata as { attachments?: unknown } | null)?.attachments;
+  const hydrated = data ? (await hydrateWorkerParentCopies(ctx.service, [data]))[0] : null;
+  const raw = (hydrated?.metadata as { attachments?: unknown } | null)?.attachments;
   if (!Array.isArray(raw)) return [];
   return raw.slice(0, 20).flatMap((value) => {
     if (!value || typeof value !== "object" || Array.isArray(value)) return [];
