@@ -2,6 +2,7 @@ import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { mentionsNumo } from "@/lib/server/assistant/comment-agent";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { findPullRequestByNumber, type PullRequestRow } from "./pull-requests";
@@ -103,7 +104,8 @@ async function scopeForPr(pr: PullRequestRow): Promise<MentionScope | null> {
     .from("project_git_links")
     .select("project_id, created_at, projects(owner_id)")
     .eq("provider", pr.provider)
-    .eq("repo_full_name", pr.repo_full_name)
+    .eq("repo_full_name", await repositoryStorageName(pr.provider,
+      pr.repo_full_name,false,service))
     .order("created_at", { ascending: true });
   for (const row of (data ?? []) as Array<{
     project_id?: string | null;

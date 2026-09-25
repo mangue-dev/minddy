@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import type { RepoProviderId } from "@/lib/repo-providers";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { decodePrCommentEdit, encodePrCommentEdit,
   shouldEncryptPrCommentEdit } from "./pr-comment-edit-content";
 
@@ -48,6 +49,8 @@ export async function recordPrCommentEditQuiet(input: {
   body: string;
   editedBy: string | null;
 }): Promise<void> {
+  const storedName = await repositoryStorageName(input.provider,
+    input.repoFullName,true);
   // An edit from minddy echoes through the webhook carrying the SAME
   // previous body, and replayed deliveries repeat themselves: a row whose
   // body equals the newest snapshot of this comment is not a version, skip
@@ -57,7 +60,7 @@ export async function recordPrCommentEditQuiet(input: {
     .from("pr_comment_edits")
     .select("id,body")
     .eq("provider", input.provider)
-    .eq("repo_full_name", input.repoFullName)
+    .eq("repo_full_name", storedName)
     .eq("pr_number", input.prNumber)
     .eq("comment_id", input.commentId)
     .order("created_at", { ascending: false })
@@ -72,7 +75,7 @@ export async function recordPrCommentEditQuiet(input: {
     .insert({
       id,
       provider: input.provider,
-      repo_full_name: input.repoFullName,
+      repo_full_name: storedName,
       pr_number: input.prNumber,
       comment_id: input.commentId,
       body,
@@ -90,11 +93,13 @@ export async function listPrCommentEdits(input: {
   prNumber: number;
   commentId: number;
 }): Promise<PrCommentEditRow[]> {
+  const storedName = await repositoryStorageName(input.provider,
+    input.repoFullName,false);
   const { data } = await getServiceClient()
     .from("pr_comment_edits")
     .select("id, body, edited_by, created_at")
     .eq("provider", input.provider)
-    .eq("repo_full_name", input.repoFullName)
+    .eq("repo_full_name", storedName)
     .eq("pr_number", input.prNumber)
     .eq("comment_id", input.commentId)
     .order("created_at", { ascending: true })

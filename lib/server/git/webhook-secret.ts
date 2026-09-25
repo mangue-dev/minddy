@@ -4,6 +4,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import type { RepoProviderId } from "@/lib/repo-providers";
+import { decodeRepositoryName } from "./repository-name-content";
 import { decryptForgeToken, encryptForgeToken } from "./token-crypto";
 
 /**
@@ -180,8 +181,9 @@ export async function loadWebhookSecrets(params: {
     hasDedicatedSecret ||= Boolean(link.webhook_secret_encrypted);
     const secret = decryptForgeToken(link.webhook_secret_encrypted);
     if (secret && !own.includes(secret)) own.push(secret);
-    if (link.repo_full_name && !repoFullNames.includes(link.repo_full_name)) {
-      repoFullNames.push(link.repo_full_name);
+    const name = await decodeRepositoryName(params.provider,link.repo_full_name);
+    if (name && !repoFullNames.includes(name)) {
+      repoFullNames.push(name);
     }
   }
   return {

@@ -13,6 +13,8 @@ import { decodePullRequestUrlRow, encodePullRequestUrl,
   shouldEncryptPullRequestUrl } from "./pull-request-url-content";
 import { decodePullRequestContentRow, encodePullRequestContent,
   PR_CONTENT_FIELDS, shouldEncryptPullRequestContent } from "./pull-request-content";
+import { decodeRepositoryName, repositoryStorageName } from
+  "@/lib/server/git/repository-name-content";
 
 /**
  * Data access from table `pull_requests` (MIN-143) — the passage point
@@ -141,7 +143,10 @@ function toRow(input: PullRequestUpsert, id?: string,
 }
 
 async function decodeStoredPr<T extends PullRequestRow>(row: T): Promise<T> {
-  return decodePullRequestContentRow(await decodePullRequestUrlRow(row));
+  const content = await decodePullRequestContentRow(
+    await decodePullRequestUrlRow(row));
+  return { ...content, repo_full_name: (await decodeRepositoryName(
+    row.provider,row.repo_full_name))! };
 }
 
 /**
@@ -153,6 +158,9 @@ export async function upsertPullRequestWithOutcome(
   input: PullRequestUpsert,
 ): Promise<PullRequestUpsertOutcome | null> {
   const service = getServiceClient();
+  const storedName = await repositoryStorageName(input.provider,
+    input.repoFullName,true,service);
+  const storedInput = { ...input,repoFullName:storedName };
   const content = { title: input.title, head_branch: input.headBranch,
     base_branch: input.baseBranch };
   const [encryptUrl, encryptContent] = await Promise.all([
@@ -166,7 +174,7 @@ export async function upsertPullRequestWithOutcome(
     const protectedFields: Record<string, string> = {};
     if (encryptUrl || encryptContent) {
       const existing = await service.from("pull_requests").select("id")
-        .eq("provider", input.provider).eq("repo_full_name", input.repoFullName)
+        .eq("provider", input.provider).eq("repo_full_name", storedName)
         .eq("number", input.number).maybeSingle();
       if (existing.error) throw new Error("Unable to resolve pull request URL identity");
       id = existing.data?.id ?? randomUUID();
@@ -182,7 +190,7 @@ export async function upsertPullRequestWithOutcome(
       }
     }
     const { data, error } = await service.rpc("upsert_pull_request_monotonic", {
-      p_values: toRow(input, id, url, protectedFields),
+      p_values: toRow(storedInput, id, url, protectedFields),
     });
     if (error?.message.includes("pull_request_id_changed") && attempt === 0) {
       continue;
@@ -226,11 +234,13 @@ export async function findPullRequestByNumber(opts: {
   number: number;
 }): Promise<PullRequestRow | null> {
   const service = getServiceClient();
+  const storedName = await repositoryStorageName(opts.provider,
+    opts.repoFullName,false,service);
   const { data } = await service
     .from("pull_requests")
     .select(PR_COLUMNS)
     .eq("provider", opts.provider)
-    .eq("repo_full_name", opts.repoFullName)
+    .eq("repo_full_name", storedName)
     .eq("number", opts.number)
     .maybeSingle();
   return data ? decodeStoredPr(data as unknown as PullRequestRow) : null;
@@ -251,11 +261,13 @@ export async function findPullRequestsByHeadSha(opts: {
   headSha: string;
 }): Promise<PullRequestRow[]> {
   const service = getServiceClient();
+  const storedName = await repositoryStorageName(opts.provider,
+    opts.repoFullName,false,service);
   const { data } = await service
     .from("pull_requests")
     .select(PR_COLUMNS)
     .eq("provider", opts.provider)
-    .eq("repo_full_name", opts.repoFullName)
+    .eq("repo_full_name", storedName)
     .eq("head_sha", opts.headSha);
   return Promise.all(((data ?? []) as unknown as PullRequestRow[])
     .map((row) => decodeStoredPr(row)));
@@ -268,13 +280,14 @@ export interface RepoRef {
 
 /** Connection line → repository, or null if it is incomplete (unknown provider,
  repository never chosen: the connection exists before the repository is designated). */
-function repoFromLink(data: unknown): RepoRef | null {
+async function repoFromLink(data: unknown): Promise<RepoRef | null> {
   const row = data as {
     provider: string;
     repo_full_name: string | null;
   } | null;
   if (!row?.repo_full_name || !isRepoProviderId(row.provider)) return null;
-  return { provider: row.provider, repoFullName: row.repo_full_name };
+  return { provider: row.provider,repoFullName:
+    (await decodeRepositoryName(row.provider,row.repo_full_name))! };
 }
 
 /**
@@ -459,11 +472,12 @@ export async function projectsForRepo(
   repoFullName: string,
 ): Promise<RepoProject[]> {
   const service = getServiceClient();
+  const storedName = await repositoryStorageName(provider, repoFullName, false, service);
   const { data } = await service
     .from("project_git_links")
     .select("project:projects(id, key)")
     .eq("provider", provider)
-    .eq("repo_full_name", repoFullName);
+    .eq("repo_full_name", storedName);
   // Embedded to-one relationship: object at runtime, cast via unknown (see Supabase).
   return ((data ?? []) as unknown as Array<{ project: RepoProject | null }>)
     .map((r) => r.project)
@@ -600,13 +614,17 @@ export async function readRepoSyncStates(
 ): Promise<Map<string, RepoSyncState>> {
   if (repos.length === 0) return new Map();
   const service = getServiceClient();
+  const stored = await Promise.all(repos.map(async (repo) => ({ ...repo,
+    name: await repositoryStorageName(repo.provider, repo.repoFullName, false, service),
+  })));
   const { data } = await service
     .from("pull_request_syncs")
     .select("provider, repo_full_name, synced_at, truncated")
-    .in("repo_full_name", [...new Set(repos.map((r) => r.repoFullName))]);
+    .in("repo_full_name", [...new Set(stored.map((r) => r.name))]);
   const map = new Map<string, RepoSyncState>();
   for (const row of (data ?? []) as RepoSyncState[]) {
-    map.set(`${row.provider}:${row.repo_full_name}`, row);
+    const clearName = await decodeRepositoryName(row.provider,row.repo_full_name);
+    map.set(`${row.provider}:${clearName}`, { ...row, repo_full_name: clearName! });
   }
   return map;
 }
@@ -634,12 +652,13 @@ export async function stampRepoSync(
   repoFullName: string,
 ): Promise<void> {
   const service = getServiceClient();
+  const storedName = await repositoryStorageName(provider, repoFullName, true, service);
   const { error } = await service
     .from("pull_request_syncs")
     .upsert(
       {
         provider,
-        repo_full_name: repoFullName,
+        repo_full_name: storedName,
         synced_at: new Date().toISOString(),
       },
       { onConflict: "provider,repo_full_name" },
@@ -678,11 +697,13 @@ export async function syncRepoPullRequests(opts: {
   });
 
   const service = getServiceClient();
+  const storedName = await repositoryStorageName(opts.provider, opts.repoFullName,
+    true, service);
   const { data: existing } = await service
     .from("pull_requests")
     .select("number, issue_id, state")
     .eq("provider", opts.provider)
-    .eq("repo_full_name", opts.repoFullName);
+    .eq("repo_full_name", storedName);
   const knownByNumber = new Map(
     (
       (existing ?? []) as Array<{
@@ -773,7 +794,7 @@ export async function syncRepoPullRequests(opts: {
   const { error: stampError } = await service.from("pull_request_syncs").upsert(
     {
       provider: opts.provider,
-      repo_full_name: opts.repoFullName,
+      repo_full_name: storedName,
       synced_at: new Date().toISOString(),
       truncated,
     },
@@ -832,7 +853,7 @@ export async function listVisibleRepos(
     .select(
       "provider, repo_full_name, project:projects(id, key, name, icon_url, orb_seed, deleted_at)",
     );
-  return (
+  const rows = (
     (data ?? []) as unknown as Array<{
       provider: string;
       repo_full_name: string | null;
@@ -851,11 +872,11 @@ export async function listVisibleRepos(
         !r.project.deleted_at &&
         isRepoProviderId(r.provider),
     )
-    .map((r) => ({
+  return Promise.all(rows.map(async (r) => ({
       provider: r.provider as RepoProviderId,
-      repoFullName: r.repo_full_name as string,
+      repoFullName: (await decodeRepositoryName(r.provider,r.repo_full_name))!,
       project: r.project as VisibleRepo["project"],
-    }));
+    })));
 }
 
 /** A PR of the list, with its ticket and the project of this ticket (RLS joins). */
@@ -882,9 +903,13 @@ export async function listPullRequestsForUser(
   opts?: { limit?: number; states?: PullRequestState[] },
 ): Promise<PullRequestWithIssue[]> {
   if (repos.length === 0) return [];
-  const names = [...new Set(repos.map((r) => r.repoFullName))];
+  const service = getServiceClient();
+  const stored = await Promise.all(repos.map(async (r) => ({ ...r,
+    name: await repositoryStorageName(r.provider,r.repoFullName,false,service),
+  })));
+  const names = [...new Set(stored.map((r) => r.name))];
   const pairs = new Set(
-    repos.map((r) => repoSyncKey(r.provider, r.repoFullName)),
+    stored.map((r) => repoSyncKey(r.provider, r.name)),
   );
 
   let query = supabase
@@ -924,9 +949,10 @@ export async function countPullRequestsForUser(
   states: PullRequestState[],
 ): Promise<number> {
   const namesByProvider = new Map<string, Set<string>>();
+  const service = getServiceClient();
   for (const repo of repos) {
     const names = namesByProvider.get(repo.provider) ?? new Set<string>();
-    names.add(repo.repoFullName);
+    names.add(await repositoryStorageName(repo.provider,repo.repoFullName,false,service));
     namesByProvider.set(repo.provider, names);
   }
 

@@ -155,5 +155,6 @@
   "20270107620000_numo_user_message_encryption.sql": "cd67b74377bad3f7492ab272c38df86d0f2dc7e2af122ab6a4c0c527ff496102",
   "20270107630000_numo_final_content_encryption.sql": "613ff93036fbacb6bd120d201099db0644d80352a558a7a0ab399345cbeb9547",
   "20270107640000_numo_error_content_encryption.sql": "ff2cead345955578932a00d3c2ec393cd779398b41f0c6ccb74160bb6016b58f",
-  "20270107650000_numo_tool_content_encryption.sql": "080525aadc6150ba025e40a2064c14ec8ac0198ef64e131d6ec8c83febb8f100"
+  "20270107650000_numo_tool_content_encryption.sql": "080525aadc6150ba025e40a2064c14ec8ac0198ef64e131d6ec8c83febb8f100",
+  "20270107660000_forge_repository_name_encryption.sql": "c1d75311698ccf6fb5051ad7b1a9839721c41997ffe02ac1799dbf994261059c"
 }

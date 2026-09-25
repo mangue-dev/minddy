@@ -1252,21 +1252,6 @@
       ]
     }
   },
-  "numo_conversation_title_scope": {
-    "scope": {
-      "kind": "system",
-      "id": "00000000-0000-0000-0000-000000000000"
-    },
-    "encrypted": [],
-    "clear": {
-      "bounded_metadata": [
-        "id"
-      ],
-      "timestamp": [
-        "activated_at"
-      ]
-    }
-  },
   "custom_domains": {
     "scope": {
       "ancestors": [
@@ -1394,6 +1379,21 @@
       ]
     }
   },
+  "feedback_merge_event_links": {
+    "scope": {
+      "ancestor": "feedback_merge_events:event_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "operational_configuration": [
+        "link_kind"
+      ],
+      "routing_identity": [
+        "event_id",
+        "target_id"
+      ]
+    }
+  },
   "feedback_merge_events": {
     "scope": {
       "kind": "project",
@@ -1421,21 +1421,6 @@
         "created_at",
         "payload_checked_at",
         "undone_at"
-      ]
-    }
-  },
-  "feedback_merge_event_links": {
-    "scope": {
-      "ancestor": "feedback_merge_events:event_id"
-    },
-    "encrypted": [],
-    "clear": {
-      "operational_configuration": [
-        "link_kind"
-      ],
-      "routing_identity": [
-        "event_id",
-        "target_id"
       ]
     }
   },
@@ -1581,6 +1566,20 @@
       ]
     }
   },
+  "feedback_sso_encryption_scope": {
+    "scope": {
+      "kind": "system"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "feedback_sso_replays": {
     "scope": {
       "kind": "system",
@@ -1670,6 +1669,21 @@
       ]
     }
   },
+  "forge_mention_key_encryption_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "forge_mention_throttle": {
     "scope": {
       "kind": "system",
@@ -1686,21 +1700,6 @@
       ],
       "token_digest": [
         "key"
-      ]
-    }
-  },
-  "forge_mention_key_encryption_scope": {
-    "scope": {
-      "kind": "system",
-      "id": "00000000-0000-0000-0000-000000000000"
-    },
-    "encrypted": [],
-    "clear": {
-      "routing_identity": [
-        "id"
-      ],
-      "timestamp": [
-        "activated_at"
       ]
     }
   },
@@ -1732,9 +1731,7 @@
       "kind": "system",
       "id": "00000000-0000-0000-0000-000000000000"
     },
-    "encrypted": [
-      "repository_full_name"
-    ],
+    "encrypted": [],
     "clear": {
       "one_way_authentication": [
         "code_hash"
@@ -1754,7 +1751,11 @@
       "timestamp": [
         "claimed_at",
         "consumed_at",
-        "created_at"
+        "created_at",
+        "repo_name_checked_at"
+      ],
+      "encryption_metadata": [
+        "repository_full_name"
       ]
     }
   },
@@ -1857,7 +1858,6 @@
       "id": "00000000-0000-0000-0000-000000000000"
     },
     "encrypted": [
-      "repo_full_name",
       "webhook_secret_encrypted"
     ],
     "clear": {
@@ -1871,7 +1871,11 @@
         "provider"
       ],
       "timestamp": [
-        "updated_at"
+        "updated_at",
+        "repo_name_checked_at"
+      ],
+      "encryption_metadata": [
+        "repo_full_name"
       ]
     }
   },
@@ -1966,6 +1970,43 @@
         "created_at",
         "delivered_at",
         "token_expires_at"
+      ]
+    }
+  },
+  "forge_repository_name_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "forge_repository_names": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [
+      "full_name_ciphertext"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "provider"
+      ],
+      "encryption_metadata": [
+        "token",
+        "encryption_version"
+      ],
+      "timestamp": [
+        "created_at",
+        "encryption_checked_at"
       ]
     }
   },
@@ -2476,59 +2517,14 @@
       ]
     }
   },
-  "numo_final_content_scope": {
+  "numo_automation_content_scope": {
     "scope": {
       "kind": "system",
       "id": "00000000-0000-0000-0000-000000000000"
     },
     "encrypted": [],
     "clear": {
-      "routing_identity": [
-        "id"
-      ],
-      "timestamp": [
-        "activated_at"
-      ]
-    }
-  },
-  "numo_error_encryption_scope": {
-    "scope": {
-      "kind": "system",
-      "id": "00000000-0000-0000-0000-000000000000"
-    },
-    "encrypted": [],
-    "clear": {
-      "routing_identity": [
-        "id"
-      ],
-      "timestamp": [
-        "activated_at"
-      ]
-    }
-  },
-  "numo_user_message_scope": {
-    "scope": {
-      "kind": "system",
-      "id": "00000000-0000-0000-0000-000000000000"
-    },
-    "encrypted": [],
-    "clear": {
-      "routing_identity": [
-        "id"
-      ],
-      "timestamp": [
-        "activated_at"
-      ]
-    }
-  },
-  "numo_turn_intent_scope": {
-    "scope": {
-      "kind": "system",
-      "id": "00000000-0000-0000-0000-000000000000"
-    },
-    "encrypted": [],
-    "clear": {
-      "routing_identity": [
+      "bounded_metadata": [
         "id"
       ],
       "timestamp": [
@@ -2570,21 +2566,6 @@
       ]
     }
   },
-  "numo_automation_content_scope": {
-    "scope": {
-      "kind": "system",
-      "id": "00000000-0000-0000-0000-000000000000"
-    },
-    "encrypted": [],
-    "clear": {
-      "bounded_metadata": [
-        "id"
-      ],
-      "timestamp": [
-        "activated_at"
-      ]
-    }
-  },
   "numo_conversation_ids": {
     "scope": {
       "kind": "system",
@@ -2616,6 +2597,66 @@
       ]
     }
   },
+  "numo_conversation_title_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "numo_error_encryption_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "numo_event_content_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "numo_final_content_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "numo_routine_occurrences": {
     "scope": {
       "ancestor": "agent_routines:routine_id"
@@ -2640,6 +2681,20 @@
         "error_encryption_checked_at",
         "scheduled_for",
         "updated_at"
+      ]
+    }
+  },
+  "numo_surface_destination_encryption_scope": {
+    "scope": {
+      "kind": "system"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   },
@@ -2776,7 +2831,22 @@
       ]
     }
   },
-  "numo_event_content_scope": {
+  "numo_turn_intent_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "numo_user_message_scope": {
     "scope": {
       "kind": "system",
       "id": "00000000-0000-0000-0000-000000000000"
@@ -3147,8 +3217,7 @@
       ]
     },
     "encrypted": [
-      "body",
-      "repo_full_name"
+      "body"
     ],
     "clear": {
       "bounded_metadata": [
@@ -3164,7 +3233,11 @@
       ],
       "timestamp": [
         "body_encryption_checked_at",
-        "created_at"
+        "created_at",
+        "repo_name_checked_at"
+      ],
+      "encryption_metadata": [
+        "repo_full_name"
       ]
     }
   },
@@ -3204,10 +3277,8 @@
     },
     "encrypted": [
       "default_branch",
-      "repo_full_name",
       "repo_name",
       "repo_owner",
-      "repo_previous_names",
       "webhook_secret_encrypted"
     ],
     "clear": {
@@ -3230,7 +3301,12 @@
         "created_at",
         "issue_sync_backfilled_at",
         "issue_sync_enabled_at",
-        "updated_at"
+        "updated_at",
+        "repo_name_checked_at"
+      ],
+      "encryption_metadata": [
+        "repo_full_name",
+        "repo_previous_names"
       ]
     }
   },
@@ -3423,9 +3499,7 @@
         "repo_full_name"
       ]
     },
-    "encrypted": [
-      "repo_full_name"
-    ],
+    "encrypted": [],
     "clear": {
       "bounded_metadata": [
         "truncated"
@@ -3434,7 +3508,11 @@
         "provider"
       ],
       "timestamp": [
-        "synced_at"
+        "synced_at",
+        "repo_name_checked_at"
+      ],
+      "encryption_metadata": [
+        "repo_full_name"
       ]
     }
   },
@@ -3464,7 +3542,6 @@
     "encrypted": [
       "base_branch",
       "head_branch",
-      "repo_full_name",
       "title",
       "url"
     ],
@@ -3492,7 +3569,11 @@
         "opened_at",
         "synced_at",
         "updated_at",
-        "url_encryption_checked_at"
+        "url_encryption_checked_at",
+        "repo_name_checked_at"
+      ],
+      "encryption_metadata": [
+        "repo_full_name"
       ]
     }
   },
@@ -3810,6 +3891,20 @@
       ]
     }
   },
+  "view_share_token_encryption_scope": {
+    "scope": {
+      "kind": "system"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "view_shares": {
     "scope": {
       "kind": "system"
@@ -3878,48 +3973,6 @@
       "timestamp": [
         "created_at",
         "updated_at"
-      ]
-    }
-  },
-  "view_share_token_encryption_scope": {
-    "scope": {
-      "kind": "system"
-    },
-    "encrypted": [],
-    "clear": {
-      "routing_identity": [
-        "id"
-      ],
-      "timestamp": [
-        "activated_at"
-      ]
-    }
-  },
-  "numo_surface_destination_encryption_scope": {
-    "scope": {
-      "kind": "system"
-    },
-    "encrypted": [],
-    "clear": {
-      "routing_identity": [
-        "id"
-      ],
-      "timestamp": [
-        "activated_at"
-      ]
-    }
-  },
-  "feedback_sso_encryption_scope": {
-    "scope": {
-      "kind": "system"
-    },
-    "encrypted": [],
-    "clear": {
-      "routing_identity": [
-        "id"
-      ],
-      "timestamp": [
-        "activated_at"
       ]
     }
   }

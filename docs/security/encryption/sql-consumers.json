@@ -2717,6 +2717,32 @@
         "realtime_topic_project_ids"
       ]
     },
+    "activate_forge_repository_names()": {
+      "sha256": "8c2992016804264c515f2027df5b622c9b0144a16178cbfedd0c66e1bfc7c0a5",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pull_requests",
+        "pr_comment_edits",
+        "project_git_links",
+        "forge_relay_claims",
+        "pull_request_syncs",
+        "forge_repository_names",
+        "forge_relay_link_mirror",
+        "forge_repository_name_scope"
+      ],
+      "protectedRelations": [
+        "pull_requests",
+        "pr_comment_edits",
+        "project_git_links",
+        "forge_repository_names",
+        "forge_relay_link_mirror"
+      ],
+      "functionReferences": []
+    },
     "agent_queue_content_version(text)": {
       "sha256": "2ad02d1649cd1b0fcd18f938dd51f09a1a4efcca322a5b32d52f2b0f632c49fd",
       "securityDefiner": false,
@@ -2896,6 +2922,24 @@
       ],
       "protectedRelations": [
         "feedback_users"
+      ],
+      "functionReferences": []
+    },
+    "guard_forge_repository_identity()": {
+      "sha256": "4b6a5332aa478c65a0ba3bda0e4f85bd0915f57ad3872039422229241399f811",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "project_git_links",
+        "forge_repository_names",
+        "forge_repository_name_scope"
+      ],
+      "protectedRelations": [
+        "project_git_links",
+        "forge_repository_names"
       ],
       "functionReferences": []
     },
@@ -3437,6 +3481,17 @@
         "agent_artifacts",
         "agent_runtime_sessions"
       ],
+      "functionReferences": []
+    },
+    "guard_forge_repository_name_registry()": {
+      "sha256": "1f177b3c1351e93da9ccd5ffce091b833a81cd8c9f0824633cb88b2ac13ea694",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "guard_project_actor(uuid,uuid,boolean)": {
@@ -4758,6 +4813,28 @@
       ],
       "functionReferences": []
     },
+    "reconcile_forge_repository_name(text,text,text,jsonb)": {
+      "sha256": "09bec7a5e474a40ccbb85fd2d4108bb641f348cb0f287371a747189746098db5",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pull_requests",
+        "pr_comment_edits",
+        "project_git_links",
+        "pull_request_syncs",
+        "forge_repository_names"
+      ],
+      "protectedRelations": [
+        "pull_requests",
+        "pr_comment_edits",
+        "project_git_links",
+        "forge_repository_names"
+      ],
+      "functionReferences": []
+    },
     "rotate_envelope_data_key(text,uuid,text,integer,text)": {
       "sha256": "d9e304876eebdddf864a8e26ddcc773acc554785bf12922b96e6ef7135993a98",
       "securityDefiner": true,
@@ -5039,8 +5116,7 @@
         "forge_relay_installations"
       ],
       "protectedRelations": [
-        "git_connections",
-        "forge_relay_claims"
+        "git_connections"
       ],
       "functionReferences": []
     },
@@ -5974,6 +6050,31 @@
       ],
       "protectedRelations": [
         "agent_runs"
+      ],
+      "functionReferences": []
+    },
+    "migrate_forge_repository_name(text,uuid,text,text,text,text[],text[],text,text,text)": {
+      "sha256": "4e36de952b79475e00b01badfaad54e4df562106c6f01aa3306113f68a16bd5e",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pull_requests",
+        "pr_comment_edits",
+        "project_git_links",
+        "forge_relay_claims",
+        "pull_request_syncs",
+        "forge_repository_names",
+        "forge_relay_link_mirror"
+      ],
+      "protectedRelations": [
+        "pull_requests",
+        "pr_comment_edits",
+        "project_git_links",
+        "forge_repository_names",
+        "forge_relay_link_mirror"
       ],
       "functionReferences": []
     },
@@ -7149,6 +7250,10 @@
       "function": "guard_agent_checkpoint()",
       "definition": "CREATE TRIGGER agent_runtime_checkpoint_guard BEFORE INSERT OR UPDATE ON agent_runtime_sessions FOR EACH ROW EXECUTE FUNCTION guard_agent_checkpoint()"
     },
+    "pull_requests.pull_requests_repository_identity_guard": {
+      "function": "guard_forge_repository_identity()",
+      "definition": "CREATE TRIGGER pull_requests_repository_identity_guard BEFORE INSERT OR UPDATE ON pull_requests FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_identity()"
+    },
     "agent_conversations.agent_conversations_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER agent_conversations_set_updated_at BEFORE UPDATE ON agent_conversations FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
@@ -7213,6 +7318,14 @@
       "function": "broadcast_feedback_child()",
       "definition": "CREATE TRIGGER feedback_post_categories_broadcast AFTER INSERT OR DELETE OR UPDATE ON feedback_post_categories FOR EACH ROW EXECUTE FUNCTION broadcast_feedback_child()"
     },
+    "forge_repository_names.forge_repository_name_registry_guard": {
+      "function": "guard_forge_repository_name_registry()",
+      "definition": "CREATE TRIGGER forge_repository_name_registry_guard BEFORE INSERT OR UPDATE ON forge_repository_names FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_name_registry()"
+    },
+    "pr_comment_edits.pr_comment_edits_repository_identity_guard": {
+      "function": "guard_forge_repository_identity()",
+      "definition": "CREATE TRIGGER pr_comment_edits_repository_identity_guard BEFORE INSERT OR UPDATE ON pr_comment_edits FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_identity()"
+    },
     "agent_conversations.agent_conversations_rekey_realtime_scope": {
       "function": "rekey_agent_conversation_scope()",
       "definition": "CREATE TRIGGER agent_conversations_rekey_realtime_scope BEFORE UPDATE OF project_id, owner_id, visibility ON agent_conversations FOR EACH ROW EXECUTE FUNCTION rekey_agent_conversation_scope()"
@@ -7221,9 +7334,21 @@
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER user_agent_preferences_set_updated_at BEFORE UPDATE ON user_agent_preferences FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
+    "project_git_links.project_git_links_repository_identity_guard": {
+      "function": "guard_forge_repository_identity()",
+      "definition": "CREATE TRIGGER project_git_links_repository_identity_guard BEFORE INSERT OR UPDATE ON project_git_links FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_identity()"
+    },
+    "forge_relay_claims.forge_relay_claims_repository_identity_guard": {
+      "function": "guard_forge_repository_identity()",
+      "definition": "CREATE TRIGGER forge_relay_claims_repository_identity_guard BEFORE INSERT OR UPDATE ON forge_relay_claims FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_identity()"
+    },
     "forge_relay_installations.forge_relay_single_installation_owner": {
       "function": "enforce_github_installation_single_owner()",
       "definition": "CREATE TRIGGER forge_relay_single_installation_owner BEFORE INSERT OR UPDATE OF installation_id ON forge_relay_installations FOR EACH ROW EXECUTE FUNCTION enforce_github_installation_single_owner()"
+    },
+    "pull_request_syncs.pull_request_syncs_repository_identity_guard": {
+      "function": "guard_forge_repository_identity()",
+      "definition": "CREATE TRIGGER pull_request_syncs_repository_identity_guard BEFORE INSERT OR UPDATE ON pull_request_syncs FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_identity()"
     },
     "numo_routine_occurrences.numo_routine_occurrences_set_updated_at": {
       "function": "set_updated_at()",
@@ -7236,6 +7361,10 @@
     "numo_automation_operations.numo_automation_operations_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER numo_automation_operations_set_updated_at BEFORE UPDATE ON numo_automation_operations FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    "forge_relay_link_mirror.forge_relay_link_mirror_repository_identity_guard": {
+      "function": "guard_forge_repository_identity()",
+      "definition": "CREATE TRIGGER forge_relay_link_mirror_repository_identity_guard BEFORE INSERT OR UPDATE ON forge_relay_link_mirror FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_identity()"
     },
     "assistant_active_conversation.assistant_active_conversation_set_updated_at": {
       "function": "set_updated_at()",

@@ -15,12 +15,16 @@ interface Row {
   [key: string]: unknown;
 }
 
-type TableName = "project_git_links" | "pull_requests" | "pull_request_syncs";
+type TableName = "project_git_links" | "pull_requests" | "pull_request_syncs" |
+  "pr_comment_edits" |
+  "forge_repository_name_scope";
 
 const db: Record<TableName, Row[]> = {
   project_git_links: [],
   pull_requests: [],
   pull_request_syncs: [],
+  pr_comment_edits: [],
+  forge_repository_name_scope: [],
 };
 
 const relayPushes: unknown[] = [];
@@ -46,25 +50,26 @@ function makeChain(name: TableName) {
     select: () => Chain;
     in: (col: string, values: unknown[]) => Chain;
     eq: (col: string, value: unknown) => Chain;
-    update: (values: Row) => {
-      eq: (col: string, value: unknown) => { then: (r: (x: { error: null }) => unknown) => unknown };
-    };
+    update: (values: Row) => Chain;
     delete: () => Chain;
     then: (r: (x: { data?: Row[] | null; error: null }) => unknown) => unknown;
+    maybeSingle: () => Promise<{ data: Row | null; error: null }>;
   };
   const chain: Chain = {
     select: () => chain,
     in: (col, values) => (filters.push({ col, op: "in", value: values }), chain),
     eq: (col, value) => (filters.push({ col, op: "eq", value }), chain),
-    update: (values) => ({
-      eq: (col, value) => ({
-        then: (resolve) => {
-          const row = db[name].find((r) => r[col] === value);
-          if (row) Object.assign(row, values);
+    update: (values) => {
+      const updater = {
+        eq: (col: string, value: unknown) =>
+          (filters.push({ col, op: "eq" as const, value }), updater),
+        then: (resolve: (x: { error: null }) => unknown) => {
+          for (const row of db[name].filter(matches)) Object.assign(row, values);
           return resolve({ error: null });
         },
-      }),
-    }),
+      };
+      return updater as unknown as Chain;
+    },
     delete: () => {
       const deleter = {
         eq: (col: string, value: unknown) => {
@@ -80,6 +85,7 @@ function makeChain(name: TableName) {
     },
     then: (resolve) =>
       resolve({ data: db[name].filter(matches), error: null }),
+    maybeSingle: async () => ({ data: db[name].find(matches) ?? null, error: null }),
   };
   return chain;
 }
@@ -108,6 +114,7 @@ beforeEach(() => {
   ];
   db.pull_requests = [];
   db.pull_request_syncs = [];
+  db.pr_comment_edits = [];
   relayPushes.length = 0;
   relayConfigured = false;
 });

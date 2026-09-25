@@ -2,6 +2,7 @@ import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { insertNotifications, projectMemberIds } from "@/lib/server/notifications";
 import type { NotificationRow } from "@/lib/server/notifications";
 import { minddyUsersForForgeAccount } from "./pr-activity";
@@ -112,7 +113,8 @@ async function projectsForPr(pr: PullRequestRow): Promise<string[]> {
     .from("project_git_links")
     .select("project_id")
     .eq("provider", pr.provider)
-    .eq("repo_full_name", pr.repo_full_name);
+    .eq("repo_full_name", await repositoryStorageName(pr.provider,
+      pr.repo_full_name,false,service));
   return [
     ...new Set(((data ?? []) as { project_id: string }[]).map((l) => l.project_id)),
   ];

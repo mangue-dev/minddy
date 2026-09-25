@@ -1,5 +1,6 @@
 import { issueStore } from "@/lib/server/issue-store";
 import { after, NextResponse, type NextRequest } from "next/server";
+import { decodeRepositoryName } from "@/lib/server/git/repository-name-content";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -283,7 +284,8 @@ export async function GET(request: NextRequest) {
     for (const run of (data ?? []) as unknown as RunRow[]) {
       const link = run.repo_link;
       if (!link?.repo_full_name || run.pr_number == null) continue;
-      const key = `${link.provider}:${link.repo_full_name}:${run.pr_number}`;
+      const clearName = await decodeRepositoryName(link.provider,link.repo_full_name);
+      const key = `${link.provider}:${clearName}:${run.pr_number}`;
       const list = runsByPr.get(key);
       if (list) list.push(run);
       else runsByPr.set(key, [run]);

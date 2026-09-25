@@ -4,6 +4,9 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { forgeProviderForConnection } from "@/lib/server/git/forge-provider";
 import { GITLAB_API_BASE, GITLAB_HOST, gitlabHeaders } from "@/lib/server/git/gitlab-rest";
+import { decodeRepositoryName, repositoryNameToken,
+  shouldProtectRepositoryNames } from
+  "@/lib/server/git/repository-name-content";
 
 /**
  * Resolve access to the repository linked to a project (MIN-46 + MIN-69).
@@ -216,11 +219,14 @@ export async function resolveProjectLinkForRepo(opts: {
   repoFullName: string;
 }): Promise<ResolvedRepoLink | null> {
   const supabase = getServiceClient();
+  const storedName = await shouldProtectRepositoryNames(supabase)
+    ? await repositoryNameToken(opts.provider,opts.repoFullName)
+    : opts.repoFullName;
   const { data } = await supabase
     .from("project_git_links")
     .select(`${GIT_LINK_COLUMNS}, project_id`)
     .eq("provider", opts.provider)
-    .eq("repo_full_name", opts.repoFullName);
+    .eq("repo_full_name", storedName);
 
   const rows = (data ?? []) as GitLinkRow[];
   for (const row of rows) {
@@ -233,7 +239,8 @@ export async function resolveProjectLinkForRepo(opts: {
       externalRepoId: row.external_repo_id,
       projectId: row.project_id,
       provider: opts.provider,
-      repoFullName: row.repo_full_name,
+      repoFullName: (await decodeRepositoryName(opts.provider,
+        row.repo_full_name,opts.userId))!,
       defaultBranch: row.default_branch ?? "main",
       row,
     };
@@ -268,6 +275,8 @@ async function targetFromLink(
   if (!row.repo_full_name) {
     throw new Error("Project git link is missing repo_full_name");
   }
+  const repoFullName = (await decodeRepositoryName(row.provider,
+    row.repo_full_name))!;
 
   // Token source behind the ForgeProvider seam (docs/managed-forge-relay-plan.md):
   // the connection's `source` marker decides — "relay" connections mint their
@@ -296,10 +305,10 @@ async function targetFromLink(
     });
     return {
       provider: "github",
-      repoFullName: row.repo_full_name,
+      repoFullName,
       defaultBranch: row.default_branch ?? "main",
-      remoteUrl: `https://github.com/${row.repo_full_name}.git`,
-      authUrl: `https://x-access-token:${token}@github.com/${row.repo_full_name}.git`,
+      remoteUrl: `https://github.com/${repoFullName}.git`,
+      authUrl: `https://x-access-token:${token}@github.com/${repoFullName}.git`,
       token,
       linkId: row.id,
       connectionId: row.connection_id,
@@ -322,10 +331,10 @@ async function targetFromLink(
     const host = new URL(GITLAB_HOST).host;
     return {
       provider: "gitlab",
-      repoFullName: row.repo_full_name,
+      repoFullName,
       defaultBranch: row.default_branch ?? "main",
-      remoteUrl: `${GITLAB_HOST.replace(/\/+$/, "")}/${row.repo_full_name}.git`,
-      authUrl: `https://oauth2:${encodeURIComponent(token)}@${host}/${row.repo_full_name}.git`,
+      remoteUrl: `${GITLAB_HOST.replace(/\/+$/, "")}/${repoFullName}.git`,
+      authUrl: `https://oauth2:${encodeURIComponent(token)}@${host}/${repoFullName}.git`,
       token,
       linkId: row.id,
       connectionId: row.connection_id,

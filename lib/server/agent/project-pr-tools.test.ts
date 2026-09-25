@@ -51,6 +51,12 @@ vi.mock("@/lib/supabase-service", () => {
   const from = (table: string) => {
     const q: Record<string, unknown> = {};
     const chain = () => q;
+    if (table === "forge_repository_name_scope") {
+      q.select = chain;
+      q.eq = chain;
+      q.maybeSingle = async () => ({ data: null,error: null });
+      return q;
+    }
     if (table === "issues") {
       const filters: Array<(row: typeof world.issueRows[number]) => boolean> = [];
       q.select = chain;

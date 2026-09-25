@@ -41,6 +41,7 @@ const userMessageTemplate = "minddy_min591_user_message_audit";
 const finalTemplate = "minddy_min591_final_audit";
 const errorTemplate = "minddy_min591_error_audit";
 const toolTemplate = "minddy_min591_tool_audit";
+const repositoryTemplate = "minddy_min591_repo_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -4591,4 +4592,117 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       }
     }
   }, 60_000);
+
+  it("restores opaque forge identities and PR copies child first across key versions", async () => {
+    const suffix=randomUUID().replaceAll("-","").slice(0,20);
+    const source=`minddy_min591_repo_source_${suffix}`;
+    const restored=`minddy_min591_repo_restore_${suffix}`;
+    const created:string[]=[];
+    const root=randomBytes(32);
+    const actor=randomUUID(),project=randomUUID(),connection=randomUUID();
+    const link=randomUUID(),pr=randomUUID(),edit=randomUUID();
+    const scope:EncryptionScope={ kind:"system",
+      id:"00000000-0000-0000-0000-000000000000" };
+    const names=["Private/Former","Private/Repository"];
+    const log=vi.spyOn(console,"info").mockImplementation(() => {});
+    try {
+      expect(sql(repositoryTemplate,"SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const database of [source,restored]) {
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${repositoryTemplate};`);
+        created.push(database);
+      }
+      sql(source,`INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Forge restore fixture','FRR');
+        INSERT INTO public.git_connections(id,user_id,provider)
+          VALUES(${quote(connection)},${quote(actor)},'github');`);
+      const keys=new ManagedDataKeys(registry(source),wrapper(root));
+      const blindKeys=new ManagedDataKeys(registry(source,"blind_index"),
+        wrapper(root,"blind_index"));
+      const store=new EncryptedStore(keys);
+      const tokens:string[]=[];
+      for (const [index,name] of names.entries()) {
+        if (index) await keys.rotate(scope,1);
+        const current=await blindKeys.current(scope);
+        current.bytes.fill(0);
+        const stable=await blindKeys.byVersion(scope,1);
+        const token=`mdyr1:${blindIndex(`github:${name.toLowerCase()}`,{
+          scope,table:"forge_repository_names",column:"full_name_digest"
+        },stable.bytes)}`;
+        stable.bytes.fill(0);
+        const cipher=await store.encrypt(name,{ scope,
+          table:"forge_repository_names",column:"full_name",
+          rowId:`github:${token}` });
+        tokens.push(token);
+        sql(source,`INSERT INTO public.forge_repository_names(provider,token,
+          full_name_ciphertext,encryption_version,encryption_checked_at)
+          VALUES('github',${quote(token)},${quote(cipher)},
+            ${store.versionOf(cipher)},now());`);
+      }
+      sql(source,`INSERT INTO public.pr_comment_edits(id,provider,repo_full_name,
+          pr_number,comment_id,body)
+          VALUES(${quote(edit)},'github',${quote(tokens[1])},17,1,'opaque');
+        INSERT INTO public.pull_requests(id,provider,repo_full_name,number)
+          VALUES(${quote(pr)},'github',${quote(tokens[1])},17);
+        INSERT INTO public.pull_request_syncs(provider,repo_full_name)
+          VALUES('github',${quote(tokens[1])});
+        INSERT INTO public.project_git_links(id,project_id,connection_id,
+          provider,external_repo_id,repo_full_name,repo_previous_names)
+          VALUES(${quote(link)},${quote(project)},${quote(connection)},
+            'github','1717',${quote(tokens[1])},ARRAY[${quote(tokens[0])}]);
+        SELECT public.activate_forge_repository_names();`);
+      const dump=execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges",...["auth.users","public.projects",
+          "public.git_connections","public.forge_repository_names",
+          "public.forge_repository_name_scope","public.project_git_links",
+          "public.pull_requests","public.pull_request_syncs",
+          "public.pr_comment_edits","public.envelope_data_keys"]
+          .map((table)=>`--table=${table}`)],
+      { encoding:"utf8",maxBuffer:4*1024*1024 });
+      expect(dump).not.toContain("Private/");
+      let remainder=dump;
+      for (const table of ["pr_comment_edits","pull_requests",
+        "pull_request_syncs","project_git_links","forge_repository_names"]) {
+        const match=remainder.match(new RegExp(
+          `(COPY public\\.${table}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`));
+        expect(match).not.toBeNull();
+        remainder=remainder.replace(match![0],"");
+        for (const line of match![2].trimEnd().split("\n").reverse()) {
+          sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;\n${match![1]}${line}\n${match![3]}COMMIT;`);
+        }
+      }
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;\n${remainder}\nCOMMIT;`);
+      expect(sql(restored,`SELECT count(*) FROM public.pull_requests p
+        JOIN public.project_git_links l ON l.provider=p.provider AND
+          l.repo_full_name=p.repo_full_name
+        WHERE p.id=${quote(pr)} AND l.id=${quote(link)};`)).toBe("1");
+      const cold=new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(root)));
+      for (const [index,token] of tokens.entries()) {
+        const record=JSON.parse(sql(restored,`SELECT row_to_json(n) FROM
+          public.forge_repository_names n WHERE token=${quote(token)};`));
+        expect(record.encryption_version).toBe(index+1);
+        expect(await cold.decrypt(cold.fromDatabase(record.full_name_ciphertext),
+          { scope,table:"forge_repository_names",column:"full_name",
+            rowId:`github:${token}` })).toBe(names[index]);
+      }
+      const wrong=new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const first=JSON.parse(sql(restored,`SELECT row_to_json(n) FROM
+        public.forge_repository_names n WHERE token=${quote(tokens[0])};`));
+      await expect(wrong.decrypt(wrong.fromDatabase(first.full_name_ciphertext),
+        { scope,table:"forge_repository_names",column:"full_name",
+          rowId:`github:${tokens[0]}` })).rejects.toThrow();
+      expect(() => sql(restored,`UPDATE public.pull_requests SET
+        repo_full_name='Private/Repository' WHERE id=${quote(pr)};`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const database of created.reverse()) {
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+      }
+    }
+  },60_000);
 });

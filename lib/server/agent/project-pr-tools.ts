@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { loadIssueTitles } from "@/lib/server/issue-store";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
@@ -227,7 +228,8 @@ async function listPullRequests(
         "issue:issues(id, number, project:projects(key))",
     )
     .eq("provider", target.provider)
-    .eq("repo_full_name", target.repoFullName)
+    .eq("repo_full_name", await repositoryStorageName(target.provider,
+      target.repoFullName,false))
     .order("updated_at", { ascending: false })
     .limit(limit);
   if (states.length > 0) query = query.in("state", states);

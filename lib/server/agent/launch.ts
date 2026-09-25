@@ -1,5 +1,6 @@
 import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
+import { decodeRepositoryName } from "@/lib/server/git/repository-name-content";
 
 import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -532,7 +533,7 @@ export async function launchAgentRun(
           projectId,
           provider: link.provider,
           externalId: link.external_repo_id,
-          fullName: link.repo_full_name
+          fullName: (await decodeRepositoryName(link.provider,link.repo_full_name))
             ?? ([link.repo_owner, link.repo_name].filter(Boolean).join("/")
               || link.external_repo_id),
           defaultBranch: link.default_branch,

@@ -12,6 +12,7 @@ import { toPrLineThreads, type PrReviewIssueContext, type PrReviewNote } from ".
 import type { PullRequestState } from "./pull-requests";
 import { decodePullRequestUrlRow } from "./pull-request-url-content";
 import { decodePullRequestContentRow } from "./pull-request-content";
+import { decodeRepositoryName } from "@/lib/server/git/repository-name-content";
 
 /**
  * The PULL REQUEST anchor of an agent run (MIN-168), resolved ONE time and served
@@ -88,8 +89,12 @@ export async function loadPrRunContext(pullRequestId: string): Promise<PrRunCont
     .select(PR_RUN_COLUMNS)
     .eq("id", pullRequestId)
     .maybeSingle();
-  return data ? toContext(await decodePullRequestContentRow(
-    await decodePullRequestUrlRow(data as PrRunRow))) : null;
+  if (!data) return null;
+  const row = await decodePullRequestContentRow(
+    await decodePullRequestUrlRow(data as PrRunRow));
+  row.repo_full_name = (await decodeRepositoryName(row.provider,
+    row.repo_full_name))!;
+  return toContext(row);
 }
 
 /**

@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { getServiceClient } from "@/lib/supabase-service";
 import { verifyGithubSignature } from "@/lib/server/git/github-app";
 import { isManagedForgeEnabled } from "@/lib/managed-services";
@@ -943,7 +944,8 @@ export async function POST(request: NextRequest) {
         .from("project_git_links")
         .select("id, external_repo_id")
         .eq("provider", "github")
-        .eq("repo_full_name", repositoryIdentity.fullName);
+        .eq("repo_full_name", await repositoryStorageName("github",
+          repositoryIdentity.fullName,false));
     if (repositoryError) {
       return NextResponse.json(
         { error: "repository identity unavailable" },

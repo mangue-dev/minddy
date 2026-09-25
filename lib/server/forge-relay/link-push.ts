@@ -2,6 +2,8 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { relayRequest } from "./client";
+import { decodeRepositoryName } from
+  "@/lib/server/git/repository-name-content";
 
 /**
  * Instance-side push of the link lifecycle to the control-plane mirror
@@ -36,19 +38,20 @@ async function currentRelayedLinks(): Promise<
     .select("provider, external_repo_id, repo_full_name, connection_id, git_connections(source)")
     .eq("git_connections.source", "relay");
   if (error) throw error;
-  return ((data ?? []) as unknown as Array<{
+  const links = ((data ?? []) as unknown as Array<{
     provider: string;
     external_repo_id: string;
     repo_full_name: string | null;
     connection_id: string;
   }>)
-    .filter((row) => row.repo_full_name)
-    .map((row) => ({
+    .filter((row) => row.repo_full_name);
+  return Promise.all(links.map(async (row) => ({
       provider: row.provider,
       repoId: row.external_repo_id,
-      repo: row.repo_full_name as string,
+      repo: (await decodeRepositoryName(row.provider,
+        row.repo_full_name))!,
       connectionId: row.connection_id,
-    }));
+    })));
 }
 
 /**

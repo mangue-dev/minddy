@@ -5,6 +5,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { insertNotifications } from "@/lib/server/notifications";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { AgentProviderId } from "@/lib/agent-providers";
@@ -1992,10 +1993,11 @@ async function repoLinkIds(
   repoFullName: string,
   provider: RepoProviderId,
 ): Promise<string[]> {
+  const storedName = await repositoryStorageName(provider, repoFullName, false, service);
   const { data: links } = await service
     .from("project_git_links")
     .select("id")
-    .eq("repo_full_name", repoFullName)
+    .eq("repo_full_name", storedName)
     .eq("provider", provider);
   return ((links ?? []) as Array<{ id: string }>).map((l) => l.id);
 }
@@ -2035,13 +2037,15 @@ export async function syncPrState(opts: {
   provider: RepoProviderId;
 }): Promise<SyncedPrRun[]> {
   const service = getServiceClient();
+  const storedName = await repositoryStorageName(opts.provider, opts.repoFullName,
+    false, service);
   const linkIds = await repoLinkIds(service, opts.repoFullName, opts.provider);
   if (linkIds.length === 0) return [];
   // Read and copy the PR row inside one database transaction. A delayed caller
   // can never write the state it observed earlier over a newer webhook/action.
   const { error } = await service.rpc("sync_agent_runs_from_pull_request", {
     p_provider: opts.provider,
-    p_repo_full_name: opts.repoFullName,
+    p_repo_full_name: storedName,
     p_number: opts.prNumber,
   });
   if (error) {
@@ -2055,7 +2059,7 @@ export async function syncPrState(opts: {
     .in("repo_link_id", linkIds);
   const { data: pr, error: prError } = await service.from("pull_requests")
     .select("id,url,updated_at")
-    .eq("provider", opts.provider).eq("repo_full_name", opts.repoFullName)
+    .eq("provider", opts.provider).eq("repo_full_name", storedName)
     .eq("number", opts.prNumber).maybeSingle();
   if (prError) throw new Error("Unable to load current pull request URL");
   if (pr?.url) {

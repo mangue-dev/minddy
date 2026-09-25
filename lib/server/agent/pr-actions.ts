@@ -8,6 +8,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { resolveUploadedMimeType, servedMimeType } from "@/lib/inline-safe";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { insertEvents } from "@/lib/server/issue-events";
 import {
   collapsesInBurst,
@@ -1061,7 +1062,8 @@ export async function startNumoPrReview(input: {
         .from("project_git_links")
         .select("project_id")
         .eq("provider", scope.target.provider)
-        .eq("repo_full_name", scope.target.repoFullName)
+        .eq("repo_full_name", await repositoryStorageName(scope.target.provider,
+          scope.target.repoFullName,false))
         .limit(1)
         .maybeSingle();
       projectId = (link?.project_id as string | undefined) ?? null;

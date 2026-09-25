@@ -1,5 +1,6 @@
 import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
+import { decodeRepositoryName } from "@/lib/server/git/repository-name-content";
 
 import { randomUUID } from "node:crypto";
 
@@ -211,7 +212,7 @@ async function pushLatestRemoteStateWithClaim(
     connectionSource: Array.isArray(row.git_connections)
       ? row.git_connections[0]?.source ?? null
       : row.git_connections?.source ?? null,
-    repoFullName: row.repo_full_name,
+    repoFullName: await decodeRepositoryName(row.provider,row.repo_full_name),
     externalRepoId: row.external_repo_id,
   };
 

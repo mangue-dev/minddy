@@ -28,6 +28,8 @@ import {
   type RemoteGithubIssueComment,
 } from "./github-app";
 import { forgeProviderForConnection } from "./forge-provider";
+import { decodeRepositoryName, registerRepositoryName,
+  shouldProtectRepositoryNames } from "./repository-name-content";
 import { getGitlabAccessToken, listGitlabOpenIssues } from "./gitlab-app";
 import {
   buildForgeAssigneeIndex,
@@ -115,14 +117,14 @@ type TargetRow = {
   git_connections?: { source: string | null } | { source: string | null }[] | null;
 };
 
-const toTarget = (row: TargetRow): IssueSyncTarget => ({
+const toTarget = async (row: TargetRow): Promise<IssueSyncTarget> => ({
   linkId: row.id,
   projectId: row.project_id,
   provider: row.provider as RepoProviderId,
   connectionId: row.connection_id,
   installationId: row.installation_id,
   externalRepoId: row.external_repo_id,
-  repoFullName: row.repo_full_name,
+  repoFullName: await decodeRepositoryName(row.provider,row.repo_full_name),
   // Embedded to-one relationship: object at runtime, cast via unknown.
   connectionSource: Array.isArray(row.git_connections)
     ? row.git_connections[0]?.source ?? null
@@ -156,7 +158,7 @@ export async function listIssueSyncTargets(params: {
     console.error("[issue-sync] targets lookup failed:", error.message);
     return [];
   }
-  return ((data ?? []) as TargetRow[]).map(toTarget);
+  return Promise.all(((data ?? []) as TargetRow[]).map(toTarget));
 }
 
 /** The link of a project, whether active or not (backfill, activation). */
@@ -169,7 +171,7 @@ export async function getIssueSyncLink(
     .select(TARGET_COLUMNS)
     .eq("project_id", projectId)
     .maybeSingle();
-  return data ? toTarget(data as TargetRow) : null;
+  return data ? await toTarget(data as TargetRow) : null;
 }
 
 /** Writes the binding toggle (and the id of the provisioned GitLab hook). */
@@ -818,11 +820,15 @@ async function refreshRepoFullName(
   );
   if (stale.length === 0) return;
   const cut = repoFullName.lastIndexOf("/");
+  const service = getServiceClient();
+  const protectNames = await shouldProtectRepositoryNames(service);
   const patch: Record<string, unknown> = {
-    repo_full_name: repoFullName,
+    repo_full_name: protectNames
+      ? await registerRepositoryName(targets[0].provider,repoFullName)
+      : repoFullName,
     // The owner is what precedes the LAST `/` — the rule applies to
     // two forges, including a nested GitLab group (`groupe/sous-groupe`).
-    repo_owner: cut > 0 ? repoFullName.slice(0, cut) : null,
+    repo_owner: protectNames ? null : cut > 0 ? repoFullName.slice(0, cut) : null,
     updated_at: new Date().toISOString(),
   };
   // `repo_name` does not have the same meaning on both sides: at GitHub it is the
@@ -830,9 +836,8 @@ async function refreshRepoFullName(
   // payload of an issue does not carry. We therefore only rewrite the one we
   // sait dire juste.
   if (targets[0]?.provider === "github" && cut >= 0) {
-    patch.repo_name = repoFullName.slice(cut + 1);
+    patch.repo_name = protectNames ? null : repoFullName.slice(cut + 1);
   }
-  const service = getServiceClient();
   const { error } = await service
     .from("project_git_links")
     .update(patch)

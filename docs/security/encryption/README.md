@@ -9,10 +9,10 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 157 application tables and 1,433 columns, their primary
+- `schema.json` records 160 application tables and 1,458 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
-  column exactly once. Its 182 encryption targets include the original content,
+  column exactly once. Its 176 encryption targets include the original content,
   derived copies, arbitrary user JSON, private identities, credentials and share
   tokens. The relay audit detail target was removed by an action-specific SQL
   guard and historical scrub; opaque attachment object paths replace two path
@@ -20,10 +20,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,492 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,515 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 392 functions, ten views and 209 triggers. Function
+- `sql-consumers.json` records 406 functions, ten views and 219 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -95,7 +95,7 @@ must be checked separately.
 | Histories and derived copies | Page versions, issue events, statistics, durable agent replay journals and run event payloads now have converted repositories and migration. The event-triggered assistant summary and pending question copies are protected with their event. Numo surface destinations and the non-worker durable activity payloads now have protected readers, writers and migrations; initial prompts, other surface projections, checkpoints and conversation content remain to be converted with their source rows. |
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
-| Forge data | Forge mention throttle identities now use a stable system blind index; convert the remaining repository data shared by several projects. Private repository names still participate in other primary/unique keys and lookup paths; introduce opaque/indexed identities before encrypting them. The generic row codec deliberately refuses sensitive primary keys. |
+| Forge data | Forge mention throttle identities and private repository names now use stable system blind indexes. The names have a recoverable encrypted registry and guarded equality keys across linked copies. Convert remaining forge fields, including default branches and legacy webhook credentials. The generic row codec deliberately refuses sensitive primary keys. |
 | Files and images | Attachment and page-file server paths, opaque names, ciphertext bytes and metadata are implemented below; private project icons and any remaining object copies still need conversion. Public avatars have an explicit public-use exception. |
 | Feedback and sharing | Feedback posts, private visitor identities, board SSO secrets and recoverable share tokens have repository and migration checkpoints below. Remaining feedback copies still need conversion; owner dialogs must retain access to share URLs. |
 | Credentials and configuration | The `app_config.value` repository now has a system-key envelope, bounded CAS rotation and an activated old-writer guard. Migrate other legacy environment-key envelopes and secret/configuration stores; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
@@ -1567,3 +1567,31 @@ key versions with cold caches and rejects a wrong root key.
 `MINDDY_NUMO_TOOL_CONTENT_ENCRYPTION_ENABLED` remains disabled in production.
 Representative search, latency, key-cache and load checks remain pre-activation
 controls, not blockers to review of the code PR.
+
+## Recoverable forge repository identity checkpoint — 25 September 2026
+
+Private GitHub and GitLab repository names now use a stable, purpose-separated
+system blind-index token in SQL equality keys. A service-only registry retains
+the original spelling in a format-3 system-key envelope bound to provider and
+token. Link owner/name duplicates are cleared; aliases, PR keys and sync stamps,
+PR comment history, relay mirrors and relay claims use the same token within
+their own database. Authorized readers recover the name after their project,
+PR or verified forge-event access check. Clear names sent to GitHub, GitLab or
+an authorized relay remain external transmissions, not durable Minddy copies.
+
+The link, webhook, agent, notification, AI, relay and PR paths use the token for
+database lookup. Protected repository rename moves links, PRs, comment edits
+and stale sync state in one SQL transaction, preserving duplicate-PR attachment
+behavior. The service-only 30-row worker compares each old row before writing,
+registers aliases, and rotates registry envelopes without changing tokens.
+Activation refuses a clear or unregistered name anywhere in the six source
+and copy tables. Once activated, table guards reject older direct and RPC
+writers. The SQL regression proves source/copy and PR-join storage, CAS,
+rename and obsolete-writer rejection. Real PostgreSQL recovery restores child
+copies before links and the registry in independent batches, decrypts two key
+versions from cold caches and rejects a wrong root.
+
+`MINDDY_FORGE_REPOSITORY_NAME_ENCRYPTION_ENABLED` and the global content flag
+remain disabled in production. Other forge fields and the global MIN-591
+boundary remain open. Representative search, latency, key-cache and load
+measurements are checks before production activation, not code PR blockers.

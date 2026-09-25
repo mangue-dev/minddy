@@ -3803,6 +3803,11 @@
         "nullable": true,
         "generated": false
       },
+      "repo_name_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
       "url_encryption_checked_at": {
         "type": "timestamp with time zone",
         "nullable": true,
@@ -5298,6 +5303,11 @@
         "nullable": false,
         "generated": false
       },
+      "repo_name_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
       "body_encryption_checked_at": {
         "type": "timestamp with time zone",
         "nullable": true,
@@ -5566,6 +5576,11 @@
       "repo_previous_names": {
         "type": "text[]",
         "nullable": false,
+        "generated": false
+      },
+      "repo_name_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       },
       "issue_sync_enabled_at": {
@@ -5999,6 +6014,11 @@
         "nullable": true,
         "generated": false
       },
+      "repo_name_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
       "repository_full_name": {
         "type": "text",
         "nullable": true,
@@ -6093,6 +6113,11 @@
       "repo_full_name": {
         "type": "text",
         "nullable": false,
+        "generated": false
+      },
+      "repo_name_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       }
     },
@@ -7640,6 +7665,45 @@
       }
     ]
   },
+  "forge_repository_names": {
+    "columns": {
+      "token": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "provider": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "full_name_ciphertext": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "provider",
+      "token"
+    ],
+    "foreignKeys": []
+  },
   "numo_turn_intent_scope": {
     "columns": {
       "id": {
@@ -7920,6 +7984,11 @@
       "external_repo_id": {
         "type": "text",
         "nullable": false,
+        "generated": false
+      },
+      "repo_name_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       },
       "webhook_secret_digest": {
@@ -9222,6 +9291,24 @@
         "targetColumn": "id"
       }
     ]
+  },
+  "forge_repository_name_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
   },
   "numo_error_encryption_scope": {
     "columns": {

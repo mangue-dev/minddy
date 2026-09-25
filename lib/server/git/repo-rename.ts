@@ -5,6 +5,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { isForgeRelayClientConfigured } from "@/lib/server/forge-relay/client";
 import { pushRelayLinkEvent } from "@/lib/server/forge-relay/link-push";
+import { registerRepositoryName, shouldProtectRepositoryNames } from
+  "./repository-name-content";
 
 /**
  * Forge-side repository RENAME reconciliation.
@@ -113,6 +115,10 @@ export async function reconcileRepoRename(opts: {
 }): Promise<{ renamed: boolean }> {
   if (!opts.externalRepoId || !opts.fullName) return { renamed: false };
   const supabase = getServiceClient();
+  const protectNames = await shouldProtectRepositoryNames(supabase);
+  const storedName = protectNames
+    ? await registerRepositoryName(opts.provider,opts.fullName)
+    : opts.fullName;
 
   const { data: links, error } = await supabase
     .from("project_git_links")
@@ -122,17 +128,54 @@ export async function reconcileRepoRename(opts: {
   if (error) throw new Error(`project_git_links read failed: ${error.message}`);
 
   const stale = ((links ?? []) as unknown as StaleLinkRow[]).filter(
-    (link) => link.repo_full_name && link.repo_full_name !== opts.fullName,
+    (link) => link.repo_full_name && link.repo_full_name !== storedName,
   );
   if (stale.length === 0) return { renamed: false };
+
+  if (protectNames) {
+    const changes = await Promise.all(stale.map(async (link) => ({
+      id:link.id,old:link.repo_full_name,
+      aliases:await Promise.all([...new Set([
+        ...(link.repo_previous_names ?? []),link.repo_full_name!,
+      ])].slice(-20).map(async (value) => value.startsWith("mdyr1:")
+        ? value : registerRepositoryName(opts.provider,value))),
+    })));
+    const { data:renamed,error:renameError } = await supabase.rpc(
+      "reconcile_forge_repository_name",{
+        p_provider:opts.provider,p_external_repo_id:opts.externalRepoId,
+        p_new:storedName,p_links:changes,
+      });
+    if (renameError || renamed!==true) {
+      throw new Error("Forge repository rename transaction failed");
+    }
+    for (const link of stale) {
+      const embedded = link.git_connections;
+      const source = Array.isArray(embedded)
+        ? embedded[0]?.source ?? null : embedded?.source ?? null;
+      if (source==="relay" && isForgeRelayClientConfigured()) {
+        await pushRelayLinkEvent({ event:"linked",provider:opts.provider,
+          repoId:opts.externalRepoId,repo:opts.fullName,
+          connectionId:link.connection_id });
+      }
+    }
+    return { renamed:true };
+  }
 
   const { owner, name } = splitFullName(opts.fullName);
   for (const link of stale) {
     const oldName = link.repo_full_name as string;
-    const previousNames = [...new Set([...(link.repo_previous_names ?? []), oldName])].slice(
-      -20,
-    );
-    await migratePullRequests(supabase, opts.provider, oldName, opts.fullName);
+    const rawPreviousNames = [...new Set([...(link.repo_previous_names ?? []), oldName])]
+      .slice(-20);
+    const previousNames = protectNames
+      ? await Promise.all(rawPreviousNames.map((alias) =>
+          alias.startsWith("mdyr1:") ? alias
+            : registerRepositoryName(opts.provider,alias)))
+      : rawPreviousNames;
+    await migratePullRequests(supabase, opts.provider, oldName, storedName);
+    const { error:editError } = await supabase.from("pr_comment_edits")
+      .update({ repo_full_name:storedName })
+      .eq("provider",opts.provider).eq("repo_full_name",oldName);
+    if (editError) throw new Error("PR comment history rename failed");
 
     // The stamp dies rather than moving: right after a rename a fresh sweep
     // is exactly what we want (states may have moved while minting was down).
@@ -146,10 +189,10 @@ export async function reconcileRepoRename(opts: {
     const { error: linkError } = await supabase
       .from("project_git_links")
       .update({
-        repo_full_name: opts.fullName,
+        repo_full_name: storedName,
         repo_previous_names: previousNames,
-        repo_owner: owner,
-        repo_name: name,
+        repo_owner: protectNames ? null : owner,
+        repo_name: protectNames ? null : name,
         updated_at: new Date().toISOString(),
       })
       .eq("id", link.id);

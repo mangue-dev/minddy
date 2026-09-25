@@ -3,6 +3,7 @@ import "server-only";
 
 import { hasMatchingIssueEvent } from "@/lib/server/issue-event-store";
 import { getServiceClient } from "@/lib/supabase-service";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { insertEvents } from "@/lib/server/issue-events";
 import { insertNotifications } from "@/lib/server/notifications";
 import { normalizeForgeInstant } from "@/lib/forge-time";
@@ -385,7 +386,8 @@ async function repoWriteActor(opts: {
     .from("project_git_links")
     .select("created_by")
     .eq("provider", opts.provider)
-    .eq("repo_full_name", opts.repoFullName)
+    .eq("repo_full_name", await repositoryStorageName(opts.provider,
+      opts.repoFullName,false,service))
     .eq("project_id", projectId)
     .maybeSingle();
   return (link as { created_by: string | null } | null)?.created_by ?? null;
