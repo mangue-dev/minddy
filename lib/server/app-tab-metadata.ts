@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { appTabRoute, normalizeAppTabLocation } from "@/lib/app-tab-location";
 import { APP_TAB_METADATA_BATCH_SIZE, type AppTabMetadata } from "@/lib/app-tab-metadata";
+import { decodeRoutineTitle } from "@/lib/server/routine-content";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -26,7 +27,8 @@ export async function readAppTabMetadata(client: SupabaseClient, hrefs: string[]
     read<AppTabMetadata["pages"][number]>("pages", "id,project_id,title,icon", ids("pageId")),
     read<AppTabMetadata["objectives"][number]>("objectives", "id,project_id,name,color", ids("objectiveId")),
     read<AppTabMetadata["pullRequests"][number]>("pull_requests", "id,number,title", ids("prId")),
-    read<AppTabMetadata["routines"][number]>("agent_routines", "id,title", ids("routineId")),
+    read<AppTabMetadata["routines"][number]>("agent_routines",
+      "id,project_id,title,encrypted_content,encryption_version", ids("routineId")),
     read<AppTabMetadata["issues"][number]>("issues", "id,project_id,number,title", ids("familyId")),
   ]);
   // A valid UUID from a different project must not relabel a malformed URL.
@@ -34,7 +36,8 @@ export async function readAppTabMetadata(client: SupabaseClient, hrefs: string[]
     pages: pages.filter((page) => routes.some((route) => route.projectId === page.project_id && route.pageId === page.id)),
     objectives: objectives.filter((objective) => routes.some((route) => route.projectId === objective.project_id && route.objectiveId === objective.id)),
     pullRequests,
-    routines,
+    routines: await Promise.all(routines.map(async (row) => ({ id: row.id,
+      title: await decodeRoutineTitle(row as unknown as Record<string,unknown>) }))),
     issues: issues.filter((issue) => routes.some((route) => route.projectId === issue.project_id && route.familyId === issue.id)),
   };
 }

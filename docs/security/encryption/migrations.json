@@ -160,5 +160,6 @@
   "20270107670000_forge_default_branch_encryption.sql": "3f30ffe993468abcc0934e91652731378b0428550147d5ad05da1aaaafa29831",
   "20270107680000_private_project_icons.sql": "98bcf2d8f2abf146e00621214a58fad278a3949c9b48937f5a45c171cf9da0a2",
   "20270107690000_saved_view_content_encryption.sql": "45de28e9aac0f509d4da397ae409164c7123319f3cba48d14f6446dc0f5480dc",
-  "20270107700000_saved_view_bookmark_encryption.sql": "8d1d076992d0a2a709aee83dc1ee56bbcb764b84ac1da17594231f918ea36f57"
+  "20270107700000_saved_view_bookmark_encryption.sql": "8d1d076992d0a2a709aee83dc1ee56bbcb764b84ac1da17594231f918ea36f57",
+  "20270107710000_agent_routine_content_encryption.sql": "947a661fec631d4170467442336b2ca1f48cabedfc1e21cc0d9fbde93934a36d"
 }

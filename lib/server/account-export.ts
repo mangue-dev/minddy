@@ -14,6 +14,7 @@ import {
 import { downloadProjectIcon } from "@/lib/server/project-icon";
 import { decodeView } from "@/lib/server/view-content";
 import { decodeSavedView } from "@/lib/server/saved-view-bookmark";
+import { decodeRoutine } from "@/lib/server/routine-content";
 import { downloadAttachment } from "@/lib/server/attachments";
 import { decodeAttachmentRow, type AttachmentTable } from
   "@/lib/server/attachment-content";
@@ -166,6 +167,7 @@ export interface AccountExport {
   issue_categories: Row[];
   views: Row[];
   saved_views: Row[];
+  agent_routines: Row[];
   cycles: Row[];
   scratchpad: Row | null;
   assistant_conversations: Row[];
@@ -227,6 +229,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     categories,
     views,
     savedViews,
+    routines,
     cycles,
     scratchpad,
     conversations,
@@ -297,6 +300,9 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       : Promise.resolve({ data: [] as Row[], error: null }),
     service.from("views").select("*").eq("user_id", userId),
     service.from("saved_views").select("*").eq("user_id", userId),
+    ownedIds.length
+      ? service.from("agent_routines").select("*").in("project_id", ownedIds)
+      : Promise.resolve({ data: [] as Row[], error: null }),
     service.from("cycles").select("*").eq("user_id", userId).order("start_date"),
     getScratchpadRow(service, userId),
     service
@@ -581,6 +587,8 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       decodeView(row, userId))),
     saved_views: await Promise.all(list("saved_views", savedViews).map((row) =>
       decodeSavedView(row, userId))),
+    agent_routines: await Promise.all(list("agent_routines", routines).map((row) =>
+      decodeRoutine(row, userId))),
     cycles: list("cycles", cycles),
     scratchpad: scratchpad ? { content: scratchpad.content, updated_at: scratchpad.updated_at } : null,
     assistant_conversations: await Promise.all(conversationRows.map(async (c) => ({

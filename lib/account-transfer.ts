@@ -34,6 +34,7 @@ export interface AccountTransferDocument {
   issue_categories?: TransferRow[];
   views: TransferRow[];
   saved_views?: TransferRow[];
+  agent_routines?: TransferRow[];
   cycles: TransferRow[];
   scratchpad: TransferRow | null;
   assistant_conversations: TransferRow[];
@@ -136,7 +137,7 @@ export function validateAccountTransfer(input: unknown): TransferValidationResul
     }
   }
 
-  for (const field of ["categories", "issue_categories", "saved_views"] as const) {
+  for (const field of ["categories", "issue_categories", "saved_views", "agent_routines"] as const) {
     if (input[field] !== undefined &&
       (!Array.isArray(input[field]) || !input[field].every(isRecord))) {
       return { ok: false, error: "invalidField", field };
@@ -174,6 +175,7 @@ export function validateAccountTransfer(input: unknown): TransferValidationResul
       issue_categories: (input.issue_categories as TransferRow[] | undefined) ?? [],
       views: input.views as TransferRow[],
       saved_views: (input.saved_views as TransferRow[] | undefined) ?? [],
+      agent_routines: (input.agent_routines as TransferRow[] | undefined) ?? [],
       cycles: input.cycles as TransferRow[],
       scratchpad: (input.scratchpad as TransferRow | null | undefined) ?? null,
       assistant_conversations: input.assistant_conversations as TransferRow[],

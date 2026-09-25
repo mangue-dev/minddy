@@ -4,6 +4,7 @@ import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import { decodeAgentTitle, legacyAgentTitleSchema } from "@/lib/server/agent/run-title-content";
 import { decodePullRequestContent } from "@/lib/server/agent/pull-request-content";
 import "server-only";
+import { decodeRoutineTitle } from "@/lib/server/routine-content";
 
 import { createTranslator } from "next-intl";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -196,8 +197,12 @@ export async function loadPushContext(
       : Promise.resolve({ data: [] as { id: string; project_id: string; title: string }[] }),
     // A ROUTINE (MIN-185): no basket, the line leaves with it.
     routineIds.length
-      ? service.from("agent_routines").select("id, title").in("id", routineIds)
-      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+      ? service.from("agent_routines")
+          .select("id, project_id, title, encrypted_content, encryption_version")
+          .in("id", routineIds).in("project_id", projectIds)
+      : Promise.resolve({ data: [] as { id: string; project_id: string;
+          title: string; encrypted_content?: string | null;
+          encryption_version?: number }[] }),
     // A PULL REQUEST: no basket either, the line leaves with it.
     prIds.length
       ? service.from("pull_requests").select("id, number, title").in("id", prIds)
@@ -235,7 +240,11 @@ export async function loadPushContext(
   }
   for (const o of objectives.data ?? []) ctx.objectives.set(o.id, o.name);
   for (const f of feedback.data ?? []) ctx.feedbackPosts.set(f.id, { projectId: f.project_id, title: f.title });
-  for (const r of routines.data ?? []) ctx.routines.set(r.id, r.title);
+  for (const r of routines.data ?? []) {
+    if (!rows.some((row) => row.routine_id === r.id &&
+        row.project_id === r.project_id)) continue;
+    ctx.routines.set(r.id, await decodeRoutineTitle(r));
+  }
   for (const p of pullRequests.data ?? []) {
     ctx.pullRequests.set(p.id, { number: p.number,
       title: await decodePullRequestContent(p.id, "title", p.title) });

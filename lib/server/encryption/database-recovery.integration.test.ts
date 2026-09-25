@@ -47,6 +47,7 @@ const defaultBranchTemplate = "minddy_min591_branch_audit";
 const projectIconTemplate = "minddy_min591_icon_audit";
 const viewContentTemplate = "minddy_min591_view_audit";
 const bookmarkTemplate = "minddy_min591_bookmark_audit";
+const routineContentTemplate = "minddy_min591_routine_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -5104,6 +5105,99 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
         actorId:actor,reason:"migration_verification" })).rejects.toThrow();
       expect(() => sql(restored,`UPDATE public.saved_views SET name='old writer'
         WHERE id=${quote(ids[0])};`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for(const database of created.reverse()) {
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+      }
+    }
+  },60_000);
+
+  it("restores routine instructions before projects and owners",async () => {
+    const suffix=randomUUID().replaceAll("-","").slice(0,20);
+    const source=`minddy_min591_routine_source_${suffix}`;
+    const restored=`minddy_min591_routine_restore_${suffix}`;
+    const created:string[]=[];
+    const root=randomBytes(32),actor=randomUUID(),project=randomUUID();
+    const ids=[randomUUID(),randomUUID()];
+    const prompts=["private routine prompt one","private routine prompt two"];
+    const scope:EncryptionScope={ kind:"project",id:project };
+    const log=vi.spyOn(console,"info").mockImplementation(() => {});
+    try {
+      expect(sql(routineContentTemplate,"SELECT count(*) FROM auth.users;"))
+        .toBe("0");
+      for(const database of [source,restored]) {
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${routineContentTemplate};`);
+        created.push(database);
+      }
+      sql(source,`INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Routine parent','RREC');`);
+      const keys=new ManagedDataKeys(registry(source),wrapper(root));
+      const codec=new EncryptedRowCodec(new EncryptedStore(keys));
+      for(const [index,id] of ids.entries()) {
+        if(index) {
+          const first=await keys.current(scope);
+          first.bytes.fill(0);
+          await keys.rotate(scope,1);
+        }
+        const sealed=await codec.encode({ id,project_id:project,owner_id:actor,
+          title:`private routine title ${index}`,prompt:prompts[index],
+          prompt_mentions:[{ label:`private mention ${index}` }],
+          base_branch:`private-branch-${index}`,
+          encrypted_content:null,encryption_version:0 },{
+            table:"agent_routines",scope });
+        sql(source,`INSERT INTO public.agent_routines(id,project_id,owner_id,
+          title,prompt,prompt_mentions,base_branch,frequency,hour,timezone,
+          encrypted_content,encryption_version)
+          VALUES(${quote(id)},${quote(project)},${quote(actor)},
+            NULL,NULL,NULL,NULL,'weekly',9,'UTC',
+            ${quote(sealed.encrypted_content as string)},
+            ${sealed.encryption_version});`);
+      }
+      expect(sql(source,"SELECT public.activate_agent_routine_content();"))
+        .toBe("t");
+      const dump=execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges",...["auth.users","public.projects",
+          "public.agent_routines",
+          "public.agent_routine_content_encryption_scope",
+          "public.envelope_data_keys"].map((table)=>`--table=${table}`)],
+      { encoding:"utf8",maxBuffer:4*1024*1024 });
+      for(const secret of prompts) expect(dump).not.toContain(secret);
+      const pattern=/(COPY public\.agent_routines[^\n]*\n)([\s\S]*?)(\\\.\n)/;
+      const copy=pattern.exec(dump);
+      expect(copy).not.toBeNull();
+      for(const line of copy![2].trimEnd().split("\n").reverse()) {
+        sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;\n${copy![1]}${line}\n${copy![3]}COMMIT;`);
+      }
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;\n${dump.replace(copy![0],"")}\nCOMMIT;`);
+      expect(sql(restored,`SELECT count(*) FROM public.agent_routines r
+        JOIN public.projects p ON p.id=r.project_id
+        JOIN auth.users u ON u.id=r.owner_id;`)).toBe("2");
+      const cold=new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored),wrapper(root))));
+      for(const [index,id] of ids.entries()) {
+        const row=JSON.parse(sql(restored,`SELECT row_to_json(r)
+          FROM public.agent_routines r WHERE id=${quote(id)};`));
+        expect(row.encryption_version).toBe(index+1);
+        expect(row.title).toBeNull();
+        expect(row.prompt).toBeNull();
+        expect(row.prompt_mentions).toBeNull();
+        const plain=await cold.decode(row,{ table:"agent_routines",scope },{
+          actorId:actor,reason:"migration_verification" });
+        expect(plain.prompt).toBe(prompts[index]);
+      }
+      const wrong=new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored),wrapper(randomBytes(32)))));
+      const row=JSON.parse(sql(restored,`SELECT row_to_json(r)
+        FROM public.agent_routines r WHERE id=${quote(ids[0])};`));
+      await expect(wrong.decode(row,{ table:"agent_routines",scope },{
+        actorId:actor,reason:"migration_verification" })).rejects.toThrow();
+      expect(() => sql(restored,`UPDATE public.agent_routines
+        SET prompt='old writer' WHERE id=${quote(ids[0])};`)).toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();

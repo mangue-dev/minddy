@@ -1809,6 +1809,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_agent_routine_content()": {
+      "sha256": "22fd621634f6a47bbc08aaf6f13abe223d2d6ac3144737db9b587b8ffa2c9450",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_routine_content_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_agent_run_base_branch()": {
       "sha256": "ffbe6ac6387955a0808fcc252aa31226c98c97fb1daade2f38183d155d7c4ce8",
       "securityDefiner": true,
@@ -2510,6 +2523,22 @@
       ],
       "protectedRelations": [
         "comments"
+      ],
+      "functionReferences": []
+    },
+    "activate_agent_routine_content()": {
+      "sha256": "77e0be6a3a4ffca722b07ec53ff30c4e0d78faf4318b0f19f5b4dade16596167",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_routines",
+        "agent_routine_content_encryption_scope"
+      ],
+      "protectedRelations": [
+        "agent_routines"
       ],
       "functionReferences": []
     },
@@ -7096,6 +7125,10 @@
     "agent_conversations.register_numo_identity": {
       "function": "register_numo_conversation()",
       "definition": "CREATE TRIGGER register_numo_identity AFTER INSERT ON agent_conversations FOR EACH ROW EXECUTE FUNCTION register_numo_conversation()"
+    },
+    "agent_routines.agent_routine_content_guard": {
+      "function": "guard_agent_routine_content()",
+      "definition": "CREATE TRIGGER agent_routine_content_guard BEFORE INSERT OR UPDATE ON agent_routines FOR EACH ROW EXECUTE FUNCTION guard_agent_routine_content()"
     },
     "agent_runs.agent_runs_cancel_pending_input": {
       "function": "cancel_agent_run_input_request()",

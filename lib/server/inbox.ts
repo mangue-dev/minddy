@@ -3,6 +3,7 @@ import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import { decodeAgentTitle, legacyAgentTitleSchema } from "@/lib/server/agent/run-title-content";
 import "server-only";
+import { decodeRoutineTitle } from "@/lib/server/routine-content";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
@@ -200,7 +201,7 @@ export async function readInboxNotifications({
     routineIds.length && projectIds.length
       ? service
           .from("agent_routines")
-          .select("id, project_id, title")
+          .select("id, project_id, title, encrypted_content, encryption_version")
           .in("id", routineIds)
           .in("project_id", projectIds)
       : Promise.resolve({
@@ -279,7 +280,9 @@ export async function readInboxNotifications({
   const feedbackMap = new Map(
     (feedbackPosts ?? []).map((item) => [item.id, item]),
   );
-  const routineMap = new Map((routines ?? []).map((item) => [item.id, item]));
+  const routineMap = new Map(await Promise.all((routines ?? [])
+    .map(async (item) => [item.id, { ...item,
+      title: await decodeRoutineTitle(item, userId) }] as const)));
   const pullRequestMap = new Map(
     (pullRequests ?? []).map((item) => [item.id, item]),
   );

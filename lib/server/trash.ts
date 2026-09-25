@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeRoutineTitle } from "@/lib/server/routine-content";
 import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
@@ -377,7 +378,7 @@ export async function listTrash(
       inProjects("feedback_posts", "id, project_id, deleted_at, deleted_by, title"),
       inProjects(
         "agent_routines",
-        "id, project_id, deleted_at, deleted_by, title",
+        "id, project_id, deleted_at, deleted_by, title, encrypted_content, encryption_version",
         ownedProjectIds
       ),
       // Only deletion ROOTS (`deleted_root_id is null`): one
@@ -427,6 +428,9 @@ export async function listTrash(
     ...visiblePageRows,
     ...projectRows,
   ]);
+  const readableRoutineRows = await Promise.all(routineRows.map(async (row) =>
+    ({ ...row, title: await decodeRoutineTitle(
+      row as unknown as Record<string, unknown>, userId) })));
 
   /** What a type has in common: parent, timestamp, author. */
   const base = (row: TrashRow) => ({
@@ -468,7 +472,7 @@ export async function listTrash(
       title: row.title ?? "",
       identifier: null,
     })),
-    ...routineRows.map((row) => ({
+    ...readableRoutineRows.map((row) => ({
       ...base(row),
       type: "routine" as const,
       title: row.title ?? "",

@@ -41,7 +41,7 @@ describe("application tab metadata", () => {
       ["pages", "id,project_id,title,icon", [page]],
       ["objectives", "id,project_id,name,color", [objective]],
       ["pull_requests", "id,number,title", [pr]],
-      ["agent_routines", "id,title", [routine]],
+      ["agent_routines", "id,project_id,title,encrypted_content,encryption_version", [routine]],
     ]);
     expect(result.pullRequests).toEqual(returned.pull_requests);
     expect(result.pages).toEqual(returned.pages);

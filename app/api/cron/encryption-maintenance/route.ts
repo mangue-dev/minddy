@@ -91,6 +91,8 @@ import { backfillViewContentBatch } from
   "@/lib/server/encryption/view-content-backfill";
 import { backfillSavedViewBookmarksBatch } from
   "@/lib/server/encryption/saved-view-bookmark-backfill";
+import { backfillAgentRoutineContentBatch } from
+  "@/lib/server/encryption/agent-routine-content-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -189,6 +191,8 @@ export async function GET(request: NextRequest) {
     process.env.MINDDY_VIEW_CONTENT_ENCRYPTION_ENABLED === "true";
   const savedViewBookmarksEnabled = contentEnabled &&
     process.env.MINDDY_SAVED_VIEW_ENCRYPTION_ENABLED === "true";
+  const agentRoutinesEnabled = contentEnabled &&
+    process.env.MINDDY_AGENT_ROUTINE_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -266,6 +270,7 @@ export async function GET(request: NextRequest) {
       projectIconsEnabled ? backfillProjectIconsBatch(10, request.signal) : Promise.resolve(null),
       viewContentEnabled ? backfillViewContentBatch(30, request.signal) : Promise.resolve(null),
       savedViewBookmarksEnabled ? backfillSavedViewBookmarksBatch(30, request.signal) : Promise.resolve(null),
+      agentRoutinesEnabled ? backfillAgentRoutineContentBatch(30, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -335,12 +340,13 @@ export async function GET(request: NextRequest) {
     const projectIcons = outcomes[65];
     const viewContent = outcomes[66];
     const savedViewBookmarks = outcomes[67];
+    const agentRoutines = outcomes[68];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, agentChainCodes, numoTurnIntents, numoAutomation, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, savedViewBookmarks].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, agentChainCodes, numoTurnIntents, numoAutomation, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, savedViewBookmarks, agentRoutines].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -468,6 +474,10 @@ export async function GET(request: NextRequest) {
         ...(savedViewBookmarksEnabled ? {
           saved_view_bookmarks: savedViewBookmarks.status === "fulfilled"
             ? savedViewBookmarks.value : { failed: true },
+        } : {}),
+        ...(agentRoutinesEnabled ? {
+          agent_routines: agentRoutines.status === "fulfilled"
+            ? agentRoutines.value : { failed: true },
         } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),

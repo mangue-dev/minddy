@@ -23,7 +23,7 @@ in [the closure matrix](closure-matrix.md).
 - `consumers.json` records 1,536 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 419 functions, ten views and 223 application triggers. Function
+- `sql-consumers.json` records 421 functions, ten views and 224 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -1682,3 +1682,29 @@ versions and the stable index from cold caches, and rejects a wrong root key.
 `MINDDY_SAVED_VIEW_ENCRYPTION_ENABLED` stays off in production. Other MIN-591
 targets remain open; representative search, latency, key-cache and load checks
 are required before production activation, not code-review blockers.
+
+## Agent routine instruction checkpoint — 25 September 2026
+
+`agent_routines.title`, `prompt`, `prompt_mentions` and the optional
+`base_branch` use a project-key format-3 envelope bound to the routine ID.
+The `last_error` field contains only one of the documented bounded error codes;
+historic free-form errors become `launchFailed` during conversion. Owner
+creation and revision-guarded edits, due scans, occurrence recovery and account
+transfer use the same codec. Member or owner access is checked before full
+routine reads; authenticated app-tab labels, owner trash, inbox and push
+notification readers decrypt only the title after their existing gates.
+Realtime and SQL occurrence references retain IDs and ciphertext, not a clear
+instruction copy. An encrypted routine occurrence refuses to start until the
+existing Numo conversation-title, user-message, intent, event, tool, final and
+error copy paths are also protected; the rollout activates these converted
+paths together so the prompt cannot be copied into a legacy clear turn.
+
+The 30-row worker verifies source content and rotates old keys under a
+content-revision compare-and-swap. Activation checks every row and thereafter
+rejects clear inserts, updates, scope changes, key downgrades and free-form
+error text. SQL regression checks the source, stale CAS, metadata-only status
+updates and old-writer refusal. PostgreSQL recovery loads routine children
+before projects and users in independent batches, reads two key versions from
+cold caches and rejects a wrong root key. The production flag
+`MINDDY_AGENT_ROUTINE_ENCRYPTION_ENABLED` remains off; the wider MIN-591
+boundary remains open.

@@ -350,6 +350,21 @@
       ]
     }
   },
+  "agent_routine_content_encryption_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "agent-routine-content"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "agent_routines": {
     "scope": {
       "kind": "project",
@@ -357,7 +372,6 @@
     },
     "encrypted": [
       "base_branch",
-      "last_error",
       "prompt",
       "prompt_mentions",
       "title"
@@ -369,10 +383,12 @@
         "hour",
         "max_spend_percent",
         "minute",
-        "weekdays"
+        "weekdays",
+        "content_revision"
       ],
       "operational_configuration": [
         "frequency",
+        "last_error",
         "timezone"
       ],
       "routing_identity": [
@@ -384,9 +400,14 @@
       "timestamp": [
         "created_at",
         "deleted_at",
+        "encryption_checked_at",
         "last_run_at",
         "next_run_at",
         "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
       ]
     }
   },

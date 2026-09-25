@@ -17,6 +17,7 @@ import { uploadPrivateAttachmentObject } from "@/lib/server/attachments";
 import { storeProjectIcon } from "@/lib/server/project-icon";
 import { encodeView } from "@/lib/server/view-content";
 import { createSavedView } from "@/lib/server/saved-views";
+import { encodeRoutine } from "@/lib/server/routine-content";
 import { encodeAttachmentValue, shouldEncryptAttachmentMetadata } from
   "@/lib/server/attachment-content";
 
@@ -151,6 +152,7 @@ async function validateAccountImportScope(
   const categoryIds = uniqueIds(document.categories ?? []);
   uniqueIds(document.views);
   uniqueIds(document.saved_views ?? []);
+  uniqueIds(document.agent_routines ?? []);
   const cycleIds = uniqueIds(document.cycles);
   uniqueIds(document.assistant_conversations);
   const codeConversationIds = uniqueIds(document.code_agent_conversations);
@@ -202,6 +204,7 @@ async function validateAccountImportScope(
     ...document.objectives,
     ...(document.categories ?? []),
     ...document.views,
+    ...(document.agent_routines ?? []),
     ...document.assistant_conversations,
     ...document.code_agent_conversations,
     ...document.notifications,
@@ -369,6 +372,10 @@ async function validateAccountImportScope(
     ),
     validateExistingIds(service, "views", document.views, "id, user_id", (row) =>
       stringValue(row, "user_id") === userId,
+    ),
+    validateExistingIds(service, "agent_routines", document.agent_routines ?? [],
+      "id, project_id, owner_id", (row, source) =>
+        sameProject(row, source) && stringValue(row, "owner_id") === userId,
     ),
     validateExistingIds(service, "conversations", document.assistant_conversations, "id, user_id", (row) =>
       stringValue(row, "user_id") === userId,
@@ -862,6 +869,20 @@ export async function importAccountTransfer(
     if (!saved.ok) throw new Error("Unable to import saved view");
     result.personalData += 1;
   }
+  await upsertRows(service, "agent_routines",
+    (await Promise.all((document.agent_routines ?? []).map(async (source) => {
+      const id = uuidValue(source, "id");
+      const projectId = mapId(source.project_id, projects.projectIds);
+      if (!id || !projectId) return null;
+      return encodeRoutine({ ...pick(source, ["title", "prompt",
+        "prompt_mentions", "base_branch", "max_spend_percent",
+        "frequency", "hour", "minute", "weekdays", "days_of_month",
+        "timezone", "enabled", "next_run_at", "last_run_at",
+        "last_error", "created_at", "updated_at", "deleted_at"]),
+        deleted_by: remapUser(source.deleted_by, sourceUserId, userId),
+        id, project_id: projectId, owner_id: userId },
+        { service });
+    }))).filter((row): row is Record<string, unknown> => row !== null));
 
   const conversationIds = new Map<string, string>();
   const { encodeConversationTitle, shouldProtectConversationTitle } = await import(
