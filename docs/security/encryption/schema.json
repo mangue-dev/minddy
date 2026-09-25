@@ -5770,7 +5770,17 @@
         "nullable": false,
         "generated": false
       },
+      "final_payload_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
       "user_payload_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "final_payload_checked_at": {
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
@@ -6758,6 +6768,11 @@
         "generated": false
       },
       "intent_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "outcome_encryption_checked_at": {
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
@@ -8239,6 +8254,24 @@
     "foreignKeys": []
   },
   "numo_event_content_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "numo_final_content_scope": {
     "columns": {
       "id": {
         "type": "boolean",

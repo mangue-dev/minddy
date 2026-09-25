@@ -9,6 +9,8 @@ import { hydrateAgentLaunchCopies, hydrateImportedAgentMessages } from "@/lib/se
 import { hydrateAgentQueueCopies } from "@/lib/server/agent/run-queue-content";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 import { hydrateNumoUserMessages } from "./user-message-content";
+import { decodeNumoTurnOutcome, hydrateNumoFinalMessages,
+  isEncryptedNumoTurnOutcome } from "./final-content";
 import { decodeAgentTitle, legacyAgentTitleSchema } from "@/lib/server/agent/run-title-content";
 import { decodeAgentContextSnapshot, legacyAgentContextSchema } from
   "@/lib/server/agent/context-snapshot-content";
@@ -275,12 +277,13 @@ export async function getNumoConversationDetail(
   // The invoker-scoped event policy authorizes each worker's own project;
   // a delegated worker may belong to a different project from its parent thread.
   const hydratedMessages = await hydrateWorkerParentCopies(supabase,
-    await hydrateNumoUserMessages(supabase,
+    await hydrateNumoFinalMessages(supabase,
+      await hydrateNumoUserMessages(supabase,
       await hydrateImportedAgentMessages(supabase,
       await hydrateAgentQueueCopies(supabase,
         await hydrateAgentLaunchCopies(supabase,
           await hydrateAgentSummaryCopies(supabase, null, messages, actorId), actorId),
-        actorId), actorId), actorId), actorId);
+        actorId), actorId), actorId), actorId), actorId);
   const safeMessages: Record<string, unknown>[] = hydratedMessages.map((m) =>
     ({ ...m, metadata: publicSkillsMetadata(m.metadata) }));
   return {
@@ -293,9 +296,25 @@ export async function getNumoConversationDetail(
     work: await hydrateWorkTitles(supabase, work, actorId),
     contexts: await hydrateContextSnapshots(supabase, contexts, actorId),
     artifacts: await hydrateAgentArtifacts(supabase, artifacts, actorId),
-    turns: await hydrateAgentTurnSummaries(supabase, turns, actorId),
+    turns: await hydrateNumoAssistantTurnOutcomes(
+      await hydrateAgentTurnSummaries(supabase, turns, actorId), actorId),
     routine_occurrence: occurrenceResult.data ?? null,
   } as unknown as NumoConversationDetail;
+}
+
+async function hydrateNumoAssistantTurnOutcomes(
+  turns: Record<string, unknown>[], actorId: string | null,
+) {
+  return Promise.all(turns.map(async (turn) => {
+    const outcome = turn.outcome as string | null;
+    if (!isEncryptedNumoTurnOutcome(outcome)) return turn;
+    const userId = turn.initiated_by as string | null;
+    if (!userId || actorId && actorId !== userId) {
+      throw new Error("Numo turn outcome owner changed");
+    }
+    return { ...turn, outcome: await decodeNumoTurnOutcome(userId,
+      turn.id as string, outcome, actorId) };
+  }));
 }
 
 async function hydrateAgentArtifacts(supabase: SupabaseClient,

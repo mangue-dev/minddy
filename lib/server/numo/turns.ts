@@ -65,6 +65,9 @@ import { decodeNumoTurnIntent, encodeNumoTurnIntent,
   shouldProtectNumoTurnIntent } from "./turn-intent-content";
 import { encodeNumoUserMessage, hydrateNumoUserMessages,
   shouldProtectNumoUserMessages } from "./user-message-content";
+import { decodeNumoFinalMessage, decodeNumoTurnOutcome,
+  encodeNumoFinalMessage, encodeNumoTurnOutcome,
+  hydrateNumoFinalMessages, shouldProtectNumoFinalContent } from "./final-content";
 import { encodeNumoTurnEvent,
   shouldProtectNumoTurnEvents } from "./turn-event-content";
 import type { SafeEmitter } from "@/lib/server/assistant/sse";
@@ -224,7 +227,9 @@ export async function hydrateNumoTurn<T extends NumoTurn>(row: T,
     userId: row.user_id, conversationId: row.conversation_id,
     requestId: row.request_id,
   }, actorId);
-  return { ...row, intent: intent as unknown as NumoTurnIntent };
+  const outcome = await decodeNumoTurnOutcome(row.user_id, row.id,
+    row.outcome, actorId);
+  return { ...row, intent: intent as unknown as NumoTurnIntent, outcome };
 }
 
 function checkpointRecord(checkpoint: NumoTurnCheckpoint): Record<string, unknown> {
@@ -547,8 +552,9 @@ async function buildExecutionInput(input: {
     .limit(30);
   if (error) throw new Error(error.message);
   const recentHistory = (await hydrateWorkerParentCopies(service,
-    await hydrateNumoUserMessages(service,
-      (data ?? []) as StoredMessage[], turn.user_id))).reverse();
+    await hydrateNumoFinalMessages(service,
+      await hydrateNumoUserMessages(service,
+        (data ?? []) as StoredMessage[], turn.user_id), turn.user_id))).reverse();
   // The bounded window can begin inside an older parallel tool batch. OpenAI
   // rejects a tool result without its preceding assistant call, so start at the
   // first complete message boundary instead of sending a malformed history.
@@ -724,6 +730,7 @@ async function checkpointTurn(input: {
   activeRunId?: string | null;
   errorMessage?: string | null;
   outcome?: string | null;
+  userId?: string;
   costUsd?: number | null;
 }): Promise<NumoTurn> {
   const { data, error } = await input.service.rpc("checkpoint_numo_turn", {
@@ -733,7 +740,10 @@ async function checkpointTurn(input: {
     p_checkpoint: input.checkpoint ?? {},
     p_active_run_id: input.activeRunId ?? null,
     p_error_message: input.errorMessage ?? null,
-    p_outcome: input.outcome ?? null,
+    p_outcome: input.outcome != null &&
+      await shouldProtectNumoFinalContent(input.service)
+      ? await encodeNumoTurnOutcome(input.userId ?? "", input.turnId, input.outcome)
+      : input.outcome ?? null,
     p_cost_usd: input.costUsd ?? null,
   });
   if (error) throw new Error(error.message);
@@ -763,6 +773,7 @@ async function saveFinalMessage(input: {
   service: SupabaseClient;
   turnId: string;
   conversationId: string;
+  userId: string;
   content: string | null;
   reasoning: unknown;
   metadata?: Record<string, unknown>;
@@ -771,16 +782,35 @@ async function saveFinalMessage(input: {
     .select("id").eq("turn_id", input.turnId).eq("role", "assistant")
     .is("tool_calls", null).maybeSingle();
   if (existing?.id) return existing.id as string;
+  const messageId = randomUUID();
+  const stored = await shouldProtectNumoFinalContent(input.service)
+    ? await encodeNumoFinalMessage(input.userId, messageId, {
+        content: input.content, context: null,
+        metadata: { ...(input.reasoning ? { reasoning: input.reasoning } : {}),
+          ...input.metadata }, tool_call_id: null, tool_name: null,
+      }) : null;
   const { data, error } = await input.service.from("assistant_messages").insert({
+    id: messageId,
     conversation_id: input.conversationId,
     turn_id: input.turnId,
     role: "assistant",
-    content: input.content,
-    metadata: {
+    content: stored?.content ?? input.content,
+    metadata: stored ? {} : {
       ...(input.reasoning ? { reasoning: input.reasoning } : {}),
       ...input.metadata,
     },
+    ...(stored ? { final_payload_version: stored.final_payload_version } : {}),
   }).select("id").single();
+  if (error?.code === "23505") {
+    const { data: raced, error: reloadError } = await input.service
+      .from("assistant_messages").select("id")
+      .eq("turn_id", input.turnId).eq("role", "assistant")
+      .is("tool_calls", null).maybeSingle();
+    if (reloadError || !raced?.id) {
+      throw new Error(reloadError?.message ?? error.message);
+    }
+    return raced.id as string;
+  }
   if (error) throw new Error(error.message);
   return (data?.id as string | undefined) ?? null;
 }
@@ -851,20 +881,34 @@ async function executeNumoTurnCore(input: {
     claimed.user_id);
   emitter.emit("conversation_id", { conversationId: claimed.conversation_id, turnId: claimed.id });
   const background = claimed.checkpoint?.phase === "worker_result";
-  const { data: savedFinal } = await service.from("assistant_messages")
-    .select("id, content")
+  const firstFinal = await service.from("assistant_messages")
+    .select("id,content,context,metadata,tool_call_id,tool_name,final_payload_version")
     .eq("turn_id", claimed.id)
     .eq("role", "assistant")
     .is("tool_calls", null)
     .maybeSingle();
+  const { data: savedFinal, error: savedFinalError } = firstFinal.error &&
+      ["42703", "PGRST204"].includes(firstFinal.error.code)
+    ? await service.from("assistant_messages")
+        .select("id,content,context,metadata,tool_call_id,tool_name")
+        .eq("turn_id", claimed.id).eq("role", "assistant")
+        .is("tool_calls", null).maybeSingle()
+    : firstFinal;
+  if (savedFinalError) throw new Error("Unable to read saved Numo answer");
   if (savedFinal?.id) {
+    const readableFinal = await decodeNumoFinalMessage(claimed.user_id,
+      savedFinal as { id: string; content: string | null;
+        context: unknown; metadata: unknown;
+        tool_call_id: string | null; tool_name: string | null;
+        final_payload_version?: number });
     const turn = await checkpointTurn({
       service,
       turnId: claimed.id,
       claimToken,
       status: "completed",
       checkpoint: { phase: "done" },
-      outcome: typeof savedFinal.content === "string" ? savedFinal.content : null,
+      outcome: typeof readableFinal.content === "string" ? readableFinal.content : null,
+      userId: claimed.user_id,
     });
     emitter.emit("message_complete", { message_id: savedFinal.id });
     emitter.emit("done", { status: "completed" });
@@ -1016,6 +1060,7 @@ async function executeNumoTurnCore(input: {
         service,
         turnId: claimed.id,
         conversationId: claimed.conversation_id,
+        userId: claimed.user_id,
         content: result.fullContent,
         reasoning: result.finalReasoning,
       });
@@ -1057,6 +1102,7 @@ async function executeNumoTurnCore(input: {
           ? execution.workerInput.runId
           : null,
       outcome: result.fullContent || null,
+      userId: claimed.user_id,
       costUsd: recordedOperationCost ?? fallbackCostUsd,
     });
     if (
@@ -1098,6 +1144,7 @@ async function executeNumoTurnCore(input: {
         service,
         turnId: claimed.id,
         conversationId: claimed.conversation_id,
+        userId: claimed.user_id,
         content: null,
         reasoning: null,
         metadata: { usage_exhausted: error.details },

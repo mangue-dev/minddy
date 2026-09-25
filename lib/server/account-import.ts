@@ -864,8 +864,12 @@ export async function importAccountTransfer(
   const { encodeNumoUserMessage, shouldProtectNumoUserMessages } = await import(
     "@/lib/server/numo/user-message-content"
   );
+  const { encodeNumoFinalMessage, shouldProtectNumoFinalContent } = await import(
+    "@/lib/server/numo/final-content"
+  );
   const protectConversationTitles = await shouldProtectConversationTitle(service);
   const protectUserMessages = await shouldProtectNumoUserMessages(service);
+  const protectFinalMessages = await shouldProtectNumoFinalContent(service);
   const conversations = (await Promise.all(document.assistant_conversations.map(async (source) => {
     const id = uuidValue(source, "id");
     if (!id) return null;
@@ -892,6 +896,15 @@ export async function importAccountTransfer(
             ? [{ ...pick(row, ["role", "content", "tool_name", "created_at"]), conversation_id: conversationId }]
             : [];
         }).map(async (row: TransferRow & { conversation_id: string }) => {
+          if (row.role === "assistant" && protectFinalMessages) {
+            const id = randomUUID();
+            const stored = await encodeNumoFinalMessage(userId, id, {
+              content: typeof row.content === "string" ? row.content : null,
+              context: null, metadata: {}, tool_call_id: null,
+              tool_name: typeof row.tool_name === "string" ? row.tool_name : null,
+            });
+            return { ...row, ...stored };
+          }
           if (row.role !== "user" || !protectUserMessages) return row;
           const id = randomUUID();
           const stored = await encodeNumoUserMessage(userId, id, {

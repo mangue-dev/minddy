@@ -4,6 +4,7 @@ import { NUMO_UUID } from "@/lib/server/numo/conversations";
 import { publicSkillsMetadata } from "@/lib/server/assistant/skills";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 import { hydrateNumoUserMessages } from "@/lib/server/numo/user-message-content";
+import { hydrateNumoFinalMessages } from "@/lib/server/numo/final-content";
 
 export async function GET(
   request: NextRequest,
@@ -47,7 +48,9 @@ export async function GET(
   }
 
   const hydrated = await hydrateWorkerParentCopies(supabase,
-    await hydrateNumoUserMessages(supabase, data ?? [], auth.user.id), auth.user.id);
+    await hydrateNumoFinalMessages(supabase,
+      await hydrateNumoUserMessages(supabase, data ?? [], auth.user.id),
+      auth.user.id), auth.user.id);
   return Response.json(
     hydrated.map((message) => ({
       ...message,

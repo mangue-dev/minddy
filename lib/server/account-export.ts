@@ -22,6 +22,7 @@ import { hydrateAgentLaunchCopies, hydrateImportedAgentMessages } from "@/lib/se
 import { hydrateAgentQueueCopies } from "@/lib/server/agent/run-queue-content";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 import { hydrateNumoUserMessages } from "@/lib/server/numo/user-message-content";
+import { hydrateNumoFinalMessages } from "@/lib/server/numo/final-content";
 import { decodeConversationTitle } from
   "@/lib/server/numo/conversation-title-content";
 import { decodeAgentContextSnapshot, legacyAgentContextSchema } from
@@ -375,14 +376,15 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
   const conversationRows = list("conversations", conversations);
   const conversationIds = conversationRows.map((c) => c.id as string);
   const messages = conversationIds.length
-    ? (await hydrateWorkerParentCopies(service, await hydrateNumoUserMessages(service, list(
+    ? (await hydrateWorkerParentCopies(service, await hydrateNumoFinalMessages(service,
+        await hydrateNumoUserMessages(service, list(
         "assistant_messages",
         await service
           .from("assistant_messages")
           .select("id, conversation_id, role, content, tool_name, created_at, metadata")
           .in("conversation_id", conversationIds)
           .order("created_at")
-      ), userId), userId)).map(({ conversation_id, role, content, tool_name, created_at }) =>
+      ), userId), userId), userId)).map(({ conversation_id, role, content, tool_name, created_at }) =>
         ({ conversation_id, role, content, tool_name, created_at }))
     : [];
 

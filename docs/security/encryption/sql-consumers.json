@@ -815,6 +815,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_numo_turn_outcome()": {
+      "sha256": "c1f0e1a0257e44ebdd916058aaeedead647ca73ef889b39425d8d09d4a75fcde",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_final_content_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_numo_user_message()": {
       "sha256": "e5d30f6bda149f28d981e78c71bbf0cb1ed14a189ca56b7d4901b49b0b56a7c1",
       "securityDefiner": true,
@@ -1044,6 +1057,19 @@
         "issue_events",
         "feedback_posts"
       ],
+      "functionReferences": []
+    },
+    "guard_numo_final_message()": {
+      "sha256": "103cb4380043e11a9d0b48ab560427b7e7aee7bb1b35d260d1f3c8c9f6daa2bd",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_final_content_scope"
+      ],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "recover_stale_numo_turns()": {
@@ -4841,6 +4867,23 @@
         "agent_run_repository_binding_is_current"
       ]
     },
+    "migrate_numo_final_content(uuid,uuid,jsonb,jsonb,text,text)": {
+      "sha256": "aeea91c3ba91c30d468ba43b7c93624a6a73542ff6af68d3ebd8f3b9c31624e7",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "assistant_messages",
+        "numo_assistant_turns"
+      ],
+      "protectedRelations": [
+        "assistant_messages",
+        "numo_assistant_turns"
+      ],
+      "functionReferences": []
+    },
     "orphan_attachment_objects(timestamp with time zone,integer)": {
       "sha256": "b56b9b6b5954e32ae5914758ccf09075a19222385c49ac2a7e1c12a20db7f8b1",
       "securityDefiner": true,
@@ -6583,6 +6626,10 @@
       "function": "lock_agent_run_anchor_on_insert()",
       "definition": "CREATE TRIGGER agent_runs_lock_anchor_on_insert BEFORE INSERT ON agent_runs FOR EACH ROW EXECUTE FUNCTION lock_agent_run_anchor_on_insert()"
     },
+    "assistant_messages.numo_final_message_guard": {
+      "function": "guard_numo_final_message()",
+      "definition": "CREATE TRIGGER numo_final_message_guard BEFORE INSERT OR UPDATE ON assistant_messages FOR EACH ROW EXECUTE FUNCTION guard_numo_final_message()"
+    },
     "billing_accounts.billing_accounts_broadcast": {
       "function": "broadcast_billing_row()",
       "definition": "CREATE TRIGGER billing_accounts_broadcast AFTER INSERT OR UPDATE ON billing_accounts FOR EACH ROW EXECUTE FUNCTION broadcast_billing_row()"
@@ -6646,6 +6693,10 @@
     "issues.github_comment_url_parent_scope_guard": {
       "function": "guard_github_comment_url_parent_scope()",
       "definition": "CREATE TRIGGER github_comment_url_parent_scope_guard BEFORE UPDATE OF project_id ON issues FOR EACH ROW EXECUTE FUNCTION guard_github_comment_url_parent_scope()"
+    },
+    "numo_assistant_turns.numo_turn_outcome_guard": {
+      "function": "guard_numo_turn_outcome()",
+      "definition": "CREATE TRIGGER numo_turn_outcome_guard BEFORE INSERT OR UPDATE ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION guard_numo_turn_outcome()"
     },
     "numo_turn_events.numo_activity_payload_guard": {
       "function": "guard_numo_activity_payload()",
