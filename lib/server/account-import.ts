@@ -16,6 +16,7 @@ import { appendStatEvents, type StatEventRow } from "@/lib/server/stat-events";
 import { uploadPrivateAttachmentObject } from "@/lib/server/attachments";
 import { storeProjectIcon } from "@/lib/server/project-icon";
 import { encodeView } from "@/lib/server/view-content";
+import { createSavedView } from "@/lib/server/saved-views";
 import { encodeAttachmentValue, shouldEncryptAttachmentMetadata } from
   "@/lib/server/attachment-content";
 
@@ -149,6 +150,7 @@ async function validateAccountImportScope(
   const objectiveIds = uniqueIds(document.objectives);
   const categoryIds = uniqueIds(document.categories ?? []);
   uniqueIds(document.views);
+  uniqueIds(document.saved_views ?? []);
   const cycleIds = uniqueIds(document.cycles);
   uniqueIds(document.assistant_conversations);
   const codeConversationIds = uniqueIds(document.code_agent_conversations);
@@ -853,6 +855,13 @@ export async function importAccountTransfer(
         id, project_id: projectId, user_id: userId }, { service });
     }))).filter((row): row is Record<string, unknown> => row !== null),
   );
+
+  for (const bookmark of document.saved_views ?? []) {
+    const saved = await createSavedView(service, userId,
+      { name: bookmark.name, href: bookmark.href });
+    if (!saved.ok) throw new Error("Unable to import saved view");
+    result.personalData += 1;
+  }
 
   const conversationIds = new Map<string, string>();
   const { encodeConversationTitle, shouldProtectConversationTitle } = await import(

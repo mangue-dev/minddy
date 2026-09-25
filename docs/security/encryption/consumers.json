@@ -703,7 +703,7 @@
     "file": "app/api/me/saved-views/route.ts",
     "operation": "from",
     "resource": "saved_views",
-    "line": 12,
+    "line": 13,
     "storage": false
   },
   {
@@ -1690,140 +1690,140 @@
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 201,
+    "line": 203,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 209,
+    "line": 211,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_agent_preferences",
-    "line": 241,
+    "line": 244,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 257,
+    "line": 260,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "page_files",
-    "line": 268,
+    "line": 271,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 280,
+    "line": 283,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "views",
-    "line": 295,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "cycles",
-    "line": 296,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "conversations",
     "line": 298,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
+    "resource": "saved_views",
+    "line": 299,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-export.ts",
+    "operation": "from",
+    "resource": "cycles",
+    "line": 300,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-export.ts",
+    "operation": "from",
+    "resource": "conversations",
+    "line": 302,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-export.ts",
+    "operation": "from",
     "resource": "notifications",
-    "line": 303,
+    "line": 307,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 315,
+    "line": 319,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 321,
+    "line": 325,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "ai_usage",
-    "line": 333,
+    "line": 337,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 341,
+    "line": 345,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 346,
+    "line": 350,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 351,
+    "line": 355,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 358,
+    "line": 362,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 363,
+    "line": 367,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 377,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "agent_conversations",
-    "line": 402,
+    "line": 381,
     "storage": false
   },
   {
@@ -1836,22 +1836,22 @@
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
+    "resource": "agent_conversations",
+    "line": 410,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-export.ts",
+    "operation": "from",
     "resource": "agent_messages",
-    "line": 420,
+    "line": 424,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_turns",
-    "line": 425,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "agent_conversation_contexts",
-    "line": 433,
+    "line": 429,
     "storage": false
   },
   {
@@ -1864,64 +1864,64 @@
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
+    "resource": "agent_conversation_contexts",
+    "line": 441,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-export.ts",
+    "operation": "from",
     "resource": "issue_categories",
-    "line": 503,
+    "line": 507,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": null,
-    "line": 107,
+    "line": 108,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 309,
+    "line": 311,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": null,
-    "line": 395,
+    "line": 397,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 416,
+    "line": 418,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 432,
+    "line": 434,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 457,
+    "line": 459,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "objectives",
-    "line": 558,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-import.ts",
-    "operation": "from",
-    "resource": "objectives",
-    "line": 566,
+    "line": 560,
     "storage": false
   },
   {
@@ -1934,15 +1934,15 @@
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
-    "resource": "categories",
-    "line": 574,
+    "resource": "objectives",
+    "line": 570,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "categories",
-    "line": 581,
+    "line": 576,
     "storage": false
   },
   {
@@ -1950,6 +1950,13 @@
     "operation": "from",
     "resource": "categories",
     "line": 583,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-import.ts",
+    "operation": "from",
+    "resource": "categories",
+    "line": 585,
     "storage": false
   },
   {
@@ -5835,6 +5842,20 @@
     "operation": "from",
     "resource": "envelope_data_keys",
     "line": 141,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/saved-view-bookmark-backfill.ts",
+    "operation": "from",
+    "resource": "saved_views",
+    "line": 23,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/saved-view-bookmark-backfill.ts",
+    "operation": "from",
+    "resource": "saved_views",
+    "line": 52,
     "storage": false
   },
   {
@@ -10157,17 +10178,59 @@
     "storage": false
   },
   {
-    "file": "lib/server/saved-views.ts",
+    "file": "lib/server/saved-view-bookmark.ts",
     "operation": "from",
-    "resource": "saved_views",
-    "line": 50,
+    "resource": "saved_view_bookmark_encryption_scope",
+    "line": 27,
     "storage": false
   },
   {
     "file": "lib/server/saved-views.ts",
     "operation": "from",
     "resource": "saved_views",
-    "line": 88,
+    "line": 54,
+    "storage": false
+  },
+  {
+    "file": "lib/server/saved-views.ts",
+    "operation": "from",
+    "resource": "saved_views",
+    "line": 59,
+    "storage": false
+  },
+  {
+    "file": "lib/server/saved-views.ts",
+    "operation": "from",
+    "resource": "saved_views",
+    "line": 68,
+    "storage": false
+  },
+  {
+    "file": "lib/server/saved-views.ts",
+    "operation": "from",
+    "resource": "saved_views",
+    "line": 79,
+    "storage": false
+  },
+  {
+    "file": "lib/server/saved-views.ts",
+    "operation": "from",
+    "resource": "saved_views",
+    "line": 90,
+    "storage": false
+  },
+  {
+    "file": "lib/server/saved-views.ts",
+    "operation": "from",
+    "resource": "saved_views",
+    "line": 129,
+    "storage": false
+  },
+  {
+    "file": "lib/server/saved-views.ts",
+    "operation": "from",
+    "resource": "saved_views",
+    "line": 138,
     "storage": false
   },
   {

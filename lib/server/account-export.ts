@@ -13,6 +13,7 @@ import {
 } from "@/lib/account-transfer";
 import { downloadProjectIcon } from "@/lib/server/project-icon";
 import { decodeView } from "@/lib/server/view-content";
+import { decodeSavedView } from "@/lib/server/saved-view-bookmark";
 import { downloadAttachment } from "@/lib/server/attachments";
 import { decodeAttachmentRow, type AttachmentTable } from
   "@/lib/server/attachment-content";
@@ -164,6 +165,7 @@ export interface AccountExport {
   categories: Row[];
   issue_categories: Row[];
   views: Row[];
+  saved_views: Row[];
   cycles: Row[];
   scratchpad: Row | null;
   assistant_conversations: Row[];
@@ -224,6 +226,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     objectives,
     categories,
     views,
+    savedViews,
     cycles,
     scratchpad,
     conversations,
@@ -293,6 +296,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
           .order("created_at")
       : Promise.resolve({ data: [] as Row[], error: null }),
     service.from("views").select("*").eq("user_id", userId),
+    service.from("saved_views").select("*").eq("user_id", userId),
     service.from("cycles").select("*").eq("user_id", userId).order("start_date"),
     getScratchpadRow(service, userId),
     service
@@ -575,6 +579,8 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     issue_categories: issueCategories,
     views: await Promise.all(list("views", views).map((row) =>
       decodeView(row, userId))),
+    saved_views: await Promise.all(list("saved_views", savedViews).map((row) =>
+      decodeSavedView(row, userId))),
     cycles: list("cycles", cycles),
     scratchpad: scratchpad ? { content: scratchpad.content, updated_at: scratchpad.updated_at } : null,
     assistant_conversations: await Promise.all(conversationRows.map(async (c) => ({

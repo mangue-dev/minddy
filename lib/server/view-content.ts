@@ -27,12 +27,12 @@ function valid(row: Row) {
     !Array.isArray(row.display);
 }
 
-export async function shouldProtectViews(service: SupabaseClient =
-  getServiceClient()): Promise<boolean> {
+export async function shouldProtectViews(service?: SupabaseClient): Promise<boolean> {
   if (isContentEncryptionEnabled() &&
       process.env.MINDDY_VIEW_CONTENT_ENCRYPTION_ENABLED === "true") return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
-  const { data, error } = await service.from("view_content_encryption_scope")
+  const { data, error } = await (service ?? getServiceClient())
+    .from("view_content_encryption_scope")
     .select("id").eq("id", true).maybeSingle();
   if (error && !["42P01", "PGRST205"].includes(error.code)) {
     throw new Error("Unable to resolve view content protection state");

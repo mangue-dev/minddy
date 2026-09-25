@@ -1404,6 +1404,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_saved_view_bookmark()": {
+      "sha256": "efb82e7f36cd0fa99b08fdd85dc80c658172e05e0a7adf3e9086578b91d076ae",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "saved_view_bookmark_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "lock_mfa_amr_epoch_delete()": {
       "sha256": "c757bbeb717a29897ec25dbeecb1e13fc45ca4b71efeda47c3fe2511c428e86e",
       "securityDefiner": true,
@@ -2286,6 +2299,22 @@
       ],
       "protectedRelations": [
         "feedback_posts"
+      ],
+      "functionReferences": []
+    },
+    "activate_saved_view_bookmarks()": {
+      "sha256": "93a93ba2930de00f33663c8386a34d40f1547ba1d39b24d10ce8d36a92284fd1",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "saved_views",
+        "saved_view_bookmark_encryption_scope"
+      ],
+      "protectedRelations": [
+        "saved_views"
       ],
       "functionReferences": []
     },
@@ -6903,6 +6932,10 @@
     "projects.project_icon_reference_guard": {
       "function": "guard_project_icon_reference()",
       "definition": "CREATE TRIGGER project_icon_reference_guard BEFORE INSERT OR UPDATE ON projects FOR EACH ROW EXECUTE FUNCTION guard_project_icon_reference()"
+    },
+    "saved_views.saved_view_bookmark_guard": {
+      "function": "guard_saved_view_bookmark()",
+      "definition": "CREATE TRIGGER saved_view_bookmark_guard BEFORE INSERT OR UPDATE ON saved_views FOR EACH ROW EXECUTE FUNCTION guard_saved_view_bookmark()"
     },
     "agent_runs.agent_run_base_branch_guard": {
       "function": "guard_agent_run_base_branch()",

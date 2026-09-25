@@ -46,6 +46,7 @@ const repositoryTemplate = "minddy_min591_repo_audit";
 const defaultBranchTemplate = "minddy_min591_branch_audit";
 const projectIconTemplate = "minddy_min591_icon_audit";
 const viewContentTemplate = "minddy_min591_view_audit";
+const bookmarkTemplate = "minddy_min591_bookmark_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -5012,6 +5013,102 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       vi.unstubAllEnvs();
       log.mockRestore();
       for (const database of created.reverse()) {
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+      }
+    }
+  },60_000);
+
+  it("restores personal bookmarks before their owner with stable equality",async () => {
+    const suffix=randomUUID().replaceAll("-","").slice(0,20);
+    const source=`minddy_min591_bookmark_source_${suffix}`;
+    const restored=`minddy_min591_bookmark_restore_${suffix}`;
+    const created:string[]=[];
+    const root=randomBytes(32),actor=randomUUID();
+    const ids=[randomUUID(),randomUUID()];
+    const names=["private sprint","private roadmap"];
+    const urls=["/issues?q=secret-one","/projects/private?tab=plan"];
+    const scope:EncryptionScope={ kind:"user",id:actor };
+    const log=vi.spyOn(console,"info").mockImplementation(() => {});
+    try {
+      expect(sql(bookmarkTemplate,"SELECT count(*) FROM auth.users;"))
+        .toBe("0");
+      for(const database of [source,restored]) {
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${bookmarkTemplate};`);
+        created.push(database);
+      }
+      sql(source,`INSERT INTO auth.users(id) VALUES(${quote(actor)});`);
+      const keys=new ManagedDataKeys(registry(source),wrapper(root));
+      const indexKeys=new ManagedDataKeys(registry(source,"blind_index"),
+        wrapper(root,"blind_index"));
+      const indexKey=await indexKeys.current(scope);
+      const codec=new EncryptedRowCodec(new EncryptedStore(keys));
+      for(const [index,id] of ids.entries()) {
+        if(index) {
+          const first=await keys.current(scope);
+          first.bytes.fill(0);
+          await keys.rotate(scope,1);
+        }
+        const sealed=await codec.encode({ id,user_id:actor,
+          name:names[index],href:urls[index],encrypted_content:null,
+          encryption_version:0 },{ table:"saved_views",scope });
+        const nameIndex=blindIndex(names[index],{ scope,
+          table:"saved_views",column:"name" },indexKey.bytes);
+        sql(source,`INSERT INTO public.saved_views(id,user_id,name,href,
+          name_index,encrypted_content,encryption_version)
+          VALUES(${quote(id)},${quote(actor)},NULL,NULL,
+            ${quote(nameIndex)},${quote(sealed.encrypted_content as string)},
+            ${sealed.encryption_version});`);
+      }
+      indexKey.bytes.fill(0);
+      expect(sql(source,"SELECT public.activate_saved_view_bookmarks();"))
+        .toBe("t");
+      const dump=execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges",...["auth.users","public.saved_views",
+          "public.saved_view_bookmark_encryption_scope",
+          "public.envelope_data_keys"].map((table)=>`--table=${table}`)],
+      { encoding:"utf8",maxBuffer:4*1024*1024 });
+      for(const secret of [...names,...urls]) expect(dump).not.toContain(secret);
+      const pattern=/(COPY public\.saved_views[^\n]*\n)([\s\S]*?)(\\\.\n)/;
+      const copy=pattern.exec(dump);
+      expect(copy).not.toBeNull();
+      for(const line of copy![2].trimEnd().split("\n").reverse()) {
+        sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;\n${copy![1]}${line}\n${copy![3]}COMMIT;`);
+      }
+      const parents=dump.replace(copy![0],"");
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;\n${parents}\nCOMMIT;`);
+      const cold=new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored),wrapper(root))));
+      const coldIndex=new ManagedDataKeys(registry(restored,"blind_index"),
+        wrapper(root,"blind_index"));
+      const lookupKey=await coldIndex.byVersion(scope,1);
+      for(const [index,id] of ids.entries()) {
+        const row=JSON.parse(sql(restored,`SELECT row_to_json(v)
+          FROM public.saved_views v WHERE id=${quote(id)};`));
+        expect(row.encryption_version).toBe(index+1);
+        expect(row.name).toBeNull();
+        expect(row.href).toBeNull();
+        expect(row.name_index).toBe(blindIndex(names[index],{ scope,
+          table:"saved_views",column:"name" },lookupKey.bytes));
+        const plain=await cold.decode(row,{ table:"saved_views",scope },{
+          actorId:actor,reason:"migration_verification" });
+        expect(plain.name).toBe(names[index]);
+        expect(plain.href).toBe(urls[index]);
+      }
+      lookupKey.bytes.fill(0);
+      const wrong=new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored),wrapper(randomBytes(32)))));
+      const row=JSON.parse(sql(restored,`SELECT row_to_json(v)
+        FROM public.saved_views v WHERE id=${quote(ids[0])};`));
+      await expect(wrong.decode(row,{ table:"saved_views",scope },{
+        actorId:actor,reason:"migration_verification" })).rejects.toThrow();
+      expect(() => sql(restored,`UPDATE public.saved_views SET name='old writer'
+        WHERE id=${quote(ids[0])};`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for(const database of created.reverse()) {
         sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
       }
     }

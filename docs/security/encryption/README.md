@@ -23,7 +23,7 @@ in [the closure matrix](closure-matrix.md).
 - `consumers.json` records 1,536 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 417 functions, ten views and 222 application triggers. Function
+- `sql-consumers.json` records 419 functions, ten views and 223 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -1661,5 +1661,24 @@ regression verifies source and share projection clearing, a stale revision and
 old-writer rejection. PostgreSQL recovery restores share children before views
 and their owners in independent batches, reads two key versions from cold
 caches and rejects a wrong root key. `MINDDY_VIEW_CONTENT_ENCRYPTION_ENABLED`
-remains disabled in production. The separate `saved_views` bookmarks and the
-global MIN-591 boundary remain open.
+remains disabled in production. The global MIN-591 boundary remains open.
+
+## Personal saved-view bookmark checkpoint — 25 September 2026
+
+`saved_views.name` and `href` use one user-key format-3 envelope. Name equality
+uses a purpose-separated user blind-index key pinned to version one, so content
+rotation cannot change uniqueness or resave behavior. Authenticated RLS reads
+establish ownership before decoding; account export sends clear values only to
+the authorized owner, while account import re-encrypts them under the target
+user. Legacy bookmarks retain their equality path until the bounded 30-row
+CAS worker verifies and converts them. Activation requires a checked encrypted
+row for every bookmark; table guards then refuse clear inserts, edits, owner
+changes and key downgrades.
+
+The SQL regression checks source clearing, protected uniqueness, stale CAS,
+service-only activation and obsolete-writer refusal. A PostgreSQL restore loads
+bookmarks before the user in independent batches, decodes two content-key
+versions and the stable index from cold caches, and rejects a wrong root key.
+`MINDDY_SAVED_VIEW_ENCRYPTION_ENABLED` stays off in production. Other MIN-591
+targets remain open; representative search, latency, key-cache and load checks
+are required before production activation, not code-review blockers.
