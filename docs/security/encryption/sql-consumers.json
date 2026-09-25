@@ -2212,6 +2212,22 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_numo_automation_content()": {
+      "sha256": "da886466cc87e41813da7414b50a2e2a446140a33ad55827632f539954220127",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_chains",
+        "numo_automation_content_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": [
+        "automation_operation_json_cipher_valid"
+      ]
+    },
     "lock_project_membership_scope()": {
       "sha256": "bd69c56a0c5b97efa80089da228f062c687fa232cddf7f80713169efdcdef833",
       "securityDefiner": false,
@@ -5237,6 +5253,17 @@
       ],
       "functionReferences": []
     },
+    "automation_operation_json_cipher_valid(jsonb,uuid,uuid,integer,text)": {
+      "sha256": "4b375fe7c2eff9f49218df700a3ef5718e3f328ccacf10adfea3a0436f422248",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "migrate_agent_run_verdict(uuid,uuid,jsonb,text,integer,text,integer)": {
       "sha256": "39e6dcdfbb0a8d789972c372b62347d705ec3bdd4ae0fcc6e77fd178d563e22a",
       "securityDefiner": true,
@@ -5645,6 +5672,28 @@
       ],
       "functionReferences": []
     },
+    "migrate_numo_automation_content(uuid,text,jsonb,text,jsonb,text,jsonb,text,jsonb)": {
+      "sha256": "2ea3714380594e70504b364f8d8fa0076bd401903373f5ef217719308767aa93",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "issues",
+        "projects",
+        "agent_chains",
+        "conversations",
+        "numo_automation_operations"
+      ],
+      "protectedRelations": [
+        "issues",
+        "projects",
+        "conversations",
+        "numo_automation_operations"
+      ],
+      "functionReferences": []
+    },
     "migrate_orphan_agent_runtime_checkpoint(uuid,uuid,jsonb,text,integer,text,integer)": {
       "sha256": "e37c895076e4af746833cf86ab9b7e8ec140f56acaa07e6e6e43dc79b53015fb",
       "securityDefiner": true,
@@ -5741,18 +5790,22 @@
       ]
     },
     "ensure_numo_automation_operation(uuid,integer,text,text,uuid,text,uuid,text,text,jsonb)": {
-      "sha256": "48d51325ff68d4bf54afb09db93e597440b52eef458c28594cc70d4ad2ea0140",
+      "sha256": "b0d11f3e1d1b7ed065270e47f32ef1390500f0e9cefc9a04f94be514028c18c1",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
+        "issues",
+        "projects",
         "agent_chains",
         "conversations",
         "numo_automation_operations"
       ],
       "protectedRelations": [
+        "issues",
+        "projects",
         "conversations",
         "numo_automation_operations"
       ],
@@ -6789,6 +6842,10 @@
     "agent_conversations.agent_work_branch_parent_scope_guard": {
       "function": "guard_agent_work_branch_parent_scope()",
       "definition": "CREATE TRIGGER agent_work_branch_parent_scope_guard BEFORE UPDATE OF project_id ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_agent_work_branch_parent_scope()"
+    },
+    "numo_automation_operations.numo_automation_content_guard": {
+      "function": "guard_numo_automation_content()",
+      "definition": "CREATE TRIGGER numo_automation_content_guard BEFORE INSERT OR UPDATE ON numo_automation_operations FOR EACH ROW EXECUTE FUNCTION guard_numo_automation_content()"
     },
     "project_git_links.project_git_links_rekey_realtime_after": {
       "function": "rekey_project_git_link_after()",

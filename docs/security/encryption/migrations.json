@@ -148,5 +148,6 @@
   "20270107510000_app_config_encryption.sql": "21d63e554b1c3570fe5986ebe43b9fb5e16c66c19e1550cec3044628ca481497",
   "20270107520000_feedback_merge_undo_relations.sql": "24f5e076d559cc234bb33d26398efdd384d85c49fffbd61ae6edc1d28c6f895e",
   "20270107530000_agent_chain_bounded_codes.sql": "8b5fcc941269f6e4fe86eaaa22cab6e3dc0fec4311005a4ffd77081b7a0ae46c",
-  "20270107540000_numo_turn_intent_encryption.sql": "6f32f602ccc3bd7fa91335d1a954e99c831a0daa0c5bca79be882d1893c944cc"
+  "20270107540000_numo_turn_intent_encryption.sql": "6f32f602ccc3bd7fa91335d1a954e99c831a0daa0c5bca79be882d1893c944cc",
+  "20270107550000_numo_automation_operation_encryption.sql": "6ae91af8865eede5991fcb7689f5dd2cf5a9ea6125e4d82a919f33f92491c28c"
 }

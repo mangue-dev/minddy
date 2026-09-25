@@ -35,6 +35,7 @@ const summaryTemplate = "minddy_min591_summary_audit";
 const prUrlTemplate = "minddy_min591_pr_url_audit";
 const sharedPrUrlTemplate = "minddy_min591_relay_audit_audit";
 const attachmentTemplate = "minddy_min591_attachment_metadata_audit";
+const operationTemplate = "minddy_min591_operation_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -3822,6 +3823,144 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
         VALUES(${quote(conversations[0])},${quote(users[0])},
           ${quote(randomUUID())},${quote(randomUUID())},
           '{"automation":{"issue":{"title":"obsolete"}}}'::jsonb);`))
+        .toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
+
+  it("restores encrypted Numo operations before their independent parents", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_op_${suffix}`;
+    const restored = `minddy_min591_op_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const owner = randomUUID(), project = randomUUID(), issue = randomUUID();
+    const chain = randomUUID(), conversation = randomUUID();
+    const operations = [randomUUID(), randomUUID()];
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(operationTemplate, "SELECT count(*) FROM public.numo_automation_operations;"))
+        .toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${operationTemplate};`);
+        created.push(name);
+      }
+      const scope: EncryptionScope = { kind: "project", id: project };
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(owner)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(owner)},'Generic project','OP');
+        INSERT INTO public.issues(id,project_id,number,title)
+          VALUES(${quote(issue)},${quote(project)},1,'Generic issue');
+        INSERT INTO public.agent_chains(id,project_id,issue_id,owner_id,status)
+          VALUES(${quote(chain)},${quote(project)},${quote(issue)},
+            ${quote(owner)},'stopped');
+        INSERT INTO public.conversations(id,user_id,title)
+          VALUES(${quote(conversation)},${quote(owner)},'Generic conversation');`);
+      for (const [index, operation] of operations.entries()) {
+        if (index) {
+          const first = await keys.current(scope);
+          first.bytes.fill(0);
+          await keys.rotate(scope, 1);
+        }
+        const step = index + 1;
+        const bind = (column: string) => ({ scope,
+          table: "numo_automation_operations", column,
+          rowId: JSON.stringify([chain, step]) });
+        const sealText = async (column: string, value: string) => {
+          const cipher = await store.encrypt(value, bind(column));
+          return `mdyo3:${store.versionOf(cipher)}:${Buffer.from(cipher).toString("base64url")}`;
+        };
+        const sealJson = async (column: string,
+          value: Record<string, unknown> | string[]) => {
+          const cipher = await store.encrypt(value, bind(column));
+          return { encrypted_operation_value: cipher,
+            encryption_version: store.versionOf(cipher), project_id: project,
+            chain_id: chain, step, field: column };
+        };
+        const prompt = await sealText("prompt", `private-operation-prompt-${index}`);
+        const context = await sealJson("context",
+          { issue: { title: `private-operation-issue-${index}` } });
+        const summary = await sealText("outcome_summary",
+          `private-operation-summary-${index}`);
+        const blockers = await sealJson("outcome_blockers",
+          [`private-operation-blocker-${index}`]);
+        sql(source, `INSERT INTO public.numo_automation_operations(id,chain_id,
+          step,rule_id,mode,conversation_id,request_id,prompt,locale,context,
+          outcome,outcome_summary,outcome_blockers) VALUES(${quote(operation)},
+          ${quote(chain)},${step},'rule','verify',${quote(conversation)},
+          ${quote(randomUUID())},${quote(prompt)},'en',
+          ${quote(JSON.stringify(context))}::jsonb,'failed',${quote(summary)},
+          ${quote(JSON.stringify(blockers))}::jsonb);`);
+      }
+      const tables = ["auth.users", "public.projects", "public.issues",
+        "public.agent_chains", "public.conversations",
+        "public.numo_automation_operations",
+        "public.numo_automation_content_scope", "public.envelope_data_keys"];
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...tables.map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      for (const secret of ["private-operation-prompt-", "private-operation-issue-",
+        "private-operation-summary-", "private-operation-blocker-"]) {
+        expect(dump).not.toContain(secret);
+      }
+      const match = dump.match(/(COPY public\.numo_automation_operations[^\n]*\n)([\s\S]*?)(\\\.\n)/);
+      expect(match).not.toBeNull();
+      for (const line of match![2].trimEnd().split("\n").reverse()) {
+        sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${match![1]}${line}\n${match![3]}COMMIT;`);
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${dump.replace(match![0], "")}\nCOMMIT;`);
+      for (const [column, parent] of [["chain_id", "agent_chains"],
+        ["conversation_id", "conversations"]] as const) {
+        const constraint = `numo_automation_operations_${column}_fkey`;
+        sql(restored, `ALTER TABLE public.numo_automation_operations DROP CONSTRAINT ${constraint};
+          ALTER TABLE public.numo_automation_operations ADD CONSTRAINT ${constraint}
+          FOREIGN KEY(${column}) REFERENCES public.${parent}(id) NOT VALID;
+          ALTER TABLE public.numo_automation_operations VALIDATE CONSTRAINT ${constraint};`);
+      }
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(root)));
+      for (const [index, operation] of operations.entries()) {
+        const row = JSON.parse(sql(restored, `SELECT row_to_json(o) FROM
+          public.numo_automation_operations o WHERE id=${quote(operation)};`));
+        const step = index + 1;
+        const bind = (column: string) => ({ scope,
+          table: "numo_automation_operations", column,
+          rowId: JSON.stringify([chain, step]) });
+        const readText = async (value: string, column: string) => cold.decrypt(
+          cold.fromDatabase(Buffer.from(value.split(":")[2], "base64url")
+            .toString("utf8")), bind(column));
+        const readJson = async (value: { encrypted_operation_value: string },
+          column: string) => cold.decrypt(cold.fromDatabase(
+            value.encrypted_operation_value), bind(column));
+        expect(await readText(row.prompt, "prompt"))
+          .toBe(`private-operation-prompt-${index}`);
+        expect(await readJson(row.context, "context"))
+          .toEqual({ issue: { title: `private-operation-issue-${index}` } });
+        expect(await readText(row.outcome_summary, "outcome_summary"))
+          .toBe(`private-operation-summary-${index}`);
+        expect(await readJson(row.outcome_blockers, "outcome_blockers"))
+          .toEqual([`private-operation-blocker-${index}`]);
+        expect(row.context.encryption_version).toBe(step);
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const row = JSON.parse(sql(restored, `SELECT row_to_json(o) FROM
+        public.numo_automation_operations o WHERE id=${quote(operations[0])};`));
+      await expect(wrong.decrypt(wrong.fromDatabase(
+        row.context.encrypted_operation_value), { scope,
+          table: "numo_automation_operations", column: "context",
+          rowId: JSON.stringify([chain, 1]) })).rejects.toThrow();
+      expect(() => sql(restored, `UPDATE public.numo_automation_operations
+        SET prompt='private obsolete writer' WHERE id=${quote(operations[0])};`))
         .toThrow();
     } finally {
       root.fill(0);

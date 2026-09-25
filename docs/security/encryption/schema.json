@@ -8746,6 +8746,11 @@
         "type": "jsonb",
         "nullable": false,
         "generated": false
+      },
+      "content_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -9861,6 +9866,24 @@
     ]
   },
   "numo_turn_intent_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "numo_automation_content_scope": {
     "columns": {
       "id": {
         "type": "boolean",

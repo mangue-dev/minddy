@@ -3286,91 +3286,105 @@
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 422,
+    "line": 425,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 669,
+    "line": 672,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 692,
+    "line": 695,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 720,
+    "line": 723,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 725,
+    "line": 728,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 738,
+    "line": 741,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 773,
+    "line": 776,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_automation_operations",
-    "line": 917,
+    "line": 920,
+    "storage": false
+  },
+  {
+    "file": "lib/server/assistant/execute-tool.ts",
+    "operation": "from",
+    "resource": "agent_chains",
+    "line": 928,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_automation_operations",
-    "line": 931,
+    "line": 940,
+    "storage": false
+  },
+  {
+    "file": "lib/server/assistant/execute-tool.ts",
+    "operation": "from",
+    "resource": "numo_automation_operations",
+    "line": 953,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1269,
+    "line": 1296,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 1318,
+    "line": 1345,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 1872,
+    "line": 1899,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_routine_occurrences",
-    "line": 2309,
+    "line": 2336,
     "storage": false
   },
   {
@@ -3594,21 +3608,14 @@
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "agent_chains",
-    "line": 132,
+    "line": 110,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "agent_chains",
-    "line": 160,
-    "storage": false
-  },
-  {
-    "file": "lib/server/automations/chain.ts",
-    "operation": "from",
-    "resource": "agent_chains",
-    "line": 174,
+    "line": 158,
     "storage": false
   },
   {
@@ -3620,114 +3627,107 @@
   },
   {
     "file": "lib/server/automations/chain.ts",
+    "operation": "from",
+    "resource": "agent_chains",
+    "line": 200,
+    "storage": false
+  },
+  {
+    "file": "lib/server/automations/chain.ts",
+    "operation": "from",
+    "resource": "agent_chains",
+    "line": 212,
+    "storage": false
+  },
+  {
+    "file": "lib/server/automations/chain.ts",
     "operation": "rpc",
     "resource": "ensure_numo_automation_operation",
-    "line": 205,
+    "line": 238,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "numo_automation_operations",
-    "line": 233,
+    "line": 266,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "numo_automation_operations",
-    "line": 246,
+    "line": 282,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "numo_automation_operations",
-    "line": 256,
+    "line": 292,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "numo_automation_operations",
-    "line": 272,
+    "line": 308,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 284,
+    "line": 322,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "numo_automation_operations",
-    "line": 299,
+    "line": 337,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "rpc",
     "resource": "retryable_numo_automation_operations",
-    "line": 323,
+    "line": 362,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 331,
+    "line": 376,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "agent_chains",
-    "line": 355,
+    "line": 400,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "numo_automation_operations",
-    "line": 398,
+    "line": 443,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 404,
+    "line": 449,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 416,
-    "storage": false
-  },
-  {
-    "file": "lib/server/automations/chain.ts",
-    "operation": "from",
-    "resource": "agent_chains",
-    "line": 427,
-    "storage": false
-  },
-  {
-    "file": "lib/server/automations/chain.ts",
-    "operation": "from",
-    "resource": "agent_chains",
-    "line": 437,
-    "storage": false
-  },
-  {
-    "file": "lib/server/automations/chain.ts",
-    "operation": "from",
-    "resource": "agent_chains",
-    "line": 457,
+    "line": 461,
     "storage": false
   },
   {
@@ -3741,6 +3741,13 @@
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "agent_chains",
+    "line": 482,
+    "storage": false
+  },
+  {
+    "file": "lib/server/automations/chain.ts",
+    "operation": "from",
+    "resource": "agent_chains",
     "line": 502,
     "storage": false
   },
@@ -3748,63 +3755,77 @@
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "agent_chains",
-    "line": 515,
+    "line": 517,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "agent_chains",
-    "line": 528,
+    "line": 547,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "agent_chains",
-    "line": 548,
+    "line": 560,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "agent_chains",
-    "line": 561,
+    "line": 573,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "agent_chains",
-    "line": 582,
+    "line": 593,
+    "storage": false
+  },
+  {
+    "file": "lib/server/automations/chain.ts",
+    "operation": "from",
+    "resource": "agent_chains",
+    "line": 606,
+    "storage": false
+  },
+  {
+    "file": "lib/server/automations/chain.ts",
+    "operation": "from",
+    "resource": "agent_chains",
+    "line": 627,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "numo_automation_operations",
-    "line": 601,
+    "line": 646,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 624,
+    "line": 676,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 633,
+    "line": 685,
     "storage": false
   },
   {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 653,
+    "line": 705,
     "storage": false
   },
   {
@@ -3833,6 +3854,13 @@
     "operation": "from",
     "resource": "agent_runs",
     "line": 86,
+    "storage": false
+  },
+  {
+    "file": "lib/server/automations/operation-content.ts",
+    "operation": "from",
+    "resource": "numo_automation_content_scope",
+    "line": 42,
     "storage": false
   },
   {
@@ -5408,6 +5436,20 @@
     "operation": "rpc",
     "resource": "migrate_numo_activity_payload",
     "line": 53,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/numo-automation-content-backfill.ts",
+    "operation": "from",
+    "resource": "numo_automation_operations",
+    "line": 22,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/numo-automation-content-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_numo_automation_content",
+    "line": 86,
     "storage": false
   },
   {

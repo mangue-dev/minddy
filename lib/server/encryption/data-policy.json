@@ -2493,8 +2493,24 @@
         "turn_id"
       ],
       "timestamp": [
+        "content_encryption_checked_at",
         "created_at",
         "updated_at"
+      ]
+    }
+  },
+  "numo_automation_content_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   },

@@ -5,6 +5,9 @@ import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
+import { decodeOperationJson, decodeOperationText, encodeOperationJson,
+  encodeOperationText, shouldProtectAutomationOperation } from
+  "@/lib/server/automations/operation-content";
 
 import { MCP_CLIENT_TOOL_NAMES, MCP_SETUP_TOOL_NAMES } from "@/lib/mcp-client-tools";
 import { executeMcpTool } from "@/lib/server/mcp-client";
@@ -914,15 +917,34 @@ export async function executeTool(
       if (outcome === "ok" && blockers.length > 0) {
         return toolError("An ok automation outcome cannot carry blockers.");
       }
+      const { data: bound, error: boundError } = await ctx.service
+        .from("numo_automation_operations")
+        .select("id, step")
+        .eq("chain_id", ctx.automationChainId)
+        .eq("turn_id", ctx.turnId)
+        .maybeSingle();
+      if (boundError) return toolError(boundError.message);
+      if (!bound) return toolError("The current Numo turn is not bound to this automation chain.");
+      const { data: chain, error: chainError } = await ctx.service
+        .from("agent_chains").select("project_id")
+        .eq("id", ctx.automationChainId).single();
+      if (chainError || !chain?.project_id) {
+        return toolError("Automation operation project is unavailable.");
+      }
+      const projectId = chain.project_id as string;
+      const protect = await shouldProtectAutomationOperation(ctx.service);
+      const storedSummary = protect ? await encodeOperationText(projectId,
+        ctx.automationChainId, bound.step, "outcome_summary", summary) : summary;
+      const storedBlockers = protect ? await encodeOperationJson(projectId,
+        ctx.automationChainId, bound.step, "outcome_blockers", blockers) : blockers;
       const { data, error } = await ctx.service
         .from("numo_automation_operations")
         .update({
           outcome,
-          outcome_summary: summary,
-          outcome_blockers: blockers,
+          outcome_summary: storedSummary,
+          outcome_blockers: storedBlockers,
         })
-        .eq("chain_id", ctx.automationChainId)
-        .eq("turn_id", ctx.turnId)
+        .eq("id", bound.id)
         .is("outcome", null)
         .select("id")
         .maybeSingle();
@@ -931,18 +953,23 @@ export async function executeTool(
         const { data: existing, error: existingError } = await ctx.service
           .from("numo_automation_operations")
           .select("outcome, outcome_summary, outcome_blockers")
-          .eq("chain_id", ctx.automationChainId)
-          .eq("turn_id", ctx.turnId)
+          .eq("id", bound.id)
           .maybeSingle();
         if (existingError) return toolError(existingError.message);
-        const sameBlockers = Array.isArray(existing?.outcome_blockers)
-          && existing.outcome_blockers.length === blockers.length
-          && existing.outcome_blockers.every(
+        const existingSummary = await decodeOperationText(projectId,
+          ctx.automationChainId, bound.step, "outcome_summary",
+          existing?.outcome_summary ?? null);
+        const existingBlockers = existing ? await decodeOperationJson(projectId,
+          ctx.automationChainId, bound.step, "outcome_blockers",
+          existing.outcome_blockers as unknown as unknown[]) : [];
+        const sameBlockers = Array.isArray(existingBlockers)
+          && existingBlockers.length === blockers.length
+          && existingBlockers.every(
             (blocker: unknown, index: number) => blocker === blockers[index],
           );
         if (
           existing?.outcome === outcome
-          && existing.outcome_summary === summary
+          && existingSummary === summary
           && sameBlockers
         ) {
           return {
