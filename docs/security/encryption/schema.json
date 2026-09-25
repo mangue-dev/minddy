@@ -2564,6 +2564,11 @@
         "type": "jsonb",
         "nullable": false,
         "generated": false
+      },
+      "codes_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [

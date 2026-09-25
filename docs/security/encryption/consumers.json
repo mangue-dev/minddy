@@ -4501,6 +4501,20 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/agent-chain-code-backfill.ts",
+    "operation": "from",
+    "resource": "agent_chains",
+    "line": 17,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/agent-chain-code-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_agent_chain_codes",
+    "line": 28,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
     "operation": "from",
     "resource": "agent_runs",
@@ -5183,14 +5197,14 @@
     "file": "lib/server/encryption/feedback-merge-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_feedback_merge_payload",
-    "line": 28,
+    "line": 29,
     "storage": false
   },
   {
     "file": "lib/server/encryption/feedback-merge-backfill.ts",
     "operation": "rpc",
     "resource": "mark_feedback_merge_payload_attempt",
-    "line": 39,
+    "line": 38,
     "storage": false
   },
   {

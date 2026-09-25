@@ -3674,4 +3674,59 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       }
     }
   }, 60_000);
+
+  it("restores bounded agent chain codes before issue and project parents", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_chain_${suffix}`;
+    const restored = `minddy_min591_chain_restore_${suffix}`;
+    const created: string[] = [];
+    const owner = randomUUID();
+    const project = randomUUID();
+    const issue = randomUUID();
+    const chain = randomUUID();
+    try {
+      expect(sql(attachmentTemplate, "SELECT count(*) FROM public.agent_chains;"))
+        .toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${attachmentTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(owner)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(owner)},'Chain restore','CR');
+        INSERT INTO public.issues(id,project_id,number,title)
+          VALUES(${quote(issue)},${quote(project)},1,'Chain issue');
+        INSERT INTO public.agent_chains(id,project_id,issue_id,owner_id,
+          status,pending_event,stop_reason) VALUES
+          (${quote(chain)},${quote(project)},${quote(issue)},${quote(owner)},
+           'pending','{"to":"todo","source":"web"}'::jsonb,'interrupted');`);
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["auth.users", "public.projects",
+          "public.issues", "public.agent_chains"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      const match = dump.match(/(COPY public\.agent_chains[^\n]*\n)([\s\S]*?)(\\\.\n)/);
+      expect(match).not.toBeNull();
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${match![0]}COMMIT;`);
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${dump.replace(match![0], "")}\nCOMMIT;`);
+      for (const [column, parent] of [["issue_id", "issues"],
+        ["project_id", "projects"], ["owner_id", "auth.users"]] as const) {
+        const target = parent === "auth.users" ? "auth.users" : `public.${parent}`;
+        const constraint = `agent_chains_${column}_fkey`;
+        sql(restored, `ALTER TABLE public.agent_chains DROP CONSTRAINT ${constraint};
+          ALTER TABLE public.agent_chains ADD CONSTRAINT ${constraint}
+          FOREIGN KEY(${column}) REFERENCES ${target}(id) NOT VALID;
+          ALTER TABLE public.agent_chains VALIDATE CONSTRAINT ${constraint};`);
+      }
+      expect(sql(restored, `SELECT pending_event->>'source'||':'||stop_reason
+        FROM public.agent_chains WHERE id=${quote(chain)};`)).toBe("web:interrupted");
+      expect(() => sql(restored, `UPDATE public.agent_chains
+        SET stop_reason='private issue text' WHERE id=${quote(chain)};`)).toThrow();
+    } finally {
+      for (const name of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
 });

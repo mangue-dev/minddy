@@ -9,10 +9,10 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 151 application tables and 1,409 columns, their primary
+- `schema.json` records 151 application tables and 1,410 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
-  column exactly once. Its 184 encryption targets include the original content,
+  column exactly once. Its 182 encryption targets include the original content,
   derived copies, arbitrary user JSON, private identities, credentials and share
   tokens. The relay audit detail target was removed by an action-specific SQL
   guard and historical scrub; opaque attachment object paths replace two path
@@ -23,7 +23,7 @@ in [the closure matrix](closure-matrix.md).
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 373 functions, ten views and 199 triggers. Function
+- `sql-consumers.json` records 377 functions, ten views and 200 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -1394,3 +1394,18 @@ writer rejection. The PostgreSQL rehearsal restores reservations before their
 owner and key registry, checks both blind-index key versions with cold caches
 and rejects a wrong root. Production flags remain disabled; other private
 forge repository paths still need conversion.
+
+## Agent chain code boundary — 25 September 2026
+
+`agent_chains.pending_event` and `stop_reason` carry only finite routing codes.
+The database now validates the exact two-key pending event shape and both code
+sets on new or changed values. Arbitrary JSON or text from an obsolete writer
+is rejected. A bounded service-only CAS pass clears invalid historical pending
+events and replaces invalid stop reasons with the `invalid` code. Valid codes
+remain available for the scheduler, report, Realtime and analytics without
+project-key decryption. The SQL regression verifies source and old-writer
+behavior; an isolated PostgreSQL restore loads chains before issue and project
+parents in separate committed batches and validates the references. The cleanup
+worker requires `MINDDY_AGENT_CHAIN_CODE_CLEANUP_ENABLED=true` and the global
+content flag. Both remain disabled in production. Numo conversation and tool
+content remains open.

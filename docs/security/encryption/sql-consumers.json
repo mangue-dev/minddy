@@ -749,6 +749,20 @@
         "can_access_project"
       ]
     },
+    "guard_agent_chain_codes()": {
+      "sha256": "6bee8f8b5b86ae237f55bf78d2f4cdf413321a733f3fbd9c6545c531d862783e",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": [
+        "agent_chain_stop_reason_is_code",
+        "agent_chain_pending_event_is_code"
+      ]
+    },
     "guard_agent_run_summary()": {
       "sha256": "6bbd6fff9103ec749efd100d5c3ab67a69fa55d179abc77dc567219b9fbe71e7",
       "securityDefiner": true,
@@ -3160,6 +3174,17 @@
         "notification_targets_match_project"
       ]
     },
+    "agent_chain_stop_reason_is_code(text)": {
+      "sha256": "5e167536ae44bb43d42281d268a9b7475e83666d1cd08f3169f33c649c7daafb",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "claim_local_agent_run(uuid,uuid,text)": {
       "sha256": "bb35d1f905cfcaab97e30f9d2642ca3a00907540a7d151d52b1b81d2ede8f5ca",
       "securityDefiner": true,
@@ -3376,6 +3401,17 @@
       "protectedRelations": [
         "github_issue_comment_syncs"
       ],
+      "functionReferences": []
+    },
+    "agent_chain_pending_event_is_code(jsonb)": {
+      "sha256": "2b0d91ab61494d97214f7f13fbc1330a9213180b4ed6e9fc81baa17fd1cde2ad",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "claim_feedback_posts_for_review(integer)": {
@@ -3690,6 +3726,22 @@
       ],
       "functionReferences": []
     },
+    "migrate_agent_chain_codes(uuid,jsonb,text)": {
+      "sha256": "259e5e722a4130d4cd3d1d1de3b66e41068b397eced68bb8f01aa5ccc842416c",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_chains"
+      ],
+      "protectedRelations": [],
+      "functionReferences": [
+        "agent_chain_stop_reason_is_code",
+        "agent_chain_pending_event_is_code"
+      ]
+    },
     "migrate_feedback_merge_payload(uuid,jsonb)": {
       "sha256": "d0eca2caa3e7e31bfd7cb93f1a973222f8c178e525f7603837a65ffb24dbd8b4",
       "securityDefiner": true,
@@ -3949,7 +4001,6 @@
         "numo_automation_operations"
       ],
       "protectedRelations": [
-        "agent_chains",
         "numo_assistant_turns",
         "numo_automation_operations"
       ],
@@ -5674,7 +5725,6 @@
         "numo_automation_operations"
       ],
       "protectedRelations": [
-        "agent_chains",
         "conversations",
         "numo_automation_operations"
       ],
@@ -6115,6 +6165,10 @@
     "view_shares.view_share_token_guard": {
       "function": "guard_view_share_token()",
       "definition": "CREATE TRIGGER view_share_token_guard BEFORE INSERT OR UPDATE ON view_shares FOR EACH ROW EXECUTE FUNCTION guard_view_share_token()"
+    },
+    "agent_chains.agent_chain_code_guard": {
+      "function": "guard_agent_chain_codes()",
+      "definition": "CREATE TRIGGER agent_chain_code_guard BEFORE INSERT OR UPDATE ON agent_chains FOR EACH ROW EXECUTE FUNCTION guard_agent_chain_codes()"
     },
     "agent_runs.zz_agent_run_title_guard": {
       "function": "guard_agent_title()",

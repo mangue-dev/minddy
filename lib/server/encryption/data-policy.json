@@ -50,16 +50,15 @@
       "kind": "project",
       "column": "project_id"
     },
-    "encrypted": [
-      "pending_event",
-      "stop_reason"
-    ],
+    "encrypted": [],
     "clear": {
       "bounded_metadata": [
         "budget_usd",
+        "pending_event",
         "retries",
         "spent_usd",
-        "step"
+        "step",
+        "stop_reason"
       ],
       "operational_configuration": [
         "preset",
@@ -73,6 +72,7 @@
         "project_id"
       ],
       "timestamp": [
+        "codes_checked_at",
         "created_at",
         "not_before",
         "updated_at"
