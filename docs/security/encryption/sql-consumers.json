@@ -614,6 +614,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_numo_turn_intent()": {
+      "sha256": "a2fba90d97fb755ede80d85a9d549ca83a24349655c9b5da562401ec5b536e48",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_turn_intent_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_project_identity()": {
       "sha256": "a1fc26869bdd69e97e861aa4383e23713a12266d136ad07d47242f89a34218d3",
       "securityDefiner": true,
@@ -3756,6 +3769,21 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "migrate_numo_turn_intent(uuid,jsonb,jsonb)": {
+      "sha256": "444531d9b503ce5a7b99b77438771821756d5dac8adb6565582c7680a5c47978",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_assistant_turns"
+      ],
+      "protectedRelations": [
+        "numo_assistant_turns"
+      ],
+      "functionReferences": []
+    },
     "migrate_page_file_metadata(uuid,text,text)": {
       "sha256": "c5b0e9a0a78802c707436b73980f18374bed578b8b7fe544b9603890dcfeaa8b",
       "securityDefiner": true,
@@ -6449,6 +6477,10 @@
     "issue_categories.issue_categories_broadcast": {
       "function": "broadcast_issue_scoped()",
       "definition": "CREATE TRIGGER issue_categories_broadcast AFTER INSERT OR DELETE OR UPDATE ON issue_categories FOR EACH ROW EXECUTE FUNCTION broadcast_issue_scoped()"
+    },
+    "numo_assistant_turns.numo_turn_intent_guard": {
+      "function": "guard_numo_turn_intent()",
+      "definition": "CREATE TRIGGER numo_turn_intent_guard BEFORE INSERT OR UPDATE ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION guard_numo_turn_intent()"
     },
     "page_comments.page_comments_guard_live_page": {
       "function": "guard_live_page_comment_mutation()",

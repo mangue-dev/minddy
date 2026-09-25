@@ -97,6 +97,9 @@ beforeEach(() => {
   h.state.turn = {
     id: "77777777-7777-4777-8777-777777777777",
     conversation_id: h.state.occurrence.conversation_id,
+    user_id: routine.owner_id,
+    request_id: h.state.occurrence.request_id,
+    intent: { routineId: routine.id },
   };
   h.state.start.mockReset().mockResolvedValue({
     conversationId: h.state.occurrence.conversation_id,

@@ -6,7 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { defaultLocale } from "@/i18n/config";
 import { getServiceClient } from "@/lib/supabase-service";
 import { startNumoIntent } from "@/lib/server/numo/start-intent";
-import type { NumoTurn } from "@/lib/server/numo/turns";
+import { hydrateNumoTurn, type NumoTurn } from "@/lib/server/numo/turns";
 import {
   routineRunBudgetUsd,
   type Routine,
@@ -98,7 +98,7 @@ export async function startRoutineOccurrence(input: {
       .eq("id", occurrence.turn_id)
       .single();
     if (turnError || !existing) throw new Error(turnError?.message ?? "Routine turn not found");
-    return { occurrence, turn: existing as NumoTurn };
+    return { occurrence, turn: await hydrateNumoTurn(existing as NumoTurn) };
   }
 
   let turnCreated = false;
@@ -163,7 +163,7 @@ export async function startRoutineOccurrence(input: {
       .eq("id", occurrence.turn_id ?? started.turnId)
       .single();
     if (turnError || !turn) throw new Error(turnError?.message ?? "Routine turn not found");
-    return { occurrence, turn: turn as NumoTurn };
+    return { occurrence, turn: await hydrateNumoTurn(turn as NumoTurn) };
   } catch (error) {
     if (!turnCreated) {
       const failure = occurrenceError(error);

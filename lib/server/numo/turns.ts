@@ -61,6 +61,8 @@ import {
 } from "@/lib/server/agent/runs";
 import { withoutWebSearch } from "@/lib/server/web-search";
 import { decodeWorkerEventPayload, encodeWorkerEventPayload } from "./worker-event-content";
+import { decodeNumoTurnIntent, encodeNumoTurnIntent,
+  shouldProtectNumoTurnIntent } from "./turn-intent-content";
 import { encodeNumoTurnEvent,
   shouldProtectNumoTurnEvents } from "./turn-event-content";
 import type { SafeEmitter } from "@/lib/server/assistant/sse";
@@ -214,6 +216,15 @@ function compositeRow<T>(data: unknown): T | null {
   return (data as T | null) ?? null;
 }
 
+export async function hydrateNumoTurn<T extends NumoTurn>(row: T,
+  actorId: string | null = null): Promise<T> {
+  const intent = await decodeNumoTurnIntent(row.intent as unknown as Record<string, unknown>, {
+    userId: row.user_id, conversationId: row.conversation_id,
+    requestId: row.request_id,
+  }, actorId);
+  return { ...row, intent: intent as unknown as NumoTurnIntent };
+}
+
 function checkpointRecord(checkpoint: NumoTurnCheckpoint): Record<string, unknown> {
   return checkpoint as unknown as Record<string, unknown>;
 }
@@ -282,12 +293,17 @@ function workerDelegationResult(workerEvent: {
 }
 
 export async function beginNumoTurn(input: BeginNumoTurnInput): Promise<NumoTurn> {
+  const service = getServiceClient();
+  const intent = await shouldProtectNumoTurnIntent(service)
+    ? await encodeNumoTurnIntent(input.userId, input.conversationId,
+      input.requestId, input.intent as unknown as Record<string, unknown>)
+    : input.intent;
   const params = {
     p_conversation_id: input.conversationId,
     p_user_id: input.userId,
     p_request_id: input.requestId,
     p_run_id: input.runId,
-    p_intent: input.intent,
+    p_intent: intent,
     p_model: input.model,
     p_reasoning_level: input.reasoningLevel,
     p_content: input.content,
@@ -295,20 +311,20 @@ export async function beginNumoTurn(input: BeginNumoTurnInput): Promise<NumoTurn
     p_metadata: input.metadata,
   };
   const { data, error } = input.managedBudget
-    ? await getServiceClient().rpc("begin_numo_turn_with_budget", {
+    ? await service.rpc("begin_numo_turn_with_budget", {
         ...params,
         p_usage_since: input.managedBudget.periodStart,
         p_budget_cap: input.managedBudget.accountCapUsd,
         p_requested_budget: input.managedBudget.requestedUsd,
       })
-    : await getServiceClient().rpc("begin_numo_turn", params);
+    : await service.rpc("begin_numo_turn", params);
   if (error) throw new Error(error.message);
   const turn = input.managedBudget
     ? ((data as { turn?: NumoTurn | null } | null)?.turn ?? null)
     : compositeRow<NumoTurn>(data);
   if (!turn && input.managedBudget) throw new NumoBudgetReservationError();
   if (!turn) throw new Error("Numo turn was not created");
-  return turn;
+  return hydrateNumoTurn(turn, input.userId);
 }
 
 const PERSISTED_EVENT_TYPES = new Set([
@@ -708,7 +724,7 @@ async function checkpointTurn(input: {
   if (error) throw new Error(error.message);
   const turn = compositeRow<NumoTurn>(data);
   if (!turn) throw new NumoClaimLostError();
-  return turn;
+  return hydrateNumoTurn(turn);
 }
 
 async function stopRequested(service: SupabaseClient, turnId: string, claimToken: string) {
@@ -810,8 +826,9 @@ async function executeNumoTurnCore(input: {
     p_allow_retryable: input.allowRetryable === true,
   });
   if (claimError) throw new Error(claimError.message);
-  const claimed = compositeRow<NumoTurn>(claimedData);
-  if (!claimed) return { status: "not_claimed" };
+  const claimedRow = compositeRow<NumoTurn>(claimedData);
+  if (!claimedRow) return { status: "not_claimed" };
+  const claimed = await hydrateNumoTurn(claimedRow);
   let latestCheckpoint = claimed.checkpoint;
   let latestActiveRunId = claimed.active_run_id;
 
@@ -1048,7 +1065,7 @@ async function executeNumoTurnCore(input: {
         const { data: reconciled } = await service.from("numo_assistant_turns")
           .select("*").eq("id", claimed.id).single();
         if (reconciled) {
-          const latest = reconciled as NumoTurn;
+          const latest = await hydrateNumoTurn(reconciled as NumoTurn);
           emitter.emit("done", { status: latest.status });
           await emitter.flush();
           emitter.close();
@@ -1099,12 +1116,12 @@ async function executeNumoTurnCore(input: {
       const { data } = await service.from("numo_assistant_turns").select("*")
         .eq("id", claimed.id).single();
       if (!data) return { status: "not_claimed" };
-      return { status: "reconciling", turn: data as NumoTurn };
+      return { status: "reconciling", turn: await hydrateNumoTurn(data as NumoTurn) };
     }
     if (error instanceof NumoClaimLostError) {
       const { data } = await service.from("numo_assistant_turns").select("*")
         .eq("id", claimed.id).single();
-      const current = data as NumoTurn;
+      const current = data ? await hydrateNumoTurn(data as NumoTurn) : null;
       if (!current) {
         emitter.close();
         return { status: "not_claimed" };
@@ -1168,7 +1185,7 @@ async function executeNumoTurnCore(input: {
         emitter.close();
         return { status: "not_claimed" };
       }
-      turn = data as NumoTurn;
+      turn = await hydrateNumoTurn(data as NumoTurn);
       if (turn.status === "stopping" && turn.claim_token === claimToken) {
         await interruptActiveWorker(service, turn.active_run_id);
         turn = await checkpointTurn({
@@ -1247,7 +1264,8 @@ export async function requestNumoTurnStop(conversationId: string, userId: string
     p_user_id: userId,
   });
   if (error) throw new Error(error.message);
-  return compositeRow<NumoTurn>(data);
+  const turn = compositeRow<NumoTurn>(data);
+  return turn ? hydrateNumoTurn(turn, userId) : null;
 }
 
 export async function retryNumoTurn(conversationId: string, userId: string) {
@@ -1256,7 +1274,8 @@ export async function retryNumoTurn(conversationId: string, userId: string) {
     p_user_id: userId,
   });
   if (error) throw new Error(error.message);
-  return compositeRow<NumoTurn>(data);
+  const turn = compositeRow<NumoTurn>(data);
+  return turn ? hydrateNumoTurn(turn, userId) : null;
 }
 
 export async function drainNumoTurns(options?: { limit?: number }) {

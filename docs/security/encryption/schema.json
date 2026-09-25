@@ -6742,6 +6742,11 @@
         "nullable": true,
         "generated": false
       },
+      "intent_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
       "worker_checkpoint_encryption_checked_at": {
         "type": "timestamp with time zone",
         "nullable": true,
@@ -9854,5 +9859,23 @@
         "targetColumn": "id"
       }
     ]
+  },
+  "numo_turn_intent_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
   }
 }

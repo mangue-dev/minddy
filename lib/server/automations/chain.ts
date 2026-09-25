@@ -5,7 +5,8 @@ import type { AgentLaunchIntent } from "@/lib/server/agent/launch";
 import type { AgentRunVerdict } from "@/lib/server/agent/runs";
 import { decodeAgentVerdict, legacyAgentVerdictSchema,
   type StoredAgentVerdict } from "@/lib/server/agent/run-verdict-content";
-import type { NumoAutomationContext, NumoTurn } from "@/lib/server/numo/turns";
+import { hydrateNumoTurn, type NumoAutomationContext,
+  type NumoTurn } from "@/lib/server/numo/turns";
 
 /**
  * The CHAIN ​​(MIN-147) — the durable object without which nothing else is
@@ -288,7 +289,7 @@ export async function lastNumoAutomationOperation(
   if (turnError) throw new Error(turnError.message);
   return {
     operation: operation as NumoAutomationOperation,
-    turn: (turn as NumoTurn | null) ?? null,
+    turn: turn ? await hydrateNumoTurn(turn as NumoTurn) : null,
   };
 }
 
@@ -332,7 +333,9 @@ export async function retryableNumoAutomationOperations(
     .select("*")
     .in("id", turnIds);
   if (turnError) throw new Error(turnError.message);
-  const byId = new Map(((turns ?? []) as NumoTurn[]).map((turn) => [turn.id, turn]));
+  const hydrated = await Promise.all(((turns ?? []) as NumoTurn[])
+    .map((turn) => hydrateNumoTurn(turn)));
+  const byId = new Map(hydrated.map((turn) => [turn.id, turn]));
   return rows.map((operation) => ({
     operation,
     turn: byId.get(operation.turn_id!) ?? null,

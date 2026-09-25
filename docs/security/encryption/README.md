@@ -9,7 +9,7 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 151 application tables and 1,410 columns, their primary
+- `schema.json` records 152 application tables and 1,413 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 182 encryption targets include the original content,
@@ -23,7 +23,7 @@ in [the closure matrix](closure-matrix.md).
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 377 functions, ten views and 200 triggers. Function
+- `sql-consumers.json` records 379 functions, ten views and 201 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -1409,3 +1409,20 @@ parents in separate committed batches and validates the references. The cleanup
 worker requires `MINDDY_AGENT_CHAIN_CODE_CLEANUP_ENABLED=true` and the global
 content flag. Both remain disabled in production. Numo conversation and tool
 content remains open.
+
+## Numo turn admission snapshot checkpoint — 25 September 2026
+
+`numo_assistant_turns.intent` retains the admitted automation issue title and
+plan across retries. New turns now seal the complete intent under the user's
+content key, authenticated to the immutable conversation and request identity.
+The ordinary and budgeted admission RPCs store the same opaque JSON wrapper;
+claim, checkpoint, stop, retry, routine and automation readers decode it at the
+server boundary. A database trigger validates row bindings and key versions,
+marks activation on the first encrypted write, and refuses changed clear intent
+from older writers. A bounded CAS worker converts and rotates historical rows.
+The unit and SQL regressions verify source plaintext absence, binding, stale
+CAS and old-writer refusal. The isolated dump/restore loads turns before their
+conversation and owner parents, reads two key versions with cold caches and
+rejects a wrong root key. `numo_automation_operations.context`, conversation
+messages, checkpoints and tool results still have their own plaintext paths, so
+the Numo boundary is not closed. Production flags remain disabled.

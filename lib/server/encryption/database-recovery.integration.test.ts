@@ -3729,4 +3729,107 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       }
     }
   }, 60_000);
+
+  it("restores Numo admission snapshots before owners with mixed cold keys", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_intent_${suffix}`;
+    const restored = `minddy_min591_intent_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const users = [randomUUID(), randomUUID()];
+    const turns = [randomUUID(), randomUUID()];
+    const conversations = [randomUUID(), randomUUID()];
+    const requests = [randomUUID(), randomUUID()];
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(attachmentTemplate, "SELECT count(*) FROM public.numo_assistant_turns;"))
+        .toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${attachmentTemplate};`);
+        created.push(name);
+      }
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      for (const [index, userId] of users.entries()) {
+        const scope: EncryptionScope = { kind: "user", id: userId };
+        if (index) {
+          const first = await keys.current(scope);
+          first.bytes.fill(0);
+          await keys.rotate(scope, 1);
+        }
+        sql(source, `INSERT INTO auth.users(id) VALUES(${quote(userId)});
+          INSERT INTO public.conversations(id,user_id)
+            VALUES(${quote(conversations[index])},${quote(userId)});`);
+        const rowId = JSON.stringify([conversations[index], requests[index]]);
+        const cipher = await store.encrypt({ automation: { issue: {
+          title: `private-intent-${index}`, plan: `private-plan-${index}` } } },
+        { scope, table: "numo_assistant_turns", column: "intent", rowId });
+        const intent = { encrypted_intent: cipher,
+          encryption_version: store.versionOf(cipher), user_id: userId,
+          conversation_id: conversations[index], request_id: requests[index] };
+        sql(source, `INSERT INTO public.numo_assistant_turns(id,conversation_id,
+          user_id,request_id,run_id,intent) VALUES(${quote(turns[index])},
+          ${quote(conversations[index])},${quote(userId)},
+          ${quote(requests[index])},${quote(randomUUID())},
+          ${quote(JSON.stringify(intent))}::jsonb);`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["auth.users", "public.conversations",
+          "public.numo_assistant_turns", "public.numo_turn_intent_scope",
+          "public.envelope_data_keys"].map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("private-intent-");
+      expect(dump).not.toContain("private-plan-");
+      const match = dump.match(/(COPY public\.numo_assistant_turns[^\n]*\n)([\s\S]*?)(\\\.\n)/);
+      expect(match).not.toBeNull();
+      for (const line of match![2].trimEnd().split("\n").reverse()) {
+        sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${match![1]}${line}\n${match![3]}COMMIT;`);
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${dump.replace(match![0], "")}\nCOMMIT;`);
+      sql(restored, `ALTER TABLE public.numo_assistant_turns
+        DROP CONSTRAINT numo_assistant_turns_conversation_id_fkey;
+        ALTER TABLE public.numo_assistant_turns ADD CONSTRAINT
+        numo_assistant_turns_conversation_id_fkey FOREIGN KEY(conversation_id)
+        REFERENCES public.conversations(id) NOT VALID;
+        ALTER TABLE public.numo_assistant_turns VALIDATE CONSTRAINT
+        numo_assistant_turns_conversation_id_fkey;`);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(root)));
+      for (const [index, turnId] of turns.entries()) {
+        const intent = JSON.parse(sql(restored, `SELECT intent FROM
+          public.numo_assistant_turns WHERE id=${quote(turnId)};`));
+        expect(intent.encryption_version).toBe(index + 1);
+        const cipher = cold.fromDatabase<Record<string, unknown>>(
+          intent.encrypted_intent);
+        expect(await cold.decrypt(cipher, { scope: { kind: "user",
+          id: users[index] }, table: "numo_assistant_turns", column: "intent",
+          rowId: JSON.stringify([conversations[index], requests[index]]) }))
+          .toEqual({ automation: { issue: { title: `private-intent-${index}`,
+            plan: `private-plan-${index}` } } });
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const intent = JSON.parse(sql(restored, `SELECT intent FROM
+        public.numo_assistant_turns WHERE id=${quote(turns[0])};`));
+      await expect(wrong.decrypt(wrong.fromDatabase(intent.encrypted_intent),
+        { scope: { kind: "user", id: users[0] },
+          table: "numo_assistant_turns", column: "intent",
+          rowId: JSON.stringify([conversations[0], requests[0]]) }))
+        .rejects.toThrow();
+      expect(() => sql(restored, `INSERT INTO public.numo_assistant_turns(
+        conversation_id,user_id,request_id,run_id,intent)
+        VALUES(${quote(conversations[0])},${quote(users[0])},
+          ${quote(randomUUID())},${quote(randomUUID())},
+          '{"automation":{"issue":{"title":"obsolete"}}}'::jsonb);`))
+        .toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
 });
