@@ -1,7 +1,9 @@
 import type { NextRequest } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { getNumoConversationConfig, getNumoConversationDetail, NUMO_UUID, validNumoPatch } from "@/lib/server/numo/conversations";
+import { getNumoConversation, getNumoConversationConfig, getNumoConversationDetail, NUMO_UUID, validNumoPatch } from "@/lib/server/numo/conversations";
+import { encodeAgentTitle, shouldEncryptAgentTitle } from
+  "@/lib/server/agent/run-title-content";
 import {
   isNumoConversationConfigError,
   resolveNumoTurnConfiguration,
@@ -56,7 +58,28 @@ export async function PATCH(request: NextRequest, { params }: Context) {
       return Response.json({ error: "Unable to validate conversation configuration" }, { status: 503 });
     }
   }
-  const { error } = await getServiceClient().rpc("update_numo_conversation", { p_id: id, p_actor: auth.user.id, p_patch: patch });
+  const service = getServiceClient();
+  let storedPatch = patch;
+  if (Object.hasOwn(patch, "title")) {
+    try {
+      const conversation = await getNumoConversation(auth.supabase, id);
+      if (!conversation) return Response.json({ error: "Not found" }, { status: 404 });
+      if (conversation.source === "agent" && conversation.project_id &&
+          await shouldEncryptAgentTitle(service, conversation.project_id)) {
+        const title = typeof patch.title === "string"
+          ? patch.title.trim() || null : null;
+        const sealed = await encodeAgentTitle(conversation.project_id,
+          conversation.legacy_id, title);
+        storedPatch = { ...patch, title: null,
+          title_ciphertext: sealed.title_ciphertext,
+          title_encryption_version: sealed.title_encryption_version };
+      }
+    } catch {
+      return Response.json({ error: "Unable to protect conversation title" },
+        { status: 503 });
+    }
+  }
+  const { error } = await service.rpc("update_numo_conversation", { p_id: id, p_actor: auth.user.id, p_patch: storedPatch });
   if (error) return Response.json({ error: error.code === "P0002" ? "Not found" : "Unable to update conversation" },
     { status: error.code === "P0002" ? 404 : 500 });
   return new Response(null, { status: 204 });

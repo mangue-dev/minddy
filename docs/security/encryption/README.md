@@ -1448,3 +1448,16 @@ does not close the Numo or agent boundary. General conversation titles,
 error messages, assistant messages, tool
 operations, checkpoints and projections remain open. Representative search,
 latency and key/cache-load measurements precede production activation.
+
+## Numo agent-title editor checkpoint — 25 September 2026
+
+The shared Numo conversation edit RPC previously wrote agent conversation
+titles into the legacy clear column. The authorized API now resolves the
+invoker-visible agent conversation, encrypts an edited title under its project
+key, and passes only the envelope and version to the locked RPC. The RPC keeps
+its project-access and ownership checks, accepts the protected agent fields,
+and lets the existing agent title guard reject an obsolete clear-title edit
+after activation. Its assistant branch still handles assistant conversation
+titles in clear and remains part of the open Numo conversation boundary. The
+isolated SQL regression verifies the encrypted agent row and Numo projection,
+obsolete writer refusal and client privilege. Production flags remain off.

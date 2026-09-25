@@ -3668,7 +3668,7 @@
       ]
     },
     "update_numo_conversation(uuid,uuid,jsonb)": {
-      "sha256": "14e7e4dedf4d5dc14b8fad67bf04810210ecf8e0c35941fa80d54e9d987e1cfc",
+      "sha256": "7bf7e728d7cd3ab3d403b594b7f2932c5a6fd1a513b81877402b07d956cd8bf2",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""

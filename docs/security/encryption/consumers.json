@@ -773,7 +773,7 @@
     "file": "app/api/numo/conversations/[id]/route.ts",
     "operation": "rpc",
     "resource": "update_numo_conversation",
-    "line": 59,
+    "line": 80,
     "storage": false
   },
   {
