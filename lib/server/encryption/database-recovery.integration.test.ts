@@ -3608,4 +3608,70 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       }
     }
   }, 60_000);
+
+  it("restores feedback merge undo links before their event and post parents", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_merge_${suffix}`;
+    const restored = `minddy_min591_merge_restore_${suffix}`;
+    const created: string[] = [];
+    const owner = randomUUID();
+    const project = randomUUID();
+    const duplicate = randomUUID();
+    const canonical = randomUUID();
+    const event = randomUUID();
+    const linked = randomUUID();
+    try {
+      expect(sql(attachmentTemplate, "SELECT count(*) FROM public.feedback_merge_events;"))
+        .toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${attachmentTemplate};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(owner)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(owner)},'Merge restore','MR');
+        INSERT INTO public.feedback_posts(id,project_id,title,
+          submitted_title,source) VALUES
+          (${quote(duplicate)},${quote(project)},'Duplicate','Duplicate','internal'),
+          (${quote(canonical)},${quote(project)},'Canonical','Canonical','internal');
+        INSERT INTO public.feedback_merge_events(id,project_id,kind,
+          dup_id,canonical_id,performed_by,payload) VALUES
+          (${quote(event)},${quote(project)},'post',${quote(duplicate)},
+           ${quote(canonical)},'team','{}'::jsonb);
+        INSERT INTO public.feedback_merge_event_links(event_id,link_kind,target_id)
+          VALUES(${quote(event)},'repointed_chain',${quote(linked)});`);
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["auth.users", "public.projects",
+          "public.feedback_posts", "public.feedback_merge_events",
+          "public.feedback_merge_event_links"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("private legacy content");
+      const match = dump.match(/(COPY public\.feedback_merge_event_links[^\n]*\n)([\s\S]*?)(\\\.\n)/);
+      expect(match).not.toBeNull();
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${match![0]}COMMIT;`);
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${dump.replace(match![0], "")}\nCOMMIT;`);
+      sql(restored, `ALTER TABLE public.feedback_merge_event_links
+        DROP CONSTRAINT feedback_merge_event_links_event_id_fkey;
+        ALTER TABLE public.feedback_merge_event_links ADD CONSTRAINT
+        feedback_merge_event_links_event_id_fkey FOREIGN KEY(event_id)
+        REFERENCES public.feedback_merge_events(id) ON DELETE CASCADE
+        NOT VALID;
+        ALTER TABLE public.feedback_merge_event_links VALIDATE CONSTRAINT
+        feedback_merge_event_links_event_id_fkey;`);
+      expect(sql(restored, `SELECT count(*) FROM public.feedback_merge_event_links
+        WHERE event_id=${quote(event)} AND target_id=${quote(linked)};`))
+        .toBe("1");
+      expect(() => sql(restored, `INSERT INTO public.feedback_merge_events(
+        project_id,kind,dup_id,canonical_id,performed_by,payload)
+        VALUES(${quote(project)},'post',${quote(duplicate)},
+          ${quote(canonical)},'team','{"secret":"obsolete"}'::jsonb);`))
+        .toThrow();
+    } finally {
+      for (const name of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
 });

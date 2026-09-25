@@ -1376,12 +1376,11 @@
       "kind": "project",
       "column": "project_id"
     },
-    "encrypted": [
-      "payload"
-    ],
+    "encrypted": [],
     "clear": {
       "bounded_metadata": [
-        "confidence"
+        "confidence",
+        "payload"
       ],
       "operational_configuration": [
         "kind",
@@ -1397,7 +1396,23 @@
       ],
       "timestamp": [
         "created_at",
+        "payload_checked_at",
         "undone_at"
+      ]
+    }
+  },
+  "feedback_merge_event_links": {
+    "scope": {
+      "ancestor": "feedback_merge_events:event_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "operational_configuration": [
+        "link_kind"
+      ],
+      "routing_identity": [
+        "event_id",
+        "target_id"
       ]
     }
   },

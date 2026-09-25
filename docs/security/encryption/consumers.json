@@ -5173,6 +5173,27 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/feedback-merge-backfill.ts",
+    "operation": "from",
+    "resource": "feedback_merge_events",
+    "line": 17,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/feedback-merge-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_feedback_merge_payload",
+    "line": 28,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/feedback-merge-backfill.ts",
+    "operation": "rpc",
+    "resource": "mark_feedback_merge_payload_attempt",
+    "line": 39,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/feedback-post-backfill.ts",
     "operation": "from",
     "resource": "feedback_posts",

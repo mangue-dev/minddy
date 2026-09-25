@@ -9,20 +9,21 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 150 application tables and 1,405 columns, their primary
+- `schema.json` records 151 application tables and 1,409 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
-  column exactly once. Its 185 encryption targets include the original content,
+  column exactly once. Its 184 encryption targets include the original content,
   derived copies, arbitrary user JSON, private identities, credentials and share
   tokens. The relay audit detail target was removed by an action-specific SQL
   guard and historical scrub; opaque attachment object paths replace two path
-  encryption targets; forge mention and provider-operation resource identities
+  encryption targets; merge undo JSON was replaced by guarded UUID relations;
+  forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 370 functions, ten views and 198 triggers. Function
+- `sql-consumers.json` records 373 functions, ten views and 199 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -1310,6 +1311,25 @@ caches and rejects the wrong root. This does not close the other credential,
 configuration, agent, issue or Numo targets. Production flags remain disabled;
 representative latency and cache-load measurements are required before
 activation, not code review.
+
+## Feedback merge undo relation checkpoint — 25 September 2026
+
+`feedback_merge_events.payload` previously held free-form JSON even though
+the merge and undo logic only needs three sets of UUIDs. New merges now store
+an empty payload and record moved votes, deduplicated votes and repointed
+chains as typed rows in `feedback_merge_event_links` in the same SQL
+transaction. Undo reads those rows under its existing event lock and retains a
+legacy JSON path until historical rows are converted. A trigger rejects new
+or changed non-empty payloads from older writers. A bounded service-only CAS
+worker copies the historical UUIDs to typed rows and clears the JSON; failed
+attempts rotate through the queue. The child table has RLS and no client
+write privilege. SQL regression verifies merge and undo semantics, source
+JSON absence, stale CAS and old-writer refusal. The isolated PostgreSQL
+restore loads child links before events and posts in independent committed
+batches and revalidates their foreign key. The cleanup worker is gated by
+`MINDDY_FEEDBACK_MERGE_PAYLOAD_CLEANUP_ENABLED=true` and the global content
+flag; both remain disabled in production. Other issue, forge and feedback
+copies remain open.
 
 ## Feedback SSO root-key checkpoint — 25 September 2026
 

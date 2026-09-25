@@ -7053,6 +7053,11 @@
         "type": "text",
         "nullable": false,
         "generated": false
+      },
+      "payload_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -9813,5 +9818,36 @@
       "id"
     ],
     "foreignKeys": []
+  },
+  "feedback_merge_event_links": {
+    "columns": {
+      "event_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "link_kind": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "target_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "event_id",
+      "link_kind",
+      "target_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "feedback_merge_events",
+        "column": "event_id",
+        "targetColumn": "id"
+      }
+    ]
   }
 }

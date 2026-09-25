@@ -1931,6 +1931,17 @@
       ],
       "functionReferences": []
     },
+    "guard_feedback_merge_payload()": {
+      "sha256": "c68189d93497a7af10f91d38032e513f983a7b6491d7d93fe39fdffbd16ca2a4",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_numo_worker_checkpoint()": {
       "sha256": "6a6c1de1cec526d9a735bf3d5de1bd877bd5eb03ac4e238c599267e2bd4b7b63",
       "securityDefiner": true,
@@ -2076,7 +2087,7 @@
       "functionReferences": []
     },
     "undo_feedback_merge(uuid,uuid)": {
-      "sha256": "6853ef77b23e322058a593e3d721ded50bac3e66f50863e2312cac50e6440e91",
+      "sha256": "8aa6388e3f25f72426bbcb238b6cad2c1fa9e9341cb7ce26009ccbba0d6d018f",
       "securityDefiner": true,
       "configuration": [
         "search_path=public, extensions"
@@ -2086,11 +2097,11 @@
         "feedback_posts",
         "feedback_votes",
         "feedback_merge_events",
-        "feedback_merge_rejections"
+        "feedback_merge_rejections",
+        "feedback_merge_event_links"
       ],
       "protectedRelations": [
-        "feedback_posts",
-        "feedback_merge_events"
+        "feedback_posts"
       ],
       "functionReferences": []
     },
@@ -3679,6 +3690,20 @@
       ],
       "functionReferences": []
     },
+    "migrate_feedback_merge_payload(uuid,jsonb)": {
+      "sha256": "d0eca2caa3e7e31bfd7cb93f1a973222f8c178e525f7603837a65ffb24dbd8b4",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "feedback_merge_events",
+        "feedback_merge_event_links"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "migrate_page_file_metadata(uuid,text,text)": {
       "sha256": "c5b0e9a0a78802c707436b73980f18374bed578b8b7fe544b9603890dcfeaa8b",
       "securityDefiner": true,
@@ -3984,7 +4009,7 @@
       "functionReferences": []
     },
     "merge_feedback_posts(uuid,uuid,text,uuid,real)": {
-      "sha256": "2111a1c41881106cc777f03964c3a1f3fbdd63baad8073c12103976d69df78a9",
+      "sha256": "5e1a22abeddc1f2115b1f754a046dbde2343620830551ff2acbee298709a218e",
       "securityDefiner": true,
       "configuration": [
         "search_path=public, extensions"
@@ -3993,11 +4018,11 @@
       "relations": [
         "feedback_posts",
         "feedback_votes",
-        "feedback_merge_events"
+        "feedback_merge_events",
+        "feedback_merge_event_links"
       ],
       "protectedRelations": [
-        "feedback_posts",
-        "feedback_merge_events"
+        "feedback_posts"
       ],
       "functionReferences": []
     },
@@ -4028,6 +4053,19 @@
       "protectedRelations": [
         "app_config"
       ],
+      "functionReferences": []
+    },
+    "mark_feedback_merge_payload_attempt(uuid,jsonb)": {
+      "sha256": "97be33c415171a6cdff5199913eb96164e6a49f27048a529e5f40f5b38b7d0a8",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "feedback_merge_events"
+      ],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "migrate_feedback_otp_email(uuid,text,text,text)": {
@@ -5099,8 +5137,7 @@
       "protectedRelations": [
         "comments",
         "feedback_posts",
-        "feedback_users",
-        "feedback_merge_events"
+        "feedback_users"
       ],
       "functionReferences": [
         "undo_feedback_merge"
@@ -6594,6 +6631,10 @@
     "agent_run_messages.trg_agent_queue_message_capture": {
       "function": "capture_agent_queue_message()",
       "definition": "CREATE TRIGGER trg_agent_queue_message_capture AFTER INSERT ON agent_run_messages FOR EACH ROW EXECUTE FUNCTION capture_agent_queue_message()"
+    },
+    "feedback_merge_events.feedback_merge_payload_guard": {
+      "function": "guard_feedback_merge_payload()",
+      "definition": "CREATE TRIGGER feedback_merge_payload_guard BEFORE INSERT OR UPDATE ON feedback_merge_events FOR EACH ROW EXECUTE FUNCTION guard_feedback_merge_payload()"
     },
     "numo_surface_events.numo_surface_destination_guard": {
       "function": "guard_numo_surface_destination()",
