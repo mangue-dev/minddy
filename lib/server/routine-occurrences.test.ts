@@ -22,7 +22,8 @@ const h = vi.hoisted(() => {
         error: null,
       }),
       maybeSingle: async () => ({
-        data: table === "numo_conversation_title_scope" ? null
+        data: table === "numo_conversation_title_scope" ||
+          table === "numo_error_encryption_scope" ? null
           : table === "numo_assistant_turns" ? state.turn : state.occurrence,
         error: null,
       }),
@@ -82,6 +83,7 @@ const routine = {
 
 beforeEach(() => {
   h.state.updates.length = 0;
+  h.service.rpc.mockClear();
   h.state.occurrence = {
     id: "44444444-4444-4444-8444-444444444444",
     routine_id: routine.id,
@@ -152,19 +154,13 @@ describe("startRoutineOccurrence", () => {
     await expect(startRoutineOccurrence({ routine, origin: "manual" }))
       .rejects.toBe(error);
 
-    expect(h.state.updates).toContainEqual({
-      table: "numo_routine_occurrences",
-      values: {
-        error_code: "usage_budget_exceeded",
-        error_message: "usage_budget_exceeded",
-      },
-    });
-    expect(h.state.updates).toContainEqual({
-      table: "conversations",
-      values: {
-        status: "error",
-        error_message: "usage_budget_exceeded",
-      },
-    });
+    expect(h.service.rpc).toHaveBeenCalledWith(
+      "fail_numo_routine_occurrence", {
+        p_id: h.state.occurrence!.id,
+        p_old_turn_id: null,
+        p_code: "usage_budget_exceeded",
+        p_occurrence_error: "usage_budget_exceeded",
+        p_conversation_error: "usage_budget_exceeded",
+      });
   });
 });

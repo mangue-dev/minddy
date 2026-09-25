@@ -39,6 +39,7 @@ const operationTemplate = "minddy_min591_operation_audit";
 const conversationTemplate = "minddy_min591_conversation_audit";
 const userMessageTemplate = "minddy_min591_user_message_audit";
 const finalTemplate = "minddy_min591_final_audit";
+const errorTemplate = "minddy_min591_error_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -4058,6 +4059,126 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       expect(() => sql(restored, `INSERT INTO public.assistant_messages(
         conversation_id,role,content) VALUES(${quote(conversations[0])},
         'assistant','private obsolete writer');`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
+
+  it("restores Numo error sources and copies before independent parents", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_err_${suffix}`;
+    const restored = `minddy_min591_err_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const users = [randomUUID(), randomUUID()];
+    const projects = [randomUUID(), randomUUID()];
+    const routines = [randomUUID(), randomUUID()];
+    const conversations = [randomUUID(), randomUUID()];
+    const turns = [randomUUID(), randomUUID()];
+    const occurrences = [randomUUID(), randomUUID()];
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(errorTemplate,
+        "SELECT count(*) FROM public.numo_routine_occurrences;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${errorTemplate};`);
+        created.push(name);
+      }
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      for (const [index, userId] of users.entries()) {
+        const scope: EncryptionScope = { kind: "user", id: userId };
+        const first = await keys.current(scope);
+        first.bytes.fill(0);
+        if (index) await keys.rotate(scope, 1);
+        const error = `private-numo-error-${index}`;
+        const encrypted = await Promise.all([
+          ["conversations", conversations[index]],
+          ["numo_assistant_turns", turns[index]],
+          ["numo_routine_occurrences", occurrences[index]],
+        ].map(async ([table, rowId]) => {
+          const cipher = await store.encrypt(error, { scope,
+            table: table!, column: "error_message", rowId: rowId! });
+          return `mdye3:${store.versionOf(cipher)}:${Buffer.from(cipher).toString("base64url")}`;
+        }));
+        sql(source, `INSERT INTO auth.users(id) VALUES(${quote(userId)});
+          INSERT INTO public.projects(id,owner_id,name,key)
+            VALUES(${quote(projects[index])},${quote(userId)},
+              ${quote(`Fixture ${index}`)},${quote(`ER${index}`)});
+          INSERT INTO public.agent_routines(id,project_id,owner_id,
+            title,prompt,frequency) VALUES(${quote(routines[index])},
+            ${quote(projects[index])},${quote(userId)},'Fixture','Fixture','daily');
+          INSERT INTO public.conversations(id,user_id,status,error_message)
+            VALUES(${quote(conversations[index])},${quote(userId)},'error',
+              ${quote(encrypted[0])});
+          INSERT INTO public.numo_assistant_turns(id,conversation_id,user_id,
+            request_id,run_id,status,error_message)
+            VALUES(${quote(turns[index])},${quote(conversations[index])},
+              ${quote(userId)},${quote(randomUUID())},${quote(randomUUID())},
+              'failed',${quote(encrypted[1])});
+          INSERT INTO public.numo_routine_occurrences(id,routine_id,origin,
+            conversation_id,request_id,error_code,error_message)
+            VALUES(${quote(occurrences[index])},${quote(routines[index])},
+              'manual',${quote(conversations[index])},${quote(randomUUID())},
+              'numo_unavailable',${quote(encrypted[2])});`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["auth.users", "public.projects",
+          "public.agent_routines", "public.conversations",
+          "public.numo_assistant_turns", "public.numo_routine_occurrences",
+          "public.numo_error_encryption_scope", "public.envelope_data_keys"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 5 * 1024 * 1024 });
+      expect(dump).not.toContain("private-numo-error-");
+      let remaining = dump;
+      for (const table of ["numo_routine_occurrences", "numo_assistant_turns",
+        "agent_routines", "conversations", "projects"]) {
+        const pattern = new RegExp(`(COPY public\\.${table}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`);
+        const match = remaining.match(pattern);
+        expect(match).not.toBeNull();
+        for (const line of match![2].trimEnd().split("\n").reverse()) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${match![1]}${line}\n${match![3]}COMMIT;`);
+        }
+        remaining = remaining.replace(match![0], "");
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${remaining}\nCOMMIT;`);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(root)));
+      for (const [index, userId] of users.entries()) {
+        for (const [table, rowId] of [
+          ["conversations", conversations[index]],
+          ["numo_assistant_turns", turns[index]],
+          ["numo_routine_occurrences", occurrences[index]],
+        ]) {
+          const cipher = sql(restored, `SELECT error_message FROM public.${table}
+            WHERE id=${quote(rowId)};`);
+          expect(cipher.startsWith(`mdye3:${index + 1}:`)).toBe(true);
+          const serialized = Buffer.from(cipher.split(":")[2], "base64url")
+            .toString("utf8");
+          expect(await cold.decrypt(cold.fromDatabase(serialized), {
+            scope: { kind: "user", id: userId }, table,
+            column: "error_message", rowId }))
+            .toBe(`private-numo-error-${index}`);
+        }
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const cipher = sql(restored, `SELECT error_message FROM public.conversations
+        WHERE id=${quote(conversations[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase(Buffer.from(
+        cipher.split(":")[2], "base64url").toString("utf8")), {
+        scope: { kind: "user", id: users[0] }, table: "conversations",
+        column: "error_message", rowId: conversations[0],
+      })).rejects.toThrow();
+      expect(() => sql(restored, `UPDATE public.conversations
+        SET error_message='private obsolete writer'
+        WHERE id=${quote(conversations[0])};`)).toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();

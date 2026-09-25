@@ -10,6 +10,8 @@ import { occurrencesForRoutine } from "@/lib/server/routine-occurrences";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { NumoTurnStatus } from "@/lib/assistant-types";
 import { decodeAgentPrUrl } from "@/lib/server/agent/run-pr-url-content";
+import { decodeNumoError } from "@/lib/server/numo/error-content";
+import { decodeNumoTurnOutcome } from "@/lib/server/numo/final-content";
 
 /**
  * Routine execution history. New rows summarize the complete Numo occurrence;
@@ -154,7 +156,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     );
   }
 
-  const numoRuns = occurrences.map((occurrence) => {
+  const numoRuns = await Promise.all(occurrences.map(async (occurrence) => {
     const turn = turns.get(occurrence.conversation_id) ?? null;
     const status = (turn?.status as NumoTurnStatus | undefined) ?? null;
     const worker = workers.get(occurrence.conversation_id) ?? null;
@@ -181,8 +183,13 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
       pr_state: worker?.pr_state ?? null,
       continuations: 0,
       cost_usd: Number(turn?.cost_usd ?? 0),
-      outcome: turn?.outcome ?? null,
-      error_message: occurrence.error_message ?? turn?.error_message ?? null,
+      outcome: turn ? await decodeNumoTurnOutcome(found.routine.owner_id,
+        turn.id as string, turn.outcome as string | null, auth.user.id) : null,
+      error_message: occurrence.error_message ?? (turn
+        ? await decodeNumoError(found.routine.owner_id,
+            "numo_assistant_turns", turn.id as string,
+            turn.error_message as string | null, auth.user.id)
+        : null),
       started_at: turn?.started_at ?? null,
       completed_at: turn?.completed_at ?? null,
       created_at: createdAt,
@@ -203,7 +210,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
           })
         : null,
     };
-  });
+  }));
 
   const runs = [...numoRuns, ...legacyRuns].sort(
     (left, right) => Date.parse(String(right.created_at)) - Date.parse(String(left.created_at)),

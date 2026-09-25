@@ -9,6 +9,8 @@ import { defaultLocale } from "@/i18n/config";
 import { getServiceClient } from "@/lib/supabase-service";
 import { startNumoIntent } from "@/lib/server/numo/start-intent";
 import { hydrateNumoTurn, type NumoTurn } from "@/lib/server/numo/turns";
+import { decodeNumoError, encodeNumoError,
+  shouldProtectNumoErrors } from "@/lib/server/numo/error-content";
 import {
   routineRunBudgetUsd,
   type Routine,
@@ -35,17 +37,20 @@ function composite<T>(value: unknown): T | null {
   return (value as T | null) ?? null;
 }
 
+async function readableOccurrence(row: NumoRoutineOccurrence, userId: string) {
+  return { ...row, error_message: await decodeNumoError(userId,
+    "numo_routine_occurrences", row.id, row.error_message) };
+}
+
 function occurrenceError(error: unknown): { code: string; message: string } {
   const candidate = error as { code?: unknown; message?: unknown };
   const message = typeof candidate.message === "string"
     ? candidate.message
     : "Numo could not start this routine occurrence.";
   return {
-    code: typeof candidate.code === "string"
-      ? candidate.code
-      : /^[a-z][a-z0-9_]+$/.test(message)
-        ? message
-        : "numo_unavailable",
+    code: candidate.code === "usage_budget_exceeded"
+      || message === "usage_budget_exceeded"
+      ? "usage_budget_exceeded" : "numo_unavailable",
     message,
   };
 }
@@ -102,7 +107,8 @@ export async function startRoutineOccurrence(input: {
       .eq("id", occurrence.turn_id)
       .single();
     if (turnError || !existing) throw new Error(turnError?.message ?? "Routine turn not found");
-    return { occurrence, turn: await hydrateNumoTurn(existing as NumoTurn) };
+    return { occurrence: await readableOccurrence(occurrence,
+      input.routine.owner_id), turn: await hydrateNumoTurn(existing as NumoTurn) };
   }
 
   let turnCreated = false;
@@ -167,21 +173,25 @@ export async function startRoutineOccurrence(input: {
       .eq("id", occurrence.turn_id ?? started.turnId)
       .single();
     if (turnError || !turn) throw new Error(turnError?.message ?? "Routine turn not found");
-    return { occurrence, turn: await hydrateNumoTurn(turn as NumoTurn) };
+    return { occurrence: await readableOccurrence(occurrence,
+      input.routine.owner_id), turn: await hydrateNumoTurn(turn as NumoTurn) };
   } catch (error) {
     if (!turnCreated) {
       const failure = occurrenceError(error);
-      await Promise.all([
-        service
-          .from("numo_routine_occurrences")
-          .update({ error_code: failure.code, error_message: failure.message })
-          .eq("id", occurrence.id)
-          .is("turn_id", null),
-        service
-          .from("conversations")
-          .update({ status: "error", error_message: failure.message })
-          .eq("id", occurrence.conversation_id),
-      ]);
+      const protect = await shouldProtectNumoErrors(service);
+      const [occurrenceErrorMessage, conversationErrorMessage] = protect
+        ? await Promise.all([
+            encodeNumoError(input.routine.owner_id, "numo_routine_occurrences",
+              occurrence.id, failure.message),
+            encodeNumoError(input.routine.owner_id, "conversations",
+              occurrence.conversation_id, failure.message),
+          ]) : [failure.message, failure.message];
+      const failed = await service.rpc("fail_numo_routine_occurrence", {
+        p_id: occurrence.id, p_old_turn_id: null, p_code: failure.code,
+        p_occurrence_error: occurrenceErrorMessage,
+        p_conversation_error: conversationErrorMessage,
+      });
+      if (failed.error) throw new Error(failed.error.message, { cause: error });
     }
     throw error;
   }
@@ -198,7 +208,13 @@ export async function occurrencesForRoutine(
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
-  return (data ?? []) as NumoRoutineOccurrence[];
+  const rows = (data ?? []) as NumoRoutineOccurrence[];
+  if (!rows.length) return rows;
+  const { data: routine, error: ownerError } = await getServiceClient()
+    .from("agent_routines").select("owner_id").eq("id", routineId).single();
+  if (ownerError || !routine?.owner_id) throw new Error("Routine owner unavailable");
+  return Promise.all(rows.map((row) => readableOccurrence(row,
+    routine.owner_id)));
 }
 
 /** Resolve the routine lineage of a user reply in an occurrence conversation. */
@@ -227,11 +243,13 @@ export async function routineContinuationForConversation(
     .maybeSingle();
   if (routineError) throw new Error(routineError.message);
   if (!routine) return null;
+  const decodedOccurrence = await readableOccurrence(occurrence as NumoRoutineOccurrence,
+    routine.owner_id);
 
   const cap = await routineRunBudgetUsd(routine as Routine);
   if (cap == null) {
     return {
-      occurrence: occurrence as NumoRoutineOccurrence,
+      occurrence: decodedOccurrence,
       routine: routine as Routine,
       remainingBudgetUsd: null,
     };
@@ -252,7 +270,7 @@ export async function routineContinuationForConversation(
     spent = (usage ?? []).reduce((total, row) => total + Number(row.cost ?? 0), 0);
   }
   return {
-    occurrence: occurrence as NumoRoutineOccurrence,
+    occurrence: decodedOccurrence,
     routine: routine as Routine,
     remainingBudgetUsd: Math.max(0, cap - spent),
   };

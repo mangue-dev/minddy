@@ -1244,6 +1244,7 @@
       "timestamp": [
         "archived_at",
         "created_at",
+        "error_encryption_checked_at",
         "title_encryption_checked_at",
         "updated_at"
       ]
@@ -2462,6 +2463,7 @@
         "claimed_at",
         "completed_at",
         "created_at",
+        "error_encryption_checked_at",
         "intent_encryption_checked_at",
         "not_before",
         "outcome_encryption_checked_at",
@@ -2472,6 +2474,21 @@
     }
   },
   "numo_final_content_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "numo_error_encryption_scope": {
     "scope": {
       "kind": "system",
       "id": "00000000-0000-0000-0000-000000000000"
@@ -2617,6 +2634,7 @@
       ],
       "timestamp": [
         "created_at",
+        "error_encryption_checked_at",
         "scheduled_for",
         "updated_at"
       ]

@@ -1,5 +1,7 @@
 import "server-only";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
+import { decodeNumoError } from "@/lib/server/numo/error-content";
+import { decodeNumoTurnOutcome } from "@/lib/server/numo/final-content";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -111,6 +113,7 @@ function runSummary(
 async function occurrenceContext(
   service: SupabaseClient,
   occurrences: NumoRoutineOccurrence[],
+  ownerId: string,
 ): Promise<OccurrenceContext> {
   const conversationIds = occurrences.map((occurrence) => occurrence.conversation_id);
   const turnResult = conversationIds.length
@@ -123,7 +126,14 @@ async function occurrenceContext(
         .order("created_at", { ascending: true })
     : { data: [], error: null };
   if (turnResult.error) throw new Error(turnResult.error.message);
-  const turns = (turnResult.data ?? []) as Array<Record<string, unknown>>;
+  const turns: Array<Record<string, unknown>> = await Promise.all(
+    ((turnResult.data ?? []) as Array<Record<string, unknown>>)
+    .map(async (turn) => ({ ...turn,
+      outcome: await decodeNumoTurnOutcome(ownerId,
+        turn.id as string, turn.outcome as string | null),
+      error_message: await decodeNumoError(ownerId, "numo_assistant_turns",
+        turn.id as string, turn.error_message as string | null),
+    })));
   const turnIds = turns.map((turn) => turn.id as string);
   const workerResult = turnIds.length
     ? await service
@@ -152,7 +162,8 @@ export async function routineRunSummaries(
 ): Promise<RoutineRunSummary[]> {
   const capped = Math.max(1, Math.min(limit, MAX_LIST_RUNS));
   const occurrences = (await occurrencesForRoutine(routine.id, capped)).reverse();
-  const context = await occurrenceContext(getServiceClient(), occurrences);
+  const context = await occurrenceContext(getServiceClient(), occurrences,
+    routine.owner_id);
   return occurrences
     .map((occurrence) => runSummary(occurrence, context))
     .sort(
@@ -176,7 +187,8 @@ export async function routineOccurrenceDetail(input: {
   occurrence: NumoRoutineOccurrence;
   readClient: SupabaseClient;
 }): Promise<RoutineOccurrenceDetail> {
-  const context = await occurrenceContext(getServiceClient(), [input.occurrence]);
+  const context = await occurrenceContext(getServiceClient(), [input.occurrence],
+    input.routine.owner_id);
   const occurrence = runSummary(input.occurrence, context);
 
   const { data: identity } = await input.readClient

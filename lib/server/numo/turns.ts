@@ -70,6 +70,8 @@ import { decodeNumoFinalMessage, decodeNumoTurnOutcome,
   hydrateNumoFinalMessages, shouldProtectNumoFinalContent } from "./final-content";
 import { encodeNumoTurnEvent,
   shouldProtectNumoTurnEvents } from "./turn-event-content";
+import { decodeNumoError, encodeNumoError,
+  shouldProtectNumoErrors } from "./error-content";
 import type { SafeEmitter } from "@/lib/server/assistant/sse";
 import {
   failNumoSurfaceProjection,
@@ -229,7 +231,10 @@ export async function hydrateNumoTurn<T extends NumoTurn>(row: T,
   }, actorId);
   const outcome = await decodeNumoTurnOutcome(row.user_id, row.id,
     row.outcome, actorId);
-  return { ...row, intent: intent as unknown as NumoTurnIntent, outcome };
+  const errorMessage = await decodeNumoError(row.user_id,
+    "numo_assistant_turns", row.id, row.error_message, actorId);
+  return { ...row, intent: intent as unknown as NumoTurnIntent,
+    outcome, error_message: errorMessage };
 }
 
 function checkpointRecord(checkpoint: NumoTurnCheckpoint): Record<string, unknown> {
@@ -733,13 +738,31 @@ async function checkpointTurn(input: {
   userId?: string;
   costUsd?: number | null;
 }): Promise<NumoTurn> {
+  let errorMessage = input.errorMessage ?? null;
+  let conversationErrorMessage = errorMessage;
+  if (errorMessage && await shouldProtectNumoErrors(input.service)) {
+    const { data: scope, error: scopeError } = await input.service
+      .from("numo_assistant_turns").select("user_id,conversation_id")
+      .eq("id", input.turnId).single();
+    if (scopeError || !scope?.user_id || !scope.conversation_id ||
+        input.userId && input.userId !== scope.user_id) {
+      throw new Error("Unable to resolve Numo error scope");
+    }
+    [errorMessage, conversationErrorMessage] = await Promise.all([
+      encodeNumoError(scope.user_id, "numo_assistant_turns", input.turnId,
+        errorMessage),
+      encodeNumoError(scope.user_id, "conversations", scope.conversation_id,
+        errorMessage),
+    ]);
+  }
   const { data, error } = await input.service.rpc("checkpoint_numo_turn", {
     p_turn_id: input.turnId,
     p_claim_token: input.claimToken,
     p_status: input.status,
     p_checkpoint: input.checkpoint ?? {},
     p_active_run_id: input.activeRunId ?? null,
-    p_error_message: input.errorMessage ?? null,
+    p_error_message: errorMessage,
+    p_conversation_error_message: conversationErrorMessage,
     p_outcome: input.outcome != null &&
       await shouldProtectNumoFinalContent(input.service)
       ? await encodeNumoTurnOutcome(input.userId ?? "", input.turnId, input.outcome)

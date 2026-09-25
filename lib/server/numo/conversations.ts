@@ -22,6 +22,7 @@ import { decodeAgentPrUrl, decodeAgentPrUrlValue,
   isEncryptedAgentPrUrl } from "@/lib/server/agent/run-pr-url-content";
 import { decodePullRequestContent } from "@/lib/server/agent/pull-request-content";
 import { decodeConversationTitle } from "./conversation-title-content";
+import { decodeNumoError } from "./error-content";
 
 export const NUMO_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const NUMO_CONVERSATIONS_PAGE_SIZE = 50;
@@ -35,7 +36,9 @@ async function hydrateAssistantTitles<T extends NumoConversation>(rows: T[]):
       throw new Error("Numo conversation owner is unavailable");
     }
     return { ...row, title: await decodeConversationTitle(row.user_id,
-      row.legacy_id, row.title) };
+      row.legacy_id, row.title),
+      error_message: await decodeNumoError(row.user_id, "conversations",
+        row.legacy_id, row.error_message) };
   }));
 }
 
@@ -307,13 +310,17 @@ async function hydrateNumoAssistantTurnOutcomes(
 ) {
   return Promise.all(turns.map(async (turn) => {
     const outcome = turn.outcome as string | null;
-    if (!isEncryptedNumoTurnOutcome(outcome)) return turn;
+    if (!isEncryptedNumoTurnOutcome(outcome) &&
+        !String(turn.error_message ?? "").startsWith("mdye3:")) return turn;
     const userId = turn.initiated_by as string | null;
     if (!userId || actorId && actorId !== userId) {
       throw new Error("Numo turn outcome owner changed");
     }
-    return { ...turn, outcome: await decodeNumoTurnOutcome(userId,
-      turn.id as string, outcome, actorId) };
+    return { ...turn,
+      outcome: await decodeNumoTurnOutcome(userId,
+        turn.id as string, outcome, actorId),
+      error_message: await decodeNumoError(userId, "numo_assistant_turns",
+        turn.id as string, turn.error_message as string | null, actorId) };
   }));
 }
 

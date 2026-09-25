@@ -3189,6 +3189,11 @@
         "nullable": true,
         "generated": false
       },
+      "error_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
       "title_encryption_checked_at": {
         "type": "timestamp with time zone",
         "nullable": true,
@@ -6767,6 +6772,11 @@
         "nullable": true,
         "generated": false
       },
+      "error_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
       "intent_encryption_checked_at": {
         "type": "timestamp with time zone",
         "nullable": true,
@@ -8345,6 +8355,11 @@
         "type": "uuid",
         "nullable": false,
         "generated": false
+      },
+      "error_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -9144,6 +9159,24 @@
         "targetColumn": "id"
       }
     ]
+  },
+  "numo_error_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
   },
   "project_realtime_generations": {
     "columns": {

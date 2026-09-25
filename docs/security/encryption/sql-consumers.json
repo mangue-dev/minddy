@@ -1059,6 +1059,26 @@
       ],
       "functionReferences": []
     },
+    "guard_numo_error_message()": {
+      "sha256": "43594f84bc90b924489f4480e9bbfc6d8e719511df4cd43085271c28c9f51422",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "conversations",
+        "numo_assistant_turns",
+        "numo_routine_occurrences",
+        "numo_error_encryption_scope"
+      ],
+      "protectedRelations": [
+        "conversations",
+        "numo_assistant_turns",
+        "numo_routine_occurrences"
+      ],
+      "functionReferences": []
+    },
     "guard_numo_final_message()": {
       "sha256": "103cb4380043e11a9d0b48ab560427b7e7aee7bb1b35d260d1f3c8c9f6daa2bd",
       "securityDefiner": true,
@@ -1073,7 +1093,7 @@
       "functionReferences": []
     },
     "recover_stale_numo_turns()": {
-      "sha256": "de7e5eb0ffc379800207939d4322ff89d4e49b30c9ea00cf34e656665ca2c3bf",
+      "sha256": "9ea7393dcc270db098e004d02036e41f5846052c780345caa4f7f803800388a7",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4727,6 +4747,25 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "fail_numo_routine_occurrence(uuid,uuid,text,text,text)": {
+      "sha256": "00f57071775a9d5f90624e00c2f714f161695a7e35e44778e5878df8f676881b",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "conversations",
+        "agent_routines",
+        "numo_routine_occurrences"
+      ],
+      "protectedRelations": [
+        "conversations",
+        "agent_routines",
+        "numo_routine_occurrences"
+      ],
+      "functionReferences": []
+    },
     "migrate_agent_queue_bundle(uuid,uuid,uuid,jsonb,jsonb)": {
       "sha256": "5ac035a58e559a9e63c8d5d75e534cad616126587da21f54252d9d78eb1e8bc9",
       "securityDefiner": true,
@@ -4826,7 +4865,7 @@
       "functionReferences": []
     },
     "claim_numo_tool_operation(uuid,uuid,text,text,jsonb,text)": {
-      "sha256": "ca118fb06b698c44fa9bd1fb476fbfd6d1f95d6b74679be76cbf09679abe3e32",
+      "sha256": "2bb857163074d5518a149e88b20b2e331cc54afa2219d857c53eb6d1126f4497",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -5183,23 +5222,6 @@
       ],
       "functionReferences": []
     },
-    "checkpoint_numo_turn(uuid,uuid,text,jsonb,uuid,text,text,numeric)": {
-      "sha256": "daf46bfa9e4f30a870be6cb656139b4ad8dda83336af11157b1737fdf62f3fd6",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "conversations",
-        "numo_assistant_turns"
-      ],
-      "protectedRelations": [
-        "conversations",
-        "numo_assistant_turns"
-      ],
-      "functionReferences": []
-    },
     "migrate_agent_artifact_branch(uuid,uuid,text,text,uuid,text,text)": {
       "sha256": "8bd1c7309a83cbdd602438dc07b47016b15703db0e047fb60057ee9806d69d19",
       "securityDefiner": true,
@@ -5376,6 +5398,23 @@
       ],
       "protectedRelations": [
         "user_ai_keys"
+      ],
+      "functionReferences": []
+    },
+    "checkpoint_numo_turn(uuid,uuid,text,jsonb,uuid,text,text,numeric,text)": {
+      "sha256": "1c9e3fe61f8eebfcb7e5c57e1e444d56e42ce5eaac6b864c1e41a22f5c3b5cfc",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "conversations",
+        "numo_assistant_turns"
+      ],
+      "protectedRelations": [
+        "conversations",
+        "numo_assistant_turns"
       ],
       "functionReferences": []
     },
@@ -5637,6 +5676,27 @@
       ],
       "protectedRelations": [
         "feedback_users"
+      ],
+      "functionReferences": []
+    },
+    "migrate_numo_error_bundle(uuid,uuid,uuid,text,text,text,text,text,text,text)": {
+      "sha256": "6272526ad47add66fe804da7dd445e7ff3ab61fe6461abfb08d323bddf18ef99",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "conversations",
+        "agent_routines",
+        "numo_assistant_turns",
+        "numo_routine_occurrences"
+      ],
+      "protectedRelations": [
+        "conversations",
+        "agent_routines",
+        "numo_assistant_turns",
+        "numo_routine_occurrences"
       ],
       "functionReferences": []
     },
@@ -6494,6 +6554,10 @@
       "function": "validate_comment_parent_scope()",
       "definition": "CREATE TRIGGER comments_validate_parent_scope BEFORE INSERT OR UPDATE ON comments FOR EACH ROW EXECUTE FUNCTION validate_comment_parent_scope()"
     },
+    "conversations.conversations_error_guard": {
+      "function": "guard_numo_error_message()",
+      "definition": "CREATE TRIGGER conversations_error_guard BEFORE INSERT OR UPDATE ON conversations FOR EACH ROW EXECUTE FUNCTION guard_numo_error_message()"
+    },
     "feedback_boards.feedback_sso_root_guard": {
       "function": "guard_feedback_sso_secret()",
       "definition": "CREATE TRIGGER feedback_sso_root_guard BEFORE INSERT OR UPDATE ON feedback_boards FOR EACH ROW EXECUTE FUNCTION guard_feedback_sso_secret()"
@@ -6605,6 +6669,10 @@
     "issue_events.issue_events_encryption_guard": {
       "function": "guard_history_encryption()",
       "definition": "CREATE TRIGGER issue_events_encryption_guard BEFORE INSERT OR UPDATE ON issue_events FOR EACH ROW EXECUTE FUNCTION guard_history_encryption()"
+    },
+    "numo_assistant_turns.numo_turn_error_guard": {
+      "function": "guard_numo_error_message()",
+      "definition": "CREATE TRIGGER numo_turn_error_guard BEFORE INSERT OR UPDATE ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION guard_numo_error_message()"
     },
     "page_comments.page_comments_set_updated_at": {
       "function": "set_comment_updated_at()",
@@ -6913,6 +6981,10 @@
     "agent_run_events.trg_agent_assistant_message_capture": {
       "function": "capture_agent_assistant_message()",
       "definition": "CREATE TRIGGER trg_agent_assistant_message_capture AFTER INSERT ON agent_run_events FOR EACH ROW EXECUTE FUNCTION capture_agent_assistant_message()"
+    },
+    "numo_routine_occurrences.numo_occurrence_error_guard": {
+      "function": "guard_numo_error_message()",
+      "definition": "CREATE TRIGGER numo_occurrence_error_guard BEFORE INSERT OR UPDATE ON numo_routine_occurrences FOR EACH ROW EXECUTE FUNCTION guard_numo_error_message()"
     },
     "agent_run_input_requests.agent_input_event_copy_guard": {
       "function": "guard_agent_event_copies()",

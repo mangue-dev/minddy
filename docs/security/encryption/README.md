@@ -9,7 +9,7 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 156 application tables and 1,428 columns, their primary
+- `schema.json` records 157 application tables and 1,433 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 182 encryption targets include the original content,
@@ -20,10 +20,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,492 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 389 functions, ten views and 206 triggers. Function
+- `sql-consumers.json` records 392 functions, ten views and 209 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -1527,3 +1527,24 @@ batches, validates foreign keys, reads two user-key versions with cold caches
 and rejects a wrong root. The new flag is off in production. Tool-call and
 tool-result messages, checkpoints, tool operations, errors and routine copies
 remain open; this is not a global Numo or agent boundary closure.
+
+## Durable Numo error-copy checkpoint — 25 September 2026
+
+Turn errors, conversation errors and routine occurrence failures now use
+separate user-key format-3 envelopes bound to each row. The turn checkpoint
+RPC writes its turn and conversation copies in one transaction; the routine
+failure RPC does the same for an occurrence and its conversation. The SQL
+recovery functions retain their status signals without persisting fixed clear
+error text. Invoker views project ciphertext. Authorized conversation,
+status, routine and turn readers decode after access checks. A service-only
+bounded CAS worker migrates and rotates each source with its conversation
+copy; an activation marker rejects changed clear errors and obsolete writers.
+
+The SQL regression checks all three source tables, Numo projections, stale
+CAS, old-writer refusal and RPC grants. Isolated PostgreSQL recovery restores
+child rows before their parents in separate batches, decrypts two key versions
+from cold caches and rejects a wrong root key. The global content flag and
+`MINDDY_NUMO_ERROR_ENCRYPTION_ENABLED` remain disabled in production. Tool
+messages, tool operation payloads and general turn checkpoints are still open.
+Search, latency, key-cache and load measurements remain checks before
+production activation, not blockers to review of the code PR.

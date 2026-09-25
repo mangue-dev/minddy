@@ -4,6 +4,7 @@ import { NUMO_UUID } from "@/lib/server/numo/conversations";
 import { decodeRunEvent } from "@/lib/server/agent/run-event-store";
 import { decodeWorkerEventPayload } from "@/lib/server/numo/worker-event-content";
 import { decodeNumoTurnEvent } from "@/lib/server/numo/turn-event-content";
+import { decodeNumoError } from "@/lib/server/numo/error-content";
 
 export async function GET(
   request: NextRequest,
@@ -20,7 +21,7 @@ export async function GET(
 
   const { data: conversation } = await supabase
     .from("numo_conversation_history")
-    .select("status, error_message, source")
+    .select("status, error_message, source, legacy_id")
     .eq("id", conversationId)
     .single();
 
@@ -116,7 +117,11 @@ export async function GET(
   }
   return Response.json({
     status: turn?.status ?? conversation.status,
-    error_message: turn?.error_message ?? conversation.error_message,
+    error_message: turn?.error_message
+      ? await decodeNumoError(auth.user.id, "numo_assistant_turns",
+          turn.id, turn.error_message, auth.user.id)
+      : await decodeNumoError(auth.user.id, "conversations",
+          conversation.legacy_id, conversation.error_message, auth.user.id),
     turn_id: turn?.id ?? null,
     last_event_seq: turn?.last_event_seq ?? -1,
     active_run_id: turn?.active_run_id ?? null,
