@@ -5,6 +5,7 @@ import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
+import { hydrateNumoUserMessages } from "@/lib/server/numo/user-message-content";
 import { decodeOperationJson, decodeOperationText, encodeOperationJson,
   encodeOperationText, shouldProtectAutomationOperation } from
   "@/lib/server/automations/operation-content";
@@ -427,7 +428,8 @@ async function parentTurnAttachments(ctx: ToolContext): Promise<AttachmentInput[
     .eq("turn_id", ctx.turnId)
     .eq("role", "user")
     .maybeSingle();
-  const hydrated = data ? (await hydrateWorkerParentCopies(ctx.service, [data]))[0] : null;
+  const hydrated = data ? (await hydrateWorkerParentCopies(ctx.service,
+    await hydrateNumoUserMessages(ctx.service, [data], ctx.userId)))[0] : null;
   const raw = (hydrated?.metadata as { attachments?: unknown } | null)?.attachments;
   if (!Array.isArray(raw)) return [];
   return raw.slice(0, 20).flatMap((value) => {

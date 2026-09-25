@@ -37,6 +37,7 @@ const sharedPrUrlTemplate = "minddy_min591_relay_audit_audit";
 const attachmentTemplate = "minddy_min591_attachment_metadata_audit";
 const operationTemplate = "minddy_min591_operation_audit";
 const conversationTemplate = "minddy_min591_conversation_audit";
+const userMessageTemplate = "minddy_min591_user_message_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -3825,6 +3826,116 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
           ${quote(randomUUID())},${quote(randomUUID())},
           '{"automation":{"issue":{"title":"obsolete"}}}'::jsonb);`))
         .toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
+
+  it("restores Numo user messages before turns and conversations with cold mixed keys", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_user_message_${suffix}`;
+    const restored = `minddy_min591_user_message_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const users = [randomUUID(), randomUUID()];
+    const conversations = [randomUUID(), randomUUID()];
+    const turns = [randomUUID(), randomUUID()];
+    const messages = [randomUUID(), randomUUID()];
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(userMessageTemplate, "SELECT count(*) FROM public.assistant_messages;"))
+        .toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${userMessageTemplate};`);
+        created.push(name);
+      }
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      for (const [index, userId] of users.entries()) {
+        const scope: EncryptionScope = { kind: "user", id: userId };
+        if (index) {
+          const first = await keys.current(scope);
+          first.bytes.fill(0);
+          await keys.rotate(scope, 1);
+        }
+        const payload = { content: `private-prompt-${index}`,
+          context: { title: `private-issue-${index}` },
+          metadata: { file: `private-file-${index}` },
+          tool_calls: null, tool_call_id: null, tool_name: null };
+        const cipher = await store.encrypt(payload, { scope,
+          table: "assistant_messages", column: "user_payload", rowId: messages[index] });
+        sql(source, `INSERT INTO auth.users(id) VALUES(${quote(userId)});
+          INSERT INTO public.conversations(id,user_id)
+            VALUES(${quote(conversations[index])},${quote(userId)});
+          INSERT INTO public.numo_assistant_turns(id,conversation_id,user_id,
+            request_id,run_id) VALUES(${quote(turns[index])},
+            ${quote(conversations[index])},${quote(userId)},
+            ${quote(randomUUID())},${quote(randomUUID())});
+          INSERT INTO public.assistant_messages(id,conversation_id,turn_id,
+            role,content,user_payload_version) VALUES(${quote(messages[index])},
+            ${quote(conversations[index])},${quote(turns[index])},'user',
+            ${quote(cipher)},${store.versionOf(cipher)});`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["auth.users", "public.conversations",
+          "public.numo_assistant_turns", "public.assistant_messages",
+          "public.numo_user_message_scope", "public.envelope_data_keys"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 5 * 1024 * 1024 });
+      expect(dump).not.toContain("private-prompt-");
+      expect(dump).not.toContain("private-issue-");
+      expect(dump).not.toContain("private-file-");
+      let remaining = dump;
+      for (const table of ["assistant_messages", "numo_assistant_turns"]) {
+        const pattern = new RegExp(`(COPY public\\.${table}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`);
+        const match = remaining.match(pattern);
+        expect(match).not.toBeNull();
+        for (const line of match![2].trimEnd().split("\n").reverse()) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${match![1]}${line}\n${match![3]}COMMIT;`);
+        }
+        remaining = remaining.replace(match![0], "");
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${remaining}\nCOMMIT;`);
+      for (const [table, constraint, column, parent] of [
+        ["assistant_messages", "assistant_messages_conversation_id_fkey", "conversation_id", "conversations"],
+        ["assistant_messages", "assistant_messages_turn_id_fkey", "turn_id", "numo_assistant_turns"],
+        ["numo_assistant_turns", "numo_assistant_turns_conversation_id_fkey", "conversation_id", "conversations"],
+      ]) {
+        sql(restored, `ALTER TABLE public.${table} DROP CONSTRAINT ${constraint};
+          ALTER TABLE public.${table} ADD CONSTRAINT ${constraint}
+          FOREIGN KEY(${column}) REFERENCES public.${parent}(id) NOT VALID;
+          ALTER TABLE public.${table} VALIDATE CONSTRAINT ${constraint};`);
+      }
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(root)));
+      for (const [index, messageId] of messages.entries()) {
+        const row = JSON.parse(sql(restored, `SELECT row_to_json(m) FROM
+          public.assistant_messages m WHERE id=${quote(messageId)};`));
+        expect(row.user_payload_version).toBe(index + 1);
+        expect(await cold.decrypt(cold.fromDatabase(row.content), {
+          scope: { kind: "user", id: users[index] }, table: "assistant_messages",
+          column: "user_payload", rowId: messageId }))
+          .toEqual({ content: `private-prompt-${index}`,
+            context: { title: `private-issue-${index}` },
+            metadata: { file: `private-file-${index}` },
+            tool_calls: null, tool_call_id: null, tool_name: null });
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const cipher = sql(restored, `SELECT content FROM public.assistant_messages
+        WHERE id=${quote(messages[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase(cipher), {
+        scope: { kind: "user", id: users[0] }, table: "assistant_messages",
+        column: "user_payload", rowId: messages[0] })).rejects.toThrow();
+      expect(() => sql(restored, `INSERT INTO public.assistant_messages(
+        conversation_id,role,content) VALUES(${quote(conversations[0])},
+        'user','private obsolete writer');`)).toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();

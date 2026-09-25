@@ -9,7 +9,7 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 154 application tables and 1,419 columns, their primary
+- `schema.json` records 155 application tables and 1,423 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 182 encryption targets include the original content,
@@ -23,7 +23,7 @@ in [the closure matrix](closure-matrix.md).
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 384 functions, ten views and 203 triggers. Function
+- `sql-consumers.json` records 386 functions, ten views and 204 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -1480,3 +1480,27 @@ caches and rejects a wrong root. The worker requires
 `MINDDY_NUMO_CONVERSATION_TITLE_ENCRYPTION_ENABLED=true` and the global content
 flag, both off in production. Conversation error messages, assistant messages,
 turn outcomes and checkpoints remain open; this is not a global Numo closure.
+
+## Durable Numo user-message checkpoint — 25 September 2026
+
+The ordinary and budgeted Numo admission RPCs now persist the user message
+under a predetermined message ID. The user's prompt, context and metadata are
+sealed together under a user-key format-3 envelope bound to that ID. The SQL
+transaction still admits the turn, message and conversation status atomically;
+repeated request IDs reuse the original turn and message. The `numo_messages`
+view projects only the ciphertext and cleared context/metadata. Authorized
+history, execution, attachment, account import and export paths decode after
+access checks. Worker-parent messages keep their separate project-key boundary.
+
+The activation marker rejects obsolete direct user-message inserts and clears
+after the first protected write. A service-only 30-row compare-and-swap worker
+verifies historical conversion and rotates old key versions. The ordinary and
+budgeted admission regression checks source, projection, idempotence, CAS and
+old-writer rejection. A real PostgreSQL dump/restore loads messages before
+turns, conversations and owner rows in separate transactions, validates their
+foreign keys, reads two user-key versions with cold caches and rejects a wrong
+root. `MINDDY_NUMO_USER_MESSAGE_ENCRYPTION_ENABLED` and the global content flag
+remain off in production. Assistant/tool messages, turn checkpoints, tool
+operations, outcomes and conversation errors still contain plaintext paths;
+the Numo and global boundaries remain open. Representative search, latency,
+key/cache and load measurements remain checks before production activation.

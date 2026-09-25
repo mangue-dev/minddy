@@ -40,7 +40,7 @@ BEGIN
   END;
   BEGIN
     PERFORM public.begin_numo_turn(old_conversation,actor,gen_random_uuid(),
-      gen_random_uuid(),old_intent,'test-model','low','Private prompt',
+      gen_random_uuid(),old_intent,'test-model','low',gen_random_uuid(),0,'Private prompt',
       '{}'::jsonb,'{}'::jsonb);
     RAISE EXCEPTION 'old admission RPC was accepted';
   EXCEPTION WHEN check_violation THEN

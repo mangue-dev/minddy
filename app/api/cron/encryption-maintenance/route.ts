@@ -73,6 +73,8 @@ import { backfillNumoAutomationContentBatch } from
   "@/lib/server/encryption/numo-automation-content-backfill";
 import { backfillNumoConversationTitlesBatch } from
   "@/lib/server/encryption/numo-conversation-title-backfill";
+import { backfillNumoUserMessagesBatch } from
+  "@/lib/server/encryption/numo-user-message-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -153,6 +155,8 @@ export async function GET(request: NextRequest) {
     process.env.MINDDY_NUMO_AUTOMATION_ENCRYPTION_ENABLED === "true";
   const numoConversationTitleEnabled = contentEnabled &&
     process.env.MINDDY_NUMO_CONVERSATION_TITLE_ENCRYPTION_ENABLED === "true";
+  const numoUserMessageEnabled = contentEnabled &&
+    process.env.MINDDY_NUMO_USER_MESSAGE_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -221,6 +225,7 @@ export async function GET(request: NextRequest) {
       numoTurnIntentsEnabled ? backfillNumoTurnIntentsBatch(30, request.signal) : Promise.resolve(null),
       numoAutomationEnabled ? backfillNumoAutomationContentBatch(30, request.signal) : Promise.resolve(null),
       numoConversationTitleEnabled ? backfillNumoConversationTitlesBatch(30, request.signal) : Promise.resolve(null),
+      numoUserMessageEnabled ? backfillNumoUserMessagesBatch(30, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -281,12 +286,13 @@ export async function GET(request: NextRequest) {
     const numoTurnIntents = outcomes[56];
     const numoAutomation = outcomes[57];
     const numoConversationTitles = outcomes[58];
+    const numoUserMessages = outcomes[59];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, agentChainCodes, numoTurnIntents, numoAutomation, numoConversationTitles].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, agentChainCodes, numoTurnIntents, numoAutomation, numoConversationTitles, numoUserMessages].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -378,6 +384,10 @@ export async function GET(request: NextRequest) {
         ...(numoConversationTitleEnabled ? {
           numo_conversation_titles: numoConversationTitles.status === "fulfilled"
             ? numoConversationTitles.value : { failed: true },
+        } : {}),
+        ...(numoUserMessageEnabled ? {
+          numo_user_messages: numoUserMessages.status === "fulfilled"
+            ? numoUserMessages.value : { failed: true },
         } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),

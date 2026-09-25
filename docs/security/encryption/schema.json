@@ -2436,6 +2436,11 @@
         "nullable": false,
         "generated": false
       },
+      "token_lookup": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
       "password_hash": {
         "type": "text",
         "nullable": true,
@@ -2449,11 +2454,6 @@
       "include_children": {
         "type": "boolean",
         "nullable": false,
-        "generated": false
-      },
-      "token_lookup": {
-        "type": "text",
-        "nullable": true,
         "generated": false
       },
       "content_encryption_checked_at": {
@@ -5765,6 +5765,16 @@
         "nullable": false,
         "generated": false
       },
+      "user_payload_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "user_payload_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
       "worker_content_encryption_version": {
         "type": "integer",
         "nullable": false,
@@ -7560,6 +7570,24 @@
       }
     ]
   },
+  "numo_turn_intent_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
   "project_storage_owners": {
     "columns": {
       "owner_id": {
@@ -7912,6 +7940,24 @@
       }
     ]
   },
+  "numo_user_message_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
   "user_mcp_oauth_attempts": {
     "columns": {
       "state": {
@@ -8189,6 +8235,24 @@
     "primaryKey": [
       "provider",
       "delivery_id"
+    ],
+    "foreignKeys": []
+  },
+  "numo_event_content_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
     ],
     "foreignKeys": []
   },
@@ -8490,6 +8554,37 @@
       "user_id"
     ],
     "foreignKeys": []
+  },
+  "feedback_merge_event_links": {
+    "columns": {
+      "event_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "link_kind": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "target_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "event_id",
+      "link_kind",
+      "target_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "feedback_merge_events",
+        "column": "event_id",
+        "targetColumn": "id"
+      }
+    ]
   },
   "github_issue_comment_syncs": {
     "columns": {
@@ -8843,6 +8938,24 @@
       }
     ]
   },
+  "app_config_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
   "attachment_object_encrypted": {
     "columns": {
       "path": {
@@ -9098,6 +9211,60 @@
         "targetColumn": "id"
       }
     ]
+  },
+  "feedback_sso_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "numo_automation_content_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "numo_conversation_title_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
   },
   "agent_launch_encryption_scopes": {
     "columns": {
@@ -9431,6 +9598,24 @@
     ],
     "foreignKeys": []
   },
+  "view_share_token_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
   "agent_checkpoint_encryption_scopes": {
     "columns": {
       "project_id": {
@@ -9522,6 +9707,24 @@
     "foreignKeys": []
   },
   "feedback_identity_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "forge_mention_key_encryption_scope": {
     "columns": {
       "id": {
         "type": "boolean",
@@ -9689,6 +9892,24 @@
       }
     ]
   },
+  "numo_surface_destination_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
   "github_issue_comment_url_encryption_scopes": {
     "columns": {
       "project_id": {
@@ -9713,200 +9934,7 @@
       }
     ]
   },
-  "view_share_token_encryption_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
-  },
-  "numo_surface_destination_encryption_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
-  },
-  "feedback_sso_encryption_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
-  },
-  "forge_mention_key_encryption_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
-  },
-  "numo_event_content_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
-  },
   "provider_operation_resource_encryption_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
-  },
-  "app_config_encryption_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
-  },
-  "feedback_merge_event_links": {
-    "columns": {
-      "event_id": {
-        "type": "uuid",
-        "nullable": false,
-        "generated": false
-      },
-      "link_kind": {
-        "type": "text",
-        "nullable": false,
-        "generated": false
-      },
-      "target_id": {
-        "type": "uuid",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "event_id",
-      "link_kind",
-      "target_id"
-    ],
-    "foreignKeys": [
-      {
-        "table": "feedback_merge_events",
-        "column": "event_id",
-        "targetColumn": "id"
-      }
-    ]
-  },
-  "numo_turn_intent_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
-  },
-  "numo_automation_content_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
-  },
-  "numo_conversation_title_scope": {
     "columns": {
       "id": {
         "type": "boolean",

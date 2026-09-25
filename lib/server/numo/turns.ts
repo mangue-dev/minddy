@@ -63,6 +63,8 @@ import { withoutWebSearch } from "@/lib/server/web-search";
 import { decodeWorkerEventPayload, encodeWorkerEventPayload } from "./worker-event-content";
 import { decodeNumoTurnIntent, encodeNumoTurnIntent,
   shouldProtectNumoTurnIntent } from "./turn-intent-content";
+import { encodeNumoUserMessage, hydrateNumoUserMessages,
+  shouldProtectNumoUserMessages } from "./user-message-content";
 import { encodeNumoTurnEvent,
   shouldProtectNumoTurnEvents } from "./turn-event-content";
 import type { SafeEmitter } from "@/lib/server/assistant/sse";
@@ -294,6 +296,16 @@ function workerDelegationResult(workerEvent: {
 
 export async function beginNumoTurn(input: BeginNumoTurnInput): Promise<NumoTurn> {
   const service = getServiceClient();
+  const messageId = randomUUID();
+  const protectedMessage = await shouldProtectNumoUserMessages(service)
+    ? await encodeNumoUserMessage(input.userId, messageId, {
+        content: input.content,
+        context: input.context as Record<string, unknown> | null,
+        metadata: input.metadata,
+        tool_calls: null,
+        tool_call_id: null,
+        tool_name: null,
+      }) : null;
   const intent = await shouldProtectNumoTurnIntent(service)
     ? await encodeNumoTurnIntent(input.userId, input.conversationId,
       input.requestId, input.intent as unknown as Record<string, unknown>)
@@ -306,9 +318,11 @@ export async function beginNumoTurn(input: BeginNumoTurnInput): Promise<NumoTurn
     p_intent: intent,
     p_model: input.model,
     p_reasoning_level: input.reasoningLevel,
-    p_content: input.content,
-    p_context: input.context,
-    p_metadata: input.metadata,
+    p_message_id: messageId,
+    p_user_payload_version: protectedMessage?.user_payload_version ?? 0,
+    p_content: protectedMessage?.content ?? input.content,
+    p_context: protectedMessage ? null : input.context,
+    p_metadata: protectedMessage ? {} : input.metadata,
   };
   const { data, error } = input.managedBudget
     ? await service.rpc("begin_numo_turn_with_budget", {
@@ -533,7 +547,8 @@ async function buildExecutionInput(input: {
     .limit(30);
   if (error) throw new Error(error.message);
   const recentHistory = (await hydrateWorkerParentCopies(service,
-    (data ?? []) as StoredMessage[])).reverse();
+    await hydrateNumoUserMessages(service,
+      (data ?? []) as StoredMessage[], turn.user_id))).reverse();
   // The bounded window can begin inside an older parallel tool batch. OpenAI
   // rejects a tool result without its preceding assistant call, so start at the
   // first complete message boundary instead of sending a malformed history.

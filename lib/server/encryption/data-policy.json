@@ -967,7 +967,8 @@
     "clear": {
       "encryption_metadata": [
         "worker_content_encryption_checked_at",
-        "worker_content_encryption_version"
+        "worker_content_encryption_version",
+        "user_payload_version"
       ],
       "operational_configuration": [
         "role",
@@ -980,7 +981,8 @@
         "turn_id"
       ],
       "timestamp": [
-        "created_at"
+        "created_at",
+        "user_payload_checked_at"
       ]
     }
   },
@@ -2463,6 +2465,21 @@
         "started_at",
         "updated_at",
         "worker_checkpoint_encryption_checked_at"
+      ]
+    }
+  },
+  "numo_user_message_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   },

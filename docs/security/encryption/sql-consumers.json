@@ -815,6 +815,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_numo_user_message()": {
+      "sha256": "e5d30f6bda149f28d981e78c71bbf0cb1ed14a189ca56b7d4901b49b0b56a7c1",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_user_message_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "rekey_deleted_auth_user()": {
       "sha256": "beed7d97cf2095bf777639fa615215ef9987455b99ced33fc3b6d8f67804fed3",
       "securityDefiner": true,
@@ -5307,25 +5320,6 @@
       ],
       "functionReferences": []
     },
-    "begin_numo_turn(uuid,uuid,uuid,uuid,jsonb,text,text,text,jsonb,jsonb)": {
-      "sha256": "1471599cd3594e2c82bcac58583fa6695d64f9b2691628d6a37479a67277d981",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "conversations",
-        "assistant_messages",
-        "numo_assistant_turns"
-      ],
-      "protectedRelations": [
-        "conversations",
-        "assistant_messages",
-        "numo_assistant_turns"
-      ],
-      "functionReferences": []
-    },
     "upsert_user_ai_key(uuid,text,text,text,text,timestamp with time zone)": {
       "sha256": "8e8cce4c8c4d819928764341c1f7c5de7236c8d2f674b8841e245301f59f487c",
       "securityDefiner": true,
@@ -5722,6 +5716,25 @@
       ],
       "functionReferences": []
     },
+    "begin_numo_turn(uuid,uuid,uuid,uuid,jsonb,text,text,uuid,integer,text,jsonb,jsonb)": {
+      "sha256": "4d6ad719a90e5741ae2aca1aa18bf5f1f370280614df92d767eb502ece05c074",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "conversations",
+        "assistant_messages",
+        "numo_assistant_turns"
+      ],
+      "protectedRelations": [
+        "conversations",
+        "assistant_messages",
+        "numo_assistant_turns"
+      ],
+      "functionReferences": []
+    },
     "migrate_orphan_agent_runtime_checkpoint(uuid,uuid,jsonb,text,integer,text,integer)": {
       "sha256": "e37c895076e4af746833cf86ab9b7e8ec140f56acaa07e6e6e43dc79b53015fb",
       "securityDefiner": true,
@@ -5798,6 +5811,21 @@
       ],
       "protectedRelations": [
         "agent_conversations"
+      ],
+      "functionReferences": []
+    },
+    "migrate_numo_user_message(uuid,text,jsonb,jsonb,jsonb,text,text,integer,text,integer)": {
+      "sha256": "413447e51f8dd244d894868d26d7047dd1705593a84f2d9f428a48a82f9e2508",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "assistant_messages"
+      ],
+      "protectedRelations": [
+        "assistant_messages"
       ],
       "functionReferences": []
     },
@@ -5982,28 +6010,6 @@
       ],
       "functionReferences": []
     },
-    "begin_numo_turn_with_budget(uuid,uuid,uuid,uuid,jsonb,text,text,text,jsonb,jsonb,timestamp with time zone,numeric,numeric)": {
-      "sha256": "29169bbeab8b08d8092c38d9b4495c05938d35e2b62d099f977b8591a8ee8613",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "ai_usage",
-        "agent_runs",
-        "conversations",
-        "assistant_messages",
-        "numo_assistant_turns"
-      ],
-      "protectedRelations": [
-        "agent_runs",
-        "conversations",
-        "assistant_messages",
-        "numo_assistant_turns"
-      ],
-      "functionReferences": []
-    },
     "issue_feedback_otp_code(uuid,uuid,text,text,text,timestamp with time zone,timestamp with time zone,integer,integer,integer,integer)": {
       "sha256": "afcc71d03de5ff82b536b21705921b83ac1d2b43ec5e99faaba66f7e431e9ee8",
       "securityDefiner": true,
@@ -6071,6 +6077,28 @@
         "agent_worker_answer_part",
         "resume_latest_agent_run_with_message"
       ]
+    },
+    "begin_numo_turn_with_budget(uuid,uuid,uuid,uuid,jsonb,text,text,uuid,integer,text,jsonb,jsonb,timestamp with time zone,numeric,numeric)": {
+      "sha256": "d1fa52e61d39187bd0285ec6d87cad1b03784aab1bfa82a4ce27137b8786bb55",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "ai_usage",
+        "agent_runs",
+        "conversations",
+        "assistant_messages",
+        "numo_assistant_turns"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "conversations",
+        "assistant_messages",
+        "numo_assistant_turns"
+      ],
+      "functionReferences": []
     },
     "issue_feedback_otp_code_protected(uuid,uuid,text,text,text,text,text,timestamp with time zone,timestamp with time zone,integer,integer,integer,integer)": {
       "sha256": "92a90650e71f57035bee22382b0f3eb04b732c9908e8ef7dad843d933df99f38",
@@ -6522,6 +6550,10 @@
     "agent_runs.trg_agent_run_sync_conversation": {
       "function": "sync_agent_run_conversation()",
       "definition": "CREATE TRIGGER trg_agent_run_sync_conversation AFTER INSERT OR UPDATE OF title, title_ciphertext, title_encryption_version, issue_id, pull_request_id, status, completed_at ON agent_runs FOR EACH ROW EXECUTE FUNCTION sync_agent_run_conversation()"
+    },
+    "assistant_messages.numo_user_message_guard": {
+      "function": "guard_numo_user_message()",
+      "definition": "CREATE TRIGGER numo_user_message_guard BEFORE INSERT OR UPDATE ON assistant_messages FOR EACH ROW EXECUTE FUNCTION guard_numo_user_message()"
     },
     "conversations.conversations_set_updated_at": {
       "function": "set_updated_at()",

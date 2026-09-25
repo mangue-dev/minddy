@@ -3,6 +3,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { NUMO_UUID } from "@/lib/server/numo/conversations";
 import { publicSkillsMetadata } from "@/lib/server/assistant/skills";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
+import { hydrateNumoUserMessages } from "@/lib/server/numo/user-message-content";
 
 export async function GET(
   request: NextRequest,
@@ -45,7 +46,8 @@ export async function GET(
     return Response.json({ error: error.message }, { status: 500 });
   }
 
-  const hydrated = await hydrateWorkerParentCopies(supabase, data ?? [], auth.user.id);
+  const hydrated = await hydrateWorkerParentCopies(supabase,
+    await hydrateNumoUserMessages(supabase, data ?? [], auth.user.id), auth.user.id);
   return Response.json(
     hydrated.map((message) => ({
       ...message,

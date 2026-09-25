@@ -151,5 +151,6 @@
   "20270107540000_numo_turn_intent_encryption.sql": "6f32f602ccc3bd7fa91335d1a954e99c831a0daa0c5bca79be882d1893c944cc",
   "20270107550000_numo_automation_operation_encryption.sql": "6ae91af8865eede5991fcb7689f5dd2cf5a9ea6125e4d82a919f33f92491c28c",
   "20270107560000_numo_agent_title_patch.sql": "4de615faa2a3467efb18870ad2d3eebe95c6313633aac5589637444e42dc27a3",
-  "20270107570000_numo_conversation_title_encryption.sql": "62df3cc933d756e3d9867124505dae26248612ebe5ef334bd928ca71ab6aa9c7"
+  "20270107570000_numo_conversation_title_encryption.sql": "62df3cc933d756e3d9867124505dae26248612ebe5ef334bd928ca71ab6aa9c7",
+  "20270107620000_numo_user_message_encryption.sql": "cd67b74377bad3f7492ab272c38df86d0f2dc7e2af122ab6a4c0c527ff496102"
 }
