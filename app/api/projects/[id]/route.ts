@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { updateProjectSettings } from "@/lib/server/update-project";
 import { softDeleteItem } from "@/lib/server/trash";
+import { decodeProject } from "@/lib/server/project-content";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!data) {
     return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
-  return NextResponse.json(data);
+  return NextResponse.json(await decodeProject(data, auth.user.id));
 }
 
 /** PATCH /api/projects/[id] — owner-only update of name / key / color. */

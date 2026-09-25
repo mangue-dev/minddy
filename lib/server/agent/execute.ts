@@ -5,6 +5,7 @@ import { resolveAgentExecutionBackend } from "@/lib/capabilities";
 import { workerModelSurfaceForAgentRun } from "@/lib/ai-surfaces";
 import { getUserSandboxPreferences } from "./sandbox-preferences";
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeProjectName } from "@/lib/server/project-content";
 import { issueStore } from "@/lib/server/issue-store";
 import { joinedPage } from "@/lib/server/resource-select";
 import { recordSandboxUsage } from "@/lib/server/usage";
@@ -286,7 +287,7 @@ async function loadIssueContext(
         .maybeSingle(),
       service
         .from("projects")
-        .select("key, name")
+        .select("id, key, name, encrypted_content, encryption_version")
         .eq("id", run.project_id)
         .maybeSingle(),
       includePromptContext
@@ -309,7 +310,7 @@ async function loadIssueContext(
     description:
       (issue as { description?: string | null } | null)?.description ?? null,
     plan: (issue as { plan?: string | null } | null)?.plan ?? null,
-    projectName: (project as { name?: string } | null)?.name ?? null,
+    projectName: project ? await decodeProjectName(project) : null,
     projectKey: key,
     resources: (
       decodedAttachmentRows as Array<{
@@ -355,12 +356,12 @@ async function loadProjectContext(
   const service = getServiceClient();
   const { data } = await service
     .from("projects")
-    .select("key, name")
+    .select("id, key, name, encrypted_content, encryption_version")
     .eq("id", projectId)
     .maybeSingle();
   return {
     key: (data as { key?: string } | null)?.key ?? "PROJECT",
-    name: (data as { name?: string } | null)?.name ?? null,
+    name: data ? await decodeProjectName(data) : null,
   };
 }
 

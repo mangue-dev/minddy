@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeProject } from "@/lib/server/project-content";
 import type { Project } from "@/lib/types";
 
 export interface ProjectAccess {
@@ -70,8 +71,15 @@ export async function getProjectAccess(
 
   if (!project) return null;
 
+  const readable = async () =>
+    project.encryption_version !== undefined ||
+      project.automations !== undefined &&
+      project.smart_assign_rules !== undefined
+      ? await decodeProject(project, userId) as unknown as Project
+      : project as Project;
+
   if (project.owner_id === userId) {
-    return { project: project as Project, isOwner: true, isMember: true };
+    return { project: await readable(), isOwner: true, isMember: true };
   }
 
   const { data: membership } = await supabase
@@ -83,5 +91,5 @@ export async function getProjectAccess(
 
   if (!membership) return null;
 
-  return { project: project as Project, isOwner: false, isMember: true };
+  return { project: await readable(), isOwner: false, isMember: true };
 }

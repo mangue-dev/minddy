@@ -5,6 +5,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { displayName } from "@/lib/display-name";
+import { decodeProjectName } from "@/lib/server/project-content";
 import { claimPendingInvitationsLate } from "@/lib/server/members";
 import type { MyInvitation } from "@/lib/types";
 import {
@@ -59,14 +60,17 @@ export async function GET(request: NextRequest) {
   const inviterIds = [...new Set(invites.map((i) => i.invited_by as string))];
 
   const [{ data: projects }, invitersById, seeds] = await Promise.all([
-    service.from("projects").select("id, name, key").in("id", projectIds),
+    service.from("projects")
+      .select("id, name, key, encrypted_content, encryption_version")
+      .in("id", projectIds),
     fetchAuthUsersById(service, inviterIds),
     // The inbox shows the portrait of who is inviting: a name alone does not say
     // much about someone we have not joined yet.
     fetchAvatarSeeds(service, inviterIds),
   ]);
 
-  const projectMap = new Map((projects ?? []).map((p) => [p.id as string, p]));
+  const projectMap = new Map(await Promise.all((projects ?? []).map(async (p) =>
+    [p.id as string, { ...p, name: await decodeProjectName(p, auth.user.id) }] as const)));
 
   const result: MyInvitation[] = invites.map((i) => {
     const project = projectMap.get(i.project_id as string);

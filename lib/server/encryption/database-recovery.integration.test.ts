@@ -48,6 +48,7 @@ const projectIconTemplate = "minddy_min591_icon_audit";
 const viewContentTemplate = "minddy_min591_view_audit";
 const bookmarkTemplate = "minddy_min591_bookmark_audit";
 const routineContentTemplate = "minddy_min591_routine_audit";
+const projectContentTemplate = "minddy_min591_project_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -5198,6 +5199,112 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
         actorId:actor,reason:"migration_verification" })).rejects.toThrow();
       expect(() => sql(restored,`UPDATE public.agent_routines
         SET prompt='old writer' WHERE id=${quote(ids[0])};`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for(const database of created.reverse()) {
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+      }
+    }
+  },60_000);
+
+  it("restores sealed projects after their member rows with independent key versions",async () => {
+    const suffix=randomUUID().replaceAll("-","").slice(0,20);
+    const source=`minddy_min591_project_source_${suffix}`;
+    const restored=`minddy_min591_project_restore_${suffix}`;
+    const created:string[]=[];
+    const root=randomBytes(32),actor=randomUUID(),member=randomUUID();
+    const ids=[randomUUID(),randomUUID()];
+    const names=["Private project alpha","Private project beta"];
+    const scopes=ids.map((id):EncryptionScope=>({ kind:"project",id }));
+    const log=vi.spyOn(console,"info").mockImplementation(() => {});
+    try {
+      expect(sql(projectContentTemplate,"SELECT count(*) FROM auth.users;"))
+        .toBe("0");
+      for(const database of [source,restored]) {
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${projectContentTemplate};`);
+        created.push(database);
+      }
+      sql(source,`INSERT INTO auth.users(id) VALUES(${quote(actor)}),(${quote(member)});`);
+      const keys=new ManagedDataKeys(registry(source),wrapper(root));
+      const codec=new EncryptedRowCodec(new EncryptedStore(keys));
+      const current=await keys.current(scopes[1]);
+      current.bytes.fill(0);
+      await keys.rotate(scopes[1],1);
+      for(const [index,id] of ids.entries()) {
+        const sealed=await codec.encode({ id,owner_id:actor,
+          name:names[index],automations:[{ prompt:`private rule ${index}` }],
+          smart_assign_rules:{ [member]:`private skill ${index}` },
+          encrypted_content:null,encryption_version:0 },{
+            table:"projects",scope:scopes[index] });
+        sql(source,`INSERT INTO public.projects(id,owner_id,name,key,
+          automations,smart_assign_rules,encrypted_content,encryption_version)
+          VALUES(${quote(id)},${quote(actor)},NULL,'P${index}',NULL,NULL,
+            ${quote(sealed.encrypted_content as string)},${sealed.encryption_version});
+          INSERT INTO public.project_members(project_id,user_id)
+            VALUES(${quote(id)},${quote(member)});`);
+      }
+      expect(sql(source,"SELECT public.activate_project_content();")).toBe("f");
+      sql(source,"INSERT INTO public.project_icon_encryption_scope(id) VALUES(true);");
+      expect(sql(source,"SELECT public.activate_project_content();")).toBe("t");
+      const dump=execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges",...["auth.users","public.projects",
+          "public.project_members","public.project_icon_encryption_scope",
+          "public.project_content_encryption_scope",
+          "public.envelope_data_keys"].map((table)=>`--table=${table}`)],
+      { encoding:"utf8",maxBuffer:4*1024*1024 });
+      for(const secret of [...names,"private rule","private skill"]) {
+        expect(dump).not.toContain(secret);
+      }
+      let remainder=dump;
+      const copies=new Map<string,{ header:string; lines:string[]; end:string }>();
+      for(const table of ["project_members","projects"]) {
+        const start=remainder.indexOf(`COPY public.${table} `);
+        expect(start).toBeGreaterThanOrEqual(0);
+        const bodyStart=remainder.indexOf("\n",start)+1;
+        const bodyEnd=remainder.indexOf("\\.\n",bodyStart);
+        expect(bodyEnd).toBeGreaterThan(bodyStart);
+        copies.set(table,{ header:remainder.slice(start,bodyStart),
+          lines:remainder.slice(bodyStart,bodyEnd).trimEnd().split("\n"),
+          end:"\\.\n" });
+        remainder=remainder.slice(0,start)+remainder.slice(bodyEnd+3);
+      }
+      for(const table of ["project_members","projects"]) {
+        const copy=copies.get(table)!;
+        for(const line of copy.lines.reverse()) {
+          sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;\n${copy.header}${line}\n${copy.end}COMMIT;`);
+        }
+      }
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;\n${remainder}\nCOMMIT;`);
+      expect(sql(restored,`SELECT count(*) FROM public.project_members m
+        JOIN public.projects p ON p.id=m.project_id
+        JOIN auth.users u ON u.id=m.user_id;`)).toBe("2");
+      const cold=new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored),wrapper(root))));
+      for(const [index,id] of ids.entries()) {
+        const row=JSON.parse(sql(restored,`SELECT row_to_json(p)
+          FROM public.projects p WHERE id=${quote(id)};`));
+        expect(row.encryption_version).toBe(index+1);
+        expect(row.name).toBeNull();
+        expect(row.automations).toBeNull();
+        expect(row.smart_assign_rules).toBeNull();
+        const plain=await cold.decode(row,{ table:"projects",scope:scopes[index] },{
+          actorId:actor,reason:"migration_verification" });
+        expect(plain.name).toBe(names[index]);
+        expect(plain.automations).toEqual([{ prompt:`private rule ${index}` }]);
+      }
+      const wrong=new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored),wrapper(randomBytes(32)))));
+      const row=JSON.parse(sql(restored,`SELECT row_to_json(p)
+        FROM public.projects p WHERE id=${quote(ids[0])};`));
+      await expect(wrong.decode(row,{ table:"projects",scope:scopes[0] },{
+        actorId:actor,reason:"migration_verification" })).rejects.toThrow();
+      expect(() => sql(restored,`UPDATE public.projects SET name='old writer'
+        WHERE id=${quote(ids[0])};`)).toThrow();
+      expect(() => sql(restored,`INSERT INTO public.projects(id,owner_id,name,key)
+        VALUES(${quote(randomUUID())},${quote(actor)},'old writer','OLD');`)).toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();

@@ -6,6 +6,7 @@ import { decodeAgentTitle } from "@/lib/server/agent/run-title-content";
 import { decodeAgentPrUrl } from "@/lib/server/agent/run-pr-url-content";
 import { decodePullRequestUrlRow } from "@/lib/server/agent/pull-request-url-content";
 import { decodePullRequestContentRow } from "@/lib/server/agent/pull-request-content";
+import { decodeProjectName } from "@/lib/server/project-content";
 import type { AssistantMention } from "@/lib/assistant-types";
 
 /**
@@ -67,6 +68,8 @@ interface RunRow {
     id: string;
     key: string;
     name: string;
+    encrypted_content?: string | null;
+    encryption_version?: number;
     icon_url: string | null;
     orb_seed: string | null;
     /** Read to DISCARD sessions from a project to the trash — never returned. */
@@ -142,7 +145,7 @@ export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  const baseColumns = "id, project_id, conversation_id, parent_numo_turn_id, issue_id, pull_request_id, status, model, triggered_by, prompt, prompt_mentions, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, conversation:agent_conversations(title, visibility), issue:issues(id, number), project:projects(id, key, name, icon_url, orb_seed, deleted_at), pull_request:pull_requests(id, number, title, url)";
+  const baseColumns = "id, project_id, conversation_id, parent_numo_turn_id, issue_id, pull_request_id, status, model, triggered_by, prompt, prompt_mentions, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, conversation:agent_conversations(title, visibility), issue:issues(id, number), project:projects(id, key, name, encrypted_content, encryption_version, icon_url, orb_seed, deleted_at), pull_request:pull_requests(id, number, title, url)";
   const readRuns = (columns: string) => auth.supabase
     .from("agent_runs")
     .select(columns)
@@ -203,6 +206,8 @@ export async function GET(request: NextRequest) {
           project_id: run.project_id }, auth.user.id)
       : null;
     return { ...run, conversation,
+      project: run.project ? { ...run.project,
+        name: await decodeProjectName(run.project, auth.user.id) } : null,
       pull_request: run.pull_request
         ? await decodePullRequestContentRow(
             await decodePullRequestUrlRow(run.pull_request, auth.user.id),

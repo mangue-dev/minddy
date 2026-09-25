@@ -3277,6 +3277,21 @@
       ]
     }
   },
+  "project_content_encryption_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "project-content"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "project_drafts": {
     "scope": {
       "kind": "user",
@@ -3471,7 +3486,6 @@
     },
     "encrypted": [
       "automations",
-      "icon_url",
       "name",
       "smart_assign_rules"
     ],
@@ -3482,7 +3496,8 @@
         "feedback_review_enabled",
         "feedback_review_skip_over_budget",
         "feedback_translate_enabled",
-        "smart_assign_enabled"
+        "smart_assign_enabled",
+        "content_revision"
       ],
       "operational_configuration": [
         "color",
@@ -3494,6 +3509,7 @@
       "routing_identity": [
         "deleted_by",
         "icon_storage_path",
+        "icon_url",
         "id",
         "issue_seq",
         "key",
@@ -3502,8 +3518,13 @@
       "timestamp": [
         "created_at",
         "deleted_at",
+        "encryption_checked_at",
         "icon_checked_at",
         "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
       ]
     }
   },

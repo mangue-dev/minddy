@@ -7,6 +7,7 @@ import {
   hashIntegrationKey,
 } from "@/lib/server/integration-key";
 import { afterOrNow } from "@/lib/server/after-safe";
+import { decodeProjectName } from "@/lib/server/project-content";
 
 /**
  * Integration key authentication for public API (/api/v1/…,
@@ -75,7 +76,7 @@ export async function authenticateIntegrationKey(
 
   const { data: project } = await service
     .from("projects")
-    .select("id, name, key")
+    .select("id, name, key, encrypted_content, encryption_version")
     .eq("id", integration.project_id)
     .is("deleted_at", null)
     .maybeSingle();
@@ -92,7 +93,8 @@ export async function authenticateIntegrationKey(
     if (error) console.error("[integration-auth] last_used_at:", error.message);
   });
 
-  return { ok: true, integration: integration as AuthedIntegration, project };
+  return { ok: true, integration: integration as AuthedIntegration,
+    project: { ...project, name: await decodeProjectName(project) } };
 }
 
 /** Usage guard: an issues key does not leave feedback and vice versa.

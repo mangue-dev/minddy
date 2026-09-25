@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import type { McpServer } from "@modelcontextprotocol/server";
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeProjectName } from "@/lib/server/project-content";
 import {
   getIssue,
   listIssues,
@@ -914,7 +915,7 @@ export function registerMinddyTools(
       const memberIds = (memberships ?? []).map((m) => m.project_id as string);
       let query = service
         .from("projects")
-        .select("id, name, key, owner_id")
+        .select("id, name, key, owner_id, encrypted_content, encryption_version")
         .is("deleted_at", null)
         .order("created_at", { ascending: true });
       query = memberIds.length
@@ -925,12 +926,12 @@ export function registerMinddyTools(
       if (error) return fail("database_error", error.message);
 
       return ok({
-        projects: (data ?? []).map((p) => ({
+        projects: await Promise.all((data ?? []).map(async (p) => ({
           id: p.id,
-          name: p.name,
+          name: await decodeProjectName(p, auth.userId),
           key: p.key,
           role: p.owner_id === auth.userId ? "owner" : "member",
-        })),
+        }))),
       });
     },
   );

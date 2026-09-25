@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeProjectName } from "@/lib/server/project-content";
 import { isRepoProviderId, type RepoProviderId } from "@/lib/repo-providers";
 import { forgeFor } from "./forge";
 import { issueRefFromPr, parseIssueRef } from "./pr-ingest-core";
@@ -851,7 +852,7 @@ export async function listVisibleRepos(
   const { data } = await supabase
     .from("project_git_links")
     .select(
-      "provider, repo_full_name, project:projects(id, key, name, icon_url, orb_seed, deleted_at)",
+      "provider, repo_full_name, project:projects(id, key, name, encrypted_content, encryption_version, icon_url, orb_seed, deleted_at)",
     );
   const rows = (
     (data ?? []) as unknown as Array<{
@@ -875,7 +876,7 @@ export async function listVisibleRepos(
   return Promise.all(rows.map(async (r) => ({
       provider: r.provider as RepoProviderId,
       repoFullName: (await decodeRepositoryName(r.provider,r.repo_full_name))!,
-      project: r.project as VisibleRepo["project"],
+      project: { ...r.project!, name: await decodeProjectName(r.project!) } as VisibleRepo["project"],
     })));
 }
 

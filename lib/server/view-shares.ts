@@ -8,6 +8,7 @@ import {
 } from "@/lib/server/custom-domains";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { publicProjectIconRoute } from "@/lib/server/project-icon-content";
+import { decodeProjectName } from "@/lib/server/project-content";
 import { decodeView } from "@/lib/server/view-content";
 import { authenticationProof } from "@/lib/server/encryption/auth-proof";
 import { decodeShareToken, encodeShareToken, shareTokenLookup,
@@ -449,11 +450,14 @@ async function livePublicProject(
 ): Promise<PublicShareProject | null> {
   const { data } = await getServiceClient()
     .from("projects")
-    .select("id, key, name, owner_id, icon_url, orb_seed")
+    .select("id, key, name, owner_id, icon_url, orb_seed, encrypted_content, encryption_version")
     .eq("id", projectId)
     .is("deleted_at", null)
     .maybeSingle();
-  return (data as PublicShareProject | null) ?? null;
+  if (!data) return null;
+  return { id: data.id, key: data.key, owner_id: data.owner_id,
+    icon_url: data.icon_url, orb_seed: data.orb_seed,
+    name: await decodeProjectName(data) };
 }
 
 /* ── The PAGE as a target (MIN-283) ──────────────────── ───────────────────── */

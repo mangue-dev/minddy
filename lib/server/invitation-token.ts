@@ -3,6 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
+import { decodeProjectName } from "@/lib/server/project-content";
 import type { InvitationPreview } from "@/lib/types";
 import {
   decryptInvitationEmail,
@@ -39,7 +40,7 @@ export async function resolveInvitationToken(
   const lookup = (storedToken: string, encrypted: boolean) => {
     const query = service
       .from("project_invitations")
-      .select("id, project_id, invited_email, invited_email_ciphertext, invited_email_blind_index, encryption_version, invited_by, expires_at, projects(name)")
+      .select("id, project_id, invited_email, invited_email_ciphertext, invited_email_blind_index, encryption_version, invited_by, expires_at, projects(id, name, encrypted_content, encryption_version)")
       .eq("token", storedToken)
       .eq("status", "pending");
     return encrypted
@@ -50,7 +51,7 @@ export async function resolveInvitationToken(
   const legacyLookup = async () => {
     const legacy = await service
       .from("project_invitations")
-      .select("id, project_id, invited_email, invited_by, expires_at, projects(name)")
+      .select("id, project_id, invited_email, invited_by, expires_at, projects(id, name, encrypted_content, encryption_version)")
       .eq("token", normalized)
       .eq("status", "pending")
       .maybeSingle();
@@ -80,12 +81,15 @@ export async function resolveInvitationToken(
   // PostgREST makes the embed to-one as an object, but the generic typing of the
   // client sometimes gives it in a table — we accept both.
   const projectEmbed = data.projects as
-    | { name?: string }
-    | Array<{ name?: string }>
+    | { id?: string; name?: string | null; encrypted_content?: string | null;
+        encryption_version?: number }
+    | Array<{ id?: string; name?: string | null;
+        encrypted_content?: string | null; encryption_version?: number }>
     | null;
   const project = Array.isArray(projectEmbed) ? projectEmbed[0] : projectEmbed;
   // Without the project name, the banner would not say anything: we do not display one.
-  if (!project?.name) return null;
+  if (!project) return null;
+  const projectName = await decodeProjectName(project);
 
   let invitedEmail: string;
   try {
@@ -99,7 +103,7 @@ export async function resolveInvitationToken(
   }
 
   return {
-    projectName: project.name,
+    projectName,
     inviterName: displayName(toNamed(inviters.get(inviterId)), ""),
     invitedEmail,
   };

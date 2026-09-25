@@ -18,6 +18,7 @@ import { storeProjectIcon } from "@/lib/server/project-icon";
 import { encodeView } from "@/lib/server/view-content";
 import { createSavedView } from "@/lib/server/saved-views";
 import { encodeRoutine } from "@/lib/server/routine-content";
+import { decodeProject, encodeProject } from "@/lib/server/project-content";
 import { encodeAttachmentValue, shouldEncryptAttachmentMetadata } from
   "@/lib/server/attachment-content";
 
@@ -461,7 +462,7 @@ async function importProjects(
   const sourceIds = document.owned_projects
     .map((row) => uuidValue(row, "id"))
     .filter((id): id is string => id !== null);
-  const existing = await existingById(service, "projects", sourceIds, "id, owner_id, key");
+  const existing = await existingById(service, "projects", sourceIds, "*");
   const usedKeys = new Set<string>();
   const { data: owned } = await service.from("projects").select("key").eq("owner_id", userId);
   for (const row of (owned ?? []) as TransferRow[]) {
@@ -485,7 +486,10 @@ async function importProjects(
       warnings.push(`Project ${sourceKey ?? sourceId} received a new ID because the original is already in use.`);
     }
     if (sourceId) projectIds.set(sourceId, targetId);
-    rows.push({
+    const old = existingRow && existingRow.owner_id === userId
+      ? await decodeProject(existingRow) : null;
+    const candidate = {
+      ...old,
       ...pick(source, [
         "name",
         "color",
@@ -508,7 +512,12 @@ async function importProjects(
       id: targetId,
       owner_id: userId,
       key: await freeProjectKey(service, sourceKey ?? `IMP${rows.length + 1}`, userId, usedKeys),
-    });
+      name: source.name ?? old?.name,
+      automations: source.automations ?? old?.automations ?? [],
+      smart_assign_rules: source.smart_assign_rules ?? old?.smart_assign_rules ?? {},
+      encryption_version: existingRow?.encryption_version ?? 0,
+    };
+    rows.push(await encodeProject(candidate, { service }));
   }
   await upsertRows(service, "projects", rows);
   for (const source of document.owned_projects) {

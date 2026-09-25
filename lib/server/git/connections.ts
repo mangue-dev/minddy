@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeProjectName } from "@/lib/server/project-content";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { GitConnection } from "@/lib/types";
 import { encryptForgeToken } from "./token-crypto";
@@ -63,7 +64,7 @@ export async function listUserConnections(
   // Projects linked by connection (for disconnection warning).
   const { data: links, error: linksError } = await supabase
     .from("project_git_links")
-    .select("connection_id, projects(id, name)")
+    .select("connection_id, projects(id, name, encrypted_content, encryption_version)")
     .in(
       "connection_id",
       rows.map((r) => r.id),
@@ -77,11 +78,13 @@ export async function listUserConnections(
   // it's an object (FK many-to-one). We cast via unknown to reflect the runtime.
   for (const link of (links ?? []) as unknown as Array<{
     connection_id: string;
-    projects: { id: string; name: string } | null;
+    projects: { id: string; name: string | null;
+      encrypted_content?: string | null; encryption_version?: number } | null;
   }>) {
     if (!link.projects) continue;
     const list = byConnection.get(link.connection_id) ?? [];
-    list.push({ id: link.projects.id, name: link.projects.name });
+    list.push({ id: link.projects.id,
+      name: await decodeProjectName(link.projects, userId) });
     byConnection.set(link.connection_id, list);
   }
 

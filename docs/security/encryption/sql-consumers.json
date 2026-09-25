@@ -430,6 +430,22 @@
       ],
       "functionReferences": []
     },
+    "guard_project_content()": {
+      "sha256": "60aeabc2e0922f746793146f2d57a74a34d9b573392ac218ddbca20f53cb33fa",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "projects",
+        "project_content_encryption_scope"
+      ],
+      "protectedRelations": [
+        "projects"
+      ],
+      "functionReferences": []
+    },
     "is_project_member(uuid)": {
       "sha256": "744b0e224a9eb37e71200f371c45eb881d54a7bcdfe022b423f1a63d93a81a6c",
       "securityDefiner": true,
@@ -908,6 +924,23 @@
       "functionReferences": [
         "rotate_user_realtime_generation"
       ]
+    },
+    "activate_project_content()": {
+      "sha256": "0415abfb958a4579fcc6c8838ba486e0f926cc41000c7979ddb0177d717886e5",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "projects",
+        "project_icon_encryption_scope",
+        "project_content_encryption_scope"
+      ],
+      "protectedRelations": [
+        "projects"
+      ],
+      "functionReferences": []
     },
     "broadcast_feedback_child()": {
       "sha256": "35dae12680d64d30dd346b0ef36d560a5c0f7fcacca2cd1cd4370c25cf0f9ee6",
@@ -4337,7 +4370,7 @@
       "functionReferences": []
     },
     "get_user_stats(text,timestamp with time zone)": {
-      "sha256": "1b76b4b49210e28e4845fe6ac9c1ce6259d0fbecd36f03597937bfc53a14cfbd",
+      "sha256": "173f73a14ddc276554ce846f18828b3e29df2cf92c4259f3925b76c611d6fec0",
       "securityDefiner": false,
       "configuration": [
         "search_path=public"
@@ -5986,19 +6019,16 @@
       ]
     },
     "get_user_usage_history(uuid,timestamp with time zone,text[],integer,integer)": {
-      "sha256": "9af6a2f2a5e4562d78557c288c2abaef8e7d068dff3d39a45abd4aec2d765be9",
+      "sha256": "a0ee9dc035dd6eeb72afa8442288607ace2dc70bc2295d485e9e8dc3e6a7dedc",
       "securityDefiner": true,
       "configuration": [
         "search_path=public"
       ],
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
-        "ai_usage",
-        "projects"
+        "ai_usage"
       ],
-      "protectedRelations": [
-        "projects"
-      ],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "migrate_agent_launch_ciphertext(uuid,uuid,uuid,integer,text,integer,boolean)": {
@@ -6809,6 +6839,10 @@
     "issues.issues_encryption_guard": {
       "function": "guard_issue_encryption()",
       "definition": "CREATE TRIGGER issues_encryption_guard BEFORE INSERT OR UPDATE ON issues FOR EACH ROW EXECUTE FUNCTION guard_issue_encryption()"
+    },
+    "projects.project_content_guard": {
+      "function": "guard_project_content()",
+      "definition": "CREATE TRIGGER project_content_guard BEFORE INSERT OR UPDATE ON projects FOR EACH ROW EXECUTE FUNCTION guard_project_content()"
     },
     "categories.categories_broadcast": {
       "function": "broadcast_category_metadata()",

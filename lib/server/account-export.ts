@@ -15,6 +15,7 @@ import { downloadProjectIcon } from "@/lib/server/project-icon";
 import { decodeView } from "@/lib/server/view-content";
 import { decodeSavedView } from "@/lib/server/saved-view-bookmark";
 import { decodeRoutine } from "@/lib/server/routine-content";
+import { decodeProject } from "@/lib/server/project-content";
 import { downloadAttachment } from "@/lib/server/attachments";
 import { decodeAttachmentRow, type AttachmentTable } from
   "@/lib/server/attachment-content";
@@ -200,14 +201,24 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
 
   // Owned projects — the export gives the entire content, since their
   // suppression suivra celle du compte.
-  const ownedProjects = list(
+  const ownedProjectRows = list(
     "projects",
     await service
       .from("projects")
-      .select("id, name, key, color, created_at, updated_at, deleted_at")
+      .select("*")
       .eq("owner_id", userId)
       .order("created_at")
   );
+  const projectFields = ["id", "name", "key", "color", "created_at",
+    "updated_at", "deleted_at", "smart_assign_enabled", "smart_assign_rules",
+    "auto_assign_enabled", "feedback_review_enabled",
+    "feedback_review_skip_over_budget", "automations_enabled", "automations",
+    "feedback_translate_enabled", "feedback_team_language",
+    "feedback_no_translate_languages", "orb_seed"];
+  const ownedProjects = await Promise.all(ownedProjectRows.map(async (row) => {
+    const plain = await decodeProject(row, userId);
+    return Object.fromEntries(projectFields.map((field) => [field, plain[field]]));
+  }));
   const exportedProjects = await includeProjectIcons(service, ownedProjects);
   const ownedIds = exportedProjects.map((p) => p.id as string);
   const membershipsResult = await service.from("project_members")

@@ -86,6 +86,7 @@ const DB = {
     name: "minddy",
     owner_id: "user-owner",
     smart_assign_enabled: true,
+    automations: [],
     smart_assign_rules: { "user-dev": "All things backend" } as Record<string, string>,
   },
   issue: {

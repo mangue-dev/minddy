@@ -2,6 +2,7 @@ import "server-only";
 
 import { after } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeProjectName } from "@/lib/server/project-content";
 import {
   isEffort,
   isPriority,
@@ -274,7 +275,7 @@ export async function updateIssueFields({
   // did getProjectAccess (the project is already loaded by this join).
   const { data: before } = await service
     .from("issues")
-    .select("*, projects(name, owner_id, deleted_at)")
+    .select("*, projects(id, name, owner_id, deleted_at, encrypted_content, encryption_version)")
     // A trashed ticket cannot be edited: it is first restored (MIN-133).
     .is("deleted_at", null)
     .eq("id", issueId)
@@ -291,9 +292,12 @@ export async function updateIssueFields({
     };
   }
   const beforeProject = before.projects as {
+    id?: string;
     name?: string | null;
     owner_id?: string;
     deleted_at?: string | null;
+    encrypted_content?: string | null;
+    encryption_version?: number;
   } | null;
   // Access = living project AND (owner OR member). Same rule as
   // getProjectAccess/can_access_project; RLS invisibility becomes a 404.
@@ -310,6 +314,8 @@ export async function updateIssueFields({
   if (!hasAccess) {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
   }
+  const projectName = beforeProject
+    ? await decodeProjectName(beforeProject, actorId) : null;
   const previousEncryptionVersion = (before.encryption_version as number | undefined) ?? 0;
   try {
     Object.assign(before, await decodeIssue(before, actorId));
@@ -620,8 +626,6 @@ export async function updateIssueFields({
     // The synchronization of a linked repository (MIN-97) is excluded: the technical actor is the
     // owner who linked the repository, it was not him who closed the remote issue.
     if (updates.status === "done" && before.status !== "done" && !forgeSync) {
-      const projectName =
-        (before.projects as { name?: string | null } | null)?.name ?? null;
       const statRow: StatEventRow = {
         user_id: actorId,
         kind: "issue_completed",
@@ -648,8 +652,7 @@ export async function updateIssueFields({
         service,
         completed: before,
         actorId,
-        projectName:
-          (before.projects as { name?: string | null } | null)?.name ?? null,
+        projectName,
       });
     }
 

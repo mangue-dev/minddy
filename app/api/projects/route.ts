@@ -14,6 +14,8 @@ import { seedDefaultCategories } from "@/lib/server/categories";
 import { DEFAULT_CATEGORIES } from "@/lib/default-categories";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
 import { normalizeLanguage } from "@/lib/feedback/languages";
+import { randomUUID } from "node:crypto";
+import { decodeProject, encodeProject } from "@/lib/server/project-content";
 
 // Length bounds (MIN-118) — same caps as updateProjectSettings:
 // beyond that we truncate. Color is a short token, never text.
@@ -39,7 +41,8 @@ export async function GET(request: NextRequest) {
     console.error("[api/projects] list failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  return NextResponse.json(data);
+  return NextResponse.json(await Promise.all((data ?? []).map((row) =>
+    decodeProject(row, auth.user.id))));
 }
 
 /** POST /api/projects — create a project owned by the caller. */
@@ -82,7 +85,7 @@ export async function POST(request: NextRequest) {
   // the preview would show one gradient, the project created another. A uuid v4 taken from
   // chance does not collide with anything; everything else is refused.
   const id =
-    typeof input.id === "string" && UUID_RE.test(input.id) ? input.id : null;
+    typeof input.id === "string" && UUID_RE.test(input.id) ? input.id : randomUUID();
 
   // The orb seed follows the same rule as the id, and for the same reason:
   // the wizard may have restarted the draw before the project exists, and
@@ -113,13 +116,25 @@ export async function POST(request: NextRequest) {
     throw err;
   }
 
+  const candidate = await encodeProject({
+      id,
+      owner_id: auth.user.id,
+      name,
+      automations: [],
+      smart_assign_rules: {},
+      icon_url: null,
+    });
   const { data, error } = await auth.supabase
     .from("projects")
     .insert({
-      ...(id ? { id } : {}),
+      id,
       ...(orbSeed ? { orb_seed: orbSeed } : {}),
       owner_id: auth.user.id,
-      name,
+      name: candidate.name,
+      automations: candidate.automations,
+      smart_assign_rules: candidate.smart_assign_rules,
+      encrypted_content: candidate.encrypted_content,
+      encryption_version: candidate.encryption_version,
       key,
       color,
       smart_assign_enabled: smartAssignEnabled,
@@ -151,5 +166,5 @@ export async function POST(request: NextRequest) {
     ),
   });
 
-  return NextResponse.json(data, { status: 201 });
+  return NextResponse.json(await decodeProject(data, auth.user.id), { status: 201 });
 }

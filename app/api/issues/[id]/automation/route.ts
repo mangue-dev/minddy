@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeProject } from "@/lib/server/project-content";
 import { activeRunForChain, requestInterrupt } from "@/lib/server/agent/runs";
 import { requestNumoTurnStop } from "@/lib/server/numo/turns";
 import {
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const [{ data: project }, chain, { data: categoryRows }] = await Promise.all([
     service
       .from("projects")
-      .select("id, owner_id, automations_enabled, automations")
+      .select("*")
       .eq("id", issue.project_id)
       .maybeSingle(),
     latestChainForIssue(id),
@@ -106,8 +107,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     ? ((await service.auth.admin.getUserById(project.owner_id as string)).data?.user
         ?.user_metadata ?? null)
     : null;
+  const readableProject = project ? await decodeProject(project) : null;
   const rules = rulesForIssue(
-    rulesForProject(project?.automations, ownerMeta as Record<string, unknown> | null),
+    rulesForProject(readableProject?.automations, ownerMeta as Record<string, unknown> | null),
     parseAutomationOverride(issue.automation_override),
   );
   const facts = {

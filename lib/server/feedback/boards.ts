@@ -3,6 +3,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 import { publicProjectIconRoute } from "@/lib/server/project-icon-content";
+import { decodeProjectName } from "@/lib/server/project-content";
 import {
   encryptBoardSsoSecret,
 } from "@/lib/server/feedback/sso-crypto";
@@ -91,7 +92,7 @@ export async function getBoardByToken(token: string): Promise<PublicBoardContext
 
   const { data: project } = await service
     .from("projects")
-    .select("id, key, name, icon_url, orb_seed")
+    .select("id, key, name, icon_url, orb_seed, encrypted_content, encryption_version")
     .eq("id", board.project_id as string)
     .is("deleted_at", null)
     .maybeSingle();
@@ -99,7 +100,8 @@ export async function getBoardByToken(token: string): Promise<PublicBoardContext
 
   return {
     board: board as PublicFeedbackBoardRow,
-    project: { ...project, icon_url: publicProjectIconRoute(
+    project: { ...project, name: await decodeProjectName(project),
+      icon_url: publicProjectIconRoute(
       project.icon_url, token, "feedback") } as PublicBoardContext["project"],
   };
 }
@@ -126,7 +128,7 @@ export async function getBoardWithSsoSecretByToken(
 
   const { data: project } = await service
     .from("projects")
-    .select("id, key, name, icon_url, orb_seed")
+    .select("id, key, name, icon_url, orb_seed, encrypted_content, encryption_version")
     .eq("id", board.project_id as string)
     .is("deleted_at", null)
     .maybeSingle();
@@ -134,7 +136,8 @@ export async function getBoardWithSsoSecretByToken(
 
   return {
     board: await hydrateBoard(board as FeedbackBoardRow) as FeedbackBoardRow,
-    project: { ...project, icon_url: publicProjectIconRoute(
+    project: { ...project, name: await decodeProjectName(project),
+      icon_url: publicProjectIconRoute(
       project.icon_url, token, "feedback") } as PublicBoardContext["project"],
   };
 }

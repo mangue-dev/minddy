@@ -1,6 +1,7 @@
 import { NextResponse, after, type NextRequest } from "next/server";
 import { getLocale } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { decodeProjectName } from "@/lib/server/project-content";
 import { recordAiUsage, newRunId } from "@/lib/server/ai-usage";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { ensureUsageBudget } from "@/lib/server/usage";
@@ -89,13 +90,14 @@ export async function POST(
   // RLS carries access: an inaccessible project reads as not found.
   const { data: project } = await auth.supabase
     .from("projects")
-    .select("id, name")
+    .select("id, name, encrypted_content, encryption_version")
     .eq("id", projectId)
     .is("deleted_at", null)
     .single();
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
+  project.name = await decodeProjectName(project, auth.user.id);
 
   const locale = await getLocale();
   const hasRun = isUuid(body.runId);

@@ -6,6 +6,7 @@ import { previouslyAssignedIssues } from "./issue-event-store";
 import { afterOrNow } from "@/lib/server/after-safe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeProject } from "@/lib/server/project-content";
 import { canUseSmartAssign } from "@/lib/server/entitlements";
 import { insertEvents } from "@/lib/server/issue-events";
 import { insertNotifications } from "@/lib/server/notifications";
@@ -127,7 +128,7 @@ export async function runSmartAssign(
     await Promise.all([
       service
         .from("projects")
-        .select("id, name, owner_id, smart_assign_enabled, smart_assign_rules")
+        .select("*")
         .eq("id", params.projectId)
         .is("deleted_at", null)
         .maybeSingle(),
@@ -145,6 +146,7 @@ export async function runSmartAssign(
   // Re-check everything at execution time — the world may have moved since
   // the schedule (toggle off, project deleted, issue assigned or re-triaged).
   if (!project?.smart_assign_enabled) return null;
+  const readableProject = await decodeProject(project);
   if (!issue || issue.assignee_id !== null) return null;
   if (!isSmartAssignEligibleStatus(issue.status)) return null;
 
@@ -157,7 +159,7 @@ export async function runSmartAssign(
       .filter((id) => id !== ownerId),
   ];
 
-  const rules = (project.smart_assign_rules ?? {}) as Record<string, string>;
+  const rules = (readableProject.smart_assign_rules ?? {}) as Record<string, string>;
   // A rule written for SOMEONE on the team is what makes the choice
   // possible: without any, the engines only have names to compare, and the
   // prompt already tells the model to fall back on the owner in this case.
@@ -192,7 +194,7 @@ export async function runSmartAssign(
         .in("id", (categoryRows ?? []).map((row) => row.category_id));
       if (categoryError) throw new Error("Unable to read smart-assignment categories");
       const spec = prepareSmartAssign({
-        projectName: (project.name as string) ?? "",
+        projectName: (readableProject.name as string) ?? "",
         issue: {
           title: issue.title as string,
           description: typeof issue.description === "string" ? issue.description : null,
@@ -469,7 +471,7 @@ export async function loadSmartAssignConfigWarnings(
 
     const { data: projects, error } = await service
       .from("projects")
-      .select("id, name, smart_assign_rules")
+      .select("*")
       .eq("owner_id", userId)
       .eq("smart_assign_enabled", true)
       .is("deleted_at", null);
@@ -488,7 +490,8 @@ export async function loadSmartAssignConfigWarnings(
     }
 
     const warnings: SmartAssignConfigWarning[] = [];
-    for (const project of projects) {
+    for (const storedProject of projects) {
+      const project = await decodeProject(storedProject, userId);
       const team = teamByProject.get(project.id as string) ?? new Set([userId]);
       if (team.size <= 1) continue;
       const rules = (project.smart_assign_rules ?? {}) as Record<string, string>;

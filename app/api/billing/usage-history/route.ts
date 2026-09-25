@@ -5,6 +5,7 @@ import { getResolvedBilling } from "@/lib/server/billing-accounts";
 import { getUsagePeriod } from "@/lib/server/usage";
 import { USAGE_SEGMENTS, type UsageSegmentId } from "@/lib/billing-plans";
 import { toUsageHistoryFeature } from "@/lib/usage-features";
+import { decodeProjectName } from "@/lib/server/project-content";
 import type { UsageHistoryEntry, UsageHistoryResponse } from "@/lib/billing-types";
 
 const PAGE_SIZE = 25;
@@ -52,9 +53,23 @@ export async function GET(request: NextRequest) {
       feature: string;
       cost: number | string;
       first_at: string;
+      project_id: string | null;
       project_name: string | null;
     }>;
   };
+  const projectIds = [...new Set((parsed.entries ?? []).flatMap((entry) =>
+    entry.project_id ? [entry.project_id] : []))];
+  const projectNames = new Map<string, string>();
+  if (projectIds.length) {
+    const { data: projects, error: projectError } = await auth.supabase
+      .from("projects")
+      .select("id, name, encrypted_content, encryption_version")
+      .in("id", projectIds).is("deleted_at", null);
+    if (projectError) return Response.json({ error: projectError.message }, { status: 500 });
+    for (const project of projects ?? []) {
+      projectNames.set(project.id, await decodeProjectName(project, auth.user.id));
+    }
+  }
 
   const response: UsageHistoryResponse = {
     total: parsed.total ?? 0,
@@ -68,7 +83,7 @@ export async function GET(request: NextRequest) {
         // `sandbox_compute`, `routine_code` before `routine_compute`).
         feature: toUsageHistoryFeature(entry.feature),
         at: entry.first_at,
-        projectName: entry.project_name,
+        projectName: entry.project_id ? projectNames.get(entry.project_id) ?? null : null,
         usd: Number(entry.cost) || 0,
       })
     ),

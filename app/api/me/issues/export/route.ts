@@ -8,6 +8,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { buildMembersByProject } from "@/lib/server/project-members";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { decodeProjectName } from "@/lib/server/project-content";
 import { ISSUE_STATUSES, isStatus, type IssueStatusValue } from "@/lib/issue-validation";
 import {
   buildIssuesCsv,
@@ -46,7 +47,9 @@ export async function GET(request: NextRequest) {
   const statuses = parseStatuses(params.get("statuses"));
 
   const [projectsRes, objectivesRes, categoriesRes] = await Promise.all([
-    auth.supabase.from("projects").select("id, key, name, owner_id").is("deleted_at", null),
+    auth.supabase.from("projects")
+      .select("id, key, name, owner_id, encrypted_content, encryption_version")
+      .is("deleted_at", null),
     objectiveStore(auth.supabase).select("id, name"),
     categoryStore(auth.supabase, auth.user.id).select("id, name"),
   ]);
@@ -57,7 +60,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
-  const projects = (projectsRes.data ?? []) as {
+  const projects = await Promise.all((projectsRes.data ?? []).map(async (row) => ({
+    ...row, name: await decodeProjectName(row, auth.user.id),
+  }))) as {
     id: string;
     key: string;
     name: string;

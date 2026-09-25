@@ -572,7 +572,7 @@ export async function POST(request: NextRequest) {
   if (projectId) {
     const { data } = await supabase
       .from("projects")
-      .select("id, name, key, owner_id")
+      .select("id")
       .eq("id", projectId)
       .is("deleted_at", null)
       .single();

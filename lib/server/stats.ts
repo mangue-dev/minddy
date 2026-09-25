@@ -4,6 +4,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { categoryStore } from "@/lib/server/category-store";
+import { decodeProjectName } from "@/lib/server/project-content";
 import { CLOSED_STATUSES } from "@/lib/server/issue-reads";
 import { EFFORTS } from "@/lib/issue-constants";
 import type {
@@ -216,6 +217,18 @@ export async function getUserStats(
 
   if (statsRes.error) throw new Error(statsRes.error.message);
   const raw = (statsRes.data ?? {}) as RawStats;
+  const projectIds = (raw.per_project ?? []).flatMap((row) =>
+    typeof row.id === "string" ? [row.id] : []);
+  const projectNames = new Map<string, string>();
+  if (projectIds.length) {
+    const { data, error } = await supabase.from("projects")
+      .select("id, name, encrypted_content, encryption_version")
+      .in("id", projectIds);
+    if (error) throw new Error(error.message);
+    for (const project of data ?? []) {
+      projectNames.set(project.id, await decodeProjectName(project, userId));
+    }
+  }
   const objectiveIds = (raw.per_objective ?? []).map((row) => row.id);
   const objectiveNames = new Map<string, string>();
   if (objectiveIds.length) {
@@ -262,11 +275,11 @@ export async function getUserStats(
     // During a rolling deploy, the previous RPC may still return its old
     // project shape. Drop incomplete rows instead of rendering false links.
     perProject: (raw.per_project ?? []).flatMap((project) =>
-      typeof project.id === "string" && typeof project.name === "string"
+      typeof project.id === "string" && projectNames.has(project.id)
         ? [
             {
               id: project.id,
-              name: project.name,
+              name: projectNames.get(project.id)!,
               color: project.color,
               iconUrl: project.icon_url,
               orbSeed: project.orb_seed,
@@ -274,7 +287,8 @@ export async function getUserStats(
             },
           ]
         : [],
-    ),
+    ).sort((left, right) => right.completed - left.completed ||
+      left.name.localeCompare(right.name)),
     // Keep the application-side merge during rolling deploys, when the old
     // RPC can still return one row per project for the same category identity.
     perCategory: Array.from(

@@ -1043,7 +1043,7 @@
       },
       "name": {
         "type": "text",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       },
       "color": {
@@ -1093,11 +1093,21 @@
       },
       "automations": {
         "type": "jsonb",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       },
       "icon_checked_at": {
         "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "content_revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "encrypted_content": {
+        "type": "text",
         "nullable": true,
         "generated": false
       },
@@ -1111,9 +1121,14 @@
         "nullable": false,
         "generated": false
       },
+      "encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
       "smart_assign_rules": {
         "type": "jsonb",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       },
       "auto_assign_enabled": {
@@ -1129,6 +1144,11 @@
       "smart_assign_enabled": {
         "type": "boolean",
         "nullable": false,
+        "generated": false
+      },
+      "encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       },
       "feedback_team_language": {
@@ -9942,6 +9962,24 @@
     ]
   },
   "pr_comment_edit_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "project_content_encryption_scope": {
     "columns": {
       "id": {
         "type": "boolean",

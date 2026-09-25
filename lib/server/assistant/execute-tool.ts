@@ -4,6 +4,7 @@ import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 import { decodeView } from "@/lib/server/view-content";
+import { decodeProjectName } from "@/lib/server/project-content";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 import { hydrateNumoUserMessages } from "@/lib/server/numo/user-message-content";
@@ -727,7 +728,7 @@ async function accessibleProjects(ctx: ToolContext): Promise<{
     await Promise.all([
       ctx.service
         .from("projects")
-        .select("id, name, key, owner_id")
+        .select("id")
         .eq("owner_id", ctx.userId)
         .is("deleted_at", null),
       ctx.service
@@ -745,12 +746,15 @@ async function accessibleProjects(ctx: ToolContext): Promise<{
   if (ids.size === 0) return { projects: [], error: null };
   const { data: projects, error } = await ctx.service
     .from("projects")
-    .select("id, name, key, owner_id")
+    .select("id, name, key, owner_id, encrypted_content, encryption_version")
     .in("id", [...ids])
     .is("deleted_at", null)
     .order("created_at", { ascending: true });
   return {
-    projects: (projects ?? []) as Array<{ id: string; name: string; key: string; owner_id: string }>,
+    projects: await Promise.all((projects ?? []).map(async (project) => ({
+      id: project.id, name: await decodeProjectName(project, ctx.userId),
+      key: project.key, owner_id: project.owner_id,
+    }))),
     error: error?.message ?? null,
   };
 }

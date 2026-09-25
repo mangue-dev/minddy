@@ -5,6 +5,7 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
+import { decodeProjectName } from "@/lib/server/project-content";
 import { ensureUsageBudget } from "@/lib/server/usage";
 import { buildSmartTriageSpec } from "@/lib/server/decisions/prepare";
 import { runDecision } from "@/lib/server/decisions/runner";
@@ -119,7 +120,7 @@ export async function runSmartTriage({
 
   const { data: project } = await service
     .from("projects")
-    .select("id, name, smart_triage_mode")
+    .select("id, name, smart_triage_mode, encrypted_content, encryption_version")
     .eq("id", projectId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -277,7 +278,7 @@ export async function runSmartTriage({
     if (mode === "jev") {
       const decision = await scoreColumn({
         projectId,
-        projectName: project.name as string,
+        projectName: await decodeProjectName(project, actorId),
         status,
         tickets: rulesOrder,
         relations,

@@ -13,6 +13,7 @@ import {
 } from "@/lib/server/project-storage";
 import { stopSandboxByName } from "@/lib/server/agent/sandbox";
 import { revokeRunKey } from "@/lib/server/agent/run-key";
+import { decodeProjectName } from "@/lib/server/project-content";
 
 /**
  * Account deletion (MIN-119, GDPR art. 17 — right to erasure).
@@ -56,7 +57,7 @@ export async function previewAccountDeletion(userId: string): Promise<DeletionPr
 
   const { data: projects } = await service
     .from("projects")
-    .select("id, name")
+    .select("id, name, encrypted_content, encryption_version")
     .eq("owner_id", userId)
     .is("deleted_at", null);
 
@@ -88,12 +89,12 @@ export async function previewAccountDeletion(userId: string): Promise<DeletionPr
   const status = billing.data?.stripe_subscription_status as string | undefined;
 
   return {
-    ownedProjects: (projects ?? []).map((p) => ({
+    ownedProjects: await Promise.all((projects ?? []).map(async (p) => ({
       id: p.id as string,
-      name: p.name as string,
+      name: await decodeProjectName(p, userId),
       // +1: the owner has no line in project_members.
       memberCount: (perProject.get(p.id as string) ?? 0) + 1,
-    })),
+    }))),
     issueCount: issues.count ?? 0,
     affectedMemberCount: others.size,
     commentCount: comments.count ?? 0,

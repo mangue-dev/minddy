@@ -91,7 +91,7 @@ must be checked separately.
 
 | Surface | Required work and proof of completion |
 | --- | --- |
-| Projects, issues, pages and views | Convert every server repository read/write and all imports, exports, MCP and AI consumers; add ciphertext/version storage and reject older plaintext writers. Preserve access checks before decryption and existing concurrency semantics. Objectives and category names now have converted repositories and bounded migrations; they still need representative staging validation before activation. |
+| Projects, issues, pages and views | Project names, automation rules and smart-assignment rules now have converted repositories, authorized projections and an activated old-writer guard. Pages and any remaining sensitive derived copies still need conversion. Preserve access checks before decryption and existing concurrency semantics. Objectives and category names have converted repositories and bounded migrations; representative production-scale validation remains a pre-activation check. |
 | Histories and derived copies | Page versions, issue events, statistics, durable agent replay journals and run event payloads now have converted repositories and migration. The event-triggered assistant summary and pending question copies are protected with their event. Numo surface destinations and the non-worker durable activity payloads now have protected readers, writers and migrations; initial prompts, other surface projections, checkpoints and conversation content remain to be converted with their source rows. |
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
@@ -1708,3 +1708,29 @@ before projects and users in independent batches, reads two key versions from
 cold caches and rejects a wrong root key. The production flag
 `MINDDY_AGENT_ROUTINE_ENCRYPTION_ENABLED` remains off; the wider MIN-591
 boundary remains open.
+
+## Project identity and configuration checkpoint — 25 September 2026
+
+`projects.name`, `automations` and `smart_assign_rules` use a row-bound project
+key envelope. The project acronym remains a routing identifier. An icon URL is
+permitted as metadata only after the private object conversion has replaced it
+with the local versioned route; an external icon URL blocks content activation.
+Project creation, owner-only revision-guarded content edits and account import
+encrypt complete rows. Account export restores only authorized plain fields.
+Membership and owner checks precede decryption. Public board and share
+capabilities, invitation tokens, agent and Numo context, MCP, webhook delivery,
+statistics, billing and trash hydrate the name through their existing access
+gate. The statistics RPCs return no source name and the application hydrates
+authorized labels after receiving identifiers.
+
+The 30-row worker verifies legacy or old-key content and advances it with a
+content-revision compare-and-swap. SQL activation requires the private project
+icon marker and checked encrypted rows; the guard rejects clear inserts,
+updates, scope changes, key downgrades and external icon references. The SQL
+regression checks source/member projections, stale CAS and old writers.
+PostgreSQL recovery restores member children before projects and users in
+independent batches, verifies two key versions from cold caches and rejects a
+wrong root key. `MINDDY_PROJECT_CONTENT_ENCRYPTION_ENABLED` remains disabled
+in production. Pages and other global MIN-591 targets remain open. Search,
+latency, key-cache and load measurements are pre-activation checks, not code PR
+blockers.

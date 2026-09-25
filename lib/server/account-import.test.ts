@@ -252,7 +252,8 @@ describe("account import tenant isolation", () => {
   });
 
   it("imports project data when every identifier belongs to the account", async () => {
-    database.rows.projects = [{ id: OWNED_PROJECT, owner_id: USER, key: "OLD" }];
+    database.rows.projects = [{ id: OWNED_PROJECT, owner_id: USER, key: "OLD",
+      name: "Existing", automations: [], smart_assign_rules: {} }];
 
     const result = await importAccountTransfer(
       transfer({

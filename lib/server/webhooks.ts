@@ -6,6 +6,7 @@ import { createHmac, randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EventRow } from "@/lib/server/issue-events";
 import { safeFetch } from "@/lib/server/safe-fetch";
+import { decodeProjectName } from "@/lib/server/project-content";
 
 /**
  * Outbound webhooks from integrations (API Feedback). Plugged into insertEvents
@@ -194,9 +195,10 @@ export function dispatchWebhooksForEvents(
 
       const { data: projects } = await service
         .from("projects")
-        .select("id, name, key")
+        .select("id, name, key, encrypted_content, encryption_version")
         .in("id", projectIds);
-      const projectById = new Map((projects ?? []).map((p) => [p.id as string, p]));
+      const projectById = new Map(await Promise.all((projects ?? []).map(async (p) =>
+        [p.id as string, { ...p, name: await decodeProjectName(p) }] as const)));
 
       // Grouping by (webhook, issue, event): a single delivery
       // issue.updated carrying all the modifications of the same save.

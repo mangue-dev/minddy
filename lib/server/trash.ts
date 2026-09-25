@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeRoutineTitle } from "@/lib/server/routine-content";
+import { decodeProjectName } from "@/lib/server/project-content";
 import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
@@ -324,7 +325,7 @@ export async function listTrash(
 
   const { data: liveProjects } = await userSupabase
     .from("projects")
-    .select("id, name, key, color, icon_url, orb_seed, owner_id")
+    .select("id, name, key, color, icon_url, orb_seed, owner_id, encrypted_content, encryption_version")
     .is("deleted_at", null);
 
   const projectIds = (liveProjects ?? []).map((p) => p.id as string);
@@ -332,16 +333,16 @@ export async function listTrash(
     .filter((p) => p.owner_id === userId)
     .map((p) => p.id as string);
   const projectById = new Map(
-    (liveProjects ?? []).map((p) => [
+    await Promise.all((liveProjects ?? []).map(async (p) => [
       p.id as string,
       {
-        name: p.name as string,
+        name: await decodeProjectName(p, userId),
         key: p.key as string,
         color: (p.color as string | null) ?? null,
         iconUrl: (p.icon_url as string | null) ?? null,
         orbSeed: (p.orb_seed as string | null) ?? null,
       },
-    ])
+    ] as const))
   );
 
   /** The five types carried by a project all read the same way. */
@@ -391,7 +392,7 @@ export async function listTrash(
       ),
       service
         .from("projects")
-        .select("id, name, key, color, icon_url, orb_seed, deleted_at, deleted_by")
+        .select("id, name, key, color, icon_url, orb_seed, deleted_at, deleted_by, encrypted_content, encryption_version")
         .eq("owner_id", userId)
         .not("deleted_at", "is", null)
         .order("deleted_at", { ascending: false })
@@ -431,6 +432,8 @@ export async function listTrash(
   const readableRoutineRows = await Promise.all(routineRows.map(async (row) =>
     ({ ...row, title: await decodeRoutineTitle(
       row as unknown as Record<string, unknown>, userId) })));
+  const readableProjectRows = await Promise.all(projectRows.map(async (row) =>
+    ({ ...row, name: await decodeProjectName(row as unknown as Record<string, unknown>, userId) })));
 
   /** What a type has in common: parent, timestamp, author. */
   const base = (row: TrashRow) => ({
@@ -485,7 +488,7 @@ export async function listTrash(
       title: row.title ?? "",
       identifier: null,
     })),
-    ...projectRows.map((row) => ({
+    ...readableProjectRows.map((row) => ({
       ...base(row),
       type: "project" as const,
       title: row.name ?? "",
@@ -511,6 +514,8 @@ interface TrashRow {
   database_schema?: unknown;
   property_values?: Record<string, unknown>;
   name?: string;
+  encrypted_content?: string | null;
+  encryption_version?: number;
   key?: string;
   number?: number;
   color?: string | null;
