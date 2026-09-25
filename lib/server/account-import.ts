@@ -15,6 +15,7 @@ import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 import { appendStatEvents, type StatEventRow } from "@/lib/server/stat-events";
 import { uploadPrivateAttachmentObject } from "@/lib/server/attachments";
 import { storeProjectIcon } from "@/lib/server/project-icon";
+import { encodeView } from "@/lib/server/view-content";
 import { encodeAttachmentValue, shouldEncryptAttachmentMetadata } from
   "@/lib/server/attachment-content";
 
@@ -843,13 +844,14 @@ export async function importAccountTransfer(
   await upsertRows(
     service,
     "views",
-    document.views.flatMap((source) => {
+    (await Promise.all(document.views.map(async (source) => {
       const id = uuidValue(source, "id");
-      if (!id) return [];
+      if (!id) return null;
       const projectId = mapId(source.project_id, projects.projectIds);
-      if (source.project_id !== undefined && !projectId) return [];
-      return [{ ...pick(source, ["id", "name", "filters", "sort", "display", "position", "created_at", "updated_at", "kind"]), id, project_id: projectId, user_id: userId }];
-    }),
+      if (source.project_id !== undefined && !projectId) return null;
+      return encodeView({ ...pick(source, ["id", "name", "filters", "sort", "display", "position", "created_at", "updated_at", "kind"]),
+        id, project_id: projectId, user_id: userId }, { service });
+    }))).filter((row): row is Record<string, unknown> => row !== null),
   );
 
   const conversationIds = new Map<string, string>();

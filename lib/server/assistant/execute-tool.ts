@@ -3,6 +3,7 @@ import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
+import { decodeView } from "@/lib/server/view-content";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 import { hydrateNumoUserMessages } from "@/lib/server/numo/user-message-content";
@@ -696,14 +697,16 @@ async function listViews(
   // global views are personal, while project views are shared or the actor's.
   const base = ctx.service
     .from("views")
-    .select("id, name, kind, user_id, filters, sort, display");
+    .select("*");
   const { data, error } = await (
     projectId
       ? base.eq("project_id", projectId).or(`user_id.is.null,user_id.eq.${ctx.userId}`)
       : base.is("project_id", null).eq("user_id", ctx.userId)
   ).order("position", { ascending: true });
   if (error) return toolError(error.message);
-  const views = (data ?? []).map((v) => ({
+  const plain = await Promise.all((data ?? []).map((row) =>
+    decodeView(row, ctx.userId)));
+  const views = plain.map((v) => ({
     id: v.id,
     name: v.name,
     kind: v.kind,

@@ -2,6 +2,8 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getPublicBoardForProject } from "@/lib/server/feedback/boards";
+import { decodeView } from "@/lib/server/view-content";
+import { decodeShareToken } from "@/lib/server/encryption/share-token-content";
 import type { DomainTarget } from "@/lib/custom-domain-lookup";
 import type { PublicSiteTab } from "@/lib/feedback/types";
 
@@ -44,13 +46,13 @@ export async function getPublicSiteTabs(params: {
   const [sharesRes, pageSharesRes] = await Promise.all([
     service
       .from("view_shares")
-      .select("token, views!inner (id, name, project_id)")
+      .select("id, token, views!inner (*)")
       .eq("views.project_id", params.projectId)
       .eq("level", "public")
       .order("created_at", { ascending: true }),
     service
       .from("view_shares")
-      .select("token, pages!inner (id, title, project_id)")
+      .select("id, token, pages!inner (id, title, project_id)")
       .eq("pages.project_id", params.projectId)
       .is("pages.deleted_at", null)
       .eq("level", "public")
@@ -69,14 +71,16 @@ export async function getPublicSiteTabs(params: {
   }
   const visible = new Set(board.visible_view_ids);
   for (const row of sharesRes.data ?? []) {
-    const view = row.views as unknown as { id: string; name: string } | null;
+    const stored = row.views as unknown as Record<string, unknown> | null;
     // Each family is armed by its own switch, then each view is opt-in:
     // only those checked in the settings come out.
-    if (!board.show_views || !view || !visible.has(view.id)) continue;
-    const shareToken = row.token as string;
+    if (!board.show_views || !stored || !visible.has(stored.id as string)) continue;
+    const view = await decodeView(stored);
+    const shareToken = await decodeShareToken(row.id as string,
+      row.token as string);
     const mapped = target?.kind === "share" && target.token === shareToken;
     tabs.push({
-      label: view.name,
+      label: view.name as string,
       href: mapped ? "/" : `/share/${shareToken}`,
       active: params.current.kind === "view" && params.current.shareToken === shareToken,
     });
@@ -89,14 +93,16 @@ export async function getPublicSiteTabs(params: {
     } | null;
     // Same double gate as the views: the switch, then the opt-in per page.
     if (!board.show_pages || !page || !visiblePages.has(page.id)) continue;
+    const pageToken = await decodeShareToken(row.id as string,
+      row.token as string);
     tabs.push({
       label: page.title || params.untitledLabel,
       // Published pages do not ride custom domains (MIN-36 covers the board
       // and shared views only), so no mapping branch here.
-      href: `/p/${row.token as string}`,
+      href: `/p/${pageToken}`,
       active:
         params.current.kind === "page" &&
-        params.current.shareToken === row.token,
+        params.current.shareToken === pageToken,
     });
   }
 

@@ -3940,6 +3940,21 @@
       ]
     }
   },
+  "view_content_encryption_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "view-content"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "view_share_token_encryption_scope": {
     "scope": {
       "kind": "system"
@@ -4008,7 +4023,8 @@
     ],
     "clear": {
       "bounded_metadata": [
-        "position"
+        "position",
+        "content_revision"
       ],
       "operational_configuration": [
         "kind",
@@ -4021,7 +4037,12 @@
       ],
       "timestamp": [
         "created_at",
+        "encryption_checked_at",
         "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
       ]
     }
   }

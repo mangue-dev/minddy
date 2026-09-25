@@ -23,7 +23,7 @@ in [the closure matrix](closure-matrix.md).
 - `consumers.json` records 1,536 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 415 functions, ten views and 221 application triggers. Function
+- `sql-consumers.json` records 417 functions, ten views and 222 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -1642,3 +1642,24 @@ batches and verifies two key versions from cold caches and wrong-root rejection.
 global MIN-591 boundary remains open; representative search, latency, key-cache
 and load measurements are required before production activation, not for code
 review of this PR.
+
+## Project and personal board view checkpoint — 25 September 2026
+
+`views.name`, `filters` and `display` use one row-bound format-3 envelope with
+the project key for project views and the user key for global personal views.
+Creation, baseline seeding, revision-guarded edits and account transfer use the
+same codec. Authorized list, Numo tool, owner export, shared-view and feedback
+navigation readers decode only after their existing access or capability gate.
+The generic Realtime payload and SQL share join now contain ciphertext and
+null protected columns. Share tokens are decoded independently after the
+public-tab visibility check.
+
+The 30-row worker verifies and rotates legacy and old-key rows with a
+content-revision compare-and-swap. Activation requires every row to be checked
+and rejects subsequent clear inserts, edits and owner changes. The SQL
+regression verifies source and share projection clearing, a stale revision and
+old-writer rejection. PostgreSQL recovery restores share children before views
+and their owners in independent batches, reads two key versions from cold
+caches and rejects a wrong root key. `MINDDY_VIEW_CONTENT_ENCRYPTION_ENABLED`
+remains disabled in production. The separate `saved_views` bookmarks and the
+global MIN-591 boundary remain open.

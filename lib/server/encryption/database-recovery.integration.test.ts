@@ -45,6 +45,7 @@ const toolTemplate = "minddy_min591_tool_audit";
 const repositoryTemplate = "minddy_min591_repo_audit";
 const defaultBranchTemplate = "minddy_min591_branch_audit";
 const projectIconTemplate = "minddy_min591_icon_audit";
+const viewContentTemplate = "minddy_min591_view_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -4902,6 +4903,110 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       expect(() => sql(restored,`UPDATE public.projects SET
         icon_url='https://clear.example/icon.png',icon_storage_path=NULL
         WHERE id=${quote(projects[0])};`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const database of created.reverse()) {
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+      }
+    }
+  },60_000);
+
+  it("restores encrypted project and personal views with shares before parents",async () => {
+    const suffix=randomUUID().replaceAll("-","").slice(0,20);
+    const source=`minddy_min591_view_source_${suffix}`;
+    const restored=`minddy_min591_view_restore_${suffix}`;
+    const created:string[]=[];
+    const root=randomBytes(32);
+    const actor=randomUUID(),project=randomUUID();
+    const views=[randomUUID(),randomUUID()];
+    const share=randomUUID();
+    const names=["private project view","private personal view"];
+    const log=vi.spyOn(console,"info").mockImplementation(() => {});
+    try {
+      expect(sql(viewContentTemplate,"SELECT count(*) FROM auth.users;"))
+        .toBe("0");
+      for (const database of [source,restored]) {
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${viewContentTemplate};`);
+        created.push(database);
+      }
+      sql(source,`INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'View parent','VREC');`);
+      const keys=new ManagedDataKeys(registry(source),wrapper(root));
+      const store=new EncryptedStore(keys);
+      const codec=new EncryptedRowCodec(store);
+      for (const [index,id] of views.entries()) {
+        const scope:EncryptionScope=index===0
+          ? { kind:"project",id:project } : { kind:"user",id:actor };
+        if (index) {
+          const first=await keys.current(scope);
+          first.bytes.fill(0);
+          await keys.rotate(scope,1);
+        }
+        const sealed=await codec.encode({ id,
+          project_id:index===0?project:null,
+          user_id:index===0?null:actor,
+          kind:"custom",sort:"smart",name:names[index],
+          filters:{ category:[`private-${index}`] },
+          display:{ hideDone:index===0 },
+          encryption_version:0,encrypted_content:null },{
+          table:"views",scope });
+        sql(source,`INSERT INTO public.views(id,project_id,user_id,kind,
+          name,filters,display,sort,encrypted_content,encryption_version)
+          VALUES(${quote(id)},${index===0?quote(project):"NULL"},
+            ${index===0?"NULL":quote(actor)},'custom',NULL,NULL,NULL,'smart',
+            ${quote(sealed.encrypted_content as string)},
+            ${sealed.encryption_version});`);
+      }
+      sql(source,`INSERT INTO public.view_shares(id,view_id,token,level)
+        VALUES(${quote(share)},${quote(views[0])},'public-view','public');`);
+      expect(sql(source,"SELECT public.activate_view_content();"))
+        .toBe("t");
+      const dump=execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges",...["auth.users","public.projects",
+          "public.views","public.view_shares",
+          "public.view_content_encryption_scope",
+          "public.envelope_data_keys"].map((table)=>`--table=${table}`)],
+      { encoding:"utf8",maxBuffer:4*1024*1024 });
+      for (const name of names) expect(dump).not.toContain(name);
+      let parents=dump;
+      for (const table of ["public.view_shares","public.views"]) {
+        const pattern=new RegExp(`(COPY ${table.replace(".","\\.")}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`);
+        const copy=pattern.exec(parents);
+        expect(copy).not.toBeNull();
+        for (const line of copy![2].trimEnd().split("\n").reverse()) {
+          sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;\n${copy![1]}${line}\n${copy![3]}COMMIT;`);
+        }
+        parents=parents.replace(copy![0],"");
+      }
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;\n${parents}\nCOMMIT;`);
+      expect(sql(restored,`SELECT count(*) FROM public.view_shares s
+        JOIN public.views v ON v.id=s.view_id
+        JOIN public.projects p ON p.id=v.project_id;`)).toBe("1");
+      const cold=new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored),wrapper(root))));
+      for (const [index,id] of views.entries()) {
+        const row=JSON.parse(sql(restored,`SELECT row_to_json(v)
+          FROM public.views v WHERE id=${quote(id)};`));
+        expect(row.encryption_version).toBe(index+1);
+        const scope:EncryptionScope=index===0
+          ? { kind:"project",id:project } : { kind:"user",id:actor };
+        const decoded=await cold.decode(row,{ table:"views",scope },{
+          actorId:null,reason:"migration_verification" });
+        expect(decoded.name).toBe(names[index]);
+      }
+      const wrong=new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored),wrapper(randomBytes(32)))));
+      const row=JSON.parse(sql(restored,`SELECT row_to_json(v)
+        FROM public.views v WHERE id=${quote(views[0])};`));
+      await expect(wrong.decode(row,{ table:"views",
+        scope:{ kind:"project",id:project } },{
+        actorId:null,reason:"migration_verification" })).rejects.toThrow();
+      expect(() => sql(restored,`UPDATE public.views SET name='old writer'
+        WHERE id=${quote(views[0])};`)).toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();

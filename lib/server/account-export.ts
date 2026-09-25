@@ -12,6 +12,7 @@ import {
   CURRENT_ACCOUNT_EXPORT_VERSION,
 } from "@/lib/account-transfer";
 import { downloadProjectIcon } from "@/lib/server/project-icon";
+import { decodeView } from "@/lib/server/view-content";
 import { downloadAttachment } from "@/lib/server/attachments";
 import { decodeAttachmentRow, type AttachmentTable } from
   "@/lib/server/attachment-content";
@@ -572,7 +573,8 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     objectives: list("objectives", objectives),
     categories: list("categories", categories),
     issue_categories: issueCategories,
-    views: list("views", views),
+    views: await Promise.all(list("views", views).map((row) =>
+      decodeView(row, userId))),
     cycles: list("cycles", cycles),
     scratchpad: scratchpad ? { content: scratchpad.content, updated_at: scratchpad.updated_at } : null,
     assistant_conversations: await Promise.all(conversationRows.map(async (c) => ({

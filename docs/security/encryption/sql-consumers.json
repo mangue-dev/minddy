@@ -197,6 +197,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_view_content()": {
+      "sha256": "a26fcb938fa7f0166ef5e1c407e3c8771f9416753b9d403efa2b2a2656acecb3",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "view_content_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "broadcast_views_row()": {
       "sha256": "6a06b86daad63cabe9f94ee7c76eebe1d1e1daff420f73c2d0d56207337b6b93",
       "securityDefiner": true,
@@ -350,6 +363,22 @@
         "effective_plan_id",
         "account_storage_bytes"
       ]
+    },
+    "activate_view_content()": {
+      "sha256": "6c60522593a13aadc51709f28d54ac0d721c173aca9b6fc0b6ef40df6ccbea5c",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "views",
+        "view_content_encryption_scope"
+      ],
+      "protectedRelations": [
+        "views"
+      ],
+      "functionReferences": []
     },
     "advance_mfa_amr_epoch()": {
       "sha256": "e92ac43d459b55ac24b3dd5890e82a57a872cec0d411f9c1cae039a04415447b",
@@ -6650,6 +6679,10 @@
     "issues.issues_one_level": {
       "function": "enforce_one_level_subissues()",
       "definition": "CREATE TRIGGER issues_one_level BEFORE INSERT OR UPDATE ON issues FOR EACH ROW EXECUTE FUNCTION enforce_one_level_subissues()"
+    },
+    "views.view_content_guard": {
+      "function": "guard_view_content()",
+      "definition": "CREATE TRIGGER view_content_guard BEFORE INSERT OR UPDATE ON views FOR EACH ROW EXECUTE FUNCTION guard_view_content()"
     },
     "pages.pages_set_updated_at": {
       "function": "set_updated_at()",

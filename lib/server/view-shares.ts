@@ -8,6 +8,7 @@ import {
 } from "@/lib/server/custom-domains";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { publicProjectIconRoute } from "@/lib/server/project-icon-content";
+import { decodeView } from "@/lib/server/view-content";
 import { authenticationProof } from "@/lib/server/encryption/auth-proof";
 import { decodeShareToken, encodeShareToken, shareTokenLookup,
   shouldProtectShareTokens } from "@/lib/server/encryption/share-token-content";
@@ -420,7 +421,8 @@ export async function getPublicShareTarget(
   if (!view) return null;
   const project = await livePublicProject(view.project_id as string);
   if (!project) return null;
-  return { kind: "view", share, view: view as View,
+  return { kind: "view", share,
+    view: await decodeView(view, null) as unknown as View,
     project: { ...project, icon_url: share.level === "public"
       ? publicProjectIconRoute(project.icon_url, token, "share") : null } };
 }

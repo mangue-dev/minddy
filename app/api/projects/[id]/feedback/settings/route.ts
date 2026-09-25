@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { requireProjectMember } from "@/lib/server/feedback/team-guard";
+import { decodeView } from "@/lib/server/view-content";
 import { isAccentColor } from "@/lib/feedback/accent";
 import {
   clearSsoSecret,
@@ -53,12 +54,16 @@ async function listSharedViews(projectId: string): Promise<{ id: string; name: s
   const service = getServiceClient();
   const { data } = await service
     .from("view_shares")
-    .select("views!inner (id, name, project_id)")
+    .select("views!inner (*)")
     .eq("views.project_id", projectId)
     .order("created_at", { ascending: true });
-  return (data ?? [])
-    .map((row) => row.views as unknown as { id: string; name: string } | null)
-    .filter((v): v is { id: string; name: string } => v !== null);
+  return Promise.all((data ?? [])
+    .map((row) => row.views as unknown as Record<string, unknown> | null)
+    .filter((v): v is Record<string, unknown> => v !== null)
+    .map(async (row) => {
+      const view = await decodeView(row);
+      return { id: view.id as string, name: view.name as string };
+    }));
 }
 
 /** Published project pages — tab checklist material. Any share level goes
