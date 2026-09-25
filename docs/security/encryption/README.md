@@ -9,7 +9,7 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 153 application tables and 1,416 columns, their primary
+- `schema.json` records 154 application tables and 1,419 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 182 encryption targets include the original content,
@@ -23,7 +23,7 @@ in [the closure matrix](closure-matrix.md).
 - `consumers.json` records TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 382 functions, ten views and 202 triggers. Function
+- `sql-consumers.json` records 384 functions, ten views and 203 triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -1444,8 +1444,8 @@ versions with cold caches and rejects a wrong root key. The worker requires
 both remain disabled in production. The reservation now stores only the issue
 routing identifier as its conversation title; its CAS migration removes the
 historical issue-title prefix from first-step conversations. This checkpoint
-does not close the Numo or agent boundary. General conversation titles,
-error messages, assistant messages, tool
+does not close the Numo or agent boundary. Conversation error messages,
+assistant messages, tool
 operations, checkpoints and projections remain open. Representative search,
 latency and key/cache-load measurements precede production activation.
 
@@ -1457,7 +1457,26 @@ invoker-visible agent conversation, encrypts an edited title under its project
 key, and passes only the envelope and version to the locked RPC. The RPC keeps
 its project-access and ownership checks, accepts the protected agent fields,
 and lets the existing agent title guard reject an obsolete clear-title edit
-after activation. Its assistant branch still handles assistant conversation
-titles in clear and remains part of the open Numo conversation boundary. The
+after activation. Its assistant branch follows the conversation title
+checkpoint below. The
 isolated SQL regression verifies the encrypted agent row and Numo projection,
 obsolete writer refusal and client privilege. Production flags remain off.
+
+## Assistant conversation title checkpoint — 25 September 2026
+
+`conversations.title` now uses a user-key format-3 envelope authenticated to
+the conversation ID. Direct chat, surface, intent, account import and edit
+writers encrypt before persistence. Routine and automation reservations use
+the stable request ID for the new conversation, so their SQL transactions can
+insert a title encrypted beforehand without weakening claim or replay checks.
+The invoker history views project ciphertext; authorized history/detail and
+account export readers decode after access. A bounded service-only CAS pass
+converts historical titles and rotates old key versions. The activation guard
+refuses changed clear titles and lower versions. Unit and SQL regressions test
+source, view, both SQL reservation writers, stale CAS and old-writer refusal.
+The isolated dump/restore loads conversation identities and conversations in
+independent child-first batches, recovers two user-key versions with cold
+caches and rejects a wrong root. The worker requires
+`MINDDY_NUMO_CONVERSATION_TITLE_ENCRYPTION_ENABLED=true` and the global content
+flag, both off in production. Conversation error messages, assistant messages,
+turn outcomes and checkpoints remain open; this is not a global Numo closure.

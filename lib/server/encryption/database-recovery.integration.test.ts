@@ -36,6 +36,7 @@ const prUrlTemplate = "minddy_min591_pr_url_audit";
 const sharedPrUrlTemplate = "minddy_min591_relay_audit_audit";
 const attachmentTemplate = "minddy_min591_attachment_metadata_audit";
 const operationTemplate = "minddy_min591_operation_audit";
+const conversationTemplate = "minddy_min591_conversation_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -3962,6 +3963,100 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       expect(() => sql(restored, `UPDATE public.numo_automation_operations
         SET prompt='private obsolete writer' WHERE id=${quote(operations[0])};`))
         .toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
+
+  it("restores assistant conversation titles before owners with cold mixed keys", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_chat_${suffix}`;
+    const restored = `minddy_min591_chat_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const owner = randomUUID();
+    const conversations = [randomUUID(), randomUUID()];
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(conversationTemplate, "SELECT count(*) FROM public.conversations;"))
+        .toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${conversationTemplate};`);
+        created.push(name);
+      }
+      const scope: EncryptionScope = { kind: "user", id: owner };
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(owner)});`);
+      for (const [index, conversation] of conversations.entries()) {
+        if (index) {
+          const first = await keys.current(scope);
+          first.bytes.fill(0);
+          await keys.rotate(scope, 1);
+        }
+        const cipher = await store.encrypt(`private-chat-title-${index}`, {
+          scope, table: "conversations", column: "title", rowId: conversation,
+        });
+        const title = `mdyn3:${store.versionOf(cipher)}:${Buffer.from(cipher).toString("base64url")}`;
+        sql(source, `INSERT INTO public.conversations(id,user_id,title)
+          VALUES(${quote(conversation)},${quote(owner)},${quote(title)});`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["auth.users", "public.conversations",
+          "public.numo_conversation_ids", "public.numo_conversation_title_scope",
+          "public.envelope_data_keys"].map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("private-chat-title-");
+      const conversationCopy = dump.match(/(COPY public\.conversations[^\n]*\n)([\s\S]*?)(\\\.\n)/);
+      const identityCopy = dump.match(/(COPY public\.numo_conversation_ids[^\n]*\n)([\s\S]*?)(\\\.\n)/);
+      expect(conversationCopy).not.toBeNull();
+      expect(identityCopy).not.toBeNull();
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${identityCopy![0]}COMMIT;`);
+      for (const line of conversationCopy![2].trimEnd().split("\n").reverse()) {
+        sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${conversationCopy![1]}${line}\n${conversationCopy![3]}COMMIT;`);
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${dump.replace(identityCopy![0], "").replace(conversationCopy![0], "")}\nCOMMIT;`);
+      sql(restored, `ALTER TABLE public.conversations
+        DROP CONSTRAINT conversations_user_id_fkey;
+        ALTER TABLE public.conversations ADD CONSTRAINT
+        conversations_user_id_fkey FOREIGN KEY(user_id)
+        REFERENCES auth.users(id) NOT VALID;
+        ALTER TABLE public.conversations VALIDATE CONSTRAINT
+        conversations_user_id_fkey;`);
+      sql(restored, `ALTER TABLE public.numo_conversation_ids
+        DROP CONSTRAINT numo_conversation_ids_assistant_id_fkey;
+        ALTER TABLE public.numo_conversation_ids ADD CONSTRAINT
+        numo_conversation_ids_assistant_id_fkey FOREIGN KEY(assistant_id)
+        REFERENCES public.conversations(id) ON DELETE CASCADE NOT VALID;
+        ALTER TABLE public.numo_conversation_ids VALIDATE CONSTRAINT
+        numo_conversation_ids_assistant_id_fkey;`);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(root)));
+      for (const [index, conversation] of conversations.entries()) {
+        const title = sql(restored, `SELECT title FROM public.conversations
+          WHERE id=${quote(conversation)};`);
+        const cipher = cold.fromDatabase(Buffer.from(title.split(":")[2],
+          "base64url").toString("utf8"));
+        expect(title.split(":")[1]).toBe(String(index + 1));
+        expect(await cold.decrypt(cipher, { scope, table: "conversations",
+          column: "title", rowId: conversation }))
+          .toBe(`private-chat-title-${index}`);
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const first = sql(restored, `SELECT title FROM public.conversations
+        WHERE id=${quote(conversations[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase(Buffer.from(first.split(":")[2],
+        "base64url").toString("utf8")), { scope, table: "conversations",
+          column: "title", rowId: conversations[0] })).rejects.toThrow();
+      expect(() => sql(restored, `INSERT INTO public.conversations(user_id,title)
+        VALUES(${quote(owner)},'private obsolete writer');`)).toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();

@@ -858,19 +858,25 @@ export async function importAccountTransfer(
   );
 
   const conversationIds = new Map<string, string>();
-  const conversations = document.assistant_conversations.flatMap((source) => {
+  const { encodeConversationTitle, shouldProtectConversationTitle } = await import(
+    "@/lib/server/numo/conversation-title-content"
+  );
+  const protectConversationTitles = await shouldProtectConversationTitle(service);
+  const conversations = (await Promise.all(document.assistant_conversations.map(async (source) => {
     const id = uuidValue(source, "id");
-    if (!id) return [];
+    if (!id) return null;
     conversationIds.set(id, id);
-    return [{
+    const title = typeof source.title === "string" ? source.title : null;
+    return {
       id,
       project_id: mapId(source.project_id, projects.projectIds),
       user_id: userId,
-      title: source.title ?? null,
+      title: protectConversationTitles
+        ? await encodeConversationTitle(userId, id, title) : title,
       created_at: source.created_at,
       updated_at: source.updated_at,
-    }];
-  });
+    };
+  }))).filter((row): row is NonNullable<typeof row> => row !== null);
   await upsertRows(service, "conversations", conversations);
   for (const conversation of document.assistant_conversations) {
     const conversationId = uuidValue(conversation, "id");

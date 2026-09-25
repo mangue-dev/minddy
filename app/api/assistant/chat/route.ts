@@ -21,6 +21,8 @@ import { parseCommand } from "@/lib/server/assistant/commands";
 import { parseSelectedSkills } from "@/lib/server/assistant/skills";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import { fallbackShortTitle, generateShortTitle } from "@/lib/server/short-title";
+import { encodeConversationTitle, shouldProtectConversationTitle } from
+  "@/lib/server/numo/conversation-title-content";
 import { newRunId } from "@/lib/server/ai-usage";
 import { isWebSearchEnabled } from "@/lib/server/web-search";
 import { parseResourcesInput } from "@/lib/server/attachments";
@@ -639,13 +641,18 @@ export async function POST(request: NextRequest) {
   let pendingTitle: { conversationId: string; fallback: string } | null = null;
   let createdConversationId: string | null = null;
   if (!convId) {
+    const newConversationId = randomUUID();
     const title = fallbackShortTitle(sanitizedUserMessage);
+    const storedTitle = await shouldProtectConversationTitle(service)
+      ? await encodeConversationTitle(user.id, newConversationId, title)
+      : title;
     const { data: conv, error: convError } = await supabase
       .from("conversations")
       .insert({
+        id: newConversationId,
         project_id: null,
         user_id: user.id,
-        title,
+        title: storedTitle,
         ...(configuration.persistedModel !== null ? { model: configuration.persistedModel } : {}),
         ...(configuration.persistedReasoningLevel !== null
           ? { reasoning_level: configuration.persistedReasoningLevel }
@@ -766,9 +773,12 @@ export async function POST(request: NextRequest) {
     })
       .then(async (generated) => {
         if (!generated || generated === fallback) return;
+        const title = await shouldProtectConversationTitle(service)
+          ? await encodeConversationTitle(user.id, titleConversationId, generated)
+          : generated;
         await service
           .from("conversations")
-          .update({ title: generated })
+          .update({ title })
           .eq("id", titleConversationId)
           .eq("user_id", user.id);
       })

@@ -7,6 +7,8 @@ import { decodeAgentVerdict, legacyAgentVerdictSchema,
   type StoredAgentVerdict } from "@/lib/server/agent/run-verdict-content";
 import { hydrateNumoTurn, type NumoAutomationContext,
   type NumoTurn } from "@/lib/server/numo/turns";
+import { encodeConversationTitle, shouldProtectConversationTitle } from
+  "@/lib/server/numo/conversation-title-content";
 import { decodeOperationJson, decodeOperationText, encodeOperationJson,
   encodeOperationText, shouldProtectAutomationOperation } from "./operation-content";
 
@@ -235,6 +237,9 @@ export async function ensureNumoAutomationOperation(input: {
   const context = protect ? await encodeOperationJson(input.chain.project_id,
     input.chain.id, input.chain.step, "context",
     input.context as unknown as Record<string, unknown>) : input.context;
+  const title = await shouldProtectConversationTitle(service)
+    ? await encodeConversationTitle(input.chain.owner_id,
+      input.requestId, input.title) : input.title;
   const { data, error } = await service.rpc(
     "ensure_numo_automation_operation",
     {
@@ -243,7 +248,7 @@ export async function ensureNumoAutomationOperation(input: {
       p_rule_id: input.ruleId,
       p_mode: input.mode,
       p_user_id: input.chain.owner_id,
-      p_title: input.title,
+      p_title: title,
       p_request_id: input.requestId,
       p_prompt: prompt,
       p_locale: input.locale,

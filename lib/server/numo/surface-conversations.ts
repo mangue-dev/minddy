@@ -4,6 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 import { decodeSurfaceDestination, encodeSurfaceDestination,
   type StoredSurfaceDestination } from "./surface-destination-content";
+import { encodeConversationTitle, shouldProtectConversationTitle } from
+  "./conversation-title-content";
 
 export type NumoSurface =
   | "issue_comment"
@@ -91,12 +93,18 @@ export async function ensureNumoSurfaceThread(input: {
   const existing = await findSurfaceThread(input.service, input);
   if (existing) return existing;
 
+  const conversationId = randomUUID();
+  const title = await shouldProtectConversationTitle(input.service)
+    ? await encodeConversationTitle(input.actorId, conversationId, input.title)
+    : input.title;
+
   const { data: conversation, error: conversationError } = await input.service
     .from("conversations")
     .insert({
+      id: conversationId,
       project_id: null,
       user_id: input.actorId,
-      title: input.title,
+      title,
     })
     .select("id")
     .single();

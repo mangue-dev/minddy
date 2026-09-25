@@ -21,6 +21,8 @@ import { hydrateAgentSummaryCopies } from "@/lib/server/agent/run-event-store";
 import { hydrateAgentLaunchCopies, hydrateImportedAgentMessages } from "@/lib/server/agent/run-launch-content";
 import { hydrateAgentQueueCopies } from "@/lib/server/agent/run-queue-content";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
+import { decodeConversationTitle } from
+  "@/lib/server/numo/conversation-title-content";
 import { decodeAgentContextSnapshot, legacyAgentContextSchema } from
   "@/lib/server/agent/context-snapshot-content";
 
@@ -574,10 +576,12 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     views: list("views", views),
     cycles: list("cycles", cycles),
     scratchpad: scratchpad ? { content: scratchpad.content, updated_at: scratchpad.updated_at } : null,
-    assistant_conversations: conversationRows.map((c) => ({
+    assistant_conversations: await Promise.all(conversationRows.map(async (c) => ({
       ...c,
+      title: await decodeConversationTitle(userId, c.id as string,
+        c.title as string | null, userId),
       messages: messagesByConversation.get(c.id as string) ?? [],
-    })),
+    }))),
     code_agent_conversations: exportedCodeConversations,
     notifications: list("notifications", notifications),
     push_devices: list("push_subscriptions", pushDevices),

@@ -18,10 +18,23 @@ import { decodeTurnSummaryValue, isEncryptedRunSummary } from
 import { decodeAgentPrUrl, decodeAgentPrUrlValue,
   isEncryptedAgentPrUrl } from "@/lib/server/agent/run-pr-url-content";
 import { decodePullRequestContent } from "@/lib/server/agent/pull-request-content";
+import { decodeConversationTitle } from "./conversation-title-content";
 
 export const NUMO_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const NUMO_CONVERSATIONS_PAGE_SIZE = 50;
 export const MAX_NUMO_CONVERSATIONS_PAGE_SIZE = 500;
+
+async function hydrateAssistantTitles<T extends NumoConversation>(rows: T[]):
+  Promise<T[]> {
+  return Promise.all(rows.map(async (row) => {
+    if (row.source !== "assistant") return row;
+    if (!row.user_id || !row.legacy_id) {
+      throw new Error("Numo conversation owner is unavailable");
+    }
+    return { ...row, title: await decodeConversationTitle(row.user_id,
+      row.legacy_id, row.title) };
+  }));
+}
 
 /** Resolve issue-derived history titles only after the invoker view grants access. */
 async function hydrateIssueTitles<T extends NumoConversation>(
@@ -139,7 +152,8 @@ export async function listNumoConversations(
   if (projectId) query = query.eq("project_id", projectId);
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  const rows = await hydrateIssueTitles(supabase, (data ?? []) as NumoConversation[]);
+  const rows = await hydrateAssistantTitles(await hydrateIssueTitles(
+    supabase, (data ?? []) as NumoConversation[]));
   return { conversations: rows.slice(0, limit), hasMore: rows.length > limit };
 }
 
@@ -148,7 +162,8 @@ export async function getNumoConversation(supabase: SupabaseClient, id: string) 
     .select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return null;
-  return (await hydrateIssueTitles(supabase, [data as NumoConversation]))[0];
+  return (await hydrateAssistantTitles(await hydrateIssueTitles(
+    supabase, [data as NumoConversation])))[0];
 }
 
 /** Read the assistant-only persisted choices through the caller's RLS client. */

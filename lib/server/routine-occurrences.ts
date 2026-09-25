@@ -1,4 +1,6 @@
 import "server-only";
+import { encodeConversationTitle, shouldProtectConversationTitle } from
+  "@/lib/server/numo/conversation-title-content";
 
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -85,7 +87,9 @@ export async function startRoutineOccurrence(input: {
     p_origin: input.origin,
     p_scheduled_for: scheduledFor,
     p_request_id: requestId,
-    p_title: input.routine.title,
+    p_title: await shouldProtectConversationTitle(service)
+      ? await encodeConversationTitle(input.routine.owner_id,
+        requestId, input.routine.title.trim().slice(0, 200)) : input.routine.title,
   });
   if (error) throw new Error(error.message);
   let occurrence = composite<NumoRoutineOccurrence>(data);

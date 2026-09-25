@@ -152,8 +152,11 @@ describe("Numo conversation routes", () => {
   it("creates a projectless conversation owned by the authenticated user", async () => {
     const db = database({ numo_conversation_history: [conversation] });
     auth.get.mockResolvedValue({ ok: true, user: { id: userId }, supabase: db.client });
+    auth.service.mockReturnValue(db.client);
     expect((await create(request("/api/numo/conversations", "POST", {}))).status).toBe(201);
-    expect(db.calls).toContainEqual({ table: "conversations", method: "insert", args: [{ user_id: userId, title: null, project_id: null }] });
+    expect(db.calls).toContainEqual({ table: "conversations", method: "insert",
+      args: [expect.objectContaining({ id: expect.any(String), user_id: userId,
+        title: null, project_id: null })] });
   });
 
   it("rejects project context that the caller cannot read", async () => {

@@ -2228,6 +2228,19 @@
         "automation_operation_json_cipher_valid"
       ]
     },
+    "guard_numo_conversation_title()": {
+      "sha256": "9e42b824fd4b37d57f282cd4ef1d300c6caabb9ff8a58eb1ac4454c1f096ca8d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_conversation_title_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "lock_project_membership_scope()": {
       "sha256": "bd69c56a0c5b97efa80089da228f062c687fa232cddf7f80713169efdcdef833",
       "securityDefiner": false,
@@ -3668,7 +3681,7 @@
       ]
     },
     "update_numo_conversation(uuid,uuid,jsonb)": {
-      "sha256": "7bf7e728d7cd3ab3d403b594b7f2932c5a6fd1a513b81877402b07d956cd8bf2",
+      "sha256": "b8aacb4b42bdbb3360f203d7cebf6ff7284e4958d45c063b403c6315099611be",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4192,6 +4205,21 @@
       "protectedRelations": [
         "numo_turn_events",
         "numo_assistant_turns"
+      ],
+      "functionReferences": []
+    },
+    "migrate_numo_conversation_title(uuid,text,text)": {
+      "sha256": "c577b6080e86dd12273480f3a8d259070bbf39c6ca8913bf69f6b6f4f604888a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "conversations"
+      ],
+      "protectedRelations": [
+        "conversations"
       ],
       "functionReferences": []
     },
@@ -5652,7 +5680,7 @@
       "functionReferences": []
     },
     "ensure_numo_routine_occurrence(uuid,uuid,text,timestamp with time zone,uuid,text)": {
-      "sha256": "a435302549899435f1da6f1071447edaedbf7a320e719974b35a1d638307c749",
+      "sha256": "9b50d2dedfb1cecb24494f63ad958f79fccf4d6ea03c30768236302b293e1b51",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -5790,7 +5818,7 @@
       ]
     },
     "ensure_numo_automation_operation(uuid,integer,text,text,uuid,text,uuid,text,text,jsonb)": {
-      "sha256": "b0d11f3e1d1b7ed065270e47f32ef1390500f0e9cefc9a04f94be514028c18c1",
+      "sha256": "782daf686e96db6ef738c08577d01209f4061cd611ce3e36a6230166d7068bc1",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6526,6 +6554,10 @@
     "billing_accounts.billing_accounts_broadcast": {
       "function": "broadcast_billing_row()",
       "definition": "CREATE TRIGGER billing_accounts_broadcast AFTER INSERT OR UPDATE ON billing_accounts FOR EACH ROW EXECUTE FUNCTION broadcast_billing_row()"
+    },
+    "conversations.numo_conversation_title_guard": {
+      "function": "guard_numo_conversation_title()",
+      "definition": "CREATE TRIGGER numo_conversation_title_guard BEFORE INSERT OR UPDATE ON conversations FOR EACH ROW EXECUTE FUNCTION guard_numo_conversation_title()"
     },
     "issue_categories.issue_categories_broadcast": {
       "function": "broadcast_issue_scoped()",

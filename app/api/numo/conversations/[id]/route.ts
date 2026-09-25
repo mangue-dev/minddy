@@ -4,6 +4,8 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getNumoConversation, getNumoConversationConfig, getNumoConversationDetail, NUMO_UUID, validNumoPatch } from "@/lib/server/numo/conversations";
 import { encodeAgentTitle, shouldEncryptAgentTitle } from
   "@/lib/server/agent/run-title-content";
+import { encodeConversationTitle, shouldProtectConversationTitle } from
+  "@/lib/server/numo/conversation-title-content";
 import {
   isNumoConversationConfigError,
   resolveNumoTurnConfiguration,
@@ -73,6 +75,13 @@ export async function PATCH(request: NextRequest, { params }: Context) {
         storedPatch = { ...patch, title: null,
           title_ciphertext: sealed.title_ciphertext,
           title_encryption_version: sealed.title_encryption_version };
+      } else if (conversation.source === "assistant" &&
+          await shouldProtectConversationTitle(service)) {
+        const title = typeof patch.title === "string"
+          ? patch.title.trim() || null : null;
+        storedPatch = { ...patch,
+          title: await encodeConversationTitle(auth.user.id,
+            conversation.legacy_id, title) };
       }
     } catch {
       return Response.json({ error: "Unable to protect conversation title" },

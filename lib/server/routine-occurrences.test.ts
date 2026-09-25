@@ -22,7 +22,8 @@ const h = vi.hoisted(() => {
         error: null,
       }),
       maybeSingle: async () => ({
-        data: table === "numo_assistant_turns" ? state.turn : state.occurrence,
+        data: table === "numo_conversation_title_scope" ? null
+          : table === "numo_assistant_turns" ? state.turn : state.occurrence,
         error: null,
       }),
     };

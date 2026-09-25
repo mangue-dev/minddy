@@ -24,6 +24,8 @@ import { fallbackShortTitle } from "@/lib/server/short-title";
 import { ensureUsageBudget } from "@/lib/server/usage";
 import { isWebSearchEnabled } from "@/lib/server/web-search";
 import { getServiceClient } from "@/lib/supabase-service";
+import { encodeConversationTitle, shouldProtectConversationTitle } from
+  "./conversation-title-content";
 import { ManagedAiUnavailableError } from "@/lib/server/ai-runtime";
 import {
   isPlanLimitError,
@@ -167,12 +169,18 @@ export async function startNumoIntent(
     }
     conversation = data as { id: string };
   } else {
+    const conversationId = randomUUID();
+    const title = fallbackShortTitle(prompt);
+    const storedTitle = await shouldProtectConversationTitle(service)
+      ? await encodeConversationTitle(input.userId, conversationId, title)
+      : title;
     const { data, error } = await input.supabase
       .from("conversations")
       .insert({
+        id: conversationId,
         project_id: null,
         user_id: input.userId,
-        title: fallbackShortTitle(prompt),
+        title: storedTitle,
       })
       .select("id")
       .single();
