@@ -11,6 +11,8 @@ import { isForgeRelayClientConfigured } from "@/lib/server/forge-relay/client";
 import { pushRelayLinkEvent } from "@/lib/server/forge-relay/link-push";
 import { decodeRepositoryName, registerRepositoryName,
   shouldProtectRepositoryNames } from "./repository-name-content";
+import { decodeDefaultBranch,encodeDefaultBranch,
+  shouldEncryptDefaultBranch } from "./default-branch-content";
 
 /**
  * Access to project link ↔ repository (project_git_links) — MIN-47. Customer service;
@@ -67,7 +69,7 @@ export async function getProjectLink(
     repo_full_name: repoFullName,
     repo_previous_names: previousNames.filter((name): name is string =>
       typeof name==="string"),
-    default_branch: row.default_branch,
+    default_branch: await decodeDefaultBranch(projectId,row.default_branch),
     account_login: row.git_connections?.account_login ?? null,
     issue_sync_enabled: row.issue_sync_enabled === true,
     issue_sync_backfilled_at: row.issue_sync_backfilled_at,
@@ -185,6 +187,9 @@ export async function bindRepo(params: {
     ? await Promise.all(previousNames.map((name) =>
         registerRepositoryName(connection.provider,name)))
     : previousNames;
+  const defaultBranch = await shouldEncryptDefaultBranch(supabase)
+    ? await encodeDefaultBranch(params.projectId,repo.default_branch)
+    : repo.default_branch;
   const values = {
     project_id: params.projectId,
     connection_id: connection.id,
@@ -195,7 +200,7 @@ export async function bindRepo(params: {
     repo_name: protectNames ? null : repo.name,
     repo_full_name: storedName,
     repo_previous_names: storedPreviousNames,
-    default_branch: repo.default_branch,
+    default_branch: defaultBranch,
     created_by: params.userId,
     updated_at: nowIso,
   };

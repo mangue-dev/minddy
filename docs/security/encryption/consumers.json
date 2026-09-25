@@ -2502,14 +2502,14 @@
     "file": "lib/server/agent/repo-access.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 162,
+    "line": 163,
     "storage": false
   },
   {
     "file": "lib/server/agent/repo-access.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 225,
+    "line": 226,
     "storage": false
   },
   {
@@ -5271,6 +5271,20 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/forge-default-branch-backfill.ts",
+    "operation": "from",
+    "resource": "project_git_links",
+    "line": 23,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-default-branch-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_forge_default_branch",
+    "line": 51,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/forge-mention-backfill.ts",
     "operation": "from",
     "resource": "forge_mention_throttle",
@@ -7049,6 +7063,13 @@
     "storage": false
   },
   {
+    "file": "lib/server/git/default-branch-content.ts",
+    "operation": "from",
+    "resource": "forge_default_branch_scope",
+    "line": 29,
+    "storage": false
+  },
+  {
     "file": "lib/server/git/forge-members.ts",
     "operation": "from",
     "resource": "projects",
@@ -7220,21 +7241,21 @@
     "file": "lib/server/git/repo-links.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 41,
+    "line": 43,
     "storage": false
   },
   {
     "file": "lib/server/git/repo-links.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 203,
+    "line": 208,
     "storage": false
   },
   {
     "file": "lib/server/git/repo-links.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 236,
+    "line": 241,
     "storage": false
   },
   {
@@ -7311,28 +7332,28 @@
     "file": "lib/server/git/repository-name-content.ts",
     "operation": "from",
     "resource": "forge_repository_names",
-    "line": 45,
+    "line": 48,
     "storage": false
   },
   {
     "file": "lib/server/git/repository-name-content.ts",
     "operation": "from",
     "resource": "forge_repository_name_scope",
-    "line": 79,
+    "line": 82,
     "storage": false
   },
   {
     "file": "lib/server/git/repository-name-content.ts",
     "operation": "from",
     "resource": "forge_repository_names",
-    "line": 102,
+    "line": 108,
     "storage": false
   },
   {
     "file": "lib/server/git/repository-name-content.ts",
     "operation": "from",
     "resource": "forge_repository_names",
-    "line": 124,
+    "line": 131,
     "storage": false
   },
   {

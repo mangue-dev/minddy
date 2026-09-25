@@ -42,6 +42,7 @@ const finalTemplate = "minddy_min591_final_audit";
 const errorTemplate = "minddy_min591_error_audit";
 const toolTemplate = "minddy_min591_tool_audit";
 const repositoryTemplate = "minddy_min591_repo_audit";
+const defaultBranchTemplate = "minddy_min591_branch_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -4696,6 +4697,101 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
           rowId:`github:${tokens[0]}` })).rejects.toThrow();
       expect(() => sql(restored,`UPDATE public.pull_requests SET
         repo_full_name='Private/Repository' WHERE id=${quote(pr)};`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const database of created.reverse()) {
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+      }
+    }
+  },60_000);
+
+  it("restores project-bound forge default branches before their parent rows",async () => {
+    const suffix=randomUUID().replaceAll("-","").slice(0,20);
+    const source=`minddy_min591_branch_source_${suffix}`;
+    const restored=`minddy_min591_branch_restore_${suffix}`;
+    const created:string[]=[];
+    const root=randomBytes(32);
+    const actor=randomUUID(),connection=randomUUID();
+    const projects=[randomUUID(),randomUUID()];
+    const links=[randomUUID(),randomUUID()];
+    const branches=["private/default-one","private/default-two"];
+    const log=vi.spyOn(console,"info").mockImplementation(() => {});
+    try {
+      expect(sql(defaultBranchTemplate,"SELECT count(*) FROM auth.users;"))
+        .toBe("0");
+      for (const database of [source,restored]) {
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${defaultBranchTemplate};`);
+        created.push(database);
+      }
+      sql(source,`INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(projects[0])},${quote(actor)},'First fixture','FDB1'),
+            (${quote(projects[1])},${quote(actor)},'Second fixture','FDB2');
+        INSERT INTO public.git_connections(id,user_id,provider)
+          VALUES(${quote(connection)},${quote(actor)},'github');`);
+      const keys=new ManagedDataKeys(registry(source),wrapper(root));
+      const store=new EncryptedStore(keys);
+      for (const [index,project] of projects.entries()) {
+        const scope:EncryptionScope={ kind:"project",id:project };
+        if (index) {
+          const first=await keys.current(scope);
+          first.bytes.fill(0);
+          await keys.rotate(scope,1);
+        }
+        const cipher=await store.encrypt(branches[index],{
+          scope,table:"project_git_links",column:"default_branch",
+          rowId:project });
+        const sealed=`mdyg3:${store.versionOf(cipher)}:${Buffer.from(cipher)
+          .toString("base64url")}`;
+        sql(source,`INSERT INTO public.project_git_links(id,project_id,
+          connection_id,provider,external_repo_id,default_branch)
+          VALUES(${quote(links[index])},${quote(project)},${quote(connection)},
+            'github',${quote(String(index+1))},${quote(sealed)});`);
+      }
+      expect(sql(source,"SELECT public.activate_forge_default_branches();"))
+        .toBe("t");
+      const dump=execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges",...["auth.users","public.projects",
+          "public.git_connections","public.project_git_links",
+          "public.forge_default_branch_scope","public.envelope_data_keys"]
+          .map((table)=>`--table=${table}`)],
+      { encoding:"utf8",maxBuffer:4*1024*1024 });
+      expect(dump).not.toContain("private/default-");
+      const copy=dump.match(/(COPY public\.project_git_links[^\n]*\n)([\s\S]*?)(\\\.\n)/);
+      expect(copy).not.toBeNull();
+      for (const line of copy![2].trimEnd().split("\n").reverse()) {
+        sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;\n${copy![1]}${line}\n${copy![3]}COMMIT;`);
+      }
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;\n${dump.replace(copy![0],"")}\nCOMMIT;`);
+      expect(sql(restored,`SELECT count(*) FROM public.project_git_links l
+        JOIN public.projects p ON p.id=l.project_id;`)).toBe("2");
+      const cold=new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(root)));
+      for (const [index,project] of projects.entries()) {
+        const sealed=sql(restored,`SELECT default_branch FROM
+          public.project_git_links WHERE project_id=${quote(project)};`);
+        const parts=sealed.split(":");
+        expect(Number(parts[1])).toBe(index+1);
+        expect(await cold.decrypt(cold.fromDatabase(Buffer.from(parts[2],
+          "base64url").toString("utf8")),{
+            scope:{ kind:"project",id:project },table:"project_git_links",
+            column:"default_branch",rowId:project })).toBe(branches[index]);
+      }
+      const wrong=new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const sealed=sql(restored,`SELECT default_branch FROM public.project_git_links
+        WHERE project_id=${quote(projects[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase(Buffer.from(
+        sealed.split(":")[2],"base64url").toString("utf8")),{
+          scope:{ kind:"project",id:projects[0] },
+          table:"project_git_links",column:"default_branch",
+          rowId:projects[0] })).rejects.toThrow();
+      expect(() => sql(restored,`UPDATE public.project_git_links SET
+        default_branch='private/obsolete' WHERE project_id=${quote(projects[0])};`))
+        .toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();

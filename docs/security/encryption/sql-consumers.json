@@ -1500,6 +1500,19 @@
       ],
       "functionReferences": []
     },
+    "guard_forge_default_branch()": {
+      "sha256": "9d613dee864b1f7a717c44fa219a2bf75a9c7890c32c19e9a011e2cf1acbd05f",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "forge_default_branch_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_numo_tool_checkpoint()": {
       "sha256": "49ab21e3bf8076e0547304e222bcf46f5bd39fdc98888f21f80fac069a670562",
       "securityDefiner": true,
@@ -2716,6 +2729,22 @@
         "current_realtime_topic",
         "realtime_topic_project_ids"
       ]
+    },
+    "activate_forge_default_branches()": {
+      "sha256": "b57ee164cba40249bee7a3871698ad0149230a3088ccc0853074ce32368ca651",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "project_git_links",
+        "forge_default_branch_scope"
+      ],
+      "protectedRelations": [
+        "project_git_links"
+      ],
+      "functionReferences": []
     },
     "activate_forge_repository_names()": {
       "sha256": "8c2992016804264c515f2027df5b622c9b0144a16178cbfedd0c66e1bfc7c0a5",
@@ -4081,6 +4110,21 @@
       ],
       "protectedRelations": [
         "pull_requests"
+      ],
+      "functionReferences": []
+    },
+    "migrate_forge_default_branch(uuid,text,text)": {
+      "sha256": "e74e725d131255273570066c6af5bc5be9a50bcfab1bd9d86531659644bd5dfc",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "project_git_links"
+      ],
+      "protectedRelations": [
+        "project_git_links"
       ],
       "functionReferences": []
     },
@@ -7033,6 +7077,10 @@
     "project_drafts.project_drafts_set_updated_at": {
       "function": "set_project_draft_updated_at()",
       "definition": "CREATE TRIGGER project_drafts_set_updated_at BEFORE UPDATE ON project_drafts FOR EACH ROW EXECUTE FUNCTION set_project_draft_updated_at()"
+    },
+    "project_git_links.forge_default_branch_guard": {
+      "function": "guard_forge_default_branch()",
+      "definition": "CREATE TRIGGER forge_default_branch_guard BEFORE INSERT OR UPDATE ON project_git_links FOR EACH ROW EXECUTE FUNCTION guard_forge_default_branch()"
     },
     "pull_requests.pull_requests_broadcast_insert": {
       "function": "broadcast_pull_request_row()",

@@ -5597,6 +5597,11 @@
         "type": "text",
         "nullable": true,
         "generated": false
+      },
+      "default_branch_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -8765,6 +8770,24 @@
         "targetColumn": "id"
       }
     ]
+  },
+  "forge_default_branch_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
   },
   "github_issue_comment_syncs": {
     "columns": {

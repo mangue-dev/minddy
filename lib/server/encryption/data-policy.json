@@ -1669,6 +1669,21 @@
       ]
     }
   },
+  "forge_default_branch_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "forge_mention_key_encryption_scope": {
     "scope": {
       "kind": "system",
@@ -3302,7 +3317,8 @@
         "issue_sync_backfilled_at",
         "issue_sync_enabled_at",
         "updated_at",
-        "repo_name_checked_at"
+        "repo_name_checked_at",
+        "default_branch_checked_at"
       ],
       "encryption_metadata": [
         "repo_full_name",

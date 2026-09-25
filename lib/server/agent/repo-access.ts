@@ -7,6 +7,7 @@ import { GITLAB_API_BASE, GITLAB_HOST, gitlabHeaders } from "@/lib/server/git/gi
 import { decodeRepositoryName, repositoryNameToken,
   shouldProtectRepositoryNames } from
   "@/lib/server/git/repository-name-content";
+import { decodeDefaultBranch } from "@/lib/server/git/default-branch-content";
 
 /**
  * Resolve access to the repository linked to a project (MIN-46 + MIN-69).
@@ -148,7 +149,7 @@ function linkConnectionSource(row: GitLinkRow): string | null {
 }
 
 const GIT_LINK_COLUMNS =
-  "id, provider, connection_id, installation_id, external_repo_id, repo_full_name, default_branch, git_connections(source)";
+  "id, project_id, provider, connection_id, installation_id, external_repo_id, repo_full_name, default_branch, git_connections(source)";
 
 /**
  * Clone target of the project, or null if it has no repository linked to it. Raise if the link
@@ -241,7 +242,7 @@ export async function resolveProjectLinkForRepo(opts: {
       provider: opts.provider,
       repoFullName: (await decodeRepositoryName(opts.provider,
         row.repo_full_name,opts.userId))!,
-      defaultBranch: row.default_branch ?? "main",
+      defaultBranch: await decodeDefaultBranch(row.project_id!,row.default_branch) ?? "main",
       row,
     };
   }
@@ -306,7 +307,7 @@ async function targetFromLink(
     return {
       provider: "github",
       repoFullName,
-      defaultBranch: row.default_branch ?? "main",
+      defaultBranch: await decodeDefaultBranch(row.project_id!,row.default_branch) ?? "main",
       remoteUrl: `https://github.com/${repoFullName}.git`,
       authUrl: `https://x-access-token:${token}@github.com/${repoFullName}.git`,
       token,
@@ -332,7 +333,7 @@ async function targetFromLink(
     return {
       provider: "gitlab",
       repoFullName,
-      defaultBranch: row.default_branch ?? "main",
+      defaultBranch: await decodeDefaultBranch(row.project_id!,row.default_branch) ?? "main",
       remoteUrl: `${GITLAB_HOST.replace(/\/+$/, "")}/${repoFullName}.git`,
       authUrl: `https://oauth2:${encodeURIComponent(token)}@${host}/${repoFullName}.git`,
       token,
