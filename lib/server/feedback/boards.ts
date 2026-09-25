@@ -2,6 +2,7 @@ import "server-only";
 
 import { randomBytes } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
+import { publicProjectIconRoute } from "@/lib/server/project-icon-content";
 import {
   encryptBoardSsoSecret,
 } from "@/lib/server/feedback/sso-crypto";
@@ -98,7 +99,8 @@ export async function getBoardByToken(token: string): Promise<PublicBoardContext
 
   return {
     board: board as PublicFeedbackBoardRow,
-    project: project as PublicBoardContext["project"],
+    project: { ...project, icon_url: publicProjectIconRoute(
+      project.icon_url, token, "feedback") } as PublicBoardContext["project"],
   };
 }
 
@@ -132,7 +134,8 @@ export async function getBoardWithSsoSecretByToken(
 
   return {
     board: await hydrateBoard(board as FeedbackBoardRow) as FeedbackBoardRow,
-    project: project as PublicBoardContext["project"],
+    project: { ...project, icon_url: publicProjectIconRoute(
+      project.icon_url, token, "feedback") } as PublicBoardContext["project"],
   };
 }
 

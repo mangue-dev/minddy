@@ -7,6 +7,7 @@ import {
   reserveCustomDomainMutation,
 } from "@/lib/server/custom-domains";
 import { getProjectAccess } from "@/lib/server/project-access";
+import { publicProjectIconRoute } from "@/lib/server/project-icon-content";
 import { authenticationProof } from "@/lib/server/encryption/auth-proof";
 import { decodeShareToken, encodeShareToken, shareTokenLookup,
   shouldProtectShareTokens } from "@/lib/server/encryption/share-token-content";
@@ -406,7 +407,9 @@ export async function getPublicShareTarget(
     if (!page) return null;
     const project = await livePublicProject(page.project_id as string);
     if (!project) return null;
-    return { kind: "page", share, page: page as Page, project };
+    return { kind: "page", share, page: page as Page,
+      project: { ...project, icon_url: share.level === "public"
+        ? publicProjectIconRoute(project.icon_url, token, "share") : null } };
   }
 
   const { data: view } = await service
@@ -417,7 +420,9 @@ export async function getPublicShareTarget(
   if (!view) return null;
   const project = await livePublicProject(view.project_id as string);
   if (!project) return null;
-  return { kind: "view", share, view: view as View, project };
+  return { kind: "view", share, view: view as View,
+    project: { ...project, icon_url: share.level === "public"
+      ? publicProjectIconRoute(project.icon_url, token, "share") : null } };
 }
 
 /** Resolve a share URL token → share + view + live project, or null (→ 404).

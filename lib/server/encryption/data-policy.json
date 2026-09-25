@@ -3326,6 +3326,37 @@
       ]
     }
   },
+  "project_icon_encrypted_objects": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "path",
+        "project_id"
+      ],
+      "timestamp": [
+        "verified_at"
+      ]
+    }
+  },
+  "project_icon_encryption_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "project_invitations": {
     "scope": {
       "kind": "project",
@@ -3441,6 +3472,7 @@
       ],
       "routing_identity": [
         "deleted_by",
+        "icon_storage_path",
         "id",
         "issue_seq",
         "key",
@@ -3449,6 +3481,7 @@
       "timestamp": [
         "created_at",
         "deleted_at",
+        "icon_checked_at",
         "updated_at"
       ]
     }

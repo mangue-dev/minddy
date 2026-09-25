@@ -8,9 +8,8 @@ import { FORGE_ATTACHMENTS_BUCKET } from "@/lib/forge-image-assets";
  * Objects in a project that do NOT live in the bucket `attachments`
  * (MIN-296).
  *
- * Three buckets carry project data, and two of them are public
- * for reading: `project-icons` (the uploaded icon) and `forge-attachments` (the
- * files attached to the pull request comments). Neither cascaded,
+ * Three buckets carry project data. `project-icons` becomes private after
+ * migration; `forge-attachments` is public for PR comment images. Neither cascaded,
  * and neither was swept — neither when purging a project, nor when deleting an
  * account. A deleted project therefore left its icon and the images of its PR
  * served by their URL, with nothing left in the base to designate them: exactly the
@@ -58,8 +57,7 @@ export async function listStoragePrefix(
   }
 }
 
-/** The uploaded icons of the given projects — one per project, extension
- unknown (hence the listing of the prefix rather than an inferred path). */
+/** Include opaque project folders and legacy root-level project icons. */
 export async function projectIconPaths(
   service: SupabaseClient,
   projectIds: string[]
@@ -67,6 +65,19 @@ export async function projectIconPaths(
   const paths: string[] = [];
   for (const id of projectIds) {
     paths.push(...(await listStoragePrefix(service, "project-icons", id)));
+  }
+  const ids = new Set(projectIds);
+  for (let offset = 0; ; offset += LIST_PAGE) {
+    const { data, error } = await service.storage.from("project-icons")
+      .list("", { limit: LIST_PAGE, offset });
+    if (error || !data) break;
+    for (const entry of data) {
+      const id = entry.name.split(".", 1)[0];
+      if (ids.has(id) && entry.id !== null && entry.metadata !== null) {
+        paths.push(entry.name);
+      }
+    }
+    if (data.length < LIST_PAGE) break;
   }
   return paths;
 }

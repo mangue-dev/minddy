@@ -64,6 +64,20 @@ describe("protected storage object codec", () => {
     ]) await expect(codec.decode(value, changed, audit)).rejects.toThrow("Unable to decrypt");
   });
 
+  it("keeps private project icon bytes out of the stored object and binds the opaque path", async () => {
+    const { codec } = fixture();
+    const icon = { ...context, bucket: "project-icons",
+      path: "project-1/opaque-icon.enc" };
+    const source = Buffer.from("private-project-icon-pixels");
+    const sealed = await codec.encode(source, icon,
+      { fileName: "project-icon", mimeType: "image/webp" });
+    expect(sealed.toString()).not.toContain(source.toString());
+    expect(sealed.toString()).not.toContain("image/webp");
+    expect((await codec.decode(sealed, icon, audit)).bytes).toEqual(source);
+    await expect(codec.decode(sealed, { ...icon,
+      path: "project-1/replaced-icon.enc" }, audit)).rejects.toThrow();
+  });
+
   it("fails closed for plaintext, truncated containers, invalid locations and oversized uploads", async () => {
     const { codec } = fixture();
     for (const raw of ["plain text", "{}", "null", "[]", '{"format":"unknown"}']) {

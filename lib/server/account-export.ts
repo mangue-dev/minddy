@@ -11,7 +11,7 @@ import {
   ACCOUNT_TRANSFER_VERSION,
   CURRENT_ACCOUNT_EXPORT_VERSION,
 } from "@/lib/account-transfer";
-import { projectIconPaths } from "@/lib/server/project-storage";
+import { downloadProjectIcon } from "@/lib/server/project-icon";
 import { downloadAttachment } from "@/lib/server/attachments";
 import { decodeAttachmentRow, type AttachmentTable } from
   "@/lib/server/attachment-content";
@@ -110,26 +110,18 @@ async function includeStorageBytes(
 }
 
 async function includeProjectIcons(
-  service: ReturnType<typeof getServiceClient>,
+  _service: ReturnType<typeof getServiceClient>,
   projects: Row[],
 ): Promise<Row[]> {
-  const paths = await projectIconPaths(
-    service,
-    projects.map((project) => project.id as string),
-  );
   return Promise.all(
     projects.map(async (project) => {
       const id = project.id as string;
-      const path = paths.find((candidate) => candidate.startsWith(`${id}.`));
-      if (!path) return project;
-      const { data, error } = await service.storage.from("project-icons").download(path);
-      if (error || !data) {
-        throw new Error(`project-icons/${path}: ${error?.message ?? "download failed"}`);
-      }
+      const data = await downloadProjectIcon(id);
+      if (!data) return project;
       return {
         ...project,
-        project_icon_base64: Buffer.from(await data.arrayBuffer()).toString("base64"),
-        project_icon_mime_type: data.type || "image/webp",
+        project_icon_base64: data.bytes.toString("base64"),
+        project_icon_mime_type: data.mimeType,
       };
     }),
   );

@@ -9,7 +9,7 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 161 application tables and 1,461 columns, their primary
+- `schema.json` records 163 application tables and 1,468 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 176 encryption targets include the original content,
@@ -20,10 +20,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,518 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,536 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 409 functions, ten views and 220 triggers. Function
+- `sql-consumers.json` records 415 functions, ten views and 221 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -96,7 +96,7 @@ must be checked separately.
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
 | Forge data | Forge mention throttle identities and private repository names now use stable system blind indexes. The names have a recoverable encrypted registry and guarded equality keys across linked copies. Default branches use project-bound envelopes. Convert remaining legacy webhook credentials. The generic row codec deliberately refuses sensitive primary keys. |
-| Files and images | Attachment and page-file server paths, opaque names, ciphertext bytes and metadata are implemented below; private project icons and any remaining object copies still need conversion. Public avatars have an explicit public-use exception. |
+| Files and images | Attachment, page-file and project-icon server paths now use opaque names, ciphertext bytes and authorized download routes. The icon bucket switches to private only after the object queue is empty; other object copies still need review. Public avatars have an explicit public-use exception. |
 | Feedback and sharing | Feedback posts, private visitor identities, board SSO secrets and recoverable share tokens have repository and migration checkpoints below. Remaining feedback copies still need conversion; owner dialogs must retain access to share URLs. |
 | Credentials and configuration | The `app_config.value` repository now has a system-key envelope, bounded CAS rotation and an activated old-writer guard. Migrate other legacy environment-key envelopes and secret/configuration stores; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
 | Migration and recovery | Add restartable batches for every target and object, compare-and-swap against concurrent edits, verification counters, rejection of obsolete writers, a restoration rehearsal and retention of historical wrapped keys. Test mixed plaintext/encrypted tenants and old versions. |
@@ -1613,3 +1613,32 @@ loads the link children before their projects and connection in independent
 batches, decrypts two key versions with cold caches and rejects a wrong root.
 `MINDDY_FORGE_DEFAULT_BRANCH_ENCRYPTION_ENABLED` remains off in production.
 Legacy forge webhook credentials and other global MIN-591 sources remain open.
+
+## Private project icon checkpoint — 25 September 2026
+
+`projects.icon_url` becomes a local authorization-gated route and
+`icon_storage_path` is an opaque immutable object path. Icon bytes and MIME
+metadata use the project-key object codec. New writes upload and verify a
+ciphertext object, register it, then compare-and-swap the project reference;
+the prior object is removed after the swap. Account import re-encrypts transfer
+bytes, and an owner-authorized export deliberately transmits clear bytes to
+that external recipient. Current members can read the route. Enabled feedback
+boards and public, unlocked shares can use their existing capability tokens;
+password-protected share pages show the generated orb instead of widening their
+path-scoped unlock cookie. Invitation emails likewise use the orb when the icon
+route requires an account session.
+
+The bounded worker converts historic objects or guarded external icon URLs,
+rotates old key versions and removes orphaned clear objects. Activation refuses
+any unverified project reference or unregistered Storage object, then makes the
+bucket private in the same database transaction. Storage RLS bars
+authenticated direct object reads and writes; a storage trigger rejects old
+service-role object paths after activation. The bucket reconciliation script preserves
+public access only until that activation marker exists. SQL and route tests
+prove the source, old-writer rejection, capability checks and private bucket
+switch; a PostgreSQL dump/restore test loads child references in independent
+batches and verifies two key versions from cold caches and wrong-root rejection.
+`MINDDY_PROJECT_ICON_ENCRYPTION_ENABLED` remains disabled in production. The
+global MIN-591 boundary remains open; representative search, latency, key-cache
+and load measurements are required before production activation, not for code
+review of this PR.

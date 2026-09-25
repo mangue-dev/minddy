@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ManagedDataKeys, type KeyRegistry, type WrappedDataKey } from "./keys";
 import { LocalKeyWrapper } from "./local-key-wrapper";
 import { EncryptedStore, blindIndex, type EncryptionScope } from "./store";
+import { EncryptedObjectCodec } from "./object-codec";
 import { EncryptedRowCodec, type StoredRow } from "./row-codec";
 import { decodeRunJournalRow, encodeRunJournal } from "@/lib/server/agent/run-journal-codec";
 import { buildRootSwapSql, parseRegistryOutput, planRootRewrap } from "@/scripts/rewrap-data-root.mjs";
@@ -43,6 +44,7 @@ const errorTemplate = "minddy_min591_error_audit";
 const toolTemplate = "minddy_min591_tool_audit";
 const repositoryTemplate = "minddy_min591_repo_audit";
 const defaultBranchTemplate = "minddy_min591_branch_audit";
+const projectIconTemplate = "minddy_min591_icon_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -4792,6 +4794,114 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       expect(() => sql(restored,`UPDATE public.project_git_links SET
         default_branch='private/obsolete' WHERE project_id=${quote(projects[0])};`))
         .toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const database of created.reverse()) {
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+      }
+    }
+  },60_000);
+
+  it("restores private project icon references and ciphertext objects in independent child batches",async () => {
+    const suffix=randomUUID().replaceAll("-","").slice(0,20);
+    const source=`minddy_min591_icon_source_${suffix}`;
+    const restored=`minddy_min591_icon_restore_${suffix}`;
+    const created:string[]=[];
+    const root=randomBytes(32);
+    const actor=randomUUID();
+    const projects=[randomUUID(),randomUUID()];
+    const paths=projects.map((id)=>`${id}/${randomUUID()}.enc`);
+    const pictures=[Buffer.from("private-icon-one"),
+      Buffer.from("private-icon-two")];
+    const log=vi.spyOn(console,"info").mockImplementation(() => {});
+    try {
+      expect(sql(projectIconTemplate,"SELECT count(*) FROM auth.users;"))
+        .toBe("0");
+      for (const database of [source,restored]) {
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${projectIconTemplate};`);
+        created.push(database);
+      }
+      sql(source,`INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO storage.buckets(id,name,public)
+          VALUES('project-icons','project-icons',true) ON CONFLICT DO NOTHING;
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(projects[0])},${quote(actor)},'First icon','ICN1'),
+            (${quote(projects[1])},${quote(actor)},'Second icon','ICN2');`);
+      const keys=new ManagedDataKeys(registry(source),wrapper(root));
+      const store=new EncryptedStore(keys);
+      const codec=new EncryptedObjectCodec(store);
+      for (const [index,project] of projects.entries()) {
+        const scope:EncryptionScope={ kind:"project",id:project };
+        if (index) {
+          const first=await keys.current(scope);
+          first.bytes.fill(0);
+          await keys.rotate(scope,1);
+        }
+        const sealed=await codec.encode(pictures[index],{
+          scope,bucket:"project-icons",path:paths[index] },{
+          fileName:"project-icon",mimeType:"image/webp" });
+        sql(source,`INSERT INTO storage.objects(bucket_id,name,metadata,
+          user_metadata) VALUES('project-icons',${quote(paths[index])},
+          '{"size":120}'::jsonb,${quote(JSON.stringify({
+            fixture_ciphertext:sealed.toString("base64") }))}::jsonb);
+          INSERT INTO public.project_icon_encrypted_objects(path,project_id)
+            VALUES(${quote(paths[index])},${quote(project)});
+          UPDATE public.projects SET icon_url=${quote(`/api/projects/${project}/icon/content?v=${index+1}`)},
+            icon_storage_path=${quote(paths[index])} WHERE id=${quote(project)};`);
+      }
+      expect(sql(source,"SELECT public.activate_private_project_icons();"))
+        .toBe("t");
+      const dump=execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges",...["auth.users","public.projects",
+          "storage.buckets","storage.objects",
+          "public.project_icon_encrypted_objects",
+          "public.project_icon_encryption_scope",
+          "public.envelope_data_keys"].map((table)=>`--table=${table}`)],
+      { encoding:"utf8",maxBuffer:4*1024*1024 });
+      expect(dump).not.toContain("private-icon-");
+      let parents=dump;
+      for (const table of ["storage.objects",
+        "public.project_icon_encrypted_objects"]) {
+        const pattern=new RegExp(`(COPY ${table.replace(".","\\.")}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`);
+        const copy=pattern.exec(parents);
+        expect(copy).not.toBeNull();
+        for (const line of copy![2].trimEnd().split("\n").reverse()) {
+          sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;\n${copy![1]}${line}\n${copy![3]}COMMIT;`);
+        }
+        parents=parents.replace(copy![0],"");
+      }
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;\n${parents}\nCOMMIT;`);
+      expect(sql(restored,`SELECT count(*) FROM public.projects p
+        JOIN public.project_icon_encrypted_objects e ON e.project_id=p.id
+        JOIN storage.objects o ON o.name=e.path
+        WHERE o.bucket_id='project-icons';`)).toBe("2");
+      expect(sql(restored,`SELECT public FROM storage.buckets
+        WHERE id='project-icons';`)).toBe("f");
+      const cold=new EncryptedObjectCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored),wrapper(root))));
+      for (const [index,project] of projects.entries()) {
+        const raw=sql(restored,`SELECT user_metadata->>'fixture_ciphertext'
+          FROM storage.objects WHERE name=${quote(paths[index])};`);
+        const decoded=await cold.decode(cold.fromStorage(Buffer.from(raw,
+          "base64")),{ scope:{ kind:"project",id:project },
+          bucket:"project-icons",path:paths[index] },{
+          actorId:null,reason:"migration_verification" });
+        expect(decoded.bytes).toEqual(pictures[index]);
+      }
+      const wrong=new EncryptedObjectCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored),wrapper(randomBytes(32)))));
+      const raw=sql(restored,`SELECT user_metadata->>'fixture_ciphertext'
+        FROM storage.objects WHERE name=${quote(paths[0])};`);
+      await expect(wrong.decode(wrong.fromStorage(Buffer.from(raw,"base64")),{
+        scope:{ kind:"project",id:projects[0] },
+        bucket:"project-icons",path:paths[0] },{
+        actorId:null,reason:"migration_verification" })).rejects.toThrow();
+      expect(() => sql(restored,`UPDATE public.projects SET
+        icon_url='https://clear.example/icon.png',icon_storage_path=NULL
+        WHERE id=${quote(projects[0])};`)).toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();

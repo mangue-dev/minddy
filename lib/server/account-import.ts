@@ -14,6 +14,7 @@ import { getScratchpad, setScratchpad } from "@/lib/server/scratchpad";
 import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 import { appendStatEvents, type StatEventRow } from "@/lib/server/stat-events";
 import { uploadPrivateAttachmentObject } from "@/lib/server/attachments";
+import { storeProjectIcon } from "@/lib/server/project-icon";
 import { encodeAttachmentValue, shouldEncryptAttachmentMetadata } from
   "@/lib/server/attachment-content";
 
@@ -483,7 +484,6 @@ async function importProjects(
         "deleted_at",
         "smart_assign_enabled",
         "smart_assign_rules",
-        "icon_url",
         "auto_assign_enabled",
         "feedback_review_enabled",
         "feedback_review_skip_over_budget",
@@ -494,6 +494,7 @@ async function importProjects(
         "feedback_no_translate_languages",
         "orb_seed",
       ]),
+      icon_url: null,
       id: targetId,
       owner_id: userId,
       key: await freeProjectKey(service, sourceKey ?? `IMP${rows.length + 1}`, userId, usedKeys),
@@ -508,14 +509,8 @@ async function importProjects(
     const mime = typeof source.project_icon_mime_type === "string"
       ? source.project_icon_mime_type
       : "image/webp";
-    const extension = mime.includes("png") ? "png" : mime.includes("jpeg") ? "jpg" : "webp";
-    const path = `${targetId}.${extension}`;
-    const { error } = await service.storage
-      .from("project-icons")
-      .upload(path, Buffer.from(bytes, "base64"), { contentType: mime, upsert: true });
-    if (error) throw new Error(`project-icons/${targetId}: ${error.message}`);
-    const { data } = service.storage.from("project-icons").getPublicUrl(path);
-    await service.from("projects").update({ icon_url: `${data.publicUrl}?v=${Date.now()}` }).eq("id", targetId);
+    await storeProjectIcon(targetId, Buffer.from(bytes, "base64"), mime,
+      mime.includes("png") ? "png" : mime.includes("jpeg") ? "jpg" : "webp");
   }
   return { projectIds, remapped };
 }

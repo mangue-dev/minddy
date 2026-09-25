@@ -2099,6 +2099,23 @@
       ],
       "functionReferences": []
     },
+    "guard_project_icon_reference()": {
+      "sha256": "227bbd68df30b47cdf9c8192cad515651b6f0645d9b7a02bc2894afeb37d71a8",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "projects",
+        "project_icon_encryption_scope",
+        "project_icon_encrypted_objects"
+      ],
+      "protectedRelations": [
+        "projects"
+      ],
+      "functionReferences": []
+    },
     "guard_stat_events_encryption()": {
       "sha256": "01d3892fd9f74309f78ae37bd0df796adac33816074e90b5e79078b322f5af98",
       "securityDefiner": false,
@@ -2435,6 +2452,23 @@
       ],
       "protectedRelations": [
         "comments"
+      ],
+      "functionReferences": []
+    },
+    "activate_private_project_icons()": {
+      "sha256": "dcdf914a68df42320964c261de023ccbf02e1802ce32eaf4f56592ddc82c6597",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "projects",
+        "project_icon_encryption_scope",
+        "project_icon_encrypted_objects"
+      ],
+      "protectedRelations": [
+        "projects"
       ],
       "functionReferences": []
     },
@@ -3281,6 +3315,21 @@
         "rotate_project_realtime_generation"
       ]
     },
+    "verify_project_icon(uuid,text,text)": {
+      "sha256": "9f1c887277d9520178c825d7dcb447a167041cc0f416a90416d182e15d112f7d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "projects"
+      ],
+      "protectedRelations": [
+        "projects"
+      ],
+      "functionReferences": []
+    },
     "apply_smart_triage_moves(uuid,jsonb)": {
       "sha256": "9595806ac8bc5f44822bccfed000ce6d058930480fd283e980c60e4fa4c9f515",
       "securityDefiner": false,
@@ -3335,6 +3384,19 @@
       "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
       "relations": [
         "forge_relay_delivery_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "guard_private_project_icon_storage()": {
+      "sha256": "908176393b59f40be49d2b69a351a1c90896f3119752cd91d56ad4c25f36bec4",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "project_icon_encryption_scope"
       ],
       "protectedRelations": [],
       "functionReferences": []
@@ -3784,6 +3846,22 @@
       "functionReferences": [
         "guard_project_actor"
       ]
+    },
+    "list_orphan_project_icon_objects(integer)": {
+      "sha256": "b1a51421a0a53693b91380660f1b2f38a0b6d7e2a6d31cbfe89f53fc88b0994d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "projects",
+        "project_icon_encrypted_objects"
+      ],
+      "protectedRelations": [
+        "projects"
+      ],
+      "functionReferences": []
     },
     "lock_live_project_actor_access(uuid,uuid)": {
       "sha256": "1be740955638e6f343594701b2d7f5283751c0d113a40568de099b6003861554",
@@ -4343,6 +4421,21 @@
       ],
       "protectedRelations": [
         "numo_assistant_turns"
+      ],
+      "functionReferences": []
+    },
+    "replace_project_icon(uuid,text,text,text,text)": {
+      "sha256": "bb41fbdd63643df93398cf9f1f30b47a911641c41d698e12a99cdf9fe1b70c7f",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "projects"
+      ],
+      "protectedRelations": [
+        "projects"
       ],
       "functionReferences": []
     },
@@ -6773,6 +6866,10 @@
     "page_comments.page_comments_broadcast": {
       "function": "broadcast_comment_metadata()",
       "definition": "CREATE TRIGGER page_comments_broadcast AFTER INSERT OR DELETE OR UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION broadcast_comment_metadata()"
+    },
+    "projects.project_icon_reference_guard": {
+      "function": "guard_project_icon_reference()",
+      "definition": "CREATE TRIGGER project_icon_reference_guard BEFORE INSERT OR UPDATE ON projects FOR EACH ROW EXECUTE FUNCTION guard_project_icon_reference()"
     },
     "agent_runs.agent_run_base_branch_guard": {
       "function": "guard_agent_run_base_branch()",

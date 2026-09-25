@@ -99,7 +99,7 @@ must be checked before a column is declared migrated.
 
 | Data | Encrypt or remove from database plaintext | Clear metadata and reason |
 | --- | --- | --- |
-| `projects` | `name`, `smart_assign_rules`, `automations`, `icon_url` when user-provided | IDs, owner, key, colors, flags, counters, timestamps. Project key is a shared identifier used in issue references and URLs; keep it clear. |
+| `projects` | `name`, `smart_assign_rules`, `automations`; legacy user-provided `icon_url` values migrate to a guarded local route and encrypted object bytes | IDs, owner, key, colors, flags, counters, timestamps and the opaque icon path. Project key is a shared identifier used in issue references and URLs; keep it clear. |
 | `objectives` | `name`, `description` | IDs, project and user references, status, target date, color, timestamps. |
 | `issues` | `title`, `description`, `plan`, user-supplied `remote_url` and automation content | IDs, number, project and user references, status, priority, effort, dates, position, recurrence and forge routing identifiers. |
 | `issue_events` | `from_value`, `to_value` when they contain content; event history must not preserve old plaintext | IDs, actor, type, field name, timestamps and flags. |

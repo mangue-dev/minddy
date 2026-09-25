@@ -85,6 +85,8 @@ import { backfillForgeRepositoryNamesBatch } from
   "@/lib/server/encryption/forge-repository-name-backfill";
 import { backfillForgeDefaultBranchesBatch } from
   "@/lib/server/encryption/forge-default-branch-backfill";
+import { backfillProjectIconsBatch } from
+  "@/lib/server/encryption/project-icon-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -177,6 +179,8 @@ export async function GET(request: NextRequest) {
     process.env.MINDDY_FORGE_REPOSITORY_NAME_ENCRYPTION_ENABLED === "true";
   const forgeDefaultBranchesEnabled = contentEnabled &&
     process.env.MINDDY_FORGE_DEFAULT_BRANCH_ENCRYPTION_ENABLED === "true";
+  const projectIconsEnabled = contentEnabled &&
+    process.env.MINDDY_PROJECT_ICON_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -251,6 +255,7 @@ export async function GET(request: NextRequest) {
       numoToolContentEnabled ? backfillNumoToolContentBatch(30, request.signal) : Promise.resolve(null),
       forgeRepositoryNamesEnabled ? backfillForgeRepositoryNamesBatch(30, request.signal) : Promise.resolve(null),
       forgeDefaultBranchesEnabled ? backfillForgeDefaultBranchesBatch(30, request.signal) : Promise.resolve(null),
+      projectIconsEnabled ? backfillProjectIconsBatch(10, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -317,12 +322,13 @@ export async function GET(request: NextRequest) {
     const numoToolContent = outcomes[62];
     const forgeRepositoryNames = outcomes[63];
     const forgeDefaultBranches = outcomes[64];
+    const projectIcons = outcomes[65];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, agentChainCodes, numoTurnIntents, numoAutomation, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, agentChainCodes, numoTurnIntents, numoAutomation, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -438,6 +444,10 @@ export async function GET(request: NextRequest) {
         ...(forgeDefaultBranchesEnabled ? {
           forge_default_branches: forgeDefaultBranches.status === "fulfilled"
             ? forgeDefaultBranches.value : { failed: true },
+        } : {}),
+        ...(projectIconsEnabled ? {
+          project_icons: projectIcons.status === "fulfilled"
+            ? projectIcons.value : { failed: true },
         } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),
