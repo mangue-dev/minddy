@@ -71,7 +71,7 @@ async function projectableOutcome(
   if (turn.status !== "waiting_input") return answer;
   const { data, error } = await service
     .from("assistant_messages")
-    .select("content")
+    .select("id,role,content,tool_calls,context,metadata,tool_call_id,tool_name,tool_payload_version")
     .eq("turn_id", turn.id)
     .eq("role", "tool")
     .eq("tool_name", "ask_user")
@@ -79,7 +79,10 @@ async function projectableOutcome(
     .limit(1)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  const questions = surfaceAskUserQuestions(data?.content as string | null);
+  const { decodeNumoToolMessage } = await import("./tool-content");
+  const visible = data ? await decodeNumoToolMessage(turn.user_id, data,
+    turn.user_id) : null;
+  const questions = surfaceAskUserQuestions(visible?.content as string | null);
   const questionText = questions.join("\n\n");
   return [answer, questionText].filter(Boolean).join("\n\n");
 }

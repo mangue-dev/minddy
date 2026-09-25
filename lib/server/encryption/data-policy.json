@@ -967,9 +967,10 @@
     "clear": {
       "encryption_metadata": [
         "final_payload_version",
+        "tool_payload_version",
+        "user_payload_version",
         "worker_content_encryption_checked_at",
-        "worker_content_encryption_version",
-        "user_payload_version"
+        "worker_content_encryption_version"
       ],
       "operational_configuration": [
         "role",
@@ -984,6 +985,7 @@
       "timestamp": [
         "created_at",
         "final_payload_checked_at",
+        "tool_payload_checked_at",
         "user_payload_checked_at"
       ]
     }
@@ -2468,6 +2470,7 @@
         "not_before",
         "outcome_encryption_checked_at",
         "started_at",
+        "tool_checkpoint_checked_at",
         "updated_at",
         "worker_checkpoint_encryption_checked_at"
       ]
@@ -2693,6 +2696,21 @@
       ]
     }
   },
+  "numo_tool_content_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "numo_tool_operations": {
     "scope": {
       "ancestor": "numo_assistant_turns:turn_id"
@@ -2714,12 +2732,22 @@
       ],
       "routing_identity": [
         "claim_token",
+        "result_run_id",
         "tool_call_id",
         "turn_id"
       ],
       "timestamp": [
         "completed_at",
+        "encryption_checked_at",
         "started_at"
+      ],
+      "encryption_metadata": [
+        "arguments_version",
+        "model_result_version",
+        "result_version"
+      ],
+      "token_digest": [
+        "arguments_digest"
       ]
     }
   },

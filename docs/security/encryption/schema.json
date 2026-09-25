@@ -5770,6 +5770,11 @@
         "nullable": false,
         "generated": false
       },
+      "tool_payload_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
       "user_payload_version": {
         "type": "integer",
         "nullable": false,
@@ -5778,6 +5783,11 @@
       "final_payload_version": {
         "type": "integer",
         "nullable": false,
+        "generated": false
+      },
+      "tool_payload_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       },
       "user_payload_checked_at": {
@@ -6772,6 +6782,11 @@
         "nullable": true,
         "generated": false
       },
+      "tool_checkpoint_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
       "error_encryption_checked_at": {
         "type": "timestamp with time zone",
         "nullable": true,
@@ -6943,6 +6958,36 @@
       "replay_policy": {
         "type": "text",
         "nullable": false,
+        "generated": false
+      },
+      "result_run_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "result_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "arguments_digest": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "arguments_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "model_result_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       }
     },
@@ -7964,6 +8009,24 @@
         "targetColumn": "id"
       }
     ]
+  },
+  "numo_tool_content_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
   },
   "numo_user_message_scope": {
     "columns": {

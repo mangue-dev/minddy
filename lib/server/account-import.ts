@@ -867,9 +867,13 @@ export async function importAccountTransfer(
   const { encodeNumoFinalMessage, shouldProtectNumoFinalContent } = await import(
     "@/lib/server/numo/final-content"
   );
+  const { encodeNumoToolMessage, shouldProtectNumoToolContent } = await import(
+    "@/lib/server/numo/tool-content"
+  );
   const protectConversationTitles = await shouldProtectConversationTitle(service);
   const protectUserMessages = await shouldProtectNumoUserMessages(service);
   const protectFinalMessages = await shouldProtectNumoFinalContent(service);
+  const protectToolMessages = await shouldProtectNumoToolContent(service);
   const conversations = (await Promise.all(document.assistant_conversations.map(async (source) => {
     const id = uuidValue(source, "id");
     if (!id) return null;
@@ -893,15 +897,41 @@ export async function importAccountTransfer(
           if (!message || typeof message !== "object") return [];
           const row = message as TransferRow;
           return conversationId
-            ? [{ ...pick(row, ["role", "content", "tool_name", "created_at"]), conversation_id: conversationId }]
+            ? [{ ...pick(row, ["role", "content", "context", "metadata",
+              "tool_calls", "tool_call_id", "tool_name", "created_at"]),
+              conversation_id: conversationId }]
             : [];
         }).map(async (row: TransferRow & { conversation_id: string }) => {
+          if (row.role === "assistant" &&
+              Array.isArray(row.tool_calls) && row.tool_calls.length &&
+              protectToolMessages) {
+            const id = randomUUID();
+            const stored = await encodeNumoToolMessage(userId, id, {
+              role: "assistant", content: typeof row.content === "string"
+                ? row.content : null,
+              tool_calls: row.tool_calls,
+              context: row.context ?? null, metadata: row.metadata ?? {},
+            });
+            return { ...row, ...stored };
+          }
           if (row.role === "assistant" && protectFinalMessages) {
             const id = randomUUID();
             const stored = await encodeNumoFinalMessage(userId, id, {
               content: typeof row.content === "string" ? row.content : null,
-              context: null, metadata: {}, tool_call_id: null,
+              context: row.context ?? null, metadata: row.metadata ?? {},
+              tool_call_id: typeof row.tool_call_id === "string"
+                ? row.tool_call_id : null,
               tool_name: typeof row.tool_name === "string" ? row.tool_name : null,
+            });
+            return { ...row, ...stored };
+          }
+          if (row.role === "tool" && protectToolMessages) {
+            const id = randomUUID();
+            const stored = await encodeNumoToolMessage(userId, id, {
+              role: "tool", content: typeof row.content === "string"
+                ? row.content : null,
+              tool_calls: null, context: row.context ?? null,
+              metadata: row.metadata ?? {},
             });
             return { ...row, ...stored };
           }
@@ -909,8 +939,10 @@ export async function importAccountTransfer(
           const id = randomUUID();
           const stored = await encodeNumoUserMessage(userId, id, {
             content: typeof row.content === "string" ? row.content : null,
-            context: null, metadata: {},
-            tool_calls: null, tool_call_id: null,
+            context: row.context ?? null, metadata: row.metadata ?? {},
+            tool_calls: row.tool_calls ?? null,
+            tool_call_id: typeof row.tool_call_id === "string"
+              ? row.tool_call_id : null,
             tool_name: typeof row.tool_name === "string" ? row.tool_name : null,
           });
           return { ...row, ...stored };

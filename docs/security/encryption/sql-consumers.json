@@ -815,6 +815,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_numo_tool_message()": {
+      "sha256": "9a391b970cd9801c460eb11d8b6df4d2ddca41d05d1763c88478432932e2f0b1",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_tool_content_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_numo_turn_outcome()": {
       "sha256": "c1f0e1a0257e44ebdd916058aaeedead647ca73ef889b39425d8d09d4a75fcde",
       "securityDefiner": true,
@@ -1080,7 +1093,7 @@
       "functionReferences": []
     },
     "guard_numo_final_message()": {
-      "sha256": "103cb4380043e11a9d0b48ab560427b7e7aee7bb1b35d260d1f3c8c9f6daa2bd",
+      "sha256": "5d9437fb0120ba0b350f7f185f3cde4ee35b41538f1b216be06840b2b3bb7a47",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1349,6 +1362,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_numo_tool_operation()": {
+      "sha256": "b3ad371022856b15ac1333a01cf70aff967c8d890c68ec030c3444e9b74f5eeb",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_tool_content_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "lock_mfa_amr_epoch_delete()": {
       "sha256": "c757bbeb717a29897ec25dbeecb1e13fc45ca4b71efeda47c3fe2511c428e86e",
       "securityDefiner": true,
@@ -1472,6 +1498,19 @@
         "project_git_links",
         "agent_conversations"
       ],
+      "functionReferences": []
+    },
+    "guard_numo_tool_checkpoint()": {
+      "sha256": "49ab21e3bf8076e0547304e222bcf46f5bd39fdc98888f21f80fac069a670562",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_tool_content_scope"
+      ],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "guard_objective_encryption()": {
@@ -4193,6 +4232,21 @@
       ],
       "functionReferences": []
     },
+    "migrate_numo_tool_checkpoint(uuid,jsonb,jsonb)": {
+      "sha256": "82fdb08bd26ba095f654c6340a02ec196a05c24bcb94aa9e0b4a5580f5e2f51f",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_assistant_turns"
+      ],
+      "protectedRelations": [
+        "numo_assistant_turns"
+      ],
+      "functionReferences": []
+    },
     "get_agent_quota_usage(timestamp with time zone)": {
       "sha256": "e0a4445a95a40008de821263fda6e11d9c85794c18ba9d856acee5a14d16b06f",
       "securityDefiner": true,
@@ -4506,7 +4560,7 @@
       "functionReferences": []
     },
     "resume_numo_turn_from_worker(uuid,uuid,text,jsonb)": {
-      "sha256": "8ff45fd71f101efc1c1d2cdaae5bbbd32539e275e20cb085882446e76e721dc4",
+      "sha256": "61963942f6e87d032ccdaef1807cd6ef74c4224fe848f385f5484f053c9f24d4",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -5745,6 +5799,23 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "checkpoint_numo_tool_round_protected(uuid,uuid,uuid,text,integer,jsonb,integer)": {
+      "sha256": "728a7899a49e89f4868ae39842ee02aeb4611ea6110da44571dab7b7549e7d4f",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "assistant_messages",
+        "numo_assistant_turns"
+      ],
+      "protectedRelations": [
+        "assistant_messages",
+        "numo_assistant_turns"
+      ],
+      "functionReferences": []
+    },
     "rekey_forge_mention_counter(text,text,integer,timestamp with time zone,integer)": {
       "sha256": "92d4d50fbb356732e6b777cb9682941d0261b05320834433398188e4c5f13d70",
       "securityDefiner": true,
@@ -5756,6 +5827,25 @@
         "forge_mention_throttle"
       ],
       "protectedRelations": [],
+      "functionReferences": []
+    },
+    "claim_numo_tool_operation_protected(uuid,uuid,text,text,jsonb,integer,text,text)": {
+      "sha256": "437a3f6598d490908de0372c7dad8159c762cfe7675d108e54a22de588edeb09",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "conversations",
+        "numo_assistant_turns",
+        "numo_tool_operations"
+      ],
+      "protectedRelations": [
+        "conversations",
+        "numo_assistant_turns",
+        "numo_tool_operations"
+      ],
       "functionReferences": []
     },
     "create_agent_run_with_budget(uuid,timestamp with time zone,numeric,numeric,jsonb)": {
@@ -5970,6 +6060,23 @@
       ],
       "functionReferences": []
     },
+    "migrate_numo_tool_message(uuid,text,jsonb,jsonb,jsonb,integer,text,integer,jsonb,jsonb)": {
+      "sha256": "aa5d6a45c25726b04ca91aa50e5ca0900bb9bae69cc0a91f674e91540242ca74",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "assistant_messages",
+        "numo_assistant_turns"
+      ],
+      "protectedRelations": [
+        "assistant_messages",
+        "numo_assistant_turns"
+      ],
+      "functionReferences": []
+    },
     "consume_share_unlock_attempt(uuid,text,timestamp with time zone,integer,integer,integer)": {
       "sha256": "63f6ce5f98655aff87623fdcb07833554d41722f46492197b2dcdcae9af4b78e",
       "securityDefiner": true,
@@ -6075,6 +6182,25 @@
       "protectedRelations": [
         "agent_runs",
         "agent_conversations"
+      ],
+      "functionReferences": []
+    },
+    "complete_numo_tool_operation_protected(uuid,uuid,text,boolean,jsonb,integer,jsonb,integer,uuid,boolean)": {
+      "sha256": "09d6db5b343a5135532ac2540dffe106bd9bf1a298ae9ed8c35842e80fef0ed4",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "numo_assistant_turns",
+        "numo_tool_operations"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "numo_assistant_turns",
+        "numo_tool_operations"
       ],
       "functionReferences": []
     },
@@ -6200,6 +6326,23 @@
         "conversations",
         "assistant_messages",
         "numo_assistant_turns"
+      ],
+      "functionReferences": []
+    },
+    "migrate_numo_tool_operation(uuid,text,jsonb,jsonb,jsonb,integer,integer,integer,text,jsonb,jsonb,jsonb,integer,integer,integer,text,uuid)": {
+      "sha256": "f879b34e40ca051c162a4b7cb0587fe2b9a642ae9fa59536ab9b3f4bc17408cb",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_assistant_turns",
+        "numo_tool_operations"
+      ],
+      "protectedRelations": [
+        "numo_assistant_turns",
+        "numo_tool_operations"
       ],
       "functionReferences": []
     },
@@ -6658,6 +6801,10 @@
       "function": "sync_agent_run_conversation()",
       "definition": "CREATE TRIGGER trg_agent_run_sync_conversation AFTER INSERT OR UPDATE OF title, title_ciphertext, title_encryption_version, issue_id, pull_request_id, status, completed_at ON agent_runs FOR EACH ROW EXECUTE FUNCTION sync_agent_run_conversation()"
     },
+    "assistant_messages.numo_tool_message_guard": {
+      "function": "guard_numo_tool_message()",
+      "definition": "CREATE TRIGGER numo_tool_message_guard BEFORE INSERT OR UPDATE ON assistant_messages FOR EACH ROW EXECUTE FUNCTION guard_numo_tool_message()"
+    },
     "assistant_messages.numo_user_message_guard": {
       "function": "guard_numo_user_message()",
       "definition": "CREATE TRIGGER numo_user_message_guard BEFORE INSERT OR UPDATE ON assistant_messages FOR EACH ROW EXECUTE FUNCTION guard_numo_user_message()"
@@ -6854,6 +7001,10 @@
       "function": "guard_forge_mention_key()",
       "definition": "CREATE TRIGGER forge_mention_key_guard BEFORE INSERT OR UPDATE ON forge_mention_throttle FOR EACH ROW EXECUTE FUNCTION guard_forge_mention_key()"
     },
+    "numo_tool_operations.numo_tool_operation_guard": {
+      "function": "guard_numo_tool_operation()",
+      "definition": "CREATE TRIGGER numo_tool_operation_guard BEFORE INSERT OR UPDATE ON numo_tool_operations FOR EACH ROW EXECUTE FUNCTION guard_numo_tool_operation()"
+    },
     "pages.pages_remove_deleted_database_properties": {
       "function": "remove_deleted_database_properties()",
       "definition": "CREATE TRIGGER pages_remove_deleted_database_properties AFTER UPDATE OF database_schema ON pages FOR EACH ROW WHEN (old.database_schema IS DISTINCT FROM new.database_schema) EXECUTE FUNCTION remove_deleted_database_properties()"
@@ -6889,6 +7040,10 @@
     "notifications.notifications_guard_client_update": {
       "function": "guard_notification_client_update()",
       "definition": "CREATE TRIGGER notifications_guard_client_update BEFORE UPDATE ON notifications FOR EACH ROW EXECUTE FUNCTION guard_notification_client_update()"
+    },
+    "numo_assistant_turns.numo_tool_checkpoint_guard": {
+      "function": "guard_numo_tool_checkpoint()",
+      "definition": "CREATE TRIGGER numo_tool_checkpoint_guard BEFORE INSERT OR UPDATE OF checkpoint ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION guard_numo_tool_checkpoint()"
     },
     "page_comments.page_comments_guard_client_update": {
       "function": "guard_comment_client_update()",

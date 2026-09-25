@@ -1,7 +1,11 @@
 import "server-only";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 import { decodeNumoError } from "@/lib/server/numo/error-content";
-import { decodeNumoTurnOutcome } from "@/lib/server/numo/final-content";
+import { decodeNumoTurnOutcome, hydrateNumoFinalMessages } from
+  "@/lib/server/numo/final-content";
+import { hydrateNumoUserMessages } from
+  "@/lib/server/numo/user-message-content";
+import { hydrateNumoToolMessages } from "@/lib/server/numo/tool-content";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -214,7 +218,12 @@ export async function routineOccurrenceDetail(input: {
     .order("id", { ascending: true });
   if (error) throw new Error(error.message);
   const rows = await hydrateWorkerParentCopies(input.readClient,
-    (data ?? []) as Array<Record<string, unknown>>);
+    await hydrateNumoToolMessages(input.readClient,
+      await hydrateNumoFinalMessages(input.readClient,
+        await hydrateNumoUserMessages(input.readClient,
+          (data ?? []) as Array<Record<string, unknown>>,
+          input.routine.owner_id), input.routine.owner_id),
+      input.routine.owner_id));
   const messages = rows
     .filter((row) => row.kind !== "action")
     .map((row) => ({

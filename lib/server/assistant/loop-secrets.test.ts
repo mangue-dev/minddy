@@ -84,7 +84,11 @@ const TEXT_ROUND = [
 function fakeService() {
   const inserted: Record<string, unknown>[] = [];
   const client = {
-    from: () => ({
+    from: (table: string) => table === "numo_tool_content_scope" ? {
+      select: () => ({ eq: () => ({ maybeSingle: async () => ({
+        data: null, error: null,
+      }) }) }),
+    } : ({
       insert: (row: Record<string, unknown>) => {
         inserted.push(row);
         return {

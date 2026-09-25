@@ -1,4 +1,7 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
+import { encodeNumoToolMessage,
+  shouldProtectNumoToolContent } from "@/lib/server/numo/tool-content";
 
 import type { AssistantToolCall } from "@/lib/assistant-types";
 import { parseAskUserQuestions } from "@/lib/ask-user";
@@ -281,7 +284,13 @@ async function saveToolResultMessage(
   context: ProcessChatContext,
   row: Record<string, unknown>,
 ): Promise<void> {
-  const { error } = await context.service.from("assistant_messages").insert(row);
+  const protectedRow = await shouldProtectNumoToolContent(context.service)
+    ? await encodeNumoToolMessage(context.userId, randomUUID(), {
+        role: "tool", content: row.content as string | null,
+        tool_calls: null, context: null, metadata: row.metadata ?? {},
+      }) : null;
+  const { error } = await context.service.from("assistant_messages")
+    .insert({ ...row, ...protectedRow });
   if (!error) return;
   // A completed ledger entry can be replayed after the message insert committed
   // but before its checkpoint did. The per-turn partial unique index proves that
@@ -595,6 +604,12 @@ export async function processChat(
           }),
         };
       } else {
+        const protectedRow = await shouldProtectNumoToolContent(context.service)
+          ? await encodeNumoToolMessage(context.userId, randomUUID(), {
+              role: "assistant",content: fullContent || null,
+              tool_calls: assistantToolCalls,context: null,
+              metadata: roundReasoning ? { reasoning: roundReasoning } : {},
+            }) : null;
         const { data, error } = await context.service
           .from("assistant_messages")
           .insert({
@@ -604,6 +619,7 @@ export async function processChat(
             content: fullContent || null,
             tool_calls: assistantToolCalls,
             ...(roundReasoning ? { metadata: { reasoning: roundReasoning } } : {}),
+            ...protectedRow,
           })
           .select("id")
           .single();

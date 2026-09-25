@@ -1544,7 +1544,26 @@ The SQL regression checks all three source tables, Numo projections, stale
 CAS, old-writer refusal and RPC grants. Isolated PostgreSQL recovery restores
 child rows before their parents in separate batches, decrypts two key versions
 from cold caches and rejects a wrong root key. The global content flag and
-`MINDDY_NUMO_ERROR_ENCRYPTION_ENABLED` remain disabled in production. Tool
-messages, tool operation payloads and general turn checkpoints are still open.
+`MINDDY_NUMO_ERROR_ENCRYPTION_ENABLED` remain disabled in production.
 Search, latency, key-cache and load measurements remain checks before
 production activation, not blockers to review of the code PR.
+
+## Durable Numo tool content checkpoint — 25 September 2026
+
+Assistant tool-call rounds, tool-result messages, model/tools checkpoints and
+the arguments, result and model result of the replay ledger now use separate
+user-key format-3 envelopes. Assistant rounds and their checkpoint are inserted
+atomically. The ledger compares a stable purpose-separated argument digest so
+randomized ciphertext does not break idempotent claims. The worker run ID is
+retained as a typed routing reference; obsolete JSON readers and writers are
+rejected by activated SQL guards. Authorized conversation, routine, export,
+surface and replay readers decode after ownership checks. A bounded CAS worker
+rotates message/checkpoint pairs and ledger rows. The message and operation
+regression verifies source and projection storage, old-writer refusal, grants
+and replay behavior. Isolated PostgreSQL recovery loads operation and message
+children before turns, conversations and users in separate batches, checks two
+key versions with cold caches and rejects a wrong root key.
+
+`MINDDY_NUMO_TOOL_CONTENT_ENCRYPTION_ENABLED` remains disabled in production.
+Representative search, latency, key-cache and load checks remain pre-activation
+controls, not blockers to review of the code PR.

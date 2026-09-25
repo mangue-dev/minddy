@@ -72,6 +72,11 @@ import { encodeNumoTurnEvent,
   shouldProtectNumoTurnEvents } from "./turn-event-content";
 import { decodeNumoError, encodeNumoError,
   shouldProtectNumoErrors } from "./error-content";
+import { decodeNumoCheckpoint, encodeNumoCheckpoint,
+  encodeNumoToolMessage, hydrateNumoToolMessages,
+  shouldProtectNumoToolContent } from "./tool-content";
+import { decodeNumoToolOperationValue, encodeNumoToolOperationValue,
+  numoToolArgumentsDigest } from "./tool-operation-content";
 import type { SafeEmitter } from "@/lib/server/assistant/sse";
 import {
   failNumoSurfaceProjection,
@@ -233,7 +238,10 @@ export async function hydrateNumoTurn<T extends NumoTurn>(row: T,
     row.outcome, actorId);
   const errorMessage = await decodeNumoError(row.user_id,
     "numo_assistant_turns", row.id, row.error_message, actorId);
+  const checkpoint = await decodeNumoCheckpoint(row.user_id, row.id,
+    (row.checkpoint ?? {}) as unknown as Record<string, unknown>, actorId);
   return { ...row, intent: intent as unknown as NumoTurnIntent,
+    checkpoint: checkpoint as unknown as NumoTurnCheckpoint,
     outcome, error_message: errorMessage };
 }
 
@@ -557,9 +565,11 @@ async function buildExecutionInput(input: {
     .limit(30);
   if (error) throw new Error(error.message);
   const recentHistory = (await hydrateWorkerParentCopies(service,
-    await hydrateNumoFinalMessages(service,
-      await hydrateNumoUserMessages(service,
-        (data ?? []) as StoredMessage[], turn.user_id), turn.user_id))).reverse();
+    await hydrateNumoToolMessages(service,
+      await hydrateNumoFinalMessages(service,
+        await hydrateNumoUserMessages(service,
+          (data ?? []) as StoredMessage[], turn.user_id), turn.user_id),
+      turn.user_id))).reverse();
   // The bounded window can begin inside an older parallel tool batch. OpenAI
   // rejects a tool result without its preceding assistant call, so start at the
   // first complete message boundary instead of sending a malformed history.
@@ -677,30 +687,46 @@ function createToolLedger(
   service: SupabaseClient,
   turnId: string,
   claimToken: string,
+  userId: string,
 ): ToolExecutionLedger {
   return {
     async claim(input) {
-      const { data, error } = await service.rpc("claim_numo_tool_operation", {
-        p_turn_id: turnId,
-        p_claim_token: claimToken,
-        p_tool_call_id: input.toolCallId,
-        p_tool_name: input.toolName,
-        p_arguments: input.args,
-        p_replay_policy: input.replayPolicy,
-      });
+      const protect = await shouldProtectNumoToolContent(service);
+      const encoded = protect ? await encodeNumoToolOperationValue(userId,
+        turnId, input.toolCallId, "arguments", input.args) : null;
+      const { data, error } = protect
+        ? await service.rpc("claim_numo_tool_operation_protected", {
+            p_turn_id: turnId, p_claim_token: claimToken,
+            p_tool_call_id: input.toolCallId, p_tool_name: input.toolName,
+            p_arguments: encoded!.value,
+            p_arguments_version: encoded!.version,
+            p_arguments_digest: await numoToolArgumentsDigest(userId, input.args),
+            p_replay_policy: input.replayPolicy,
+          })
+        : await service.rpc("claim_numo_tool_operation", {
+            p_turn_id: turnId, p_claim_token: claimToken,
+            p_tool_call_id: input.toolCallId, p_tool_name: input.toolName,
+            p_arguments: input.args, p_replay_policy: input.replayPolicy,
+          });
       if (error) throw new Error(error.message);
       const result = data as {
         action?: "execute" | "reuse" | "reconcile" | "lost_claim";
         success?: boolean;
         result?: unknown;
         model_result?: unknown;
+        result_version?: number;
+        model_result_version?: number;
         pause?: boolean;
       } | null;
       if (result?.action === "reuse") {
         const execution: ToolExecution = {
           success: result.success === true,
-          result: result.result,
-          modelResult: result.model_result,
+          result: await decodeNumoToolOperationValue(userId, turnId,
+            input.toolCallId, "result", result.result,
+            result.result_version ?? 0),
+          modelResult: await decodeNumoToolOperationValue(userId, turnId,
+            input.toolCallId, "model_result", result.model_result,
+            result.model_result_version ?? 0),
           pause: result.pause === true,
         };
         return { action: "reuse", execution };
@@ -711,15 +737,36 @@ function createToolLedger(
       return { action: result.action };
     },
     async complete(input) {
-      const { data, error } = await service.rpc("complete_numo_tool_operation", {
-        p_turn_id: turnId,
-        p_claim_token: claimToken,
-        p_tool_call_id: input.toolCallId,
-        p_success: input.success,
-        p_result: input.result ?? null,
-        p_model_result: input.modelResult ?? null,
-        p_pause: input.pause,
-      });
+      const protect = await shouldProtectNumoToolContent(service);
+      const [sealedResult, sealedModel] = protect ? await Promise.all([
+        encodeNumoToolOperationValue(userId, turnId, input.toolCallId,
+          "result", input.result ?? null),
+        encodeNumoToolOperationValue(userId, turnId, input.toolCallId,
+          "model_result", input.modelResult ?? null),
+      ]) : [null, null];
+      const runId = input.success && input.result &&
+        typeof input.result === "object" && !Array.isArray(input.result) &&
+        typeof (input.result as Record<string, unknown>).run_id === "string" &&
+        /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(
+          (input.result as Record<string, unknown>).run_id as string)
+        ? (input.result as Record<string, unknown>).run_id as string : null;
+      const { data, error } = protect
+        ? await service.rpc("complete_numo_tool_operation_protected", {
+            p_turn_id: turnId, p_claim_token: claimToken,
+            p_tool_call_id: input.toolCallId, p_success: input.success,
+            p_result: sealedResult!.value,
+            p_result_version: sealedResult!.version,
+            p_model_result: sealedModel!.value,
+            p_model_result_version: sealedModel!.version,
+            p_result_run_id: runId, p_pause: input.pause,
+          })
+        : await service.rpc("complete_numo_tool_operation", {
+            p_turn_id: turnId, p_claim_token: claimToken,
+            p_tool_call_id: input.toolCallId, p_success: input.success,
+            p_result: input.result ?? null,
+            p_model_result: input.modelResult ?? null,
+            p_pause: input.pause,
+          });
       if (error) throw new Error(error.message);
       if (data !== true) throw new NumoClaimLostError();
     },
@@ -759,7 +806,14 @@ async function checkpointTurn(input: {
     p_turn_id: input.turnId,
     p_claim_token: input.claimToken,
     p_status: input.status,
-    p_checkpoint: input.checkpoint ?? {},
+    p_checkpoint: input.checkpoint &&
+      (input.checkpoint.phase === "model" || input.checkpoint.phase === "tools") &&
+      await shouldProtectNumoToolContent(input.service)
+      ? await encodeNumoCheckpoint(input.userId ?? (await input.service
+          .from("numo_assistant_turns").select("user_id")
+          .eq("id", input.turnId).single()).data?.user_id ?? "",
+        input.turnId, input.checkpoint)
+      : input.checkpoint ?? {},
     p_active_run_id: input.activeRunId ?? null,
     p_error_message: errorMessage,
     p_conversation_error_message: conversationErrorMessage,
@@ -803,7 +857,7 @@ async function saveFinalMessage(input: {
 }): Promise<string | null> {
   const { data: existing } = await input.service.from("assistant_messages")
     .select("id").eq("turn_id", input.turnId).eq("role", "assistant")
-    .is("tool_calls", null).maybeSingle();
+    .is("tool_calls", null).eq("tool_payload_version", 0).maybeSingle();
   if (existing?.id) return existing.id as string;
   const messageId = randomUUID();
   const stored = await shouldProtectNumoFinalContent(input.service)
@@ -828,7 +882,7 @@ async function saveFinalMessage(input: {
     const { data: raced, error: reloadError } = await input.service
       .from("assistant_messages").select("id")
       .eq("turn_id", input.turnId).eq("role", "assistant")
-      .is("tool_calls", null).maybeSingle();
+      .is("tool_calls", null).eq("tool_payload_version", 0).maybeSingle();
     if (reloadError || !raced?.id) {
       throw new Error(reloadError?.message ?? error.message);
     }
@@ -909,6 +963,7 @@ async function executeNumoTurnCore(input: {
     .eq("turn_id", claimed.id)
     .eq("role", "assistant")
     .is("tool_calls", null)
+    .eq("tool_payload_version", 0)
     .maybeSingle();
   const { data: savedFinal, error: savedFinalError } = firstFinal.error &&
       ["42703", "PGRST204"].includes(firstFinal.error.code)
@@ -1012,28 +1067,54 @@ async function executeNumoTurnCore(input: {
         latestCheckpoint = persisted.checkpoint;
       },
       persistToolRound: async (toolRound) => {
-        const { data, error } = await service.rpc("checkpoint_numo_tool_round", {
-          p_turn_id: claimed.id,
-          p_claim_token: claimToken,
-          p_content: toolRound.assistantContent,
-          p_tool_calls: toolRound.pendingToolCalls,
-          p_reasoning: toolRound.assistantReasoning,
-          p_round_count: toolRound.roundCount,
-        });
+        const protect = await shouldProtectNumoToolContent(service);
+        const messageId = randomUUID();
+        const payload = protect ? await encodeNumoToolMessage(
+          claimed.user_id, messageId, {
+            role: "assistant", content: toolRound.assistantContent,
+            tool_calls: toolRound.pendingToolCalls, context: null,
+            metadata: toolRound.assistantReasoning
+              ? { reasoning: toolRound.assistantReasoning } : {},
+          }) : null;
+        const checkpoint = protect ? await encodeNumoCheckpoint(
+          claimed.user_id, claimed.id, {
+            phase: "tools", assistantContent: toolRound.assistantContent,
+            assistantReasoning: toolRound.assistantReasoning,
+            assistantMessageId: messageId,
+            pendingToolCalls: toolRound.pendingToolCalls,
+            completedToolCallIds: [], roundCount: toolRound.roundCount,
+          }) : null;
+        const { data, error } = protect
+          ? await service.rpc("checkpoint_numo_tool_round_protected", {
+              p_turn_id: claimed.id, p_claim_token: claimToken,
+              p_message_id: messageId,p_content: payload!.content,
+              p_payload_version: payload!.tool_payload_version,
+              p_checkpoint: checkpoint,p_round_count: toolRound.roundCount,
+            })
+          : await service.rpc("checkpoint_numo_tool_round", {
+              p_turn_id: claimed.id,
+              p_claim_token: claimToken,
+              p_content: toolRound.assistantContent,
+              p_tool_calls: toolRound.pendingToolCalls,
+              p_reasoning: toolRound.assistantReasoning,
+              p_round_count: toolRound.roundCount,
+            });
         if (error) throw new Error(error.message);
-        const persisted = compositeRow<NumoTurn>(data);
+        const persistedRow = compositeRow<NumoTurn>(data);
+        const persisted = persistedRow ? await hydrateNumoTurn(persistedRow) : null;
         if (!persisted) throw new NumoClaimLostError();
         latestCheckpoint = persisted.checkpoint;
-        const messageId = persisted.checkpoint?.phase === "tools"
+        const persistedMessageId = persisted.checkpoint?.phase === "tools"
           ? persisted.checkpoint.assistantMessageId
           : null;
-        if (!messageId) throw new Error("Assistant tool round checkpoint is incomplete");
-        return messageId;
+        if (!persistedMessageId) throw new Error("Assistant tool round checkpoint is incomplete");
+        return persistedMessageId;
       },
       registerActiveRun: (runId) => {
         latestActiveRunId = runId;
       },
-      toolLedger: createToolLedger(service, claimed.id, claimToken),
+      toolLedger: createToolLedger(service, claimed.id, claimToken,
+        claimed.user_id),
       shouldStop: () => stopRequested(service, claimed.id, claimToken),
       beforeGeneration: () => ensureNumoOperationBudget(claimed, runtime),
       onGeneration: async (generation, roundCount) => {
@@ -1247,8 +1328,13 @@ async function executeNumoTurnCore(input: {
       emitter.close();
       throw error;
     }
-    const failureCheckpoint = (currentClaim as { checkpoint?: NumoTurnCheckpoint } | null)
-      ?.checkpoint ?? latestCheckpoint;
+    const storedFailureCheckpoint = (currentClaim as
+      { checkpoint?: NumoTurnCheckpoint } | null)?.checkpoint;
+    const failureCheckpoint = storedFailureCheckpoint
+      ? await decodeNumoCheckpoint(claimed.user_id, claimed.id,
+          storedFailureCheckpoint as unknown as Record<string, unknown>) as
+          unknown as NumoTurnCheckpoint
+      : latestCheckpoint;
     const failureActiveRunId = (currentClaim as { active_run_id?: string | null } | null)
       ?.active_run_id ?? claimed.active_run_id;
     let turn: NumoTurn;

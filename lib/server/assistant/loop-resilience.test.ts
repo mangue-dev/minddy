@@ -33,7 +33,11 @@ function stream(delta: Record<string, unknown>): Response {
 
 function fakeService(): SupabaseClient {
   return {
-    from: () => ({
+    from: (table: string) => table === "numo_tool_content_scope" ? {
+      select: () => ({ eq: () => ({ maybeSingle: async () => ({
+        data: null, error: null,
+      }) }) }),
+    } : ({
       insert: () => ({
         select: () => ({ single: async () => ({ data: { id: "message" } }) }),
       }),

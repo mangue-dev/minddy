@@ -100,7 +100,7 @@ export async function backfillNumoFinalContentBatch(limit = 30,
       const read = await service.from("assistant_messages")
         .select("id,conversation_id,turn_id,content,context,metadata,tool_call_id,tool_name,final_payload_version")
         .eq("turn_id", turn.id).eq("role", "assistant")
-        .is("tool_calls", null).maybeSingle();
+        .is("tool_calls", null).eq("tool_payload_version", 0).maybeSingle();
       if (read.error) throw new Error("Unable to read Numo final copy");
       const key = await getContentKeys().current({ kind: "user", id: turn.user_id });
       const version = key.version;
@@ -115,7 +115,8 @@ export async function backfillNumoFinalContentBatch(limit = 30,
   if (result.interrupted) return result;
   const standalone = await service.from("assistant_messages")
     .select("id,conversation_id,turn_id,content,context,metadata,tool_call_id,tool_name,final_payload_version,conversation:conversations!inner(user_id)")
-    .eq("role", "assistant").is("tool_calls", null).is("turn_id", null)
+    .eq("role", "assistant").is("tool_calls", null)
+    .eq("tool_payload_version", 0).is("turn_id", null)
     .order("final_payload_checked_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (standalone.error) throw new Error("Unable to scan standalone Numo answers");

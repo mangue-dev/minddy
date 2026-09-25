@@ -40,6 +40,7 @@ const conversationTemplate = "minddy_min591_conversation_audit";
 const userMessageTemplate = "minddy_min591_user_message_audit";
 const finalTemplate = "minddy_min591_final_audit";
 const errorTemplate = "minddy_min591_error_audit";
+const toolTemplate = "minddy_min591_tool_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -4417,6 +4418,176 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       log.mockRestore();
       for (const name of created.reverse()) {
         sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
+
+  it("restores Numo tool messages, checkpoints and ledgers child first across key versions", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_tool_source_${suffix}`;
+    const restored = `minddy_min591_tool_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), conversation = randomUUID();
+    const turns = [randomUUID(), randomUUID()];
+    const messages = [randomUUID(), randomUUID()];
+    const results = [randomUUID(), randomUUID()];
+    const scope: EncryptionScope = { kind: "user", id: actor };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(toolTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const database of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${database} TEMPLATE ${toolTemplate};`);
+        created.push(database);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.conversations(id,user_id,status)
+          VALUES(${quote(conversation)},${quote(actor)},'generating');`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const indexKeys = new ManagedDataKeys(registry(source, "blind_index"),
+        wrapper(root, "blind_index"));
+      const store = new EncryptedStore(keys);
+      for (const [index, turn] of turns.entries()) {
+        if (index) await keys.rotate(scope, 1);
+        const callId = `opaque-call-${index}`;
+        const checkpointClear = { phase: "tools", assistantContent:
+          `Private tool thought ${index}`, assistantMessageId: messages[index],
+          pendingToolCalls: [{ id: callId, args: `Private arguments ${index}` }],
+          completedToolCallIds: [], roundCount: 1 };
+        const checkpointCipher = await store.encrypt(checkpointClear, {
+          scope,table:"numo_assistant_turns",column:"checkpoint",rowId:turn });
+        const checkpoint = { phase:"tools",encrypted_payload:checkpointCipher,
+          encryption_version:store.versionOf(checkpointCipher) };
+        sql(source, `INSERT INTO public.numo_assistant_turns(id,conversation_id,
+          user_id,request_id,run_id,status,checkpoint)
+          VALUES(${quote(turn)},${quote(conversation)},${quote(actor)},
+            ${quote(randomUUID())},${quote(randomUUID())},'completed',
+            ${quote(JSON.stringify(checkpoint))}::jsonb);`);
+        const round = await store.encrypt({ role:"assistant",
+          content:`Private tool thought ${index}`,
+          tool_calls:[{ id:callId,args:`Private arguments ${index}` }],
+          context:null,metadata:{ reasoning:`Private reasoning ${index}` } },
+        { scope,table:"assistant_messages",column:"tool_payload",
+          rowId:messages[index] });
+        const result = await store.encrypt({ role:"tool",
+          content:`Private result ${index}`,tool_calls:null,context:null,
+          metadata:{} }, { scope,table:"assistant_messages",
+          column:"tool_payload",rowId:results[index] });
+        sql(source, `INSERT INTO public.assistant_messages(id,conversation_id,
+          turn_id,role,content,tool_payload_version,context,metadata)
+          VALUES(${quote(messages[index])},${quote(conversation)},
+            ${quote(turn)},'assistant',${quote(round)},
+            ${store.versionOf(round)},NULL,'{}'::jsonb);
+          INSERT INTO public.assistant_messages(id,conversation_id,
+            turn_id,role,content,tool_call_id,tool_name,
+            tool_payload_version,context,metadata)
+          VALUES(${quote(results[index])},${quote(conversation)},
+            ${quote(turn)},'tool',${quote(result)},${quote(callId)},'ask_user',
+            ${store.versionOf(result)},NULL,'{}'::jsonb);`);
+        const argumentsCipher = await store.encrypt({ text:
+          `Private arguments ${index}` }, { scope,
+          table:"numo_tool_operations",column:"arguments",
+          rowId:`${turn}:${callId}` });
+        const resultCipher = await store.encrypt({ text:
+          `Private result ${index}` }, { scope,
+          table:"numo_tool_operations",column:"result",
+          rowId:`${turn}:${callId}` });
+        const modelCipher = await store.encrypt({ text:
+          `Private model result ${index}` }, { scope,
+          table:"numo_tool_operations",column:"model_result",
+          rowId:`${turn}:${callId}` });
+        const stable = await indexKeys.current(scope);
+        stable.bytes.fill(0);
+        const first = await indexKeys.byVersion(scope,1);
+        const digest = blindIndex(JSON.stringify({ text:
+          `Private arguments ${index}` }), { scope,
+          table:"numo_tool_operations",column:"arguments_digest" },
+        first.bytes);
+        first.bytes.fill(0);
+        sql(source, `INSERT INTO public.numo_tool_operations(turn_id,tool_call_id,
+          tool_name,arguments,arguments_version,arguments_digest,
+          replay_policy,status,claim_token,success,result,result_version,
+          model_result,model_result_version,completed_at)
+          VALUES(${quote(turn)},${quote(callId)},'ask_user',
+            ${quote(argumentsCipher)}::jsonb,${store.versionOf(argumentsCipher)},
+            ${quote(digest)},'retry','completed',${quote(randomUUID())},true,
+            ${quote(resultCipher)}::jsonb,${store.versionOf(resultCipher)},
+            ${quote(modelCipher)}::jsonb,${store.versionOf(modelCipher)},now());`);
+      }
+      const dump = execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges",...["auth.users","public.conversations",
+          "public.numo_conversation_ids","public.numo_assistant_turns",
+          "public.assistant_messages","public.numo_tool_operations",
+          "public.envelope_data_keys","public.numo_tool_content_scope"]
+          .map((table)=>`--table=${table}`)],
+      { encoding:"utf8",maxBuffer:4*1024*1024 });
+      expect(dump).not.toContain("Private ");
+      let remainder = dump;
+      const batches = new Map<string,{ header:string;lines:string[];footer:string }>();
+      for (const table of ["numo_tool_operations","assistant_messages",
+        "numo_assistant_turns","numo_conversation_ids","conversations","users"]) {
+        const schema = table==="users" ? "auth" : "public";
+        const match = remainder.match(new RegExp(
+          `(COPY ${schema}\\.${table}[^\\n]*\\n)([\\s\\S]*?)(\\\\\\.\\n)`));
+        expect(match).not.toBeNull();
+        batches.set(table,{ header:match![1],
+          lines:match![2].trimEnd().split("\n").reverse(),footer:match![3] });
+        remainder = remainder.replace(match![0],"");
+      }
+      for (const table of ["numo_tool_operations","assistant_messages",
+        "numo_assistant_turns","numo_conversation_ids","conversations","users"]) {
+        const batch = batches.get(table)!;
+        for (const line of batch.lines) {
+          sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;\n${batch.header}${line}\n${batch.footer}COMMIT;`);
+        }
+      }
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;\n${remainder}\nCOMMIT;`);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(root)));
+      for (const [index,turn] of turns.entries()) {
+        const row = JSON.parse(sql(restored,`SELECT row_to_json(t) FROM
+          public.numo_assistant_turns t JOIN public.conversations c
+            ON c.id=t.conversation_id AND c.user_id=t.user_id
+          WHERE t.id=${quote(turn)};`));
+        expect(row.checkpoint.encryption_version).toBe(index+1);
+        expect((await cold.decrypt(cold.fromDatabase<{ assistantContent: string }>(
+          row.checkpoint.encrypted_payload),{ scope,
+          table:"numo_assistant_turns",column:"checkpoint",rowId:turn }))
+          .assistantContent).toBe(`Private tool thought ${index}`);
+        const message = JSON.parse(sql(restored,`SELECT row_to_json(m) FROM
+          public.assistant_messages m WHERE m.id=${quote(messages[index])}
+          AND m.turn_id=${quote(turn)};`));
+        expect(message.tool_calls).toBeNull();
+        expect((await cold.decrypt(cold.fromDatabase<{ content: string }>(message.content),{ scope,
+          table:"assistant_messages",column:"tool_payload",
+          rowId:messages[index] })).content)
+          .toBe(`Private tool thought ${index}`);
+        const operation = JSON.parse(sql(restored,`SELECT row_to_json(o) FROM
+          public.numo_tool_operations o WHERE o.turn_id=${quote(turn)};`));
+        expect((await cold.decrypt(cold.fromDatabase<{ text: string }>(JSON.stringify(
+          operation.result)),{ scope,table:"numo_tool_operations",
+          column:"result",rowId:`${turn}:opaque-call-${index}` })).text)
+          .toBe(`Private result ${index}`);
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored),
+        wrapper(randomBytes(32))));
+      const first = JSON.parse(sql(restored,`SELECT row_to_json(t) FROM
+        public.numo_assistant_turns t WHERE id=${quote(turns[0])};`));
+      await expect(wrong.decrypt(wrong.fromDatabase(
+        first.checkpoint.encrypted_payload),{ scope,
+        table:"numo_assistant_turns",column:"checkpoint",rowId:turns[0] }))
+        .rejects.toThrow();
+      expect(() => sql(restored,`INSERT INTO public.assistant_messages(
+        conversation_id,role,content,tool_calls) VALUES(${quote(conversation)},
+        'assistant','Private obsolete writer','[{"id":"old"}]'::jsonb);`))
+        .toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const database of created.reverse()) {
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
       }
     }
   }, 60_000);
