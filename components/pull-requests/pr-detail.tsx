@@ -1517,18 +1517,33 @@ export function PrDetail({
     ],
   );
 
-  // The FIX gesture of a failing PR (MIN-548 review): one prompt — identify
-  // what is wrong, fix it — that either lands in the clipboard or wakes
-  // Numo directly. A red card is only half the story; this card is the way
-  // out.
+  // The FIX gesture of a PR that needs a hand (MIN-548 review): one prompt —
+  // identify what is wrong, fix it — that either lands in the clipboard or
+  // wakes Numo directly. A red card is only half the story; this card is the
+  // way out.
+  //
+  // The card appears as soon as ANYTHING stands between the PR and its
+  // merge, not only once the whole CI suite has settled: one failing check
+  // is enough, and so is one unresolved review conversation, an
+  // out-of-date branch, or a conflict. The prompt carries the same stories.
+  const fixExtras = useMemo(
+    () => ({
+      unresolvedThreads,
+      branchOutOfDate: !!effectiveReadiness?.blockers.some(
+        (blocker) => blocker.kind === "branch",
+      ),
+    }),
+    [unresolvedThreads, effectiveReadiness?.blockers],
+  );
   const fixPrompt = useMemo(
-    () => buildPullRequestFixPrompt(feedbackContext, checks),
-    [feedbackContext, checks],
+    () => buildPullRequestFixPrompt(feedbackContext, checks, fixExtras),
+    [feedbackContext, checks, fixExtras],
   );
   const prFailing =
-    checks?.state === "failure" ||
+    !!checks?.checks.some((check) => check.state === "failure") ||
+    unresolvedThreads.length > 0 ||
     !!effectiveReadiness?.blockers.some(
-      (blocker) => blocker.kind === "conflicts",
+      (blocker) => blocker.kind === "conflicts" || blocker.kind === "branch",
     );
   const fixCard = useMemo(() => {
     if (!prFailing) return null;

@@ -553,13 +553,17 @@ button[data-variant="ghost"] {
     border: 1px solid var(--border);
   }
 
-  /* Hidden navigation keeps the same gutter on both sides. Apply the final
-     geometry once; only the sidebar surface slides, avoiding repeated page
-     layout and editor resize work throughout its exit animation. The state
-     rides a lifecycle attribute synced onto the shell main and <body> by
+  /* Hidden navigation keeps the same gutter on both sides. The margin and
+     the pane's width travel on the SAME shared chassis curve as the
+     sidebar's own width and slide, so the whole shell resizes live as one
+     block instead of snapping when the surface lands. The transition rides
+     the lifecycle attribute synced onto the shell main and <body> by
      SidebarNavOverlay: a `:has()` anchored that high would attach
      descendant-watching invalidation sets to it and broaden every unrelated
      style change into a full-document recalculation. */
+  .app-shell > div.flex.min-h-0.min-w-0.flex-1.flex-col {
+    transition: margin-left 180ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
   .app-shell[data-sidebar-hidden="true"] > div.flex.min-h-0.min-w-0.flex-1.flex-col {
     margin-left: 12px;
   }
@@ -1876,6 +1880,9 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
 @media (prefers-reduced-motion: reduce) {
   .faq-accordion [data-slot="accordion-content"] > div,
   .faq-accordion [data-slot="accordion-trigger-icon"] {
+    transition: none;
+  }
+  .app-shell > div.flex.min-h-0.min-w-0.flex-1.flex-col {
     transition: none;
   }
 }

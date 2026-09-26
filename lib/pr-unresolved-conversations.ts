@@ -26,7 +26,9 @@ export function unresolvedReviewThreads(
   );
 }
 
-function threadLocation(thread: PullRequestFeedbackThread): string {
+/** "path" or "path:line" where a review conversation sits — shared by the
+    feedback prompt and the fix prompt, which both spell the threads out. */
+export function threadLocation(thread: PullRequestFeedbackThread): string {
   const line = displayLineOf(thread.root);
   return line == null ? thread.root.path : `${thread.root.path}:${line}`;
 }

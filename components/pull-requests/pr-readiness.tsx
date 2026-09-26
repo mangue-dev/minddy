@@ -155,12 +155,12 @@ export function PrReadinessBadge({
         "shrink-0 gap-1.5",
         className,
         ready &&
-          "border-emerald-600/20 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400",
+          "bg-emerald-600/10 text-emerald-700 dark:text-emerald-400",
         pending &&
-          "border-amber-600/20 bg-amber-600/10 text-amber-700 dark:text-amber-400",
+          "bg-amber-600/10 text-amber-700 dark:text-amber-400",
         !ready &&
           !pending &&
-          "border-destructive/20 bg-destructive/10 text-destructive",
+          "bg-destructive/10 text-destructive",
       )}
     >
       {ready ? (
@@ -423,85 +423,83 @@ export function PrReadinessControl({
           // running, the viewer can register the merge NOW and let the forge
           // fire it the moment everything clears. One-way is not an option —
           // the checkbox reads the forge state and unregisters too.
+          // Checkbox and title only: the long explanation below used to
+          // overweight the row — what the registration does is what the
+          // title already says, and the spinner next to it carries the
+          // write in flight.
           <label
             data-testid="pr-auto-merge-toggle"
-            className="flex items-start gap-2.5 border-t border-border px-3.5 py-3"
+            className="flex items-center gap-2.5 border-t border-border px-3.5 py-3"
           >
             <Checkbox
               checked={mergeFlowActive}
               disabled={autoMerging}
               onCheckedChange={(checked) => onToggleAutoMerge(checked === true)}
-              className="mt-0.5"
             />
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm">
-                {mergeFlowActive
-                  ? t("autoMergeOn")
-                  : t("autoMergeWhenReady")}
-              </span>
-              <span className="block text-xs text-muted-foreground">
-                {autoMerging ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Spinner className="size-3 shrink-0" />
-                    {t("autoMergeUpdating")}
-                  </span>
-                ) : mergeFlowActive ? (
-                  t("autoMergeOnHint")
-                ) : (
-                  t("autoMergeWhenReadyHint")
-                )}
-              </span>
+            <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 text-sm">
+              {mergeFlowActive ? t("autoMergeOn") : t("autoMergeWhenReady")}
+              {autoMerging ? <Spinner className="size-3 shrink-0" /> : null}
             </span>
           </label>
         ) : null}
-        <div className="flex items-center justify-between gap-3 px-3.5 py-3">
-          <p className="min-w-0 text-xs text-muted-foreground">
-            {readiness.mergeAllowed && canMerge
-              ? t("readinessMergeAvailable")
-              : t("readinessMergeUnavailable")}
-          </p>
+        <div className="flex items-center justify-end gap-3 px-3.5 py-3">
           {preferredMethod ? (
             <div className="flex shrink-0 items-center">
-              <Button
-                data-testid="pr-readiness-merge"
-                size="sm"
-                className={cn(otherMethods.length > 0 && "rounded-r-none")}
-                disabled={!readiness.mergeAllowed || !canMerge || merging}
-                onClick={() => {
-                  setOpen(false);
-                  onMerge(preferredMethod);
-                }}
+              {/* Why the merge is (not yet) available used to sit as a
+                  sentence to the left of the button; it is now a tooltip ON
+                  the button — the information belongs to the gesture. The
+                  span keeps the hover alive on a DISABLED button, which is
+                  exactly when the explanation matters. */}
+              <AppTooltip
+                label={
+                  readiness.mergeAllowed && canMerge
+                    ? t("readinessMergeAvailable")
+                    : t("readinessMergeUnavailable")
+                }
               >
-                {merging ? <Spinner /> : <Check />}
-                {t(mergeMethodKey(preferredMethod))}
-              </Button>
-              {otherMethods.length > 0 ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="sm"
-                      className="rounded-l-none border-l border-primary-foreground/20 px-2"
-                      disabled={!readiness.mergeAllowed || !canMerge || merging}
-                      aria-label={t("mergeMethodMenu")}
-                    >
-                      <ChevronDown className="size-3.5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {otherMethods.map((method) => (
-                      <DropdownMenuItem
-                        key={method}
-                        onSelect={() => {
-                          setOpen(false);
-                          onMerge(method);
-                        }}
-                      >
-                        {t(mergeMethodKey(method))}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : null}
+                <span className="flex items-center">
+                  <Button
+                    data-testid="pr-readiness-merge"
+                    size="sm"
+                    className={cn(otherMethods.length > 0 && "rounded-r-none")}
+                    disabled={!readiness.mergeAllowed || !canMerge || merging}
+                    onClick={() => {
+                      setOpen(false);
+                      onMerge(preferredMethod);
+                    }}
+                  >
+                    {merging ? <Spinner /> : <Check />}
+                    {t(mergeMethodKey(preferredMethod))}
+                  </Button>
+                  {otherMethods.length > 0 ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          className="rounded-l-none border-l border-primary-foreground/20 px-2"
+                          disabled={!readiness.mergeAllowed || !canMerge || merging}
+                          aria-label={t("mergeMethodMenu")}
+                        >
+                          <ChevronDown className="size-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {otherMethods.map((method) => (
+                          <DropdownMenuItem
+                            key={method}
+                            onSelect={() => {
+                              setOpen(false);
+                              onMerge(method);
+                            }}
+                          >
+                            {t(mergeMethodKey(method))}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : null}
+                </span>
+              </AppTooltip>
             </div>
           ) : null}
         </div>

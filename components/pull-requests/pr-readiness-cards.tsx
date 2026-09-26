@@ -24,7 +24,7 @@
  * matching surface directly.
  */
 
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNow, useTranslations } from "next-intl";
 import {
   ArrowUpRight,
@@ -53,6 +53,7 @@ import type {
   ChecksSummary,
 } from "@/lib/agent-api";
 import type { RepoProviderId } from "@/lib/repo-providers";
+import type { MessageKey } from "@/lib/i18n-keys";
 import type { PullRequestFeedbackThread } from "@/lib/pr-unresolved-conversations";
 import type {
   PullRequestReadiness,
@@ -88,6 +89,23 @@ const TONE_TITLE: Record<PrStatusCardTone, string> = {
   danger: "text-destructive",
   neutral: "text-foreground",
 };
+
+/** The word a clicked split option replaces its label with, for a moment —
+    the visual proof the gesture landed (Copied, Opened, Launched). */
+export type PrSplitFeedback = "copied" | "opened" | "launched";
+
+const FEEDBACK_KEYS: Record<
+  PrSplitFeedback,
+  MessageKey<"PullRequests">
+> = {
+  copied: "cardFeedbackCopied",
+  opened: "cardFeedbackOpened",
+  launched: "cardFeedbackLaunched",
+};
+
+/** How long a clicked split option keeps its feedback word before the
+    regular label comes back. */
+const SPLIT_FEEDBACK_MS = 1_600;
 
 /** Alpha background of a check row, tinted by its own state. */
 const CHECK_ROW_BG: Record<CheckState, string> = {
@@ -147,10 +165,22 @@ interface PrStatusCard {
     disabled?: boolean;
   };
   /** Hover overlay SPLIT in two: the card halves vertically, one option
-      on top, one below (MIN-548 review). */
+      on top, one below (MIN-548 review). A clicked option flashes its
+      feedback word (`feedback`) so the gesture visibly landed. */
   actions?: {
-    top: { label: string; onClick: () => void; testId?: string };
-    bottom: { label: string; onClick: () => void; testId?: string; disabled?: boolean };
+    top: {
+      label: string;
+      onClick: () => void;
+      testId?: string;
+      feedback?: PrSplitFeedback;
+    };
+    bottom: {
+      label: string;
+      onClick: () => void;
+      testId?: string;
+      disabled?: boolean;
+      feedback?: PrSplitFeedback;
+    };
   };
 }
 
@@ -283,12 +313,14 @@ function buildStatusCards(
           label: t("cardFixCopyPrompt"),
           onClick: props.fix.onCopy,
           testId: "pr-card-fix-copy",
+          feedback: "copied",
         },
         bottom: {
           label: t("cardFixLaunchNumo"),
           onClick: props.fix.onLaunch,
           disabled: !props.fix.canLaunch,
           testId: "pr-card-fix-launch",
+          feedback: "launched",
         },
       },
     });
@@ -355,7 +387,26 @@ function buildStatusCards(
   // The story is sticky: a poll that comes back empty must not tear the
   // card down while the build goes on. The card never hides behind the
   // checks: an environment can exist whether or not the CI has spoken.
+  //
+  // When a URL exists the card is a SPLIT card, like the fix card: copy the
+  // link on top, open the deployment below.
   const deployment = props.deployment;
+  const deploymentActions = (url: string): PrStatusCard["actions"] => ({
+    top: {
+      label: t("cardCopyLink"),
+      onClick: () => {
+        void navigator.clipboard.writeText(url).catch(() => {});
+      },
+      testId: "pr-card-copy-deployment",
+      feedback: "copied",
+    },
+    bottom: {
+      label: t("viewDeployment"),
+      onClick: () => window.open(url, "_blank", "noreferrer"),
+      testId: "pr-card-view-deployment",
+      feedback: "opened",
+    },
+  });
   if (deployment?.status === "in_progress") {
     push({
       id: "deployment",
@@ -366,13 +417,7 @@ function buildStatusCards(
       donutParts: null,
       avatars: null,
       iconKind: "mergeability",
-      action: deployment.url
-        ? {
-            label: t("viewDeployment"),
-            onClick: () => window.open(deployment.url as string, "_blank", "noreferrer"),
-            testId: "pr-card-view-deployment",
-          }
-        : undefined,
+      actions: deployment.url ? deploymentActions(deployment.url) : undefined,
     });
   } else if (deployment?.status === "success" && deployment.url) {
     push({
@@ -384,11 +429,7 @@ function buildStatusCards(
       donutParts: null,
       avatars: null,
       iconKind: "mergeability",
-      action: {
-        label: t("viewDeployment"),
-        onClick: () => window.open(deployment.url as string, "_blank", "noreferrer"),
-        testId: "pr-card-view-deployment",
-      },
+      actions: deploymentActions(deployment.url),
     });
   }
 
@@ -718,6 +759,21 @@ function PrStatusCardView({
   onChecksOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("PullRequests");
+  // A clicked split option flashes its feedback word (Copied, Opened,
+  // Launched…): the gesture visibly landed. The regular label comes back
+  // after a beat.
+  const [pressed, setPressed] = useState<"top" | "bottom" | null>(null);
+  useEffect(() => {
+    if (!pressed) return;
+    const timer = setTimeout(() => setPressed(null), SPLIT_FEEDBACK_MS);
+    return () => clearTimeout(timer);
+  }, [pressed]);
+  const splitLabel = (which: "top" | "bottom", label: string) => {
+    if (pressed !== which) return label;
+    const feedback =
+      which === "top" ? card.actions?.top.feedback : card.actions?.bottom.feedback;
+    return feedback ? t(FEEDBACK_KEYS[feedback]) : label;
+  };
   const body = (
     <>
       {/* Illustration: donut for a mixed checks story, avatars for the
@@ -772,7 +828,8 @@ function PrStatusCardView({
   // The split card carries NO padding: the whole top half is the copy
   // gesture, the whole bottom half is Numo, edge to edge — only the
   // separating hairline between them (MIN-548 review).
-  const inner = card.actions ? (
+  const actions = card.actions;
+  const inner = actions ? (
     <div className="group relative flex h-24 min-w-0 flex-col">
       <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 p-3 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px]">
         {body}
@@ -780,30 +837,36 @@ function PrStatusCardView({
       <div className="pointer-events-none absolute inset-0 flex flex-col opacity-0 transition duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
         <button
           type="button"
-          data-testid={card.actions.top.testId}
-          onClick={card.actions.top.onClick}
+          data-testid={actions.top.testId}
+          onClick={() => {
+            setPressed("top");
+            actions.top.onClick();
+          }}
           className={cn(
             "flex min-h-0 flex-1 items-center justify-center rounded-t-xl text-sm font-medium outline-none",
             TONE_TITLE[card.tone],
             "hover:bg-muted/50 focus-visible:bg-muted/50",
           )}
         >
-          {card.actions.top.label}
+          {splitLabel("top", actions.top.label)}
         </button>
         <div className="h-px shrink-0 bg-border" />
         <button
           type="button"
-          data-testid={card.actions.bottom.testId}
-          onClick={card.actions.bottom.onClick}
-          disabled={card.actions.bottom.disabled}
+          data-testid={actions.bottom.testId}
+          onClick={() => {
+            setPressed("bottom");
+            actions.bottom.onClick();
+          }}
+          disabled={actions.bottom.disabled}
           className={cn(
             "flex min-h-0 flex-1 items-center justify-center rounded-b-xl text-sm font-medium outline-none",
             TONE_TITLE[card.tone],
-            card.actions.bottom.disabled && "opacity-50",
+            actions.bottom.disabled && "opacity-50",
             "hover:bg-muted/50 focus-visible:bg-muted/50",
           )}
         >
-          {card.actions.bottom.label}
+          {splitLabel("bottom", actions.bottom.label)}
         </button>
       </div>
     </div>

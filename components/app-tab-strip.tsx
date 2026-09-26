@@ -51,6 +51,8 @@ import { useAppTabMetadata } from "@/lib/use-app-tab-metadata";
 import { AppTabIcon } from "./app-tab-icon";
 import { AppTabItem } from "./app-tab-item";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { KbdSequence } from "./ui/kbd";
+import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 const routeLabels: Record<string, MessageKey<"Nav">> = {
@@ -75,6 +77,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   const nav = useTranslations("Nav");
   const common = useTranslations("Common");
   const tFamily = useTranslations("IssueFamily");
+  const modKey = useModKey();
   const hrefs = tabs.map((tab) => tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href);
   const { pageById, objectiveById, prById, routineById, issueById } = useAppTabMetadata(hrefs);
 
@@ -346,7 +349,10 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           onClick={onNewTab} onMouseEnter={onNewTabWarm} onFocus={onNewTabWarm}
           className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
           <Plus className="size-4" aria-hidden />
-        </button></TooltipTrigger><TooltipContent side="bottom">{t("newTab")}</TooltipContent></Tooltip>
+        </button></TooltipTrigger><TooltipContent side="bottom" className="flex items-center gap-2">
+          <span>{t("newTab")}</span>
+          <KbdSequence keys={[[modKey, "T"]]} size="sm" />
+        </TooltipContent></Tooltip>
       )}
       {(loadError || error) && <Tooltip><TooltipTrigger asChild><button type="button" aria-label={t("retry")}
         onClick={() => { reload(); void session.retry(); }} className="flex size-7 shrink-0 items-center justify-center text-destructive">

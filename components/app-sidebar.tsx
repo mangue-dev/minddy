@@ -967,7 +967,7 @@ export function AppSidebar({
     [onLayerOpenChange],
   );
 
-  const shellTransition = reduce ? { duration: 0 } : transitions.shell;
+  const shellTransition = reduce ? { duration: 0 } : transitions.panel;
 
   const level1 = (
     <SidebarNav
@@ -1114,7 +1114,7 @@ export function AppSidebar({
               key="home"
               className="absolute inset-0 flex min-h-0 flex-col"
               offset={-16}
-              transition={reduce ? { duration: 0 } : transitions.fade}
+              transition={reduce ? { duration: 0 } : transitions.panel}
             >
               {homeLevel}
             </SidebarPanelTransition>
@@ -1123,7 +1123,7 @@ export function AppSidebar({
               key={modeKey}
               className="absolute inset-0 flex min-h-0 flex-col"
               offset={16}
-              transition={reduce ? { duration: 0 } : transitions.fade}
+              transition={reduce ? { duration: 0 } : transitions.panel}
             >
               {level1}
             </SidebarPanelTransition>

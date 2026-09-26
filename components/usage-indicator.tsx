@@ -14,6 +14,7 @@ import {
   Mic,
 } from "lucide-react";
 import {
+  Badge,
   Button,
   Popover,
   PopoverContent,
@@ -31,6 +32,7 @@ import {
   useBillingSummary,
 } from "@/lib/use-billing-query";
 import { createCheckoutApi, createPortalApi } from "@/lib/billing-api";
+import { CARD_TONES } from "@/components/marketing/card-tones";
 import { NumoIcon } from "@/components/numo-icon";
 import { SmartAssignIcon } from "@/components/smart-icons";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
@@ -79,6 +81,18 @@ const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> 
   free: "planFree",
   go: "planGo",
   pro: "planPro",
+};
+
+/**
+ * The plan chip wears the pricing card of its plan (same `CARD_TONES`, the
+ * pastel wash the pricing page paints each plan with) — the same color key
+ * says "this is the plan you are on" on both surfaces. Not the neutral
+ * primary tint that read as a plain black chip.
+ */
+const PLAN_BADGE_TONES: Record<BillingPlanId, string> = {
+  free: CARD_TONES.sky,
+  go: CARD_TONES.butter,
+  pro: CARD_TONES.lavender,
 };
 
 export function UsageIndicator({
@@ -235,9 +249,12 @@ export function UsageBreakdownBody({
             {t("ofBudget")}
           </span>
         </div>
-        <span className="flex h-5 shrink-0 items-center rounded-full border border-primary bg-primary/10 px-2 text-xs font-semibold text-primary">
+        <Badge
+          variant="secondary"
+          className={cn("h-5 shrink-0 rounded-full px-2 text-xs font-semibold", PLAN_BADGE_TONES[planId])}
+        >
           {t(PLAN_LABEL_KEYS[planId])}
-        </span>
+        </Badge>
       </div>
 
       <div

@@ -420,21 +420,11 @@ export default function TriagePage() {
     else if (!trimmed) setTitle(selected.title);
   };
 
-  if (!loading && triageIssues.length === 0) {
-    return (
-      /* Empty yard: the same shape as the board and the objectives — a scene,
- a sentence, and here nothing to do. No button: the sorting fills
- by itself, it's not a place where you create. The page title
- goes INTO the block, it doesn't have to be said twice. */
-      <div className="flex h-full flex-col">
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
-          <div className="mx-auto max-w-5xl">
-            <EmptyScene icon={CircleDotDashed} title={t("emptyTitle")} />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Empty yard handled INSIDE the layout: the sidebar keeps its search
+  // input and carries a compact scene (the isometric block), the pane says
+  // there is nothing to triage — the bar never reads as a dead strip
+  // (MIN-548 review). No button: the sorting fills by itself, it's not a
+  // place where you create.
 
   return (
     /* “@” on hover over a line (or on selection) opens Numo — even
@@ -460,6 +450,16 @@ export default function TriagePage() {
               <Skeleton key={i} className="h-14 rounded-lg" />
             ))}
           </div>
+        ) : triageIssues.length === 0 ? (
+          // Nothing in the yard at all: the same compact scene as the
+          // feedback column, so the bar fills its frame — and the search
+          // input above stays where it is, even if it filters nothing.
+          <EmptyScene
+            size="compact"
+            icon={CircleDotDashed}
+            title={t("emptyTitle")}
+            className="py-10"
+          />
         ) : visibleIssues.length === 0 ? (
           // An empty sort is handled above, before rendering the column:
           // here, it must have been the filter that emptied it.
@@ -670,6 +670,16 @@ export default function TriagePage() {
               </div>
             </div>
           </>
+        ) : triageIssues.length === 0 ? (
+          /* Nothing in the yard: the same scene the whole page used to show,
+             kept in the pane now that the sidebar stays up. */
+          <div className="flex h-full flex-col">
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+              <div className="mx-auto max-w-5xl">
+                <EmptyScene icon={CircleDotDashed} title={t("emptyTitle")} />
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="flex flex-1 items-center justify-center p-6">
             <p className="text-sm text-muted-foreground">{t("noSelection")}</p>

@@ -14,7 +14,6 @@ import { HomeNumoComposer } from "@/components/home/home-numo-composer";
 import { OnboardingCard } from "@/components/home/onboarding-card";
 import { DesktopInstallBanner } from "@/components/home/desktop-install-banner";
 import { HomeTip } from "@/components/home/home-tip";
-import HomeLoading from "./loading";
 
 /** Display name from Supabase auth metadata (display_name → full_name → name),
     never the raw email — mirrors the sidebar account button. */
@@ -74,7 +73,14 @@ export default function HomePage() {
 
   const greeting = useGreeting(name);
 
-  if (onboarding.loading) return <HomeLoading />;
+  // NO loading screen (MIN-548 review): the home is a sentence and a
+  // composer, both instant — the greeting is local time, the composer is
+  // client-only, and the signals under it render nothing until they are
+  // known. The ONLY wait-sensitive piece is the onboarding card: while the
+  // signals resolve it stays out of the way, and it takes the page over
+  // once they name a blank account. An established account therefore sees
+  // its real home at once, and a fresh one never gets a skeleton in
+  // between.
 
   /**
    * The page fits on ONE screen, and nothing below. There was a column of

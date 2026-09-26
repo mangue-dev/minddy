@@ -10,9 +10,13 @@ const HOTZONE = 12;
 
 /**
  * Keep one navigation tree mounted across docked, rail, and hidden modes.
- * Commit the reserved width once; only the floating panel's transform animates.
- * Tweening layout width reflows every card and editor on every animation frame.
- * Hidden navigation can be recalled by pointer, keyboard focus, or a portaled layer.
+ * The panel slides with a transform; the reserved width travels ALONG it on
+ * the same shared chassis curve, so the content pane resizes live, fluidly,
+ * instead of snapping when the surface lands (MIN-548 review). The panel
+ * itself is absolutely positioned — nothing inside the sidebar reflows
+ * during travel; only the content pane to the right follows the width.
+ * Hidden navigation can be recalled by pointer, keyboard focus, or a
+ * portaled layer.
  */
 export function SidebarNavOverlay({
   width,
@@ -209,7 +213,7 @@ export function SidebarNavOverlay({
 
   return (
     <div
-      className="relative h-full shrink-0"
+      className="relative h-full shrink-0 [transition:width_180ms_cubic-bezier(0.32,0.72,0,1)] motion-reduce:[transition:none]"
       data-sidebar-hidden={hidden}
       style={{ width: flowWidth }}
     >
