@@ -561,7 +561,7 @@ function PlainComposer({
 
   return (
     <div className="flex flex-col gap-2 font-sans">
-      <div className="w-full rounded-lg border border-border bg-background transition-colors focus-within:border-ring">
+      <div className="w-full rounded-lg bg-control transition-colors">
         <AutoTextarea
           autoFocus={autoFocus}
           value={value}

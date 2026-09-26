@@ -872,8 +872,7 @@ export function CreateIssueDialog({
                       type="submit"
                       disabled={submitting || numoBusy || !title.trim() || uploads.uploading}
                       className="max-sm:w-full"
-                      actionClassName="rounded-l-full pl-4 max-sm:flex-1"
-                      triggerClassName="rounded-r-full"
+                      actionClassName="max-sm:flex-1"
                       menuLabel={t("createInOtherProject")}
                       menu={otherProjects.map((p) => (
                         <DropdownMenuItem

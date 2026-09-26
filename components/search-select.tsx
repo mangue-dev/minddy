@@ -22,11 +22,14 @@ import { SearchMenu } from "@/components/search-menu";
  * transparent is legitimate on a map; in a row of fields it reads
  * like a disabled or not yet loaded control.
  *
+ * Since mango-ui 0.8.0 the fields are borderless (`bg-control` only, focus
+ * marks nothing): the trigger follows them.
+ *
  * Pickers whose trigger is a PELLET (the compact fields of a
  * ticket) have nothing to do with this: they pass their own `trigger`.
  */
 export const PICKER_FIELD_TRIGGER =
-  "flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-input bg-control px-3 text-sm outline-none transition-colors hover:bg-control-hover focus-visible:border-ring";
+  "flex h-9 w-full items-center justify-between gap-2 rounded-lg bg-control px-3 text-sm outline-none transition-colors hover:bg-control-hover focus-visible:outline-none";
 
 export type PickerOption = {
   value: string;

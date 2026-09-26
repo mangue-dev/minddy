@@ -364,7 +364,7 @@ export function DateTimePicker({
         type="button"
         aria-label={ariaLabel}
         className={cn(
-          "flex h-9 items-center gap-2 rounded-lg border border-input bg-transparent px-3 text-sm text-foreground outline-none transition-colors hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:border-ring",
+          "flex h-9 items-center gap-2 rounded-lg bg-control px-3 text-sm text-foreground outline-none transition-colors hover:bg-control-hover focus-visible:bg-control-hover aria-expanded:bg-control-hover",
           className,
         )}
       >
@@ -529,7 +529,7 @@ export function DateTimePicker({
                 type="time"
                 value={`${pad(selected.getHours())}:${pad(selected.getMinutes())}`}
                 onChange={handleTimeChange}
-                className="rounded-md border border-input bg-transparent px-2 py-1 text-sm tabular-nums outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [&::-webkit-calendar-picker-indicator]:opacity-60"
+                className="rounded-md bg-control px-2 py-1 text-sm tabular-nums outline-none transition-colors focus-visible:bg-control-hover [&::-webkit-calendar-picker-indicator]:opacity-60"
               />
             </div>
           )}

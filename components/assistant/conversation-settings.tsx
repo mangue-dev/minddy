@@ -201,7 +201,7 @@ export function ConversationSettings() {
                 max={Math.max(0, reasoningLevels.length - 1)}
                 step={1}
                 aria-label={t("reasoning")}
-                className="h-8 [&_[data-slot=slider-track]]:h-6 [&_[data-slot=slider-track]]:rounded-full [&_[data-slot=slider-range]]:bg-blue-500 [&_[data-slot=slider-thumb]]:size-8 [&_[data-slot=slider-thumb]]:border-[3px] [&_[data-slot=slider-thumb]]:border-background [&_[data-slot=slider-thumb]]:ring-blue-500/30"
+                className="[&_[data-slot=slider-track]]:h-8 [&_[data-slot=slider-track]]:rounded-full [&_[data-slot=slider-range]]:bg-blue-500"
                 onValueChange={(values) => {
                   selectReasoningIndex(values[0] ?? 0);
                 }}

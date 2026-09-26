@@ -260,7 +260,7 @@ function Composer({
         placeholder={placeholder}
         maxLength={FEEDBACK_COMMENT_BODY_MAX}
         autoFocus={autoFocus}
-        className="min-h-16 w-full resize-none rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring"
+        className="min-h-16 w-full resize-none rounded-lg bg-control px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:bg-control-hover"
       />
       {error && (
         <p className="text-sm text-destructive">

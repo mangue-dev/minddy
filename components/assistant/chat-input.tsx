@@ -1413,13 +1413,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         <AgentBeam active={!!beam} keepMounted className="relative z-10 rounded-2xl">
         <div
           className={cn(
-            // No blue focus ring, no drop shadow: the surface stays quiet on
-            // focus (the editor caret is the signal), brand colors are kept
-            // for drag feedback only.
-            "chat-input-surface relative flex flex-col overflow-hidden rounded-2xl border bg-card transition-all",
-            drop.dragging
-              ? "border-brand ring-2 ring-brand/20"
-              : "border-border"
+            // No focus ring, no border: since mango-ui 0.8.0 the Numo composer
+            // is a borderless `bg-control` surface (the editor caret is the
+            // signal), brand colors are kept for drag feedback only.
+            "chat-input-surface relative flex flex-col overflow-hidden rounded-2xl bg-control transition-all",
+            drop.dragging && "ring-2 ring-brand/20"
           )}
           {...(canAttach ? drop.handlers : {})}
         >

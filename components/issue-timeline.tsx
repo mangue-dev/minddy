@@ -1246,12 +1246,12 @@ export function CommentComposer({
   return (
     <div
       className={cn(
-        "relative w-full rounded-lg border border-border bg-card transition-colors focus-within:border-ring",
-        allowAttachments && drop.dragging && "border-brand",
+        "relative w-full rounded-lg bg-control transition-colors",
+        allowAttachments && drop.dragging && "ring-2 ring-brand/20",
         // The composer CHANGES AIR when what we write goes onto the board.
-        // A discreet pellet is missed; the edge of the field, no — and it is
+        // A discreet pellet is missed; the surface tint, no — and it is
         // the only thing someone is looking at while typing.
-        isPublic && "border-brand/50 bg-brand/[0.03]"
+        isPublic && "bg-brand/[0.06]"
       )}
       onPaste={allowAttachments ? pasteFileHandler(uploads.addFiles) : undefined}
       {...(allowAttachments ? drop.handlers : {})}

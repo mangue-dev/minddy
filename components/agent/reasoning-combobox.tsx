@@ -114,7 +114,7 @@ export function ReasoningCombobox({
           className={cn(
             "gap-1.5 text-xs font-medium text-foreground/80",
             variant === "field"
-              ? "h-10 w-full justify-start rounded-md border border-input bg-transparent px-3 text-left hover:bg-muted/50"
+              ? "h-10 w-full justify-start rounded-md bg-control px-3 text-left hover:bg-control-hover"
               : "h-8 shrink-0 rounded-full border border-transparent bg-transparent px-1.5 hover:bg-muted/50",
           )}
         >

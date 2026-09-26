@@ -78,7 +78,7 @@ export function EmojiPicker({
           <div className="flex items-center gap-2 border-b border-border p-2">
             <Frimousse.Search
               placeholder={t("searchEmoji")}
-              className="h-8 min-w-0 flex-1 rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="h-8 min-w-0 flex-1 rounded-md bg-control px-2 text-sm outline-none focus-visible:bg-control-hover"
             />
             {value ? (
               <Button

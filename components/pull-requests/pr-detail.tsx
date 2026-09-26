@@ -2323,7 +2323,7 @@ export function PrDetail({
             onChange={(event) => setTitleDraft(event.target.value)}
             maxLength={256}
             autoFocus
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-9 w-full rounded-md bg-control px-3 text-sm outline-none focus-visible:bg-control-hover"
             onKeyDown={(event) => {
               if (event.key === "Enter" && titleDraft.trim()) void saveTitle();
             }}
@@ -2404,7 +2404,7 @@ export function PrDetail({
                       current ? { ...current, title: event.target.value } : current,
                     );
                   }}
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="h-9 w-full rounded-md bg-control px-3 text-sm font-normal outline-none focus-visible:bg-control-hover"
                 />
               </label>
               <label className="grid gap-1.5 text-sm font-medium">
@@ -2652,8 +2652,8 @@ export function PrDetail({
 
           <div
             className={cn(
-              "relative min-w-0 max-w-full overflow-clip rounded-md border border-border transition-colors focus-within:border-ring",
-              reviewDrop.dragging && "border-brand",
+              "relative min-w-0 max-w-full overflow-clip rounded-md bg-control transition-colors",
+              reviewDrop.dragging && "ring-2 ring-brand/20",
             )}
             onPaste={pasteFileHandler(reviewUploads.addFiles)}
             {...reviewDrop.handlers}

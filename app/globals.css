@@ -100,8 +100,8 @@ html[data-desktop-app] .sidebar-nav-hotzone {
 }
 
 /* mango-ui gives menu options a higher touch target up to
-   1199 px (`max-[1199px]:py-2.5`). However, the application remains desktop from
-   768 px: in this section, the menus must regain their density of
+   1199 px (`max-[1199px]:min-h-10`). However, the application remains desktop
+   from 768 px: in this section, the menus must regain their density of
    desktop (the original `py-1.5`). The rule is outside layer and `!important` for
    also cover utilities already compiled in the dependency. */
 @media (width >= 768px) {
@@ -1216,25 +1216,23 @@ nav[aria-label="Navigation"]
   }
 
   /* What hits and isn't a button. Two families, two treatments —
-     and it’s geometry that decides, not taste.
+      and it’s geometry that decides, not taste.
 
-     ISOLATED COMMANDS expand by pseudo-element, like buttons:
-     nothing around them hits, so overflow costs nothing.
-     mango-ui already extends two, but not far enough (16 px + 2×8 for the box
-     to check, 12 px + 2×8 for the thumb of the cursor): we take HIS instead
-     than to install a second one — an off-layer rule beats the `after:` utility
-     who wrote it. The switch does not have one; he receives one, in
-     `absolute` so as not to become an element of its own flex and push its
-     thumb. 20 px high by 36, this is the smallest target of the product. */
+      ISOLATED COMMANDS expand by pseudo-element, like buttons:
+      nothing around them hits, so overflow costs nothing.
+      mango-ui still extends the box to check (`after:-inset-x-3
+      after:-inset-y-2` on a 16px square); we take HIS instead
+      than to install a second one — an off-layer rule beats the `after:` utility
+      who wrote it. The slider thumb lost its own `::after` in 0.8.0 and is
+      centered in a full-height track, so it receives the centered `max()` form
+      below — robust against the thumb's real geometry. The switch does not
+      have one either; it receives the same treatment, in `absolute` so as not
+      to become an element of its own flex and push its thumb. 20 px high by
+      36, this is the smallest target of the product. */
   [data-slot="checkbox"]::after {
     inset: -14px; /* 16 + 2×14 = 44 */
   }
-  [data-slot="slider-thumb"]::after {
-    inset: -16px; /* 12 + 2×16 = 44 */
-  }
-  [data-slot="switch"] {
-    position: relative;
-  }
+  [data-slot="slider-thumb"]::after,
   [data-slot="switch"]::after {
     content: "";
     position: absolute;
@@ -1243,6 +1241,9 @@ nav[aria-label="Navigation"]
     translate: -50% -50%;
     width: max(100%, 44px);
     height: max(100%, 44px);
+  }
+  [data-slot="switch"] {
+    position: relative;
   }
 
   /* A tab is wide but low. We therefore only extend it HEIGHT, and by
