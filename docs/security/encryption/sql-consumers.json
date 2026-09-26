@@ -1438,6 +1438,21 @@
       ],
       "functionReferences": []
     },
+    "guard_agent_branch_prefix()": {
+      "sha256": "420993e0432917e208ab5f8feb2f3a63dc2eedc5f2120960fde9da8ec6d02a28",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_branch_prefix_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": [
+        "agent_branch_prefix_version"
+      ]
+    },
     "guard_agent_queue_message()": {
       "sha256": "826f2df998c4997e8927ed36d27a52d3b2e246453148d4574cacb6841127e8a9",
       "securityDefiner": true,
@@ -2137,6 +2152,24 @@
         "page_comments"
       ],
       "functionReferences": []
+    },
+    "activate_agent_branch_prefix()": {
+      "sha256": "80bf3a2846c98c0f82e8a14324549e4ed282600209f0fabf67e261e036a6821d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "user_agent_preferences",
+        "agent_branch_prefix_scope"
+      ],
+      "protectedRelations": [
+        "user_agent_preferences"
+      ],
+      "functionReferences": [
+        "agent_branch_prefix_version"
+      ]
     },
     "activate_user_ai_key_content()": {
       "sha256": "c5ee3b4a79a41d5bb2472f36e24ff22464c7faaa88c960922632752b7136f51b",
@@ -3040,6 +3073,17 @@
         "project_git_links",
         "forge_repository_names"
       ],
+      "functionReferences": []
+    },
+    "agent_branch_prefix_version(text)": {
+      "sha256": "baec6afb0d82ce297b09b0987ba013a0941165ab07db8d82f0573fab96f695ae",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "agent_queue_content_version(text)": {
@@ -5643,6 +5687,23 @@
       ],
       "functionReferences": []
     },
+    "upsert_agent_preferences_protected(uuid,jsonb,text,boolean)": {
+      "sha256": "6ff7572163945632bd4f8da2d25ed10e2fc835069f3d6120b1f76779261cd343",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "user_agent_preferences"
+      ],
+      "protectedRelations": [
+        "user_agent_preferences"
+      ],
+      "functionReferences": [
+        "agent_branch_prefix_version"
+      ]
+    },
     "write_feedback_sso_secret_protected(uuid,uuid,text,boolean)": {
       "sha256": "4a06a9823bd5d5e6d5ff19ca5051a7aa94ee7237bad120eb4025d0659fe63ecd",
       "securityDefiner": true,
@@ -8066,6 +8127,10 @@
     "provider_operation_reservations.provider_operation_resource_guard": {
       "function": "guard_provider_operation_resource()",
       "definition": "CREATE TRIGGER provider_operation_resource_guard BEFORE INSERT OR UPDATE ON provider_operation_reservations FOR EACH ROW EXECUTE FUNCTION guard_provider_operation_resource()"
+    },
+    "user_agent_preferences.user_agent_preferences_branch_prefix_guard": {
+      "function": "guard_agent_branch_prefix()",
+      "definition": "CREATE TRIGGER user_agent_preferences_branch_prefix_guard BEFORE INSERT OR UPDATE ON user_agent_preferences FOR EACH ROW EXECUTE FUNCTION guard_agent_branch_prefix()"
     },
     "forge_relay_user_deliveries.forge_relay_user_delivery_content_guard": {
       "function": "guard_forge_relay_user_delivery_content()",

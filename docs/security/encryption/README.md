@@ -1947,3 +1947,22 @@ wrong root. `MINDDY_MCP_CONTENT_ENCRYPTION_ENABLED` and the global flag remain
 off in production. Representative search, latency and key/cache load
 measurements remain a check before production activation; they do not block
 review of the code PR. Other MIN-591 targets remain open.
+
+## Personal agent branch namespace checkpoint — 26 September 2026
+
+`user_agent_preferences.branch_prefix` now uses a format-3 user-key field
+envelope bound to the preference owner. Account settings, the agent-preference
+API, worker launch and account transfer read through the same decoder. The
+protected service RPC merges partial model, sandbox and namespace changes
+under the row's conflict lock, preserving a previously saved namespace when a
+different control changes only sandbox settings. A new row receives an
+encrypted default namespace; no clear default is written after activation.
+
+A bounded 25-row worker migrates old prefixes and rotates historical user
+keys using exact-value compare-and-swap. Activation requires every row to
+carry a checked format-3 envelope. SQL rejects old clear inserts and updates,
+scope changes and key downgrades. The isolated SQL regression covers the source,
+obsolete writers and partial updates. A real PostgreSQL dump/restore loads
+preference children before users in independent batches, recovers two key
+versions with cold caches and rejects the wrong root. The dedicated and global
+encryption flags remain off in production. Other MIN-591 targets remain open.

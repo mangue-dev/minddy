@@ -57,6 +57,7 @@ const relayProvisioningTemplate = "minddy_min591_provisioning_audit";
 const relayUserDeliveryTemplate = "minddy_min591_user_delivery_audit";
 const forgeOAuthTemplate = "minddy_min591_forge_oauth_audit";
 const mcpContentTemplate = "minddy_min591_mcp_audit";
+const agentPrefTemplate = "minddy_min591_agent_pref_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -6215,6 +6216,101 @@ describe.skipIf(!enabled)("personal MCP content PostgreSQL recovery", () => {
       vi.unstubAllEnvs();
       log.mockRestore();
       for (const database of created.reverse())
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+    }
+  },60_000);
+});
+
+describe.skipIf(!enabled)("agent branch preference PostgreSQL recovery", () => {
+  it("restores preferences before users with historical keys and rejects a wrong root", async () => {
+    const suffix=randomUUID().replaceAll("-","").slice(0,12);
+    const source=`minddy_min591_pref_source_${suffix}`;
+    const restored=`minddy_min591_pref_restore_${suffix}`;
+    const created:string[]=[];
+    const root=randomBytes(32);
+    const users=[randomUUID(),randomUUID()];
+    const log=vi.spyOn(console,"info").mockImplementation(()=>{});
+    try {
+      expect(sql(agentPrefTemplate,
+        "SELECT count(*) FROM public.user_agent_preferences;"))
+        .toBe("0");
+      for(const database of [source,restored]){
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${agentPrefTemplate};`);
+        created.push(database);
+      }
+      const keys=new ManagedDataKeys(registry(source),wrapper(root));
+      const store=new EncryptedStore(keys);
+      for(const [index,user] of users.entries()){
+        const scope:EncryptionScope={kind:"user",id:user};
+        sql(source,`INSERT INTO auth.users(id) VALUES(${quote(user)});`);
+        if(index===1){
+          const first=await keys.current(scope);
+          first.bytes.fill(0);
+          await keys.rotate(scope,1);
+        }
+        const cipher=await store.encrypt(`private-${index}/`,{
+          scope,table:"user_agent_preferences",column:"branch_prefix",
+          rowId:user,
+        });
+        sql(source,`INSERT INTO public.user_agent_preferences(user_id,
+          branch_prefix) VALUES(${quote(user)},${quote(`mdye3:${cipher}`)});`);
+        keys.invalidate(scope);
+      }
+      expect(sql(source,"SELECT public.activate_agent_branch_prefix();"))
+        .toBe("t");
+      const dump=execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges", ...["auth.users","public.user_agent_preferences",
+          "public.agent_branch_prefix_scope","public.envelope_data_keys"]
+          .map((table)=>`--table=${table}`)],
+      {encoding:"utf8",maxBuffer:4*1024*1024});
+      for(const marker of ["private-0/","private-1/"])
+        expect(dump).not.toContain(marker);
+      let remainder=dump;
+      const copies=new Map<string,{header:string;lines:string[]}>();
+      for(const table of ["public.user_agent_preferences","auth.users"]){
+        const start=remainder.indexOf(`COPY ${table} `);
+        expect(start).toBeGreaterThanOrEqual(0);
+        const bodyStart=remainder.indexOf("\n",start)+1;
+        const bodyEnd=remainder.indexOf("\\.\n",bodyStart);
+        copies.set(table,{header:remainder.slice(start,bodyStart),
+          lines:remainder.slice(bodyStart,bodyEnd).trimEnd().split("\n")});
+        remainder=remainder.slice(0,start)+remainder.slice(bodyEnd+3);
+      }
+      for(const table of ["public.user_agent_preferences","auth.users"])
+        for(const line of copies.get(table)!.lines.reverse())
+          sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+            ${copies.get(table)!.header}${line}\n\\.\nCOMMIT;`);
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+        ${remainder}\nCOMMIT;`);
+      expect(sql(restored,`SELECT count(*) FROM public.user_agent_preferences p
+        JOIN auth.users u ON u.id=p.user_id;`)).toBe("2");
+      const cold=new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(root)));
+      for(const [index,user] of users.entries()){
+        const row=JSON.parse(sql(restored,`SELECT row_to_json(p) FROM
+          public.user_agent_preferences p WHERE user_id=${quote(user)};`));
+        expect(row.branch_prefix_encryption_checked_at).not.toBeNull();
+        const plain=await cold.decrypt<string>(
+          cold.fromDatabase(row.branch_prefix.slice(6)),{
+            scope:{kind:"user",id:user},table:"user_agent_preferences",
+            column:"branch_prefix",rowId:user,
+          });
+        expect(plain).toBe(`private-${index}/`);
+      }
+      const wrong=new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(randomBytes(32))));
+      const value=sql(restored,`SELECT branch_prefix FROM
+        public.user_agent_preferences WHERE user_id=${quote(users[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase(value.slice(6)),{
+        scope:{kind:"user",id:users[0]},table:"user_agent_preferences",
+        column:"branch_prefix",rowId:users[0],
+      })).rejects.toThrow();
+      expect(()=>sql(restored,`UPDATE public.user_agent_preferences SET
+        branch_prefix='old/' WHERE user_id=${quote(users[0])};`)).toThrow();
+    }finally{
+      root.fill(0);vi.unstubAllEnvs();log.mockRestore();
+      for(const database of created.reverse())
         sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
     }
   },60_000);

@@ -35,6 +35,8 @@ import { decodeConversationTitle } from
   "@/lib/server/numo/conversation-title-content";
 import { decodeAgentContextSnapshot, legacyAgentContextSchema } from
   "@/lib/server/agent/context-snapshot-content";
+import { decodeAgentBranchPrefix } from
+  "@/lib/server/agent/branch-prefix-content";
 
 /**
  * Export of account data (MIN-119, GDPR art. 15 and 20).
@@ -540,6 +542,16 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
   const exportedPageFiles = await includeStorageBytes(service,
     list("page_files", pageFiles), "page_files", userId);
 
+  const storedPreferences = one("user_agent_preferences", preferences);
+  const exportedPreferences = storedPreferences ? {
+    ...storedPreferences,
+    branch_prefix: await decodeAgentBranchPrefix(userId,
+      storedPreferences.branch_prefix as string | null),
+  } : null;
+  if (exportedPreferences) {
+    delete (exportedPreferences as Row).branch_prefix_encryption_checked_at;
+    delete (exportedPreferences as Row).branch_prefix_encryption_attempted_at;
+  }
   return {
     transfer_format: ACCOUNT_TRANSFER_FORMAT,
     transfer_version: ACCOUNT_TRANSFER_VERSION,
@@ -588,7 +600,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       email_confirmed_at: user.email_confirmed_at ?? null,
       user_metadata: user.user_metadata ?? {},
     },
-    preferences: one("user_agent_preferences", preferences),
+    preferences: exportedPreferences,
     owned_projects: exportedProjects,
     memberships: list("project_members", memberships),
     issues: [...issuesById.values()],

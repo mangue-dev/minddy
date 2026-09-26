@@ -112,6 +112,8 @@ import { backfillForgeOAuthConnectionsBatch,
   "@/lib/server/encryption/forge-oauth-token-backfill";
 import { backfillMcpConnectionsBatch, backfillMcpAttemptsBatch } from
   "@/lib/server/encryption/personal-mcp-backfill";
+import { backfillAgentBranchPrefixesBatch } from
+  "@/lib/server/encryption/agent-branch-prefix-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -230,6 +232,8 @@ export async function GET(request: NextRequest) {
     process.env.MINDDY_FORGE_OAUTH_TOKEN_ENCRYPTION_ENABLED === "true";
   const mcpContentEnabled = contentEnabled &&
     process.env.MINDDY_MCP_CONTENT_ENCRYPTION_ENABLED === "true";
+  const agentBranchPrefixesEnabled = contentEnabled &&
+    process.env.MINDDY_AGENT_BRANCH_PREFIX_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -319,6 +323,7 @@ export async function GET(request: NextRequest) {
       forgeOAuthTokensEnabled ? backfillForgeOAuthIdentitiesBatch(25, request.signal) : Promise.resolve(null),
       mcpContentEnabled ? backfillMcpConnectionsBatch(25, request.signal) : Promise.resolve(null),
       mcpContentEnabled ? backfillMcpAttemptsBatch(25, request.signal) : Promise.resolve(null),
+      agentBranchPrefixesEnabled ? backfillAgentBranchPrefixesBatch(25, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -400,6 +405,7 @@ export async function GET(request: NextRequest) {
     const forgeOAuthIdentities = outcomes[77];
     const mcpConnections = outcomes[78];
     const mcpAttempts = outcomes[79];
+    const agentBranchPrefixes = outcomes[80];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
@@ -577,6 +583,10 @@ export async function GET(request: NextRequest) {
             ? mcpConnections.value : { failed: true },
           mcp_attempts: mcpAttempts.status === "fulfilled"
             ? mcpAttempts.value : { failed: true },
+        } : {}),
+        ...(agentBranchPrefixesEnabled ? {
+          agent_branch_prefixes: agentBranchPrefixes.status === "fulfilled"
+            ? agentBranchPrefixes.value : { failed: true },
         } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),

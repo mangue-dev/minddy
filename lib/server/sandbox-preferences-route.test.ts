@@ -15,11 +15,19 @@ vi.mock("@/lib/server/api-auth", () => ({
       select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: h.row, error: h.error }) }) }),
       upsert: (patch: Record<string, unknown>) => {
         h.patch = patch;
-        return { select: () => ({ single: async () => ({ data: { ...h.row, ...patch }, error: h.error }) }) };
+        Object.assign(h.row,patch);
+        return { error: h.error };
       },
     }) },
   } : { ok: false, response: new Response(null, { status: 401 }) },
 }));
+vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({
+  from: (table: string) => {
+    if (table !== "agent_branch_prefix_scope") throw new Error("Unexpected table");
+    return { select: () => ({ eq: () => ({ maybeSingle: async () =>
+      ({ data: null, error: { code: "42P01" } }) }) }) };
+  },
+}) }));
 vi.mock("@/lib/server/agent/model-plan", () => ({ ensureModelInPlan: vi.fn() }));
 vi.mock("@/lib/server/agent/model", () => ({ userHasByokKey: vi.fn() }));
 

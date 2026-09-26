@@ -11,6 +11,8 @@ import {
   DEFAULT_AGENT_BRANCH_PREFIX,
   normalizeAgentBranchPrefix,
 } from "@/lib/server/agent/branch-name";
+import { decodeAgentBranchPrefix, saveAgentPreferences } from
+  "@/lib/server/agent/branch-prefix-content";
 
 /**
  * User agent preferences (MIN-46): the provider-bound code-worker model,
@@ -54,8 +56,8 @@ export async function GET(request: NextRequest) {
     default_reasoning_level: isReasoningLevel(row?.default_reasoning_level)
       ? row.default_reasoning_level
       : null,
-    branch_prefix:
-      normalizeAgentBranchPrefix(row?.branch_prefix) ?? DEFAULT_AGENT_BRANCH_PREFIX,
+    branch_prefix: await decodeAgentBranchPrefix(auth.user.id,
+      row?.branch_prefix ?? null),
   });
 }
 
@@ -145,26 +147,25 @@ export async function PUT(request: NextRequest) {
     patch.sandbox_size = body.sandbox_size;
   }
 
-  const { data, error } = await auth.supabase
-    .from("user_agent_preferences")
-    .upsert(patch, { onConflict: "user_id" })
-    .select("default_model, default_reasoning_level, branch_prefix, sandbox_region, sandbox_size")
-    .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  const row = data as {
+  let row: {
     default_model: string | null;
     default_reasoning_level: string | null;
     branch_prefix: string | null;
     sandbox_region: string | null;
     sandbox_size: string | null;
   };
+  try {
+    const { user_id: _owner, updated_at: _updated, ...fields } = patch;
+    row = await saveAgentPreferences(auth.user.id, fields, auth.supabase) as unknown as typeof row;
+  } catch {
+    return NextResponse.json({ error: "Could not save agent preferences" }, { status: 500 });
+  }
   return NextResponse.json({
     ...resolveSandboxPreferences(row),
     default_model: row.default_model ?? null,
     default_reasoning_level: isReasoningLevel(row.default_reasoning_level)
       ? row.default_reasoning_level
       : null,
-    branch_prefix:
-      normalizeAgentBranchPrefix(row.branch_prefix) ?? DEFAULT_AGENT_BRANCH_PREFIX,
+    branch_prefix: await decodeAgentBranchPrefix(auth.user.id, row.branch_prefix),
   });
 }

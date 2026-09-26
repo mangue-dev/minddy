@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeAgentBranchPrefix, saveAgentPreferences } from "./agent/branch-prefix-content";
 import { locales, type Locale } from "@/i18n/config";
 import {
   resolveNumoDefaultStatus,
@@ -176,10 +177,8 @@ async function readAgentPrefs(
       )
         ? ((data as { default_reasoning_level: string }).default_reasoning_level as ReasoningLevel)
         : null,
-      branch_prefix:
-        normalizeAgentBranchPrefix(
-          (data as { branch_prefix?: string | null } | null)?.branch_prefix
-        ) ?? DEFAULT_AGENT_BRANCH_PREFIX,
+      branch_prefix: await decodeAgentBranchPrefix(userId,
+        (data as { branch_prefix?: string | null } | null)?.branch_prefix ?? null),
       sandbox_region: sandbox.sandbox_region,
       sandbox_size: sandbox.sandbox_size,
     },
@@ -535,15 +534,11 @@ export async function updateAccountSettings({
   }
 
   if (Object.keys(agentPatch).length > 0) {
-    const { error: agentErr } = await service
-      .from("user_agent_preferences")
-      .upsert(
-        { user_id: userId, updated_at: new Date().toISOString(), ...agentPatch },
-        { onConflict: "user_id" }
-      );
-    if (agentErr) {
-      console.error("[account-settings] agent prefs update failed:", agentErr.message);
-      return { ok: false, error: agentErr.message };
+    try {
+      await saveAgentPreferences(userId, agentPatch, service);
+    } catch {
+      console.error("[account-settings] agent prefs update failed");
+      return { ok: false, error: "Could not save agent preferences" };
     }
   }
 

@@ -21,6 +21,7 @@ import { encodeRoutine } from "@/lib/server/routine-content";
 import { decodeProject, encodeProject } from "@/lib/server/project-content";
 import { encodeAttachmentValue, shouldEncryptAttachmentMetadata } from
   "@/lib/server/attachment-content";
+import { saveAgentPreferences } from "@/lib/server/agent/branch-prefix-content";
 
 type Service = ReturnType<typeof getServiceClient>;
 
@@ -848,7 +849,11 @@ export async function importAccountTransfer(
   result.attachments = attachments.length;
 
   if (document.preferences) {
-    await upsertRows(service, "user_agent_preferences", [{ ...document.preferences, user_id: userId }], "user_id");
+    const fields = Object.fromEntries(Object.entries(document.preferences)
+      .filter(([key]) => ["branch_prefix", "default_model",
+        "default_model_provider", "default_reasoning_level",
+        "sandbox_region", "sandbox_size"].includes(key)));
+    await saveAgentPreferences(userId, fields, service);
     result.personalData += 1;
   }
   if (document.scratchpad) {

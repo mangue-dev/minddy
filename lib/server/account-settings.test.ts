@@ -22,6 +22,10 @@ function makeService({ meta, agentRow }: { meta: Meta; agentRow: Meta }) {
       },
     },
     from: (table: string) => {
+      if (table === "agent_branch_prefix_scope") return {
+        select: () => ({ eq: () => ({ maybeSingle: async () =>
+          ({ data: null, error: { code: "42P01" } }) }) }),
+      };
       if (table !== "user_agent_preferences") {
         throw new Error(`unexpected table ${table}`);
       }

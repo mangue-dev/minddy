@@ -3938,7 +3938,9 @@
         "user_id"
       ],
       "timestamp": [
-        "updated_at"
+        "updated_at",
+        "branch_prefix_encryption_checked_at",
+        "branch_prefix_encryption_attempted_at"
       ]
     }
   },
@@ -4289,6 +4291,21 @@
     }
   },
   "mcp_content_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "agent_branch_prefix_scope": {
     "scope": {
       "kind": "system",
       "id": "00000000-0000-0000-0000-000000000000"
