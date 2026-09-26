@@ -1,6 +1,6 @@
 "use client";
 
-import { Children, type ReactNode } from "react";
+import { Children, useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "mangue-ui";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -10,13 +10,13 @@ import {
 import {
   Field,
   FieldContent,
-  FieldDescription,
   FieldGroup,
   FieldLabel,
   FieldTitle,
   type FieldOrientation,
 } from "@/components/ui/field";
 import { HelpHint } from "@/components/settings/help-hint";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
  * The grammar of the settings screens (MIN-167).
@@ -140,6 +140,61 @@ export function SettingsGroup({
 }
 
 /**
+ * One-line row hint (MIN-593): a description that wraps to several lines
+ * breaks the rhythm of the card. The hint is clamped to a single line; when
+ * the text does not fit, it is truncated with an ellipsis and readable via a
+ * tooltip on hover/focus, so nothing is lost. Measured, not guessed: a
+ * `scrollWidth > clientWidth` check keeps the tooltip dead when the text
+ * simply fits. The DOM is identical in both cases (`open=false` → `undefined`
+ * re-enables hover — a transition our Tooltip wrapper holds stable), so the
+ * swap costs no remount. Fonts change `scrollWidth` without changing the
+ * node's size, so they are checked explicitly alongside the ResizeObserver.
+ */
+function OneLineHint({ hint }: { hint: ReactNode }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [overflows, setOverflows] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const check = () => {
+      if (node.isConnected) {
+        setOverflows(node.scrollWidth > node.clientWidth + 1);
+      }
+    };
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(node);
+    // The swap happens long before anyone hovers, but if the font swap or the
+    // layout settles right under the pointer, the tooltip opens on re-enter.
+    // Font loading changes `scrollWidth` without resizing the node.
+    document.fonts?.ready.then(check).catch(() => {});
+    return () => observer.disconnect();
+  }, [hint]);
+
+  return (
+    <p className="w-full min-w-0">
+      <Tooltip open={overflows ? undefined : false}>
+        <TooltipTrigger
+          asChild
+          tabIndex={overflows ? 0 : undefined}
+          className="block w-full min-w-0 truncate text-xs leading-relaxed font-normal text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span ref={ref} data-slot="field-description">
+            {hint}
+          </span>
+        </TooltipTrigger>
+        {overflows && (
+          <TooltipContent side="top" align="start" className="max-w-sm text-start">
+            {hint}
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </p>
+  );
+}
+
+/**
  * Setting row: label (+ ⓘ) and index on the left, control on the right,
  * drop-down content below. `htmlFor` makes it a real `<label>` — without it
  * it's a title, which is the right choice when the control is not a single field
@@ -179,7 +234,7 @@ export function SettingsRow({
           ) : (
             <FieldTitle>{head}</FieldTitle>
           )}
-          {hint && <FieldDescription>{hint}</FieldDescription>}
+          {hint && <OneLineHint hint={hint} />}
         </FieldContent>
         {control && (
           <div
