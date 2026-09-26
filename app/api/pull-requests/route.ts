@@ -3,8 +3,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { type RepoProviderId } from "@/lib/repo-providers";
-import { resolveRepoCloneTargetForRepo } from "@/lib/server/agent/repo-access";
-import { getRun } from "@/lib/server/agent/runs";
 import {
   findPullRequest,
   listPullRequestsForUser,
@@ -14,12 +12,12 @@ import {
   repoSyncKey,
   resolvePrForRun,
   rowProvider,
-  stampRepoSync,
-  syncRepoPullRequests,
   type PullRequestState,
   type PullRequestWithIssue,
   type VisibleRepo,
 } from "@/lib/server/agent/pull-requests";
+import { sweepRepo } from "@/lib/server/agent/pull-requests-sweep";
+import { getRun } from "@/lib/server/agent/runs";
 
 /**
  * GLOBAL list of pull requests from linked repositories, all projects accessible
@@ -112,33 +110,11 @@ const STATE_FILTERS: Record<string, PullRequestState[]> = {
  * would appear empty on a repository that has just been linked. Simply OUT OF DATE, it
  * part in `after()`: the response does not make the user wait for a
  * lost webhook, and the next display will be correct.
+ *
+ * The shared `sweepRepo` (lib/server/agent/pull-requests-sweep.ts, MIN-595) is
+ * also fired by the badge count route: every reader of a TTL window coalesces
+ * into one forge read, whichever route got there first.
  */
-async function sweepRepo(userId: string, repo: VisibleRepo): Promise<boolean> {
-  try {
-    const target = await resolveRepoCloneTargetForRepo({
-      userId,
-      provider: repo.provider,
-      repoFullName: repo.repoFullName,
-    });
-    if (!target) return false;
-    const { truncated } = await syncRepoPullRequests({
-      provider: repo.provider,
-      repoFullName: repo.repoFullName,
-      token: target.token,
-    });
-    return truncated;
-  } catch (err) {
-    console.error(
-      `[pull-requests] sweep ${repo.repoFullName} failed:`,
-      (err as Error).message,
-    );
-    // We stamp all the same: a broken down forge should not make the user try again.
-    // scan EACH view of the page. The list remains as before, and
-    // the next window will try again.
-    await stampRepoSync(repo.provider, repo.repoFullName);
-    return false;
-  }
-}
 
 /**
  * PR targeted by a deep-link (direct `?pr=`, historical `?run=`) when the page
