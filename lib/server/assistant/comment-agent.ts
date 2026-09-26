@@ -15,6 +15,7 @@ import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { getProjectAccess } from "@/lib/server/project-access";
+import { decodePageProjection } from "@/lib/server/page-content";
 import { hasUsageBudget } from "@/lib/server/usage";
 import type { PromptAttachment } from "./attachment-parts";
 import {
@@ -496,13 +497,14 @@ export async function runPageCommentMention(input: {
 }): Promise<void> {
   const { service, actorId, pageId, triggerCommentId } = input;
   const { data: page } = await service.from("pages")
-    .select("id, project_id, title, created_by").eq("id", pageId)
+    .select("id, project_id, title, created_by, encrypted_content, encryption_version").eq("id", pageId)
     .is("deleted_at", null).maybeSingle();
   if (
     !page
     || !await getProjectAccess(actorId, page.project_id as string)
     || !await hasUsageBudget(actorId, "assistant", "assistant_model")
   ) return;
+  const clearPage = await decodePageProjection(page, actorId);
   const { data: triggerRow } = await commentStore(service, "page_comments", actorId)
     .select("id, parent_id, body, author_id, block_id")
     .eq("id", triggerCommentId).eq("page_id", pageId).maybeSingle();
@@ -532,11 +534,11 @@ export async function runPageCommentMention(input: {
     sourceEventId: triggerCommentId,
     actorMetadata: names.users.get(actorId)?.user_metadata,
     projectId: page.project_id as string,
-    title: `Page: ${page.title as string}`,
+    title: `Page: ${clearPage.title as string}`,
     prompt: sharedSurfacePrompt({
       author: names.name(actorId),
       trigger: input.trigger ?? "mention",
-      target: `the page “${page.title as string}”${quote}`,
+      target: `the page “${clearPage.title as string}”${quote}`,
       body: triggerRow.body as string,
       thread,
     }),
@@ -545,7 +547,7 @@ export async function runPageCommentMention(input: {
     context: {
       projectId: page.project_id as string,
       pageId,
-      pageTitle: page.title as string,
+      pageTitle: clearPage.title as string,
     },
     destination: {
       kind: "comment",

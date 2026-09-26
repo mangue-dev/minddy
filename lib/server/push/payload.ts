@@ -5,6 +5,7 @@ import { decodeAgentTitle, legacyAgentTitleSchema } from "@/lib/server/agent/run
 import { decodePullRequestContent } from "@/lib/server/agent/pull-request-content";
 import "server-only";
 import { decodeRoutineTitle } from "@/lib/server/routine-content";
+import { decodePageProjection } from "@/lib/server/page-content";
 
 import { createTranslator } from "next-intl";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -214,7 +215,7 @@ export async function loadPushContext(
     pageIds.length
       ? service
           .from("pages")
-          .select("id, title")
+          .select("id, project_id, title, encrypted_content, encryption_version")
           .in("id", pageIds)
           .is("deleted_at", null)
       : Promise.resolve({ data: [] as { id: string; title: string }[] }),
@@ -249,7 +250,10 @@ export async function loadPushContext(
     ctx.pullRequests.set(p.id, { number: p.number,
       title: await decodePullRequestContent(p.id, "title", p.title) });
   }
-  for (const p of pages.data ?? []) ctx.pages.set(p.id, p.title);
+  for (const p of pages.data ?? []) {
+    const clear = await decodePageProjection(p);
+    ctx.pages.set(p.id, clear.title);
+  }
   for (const p of projects.data ?? []) ctx.projectKeys.set(p.id, p.key);
   for (const [id, user] of actors) {
     // EMPTY fallback rather than “User”: the fallback label is translated, and its

@@ -48,7 +48,7 @@ async function reachable(
 ): Promise<Page | null> {
   const { data } = await service
     .from("pages")
-    .select("id, project_id, title, icon, version, deleted_at")
+    .select("id, project_id, version, deleted_at")
     .eq("id", pageId)
     .maybeSingle();
   const page = (data as Page | null) ?? null;

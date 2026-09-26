@@ -187,7 +187,7 @@
       "functionReferences": []
     },
     "broadcast_page_row()": {
-      "sha256": "15c4be6d5dfa03e5e7d73b37d5310b334bd037e12cb4016a4dabd8fb96e7d6a5",
+      "sha256": "93798555cd9822a089475573ea755fd9bc9d119a3513b3b6be26e52c7f1da03a",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -195,6 +195,22 @@
       "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
+      "functionReferences": []
+    },
+    "guard_page_content()": {
+      "sha256": "0f9a06b06c53b739bb165aef26917c847a99e6aa29a60ffbe93469cf2fb01051",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pages",
+        "page_content_encryption_scope"
+      ],
+      "protectedRelations": [
+        "pages"
+      ],
       "functionReferences": []
     },
     "guard_view_content()": {
@@ -363,6 +379,22 @@
         "effective_plan_id",
         "account_storage_bytes"
       ]
+    },
+    "activate_page_content()": {
+      "sha256": "bb0ef6f6639911730782f1a2fa81ea45e012a7b8b1610d3b187530b8a8e62263",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pages",
+        "page_content_encryption_scope"
+      ],
+      "protectedRelations": [
+        "pages"
+      ],
+      "functionReferences": []
     },
     "activate_view_content()": {
       "sha256": "6c60522593a13aadc51709f28d54ac0d721c173aca9b6fc0b6ef40df6ccbea5c",
@@ -721,7 +753,7 @@
       "functionReferences": []
     },
     "validate_page_database()": {
-      "sha256": "e97d26ff209669c1fed38be4e2e1731b03600339cf7b61b5a7f959aa153b6cdb",
+      "sha256": "3d3076ddc7a05e9e59c4285b8c4af34f8e7300f7d55e3ed41d411953ec7e76c9",
       "securityDefiner": false,
       "configuration": [
         "search_path=\"\""
@@ -1615,7 +1647,7 @@
       "functionReferences": []
     },
     "guard_page_database_parent()": {
-      "sha256": "28a9989d4787cacf0ab815918f3685a125d215496aa8b594c699edcb030d2f62",
+      "sha256": "f68605b77364ad46cae4ab4b6028f46365628ca91004844ac0761d6694d14ed2",
       "securityDefiner": false,
       "configuration": [
         "search_path=\"\""
@@ -2640,7 +2672,7 @@
       "functionReferences": []
     },
     "discard_blank_page_guarded(uuid)": {
-      "sha256": "58e4136a27f0046c85663ca84fc430a2d395a11d74c4bbee41e14e1d25713a67",
+      "sha256": "2690761d3b510b59e5eaa9916a4f19ef49b4391ec551a188c4e8fc552367bf09",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3522,7 +3554,7 @@
       "functionReferences": []
     },
     "remove_deleted_database_properties()": {
-      "sha256": "564bd6439140f22f21b53527696732a2e7dc969d33bc450b57ce790c9ac701a8",
+      "sha256": "1365cf02dc54791cc25e3934661c7b51c7d94f5f496c2fdccc30a16976b31aa1",
       "securityDefiner": false,
       "configuration": [
         "search_path=\"\""
@@ -4044,7 +4076,7 @@
       ]
     },
     "restore_page_guarded(uuid,uuid,uuid,text)": {
-      "sha256": "f1dc59ef1b9878d8fc616844403979c9b78f2838501de595448563643ec35409",
+      "sha256": "c4fb6e4a6bc1741d797c73863ecd85f621f19b0372d15b84aacc5eb227e6ae42",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4906,7 +4938,7 @@
       "functionReferences": []
     },
     "update_page_database_guarded(uuid,uuid,uuid,jsonb)": {
-      "sha256": "ae3c013bbe623d04b4254720acd39eedd3b5060bb91b254afaec66aae302c8f9",
+      "sha256": "516e2aec969841855a482f9f4301e79040f94f35fde0971db37f8822c8adcdbf",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4923,7 +4955,7 @@
       ]
     },
     "convert_page_database_guarded(uuid,uuid,uuid,jsonb)": {
-      "sha256": "eb0244bc213c7b74c3f2bc6531e1c964b34d43d2ca02f0f25cd4858bb115ab19",
+      "sha256": "8a58b4ba726463fcd7cd81c2fe7a167a6f4e527d8cfcb67c06881beb82ca8f51",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -5378,7 +5410,7 @@
       "functionReferences": []
     },
     "import_page_database(uuid,uuid,uuid,uuid,integer,jsonb,jsonb)": {
-      "sha256": "677b41dedb3635edcc930bbf46198421ed98bf80b637961301e2e3e234c1a368",
+      "sha256": "89e80b6ee8dffe374ea6e98a2dc9a27ead6c7045b410740be01609893856dad6",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -5820,6 +5852,23 @@
       ],
       "functionReferences": []
     },
+    "commit_page_content_batch(uuid,uuid,uuid,jsonb,jsonb,uuid[],text,uuid)": {
+      "sha256": "0e3811a64e45c235ec3793ce0003bc92abbedd84a5a626e4ed98677b48e2a39d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pages"
+      ],
+      "protectedRelations": [
+        "pages"
+      ],
+      "functionReferences": [
+        "lock_live_project_actor_access"
+      ]
+    },
     "migrate_comment_ciphertext(text,uuid,uuid,bigint,integer,integer,text)": {
       "sha256": "0acd0569eeb4dd19cefc74fa4b5937a979d2a831949b9384d368485789ac7fb8",
       "securityDefiner": true,
@@ -6098,6 +6147,26 @@
         "view_shares"
       ],
       "functionReferences": []
+    },
+    "import_encrypted_page_database(uuid,uuid,uuid,uuid,integer,bigint,jsonb,jsonb)": {
+      "sha256": "7632dc2abb65919f12366f891a05d31a3c5cf358fab44f32a58ea000f534c9c3",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pages",
+        "page_files",
+        "page_database_imports"
+      ],
+      "protectedRelations": [
+        "pages",
+        "page_files"
+      ],
+      "functionReferences": [
+        "lock_live_project_actor_access"
+      ]
     },
     "migrate_agent_context_snapshot(uuid,uuid,uuid,jsonb,text,integer,text,integer)": {
       "sha256": "11f88adc693f84276fee91ff7b154b5a2e135756edaed179c13f509458846286",
@@ -6796,6 +6865,10 @@
       "function": "enforce_issue_cycle()",
       "definition": "CREATE TRIGGER issues_enforce_cycle BEFORE INSERT OR UPDATE ON issues FOR EACH ROW EXECUTE FUNCTION enforce_issue_cycle()"
     },
+    "pages.pages_a_content_guard": {
+      "function": "guard_page_content()",
+      "definition": "CREATE TRIGGER pages_a_content_guard BEFORE INSERT OR UPDATE ON pages FOR EACH ROW EXECUTE FUNCTION guard_page_content()"
+    },
     "projects.projects_broadcast": {
       "function": "broadcast_projects_row()",
       "definition": "CREATE TRIGGER projects_broadcast AFTER INSERT OR DELETE OR UPDATE ON projects FOR EACH ROW EXECUTE FUNCTION broadcast_projects_row()"
@@ -6818,7 +6891,7 @@
     },
     "pages.pages_broadcast_update": {
       "function": "broadcast_page_row()",
-      "definition": "CREATE TRIGGER pages_broadcast_update AFTER UPDATE ON pages FOR EACH ROW WHEN (old.title IS DISTINCT FROM new.title OR old.icon IS DISTINCT FROM new.icon OR old.parent_id IS DISTINCT FROM new.parent_id OR old.\"position\" IS DISTINCT FROM new.\"position\" OR old.favorite IS DISTINCT FROM new.favorite OR old.deleted_at IS DISTINCT FROM new.deleted_at OR old.deleted_root_id IS DISTINCT FROM new.deleted_root_id OR old.parent_block_removed IS DISTINCT FROM new.parent_block_removed OR old.content IS DISTINCT FROM new.content OR old.database_schema IS DISTINCT FROM new.database_schema OR old.database_title_name IS DISTINCT FROM new.database_title_name OR old.property_values IS DISTINCT FROM new.property_values) EXECUTE FUNCTION broadcast_page_row()"
+      "definition": "CREATE TRIGGER pages_broadcast_update AFTER UPDATE ON pages FOR EACH ROW WHEN (old.encrypted_content IS DISTINCT FROM new.encrypted_content OR old.title IS DISTINCT FROM new.title OR old.icon IS DISTINCT FROM new.icon OR old.parent_id IS DISTINCT FROM new.parent_id OR old.\"position\" IS DISTINCT FROM new.\"position\" OR old.favorite IS DISTINCT FROM new.favorite OR old.deleted_at IS DISTINCT FROM new.deleted_at OR old.deleted_root_id IS DISTINCT FROM new.deleted_root_id OR old.parent_block_removed IS DISTINCT FROM new.parent_block_removed OR old.content IS DISTINCT FROM new.content OR old.database_schema IS DISTINCT FROM new.database_schema OR old.database_title_name IS DISTINCT FROM new.database_title_name OR old.property_values IS DISTINCT FROM new.property_values) EXECUTE FUNCTION broadcast_page_row()"
     },
     "issues.issues_purge_relations": {
       "function": "purge_issue_relations()",

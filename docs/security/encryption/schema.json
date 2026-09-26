@@ -13,12 +13,12 @@
       },
       "title": {
         "type": "text",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       },
       "content": {
         "type": "jsonb",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       },
       "version": {
@@ -83,11 +83,16 @@
       },
       "search_text": {
         "type": "text",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       },
       "updated_kind": {
         "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "page_is_blank": {
+        "type": "boolean",
         "nullable": false,
         "generated": false
       },
@@ -101,12 +106,37 @@
         "nullable": true,
         "generated": false
       },
+      "page_has_values": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
       "property_values": {
         "type": "jsonb",
+        "nullable": true,
+        "generated": false
+      },
+      "content_revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "page_is_database": {
+        "type": "boolean",
         "nullable": false,
         "generated": false
       },
       "database_revision": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "encrypted_content": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_version": {
         "type": "integer",
         "nullable": false,
         "generated": false
@@ -124,6 +154,11 @@
       "parent_block_removed": {
         "type": "boolean",
         "nullable": false,
+        "generated": false
+      },
+      "encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       }
     },
@@ -10388,6 +10423,24 @@
     ]
   },
   "provider_operation_resource_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "page_content_encryption_scope": {
     "columns": {
       "id": {
         "type": "boolean",

@@ -5,6 +5,7 @@ import { commentStore } from "@/lib/server/comment-store";
 import { readIssueEvents } from "@/lib/server/issue-event-store";
 import "server-only";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
+import { decodePageProjection } from "@/lib/server/page-content";
 
 import { z } from "zod";
 
@@ -1486,7 +1487,7 @@ export function registerMinddyTools(
         service
           .from("attachments")
           .select(
-            "id, objective_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title)",
+            "id, objective_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, encrypted_content, encryption_version)",
           )
           .eq("project_id", scope.access.project.id)
           .not("objective_id", "is", null)
@@ -1642,7 +1643,7 @@ export function registerMinddyTools(
         service
           .from("attachments")
           .select(
-            "id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title)",
+            "id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, encrypted_content, encryption_version)",
           )
           .eq("objective_id", objective.id)
           .order("created_at", { ascending: true }),
@@ -2635,7 +2636,7 @@ export function registerMinddyTools(
         // ligne ne sert qu'aux lecteurs sans jointure.
         const { data: page } = await getServiceClient()
           .from("pages")
-          .select("id, title")
+          .select("id, project_id, title, encrypted_content, encryption_version")
           .eq("id", pageId)
           .eq("project_id", scope.access.project.id)
           .is("deleted_at", null)
@@ -2643,6 +2644,7 @@ export function registerMinddyTools(
         if (!page) {
           return fail("not_found", "Page not found in this project.");
         }
+        const clearPage = await decodePageProjection(page, scope.userId);
         try {
           const [row] = await insertAttachments(getServiceClient(), {
             projectId: scope.access.project.id,
@@ -2653,7 +2655,7 @@ export function registerMinddyTools(
               {
                 kind: "page",
                 page_id: pageId,
-                file_name: (page.title as string)?.trim() || "Page",
+                file_name: (clearPage.title as string)?.trim() || "Page",
               },
             ],
           });
@@ -2794,7 +2796,7 @@ export function registerMinddyTools(
       const { data: row, error } = await service
         .from("attachments")
         .select(
-          "id, kind, url, page_id, storage_path, file_name, mime_type, size_bytes, issue_id, objective_id, comment_id, page:pages(id, title, deleted_at)",
+          "id, kind, url, page_id, storage_path, file_name, mime_type, size_bytes, issue_id, objective_id, comment_id, page:pages(id, project_id, title, deleted_at, encrypted_content, encryption_version)",
         )
         .eq("id", args.resource_id)
         .eq("project_id", scope.access.project.id)

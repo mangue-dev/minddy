@@ -38,6 +38,8 @@ import { queueSearchText } from "./pages-search";
 import { opaqueAttachmentPath, uploadPrivateAttachmentObject } from "./attachments";
 import { encodeAttachmentValue, shouldEncryptAttachmentMetadata } from
   "./attachment-content";
+import { getPage } from "./pages";
+import { encodePage } from "./page-content";
 
 export async function importDatabase(args: {
   projectId: string;
@@ -318,13 +320,56 @@ export async function importDatabase(args: {
     file_name: await encodeAttachmentValue("page_files", projectId, file.id,
       "file_name", file.file_name),
   }))) : files;
-  const { data, error } = await service.rpc("import_page_database", {
+  const { data: targetStored, error: targetError } = await service.from("pages")
+    .select("id,encryption_version").eq("id", pageId).maybeSingle();
+  if (targetError) throw new Error("importUnavailable");
+  const protectedTarget = Number(targetStored?.encryption_version ?? 0) > 0;
+  let protectedPages: Record<string, unknown>[] | null = null;
+  let contentRevision: number | null = null;
+  if (protectedTarget) {
+    const current = await getPage(pageId, actorId);
+    if (!current.ok || current.page.database_revision !== args.revision ||
+        current.page.database_schema?.length !== 0) throw new Error("importConflict");
+    contentRevision = (current.page as typeof current.page & {
+      content_revision: number }).content_revision;
+    protectedPages = await Promise.all(pages.map(async (page, index) => {
+      const plain = index === 0 ? {
+        ...current.page,
+        title: current.page.title || page.title,
+        icon: current.page.icon ?? page.icon,
+        content: page.content ?? { type: "doc", content: [] },
+        database_schema: page.database_schema,
+        database_title_name: page.database_title_name,
+        property_values: page.property_values,
+      } : {
+        ...page,
+        project_id: projectId,
+        title: page.title,
+        icon: page.icon,
+        content: page.content ?? { type: "doc", content: [] },
+        database_schema: page.database_schema,
+        database_title_name: page.database_title_name,
+        property_values: page.property_values,
+      };
+      const encoded = await encodePage(plain, { service, force: true });
+      return { id: page.id, parent_id: page.parent_id,
+        position: page.position, created_at: page.created_at,
+        encrypted_content: encoded.encrypted_content,
+        encryption_version: encoded.encryption_version,
+        page_is_database: encoded.page_is_database,
+        page_has_values: encoded.page_has_values,
+        page_is_blank: encoded.page_is_blank };
+    }));
+  }
+  const { data, error } = await service.rpc(protectedTarget
+    ? "import_encrypted_page_database" : "import_page_database", {
     p_project: projectId,
     p_page: pageId,
     p_actor: actorId,
     p_request: args.requestId,
     p_revision: args.revision,
-    p_pages: pages,
+    ...(protectedTarget ? { p_content_revision: contentRevision } : {}),
+    p_pages: protectedPages ?? pages,
     p_files: storedFiles,
   });
   if (error) {

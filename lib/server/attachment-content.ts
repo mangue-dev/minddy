@@ -5,6 +5,7 @@ import { isContentEncryptionEnabled } from "@/lib/server/encryption/content-conf
 import { getEncryptedStore } from "@/lib/server/encryption/registry";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { decodePageProjection } from "./page-content";
 
 const PREFIX = "mdya3";
 const ENCODED = /^mdya3:([1-9][0-9]*):([A-Za-z0-9_-]+)$/;
@@ -96,6 +97,18 @@ export async function decodeAttachmentRow<T extends Record<string, unknown>>(
     if (typeof row[column] === "string") {
       next[column] = await decodeAttachmentValue(table, owner,
         row.id, column, row[column] as string, actorId);
+    }
+  }
+  if (table === "attachments" && row.page) {
+    const embedded = Array.isArray(row.page) ? row.page[0] : row.page;
+    if (embedded && typeof embedded === "object" && !Array.isArray(embedded)) {
+      const page = embedded as Record<string, unknown>;
+      if (page.project_id != null && page.project_id !== owner) {
+        throw new Error("Attached page scope mismatch");
+      }
+      const decoded = await decodePageProjection({ ...page,
+        project_id: owner }, actorId);
+      next.page = Array.isArray(row.page) ? [decoded] : decoded;
     }
   }
   delete next.content_encryption_checked_at;

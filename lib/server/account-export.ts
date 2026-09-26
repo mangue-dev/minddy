@@ -16,6 +16,7 @@ import { decodeView } from "@/lib/server/view-content";
 import { decodeSavedView } from "@/lib/server/saved-view-bookmark";
 import { decodeRoutine } from "@/lib/server/routine-content";
 import { decodeProject } from "@/lib/server/project-content";
+import { decodePageProjection } from "@/lib/server/page-content";
 import { downloadAttachment } from "@/lib/server/attachments";
 import { decodeAttachmentRow, type AttachmentTable } from
   "@/lib/server/attachment-content";
@@ -138,7 +139,9 @@ async function includeProjectIcons(
 // without giving a line.
 const PAGE_COLUMNS =
   "id, project_id, parent_id, title, icon, content, position, favorite, version, " +
-  "created_by, updated_by, created_at, updated_at, deleted_at, deleted_by";
+  "created_by, updated_by, created_at, updated_at, deleted_at, deleted_by, " +
+  "database_schema, database_revision, database_title_name, property_values, " +
+  "encrypted_content, encryption_version";
 
 const ISSUE_COLUMNS =
   "id, project_id, number, title, description, plan, status, priority, effort, " +
@@ -590,7 +593,8 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     comments: list("comments", comments),
     attachments: exportedAttachments,
     page_files: exportedPageFiles,
-    pages: list("pages", pages),
+    pages: await Promise.all(list("pages", pages).map((row) =>
+      decodePageProjection(row, userId))),
     objectives: list("objectives", objectives),
     categories: list("categories", categories),
     issue_categories: issueCategories,

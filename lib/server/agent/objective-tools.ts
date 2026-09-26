@@ -260,7 +260,7 @@ async function readObjective(
       service
         .from("attachments")
         .select(
-          "id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title, deleted_at)",
+          "id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, deleted_at, encrypted_content, encryption_version)",
         )
         .eq("objective_id", objective.id)
         .is("comment_id", null)

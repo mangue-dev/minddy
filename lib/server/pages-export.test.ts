@@ -147,7 +147,7 @@ describe("exportPage", () => {
     );
   });
 
-  it("ne charge le corps que des pages de la branche", async () => {
+  it("loads bodies only for pages in the exported branch", async () => {
     access = { isOwner: true };
     rows.list = branchRows();
     reads.selects = [];
@@ -160,12 +160,13 @@ describe("exportPage", () => {
     expect(result.ok).toBe(true);
 
     // The project list is a SKELETON: without it, export a page from a
-    // wiki de mille documents en chargeait mille corps (MIN-348).
+    // thousand-page wiki would otherwise load a thousand bodies (MIN-348).
     const listSelect = reads.selects.find(
-      (s) => s.includes("parent_id") && !s.includes("project_id"),
+      (s) => s.includes("parent_id") && s.includes("encrypted_content") &&
+        !/(^|,\s*)content(,|$)/.test(s),
     );
     expect(listSelect).toBeDefined();
-    expect(listSelect).not.toContain("content");
+    expect(listSelect).not.toMatch(/(^|,\s*)content(,|$)/);
     // And the bodies requested are those of the branch, except the root (it
     // is already read). The neighbor is not there.
     expect(reads.bodyIds.flat()).toEqual(["kid"]);

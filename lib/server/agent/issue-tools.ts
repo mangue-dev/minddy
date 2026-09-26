@@ -466,7 +466,7 @@ async function readResource(
   const { data: row } = await service
     .from("attachments")
     .select(
-      "id, issue_id, objective_id, project_id, kind, url, page_id, storage_path, file_name, mime_type, size_bytes, comment_id, page:pages(id, title, deleted_at)",
+      "id, issue_id, objective_id, project_id, kind, url, page_id, storage_path, file_name, mime_type, size_bytes, comment_id, page:pages(id, project_id, title, deleted_at, encrypted_content, encryption_version)",
     )
     .eq("id", resourceId)
     .maybeSingle();

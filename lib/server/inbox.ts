@@ -4,6 +4,7 @@ import { commentStore } from "@/lib/server/comment-store";
 import { decodeAgentTitle, legacyAgentTitleSchema } from "@/lib/server/agent/run-title-content";
 import "server-only";
 import { decodeRoutineTitle } from "@/lib/server/routine-content";
+import { decodePageProjection } from "@/lib/server/page-content";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
@@ -224,7 +225,7 @@ export async function readInboxNotifications({
     pageIds.length && projectIds.length
       ? service
           .from("pages")
-          .select("id, project_id, title")
+          .select("id, project_id, title, encrypted_content, encryption_version")
           .in("id", pageIds)
           .in("project_id", projectIds)
           .is("deleted_at", null)
@@ -286,7 +287,8 @@ export async function readInboxNotifications({
   const pullRequestMap = new Map(
     (pullRequests ?? []).map((item) => [item.id, item]),
   );
-  const pageMap = new Map((pages ?? []).map((item) => [item.id, item]));
+  const pageMap = new Map((await Promise.all((pages ?? []).map((item) =>
+    decodePageProjection(item, userId)))).map((item) => [item.id, item]));
   const projectMap = new Map((projects ?? []).map((item) => [item.id, item]));
   const commentMap = new Map((comments ?? []).map((item) => [item.id, item]));
   const delegatedWorkMap = new Map<string, {

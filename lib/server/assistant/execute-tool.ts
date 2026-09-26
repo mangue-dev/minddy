@@ -4,6 +4,7 @@ import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 import { decodeView } from "@/lib/server/view-content";
+import { decodePageProjection } from "@/lib/server/page-content";
 import { decodeProjectName } from "@/lib/server/project-content";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
@@ -1305,7 +1306,7 @@ export async function executeTool(
           ctx.supabase
             .from("attachments")
             .select(
-              "id, objective_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title)",
+              "id, objective_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, encrypted_content, encryption_version)",
             )
             .eq("project_id", projectId)
             .not("objective_id", "is", null)
@@ -1907,16 +1908,17 @@ export async function executeTool(
           // that cannot select the wrong page.
           const { data: page } = await ctx.supabase
             .from("pages")
-            .select("id, title")
+            .select("id, project_id, title, encrypted_content, encryption_version")
             .eq("id", pageId)
             .eq("project_id", projectId)
             .is("deleted_at", null)
             .maybeSingle();
           if (!page) return toolError("Page not found in this project.");
+          const clearPage = await decodePageProjection(page, ctx.userId);
           resource = {
             kind: "page" as const,
             page_id: pageId,
-            file_name: ((page.title as string) ?? "").trim() || "Page",
+            file_name: ((clearPage.title as string) ?? "").trim() || "Page",
           };
         } else {
           try {

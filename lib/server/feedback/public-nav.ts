@@ -3,6 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getPublicBoardForProject } from "@/lib/server/feedback/boards";
 import { decodeView } from "@/lib/server/view-content";
+import { decodePageProjection } from "@/lib/server/page-content";
 import { decodeShareToken } from "@/lib/server/encryption/share-token-content";
 import type { DomainTarget } from "@/lib/custom-domain-lookup";
 import type { PublicSiteTab } from "@/lib/feedback/types";
@@ -52,7 +53,7 @@ export async function getPublicSiteTabs(params: {
       .order("created_at", { ascending: true }),
     service
       .from("view_shares")
-      .select("id, token, pages!inner (id, title, project_id)")
+      .select("id, token, pages!inner (id, title, project_id, encrypted_content, encryption_version)")
       .eq("pages.project_id", params.projectId)
       .is("pages.deleted_at", null)
       .eq("level", "public")
@@ -87,12 +88,16 @@ export async function getPublicSiteTabs(params: {
   }
   const visiblePages = new Set(board.visible_page_ids);
   for (const row of pageSharesRes.data ?? []) {
-    const page = row.pages as unknown as {
+    const storedPage = row.pages as unknown as {
       id: string;
       title: string;
+      project_id: string;
+      encrypted_content?: string | null;
+      encryption_version?: number;
     } | null;
     // Same double gate as the views: the switch, then the opt-in per page.
-    if (!board.show_pages || !page || !visiblePages.has(page.id)) continue;
+    if (!board.show_pages || !storedPage || !visiblePages.has(storedPage.id)) continue;
+    const page = await decodePageProjection(storedPage);
     const pageToken = await decodeShareToken(row.id as string,
       row.token as string);
     tabs.push({

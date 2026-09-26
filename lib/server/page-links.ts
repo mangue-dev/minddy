@@ -4,6 +4,7 @@ import { contentMentionScanner, type MentionPage } from "@/lib/mention-scan";
 import { pageBlockTexts } from "@/lib/pages-mentions";
 import { afterOrNow } from "@/lib/server/after-safe";
 import type { getServiceClient } from "@/lib/supabase-service";
+import { decodePageProjection } from "./page-content";
 
 /**
  * THAT cites a page (MIN-279) — the half that no query could return.
@@ -65,13 +66,15 @@ async function citablePages(
 ): Promise<MentionPage[]> {
   const { data, error } = await service
     .from("pages")
-    .select("id, project_id, title, icon")
+    .select("id, project_id, title, icon, encrypted_content, encryption_version")
     .eq("project_id", projectId);
   if (error) {
     console.error("[page-links] pages read failed:", error.message);
     return [];
   }
-  return ((data ?? []) as MentionPage[]).filter((page) => !!page.title?.trim());
+  const pages = await Promise.all((data ?? []).map((row) =>
+    decodePageProjection(row)));
+  return (pages as MentionPage[]).filter((page) => !!page.title?.trim());
 }
 
 /**
@@ -190,18 +193,19 @@ export async function syncPageBodyLinks(
 
   const { data, error } = await service
     .from("pages")
-    .select("id, project_id, content")
+    .select("id, project_id, content, encrypted_content, encryption_version")
     .in("id", pageIds);
   if (error) {
     console.error("[page-links] body read failed:", error.message);
     return;
   }
 
-  for (const row of (data ?? []) as {
+  for (const stored of (data ?? []) as {
     id: string;
     project_id: string;
     content: unknown;
   }[]) {
+    const row = await decodePageProjection(stored);
     await syncPageLinks(
       service,
       { kind: "page", id: row.id, projectId: row.project_id },

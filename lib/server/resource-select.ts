@@ -16,7 +16,7 @@ import "server-only";
  * this is what makes the pill inert without any code taking care of the
  * trash.
  */
-export const RESOURCE_SELECT = "*, page:pages(id, title, icon)";
+export const RESOURCE_SELECT = "*, page:pages(id, project_id, title, icon, encrypted_content, encryption_version)";
 
 /** The attached page of a resource row. */
 export interface JoinedPage {

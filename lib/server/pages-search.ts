@@ -1,11 +1,13 @@
 import "server-only";
 
 import type { JSONContent } from "@tiptap/core";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { afterOrNow } from "@/lib/server/after-safe";
 import { getServiceClient } from "@/lib/supabase-service";
 import { pageBodyToMarkdownServer } from "@/lib/server/pages-projection";
 import type { PageSearchHit } from "@/lib/types";
+import { decodePageProjection, shouldProtectPages } from "./page-content";
 
 export type { PageSearchHit };
 
@@ -60,14 +62,15 @@ export async function syncPagesSearchText(
 
   const { data, error } = await service
     .from("pages")
-    .select("id, content")
+    .select("id, project_id, content, encrypted_content, encryption_version")
     .in("id", pageIds);
   if (error) {
     console.error("[pages] search text read failed:", error.message);
     return;
   }
 
-  for (const row of (data ?? []) as { id: string; content: unknown }[]) {
+  for (const row of data ?? []) {
+    if (row.encryption_version > 0) continue;
     const text = await pageSearchText(row.content);
     const { error: writeError } = await service
       .from("pages")
@@ -129,18 +132,16 @@ export const MAX_SEARCH_QUERY_LENGTH = 200;
 export const MAX_SEARCH_LIMIT = 50;
 
 export async function runPageSearch(
-  client: {
-    rpc: (
-      name: string,
-      args: Record<string, unknown>
-    ) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
-  },
+  client: SupabaseClient,
   {
     query,
     projectId = null,
     limit = 20,
   }: { query: string; projectId?: string | null; limit?: number }
 ): Promise<{ ok: true; hits: PageSearchHit[] } | { ok: false }> {
+  if (await shouldProtectPages()) {
+    return searchProtectedPages(client, { query, projectId, limit });
+  }
   const { data, error } = await client.rpc("search_pages", {
     p_query: query.slice(0, MAX_SEARCH_QUERY_LENGTH),
     p_project_id: projectId,
@@ -155,4 +156,52 @@ export async function runPageSearch(
     excerpt: cleanExcerpt(hit.excerpt),
   }));
   return { ok: true, hits };
+}
+
+/** Read every RLS-visible batch before ranking, so page limits never bias search. */
+async function searchProtectedPages(client: SupabaseClient, {
+  query, projectId, limit,
+}: { query: string; projectId: string | null; limit: number }):
+  Promise<{ ok: true; hits: PageSearchHit[] } | { ok: false }> {
+  const terms = query.slice(0, MAX_SEARCH_QUERY_LENGTH).toLocaleLowerCase()
+    .match(/[\p{L}\p{N}_]+/gu) ?? [];
+  if (!terms.length) return { ok: true, hits: [] };
+  const hits: PageSearchHit[] = [];
+  const batch = 200;
+  for (let offset = 0; ; offset += batch) {
+    let request = client.from("pages")
+      .select("id,project_id,parent_id,title,icon,content,updated_at,encrypted_content,encryption_version")
+      .is("deleted_at", null).order("id", { ascending: true })
+      .range(offset, offset + batch - 1);
+    if (projectId) request = request.eq("project_id", projectId);
+    const { data, error } = await request;
+    if (error) {
+      console.error("[pages] protected search read failed:", error.message);
+      return { ok: false };
+    }
+    for (const stored of data ?? []) {
+      const row = await decodePageProjection(stored);
+      const title = String(row.title ?? "");
+      const body = await pageSearchText(row.content);
+      const titleLower = title.toLocaleLowerCase();
+      const bodyLower = body.toLocaleLowerCase();
+      if (!terms.every((term) => titleLower.includes(term) || bodyLower.includes(term))) continue;
+      const titleScore = terms.reduce((n, term) => n +
+        (titleLower.includes(term) ? 4 : 0), 0);
+      const bodyScore = terms.reduce((n, term) => n +
+        (bodyLower.includes(term) ? 1 : 0), 0);
+      const first = Math.max(0, bodyLower.indexOf(terms.find((term) =>
+        bodyLower.includes(term)) ?? terms[0] ?? "") - 35);
+      hits.push({ id: row.id, project_id: row.project_id,
+        parent_id: row.parent_id, title, icon: row.icon,
+        updated_at: row.updated_at,
+        excerpt: cleanExcerpt(body.slice(first, first + 180)),
+        rank: titleScore + bodyScore });
+    }
+    if (!data || data.length < batch) break;
+  }
+  hits.sort((a, b) => b.rank - a.rank ||
+    b.updated_at.localeCompare(a.updated_at) || a.id.localeCompare(b.id));
+  return { ok: true, hits: hits.slice(0,
+    Math.min(Math.max(1, Math.trunc(limit) || 1), MAX_SEARCH_LIMIT)) };
 }

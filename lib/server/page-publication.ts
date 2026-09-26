@@ -1,5 +1,6 @@
 import "server-only";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
+import { decodePageProjection } from "@/lib/server/page-content";
 
 import { pageDatabaseDocument, type DatabaseDocumentPage } from "@/lib/page-database-document";
 import { databaseDocumentNames } from "./page-database-document";
@@ -102,10 +103,11 @@ export async function getPublicPageBundle(
   if (ctx.share.include_children) {
     const { data } = await service
       .from("pages")
-      .select("id, parent_id, title, icon, position, database_schema, property_values, created_at")
+      .select("id, project_id, parent_id, title, icon, position, database_schema, property_values, created_at, encrypted_content, encryption_version")
       .eq("project_id", ctx.project.id)
       .is("deleted_at", null);
-    const all = (data ?? []) as Array<PublicPageNode & { position: string }>;
+    const all = await Promise.all((data ?? []).map((row) =>
+      decodePageProjection(row))) as Array<PublicPageNode & { position: string }>;
     const inBranch = descendantIds(all, root.id);
     databasePages = all.filter((page) => page.id === root.id || inBranch.includes(page.id));
     pages = [
@@ -119,13 +121,14 @@ export async function getPublicPageBundle(
   const targetId = pageId ?? root.id;
   if (!pages.some((p) => p.id === targetId)) return null;
 
-  const { data: pageRow } = await service
+  const { data: storedPage } = await service
     .from("pages")
-    .select("id, parent_id, title, icon, content, updated_at, database_schema, property_values, created_at")
+    .select("id, project_id, parent_id, title, icon, content, updated_at, database_schema, property_values, created_at, encrypted_content, encryption_version")
     .eq("id", targetId)
     .is("deleted_at", null)
     .maybeSingle();
-  if (!pageRow) return null;
+  if (!storedPage) return null;
+  const pageRow = await decodePageProjection(storedPage);
 
   databasePages = databasePages.map((page) => page.id === targetId ? pageRow as DatabaseDocumentPage : page);
   if (
@@ -135,18 +138,19 @@ export async function getPublicPageBundle(
   ) {
     const { data: parent } = await service
       .from("pages")
-      .select("id, database_schema")
+      .select("id, project_id, database_schema, encrypted_content, encryption_version")
       .eq("id", pageRow.parent_id)
       .eq("project_id", ctx.project.id)
       .is("deleted_at", null)
       .maybeSingle();
-    if (parent?.database_schema != null) {
+    const clearParent = parent ? await decodePageProjection(parent) : null;
+    if (clearParent?.database_schema != null) {
       // The parent provides column definitions only; it is not a published page.
       databasePages.push({
-        id: parent.id,
+        id: clearParent.id,
         parent_id: null,
         title: "",
-        database_schema: parent.database_schema,
+        database_schema: clearParent.database_schema,
       });
     }
   }

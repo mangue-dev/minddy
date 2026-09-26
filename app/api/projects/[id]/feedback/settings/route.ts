@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { requireProjectMember } from "@/lib/server/feedback/team-guard";
 import { decodeView } from "@/lib/server/view-content";
+import { decodePageProjection } from "@/lib/server/page-content";
 import { isAccentColor } from "@/lib/feedback/accent";
 import {
   clearSsoSecret,
@@ -73,13 +74,17 @@ async function listPublishedPages(projectId: string): Promise<{ id: string; titl
   const service = getServiceClient();
   const { data } = await service
     .from("view_shares")
-    .select("pages!inner (id, title, project_id)")
+    .select("pages!inner (id, title, project_id, encrypted_content, encryption_version)")
     .eq("pages.project_id", projectId)
     .is("pages.deleted_at", null)
     .order("created_at", { ascending: true });
-  return (data ?? [])
-    .map((row) => row.pages as unknown as { id: string; title: string } | null)
-    .filter((p): p is { id: string; title: string } => p !== null);
+  const rows = (data ?? [])
+    .map((row) => row.pages as unknown as Record<string, unknown> | null)
+    .filter((page): page is Record<string, unknown> => page !== null);
+  return Promise.all(rows.map(async (row) => {
+    const page = await decodePageProjection(row);
+    return { id: page.id as string, title: page.title as string };
+  }));
 }
 
 export async function GET(request: NextRequest, { params }: RouteContext) {

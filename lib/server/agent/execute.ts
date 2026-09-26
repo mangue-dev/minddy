@@ -294,7 +294,7 @@ async function loadIssueContext(
         ? service
             .from("attachments")
             .select(
-              "id, kind, page_id, file_name, mime_type, size_bytes, page:pages(title)",
+              "id, kind, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, encrypted_content, encryption_version)",
             )
             .eq("issue_id", issueId)
             .order("created_at", { ascending: true })

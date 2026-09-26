@@ -252,7 +252,7 @@ describe("published page databases", () => {
       expect(json).not.toContain("/p/tok/sibling");
       expect(db.pageReads.filter((read) => read.filters.id === "root")).toEqual([
         {
-          columns: "id, database_schema",
+          columns: "id, project_id, database_schema, encrypted_content, encryption_version",
           filters: { id: "root", project_id: PROJECT, deleted_at: null },
         },
       ]);

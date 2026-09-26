@@ -602,7 +602,7 @@ export async function getIssue(
       ctx.db
         .from("attachments")
         .select(
-          "id, project_id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, title, deleted_at)"
+          "id, project_id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, deleted_at, encrypted_content, encryption_version)"
         )
         .eq("issue_id", issue.id)
         .order("created_at", { ascending: true }),

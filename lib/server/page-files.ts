@@ -13,6 +13,7 @@ import { opaqueAttachmentPath, removeStorageObjects,
 import { projectStorageAllowed } from "@/lib/server/storage-quota";
 import { decodeAttachmentRow, encodeAttachmentValue,
   shouldEncryptAttachmentMetadata } from "@/lib/server/attachment-content";
+import { decodePageProjection } from "@/lib/server/page-content";
 
 /**
  * One-page files, server side (MIN-280): sending, and HOUSEHOLD.
@@ -221,14 +222,13 @@ export async function sweepOrphanPageFiles(
 
   const { data: pages, error: pagesError } = await service
     .from("pages")
-    .select("id, content")
+    .select("id, project_id, content, encrypted_content, encryption_version")
     .in("id", [...byPage.keys()]);
   if (pagesError) throw pagesError;
 
   const orphans: typeof candidates = [];
-  const bodies = new Map(
-    ((pages ?? []) as { id: string; content: unknown }[]).map((p) => [p.id, p.content])
-  );
+  const bodies = new Map((await Promise.all((pages ?? []).map((row) =>
+    decodePageProjection(row)))).map((page) => [page.id, page.content]));
   for (const [pageId, rows] of byPage) {
     // A page that has NOT returned from reading no longer exists (it just
     // to be purged between two scans): its files are orphaned

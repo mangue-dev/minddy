@@ -8,6 +8,7 @@ import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { PromptProjectContext } from "./prompt";
+import { decodePageProjection } from "@/lib/server/page-content";
 
 /**
  * Gather the project data injected into Numo's system prompt (status counts,
@@ -55,7 +56,7 @@ export async function gatherProjectPromptContext({
     // in the prompt, the documents are read page by page with get_page.
     supabase
       .from("pages")
-      .select("id, title, parent_id")
+      .select("id, project_id, title, parent_id, encrypted_content, encryption_version")
       .is("deleted_at", null)
       .eq("project_id", project.id)
       .order("position", { ascending: true }),
@@ -92,6 +93,7 @@ export async function gatherProjectPromptContext({
     members,
     objectives: (objectives ?? []) as PromptProjectContext["objectives"],
     categories: (categories ?? []) as unknown as PromptProjectContext["categories"],
-    pages: (pages ?? []) as PromptProjectContext["pages"],
+    pages: await Promise.all((pages ?? []).map((row) =>
+      decodePageProjection(row))) as PromptProjectContext["pages"],
   };
 }
