@@ -1718,196 +1718,196 @@
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 213,
+    "line": 214,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 231,
+    "line": 232,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_agent_preferences",
-    "line": 265,
+    "line": 266,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 281,
+    "line": 282,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "page_files",
-    "line": 292,
+    "line": 293,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 304,
+    "line": 305,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "views",
-    "line": 319,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "saved_views",
     "line": 320,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
+    "resource": "saved_views",
+    "line": 321,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-export.ts",
+    "operation": "from",
     "resource": "agent_routines",
-    "line": 322,
+    "line": 323,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "cycles",
-    "line": 324,
+    "line": 325,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 326,
+    "line": 327,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 331,
+    "line": 332,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 343,
+    "line": 344,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 349,
+    "line": 350,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "ai_usage",
-    "line": 361,
+    "line": 362,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 369,
+    "line": 370,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 374,
+    "line": 375,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 379,
+    "line": 380,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 386,
+    "line": 387,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 391,
+    "line": 392,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 405,
+    "line": 406,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 430,
+    "line": 431,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 434,
+    "line": 435,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_messages",
-    "line": 448,
+    "line": 449,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_turns",
-    "line": 453,
+    "line": 454,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversation_contexts",
-    "line": 461,
+    "line": 462,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversation_contexts",
-    "line": 465,
+    "line": 466,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "issue_categories",
-    "line": 531,
+    "line": 532,
     "storage": false
   },
   {
@@ -4042,56 +4042,63 @@
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 150,
+    "line": 152,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
-    "operation": "from",
-    "resource": "billing_accounts",
-    "line": 164,
+    "operation": "rpc",
+    "resource": "upsert_billing_account_patch",
+    "line": 174,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "rpc",
     "resource": "apply_stripe_billing_event",
-    "line": 201,
+    "line": 207,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 225,
+    "line": 231,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 296,
+    "line": 302,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 305,
+    "line": 311,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 383,
+    "line": 389,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 415,
+    "line": 421,
+    "storage": false
+  },
+  {
+    "file": "lib/server/billing-content.ts",
+    "operation": "from",
+    "resource": "billing_identity_scope",
+    "line": 23,
     "storage": false
   },
   {
@@ -4336,35 +4343,35 @@
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 280,
+    "line": 286,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 298,
+    "line": 304,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 333,
+    "line": 339,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "rpc",
     "resource": "delete_custom_domain_if_current",
-    "line": 374,
+    "line": 380,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 459,
+    "line": 465,
     "storage": false
   },
   {
@@ -5310,6 +5317,27 @@
     "operation": "rpc",
     "resource": "record_attachment_object_migration_attempt",
     "line": 94,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/billing-identity-backfill.ts",
+    "operation": "from",
+    "resource": "billing_accounts",
+    "line": 24,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/billing-identity-backfill.ts",
+    "operation": "from",
+    "resource": "billing_accounts",
+    "line": 57,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/billing-identity-backfill.ts",
+    "operation": "from",
+    "resource": "billing_accounts",
+    "line": 72,
     "storage": false
   },
   {

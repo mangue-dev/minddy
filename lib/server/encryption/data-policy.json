@@ -1184,6 +1184,7 @@
     ],
     "clear": {
       "bounded_metadata": [
+        "content_revision",
         "stripe_cancel_at_period_end"
       ],
       "operational_configuration": [
@@ -1205,8 +1206,22 @@
         "stripe_current_period_end",
         "stripe_current_period_start",
         "stripe_last_event_created",
-        "updated_at"
+        "updated_at",
+        "email_encryption_checked_at",
+        "admin_override_note_encryption_checked_at",
+        "encryption_attempted_at"
       ]
+    }
+  },
+  "billing_identity_scope": {
+    "scope": {
+      "kind": "global",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": ["id"],
+      "timestamp": ["activated_at"]
     }
   },
   "categories": {

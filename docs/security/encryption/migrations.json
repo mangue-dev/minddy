@@ -181,5 +181,6 @@
   "20270107830000_app_tab_content.sql": "90aa3fb52ec04834532dbb164cef4a6b3599875f6a9fe57356e0142dc567de57",
   "20270107840000_ai_decision_evaluation_content.sql": "17bee0d82f8f115756e06d66944bf6ba2e24444372dcf46eadeec35efc1242b8",
   "20270107850000_stripe_webhook_payload_scrub.sql": "434bcd12a1a6a47357919413b4e2bcd413694dccdbff1a7d2a99e33c46666edc",
-  "20270107860000_custom_domain_verification.sql": "592ea554304db26cd0d072940746ebbbf0a101c4edb8845cfb450edadc61c969"
+  "20270107860000_custom_domain_verification.sql": "592ea554304db26cd0d072940746ebbbf0a101c4edb8845cfb450edadc61c969",
+  "20270107870000_billing_identity_content.sql": "4233bff07f9fc5c96d4ba502c1648c67d250c5341c3884a3874d2978a8cb85c9"
 }

@@ -62,6 +62,7 @@ const appTabTemplate = "minddy_min591_app_tab_audit";
 const aiEvaluationTemplate = "minddy_min591_ai_eval_audit";
 const stripePayloadTemplate = "minddy_min591_stripe_audit";
 const customDomainTemplate = "minddy_min591_custom_domain_audit";
+const billingIdentityTemplate = "minddy_min591_billing_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -6665,6 +6666,101 @@ describe.skipIf(!enabled)("custom domain verification PostgreSQL recovery", () =
       expect(()=>sql(restored,`UPDATE public.custom_domains SET
         verification='[{"type":"TXT","value":"old"}]'::jsonb
         WHERE id=${quote(ids[0])};`)).toThrow();
+    }finally{
+      root.fill(0);vi.unstubAllEnvs();log.mockRestore();
+      for(const database of created.reverse())
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+    }
+  },60_000);
+});
+
+describe.skipIf(!enabled)("billing identity PostgreSQL recovery", () => {
+  it("restores billing rows before users and historical keys in separate batches", async () => {
+    const suffix=randomUUID().replaceAll("-","").slice(0,12);
+    const source=`minddy_min591_billing_source_${suffix}`;
+    const restored=`minddy_min591_billing_restore_${suffix}`;
+    const created:string[]=[];
+    const root=randomBytes(32);
+    const ids=[randomUUID(),randomUUID()];
+    const log=vi.spyOn(console,"info").mockImplementation(()=>{});
+    try {
+      expect(sql(billingIdentityTemplate,
+        "SELECT count(*) FROM public.billing_accounts;"))
+        .toBe("0");
+      for(const database of [source,restored]){
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${billingIdentityTemplate};`);
+        created.push(database);
+      }
+      const keys=new ManagedDataKeys(registry(source),wrapper(root));
+      const store=new EncryptedStore(keys);
+      for(const [index,id] of ids.entries()){
+        const scope:EncryptionScope={kind:"user",id};
+        if(index===1) {
+          await keys.current(scope);
+          await keys.rotate(scope,1);
+        }
+        const email=await store.encrypt(`private-${index}@example.test`,{
+          scope,table:"billing_accounts",column:"email",rowId:id});
+        const note=await store.encrypt(`Private billing note ${index}`,{
+          scope,table:"billing_accounts",column:"admin_override_note",
+          rowId:id});
+        sql(source,`INSERT INTO auth.users(id) VALUES(${quote(id)});
+          INSERT INTO public.billing_accounts(user_id,email,
+            admin_override_note) VALUES(${quote(id)},
+            ${quote(`mdye3:${email}`)},${quote(`mdye3:${note}`)});`);
+        keys.invalidate(scope);
+      }
+      expect(sql(source,"SELECT public.activate_billing_identity();"))
+        .toBe("t");
+      const dump=execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges",...["public.billing_accounts","auth.users",
+          "public.billing_identity_scope","public.envelope_data_keys"]
+          .map((table)=>`--table=${table}`)],
+      {encoding:"utf8",maxBuffer:4*1024*1024});
+      for(const marker of ["private-0@example.test",
+        "private-1@example.test","Private billing note"])
+        expect(dump).not.toContain(marker);
+      const table="public.billing_accounts";
+      const start=dump.indexOf(`COPY ${table} `);
+      expect(start).toBeGreaterThanOrEqual(0);
+      const bodyStart=dump.indexOf("\n",start)+1;
+      const bodyEnd=dump.indexOf("\\.\n",bodyStart);
+      const header=dump.slice(start,bodyStart);
+      const lines=dump.slice(bodyStart,bodyEnd).trimEnd().split("\n");
+      const remainder=dump.slice(0,start)+dump.slice(bodyEnd+3);
+      for(const line of lines.reverse())
+        sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+          ${header}${line}\n\\.\nCOMMIT;`);
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+        ${remainder}\nCOMMIT;`);
+      const cold=new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(root)));
+      for(const [index,id] of ids.entries()){
+        const scope:EncryptionScope={kind:"user",id};
+        const row=JSON.parse(sql(restored,`SELECT row_to_json(b) FROM
+          public.billing_accounts b WHERE user_id=${quote(id)};`));
+        expect(row.email_encryption_checked_at).not.toBeNull();
+        expect(row.admin_override_note_encryption_checked_at).not.toBeNull();
+        for(const [field,expected] of [
+          ["email",`private-${index}@example.test`],
+          ["admin_override_note",`Private billing note ${index}`],
+        ] as const){
+          const cipher=cold.fromDatabase<string>(row[field].slice(6));
+          expect(cold.versionOf(cipher)).toBe(index+1);
+          expect(await cold.decrypt(cipher,{scope,table:"billing_accounts",
+            column:field,rowId:id})).toBe(expected);
+        }
+      }
+      const wrong=new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(randomBytes(32))));
+      const value=sql(restored,`SELECT email FROM public.billing_accounts
+        WHERE user_id=${quote(ids[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase(value.slice(6)),{
+        scope:{kind:"user",id:ids[0]},table:"billing_accounts",
+        column:"email",rowId:ids[0]})).rejects.toThrow();
+      expect(()=>sql(restored,`UPDATE public.billing_accounts SET
+        email='old@example.test' WHERE user_id=${quote(ids[0])};`)).toThrow();
     }finally{
       root.fill(0);vi.unstubAllEnvs();log.mockRestore();
       for(const database of created.reverse())

@@ -5,6 +5,7 @@ import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeBillingAccount } from "@/lib/server/billing-content";
 import { CONTACT_EMAIL } from "@/lib/site";
 import {
   ACCOUNT_TRANSFER_FORMAT,
@@ -349,7 +350,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     service
       .from("billing_accounts")
       .select(
-        "email, stripe_plan_id, stripe_subscription_status, stripe_current_period_start, " +
+        "user_id, email, stripe_plan_id, stripe_subscription_status, stripe_current_period_start, " +
           "stripe_current_period_end, stripe_cancel_at_period_end, created_at"
       )
       .eq("user_id", userId)
@@ -552,6 +553,10 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     delete (exportedPreferences as Row).branch_prefix_encryption_checked_at;
     delete (exportedPreferences as Row).branch_prefix_encryption_attempted_at;
   }
+  const billingRow = one("billing_accounts", billing);
+  const exportedBilling = billingRow
+    ? await decodeBillingAccount(userId, billingRow as Row & {
+      user_id: string; email: string | null }) : null;
   return {
     transfer_format: ACCOUNT_TRANSFER_FORMAT,
     transfer_version: ACCOUNT_TRANSFER_VERSION,
@@ -630,7 +635,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     notifications: list("notifications", notifications),
     push_devices: list("push_subscriptions", pushDevices),
     statistics,
-    billing: one("billing_accounts", billing),
+    billing: exportedBilling,
     ai_usage: list("ai_usage", aiUsage),
     api_keys: list("api_keys", apiKeys),
     connected_apps: list("oauth_grants", grants),

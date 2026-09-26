@@ -9,7 +9,7 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 180 application tables and 1,582 columns, their primary
+- `schema.json` records 181 application tables and 1,588 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 173 encryption targets include the original content,
@@ -20,10 +20,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,629 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,633 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 464 functions, ten views and 240 application triggers. Function
+- `sql-consumers.json` records 468 functions, ten views and 241 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -98,7 +98,7 @@ must be checked separately.
 | Forge data | Forge mention throttle identities and private repository names use stable system blind indexes. Names have a recoverable encrypted registry and guarded equality keys across linked copies. Default branches use project-bound envelopes. Relay instance configuration, singleton self-hosted provisioning, brokered user deliveries, persistent OAuth grants, repository hook secrets and personal MCP connections are sealed; the unused relay mirror secret copy is removed. Review remaining forge sidecars. The generic row codec deliberately refuses sensitive primary keys. |
 | Files and images | Attachment, page-file and project-icon server paths now use opaque names, ciphertext bytes and authorized download routes. The icon bucket switches to private only after the object queue is empty; other object copies still need review. Public avatars have an explicit public-use exception. |
 | Feedback and sharing | Feedback posts, private visitor identities, board SSO secrets and recoverable share tokens have repository and migration checkpoints below. Remaining feedback copies still need conversion; owner dialogs must retain access to share URLs. |
-| Credentials and configuration | `app_config.value` and BYOK credentials, endpoints and private model choices have bounded CAS envelopes and activated old-writer guards. Migrate remaining legacy environment-key envelopes and secret/configuration stores; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
+| Credentials and configuration | `app_config.value`, BYOK credentials, endpoints and private model choices, and billing email/admin notes have bounded CAS envelopes and activated old-writer guards. Migrate remaining legacy environment-key envelopes and secret/configuration stores; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
 | Migration and recovery | Add restartable batches for every target and object, compare-and-swap against concurrent edits, verification counters, rejection of obsolete writers, a restoration rehearsal and retention of historical wrapped keys. Test mixed plaintext/encrypted tenants and old versions. |
 | Root key and operations | Provision a dedicated root key outside the database and rehearse key backup and restore. The offline root-key rewrap procedure is implemented and tested on isolated PostgreSQL; production rehearsal and application-scale latency remain. Production deployment and migration require a later explicit deployment request. |
 
@@ -2041,3 +2041,24 @@ writers. A PostgreSQL dump/restore loads domain rows before their board/share
 parents and keys in independent batches, reads two key versions with cold
 caches and rejects a wrong root. The dedicated and global flags remain off in
 production. Other MIN-591 targets remain open.
+
+## Billing identity checkpoint — 26 September 2026
+
+`billing_accounts.email` and `admin_override_note` now store format-3
+user-key envelopes bound to the account owner and individual column. The
+checkout and admin writers seal values; owner billing reads, the Stripe RPC
+result and account export decode them. Realtime continues to publish only a
+plan invalidation key. A service-only SQL patch RPC preserves absent columns
+atomically when Stripe and admin updates race. The existing Stripe event RPC
+keeps its event watermark and does not rewrite either identity field.
+
+A bounded 25-row worker verifies and rotates both fields under one account
+revision comparison. Activation requires checked envelopes for all non-null
+values and the SQL trigger then rejects old clear writers. The SQL regression
+tests source removal, both RPCs, access control and old-writer refusal. An
+isolated PostgreSQL dump/restore loads child billing rows before users and
+historical keys in separate batches, reads two key versions through cold
+caches and rejects a wrong root. The dedicated and global flags remain off in
+production. Representative search, latency and key-cache load measurements
+remain checks before production activation, not blockers for the code PR.
+Other MIN-591 targets remain open.

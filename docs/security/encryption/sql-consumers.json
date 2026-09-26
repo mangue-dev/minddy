@@ -733,6 +733,21 @@
       ],
       "functionReferences": []
     },
+    "guard_billing_identity()": {
+      "sha256": "12db14078e2df523e2e447b66321b7cd518c2ab11538f2490c7e176cd1475d8f",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "billing_identity_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": [
+        "billing_identity_version"
+      ]
+    },
     "guard_issue_encryption()": {
       "sha256": "65c522aaf521904d5ec49998b218b5c86aea812b933f24f293fb6eeaef42be39",
       "securityDefiner": true,
@@ -1374,6 +1389,24 @@
       ],
       "functionReferences": [
         "storage_object_size_bytes"
+      ]
+    },
+    "activate_billing_identity()": {
+      "sha256": "6358c13cf5c81eff2dd35814c6f9ada2549f7bc939f467f4c1e172d8cca1daf5",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "billing_accounts",
+        "billing_identity_scope"
+      ],
+      "protectedRelations": [
+        "billing_accounts"
+      ],
+      "functionReferences": [
+        "billing_identity_version"
       ]
     },
     "broadcast_activity_scoped()": {
@@ -2229,6 +2262,17 @@
       "protectedRelations": [
         "user_ai_keys"
       ],
+      "functionReferences": []
+    },
+    "billing_identity_version(text)": {
+      "sha256": "704e4b3987057c779e47b2b3405e6df64a6182e6c3a7ee1a6e729cfd93c1e15f",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "broadcast_objective_metadata()": {
@@ -4318,6 +4362,21 @@
       "functionReferences": [
         "guard_project_actor"
       ]
+    },
+    "upsert_billing_account_patch(uuid,jsonb)": {
+      "sha256": "a5f937319e8f8707623b3afe2de2da753556a5eebdec3e2392949849e2ae58f2",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "billing_accounts"
+      ],
+      "protectedRelations": [
+        "billing_accounts"
+      ],
+      "functionReferences": []
     },
     "account_storage_quota_allows(uuid,bigint)": {
       "sha256": "39a7a290d7f12b19ffe0f9e5e868172243efe006bc964881bc03960910293b72",
@@ -8066,6 +8125,10 @@
     "agent_run_journal.agent_journal_encryption_guard": {
       "function": "guard_agent_journal_encryption()",
       "definition": "CREATE TRIGGER agent_journal_encryption_guard BEFORE INSERT OR UPDATE ON agent_run_journal FOR EACH ROW EXECUTE FUNCTION guard_agent_journal_encryption()"
+    },
+    "billing_accounts.billing_accounts_identity_guard": {
+      "function": "guard_billing_identity()",
+      "definition": "CREATE TRIGGER billing_accounts_identity_guard BEFORE INSERT OR UPDATE ON billing_accounts FOR EACH ROW EXECUTE FUNCTION guard_billing_identity()"
     },
     "forge_relay_audit.forge_relay_audit_detail_guard": {
       "function": "guard_forge_relay_audit_detail()",
