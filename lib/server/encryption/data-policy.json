@@ -3365,6 +3365,21 @@
       ]
     }
   },
+  "project_git_webhook_secret_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "project_git_links": {
     "scope": {
       "kind": "project",
@@ -3398,7 +3413,9 @@
         "issue_sync_enabled_at",
         "updated_at",
         "repo_name_checked_at",
-        "default_branch_checked_at"
+        "default_branch_checked_at",
+        "webhook_secret_checked_at",
+        "webhook_secret_attempted_at"
       ],
       "encryption_metadata": [
         "repo_full_name",

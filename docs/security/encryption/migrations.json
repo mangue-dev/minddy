@@ -171,5 +171,6 @@
   "20270107730500_page_content_purge.sql": "1d8c9c2b6a6e9ea8de9b5b5897c312b8e1923db8849c6a2a28599500ec87785b",
   "20270107740000_user_ai_key_content.sql": "bf3c457559e3a752d02bdbde46cb1b5094f1563c3ad754918c4c33aa4fee77a0",
   "20270107750000_forge_relay_instance_content.sql": "bfe1fd5905f74bbd43cdee3496cc7a78f2d8c00a328025ebdcd79134d32265ba",
-  "20270107760000_drop_forge_relay_mirror_secret.sql": "a101cad7d321c24d2563668bf0b0a4641eb46a78baf53a9ec3ae06fe4b8ddea2"
+  "20270107760000_drop_forge_relay_mirror_secret.sql": "a101cad7d321c24d2563668bf0b0a4641eb46a78baf53a9ec3ae06fe4b8ddea2",
+  "20270107770000_project_git_webhook_secret.sql": "2573b1b0ab88fc9c92d028687f9904079dc24446a8ec6df6e81b314cc777f872"
 }

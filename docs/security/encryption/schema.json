@@ -5669,6 +5669,24 @@
       }
     ]
   },
+  "project_git_webhook_secret_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
   "project_git_links": {
     "columns": {
       "id": {
@@ -5772,6 +5790,16 @@
         "generated": false
       },
       "default_branch_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "webhook_secret_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "webhook_secret_attempted_at": {
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false

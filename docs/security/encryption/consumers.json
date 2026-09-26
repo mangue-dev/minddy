@@ -5880,6 +5880,27 @@
     "storage": true
   },
   {
+    "file": "lib/server/encryption/project-webhook-secret-backfill.ts",
+    "operation": "from",
+    "resource": "project_git_links",
+    "line": 24,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/project-webhook-secret-backfill.ts",
+    "operation": "from",
+    "resource": "project_git_links",
+    "line": 54,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/project-webhook-secret-backfill.ts",
+    "operation": "from",
+    "resource": "project_git_links",
+    "line": 67,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/provider-resource-backfill.ts",
     "operation": "rpc",
     "resource": "list_provider_operation_resource_candidates",
@@ -6947,7 +6968,7 @@
     "file": "lib/server/forge-relay/gitlab-broker.ts",
     "operation": "from",
     "resource": "forge_relay_link_mirror",
-    "line": 220,
+    "line": 219,
     "storage": false
   },
   {
@@ -6968,42 +6989,42 @@
     "file": "lib/server/forge-relay/instances.ts",
     "operation": "from",
     "resource": "forge_relay_instances",
-    "line": 59,
+    "line": 63,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/instances.ts",
     "operation": "from",
     "resource": "forge_relay_instances",
-    "line": 77,
+    "line": 81,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/instances.ts",
     "operation": "from",
     "resource": "forge_relay_instances",
-    "line": 93,
+    "line": 97,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/instances.ts",
     "operation": "from",
     "resource": "forge_relay_instances",
-    "line": 105,
+    "line": 109,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/instances.ts",
     "operation": "from",
     "resource": "forge_relay_instances",
-    "line": 122,
+    "line": 126,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/instances.ts",
     "operation": "from",
     "resource": "forge_relay_deliveries",
-    "line": 133,
+    "line": 137,
     "storage": false
   },
   {
@@ -7651,31 +7672,38 @@
     "storage": false
   },
   {
-    "file": "lib/server/git/webhook-secret.ts",
+    "file": "lib/server/git/webhook-secret-content.ts",
     "operation": "from",
-    "resource": "project_git_links",
-    "line": 60,
+    "resource": "project_git_webhook_secret_scope",
+    "line": 39,
     "storage": false
   },
   {
     "file": "lib/server/git/webhook-secret.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 96,
+    "line": 61,
     "storage": false
   },
   {
     "file": "lib/server/git/webhook-secret.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 115,
+    "line": 103,
     "storage": false
   },
   {
     "file": "lib/server/git/webhook-secret.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 147,
+    "line": 124,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/webhook-secret.ts",
+    "operation": "from",
+    "resource": "project_git_links",
+    "line": 162,
     "storage": false
   },
   {

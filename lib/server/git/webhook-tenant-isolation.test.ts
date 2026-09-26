@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import crypto from "node:crypto";
 import type { RemoteIssue } from "@/lib/server/git/issue-sync-core";
+import { EncryptedStore, type DataKeyProvider } from
+  "@/lib/server/encryption/store";
 
 /**
  * The partitioning of forge webhook receivers (MIN-333).
@@ -22,6 +25,10 @@ import type { RemoteIssue } from "@/lib/server/git/issue-sync-core";
  */
 
 process.env.GIT_TOKEN_ENCRYPTION_SECRET = "test-secret-for-forge-envelopes-32ch";
+const encryption = vi.hoisted(() => ({ store: null as EncryptedStore | null }));
+vi.mock("@/lib/server/encryption/registry", () => ({
+  getEncryptedStore: () => encryption.store,
+}));
 
 interface Row extends Record<string, unknown> {}
 
@@ -168,6 +175,37 @@ beforeEach(() => {
 });
 
 describe("webhook secret per repository", () => {
+  it("seals shared hook copies and verifies deliveries after authorization", async () => {
+    const root = crypto.randomBytes(32);
+    const keys: DataKeyProvider = {
+      current: async () => ({ version: 2, bytes: Buffer.from(root) }),
+      byVersion: async (_scope, version) =>
+        ({ version, bytes: Buffer.from(root) }),
+    };
+    encryption.store = new EncryptedStore(keys);
+    vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");
+    vi.stubEnv("MINDDY_REPO_WEBHOOK_SECRET_ENCRYPTION_ENABLED", "true");
+    try {
+      linkRows = [link({ id: "link-a", project_id: "project-a" }),
+        link({ id: "link-b", project_id: "project-b" })];
+      const first = await ensureRepoWebhookSecret({ provider: "gitlab",
+        externalRepoId: "1001" });
+      const copies = linkRows.map((row) =>
+        row.webhook_secret_encrypted as string);
+      expect(copies[0]).toBe(copies[1]);
+      expect(copies[0]).not.toContain(first);
+      expect(JSON.parse(copies[0]).format).toBe(3);
+      const candidates = await loadWebhookSecrets({ provider: "gitlab",
+        externalRepoId: "1001" });
+      expect(verifyWebhookToken(first,candidates)).toBe("own");
+      const second = await rotateRepoWebhookSecret({ provider: "gitlab",
+        externalRepoId: "1001" });
+      const rotated = await loadWebhookSecrets({ provider: "gitlab",
+        externalRepoId: "1001" });
+      expect(verifyWebhookToken(first,rotated)).toBe("rejected");
+      expect(verifyWebhookToken(second,rotated)).toBe("own");
+    } finally { vi.unstubAllEnvs(); }
+  });
   it("mints a repository-specific secret and stores it encrypted", async () => {
     linkRows = [link()];
     const secret = await ensureRepoWebhookSecret({

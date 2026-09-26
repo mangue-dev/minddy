@@ -101,6 +101,8 @@ import { backfillUserAiKeysBatch } from
   "@/lib/server/encryption/user-ai-key-backfill";
 import { backfillRelayInstancesBatch } from
   "@/lib/server/encryption/forge-relay-instance-backfill";
+import { backfillProjectWebhookSecretsBatch } from
+  "@/lib/server/encryption/project-webhook-secret-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -209,6 +211,8 @@ export async function GET(request: NextRequest) {
     process.env.MINDDY_USER_AI_KEY_ENCRYPTION_ENABLED === "true";
   const relayInstancesEnabled = contentEnabled &&
     process.env.MINDDY_RELAY_INSTANCE_ENCRYPTION_ENABLED === "true";
+  const projectWebhookSecretsEnabled = contentEnabled &&
+    process.env.MINDDY_REPO_WEBHOOK_SECRET_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -291,6 +295,7 @@ export async function GET(request: NextRequest) {
       pageContentEnabled ? backfillPageContentBatch(30, request.signal) : Promise.resolve(null),
       userAiKeysEnabled ? backfillUserAiKeysBatch(30, request.signal) : Promise.resolve(null),
       relayInstancesEnabled ? backfillRelayInstancesBatch(20, request.signal) : Promise.resolve(null),
+      projectWebhookSecretsEnabled ? backfillProjectWebhookSecretsBatch(30, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -365,12 +370,13 @@ export async function GET(request: NextRequest) {
     const pageContent = outcomes[70];
     const userAiKeys = outcomes[71];
     const relayInstances = outcomes[72];
+    const projectWebhookSecrets = outcomes[73];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, agentChainCodes, numoTurnIntents, numoAutomation, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, savedViewBookmarks, agentRoutines, projectContent, pageContent, userAiKeys, relayInstances].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, agentChainCodes, numoTurnIntents, numoAutomation, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, savedViewBookmarks, agentRoutines, projectContent, pageContent, userAiKeys, relayInstances, projectWebhookSecrets].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -518,6 +524,10 @@ export async function GET(request: NextRequest) {
         ...(relayInstancesEnabled ? {
           relay_instances: relayInstances.status === "fulfilled"
             ? relayInstances.value : { failed: true },
+        } : {}),
+        ...(projectWebhookSecretsEnabled ? {
+          project_webhook_secrets: projectWebhookSecrets.status === "fulfilled"
+            ? projectWebhookSecrets.value : { failed: true },
         } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),

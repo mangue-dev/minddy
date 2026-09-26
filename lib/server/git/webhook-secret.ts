@@ -5,7 +5,8 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { decodeRepositoryName } from "./repository-name-content";
-import { decryptForgeToken, encryptForgeToken } from "./token-crypto";
+import { decodeRepoWebhookSecret, encodeRepoWebhookSecret,
+  protectedWebhookSecretVersion } from "./webhook-secret-content";
 
 /**
  * GitLab webhook secrets, scoped per repository (MIN-333, MIN-435).
@@ -86,17 +87,23 @@ export async function ensureRepoWebhookSecret(params: {
   }
   let existingSecret: string | null = null;
   for (const link of links) {
-    const existing = decryptForgeToken(link.webhook_secret_encrypted);
+    const existing = await decodeRepoWebhookSecret(link.webhook_secret_encrypted,
+      params.provider, params.externalRepoId);
     if (existing) existingSecret ??= existing;
     if (link.webhook_secret_encrypted) {
       if (!existing) throw new Error("Stored webhook secret cannot be decrypted");
     }
   }
   if (existingSecret) {
-    const { error } = await getServiceClient()
+    const service = getServiceClient();
+    const cipher = await encodeRepoWebhookSecret(existingSecret,
+      params.provider, params.externalRepoId, { service,
+        force: links.some((link) =>
+          protectedWebhookSecretVersion(link.webhook_secret_encrypted)>0) });
+    const { error } = await service
       .from("project_git_links")
       .update({
-        webhook_secret_encrypted: encryptForgeToken(existingSecret),
+        webhook_secret_encrypted: cipher,
         updated_at: new Date().toISOString(),
       })
       .eq("provider", params.provider)
@@ -112,10 +119,12 @@ export async function ensureRepoWebhookSecret(params: {
   // hook with a secret the receiver will never accept.
   const secret = generateWebhookSecret();
   const service = getServiceClient();
+  const cipher = await encodeRepoWebhookSecret(secret,
+    params.provider,params.externalRepoId,{ service });
   const { data: written, error } = await service
     .from("project_git_links")
     .update({
-      webhook_secret_encrypted: encryptForgeToken(secret),
+      webhook_secret_encrypted: cipher,
       updated_at: new Date().toISOString(),
     })
     .eq("provider", params.provider)
@@ -127,7 +136,8 @@ export async function ensureRepoWebhookSecret(params: {
 
   const raced = await loadRepoLinks(params.provider, params.externalRepoId);
   for (const link of raced) {
-    const winner = decryptForgeToken(link.webhook_secret_encrypted);
+    const winner = await decodeRepoWebhookSecret(link.webhook_secret_encrypted,
+      params.provider, params.externalRepoId);
     if (winner) return winner;
   }
   throw new Error("Webhook-secret initialization lost without a persisted winner");
@@ -144,10 +154,15 @@ export async function rotateRepoWebhookSecret(params: {
 }): Promise<string> {
   const secret = generateWebhookSecret();
   const service = getServiceClient();
+  const links = await loadRepoLinks(params.provider, params.externalRepoId);
+  const cipher = await encodeRepoWebhookSecret(secret,
+    params.provider, params.externalRepoId, { service,
+      force: links.some((link) =>
+        protectedWebhookSecretVersion(link.webhook_secret_encrypted)>0) });
   const { error } = await service
     .from("project_git_links")
     .update({
-      webhook_secret_encrypted: encryptForgeToken(secret),
+      webhook_secret_encrypted: cipher,
       updated_at: new Date().toISOString(),
     })
     .eq("provider", params.provider)
@@ -179,7 +194,8 @@ export async function loadWebhookSecrets(params: {
   let hasDedicatedSecret = false;
   for (const link of links) {
     hasDedicatedSecret ||= Boolean(link.webhook_secret_encrypted);
-    const secret = decryptForgeToken(link.webhook_secret_encrypted);
+    const secret = await decodeRepoWebhookSecret(link.webhook_secret_encrypted,
+      params.provider, params.externalRepoId);
     if (secret && !own.includes(secret)) own.push(secret);
     const name = await decodeRepositoryName(params.provider,link.repo_full_name);
     if (name && !repoFullNames.includes(name)) {

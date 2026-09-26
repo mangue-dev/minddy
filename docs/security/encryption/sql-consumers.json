@@ -3379,6 +3379,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_project_git_webhook_secret()": {
+      "sha256": "5c1cbd22ebe0cdaad13bfe07ab5255a8243d27b6e6e09d0f9e96454baf0b0b86",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "project_git_webhook_secret_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "is_numo_routine_conversation(uuid)": {
       "sha256": "caf5ff22a6c90838d4f69d52f092398d87165ce2f1ac72ba2fdcbd0575caff5f",
       "securityDefiner": true,
@@ -3729,6 +3742,24 @@
         "rotate_project_realtime_generation"
       ]
     },
+    "activate_project_git_webhook_secrets()": {
+      "sha256": "d99ba6665996969a46bbf57a51964ec9c5b150f88b0a6a42a755201d71ff56ea",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "project_git_links",
+        "project_git_webhook_secret_scope"
+      ],
+      "protectedRelations": [
+        "project_git_links"
+      ],
+      "functionReferences": [
+        "project_git_webhook_secret_version"
+      ]
+    },
     "guard_agent_base_branch_parent_scope()": {
       "sha256": "f220bf7202eb304a2897173b7ced74a1e3b315511e7f8e2c08e85616b36153b5",
       "securityDefiner": true,
@@ -3962,6 +3993,17 @@
       "protectedRelations": [
         "pull_requests"
       ],
+      "functionReferences": []
+    },
+    "project_git_webhook_secret_version(text)": {
+      "sha256": "db31f7ea3aae860f1bc15cad5cd19b24dd8ef3849d2220af1df91de093650539",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "soft_delete_objective_guarded(uuid,uuid)": {
@@ -7749,6 +7791,10 @@
     "agent_conversations.agent_message_conversation_scope_guard": {
       "function": "guard_agent_message_conversation_scope()",
       "definition": "CREATE TRIGGER agent_message_conversation_scope_guard BEFORE UPDATE OF project_id ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_agent_message_conversation_scope()"
+    },
+    "project_git_links.project_git_links_a_webhook_secret_guard": {
+      "function": "guard_project_git_webhook_secret()",
+      "definition": "CREATE TRIGGER project_git_links_a_webhook_secret_guard BEFORE INSERT OR UPDATE ON project_git_links FOR EACH ROW EXECUTE FUNCTION guard_project_git_webhook_secret()"
     },
     "feedback_post_categories.feedback_post_categories_broadcast": {
       "function": "broadcast_feedback_child()",

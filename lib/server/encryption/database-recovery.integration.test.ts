@@ -52,6 +52,7 @@ const projectContentTemplate = "minddy_min591_project_audit";
 const pageContentTemplate = "minddy_min591_page_audit";
 const userAiKeyTemplate = "minddy_min591_byok_audit";
 const relayInstanceTemplate = "minddy_min591_relay_audit";
+const projectWebhookTemplate = "minddy_min591_repo_hook_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -5648,6 +5649,121 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
         .rejects.toThrow();
       expect(() => sql(restored, `UPDATE public.forge_relay_instances
         SET name='old writer' WHERE id=${quote(ids[0])};`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const database of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${database} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
+
+  it("restores repository hook secrets before links, projects and owners", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_hook_source_${suffix}`;
+    const restored = `minddy_min591_hook_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32), owner = randomUUID();
+    const projects = [randomUUID(), randomUUID()];
+    const connection = randomUUID();
+    const ids = [randomUUID(), randomUUID()];
+    const scope: EncryptionScope = { kind: "system",
+      id: "00000000-0000-0000-0000-000000000000" };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(projectWebhookTemplate,
+        "SELECT count(*) FROM public.project_git_links;"))
+        .toBe("0");
+      for (const database of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${database} TEMPLATE ${projectWebhookTemplate};`);
+        created.push(database);
+      }
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(owner)});
+        INSERT INTO public.projects(id,key,owner_id,name)
+          VALUES(${quote(projects[0])},'HKAA','${owner}','Fixture'),
+            (${quote(projects[1])},'HKBB','${owner}','Fixture');
+        INSERT INTO public.git_connections(id,user_id,provider)
+          VALUES(${quote(connection)},${quote(owner)},'gitlab');`);
+      for (const [index, id] of ids.entries()) {
+        if (index === 1) await keys.rotate(scope, 1);
+        const repoId = String(4200 + index);
+        const cipher = await store.encrypt(`private-hook-secret-${index}`, {
+          scope, table: "project_git_links",
+          column: "webhook_secret_encrypted",
+          rowId: JSON.stringify(["gitlab",repoId]),
+        });
+        sql(source, `INSERT INTO public.project_git_links(id,project_id,
+            connection_id,provider,external_repo_id,
+            webhook_secret_encrypted)
+          VALUES(${quote(id)},${quote(projects[index])},${quote(connection)},
+            'gitlab',${quote(repoId)},${quote(cipher)});`);
+        keys.invalidate(scope);
+      }
+      expect(sql(source,
+        "SELECT public.activate_project_git_webhook_secrets();"))
+        .toBe("t");
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["auth.users", "public.projects",
+          "public.git_connections", "public.project_git_links",
+          "public.project_git_webhook_secret_scope",
+          "public.envelope_data_keys"].map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("private-hook-secret");
+      let remainder = dump;
+      const copies = new Map<string, { header: string; lines: string[] }>();
+      for (const table of ["public.project_git_links","public.git_connections",
+        "public.projects","auth.users"]) {
+        const start = remainder.indexOf(`COPY ${table} `);
+        expect(start).toBeGreaterThanOrEqual(0);
+        const bodyStart = remainder.indexOf("\n", start) + 1;
+        const bodyEnd = remainder.indexOf("\\.\n", bodyStart);
+        copies.set(table, { header: remainder.slice(start, bodyStart),
+          lines: remainder.slice(bodyStart, bodyEnd).trimEnd().split("\n") });
+        remainder = remainder.slice(0, start) + remainder.slice(bodyEnd + 3);
+      }
+      for (const table of ["public.project_git_links","public.git_connections",
+        "public.projects","auth.users"]) {
+        for (const line of copies.get(table)!.lines.reverse()) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;
+            ${copies.get(table)!.header}${line}\n\\.\nCOMMIT;`);
+        }
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;
+        ${remainder}\nCOMMIT;`);
+      expect(sql(restored, `SELECT count(*) FROM public.project_git_links link
+        JOIN public.git_connections connection ON connection.id=link.connection_id
+        JOIN public.projects project ON project.id=link.project_id
+        JOIN auth.users owner ON owner.id=project.owner_id;`)).toBe("2");
+      const cold = new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(root)));
+      for (const [index, id] of ids.entries()) {
+        const row = JSON.parse(sql(restored, `SELECT row_to_json(link)
+          FROM public.project_git_links link WHERE id=${quote(id)};`));
+        expect(row.webhook_secret_checked_at).not.toBeNull();
+        const plain = await cold.decrypt<string>(
+          cold.fromDatabase(row.webhook_secret_encrypted), {
+            scope, table: "project_git_links",
+            column: "webhook_secret_encrypted",
+            rowId: JSON.stringify(["gitlab",String(4200 + index)]),
+          });
+        expect(plain).toBe(`private-hook-secret-${index}`);
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(randomBytes(32))));
+      const cipher = sql(restored, `SELECT webhook_secret_encrypted
+        FROM public.project_git_links WHERE id=${quote(ids[0])};`);
+      await expect(wrong.decrypt<string>(wrong.fromDatabase(cipher), {
+        scope, table: "project_git_links",
+        column: "webhook_secret_encrypted",
+        rowId: JSON.stringify(["gitlab","4200"]),
+      })).rejects.toThrow();
+      expect(() => sql(restored, `UPDATE public.project_git_links
+        SET webhook_secret_encrypted='{"__encrypted":true}'
+        WHERE id=${quote(ids[0])};`)).toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();
