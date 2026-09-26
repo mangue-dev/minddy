@@ -89,7 +89,7 @@ export function HeaderSearchPill({
       onPointerEnter={onWarm}
       onFocus={onWarm}
       aria-label={t("searchPlaceholder")}
-      className="flex h-8 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-[0.8rem] font-medium text-muted-foreground shadow-none transition-[border-color,box-shadow] hover:border-primary/40 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+      className="flex h-8 items-center gap-1.5 rounded-full bg-control px-3 text-[0.8rem] font-medium text-muted-foreground shadow-none transition-colors hover:bg-control-hover focus-visible:bg-control-hover focus-visible:outline-none"
     >
       <Search className="size-4 shrink-0" strokeWidth={2} />
       <span className="hidden text-left sm:inline-block">

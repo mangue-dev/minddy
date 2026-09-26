@@ -8,6 +8,14 @@ paths = ['''(?:^|/)components/app-tab-item\.tsx$''']
 regexTarget = "secret"
 regexes = ['''^Alt\+Shift\+ArrowLeft$''']
 
+[[allowlists]]
+description = "Migration digest manifest: sha256 checksums of tracked Supabase migration files, not credentials. The manifest exists so encrypted deployments can verify the migration bundle it replays; every entry is a digest of a file that ships in the same repository."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(?:^|/)docs/security/encryption/migrations\.json$''']
+regexTarget = "secret"
+regexes = ['''^[0-9a-f]{64}$''']
+
 [extend]
 useDefault = true
 

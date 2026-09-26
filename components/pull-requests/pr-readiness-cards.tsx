@@ -67,16 +67,19 @@ export type PrStatusCardTone =
   | "success"
   | "neutral";
 
-/** The tone grammar, shared by the merge-state control and the state badges. */
+/** The tone grammar, shared by the merge-state control and the state badges.
+ *  Since mango-ui 0.8.0 the badges carry no border — a tinted chip reads on
+ *  its background alone — and the tinted cards follow them: no border, only
+ *  the wash. The border belongs to the NEUTRAL card: idle, it is a plain
+ *  card (white in light, ink-dark in dark) and needs its edge to be seen. */
 const TONE_CARD: Record<PrStatusCardTone, string> = {
-  success:
-    "border-emerald-600/30 bg-emerald-600/10 dark:border-emerald-400/30",
-  progress: "border-amber-600/30 bg-amber-600/10 dark:border-amber-400/30",
-  danger: "border-destructive/30 bg-destructive/10",
+  success: "bg-emerald-600/10",
+  progress: "bg-amber-600/10",
+  danger: "bg-destructive/10",
   // A card that carries a GESTURE, not a verdict: it says nothing about the
   // merge state, so it reads in the plain card palette instead of borrowing
   // a meaning (red = blocked) it does not have.
-  neutral: "border-border bg-card",
+  neutral: "border border-border bg-card",
 };
 
 const TONE_TITLE: Record<PrStatusCardTone, string> = {
@@ -865,7 +868,7 @@ function PrStatusCardView({
       data-card-id={card.id}
       data-testid={card.action?.testId ?? `pr-status-card-${card.id}`}
       className={cn(
-        "max-w-full rounded-xl border text-left",
+        "max-w-full rounded-xl text-left",
         TONE_CARD[card.tone],
         activate &&
           "outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
@@ -903,7 +906,7 @@ function ChecksPopoverCard({
           role="button"
           tabIndex={0}
           className={cn(
-            "max-w-full rounded-xl border outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
+            "max-w-full rounded-xl outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
             TONE_CARD[tone],
           )}
         >

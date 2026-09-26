@@ -637,8 +637,7 @@ export function ObjectiveDialog({
                         uploads.uploading
                       }
                       className="max-sm:w-full"
-                      actionClassName="rounded-l-full pl-4 max-sm:flex-1"
-                      triggerClassName="rounded-r-full"
+                      actionClassName="max-sm:flex-1"
                       menuLabel={t("createInOtherProject")}
                       menu={otherProjects.map((p) => (
                         <DropdownMenuItem key={p.id} onSelect={() => void submit(p)}>

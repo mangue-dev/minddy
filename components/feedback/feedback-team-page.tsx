@@ -2543,7 +2543,7 @@ function AuthorPicker({
       trigger={
         <button
           type="button"
-          className="flex min-w-0 items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm outline-none transition-colors hover:bg-muted focus-visible:border-ring"
+          className="flex min-w-0 items-center gap-2 rounded-md px-2.5 py-1.5 text-sm outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
         >
           {value ? (
             <>
