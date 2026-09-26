@@ -88,7 +88,7 @@
       ]
     },
     "ai_decision_evaluations_weekly": {
-      "sha256": "2f06daa730923053a3200d566cf9a50df58dbd3bda6fc7f7dc018286290898fc",
+      "sha256": "63dc9faf5f45ca2d7467c3c218cbe6407a682dd4eb4a34f9e1858a70b3e93eaa",
       "relations": [
         "ai_decision_evaluations"
       ]
@@ -3991,6 +3991,21 @@
       ],
       "functionReferences": []
     },
+    "guard_ai_decision_evaluation_content()": {
+      "sha256": "069cdc03de693a3f66ff6c53fe4ecca487e2081da8465b816305aec6abd26375",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "ai_decision_evaluation_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": [
+        "ai_decision_evaluation_cipher_version"
+      ]
+    },
     "guard_forge_repository_name_registry()": {
       "sha256": "1f177b3c1351e93da9ccd5ffce091b833a81cd8c9f0824633cb88b2ac13ea694",
       "securityDefiner": true,
@@ -4258,6 +4273,24 @@
       "functionReferences": [
         "effective_plan_id",
         "account_storage_bytes"
+      ]
+    },
+    "activate_ai_decision_evaluation_content()": {
+      "sha256": "73c8c3333c5ef15763df48a699644c1c4a91ecc124a2d60c39cf0d6cd4530424",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "ai_decision_evaluations",
+        "ai_decision_evaluation_scope"
+      ],
+      "protectedRelations": [
+        "ai_decision_evaluations"
+      ],
+      "functionReferences": [
+        "ai_decision_evaluation_cipher_version"
       ]
     },
     "can_access_comment_parent(uuid,uuid,uuid)": {
@@ -4588,6 +4621,17 @@
       "functionReferences": [
         "forge_relay_provisioning_envelope_version"
       ]
+    },
+    "ai_decision_evaluation_cipher_version(text)": {
+      "sha256": "4b6252fe697de50db605368c229f7121c9e47bcff86fdfd8098a854ec4a568d0",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
     },
     "broadcast_private_realtime(text,text,jsonb)": {
       "sha256": "94065a6d7c6ca743e4d6c80fa2318569dad9b01eddc28e2e5a5ce8f8ef55c894",
@@ -8139,6 +8183,10 @@
     "agent_conversations.agent_conversations_rekey_realtime_scope": {
       "function": "rekey_agent_conversation_scope()",
       "definition": "CREATE TRIGGER agent_conversations_rekey_realtime_scope BEFORE UPDATE OF project_id, owner_id, visibility ON agent_conversations FOR EACH ROW EXECUTE FUNCTION rekey_agent_conversation_scope()"
+    },
+    "ai_decision_evaluations.ai_decision_evaluation_content_guard": {
+      "function": "guard_ai_decision_evaluation_content()",
+      "definition": "CREATE TRIGGER ai_decision_evaluation_content_guard BEFORE INSERT OR UPDATE ON ai_decision_evaluations FOR EACH ROW EXECUTE FUNCTION guard_ai_decision_evaluation_content()"
     },
     "user_agent_preferences.user_agent_preferences_set_updated_at": {
       "function": "set_updated_at()",

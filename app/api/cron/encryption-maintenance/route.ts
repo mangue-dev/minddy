@@ -116,6 +116,8 @@ import { backfillAgentBranchPrefixesBatch } from
   "@/lib/server/encryption/agent-branch-prefix-backfill";
 import { backfillAppTabsBatch } from
   "@/lib/server/encryption/app-tab-backfill";
+import { backfillAiDecisionEvaluationsBatch } from
+  "@/lib/server/encryption/ai-decision-evaluation-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -238,6 +240,8 @@ export async function GET(request: NextRequest) {
     process.env.MINDDY_AGENT_BRANCH_PREFIX_ENCRYPTION_ENABLED === "true";
   const appTabsEnabled = contentEnabled &&
     process.env.MINDDY_APP_TABS_ENCRYPTION_ENABLED === "true";
+  const aiDecisionEvaluationsEnabled = contentEnabled &&
+    process.env.MINDDY_AI_DECISION_EVALUATION_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -329,6 +333,7 @@ export async function GET(request: NextRequest) {
       mcpContentEnabled ? backfillMcpAttemptsBatch(25, request.signal) : Promise.resolve(null),
       agentBranchPrefixesEnabled ? backfillAgentBranchPrefixesBatch(25, request.signal) : Promise.resolve(null),
       appTabsEnabled ? backfillAppTabsBatch(25, request.signal) : Promise.resolve(null),
+      aiDecisionEvaluationsEnabled ? backfillAiDecisionEvaluationsBatch(25, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -412,12 +417,13 @@ export async function GET(request: NextRequest) {
     const mcpAttempts = outcomes[79];
     const agentBranchPrefixes = outcomes[80];
     const appTabs = outcomes[81];
+    const aiDecisionEvaluations = outcomes[82];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, agentChainCodes, numoTurnIntents, numoAutomation, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, savedViewBookmarks, agentRoutines, projectContent, pageContent, userAiKeys, relayInstances, projectWebhookSecrets, relayProvisioning, relayUserDeliveries, forgeOAuthConnections, forgeOAuthIdentities, mcpConnections, mcpAttempts, agentBranchPrefixes, appTabs].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, agentChainCodes, numoTurnIntents, numoAutomation, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, savedViewBookmarks, agentRoutines, projectContent, pageContent, userAiKeys, relayInstances, projectWebhookSecrets, relayProvisioning, relayUserDeliveries, forgeOAuthConnections, forgeOAuthIdentities, mcpConnections, mcpAttempts, agentBranchPrefixes, appTabs, aiDecisionEvaluations].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -596,6 +602,10 @@ export async function GET(request: NextRequest) {
         } : {}),
         ...(appTabsEnabled ? {
           app_tabs: appTabs.status === "fulfilled" ? appTabs.value : { failed: true },
+        } : {}),
+        ...(aiDecisionEvaluationsEnabled ? {
+          ai_decision_evaluations: aiDecisionEvaluations.status === "fulfilled"
+            ? aiDecisionEvaluations.value : { failed: true },
         } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),

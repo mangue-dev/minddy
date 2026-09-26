@@ -18,8 +18,8 @@ beforeEach(() => vi.spyOn(console, "info").mockImplementation(() => {}));
 afterEach(() => vi.restoreAllMocks());
 
 describe("protected column serialization coverage (not a repository authorization test)", () => {
-  it("keeps unsupported primary-key designs explicit instead of migrating under an invented identity", () => {
-    expect(blocked).toEqual(["ai_decision_evaluations"]);
+  it("has stable, non-sensitive primary keys for every protected table", () => {
+    expect(blocked).toEqual([]);
   });
 
   it.each(tables.filter((table) => !blocked.includes(table)))("preserves every classified value in %s", async (table) => {

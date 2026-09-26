@@ -8204,7 +8204,7 @@
       },
       "jev_answers": {
         "type": "jsonb",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       },
       "llm_answers": {
@@ -8231,9 +8231,41 @@
         "type": "integer",
         "nullable": true,
         "generated": false
+      },
+      "content_revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "replay_succeeded": {
+        "type": "boolean",
+        "nullable": true,
+        "generated": false
+      },
+      "encrypted_content": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
-    "primaryKey": [],
+    "primaryKey": [
+      "id"
+    ],
     "foreignKeys": []
   },
   "feedback_voice_attempts": {
@@ -9784,6 +9816,24 @@
     "foreignKeys": []
   },
   "numo_error_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "ai_decision_evaluation_scope": {
     "columns": {
       "id": {
         "type": "boolean",

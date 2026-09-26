@@ -59,6 +59,7 @@ const forgeOAuthTemplate = "minddy_min591_forge_oauth_audit";
 const mcpContentTemplate = "minddy_min591_mcp_audit";
 const agentPrefTemplate = "minddy_min591_agent_pref_audit";
 const appTabTemplate = "minddy_min591_app_tab_audit";
+const aiEvaluationTemplate = "minddy_min591_ai_eval_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -6416,6 +6417,100 @@ describe.skipIf(!enabled)("application tab PostgreSQL recovery", () => {
       })).rejects.toThrow();
       expect(()=>sql(restored,`UPDATE public.app_tabs SET href='/home'
         WHERE id=${quote(tabs[0])};`)).toThrow();
+    }finally{
+      root.fill(0);vi.unstubAllEnvs();log.mockRestore();
+      for(const database of created.reverse())
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+    }
+  },60_000);
+});
+
+describe.skipIf(!enabled)("decision evaluation PostgreSQL recovery", () => {
+  it("restores protected answers before historical keys and rejects a wrong root", async () => {
+    const suffix=randomUUID().replaceAll("-","").slice(0,12);
+    const source=`minddy_min591_eval_source_${suffix}`;
+    const restored=`minddy_min591_eval_restore_${suffix}`;
+    const created:string[]=[];
+    const root=randomBytes(32);
+    const scope:EncryptionScope={kind:"system",
+      id:"00000000-0000-0000-0000-000000000000"};
+    const context={table:"ai_decision_evaluations" as const,scope};
+    const ids=[randomUUID(),randomUUID()];
+    const log=vi.spyOn(console,"info").mockImplementation(()=>{});
+    try {
+      expect(sql(aiEvaluationTemplate,
+        "SELECT count(*) FROM public.ai_decision_evaluations;"))
+        .toBe("0");
+      for(const database of [source,restored]){
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${aiEvaluationTemplate};`);
+        created.push(database);
+      }
+      const keys=new ManagedDataKeys(registry(source),wrapper(root));
+      const codec=new EncryptedRowCodec(new EncryptedStore(keys));
+      for(const [index,id] of ids.entries()){
+        if(index===1) await keys.rotate(scope,1);
+        const protectedRow=await codec.encode({id,use_case:"smart_fill",
+          subject_id:`private-issue-${index}`,
+          jev_answers:{answer:`Private Jev ${index}`},
+          llm_answers:index===0?{answer:`Private LLM ${index}`}:null,
+          encryption_version:0,encrypted_content:null},context);
+        sql(source,`INSERT INTO public.ai_decision_evaluations(id,use_case,
+          subject_id,jev_answers,llm_answers,encrypted_content,
+          encryption_version,replay_succeeded) VALUES(${quote(id)},
+          'smart_fill',NULL,NULL,NULL,
+          ${quote(protectedRow.encrypted_content as string)},
+          ${protectedRow.encryption_version},${index===0?'true':'false'});`);
+        keys.invalidate(scope);
+      }
+      expect(sql(source,
+        "SELECT public.activate_ai_decision_evaluation_content();"))
+        .toBe("t");
+      const dump=execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges",...["public.ai_decision_evaluations",
+          "public.ai_decision_evaluation_scope","public.envelope_data_keys"]
+          .map((table)=>`--table=${table}`)],
+      {encoding:"utf8",maxBuffer:4*1024*1024});
+      for(const marker of ["private-issue-0","private-issue-1",
+        "Private Jev 0","Private LLM 0","Private Jev 1"])
+        expect(dump).not.toContain(marker);
+      const table="public.ai_decision_evaluations";
+      const start=dump.indexOf(`COPY ${table} `);
+      expect(start).toBeGreaterThanOrEqual(0);
+      const bodyStart=dump.indexOf("\n",start)+1;
+      const bodyEnd=dump.indexOf("\\.\n",bodyStart);
+      const header=dump.slice(start,bodyStart);
+      const lines=dump.slice(bodyStart,bodyEnd).trimEnd().split("\n");
+      const remainder=dump.slice(0,start)+dump.slice(bodyEnd+3);
+      for(const line of lines.reverse())
+        sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+          ${header}${line}\n\\.\nCOMMIT;`);
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+        ${remainder}\nCOMMIT;`);
+      const cold=new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored),wrapper(root))));
+      for(const [index,id] of ids.entries()){
+        const row=JSON.parse(sql(restored,`SELECT row_to_json(e) FROM
+          public.ai_decision_evaluations e WHERE id=${quote(id)};`));
+        expect(row.encryption_version).toBe(index+1);
+        expect(row.encryption_checked_at).not.toBeNull();
+        expect(row.subject_id).toBeNull();
+        expect(row.jev_answers).toBeNull();
+        expect(row.llm_answers).toBeNull();
+        expect(await cold.decode(row,context,
+          {actorId:null,reason:"migration_verification"}))
+          .toMatchObject({subject_id:`private-issue-${index}`,
+            jev_answers:{answer:`Private Jev ${index}`}});
+      }
+      const wrong=new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored),wrapper(randomBytes(32)))));
+      const row=JSON.parse(sql(restored,`SELECT row_to_json(e) FROM
+        public.ai_decision_evaluations e WHERE id=${quote(ids[0])};`));
+      await expect(wrong.decode(row,context,
+        {actorId:null,reason:"migration_verification"})).rejects.toThrow();
+      expect(()=>sql(restored,`UPDATE public.ai_decision_evaluations SET
+        jev_answers='{"answer":"old"}'::jsonb
+        WHERE id=${quote(ids[0])};`)).toThrow();
     }finally{
       root.fill(0);vi.unstubAllEnvs();log.mockRestore();
       for(const database of created.reverse())

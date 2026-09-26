@@ -4536,6 +4536,13 @@
     "storage": true
   },
   {
+    "file": "lib/server/decisions/evaluation-content.ts",
+    "operation": "from",
+    "resource": "ai_decision_evaluation_scope",
+    "line": 20,
+    "storage": false
+  },
+  {
     "file": "lib/server/decisions/jev.ts",
     "operation": "from",
     "resource": "projects",
@@ -4546,7 +4553,7 @@
     "file": "lib/server/decisions/shadow.ts",
     "operation": "from",
     "resource": "ai_decision_evaluations",
-    "line": 121,
+    "line": 126,
     "storage": false
   },
   {
@@ -5156,6 +5163,27 @@
     "operation": "rpc",
     "resource": "migrate_orphan_agent_runtime_work_branch",
     "line": 179,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/ai-decision-evaluation-backfill.ts",
+    "operation": "from",
+    "resource": "ai_decision_evaluations",
+    "line": 27,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/ai-decision-evaluation-backfill.ts",
+    "operation": "from",
+    "resource": "ai_decision_evaluations",
+    "line": 50,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/ai-decision-evaluation-backfill.ts",
+    "operation": "from",
+    "resource": "ai_decision_evaluations",
+    "line": 67,
     "storage": false
   },
   {

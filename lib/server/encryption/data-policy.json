@@ -814,11 +814,17 @@
     "clear": {
       "bounded_metadata": [
         "agree",
+        "content_revision",
         "jev_confidence",
         "jev_latency_ms",
         "llm_confidence",
         "llm_cost",
-        "llm_latency_ms"
+        "llm_latency_ms",
+        "replay_succeeded"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
       ],
       "operational_configuration": [
         "use_case"
@@ -827,8 +833,21 @@
         "id"
       ],
       "timestamp": [
-        "created_at"
+        "created_at",
+        "encryption_checked_at",
+        "encryption_attempted_at"
       ]
+    }
+  },
+  "ai_decision_evaluation_scope": {
+    "scope": {
+      "kind": "global",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": ["id"],
+      "timestamp": ["activated_at"]
     }
   },
   "ai_usage": {
