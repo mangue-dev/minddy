@@ -4022,6 +4022,7 @@
     "mergeAutoHint": "Numo schreibt Titel und Beschreibung des Merge-Commits aus dem Pull Request; die Zusammenführung erfolgt, sobald sie bereit sind.",
     "mergeGenerateThenMerge": "Generieren und zusammenführen",
     "numoMerging": "Numo schreibt den Merge-Commit…",
+    "cardNumoMerging": "Zusammenführung läuft",
     "numoMergeFailed": "Numo hat die Zusammenführung nicht abgeschlossen. Versuche es erneut."
   },
   "Triage": {

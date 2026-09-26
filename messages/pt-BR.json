@@ -4022,6 +4022,7 @@
     "mergeAutoHint": "Numo escreve o título e a descrição do commit de mesclagem a partir do pull request; a mesclagem acontece assim que estiverem prontos.",
     "mergeGenerateThenMerge": "Gerar e mesclar",
     "numoMerging": "Numo está escrevendo o commit de mesclagem…",
+    "cardNumoMerging": "Mesclagem em andamento",
     "numoMergeFailed": "Numo não concluiu a mesclagem. Tente novamente."
   },
   "Triage": {

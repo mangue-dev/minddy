@@ -4022,6 +4022,7 @@
     "mergeAutoHint": "Numo writes the title and description of the merge commit from the pull request; the merge happens as soon as they are ready.",
     "mergeGenerateThenMerge": "Generate then merge",
     "numoMerging": "Numo is writing the merge commit…",
+    "cardNumoMerging": "Merge in progress",
     "numoMergeFailed": "Numo did not complete the merge. Try again."
   },
   "Triage": {

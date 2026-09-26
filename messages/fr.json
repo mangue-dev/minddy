@@ -4022,6 +4022,7 @@
     "mergeAutoHint": "Numo rédige le titre et la description du commit de fusion à partir de la pull request ; la fusion se fait dès qu'ils sont prêts.",
     "mergeGenerateThenMerge": "Générer puis fusionner",
     "numoMerging": "Numo rédige le commit de fusion…",
+    "cardNumoMerging": "Fusion en cours",
     "numoMergeFailed": "Numo n'a pas terminé la fusion. Réessaie."
   },
   "Triage": {

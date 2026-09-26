@@ -4022,6 +4022,7 @@
     "mergeAutoHint": "Numo scrive titolo e descrizione del commit di unione dalla pull request; l'unione avviene appena sono pronti.",
     "mergeGenerateThenMerge": "Genera e unisci",
     "numoMerging": "Numo sta scrivendo il commit di unione…",
+    "cardNumoMerging": "Unione in corso",
     "numoMergeFailed": "Numo non ha completato l'unione. Riprova."
   },
   "Triage": {
