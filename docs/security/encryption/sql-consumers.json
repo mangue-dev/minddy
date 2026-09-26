@@ -1482,6 +1482,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_user_ai_key_content()": {
+      "sha256": "e959d00cc346318ae857fadeed218df4127b30a7fc882e4add2cfde9482120e6",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "user_ai_key_content_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "lock_mfa_amr_epoch_delete()": {
       "sha256": "c757bbeb717a29897ec25dbeecb1e13fc45ca4b71efeda47c3fe2511c428e86e",
       "securityDefiner": true,
@@ -2062,6 +2075,22 @@
       "protectedRelations": [
         "pages",
         "page_comments"
+      ],
+      "functionReferences": []
+    },
+    "activate_user_ai_key_content()": {
+      "sha256": "c5ee3b4a79a41d5bb2472f36e24ff22464c7faaa88c960922632752b7136f51b",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "user_ai_keys",
+        "user_ai_key_content_scope"
+      ],
+      "protectedRelations": [
+        "user_ai_keys"
       ],
       "functionReferences": []
     },
@@ -6194,6 +6223,21 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "update_user_ai_key_preferences_protected(uuid,uuid,bigint,text,integer,text[])": {
+      "sha256": "e2726d1376eb2ee821100405d0a4cf37cd13fcd3d566f1467f91e325a66a55c7",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "user_ai_keys"
+      ],
+      "protectedRelations": [
+        "user_ai_keys"
+      ],
+      "functionReferences": []
+    },
     "checkpoint_numo_tool_round_protected(uuid,uuid,uuid,text,integer,jsonb,integer)": {
       "sha256": "728a7899a49e89f4868ae39842ee02aeb4611ea6110da44571dab7b7549e7d4f",
       "securityDefiner": true,
@@ -6539,6 +6583,22 @@
       "protectedRelations": [
         "issues",
         "github_issue_comment_syncs"
+      ],
+      "functionReferences": []
+    },
+    "upsert_user_ai_key_protected(uuid,text,uuid,bigint,text,integer,text,timestamp with time zone)": {
+      "sha256": "c1bc701dc760317e777c3fe3d2f1d1c8efdf6eaed38c9de1a5d7840bbc988edf",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "user_ai_keys",
+        "user_ai_capability_assignments"
+      ],
+      "protectedRelations": [
+        "user_ai_keys"
       ],
       "functionReferences": []
     },
@@ -7212,6 +7272,10 @@
     "project_members.project_members_broadcast": {
       "function": "broadcast_members_row()",
       "definition": "CREATE TRIGGER project_members_broadcast AFTER INSERT OR DELETE OR UPDATE ON project_members FOR EACH ROW EXECUTE FUNCTION broadcast_members_row()"
+    },
+    "user_ai_keys.user_ai_keys_a_content_guard": {
+      "function": "guard_user_ai_key_content()",
+      "definition": "CREATE TRIGGER user_ai_keys_a_content_guard BEFORE INSERT OR UPDATE ON user_ai_keys FOR EACH ROW EXECUTE FUNCTION guard_user_ai_key_content()"
     },
     "user_scratchpad.user_scratchpad_broadcast": {
       "function": "broadcast_scratchpad_row()",

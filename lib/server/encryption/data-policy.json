@@ -3889,6 +3889,21 @@
       ]
     }
   },
+  "user_ai_key_content_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
   "user_ai_keys": {
     "scope": {
       "kind": "user",
@@ -3915,7 +3930,14 @@
         "created_at",
         "last_used_at",
         "updated_at",
-        "validated_at"
+        "validated_at",
+        "encryption_checked_at",
+        "encryption_attempted_at"
+      ],
+      "encryption_metadata": [
+        "content_revision",
+        "encrypted_content",
+        "encryption_version"
       ]
     }
   },

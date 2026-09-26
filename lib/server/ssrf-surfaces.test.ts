@@ -68,9 +68,20 @@ function anyChain(data: unknown): unknown {
 
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
-    rpc: () => anyChain({}),
+    rpc: (name: string, args: Record<string, unknown>) =>
+      name === "upsert_user_ai_key"
+        ? anyChain({ id: "key-1", user_id: "u1", provider: args.p_provider,
+            key_encrypted: args.p_key_encrypted,
+            key_prefix: args.p_key_prefix, base_url: args.p_base_url,
+            feature_models: {}, enabled_surfaces: ["agent"],
+            created_at: "2026-09-26T00:00:00Z",
+            updated_at: "2026-09-26T00:00:00Z", validated_at: null,
+            last_used_at: null })
+        : anyChain({}),
     from: (table: string) =>
-      table === "integrations" ? integrationsTable() : (anyChain({}) as never),
+      table === "integrations" ? integrationsTable()
+        : table === "app_config" ? anyChain([])
+        : (anyChain({}) as never),
   }),
 }));
 
@@ -258,6 +269,7 @@ vi.mock("@/lib/server/api-auth", () => ({
 vi.mock("@/lib/server/agent/byok-credentials", () => ({
   LOCAL_ENDPOINT_WITHOUT_API_KEY: "sans-cle-local",
   encryptUserAiKey: () => "chiffré",
+  decryptUserAiKey: () => "sk-test",
   keyPrefix: () => "sk-…",
 }));
 

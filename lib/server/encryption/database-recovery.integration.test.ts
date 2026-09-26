@@ -50,6 +50,7 @@ const bookmarkTemplate = "minddy_min591_bookmark_audit";
 const routineContentTemplate = "minddy_min591_routine_audit";
 const projectContentTemplate = "minddy_min591_project_audit";
 const pageContentTemplate = "minddy_min591_page_audit";
+const userAiKeyTemplate = "minddy_min591_byok_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -5427,6 +5428,118 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
         { actorId: actor, reason: "migration_verification" })).rejects.toThrow();
       expect(() => sql(restored, `UPDATE public.pages SET title='Old writer'
         WHERE id=${quote(children[0])};`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const database of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${database} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
+
+  it("restores sealed BYOK assignments before credentials and users", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_byok_source_${suffix}`;
+    const restored = `minddy_min591_byok_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32), users = [randomUUID(), randomUUID()];
+    const ids = [randomUUID(), randomUUID()];
+    const scopes = users.map((id): EncryptionScope => ({ kind: "user", id }));
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(userAiKeyTemplate, "SELECT count(*) FROM auth.users;"))
+        .toBe("0");
+      for (const database of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${database} TEMPLATE ${userAiKeyTemplate};`);
+        created.push(database);
+      }
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const codec = new EncryptedRowCodec(new EncryptedStore(keys));
+      for (const [index, user] of users.entries()) {
+        sql(source, `INSERT INTO auth.users(id) VALUES(${quote(user)});`);
+        if (index === 1) {
+          const first = await keys.current(scopes[index]);
+          first.bytes.fill(0);
+          await keys.rotate(scopes[index], 1);
+        }
+        const sealed = await codec.encode({ id: ids[index], user_id: user,
+          provider: "openrouter", key_encrypted: `private-byok-${index}`,
+          base_url: `https://private-endpoint-${index}.example/v1`,
+          feature_models: { assistant: `private-model-${index}` },
+          encrypted_content: null, encryption_version: 0 },
+        { table: "user_ai_keys", scope: scopes[index] });
+        sql(source, `INSERT INTO public.user_ai_keys(id,user_id,provider,
+            key_encrypted,base_url,feature_models,encrypted_content,
+            encryption_version)
+          VALUES(${quote(ids[index])},${quote(user)},'openrouter',NULL,NULL,
+            NULL,${quote(sealed.encrypted_content as string)},
+            ${sealed.encryption_version});
+          INSERT INTO public.user_ai_capability_assignments(
+            user_id,capability,ai_key_id)
+          VALUES(${quote(user)},'text',${quote(ids[index])});`);
+        keys.invalidate(scopes[index]);
+      }
+      expect(sql(source, "SELECT public.activate_user_ai_key_content();"))
+        .toBe("t");
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["auth.users", "public.user_ai_keys",
+          "public.user_ai_capability_assignments",
+          "public.user_ai_key_content_scope", "public.envelope_data_keys"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      for (const secret of ["private-byok", "private-endpoint",
+        "private-model"]) expect(dump).not.toContain(secret);
+      let remainder = dump;
+      const copies = new Map<string, { header: string; lines: string[] }>();
+      for (const table of ["user_ai_capability_assignments", "user_ai_keys"]) {
+        const start = remainder.indexOf(`COPY public.${table} `);
+        expect(start).toBeGreaterThanOrEqual(0);
+        const bodyStart = remainder.indexOf("\n", start) + 1;
+        const bodyEnd = remainder.indexOf("\\.\n", bodyStart);
+        copies.set(table, { header: remainder.slice(start, bodyStart),
+          lines: remainder.slice(bodyStart, bodyEnd).trimEnd().split("\n") });
+        remainder = remainder.slice(0, start) + remainder.slice(bodyEnd + 3);
+      }
+      for (const table of ["user_ai_capability_assignments", "user_ai_keys"]) {
+        const copy = copies.get(table)!;
+        for (const line of copy.lines.reverse()) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;
+            ${copy.header}${line}\n\\.\nCOMMIT;`);
+        }
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;
+        ${remainder}\nCOMMIT;`);
+      expect(sql(restored, `SELECT count(*)
+        FROM public.user_ai_capability_assignments assignment
+        JOIN public.user_ai_keys credential
+          ON credential.id=assignment.ai_key_id
+        JOIN auth.users owner ON owner.id=credential.user_id;`)).toBe("2");
+      const cold = new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored), wrapper(root))));
+      for (const [index, id] of ids.entries()) {
+        const row = JSON.parse(sql(restored, `SELECT row_to_json(k)
+          FROM public.user_ai_keys k WHERE id=${quote(id)};`));
+        expect(row.encryption_version).toBe(index + 1);
+        expect(row.key_encrypted).toBeNull();
+        expect(row.base_url).toBeNull();
+        expect(row.feature_models).toBeNull();
+        const plain = await cold.decode(row,
+          { table: "user_ai_keys", scope: scopes[index] },
+          { actorId: users[index], reason: "migration_verification" });
+        expect(plain.key_encrypted).toBe(`private-byok-${index}`);
+      }
+      const wrong = new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored), wrapper(randomBytes(32)))));
+      const row = JSON.parse(sql(restored, `SELECT row_to_json(k)
+        FROM public.user_ai_keys k WHERE id=${quote(ids[0])};`));
+      await expect(wrong.decode(row,
+        { table: "user_ai_keys", scope: scopes[0] },
+        { actorId: users[0], reason: "migration_verification" }))
+        .rejects.toThrow();
+      expect(() => sql(restored, `UPDATE public.user_ai_keys
+        SET key_encrypted='old writer' WHERE id=${quote(ids[0])};`)).toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();

@@ -9,7 +9,7 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 168 application tables and 1,502 columns, their primary
+- `schema.json` records 169 application tables and 1,509 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 174 encryption targets include the original content,
@@ -98,7 +98,7 @@ must be checked separately.
 | Forge data | Forge mention throttle identities and private repository names now use stable system blind indexes. The names have a recoverable encrypted registry and guarded equality keys across linked copies. Default branches use project-bound envelopes. Convert remaining legacy webhook credentials. The generic row codec deliberately refuses sensitive primary keys. |
 | Files and images | Attachment, page-file and project-icon server paths now use opaque names, ciphertext bytes and authorized download routes. The icon bucket switches to private only after the object queue is empty; other object copies still need review. Public avatars have an explicit public-use exception. |
 | Feedback and sharing | Feedback posts, private visitor identities, board SSO secrets and recoverable share tokens have repository and migration checkpoints below. Remaining feedback copies still need conversion; owner dialogs must retain access to share URLs. |
-| Credentials and configuration | The `app_config.value` repository now has a system-key envelope, bounded CAS rotation and an activated old-writer guard. Migrate other legacy environment-key envelopes and secret/configuration stores; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
+| Credentials and configuration | `app_config.value` and BYOK credentials, endpoints and private model choices have bounded CAS envelopes and activated old-writer guards. Migrate remaining legacy environment-key envelopes and secret/configuration stores; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
 | Migration and recovery | Add restartable batches for every target and object, compare-and-swap against concurrent edits, verification counters, rejection of obsolete writers, a restoration rehearsal and retention of historical wrapped keys. Test mixed plaintext/encrypted tenants and old versions. |
 | Root key and operations | Provision a dedicated root key outside the database and rehearse key backup and restore. The offline root-key rewrap procedure is implemented and tested on isolated PostgreSQL; production rehearsal and application-scale latency remain. Production deployment and migration require a later explicit deployment request. |
 
@@ -1764,3 +1764,25 @@ cold caches and rejects an incorrect root key. The page flag and global content
 flag remain disabled in production. Representative search, latency, key-cache
 and load measurements remain controls before production activation, not code
 PR blockers. Other MIN-591 targets remain open.
+
+## BYOK credential checkpoint — 26 September 2026
+
+`user_ai_keys.key_encrypted`, `base_url` and `feature_models` now move together
+into a row-bound user-key envelope. Capability assignments retain only opaque
+credential IDs. Account settings decode only after the owner check and return
+an explicit safe projection without the credential. Agent resolution uses the
+same codec; account export includes the endpoint but never the secret.
+
+Protected save and preference RPCs preserve assignment atomicity and use the
+content revision as a compare-and-swap token. A 30-row maintenance pass
+verifies legacy credentials, migrates or rotates them and records conflicts.
+Failed attempts advance an independent queue timestamp without marking the row
+verified, so an unreadable credential cannot starve later rows or activate the
+gate.
+Activation requires checked sealed rows; SQL rejects clear inserts, updates,
+scope changes and obsolete writers. The regression covers source and old RPC
+rejection. PostgreSQL recovery loads assignments before credentials and users
+in separate batches, reads two key versions with cold caches and rejects an
+incorrect root key. `MINDDY_USER_AI_KEY_ENCRYPTION_ENABLED` and the global
+content flag remain off in production. Other legacy credential stores and the
+remaining MIN-591 boundaries are still open.

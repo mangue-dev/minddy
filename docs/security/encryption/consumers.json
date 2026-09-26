@@ -17,70 +17,91 @@
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 136,
+    "line": 154,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_capability_assignments",
-    "line": 141,
+    "line": 159,
+    "storage": false
+  },
+  {
+    "file": "app/api/account/ai-keys/route.ts",
+    "operation": "from",
+    "resource": "user_ai_keys",
+    "line": 283,
+    "storage": false
+  },
+  {
+    "file": "app/api/account/ai-keys/route.ts",
+    "operation": "rpc",
+    "resource": "upsert_user_ai_key_protected",
+    "line": 301,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "rpc",
     "resource": "upsert_user_ai_key",
-    "line": 279,
+    "line": 324,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_capability_assignments",
-    "line": 296,
+    "line": 347,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "rpc",
     "resource": "delete_user_ai_key",
-    "line": 318,
+    "line": 370,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 376,
+    "line": 428,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "rpc",
     "resource": "set_user_ai_capability_assignment",
-    "line": 394,
+    "line": 446,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 415,
+    "line": 467,
+    "storage": false
+  },
+  {
+    "file": "app/api/account/ai-keys/route.ts",
+    "operation": "rpc",
+    "resource": "update_user_ai_key_preferences_protected",
+    "line": 541,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "rpc",
     "resource": "update_user_ai_key_preferences",
-    "line": 476,
+    "line": 555,
     "storage": false
   },
   {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_capability_assignments",
-    "line": 501,
+    "line": 586,
     "storage": false
   },
   {
@@ -1697,196 +1718,196 @@
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 209,
+    "line": 211,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 227,
+    "line": 229,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_agent_preferences",
-    "line": 261,
+    "line": 263,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 277,
+    "line": 279,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "page_files",
-    "line": 288,
+    "line": 290,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 300,
+    "line": 302,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "views",
-    "line": 315,
+    "line": 317,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "saved_views",
-    "line": 316,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "agent_routines",
     "line": 318,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
-    "resource": "cycles",
+    "resource": "agent_routines",
     "line": 320,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
-    "resource": "conversations",
+    "resource": "cycles",
     "line": 322,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
+    "resource": "conversations",
+    "line": 324,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-export.ts",
+    "operation": "from",
     "resource": "notifications",
-    "line": 327,
+    "line": 329,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 339,
+    "line": 341,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 345,
+    "line": 347,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "ai_usage",
-    "line": 357,
+    "line": 359,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 365,
+    "line": 367,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 370,
+    "line": 372,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 375,
+    "line": 377,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 382,
+    "line": 384,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 387,
+    "line": 389,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 401,
+    "line": 403,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 426,
+    "line": 428,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 430,
+    "line": 432,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_messages",
-    "line": 444,
+    "line": 446,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_turns",
-    "line": 449,
+    "line": 451,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversation_contexts",
-    "line": 457,
+    "line": 459,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversation_contexts",
-    "line": 461,
+    "line": 463,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "issue_categories",
-    "line": 527,
+    "line": 529,
     "storage": false
   },
   {
@@ -2215,35 +2236,35 @@
     "file": "lib/server/agent/model.ts",
     "operation": "from",
     "resource": "user_agent_preferences",
-    "line": 67,
+    "line": 68,
     "storage": false
   },
   {
     "file": "lib/server/agent/model.ts",
     "operation": "from",
     "resource": "user_agent_preferences",
-    "line": 87,
+    "line": 88,
     "storage": false
   },
   {
     "file": "lib/server/agent/model.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 227,
+    "line": 228,
     "storage": false
   },
   {
     "file": "lib/server/agent/model.ts",
     "operation": "from",
     "resource": "user_ai_capability_assignments",
-    "line": 255,
+    "line": 256,
     "storage": false
   },
   {
     "file": "lib/server/agent/model.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 264,
+    "line": 265,
     "storage": false
   },
   {
@@ -3440,21 +3461,21 @@
     "file": "lib/server/assistant/project-scope.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 47,
+    "line": 48,
     "storage": false
   },
   {
     "file": "lib/server/assistant/project-scope.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 52,
+    "line": 53,
     "storage": false
   },
   {
     "file": "lib/server/assistant/project-scope.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 60,
+    "line": 61,
     "storage": false
   },
   {
@@ -6003,6 +6024,27 @@
     "operation": "from",
     "resource": "stat_events",
     "line": 36,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/user-ai-key-backfill.ts",
+    "operation": "from",
+    "resource": "user_ai_keys",
+    "line": 23,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/user-ai-key-backfill.ts",
+    "operation": "from",
+    "resource": "user_ai_keys",
+    "line": 57,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/user-ai-key-backfill.ts",
+    "operation": "from",
+    "resource": "user_ai_keys",
+    "line": 76,
     "storage": false
   },
   {
@@ -10756,6 +10798,13 @@
     "operation": "from",
     "resource": "projects",
     "line": 222,
+    "storage": false
+  },
+  {
+    "file": "lib/server/user-ai-key-content.ts",
+    "operation": "from",
+    "resource": "user_ai_key_content_scope",
+    "line": 33,
     "storage": false
   },
   {

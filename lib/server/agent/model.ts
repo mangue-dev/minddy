@@ -19,9 +19,10 @@ import {
   type ReasoningLevel,
 } from "@/lib/agent-reasoning";
 import {
-  decryptUserAiKey,
   LOCAL_ENDPOINT_WITHOUT_API_KEY,
 } from "./byok-credentials";
+import { decodeUserAiKeyRow, type UserAiKeyRow } from
+  "@/lib/server/user-ai-key-content";
 import { getOpenRouterModelInfo } from "./openrouter-index";
 import type { VmModelPricing } from "./vm/protocol";
 import {
@@ -264,14 +265,14 @@ async function resolveUserByok(
   let keyQuery = supabase
     .from("user_ai_keys")
     .select(
-      "provider, key_encrypted, base_url, validated_at, updated_at, enabled_surfaces, feature_models",
+      "id, user_id, provider, key_encrypted, base_url, validated_at, updated_at, enabled_surfaces, feature_models, encrypted_content, encryption_version, content_revision",
     )
     .eq("user_id", userId);
   keyQuery = "provider" in target
     ? keyQuery.eq("provider", target.provider)
     : keyQuery.eq("id", aiKeyId!);
   const { data } = await keyQuery.maybeSingle();
-  const row = data as {
+  const stored = data as ({
     provider: string;
     key_encrypted: string | null;
     base_url: string | null;
@@ -279,7 +280,9 @@ async function resolveUserByok(
     updated_at: string;
     enabled_surfaces: AiSurface[] | null;
     feature_models: ByokFeatureModels | null;
-  } | null;
+  } & UserAiKeyRow) | null;
+  if (!stored) return null;
+  const row = await decodeUserAiKeyRow(stored, userId).catch(() => null);
   if (!row) return null;
   const enabledSurfaces = Array.isArray(row.enabled_surfaces)
     ? row.enabled_surfaces
@@ -293,7 +296,7 @@ async function resolveUserByok(
   const apiKey =
     row.key_encrypted === LOCAL_ENDPOINT_WITHOUT_API_KEY
       ? ""
-      : decryptUserAiKey(row.key_encrypted);
+      : row.key_encrypted;
   // The key remains mandatory for all cloud providers. Locally, Ollama
   // and most OpenAI-compatible servers do not require any: the
   // proxy will then remove the placeholder from opencode instead of sending it.
@@ -330,7 +333,7 @@ async function resolveUserByok(
   return {
     provider,
     apiKey: apiKey ?? "",
-    credentialVersion: row.updated_at,
+    credentialVersion: stored.updated_at,
     baseUrl,
     enabledSurfaces,
     featureModels: row.feature_models ?? {},

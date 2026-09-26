@@ -17,6 +17,8 @@ import { decodeSavedView } from "@/lib/server/saved-view-bookmark";
 import { decodeRoutine } from "@/lib/server/routine-content";
 import { decodeProject } from "@/lib/server/project-content";
 import { decodePageProjection } from "@/lib/server/page-content";
+import { decodeUserAiKeyRow, type UserAiKeyRow } from
+  "@/lib/server/user-ai-key-content";
 import { downloadAttachment } from "@/lib/server/attachments";
 import { decodeAttachmentRow, type AttachmentTable } from
   "@/lib/server/attachment-content";
@@ -386,7 +388,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       .order("created_at"),
     service
       .from("user_ai_keys")
-      .select("provider, key_prefix, base_url, created_at, last_used_at")
+      .select("id, user_id, provider, key_encrypted, key_prefix, base_url, feature_models, encrypted_content, encryption_version, created_at, last_used_at")
       .eq("user_id", userId)
       .order("created_at"),
   ]);
@@ -622,6 +624,12 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     connected_apps: list("oauth_grants", grants),
     git_connections: list("git_connections", gitConnections),
     git_user_identities: list("git_user_identities", gitIdentities),
-    model_keys: list("user_ai_keys", modelKeys),
+    model_keys: await Promise.all(list("user_ai_keys", modelKeys).map(
+      async (row) => {
+        const plain = await decodeUserAiKeyRow(row as UserAiKeyRow, userId);
+        return { provider: plain.provider, key_prefix: plain.key_prefix,
+          base_url: plain.base_url, created_at: plain.created_at,
+          last_used_at: plain.last_used_at };
+      })),
   };
 }
