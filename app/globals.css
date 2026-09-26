@@ -351,6 +351,21 @@ a.markdown-link::before {
   background-color: var(--primary-foreground);
 }
 
+/* ── A ghost stays transparent ──────────────────────────────────────────────
+   mango-ui 0.8.0 paints the ghost variant `bg-background` — it assumes the
+   button rests on a surface of its own color. On minddy's gray chrome that
+   makes every quiet chrome button (new ticket, usage, scratchpad, board
+   filter, create objective…) read as a floating white pill. A ghost's whole
+   point is to borrow the surface it sits on, so restore transparency: the
+   variant keeps its hover / expanded feedback (`hover:bg-control-hover`,
+   `aria-expanded:bg-control-hover`), and the off-layer rule beats the
+   `bg-background` utility compiled by the dependency. Explicit `bg-*` classes
+   a caller passes are lost in the process — they carried the same 0.7-era
+   look (white on white), not a different one. */
+[data-slot="button"][data-variant="ghost"] {
+  background-color: transparent;
+}
+
 
 
 /* ── Diff view of Pull Requests (MIN-66, MIN-181) ─────────────────────────────
@@ -439,6 +454,15 @@ a.markdown-link::before {
   --sidebar-border: oklch(0.912 0.008 264);
   --app-tab-background: color-mix(in oklab, var(--sidebar-accent) 55%, transparent);
   --app-tab-active-background: var(--background);
+
+  /* mango-ui 0.8.0 fills its borderless controls with an opaque gray
+     (--control oklch(0.935)) that reads heavy next to our white surfaces —
+     inputs and outline buttons sat as dark chips on the page. Since the
+     controls carry no border anymore, the fill must stay whisper-light to
+     keep contrast with white: barely grayer than the sidebar, hover one
+     clear step below. */
+  --control: oklch(0.972 0.005 264);
+  --control-hover: oklch(0.938 0.008 264);
 }
 /* Keep content slightly lighter than both sidebar levels, including floating
    navigation. The shared surface scale below also covers cards and popovers. */
@@ -464,9 +488,11 @@ a.markdown-link::before {
   --app-tab-background: color-mix(in oklab, var(--sidebar-accent) 30%, transparent);
   --app-tab-active-background: color-mix(in oklab, var(--sidebar-accent) 94%, white);
 
-  /* Fields and neutral badges stay above the surface; hover adds another step. */
-  --control: oklch(0.240 0.005 264);
-  --control-hover: oklch(0.270 0.005 264);
+  /* Fields and neutral badges stay above the surface; hover adds another step.
+     One notch lighter than 0.7 kept them: the borderless fill must stay clearly
+     readable on the dark background, and hover must be felt. */
+  --control: oklch(0.262 0.006 264);
+  --control-hover: oklch(0.298 0.006 264);
 }
 
 /* ── Floating content pane (Linear-style shell, test) ────────────────────────
