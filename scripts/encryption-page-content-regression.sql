@@ -8,6 +8,8 @@ END $$;
 DO $test$
 DECLARE actor uuid:=gen_random_uuid(); project uuid:=gen_random_uuid();
   parent uuid:=gen_random_uuid(); child uuid:=gen_random_uuid();
+  imported uuid:=gen_random_uuid(); imported_child uuid:=gen_random_uuid();
+  request_id uuid:=gen_random_uuid();
   cipher text:='{"format":3,"keyVersion":1,"data":"opaque"}';
   original_revision bigint; changed integer; rejected boolean;
   result jsonb;
@@ -55,6 +57,34 @@ BEGIN
   IF NOT public.activate_page_content() THEN
     RAISE EXCEPTION 'Verified pages refused activation';
   END IF;
+  INSERT INTO public.pages(id,project_id,title,icon,content,database_schema,
+    database_title_name,property_values,search_text,encrypted_content,
+    encryption_version,page_is_database,page_has_values,page_is_blank,
+    position,created_by)
+    VALUES(imported,project,NULL,NULL,NULL,NULL,NULL,NULL,NULL,cipher,
+      1,true,false,false,'b',actor);
+  result:=public.import_encrypted_page_database(project,imported,actor,
+    request_id,0,(SELECT content_revision FROM public.pages WHERE id=imported),
+    jsonb_build_array(
+      jsonb_build_object('id',imported,'parent_id',NULL,
+        'encrypted_content',cipher,'encryption_version',1,
+        'page_is_database',true,'page_has_values',false,
+        'page_is_blank',false),
+      jsonb_build_object('id',imported_child,'parent_id',imported,
+        'position','a','encrypted_content',cipher,'encryption_version',1,
+        'page_is_database',false,'page_has_values',true,
+        'page_is_blank',false)), '[]'::jsonb);
+  IF result->>'count'<>'1' OR result->>'replayed'<>'false' OR
+      EXISTS(SELECT 1 FROM public.pages WHERE id=imported_child AND
+        (title IS NOT NULL OR content IS NOT NULL OR
+         property_values IS NOT NULL OR search_text IS NOT NULL)) THEN
+    RAISE EXCEPTION 'Encrypted import retained clear content: %',result;
+  END IF;
+  result:=public.import_encrypted_page_database(project,imported,actor,
+    request_id,0,0,'[]'::jsonb,'[]'::jsonb);
+  IF result->>'replayed'<>'true' THEN
+    RAISE EXCEPTION 'Encrypted import lost idempotence';
+  END IF;
   result:=public.commit_page_content_batch(project,actor,parent,
     jsonb_build_array(
       jsonb_build_object('id',parent,'revision',(SELECT content_revision
@@ -68,6 +98,21 @@ BEGIN
       'databaseRevision',1)),ARRAY[child], 'human',NULL);
   IF result->>'status'<>'updated' THEN
     RAISE EXCEPTION 'Encrypted batch was not applied: %',result;
+  END IF;
+  UPDATE public.pages SET deleted_at=now() WHERE id=child;
+  result:=public.commit_page_content_batch(project,actor,parent,
+    jsonb_build_array(
+      jsonb_build_object('id',parent,'revision',(SELECT content_revision
+        FROM public.pages WHERE id=parent),'databaseRevision',1,
+        'version',1,'parentId',NULL),
+      jsonb_build_object('id',child,'revision',(SELECT content_revision
+        FROM public.pages WHERE id=child),'databaseRevision',0,
+        'version',1,'parentId',parent)),
+    jsonb_build_array(jsonb_build_object('id',child,'ciphertext',cipher,
+      'keyVersion',1,'isDatabase',false,'hasValues',false,'isBlank',false,
+      'databaseRevision',0)),ARRAY[child], 'human',NULL);
+  IF result->>'status'<>'updated' THEN
+    RAISE EXCEPTION 'Trashed database entry missed schema cleanup: %',result;
   END IF;
   rejected:=false;
   BEGIN
@@ -96,6 +141,10 @@ BEGIN
   IF pg_get_functiondef('public.broadcast_page_row()'::regprocedure)
       NOT LIKE '%''encrypted_content''%' THEN
     RAISE EXCEPTION 'Realtime page payload does not exclude ciphertext';
+  END IF;
+  DELETE FROM public.pages WHERE id=parent;
+  IF EXISTS(SELECT 1 FROM public.pages WHERE id=child) THEN
+    RAISE EXCEPTION 'Encrypted child survived permanent parent deletion';
   END IF;
 END;
 $test$;

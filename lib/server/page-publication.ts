@@ -101,20 +101,32 @@ export async function getPublicPageBundle(
   let pages: PublicPageNode[] = [root];
   let databasePages: DatabaseDocumentPage[] = [ctx.page];
   if (ctx.share.include_children) {
-    const { data } = await service
-      .from("pages")
-      .select("id, project_id, parent_id, title, icon, position, database_schema, property_values, created_at, encrypted_content, encryption_version")
-      .eq("project_id", ctx.project.id)
-      .is("deleted_at", null);
-    const all = await Promise.all((data ?? []).map((row) =>
-      decodePageProjection(row))) as Array<PublicPageNode & { position: string }>;
-    const inBranch = descendantIds(all, root.id);
-    databasePages = all.filter((page) => page.id === root.id || inBranch.includes(page.id));
+    const hierarchy: { id: string; parent_id: string | null }[] = [];
+    for (let offset = 0; ; offset += 200) {
+      const { data, error } = await service.from("pages")
+        .select("id,parent_id").eq("project_id", ctx.project.id)
+        .is("deleted_at", null).order("id", { ascending: true })
+        .range(offset, offset + 199);
+      if (error) return null;
+      hierarchy.push(...(data ?? []));
+      if (!data || data.length < 200) break;
+    }
+    const inBranch = descendantIds(hierarchy, root.id);
+    const all: Array<PublicPageNode & { position: string }> = [];
+    for (let offset = 0; offset < inBranch.length; offset += 100) {
+      const { data, error } = await service.from("pages")
+        .select("id, project_id, parent_id, title, icon, position, database_schema, property_values, created_at, encrypted_content, encryption_version")
+        .eq("project_id", ctx.project.id).is("deleted_at", null)
+        .in("id", inBranch.slice(offset, offset + 100));
+      if (error) return null;
+      all.push(...await Promise.all((data ?? []).map((row) =>
+        decodePageProjection(row))) as Array<PublicPageNode & { position: string }>);
+    }
+    databasePages = [ctx.page, ...all];
     pages = [
       root,
-      ...all
-        .filter((p) => inBranch.includes(p.id))
-        .map((p) => ({ id: p.id, parent_id: p.parent_id, title: p.title, icon: p.icon })),
+      ...all.map((p) => ({ id: p.id, parent_id: p.parent_id,
+        title: p.title, icon: p.icon })),
     ];
   }
 

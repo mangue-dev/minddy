@@ -9,10 +9,10 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 163 application tables and 1,468 columns, their primary
+- `schema.json` records 168 application tables and 1,502 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
-  column exactly once. Its 176 encryption targets include the original content,
+  column exactly once. Its 174 encryption targets include the original content,
   derived copies, arbitrary user JSON, private identities, credentials and share
   tokens. The relay audit detail target was removed by an action-specific SQL
   guard and historical scrub; opaque attachment object paths replace two path
@@ -20,10 +20,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,536 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,568 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 421 functions, ten views and 224 application triggers. Function
+- `sql-consumers.json` records 427 functions, ten views and 226 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -91,7 +91,7 @@ must be checked separately.
 
 | Surface | Required work and proof of completion |
 | --- | --- |
-| Projects, issues, pages and views | Project names, automation rules and smart-assignment rules now have converted repositories, authorized projections and an activated old-writer guard. Pages and any remaining sensitive derived copies still need conversion. Preserve access checks before decryption and existing concurrency semantics. Objectives and category names have converted repositories and bounded migrations; representative production-scale validation remains a pre-activation check. |
+| Projects, issues, pages and views | Project names, automation rules, smart-assignment rules, pages and their database cells now have converted repositories, authorized projections and activated old-writer guards. Review any remaining sensitive derived copies before global activation. Objectives and category names have converted repositories and bounded migrations; representative production-scale validation remains a pre-activation check. |
 | Histories and derived copies | Page versions, issue events, statistics, durable agent replay journals and run event payloads now have converted repositories and migration. The event-triggered assistant summary and pending question copies are protected with their event. Numo surface destinations and the non-worker durable activity payloads now have protected readers, writers and migrations; initial prompts, other surface projections, checkpoints and conversation content remain to be converted with their source rows. |
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
@@ -1734,3 +1734,33 @@ wrong root key. `MINDDY_PROJECT_CONTENT_ENCRYPTION_ENABLED` remains disabled
 in production. Pages and other global MIN-591 targets remain open. Search,
 latency, key-cache and load measurements are pre-activation checks, not code PR
 blockers.
+
+## Page content and database-cell checkpoint — 26 September 2026
+
+Page titles, icons, bodies, database schemas, title-column names and entry
+values now use one project-bound row envelope. Page history and file metadata
+retain their earlier independent encryption. Authorized page, AI/MCP, export,
+Numo and public-share readers decode after their access gate. Public branch
+reads scan only page IDs and parent IDs across the project before fetching
+content for the branch; unrelated pages are never decrypted for that share.
+Search reads RLS-visible pages in batches and ranks the decoded content in the
+application. The stored search text and generated vector clear with the source.
+Realtime carries invalidation metadata without content or ciphertext.
+
+Page edits, duplicate trees, database schema/value changes and archive imports
+write ciphertext. The database batch checks parent and child revisions while
+holding locks and updates deleted entries alongside a changed schema, so
+restoration cannot revive stale cells. Imports keep request replay atomic. The
+permanent-delete foreign keys now cascade through encrypted page trees instead
+of detaching populated entries. A 30-row worker verifies legacy conversion and
+rotates old envelopes under a content-revision compare-and-swap. Activation
+requires checked encrypted rows and rejects obsolete plaintext writers.
+
+The isolated SQL regression covers sources, search and Realtime projections,
+atomic database edits/import, idempotence, trashed entries, purge and old-writer
+rejection. A real PostgreSQL dump/restore loads encrypted children before
+parents, projects and users in separate batches, verifies two key versions from
+cold caches and rejects an incorrect root key. The page flag and global content
+flag remain disabled in production. Representative search, latency, key-cache
+and load measurements remain controls before production activation, not code
+PR blockers. Other MIN-591 targets remain open.

@@ -49,6 +49,7 @@ const viewContentTemplate = "minddy_min591_view_audit";
 const bookmarkTemplate = "minddy_min591_bookmark_audit";
 const routineContentTemplate = "minddy_min591_routine_audit";
 const projectContentTemplate = "minddy_min591_project_audit";
+const pageContentTemplate = "minddy_min591_page_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -5314,4 +5315,125 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       }
     }
   },60_000);
+
+  it("restores sealed page trees from independent child-first batches", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_page_source_${suffix}`;
+    const restored = `minddy_min591_page_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32), actor = randomUUID(), project = randomUUID();
+    const parents = [randomUUID(), randomUUID()];
+    const children = [randomUUID(), randomUUID()];
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(pageContentTemplate, "SELECT count(*) FROM auth.users;")).toBe("0");
+      expect(sql(pageContentTemplate, "SELECT count(*) FROM public.pages;")).toBe("0");
+      for (const database of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${database} TEMPLATE ${pageContentTemplate};`);
+        created.push(database);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+        VALUES(${quote(project)},${quote(actor)},'Project','PGRE');`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const codec = new EncryptedRowCodec(new EncryptedStore(keys));
+      for (const index of [0, 1]) {
+        if (index === 1) await keys.rotate(scope, 1);
+        const propertyId = randomUUID();
+        for (const [isParent, id] of [[true, parents[index]],
+          [false, children[index]]] as const) {
+          const title = `Private page ${index} ${isParent ? "parent" : "child"}`;
+          const plain: StoredRow = {
+            id, project_id: project, title, icon: "private-icon",
+            content: { type: "doc", content: [{ type: "paragraph",
+              content: [{ type: "text", text: `Private body ${index}` }] }] },
+            database_schema: isParent
+              ? [{ id: propertyId, name: `Private property ${index}`, type: "text" }]
+              : null,
+            database_title_name: isParent ? `Private title ${index}` : null,
+            property_values: isParent ? {} : { [propertyId]: `Private cell ${index}` },
+            encrypted_content: null, encryption_version: 0,
+          };
+          const sealed = await codec.encode(plain, { table: "pages", scope });
+          sql(source, `INSERT INTO public.pages(id,project_id,parent_id,
+              position,created_by,title,icon,content,database_schema,
+              database_title_name,property_values,search_text,
+              encrypted_content,encryption_version,page_is_database,
+              page_has_values,page_is_blank)
+            VALUES(${quote(id)},${quote(project)},
+              ${isParent ? "NULL" : quote(parents[index])},'a',${quote(actor)},
+              NULL,NULL,NULL,NULL,NULL,NULL,NULL,
+              ${quote(sealed.encrypted_content as string)},
+              ${sealed.encryption_version},${isParent},${!isParent},false);`);
+        }
+        keys.invalidate(scope);
+      }
+      expect(sql(source, "SELECT public.activate_page_content();")).toBe("t");
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["auth.users", "public.projects", "public.pages",
+          "public.page_content_encryption_scope", "public.envelope_data_keys"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      for (const secret of ["Private page", "Private body", "Private cell",
+        "Private property", "Private title", "private-icon"]) {
+        expect(dump).not.toContain(secret);
+      }
+      let remainder = dump;
+      const start = remainder.indexOf("COPY public.pages ");
+      expect(start).toBeGreaterThanOrEqual(0);
+      const bodyStart = remainder.indexOf("\n", start) + 1;
+      const bodyEnd = remainder.indexOf("\\.\n", bodyStart);
+      const header = remainder.slice(start, bodyStart);
+      const lines = remainder.slice(bodyStart, bodyEnd).trimEnd().split("\n");
+      remainder = remainder.slice(0, start) + remainder.slice(bodyEnd + 3);
+      expect(lines).toHaveLength(4);
+      for (const id of [...children, ...parents]) {
+        const line = lines.find((item) => item.startsWith(`${id}\t`));
+        expect(line).toBeDefined();
+        sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;
+          ${header}${line}\n\\.\nCOMMIT;`);
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;
+        ${remainder}\nCOMMIT;`);
+      expect(sql(restored, `SELECT count(*) FROM public.pages child
+        JOIN public.pages parent ON parent.id=child.parent_id
+        JOIN public.projects project ON project.id=child.project_id
+        JOIN auth.users actor ON actor.id=child.created_by;`)).toBe("2");
+      const cold = new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored), wrapper(root))));
+      for (const [index, id] of [...parents, ...children].entries()) {
+        const row = JSON.parse(sql(restored, `SELECT row_to_json(p)
+          FROM public.pages p WHERE id=${quote(id)};`));
+        expect(row.encryption_version).toBe(index % 2 + 1);
+        for (const field of ["title", "icon", "content", "database_schema",
+          "database_title_name", "property_values", "search_text"]) {
+          expect(row[field]).toBeNull();
+        }
+        const plain = await cold.decode(row, { table: "pages", scope },
+          { actorId: actor, reason: "migration_verification" });
+        expect(plain.title).toBe(`Private page ${index % 2} ${index < 2 ? "parent" : "child"}`);
+        if (index >= 2) {
+          expect(Object.values(plain.property_values as object))
+            .toEqual([`Private cell ${index % 2}`]);
+        }
+      }
+      const wrong = new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored), wrapper(randomBytes(32)))));
+      const row = JSON.parse(sql(restored, `SELECT row_to_json(p)
+        FROM public.pages p WHERE id=${quote(parents[0])};`));
+      await expect(wrong.decode(row, { table: "pages", scope },
+        { actorId: actor, reason: "migration_verification" })).rejects.toThrow();
+      expect(() => sql(restored, `UPDATE public.pages SET title='Old writer'
+        WHERE id=${quote(children[0])};`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const database of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${database} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
 });

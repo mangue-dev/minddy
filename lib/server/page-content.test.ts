@@ -49,7 +49,7 @@ describe("page content", () => {
     expect(clear.title).toBe(row.title);
     expect(clear.content).toEqual(row.content);
     expect(clear.property_values).toEqual(row.property_values);
-    const projected = await decodePageProjection({ id: row.id,
+    const projected = await decodePageProjection<Record<string, unknown>>({ id: row.id,
       project_id: row.project_id, title: null,
       encrypted_content: stored.encrypted_content,
       encryption_version: stored.encryption_version });

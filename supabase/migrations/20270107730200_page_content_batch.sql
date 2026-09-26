@@ -41,7 +41,9 @@ BEGIN
     expected_ids := array_append(expected_ids,(expected->>'id')::uuid);
     SELECT * INTO current_row FROM public.pages
       WHERE id=(expected->>'id')::uuid AND project_id=p_project_id;
-    IF current_row.id IS NULL OR current_row.deleted_at IS NOT NULL OR
+    -- Trashed entries retain cells and must migrate with their database schema
+    -- so a later restore cannot revive a stale or unsealed value.
+    IF current_row.id IS NULL OR
         current_row.encryption_version < 1 OR
         current_row.content_revision IS DISTINCT FROM (expected->>'revision')::bigint OR
         current_row.database_revision IS DISTINCT FROM (expected->>'databaseRevision')::integer OR

@@ -198,7 +198,7 @@
       "functionReferences": []
     },
     "guard_page_content()": {
-      "sha256": "0f9a06b06c53b739bb165aef26917c847a99e6aa29a60ffbe93469cf2fb01051",
+      "sha256": "19e1c61c4f07e8abfe655e9e94c12ee5bb1b3bb05f504de7808d19ebc0132ef7",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1647,18 +1647,14 @@
       "functionReferences": []
     },
     "guard_page_database_parent()": {
-      "sha256": "f68605b77364ad46cae4ab4b6028f46365628ca91004844ac0761d6694d14ed2",
+      "sha256": "0d7ea7f7d15c1624251726b411347f253c0e7d7442e68c6cb17dd1e1100d8909",
       "securityDefiner": false,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "pages"
-      ],
-      "protectedRelations": [
-        "pages"
-      ],
+      "relations": [],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "guard_pr_comment_edit_body()": {
@@ -4938,7 +4934,7 @@
       "functionReferences": []
     },
     "update_page_database_guarded(uuid,uuid,uuid,jsonb)": {
-      "sha256": "516e2aec969841855a482f9f4301e79040f94f35fde0971db37f8822c8adcdbf",
+      "sha256": "1ba942971824f6a3f2601faf0209a3d3abce6933dc2ecb4f82112ff4948b0d61",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4955,7 +4951,7 @@
       ]
     },
     "convert_page_database_guarded(uuid,uuid,uuid,jsonb)": {
-      "sha256": "8a58b4ba726463fcd7cd81c2fe7a167a6f4e527d8cfcb67c06881beb82ca8f51",
+      "sha256": "fe82cd562a11fa1a2f6527c05735787ae53e71acf7b8ccc41cdc509c91b69b8d",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -5410,7 +5406,7 @@
       "functionReferences": []
     },
     "import_page_database(uuid,uuid,uuid,uuid,integer,jsonb,jsonb)": {
-      "sha256": "89e80b6ee8dffe374ea6e98a2dc9a27ead6c7045b410740be01609893856dad6",
+      "sha256": "ed5c4845d898df21b468ad93681cf8fc1d7ed5b57f0615e1b2526f5d84b9bf9e",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -5853,7 +5849,7 @@
       "functionReferences": []
     },
     "commit_page_content_batch(uuid,uuid,uuid,jsonb,jsonb,uuid[],text,uuid)": {
-      "sha256": "0e3811a64e45c235ec3793ce0003bc92abbedd84a5a626e4ed98677b48e2a39d",
+      "sha256": "aa96487fb901d9d30c1a539028144f8393facc5095bfe4ea5e66531833755e90",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""

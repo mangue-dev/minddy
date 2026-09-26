@@ -23,7 +23,7 @@ const db = {
   pages: [] as Row[],
   project: null as Row | null,
   files: [] as Row[],
-  pageReads: [] as Array<{ columns: string; filters: Row }>,
+  pageReads: [] as Array<{ columns: string; filters: Row; inIds?: unknown[] }>,
 };
 
 const signed = vi.fn(async (_service: unknown, path: string) => `https://signed/${path}`);
@@ -40,9 +40,11 @@ vi.mock("@/lib/server/attachments", () => ({
 function table(name: string) {
   const filters: Record<string, unknown> = {};
   let ins: unknown[] | undefined;
+  let range: [number, number] | undefined;
   let columns = "";
   const recordRead = () => {
-    if (name === "pages") db.pageReads.push({ columns, filters: { ...filters } });
+    if (name === "pages") db.pageReads.push({ columns,
+      filters: { ...filters }, inIds: ins });
   };
   const api = {
     select: (selected: string) => {
@@ -62,13 +64,19 @@ function table(name: string) {
       return api;
     },
     order: () => api,
+    range: (start: number, end: number) => {
+      range = [start, end];
+      return api;
+    },
     maybeSingle: async () => {
       recordRead();
       return { data: single(name, filters) };
     },
     then: (resolve: (value: { data: unknown; error: null }) => void) => {
       recordRead();
-      resolve({ data: many(name, filters, ins), error: null });
+      const data = many(name, filters, ins);
+      resolve({ data: range ? data.slice(range[0], range[1] + 1) : data,
+        error: null });
     },
   };
   return api;
@@ -89,7 +97,8 @@ function single(name: string, filters: Record<string, unknown>): Row | null {
 
 function many(name: string, filters: Record<string, unknown>, ins?: unknown[]): Row[] {
   if (name === "pages") {
-    return db.pages.filter((p) => p.project_id === filters.project_id);
+    return db.pages.filter((p) => p.project_id === filters.project_id &&
+      (!ins || ins.includes(p.id)));
   }
   if (name === "page_files") {
     return db.files.filter((f) => (ins ?? []).includes(f.id));
@@ -180,6 +189,18 @@ describe("getPublicPageBundle", () => {
     expect(bundle!.pages.map((p) => p.id).sort()).toEqual(["kid", "root"]);
     // The breadcrumbs stop at the published page, never above.
     expect(bundle!.trail.map((p) => p.id)).toEqual(["root"]);
+  });
+
+  it("reads only the published branch's content after a metadata scan", async () => {
+    db.share = share({ include_children: true });
+    db.pages.push(page("other", null, "Unrelated private page"));
+    const bundle = await getPublicPageBundle("tok", "kid");
+    expect(bundle?.pages.map((entry) => entry.id).sort()).toEqual(["kid", "root"]);
+    const branchReads = db.pageReads.filter((read) => read.inIds);
+    expect(branchReads).toHaveLength(1);
+    expect(branchReads[0].inIds).toEqual(["kid"]);
+    expect(db.pageReads.find((read) => read.columns === "id,parent_id"))
+      .toBeDefined();
   });
 
   it("ne sort jamais d'un projet supprimé", async () => {

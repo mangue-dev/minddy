@@ -1024,7 +1024,13 @@ async function syncParentBody(
   actorId: string,
   edit: (doc: PageDocJSON | null) => { doc: PageDocJSON; changed: boolean }
 ): Promise<void> {
-  const parent = await loadPage(service, parentId, actorId);
+  let parent: Page | null;
+  try {
+    parent = await loadPage(service, parentId, actorId);
+  } catch {
+    // A damaged parent body must not prevent a child from entering the trash.
+    return;
+  }
   if (!parent) return;
 
   const { doc, changed } = edit((parent.content as PageDocJSON | null) ?? null);

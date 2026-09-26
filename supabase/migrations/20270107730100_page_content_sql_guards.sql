@@ -174,18 +174,6 @@ CREATE OR REPLACE FUNCTION public.guard_page_database_parent()
 AS $function$
 BEGIN
   IF NEW.parent_id IS DISTINCT FROM OLD.parent_id AND NEW.page_has_values THEN
-    -- A permanent parent deletion may detach the entry, but its typed values
-    -- have no valid schema as a root document and must be cleared atomically.
-    IF pg_trigger_depth() > 1 AND NEW.parent_id IS NULL AND OLD.parent_id IS NOT NULL AND
-       NOT EXISTS (SELECT 1 FROM public.pages WHERE id = OLD.parent_id) THEN
-      IF NEW.encryption_version > 0 THEN
-        RAISE EXCEPTION 'Encrypted database entry requires explicit parent cleanup'
-          USING ERRCODE = '23514';
-      END IF;
-      NEW.property_values := CASE WHEN NEW.encryption_version > 0 THEN NULL ELSE '{}'::jsonb END;
-      NEW.page_has_values := false;
-      RETURN NEW;
-    END IF;
     RAISE EXCEPTION 'Database entries with values cannot change parent'
       USING ERRCODE = '23514', CONSTRAINT = 'page_database_parent_values';
   END IF;
