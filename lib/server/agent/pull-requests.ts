@@ -6,6 +6,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { isRepoProviderId, type RepoProviderId } from "@/lib/repo-providers";
 import { forgeFor } from "./forge";
 import { issueRefFromPr, parseIssueRef } from "./pr-ingest-core";
+import { broadcastPrChangedByNumber } from "./pr-live";
 import type { PullRequestRef } from "./pr";
 
 /**
@@ -530,8 +531,14 @@ async function reconcileDriftedPr(
  * leave the list false forever; a cron that would scan ALL related
  * repositories would be expensive for this one catch-up alone. We therefore resynchronize at the
  * reading, and not more often than that.
+ *
+ * Five minutes (MIN-595): the sweep IS the light background sync — it is
+ * stamped per repository, so all the readers of a window coalesce into ONE
+ * paginated forge read, whoever triggers it. The badge and the list poll
+ * lightly on the client side; this TTL is what bounds how old a
+ * webhook-less fact (dev, self-hosted relay) can get.
  */
-export const REPO_SYNC_TTL_MS = 15 * 60_000;
+export const REPO_SYNC_TTL_MS = 5 * 60_000;
 
 export interface RepoSyncState {
   provider: string;
@@ -712,6 +719,38 @@ export async function syncRepoPullRequests(opts: {
         number: observation.input.number,
         state: observation.state,
         at: observation.at,
+      });
+    }
+  }
+
+  // Live catch-up (MIN-595): the sweep just repaired rows a lost webhook (or a
+  // webhook-less setup) had let go stale. Open panels reread their parts on the
+  // `pull-request:{id}` topic, so tell them what moved — a new HEAD means new
+  // commits, new checks and fresh timeline entries, a new title alone only the
+  // header and the conversation. State-only drift already reconciles below; the
+  // broadcast is per-part, so a row that only flipped state stays quiet here.
+  // Fire-and-forget, like every `pr-live` emitter: a failed broadcast never
+  // fails the sweep.
+  for (const { observation, outcome } of applied) {
+    if (!outcome?.applied || !observation.before) continue;
+    const input = observation.input;
+    const headMoved =
+      input.headSha != null && input.headSha !== (outcome.row.head_sha ?? null);
+    const titleMoved =
+      input.title != null && input.title !== (outcome.row.title ?? null);
+    if (headMoved) {
+      void broadcastPrChangedByNumber({
+        provider: opts.provider,
+        repoFullName: opts.repoFullName,
+        number: input.number,
+        parts: ["pr", "conversation", "commits"],
+      });
+    } else if (titleMoved) {
+      void broadcastPrChangedByNumber({
+        provider: opts.provider,
+        repoFullName: opts.repoFullName,
+        number: input.number,
+        parts: ["pr", "conversation"],
       });
     }
   }
