@@ -1915,9 +1915,7 @@
       "kind": "system",
       "id": "00000000-0000-0000-0000-000000000000"
     },
-    "encrypted": [
-      "webhook_secret_encrypted"
-    ],
+    "encrypted": [],
     "clear": {
       "one_way_authentication": [
         "webhook_secret_digest"

@@ -5,7 +5,6 @@ import crypto from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { requireSecret } from "@/lib/server/env-secrets";
-import { encryptForgeToken } from "@/lib/server/git/token-crypto";
 import {
   createUserDelivery,
   consumeUserDelivery,
@@ -223,7 +222,6 @@ export async function registerGitlabHookSecret(input: {
       provider: "gitlab",
       external_repo_id: input.repoId,
       repo_full_name: await repositoryStorageName("gitlab",input.repo,true,supabase),
-      webhook_secret_encrypted: encryptForgeToken(input.secret),
       webhook_secret_digest: gitlabHookTokenDigest(input.secret),
       updated_at: new Date().toISOString(),
     },

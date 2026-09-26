@@ -9,10 +9,10 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 170 application tables and 1,516 columns, their primary
+- `schema.json` records 170 application tables and 1,515 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
-  column exactly once. Its 174 encryption targets include the original content,
+  column exactly once. Its 173 encryption targets include the original content,
   derived copies, arbitrary user JSON, private identities, credentials and share
   tokens. The relay audit detail target was removed by an action-specific SQL
   guard and historical scrub; opaque attachment object paths replace two path
@@ -20,7 +20,7 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,571 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,584 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
 - `sql-consumers.json` records 427 functions, ten views and 226 application triggers. Function
@@ -1812,3 +1812,14 @@ rehearsal also exposed a table-specific ownership trigger that referenced
 `provider` on installation rows; the migration fixes its branch structure.
 The relay flag and global content flag remain off in production. Other forge
 credentials, sidecars and global MIN-591 targets remain open.
+
+## GitLab relay hook mirror checkpoint — 26 September 2026
+
+`forge_relay_link_mirror.webhook_secret_encrypted` had no reader: GitLab hook
+authentication already uses a purpose-separated keyed digest before parsing
+the request body. The mirror writer now persists only that digest, and the SQL
+migration drops the recoverable secret column, removing existing copies and
+making obsolete writers fail. The route regression proves valid hooks still
+authenticate and no secret copy is retained; the isolated SQL regression
+checks the absent column and old-writer refusal. The per-project hook secret
+source and other forge credentials remain open.

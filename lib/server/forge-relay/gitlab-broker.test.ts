@@ -190,7 +190,7 @@ describe("GitLab token deliveries", () => {
 });
 
 describe("registerGitlabHookSecret", () => {
-  it("stores the per-repo secret ENCRYPTED in the mirror, upserting a minimal row", async () => {
+  it("stores only a keyed token digest in the mirror, upserting a minimal row", async () => {
     const ok = await registerGitlabHookSecret({
       instanceId: INSTANCE_ID,
       repoId: "1001",
@@ -205,7 +205,7 @@ describe("registerGitlabHookSecret", () => {
       external_repo_id: "1001",
       repo_full_name: "acme/app",
     });
-    expect(String(row.webhook_secret_encrypted)).not.toContain("per-repo-hook-secret");
+    expect(row).not.toHaveProperty("webhook_secret_encrypted");
     expect(row.webhook_secret_digest).toBe(
       gitlabHookTokenDigest("per-repo-hook-secret-0123456789abcdef"),
     );

@@ -8216,11 +8216,6 @@
         "type": "text",
         "nullable": true,
         "generated": false
-      },
-      "webhook_secret_encrypted": {
-        "type": "text",
-        "nullable": true,
-        "generated": false
       }
     },
     "primaryKey": [

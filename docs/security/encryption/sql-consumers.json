@@ -2978,8 +2978,7 @@
         "pull_requests",
         "pr_comment_edits",
         "project_git_links",
-        "forge_repository_names",
-        "forge_relay_link_mirror"
+        "forge_repository_names"
       ],
       "functionReferences": []
     },
@@ -4889,8 +4888,7 @@
         "forge_relay_link_mirror"
       ],
       "protectedRelations": [
-        "forge_relay_instances",
-        "forge_relay_link_mirror"
+        "forge_relay_instances"
       ],
       "functionReferences": []
     },
@@ -5051,8 +5049,7 @@
         "forge_relay_link_mirror"
       ],
       "protectedRelations": [
-        "forge_relay_instances",
-        "forge_relay_link_mirror"
+        "forge_relay_instances"
       ],
       "functionReferences": []
     },
@@ -6465,8 +6462,7 @@
         "pull_requests",
         "pr_comment_edits",
         "project_git_links",
-        "forge_repository_names",
-        "forge_relay_link_mirror"
+        "forge_repository_names"
       ],
       "functionReferences": []
     },

@@ -244,10 +244,10 @@ describe("POST /api/relay/gitlab/webhook", () => {
     expect(fakeTables["forge_relay_deliveries"] ?? []).toHaveLength(0);
   });
 
-  it("authenticates before parsing and never decrypts candidate secrets", async () => {
+  it("authenticates from the digest before parsing and keeps no secret copy", async () => {
     await registerAndMirror();
     const row = fakeTables.forge_relay_link_mirror?.[0] as Record<string, unknown>;
-    row.webhook_secret_encrypted = "not-valid-ciphertext";
+    expect(row).not.toHaveProperty("webhook_secret_encrypted");
 
     const malformed = new Request("http://localhost/api/relay/gitlab/webhook", {
       method: "POST",
