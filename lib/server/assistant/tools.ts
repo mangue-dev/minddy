@@ -450,7 +450,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_issue",
       description:
-        "Create an issue. IMPORTANT: unless the user explicitly asked for a specific status, DO NOT pass status — minddy files new issues in the user's chosen Numo landing status (an account setting) on its own. Fill every other field you can: pass an estimated priority and effort (inferred from the description when not stated) unless smart_fill is true, and pass matching category_ids unless smart_fill is true. Resolve assignee/objective/category ids via the list_* tools first.",
+        "Create an issue. IMPORTANT: unless the user explicitly asked for a specific status, DO NOT pass status — minddy files new issues in the user's chosen Numo landing status (an account setting) on its own. Fill every other field you can: pass an estimated priority and effort (inferred from the description when not stated) unless smart_fill is true, and pass matching category_ids unless smart_fill is true. Resolve assignee/objective/category ids via the list_* tools first. When no project is attached to the conversation, resolve the project the user named (by key like 'MIN' or by name like 'minddy') to its id with list_projects BEFORE calling this — never guess an id, and never silently give up because the id was not attached.",
       parameters: {
         type: "object",
         properties: {
@@ -2594,8 +2594,8 @@ function withProjectId(
           project_id: {
             type: "string",
             description: options.required
-              ? "The project ID to operate on. Use list_projects to discover available projects."
-              : "The project ID to operate on. Omit it for the current project. Set it only when the user explicitly names another project, after resolving that project with list_projects.",
+              ? "The project ID to operate on. Use list_projects to discover available projects — when the user names one (key like 'MIN' or display name), resolve it to its id there first; a key or exact name is also matched as a fallback."
+              : "The project ID to operate on. Omit it for the current project. Set it only when the user explicitly names another project, after resolving that project with list_projects (a key or exact name is also matched as a fallback).",
           },
           ...params.properties,
         },
