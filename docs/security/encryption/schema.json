@@ -4289,6 +4289,21 @@
         "type": "jsonb",
         "nullable": true,
         "generated": false
+      },
+      "content_revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "verification_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "verification_encryption_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -10442,6 +10457,24 @@
         "targetColumn": "id"
       }
     ]
+  },
+  "custom_domain_verification_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
   },
   "pr_comment_edit_encryption_scope": {
     "columns": {

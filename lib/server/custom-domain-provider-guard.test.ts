@@ -44,6 +44,7 @@ const ROW = {
   share_id: null,
   status: "pending" as const,
   verification: null,
+  content_revision: 0,
   cname_target: null,
   created_at: "2026-08-26T00:00:00.000Z",
   updated_at: "2026-08-26T00:00:00.000Z",

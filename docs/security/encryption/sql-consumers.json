@@ -3534,6 +3534,21 @@
       ],
       "functionReferences": []
     },
+    "guard_custom_domain_verification()": {
+      "sha256": "122aef3d3fecd7ec94c2912450b4b41e5d3ea0224b8632a51f53bf5d031581b7",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "custom_domain_verification_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": [
+        "custom_domain_verification_version"
+      ]
+    },
     "guard_live_page_comment_mutation()": {
       "sha256": "4bc59016a8e3630e65ffb38dceda5180312ec91d1cffbaa1938674592974c9bc",
       "securityDefiner": false,
@@ -3841,6 +3856,24 @@
       ],
       "functionReferences": [
         "notification_targets_match_project"
+      ]
+    },
+    "activate_custom_domain_verification()": {
+      "sha256": "db280caa595543fbf2847b35b1a32468b5ca0e618f7ce201e949fd87006e4a56",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "custom_domains",
+        "custom_domain_verification_scope"
+      ],
+      "protectedRelations": [
+        "custom_domains"
+      ],
+      "functionReferences": [
+        "custom_domain_verification_version"
       ]
     },
     "agent_chain_stop_reason_is_code(text)": {
@@ -4374,6 +4407,17 @@
       "functionReferences": [
         "guard_project_actor"
       ]
+    },
+    "custom_domain_verification_version(jsonb)": {
+      "sha256": "167afe08db4060b40428241143b76f5475ac2c5d129d2e5ac59609ea142c217d",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
     },
     "guard_forge_relay_user_delivery_content()": {
       "sha256": "84bf191c0363cde667e26593a565d983ba232976199ac615d4936dda3ffd009c",
@@ -7990,6 +8034,10 @@
     "agent_runs.trg_reject_new_local_agent_execution": {
       "function": "reject_new_local_agent_execution()",
       "definition": "CREATE TRIGGER trg_reject_new_local_agent_execution BEFORE INSERT OR UPDATE OF local_exec ON agent_runs FOR EACH ROW EXECUTE FUNCTION reject_new_local_agent_execution()"
+    },
+    "custom_domains.custom_domain_verification_guard": {
+      "function": "guard_custom_domain_verification()",
+      "definition": "CREATE TRIGGER custom_domain_verification_guard BEFORE INSERT OR UPDATE ON custom_domains FOR EACH ROW EXECUTE FUNCTION guard_custom_domain_verification()"
     },
     "feedback_posts.feedback_posts_freeze_project_id": {
       "function": "freeze_project_id()",

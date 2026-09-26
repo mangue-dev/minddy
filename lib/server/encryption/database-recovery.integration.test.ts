@@ -61,6 +61,7 @@ const agentPrefTemplate = "minddy_min591_agent_pref_audit";
 const appTabTemplate = "minddy_min591_app_tab_audit";
 const aiEvaluationTemplate = "minddy_min591_ai_eval_audit";
 const stripePayloadTemplate = "minddy_min591_stripe_audit";
+const customDomainTemplate = "minddy_min591_custom_domain_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -6555,6 +6556,117 @@ describe.skipIf(!enabled)("Stripe webhook payload scrub PostgreSQL recovery", ()
         stripe_event_id,type,payload) VALUES('evt_old','other',
         '{"email":"old@example.test"}'::jsonb);`)).toThrow();
     }finally{
+      for(const database of created.reverse())
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+    }
+  },60_000);
+});
+
+describe.skipIf(!enabled)("custom domain verification PostgreSQL recovery", () => {
+  it("restores domains before both target parents and historical keys", async () => {
+    const suffix=randomUUID().replaceAll("-","").slice(0,12);
+    const source=`minddy_min591_domain_source_${suffix}`;
+    const restored=`minddy_min591_domain_restore_${suffix}`;
+    const created:string[]=[];
+    const root=randomBytes(32);
+    const scope:EncryptionScope={kind:"system",
+      id:"00000000-0000-0000-0000-000000000000"};
+    const ids=[randomUUID(),randomUUID()];
+    const parents=[randomUUID(),randomUUID()];
+    const log=vi.spyOn(console,"info").mockImplementation(()=>{});
+    try {
+      expect(sql(customDomainTemplate,
+        "SELECT count(*) FROM public.custom_domains;"))
+        .toBe("0");
+      for(const database of [source,restored]){
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${customDomainTemplate};`);
+        created.push(database);
+      }
+      sql(source,`BEGIN; SET LOCAL session_replication_role=replica;
+        INSERT INTO public.feedback_boards(id,project_id,token) VALUES(
+          ${quote(parents[0])},${quote(randomUUID())},'board-restore');
+        INSERT INTO public.view_shares(id,view_id,level,token) VALUES(
+          ${quote(parents[1])},${quote(randomUUID())},'public','share-restore');
+        COMMIT;`);
+      const keys=new ManagedDataKeys(registry(source),wrapper(root));
+      const store=new EncryptedStore(keys);
+      for(const [index,id] of ids.entries()){
+        if(index===1) await keys.rotate(scope,1);
+        const cipher=await store.encrypt([{type:"TXT",
+          domain:`domain-${index}.example.test`,
+          value:`Private DNS challenge ${index}`}],{
+            scope,table:"custom_domains",column:"verification",rowId:id,
+          });
+        const target=index===0
+          ? `board_id,${quote(parents[index])}`
+          : `share_id,${quote(parents[index])}`;
+        const [column,value]=target.split(",");
+        sql(source,`INSERT INTO public.custom_domains(id,domain,
+          ${column},status,verification) VALUES(${quote(id)},
+          ${quote(`domain-${index}.example.test`)},${value},'pending',
+          ${quote(JSON.stringify(`mdye3:${cipher}`))}::jsonb);`);
+        keys.invalidate(scope);
+      }
+      expect(sql(source,
+        "SELECT public.activate_custom_domain_verification();"))
+        .toBe("t");
+      const dump=execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges",...["public.custom_domains","public.feedback_boards",
+          "public.view_shares","public.custom_domain_verification_scope",
+          "public.envelope_data_keys"].map((table)=>`--table=${table}`)],
+      {encoding:"utf8",maxBuffer:4*1024*1024});
+      for(const marker of ["Private DNS challenge 0",
+        "Private DNS challenge 1"])
+        expect(dump).not.toContain(marker);
+      let remainder=dump;
+      const copies=new Map<string,{header:string;lines:string[]}>();
+      for(const table of ["public.custom_domains","public.feedback_boards",
+        "public.view_shares"]){
+        const start=remainder.indexOf(`COPY ${table} `);
+        expect(start).toBeGreaterThanOrEqual(0);
+        const bodyStart=remainder.indexOf("\n",start)+1;
+        const bodyEnd=remainder.indexOf("\\.\n",bodyStart);
+        copies.set(table,{header:remainder.slice(start,bodyStart),
+          lines:remainder.slice(bodyStart,bodyEnd).trimEnd().split("\n")});
+        remainder=remainder.slice(0,start)+remainder.slice(bodyEnd+3);
+      }
+      for(const table of ["public.custom_domains","public.view_shares",
+        "public.feedback_boards"])
+        for(const line of copies.get(table)!.lines.reverse())
+          sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+            ${copies.get(table)!.header}${line}\n\\.\nCOMMIT;`);
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+        ${remainder}\nCOMMIT;`);
+      expect(sql(restored,`SELECT count(*) FROM public.custom_domains d
+        LEFT JOIN public.feedback_boards b ON b.id=d.board_id
+        LEFT JOIN public.view_shares s ON s.id=d.share_id
+        WHERE b.id IS NOT NULL OR s.id IS NOT NULL;`)).toBe("2");
+      const cold=new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(root)));
+      for(const [index,id] of ids.entries()){
+        const row=JSON.parse(sql(restored,`SELECT row_to_json(d) FROM
+          public.custom_domains d WHERE id=${quote(id)};`));
+        expect(row.verification_encryption_checked_at).not.toBeNull();
+        expect(row.verification).toMatch(/^mdye3:/);
+        const cipher=cold.fromDatabase(row.verification.slice(6));
+        expect(cold.versionOf(cipher)).toBe(index+1);
+        expect(await cold.decrypt(cipher,{scope,table:"custom_domains",
+          column:"verification",rowId:id}))
+          .toMatchObject([{value:`Private DNS challenge ${index}`}]);
+      }
+      const wrong=new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(randomBytes(32))));
+      const value=JSON.parse(sql(restored,`SELECT verification::text FROM
+        public.custom_domains WHERE id=${quote(ids[0])};`));
+      await expect(wrong.decrypt(wrong.fromDatabase(value.slice(6)),{
+        scope,table:"custom_domains",column:"verification",rowId:ids[0],
+      })).rejects.toThrow();
+      expect(()=>sql(restored,`UPDATE public.custom_domains SET
+        verification='[{"type":"TXT","value":"old"}]'::jsonb
+        WHERE id=${quote(ids[0])};`)).toThrow();
+    }finally{
+      root.fill(0);vi.unstubAllEnvs();log.mockRestore();
       for(const database of created.reverse())
         sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
     }

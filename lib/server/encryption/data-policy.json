@@ -1308,15 +1308,16 @@
   },
   "custom_domains": {
     "scope": {
-      "ancestors": [
-        "feedback_boards:board_id",
-        "view_shares:share_id"
-      ]
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
     },
     "encrypted": [
       "verification"
     ],
     "clear": {
+      "bounded_metadata": [
+        "content_revision"
+      ],
       "operational_configuration": [
         "status"
       ],
@@ -1332,8 +1333,21 @@
       ],
       "timestamp": [
         "created_at",
-        "updated_at"
+        "updated_at",
+        "verification_encryption_checked_at",
+        "verification_encryption_attempted_at"
       ]
+    }
+  },
+  "custom_domain_verification_scope": {
+    "scope": {
+      "kind": "global",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": ["id"],
+      "timestamp": ["activated_at"]
     }
   },
   "cycles": {

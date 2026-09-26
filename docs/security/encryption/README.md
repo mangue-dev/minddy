@@ -9,7 +9,7 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 179 application tables and 1,577 columns, their primary
+- `schema.json` records 180 application tables and 1,582 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 173 encryption targets include the original content,
@@ -20,10 +20,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,625 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,629 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 461 functions, ten views and 239 application triggers. Function
+- `sql-consumers.json` records 464 functions, ten views and 240 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -2021,3 +2021,23 @@ body; an isolated PostgreSQL dump/restore confirms that a scrubbed event body
 does not reappear. No key rotation is needed for a value that is removed.
 `MINDDY_STRIPE_WEBHOOK_PAYLOAD_SCRUB_ENABLED` and the global content flag stay
 off in production. Other MIN-591 targets remain open.
+
+## Custom-domain verification checkpoint — 26 September 2026
+
+`custom_domains.verification` now stores a format-3 system-key envelope bound
+to its stable domain row ID. The Vercel attach and refresh writers seal TXT
+records before persistence; board and shared-view settings decrypt after
+their existing authorization checks. The public hostname lookup selects only
+routing IDs and status, and therefore does not reveal the verification value.
+The field uses a system key because it describes the deployment's Vercel DNS
+challenge for a globally unique hostname, whether its target is a board or a
+shared view. The target parent and row ID remain immutable under the guard.
+
+A bounded 25-row worker verifies and rotates legacy or historical-key records
+under a row revision compare-and-swap. Activation requires every non-null
+verification record to be checked and sealed; SQL rejects old JSON inserts and
+updates afterward. The local regression covers both target kinds and old
+writers. A PostgreSQL dump/restore loads domain rows before their board/share
+parents and keys in independent batches, reads two key versions with cold
+caches and rejects a wrong root. The dedicated and global flags remain off in
+production. Other MIN-591 targets remain open.

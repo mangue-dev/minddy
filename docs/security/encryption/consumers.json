@@ -4305,59 +4305,66 @@
     "storage": false
   },
   {
-    "file": "lib/server/custom-domains.ts",
+    "file": "lib/server/custom-domain-content.ts",
     "operation": "from",
-    "resource": "custom_domains",
-    "line": 90,
+    "resource": "custom_domain_verification_scope",
+    "line": 24,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 100,
+    "line": 99,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 236,
+    "line": 109,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 267,
+    "line": 245,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 284,
+    "line": 280,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 319,
+    "line": 298,
+    "storage": false
+  },
+  {
+    "file": "lib/server/custom-domains.ts",
+    "operation": "from",
+    "resource": "custom_domains",
+    "line": 333,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "rpc",
     "resource": "delete_custom_domain_if_current",
-    "line": 360,
+    "line": 374,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 443,
+    "line": 459,
     "storage": false
   },
   {
@@ -5345,6 +5352,27 @@
     "operation": "rpc",
     "resource": "migrate_comment_ciphertext",
     "line": 40,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/custom-domain-verification-backfill.ts",
+    "operation": "from",
+    "resource": "custom_domains",
+    "line": 25,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/custom-domain-verification-backfill.ts",
+    "operation": "from",
+    "resource": "custom_domains",
+    "line": 48,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/custom-domain-verification-backfill.ts",
+    "operation": "from",
+    "resource": "custom_domains",
+    "line": 61,
     "storage": false
   },
   {
