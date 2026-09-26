@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { MAX_QUESTION_CHARS } from "@/lib/faq-question-limits";
 
 /** The pages that carry a FAQ section, mirroring `FAQ_SECTIONS` on the server. */
 export type FaqAskSection = "landing" | "pricing" | "mcp";
@@ -76,7 +77,7 @@ export function FaqAsk({
         <input
           value={question}
           placeholder={strings.placeholder}
-          maxLength={500}
+          maxLength={MAX_QUESTION_CHARS}
           autoComplete="off"
           disabled={status.kind === "loading"}
           className="w-full rounded-lg border border-transparent bg-transparent py-6 text-base font-medium text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50"
