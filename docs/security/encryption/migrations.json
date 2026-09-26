@@ -173,5 +173,6 @@
   "20270107750000_forge_relay_instance_content.sql": "bfe1fd5905f74bbd43cdee3496cc7a78f2d8c00a328025ebdcd79134d32265ba",
   "20270107760000_drop_forge_relay_mirror_secret.sql": "a101cad7d321c24d2563668bf0b0a4641eb46a78baf53a9ec3ae06fe4b8ddea2",
   "20270107770000_project_git_webhook_secret.sql": "2573b1b0ab88fc9c92d028687f9904079dc24446a8ec6df6e81b314cc777f872",
-  "20270107780000_forge_relay_provisioning_content.sql": "c171aa0857bf7f519a944a4f22426e86bf3de51a6a2a241dd94c8b7b46c3b063"
+  "20270107780000_forge_relay_provisioning_content.sql": "c171aa0857bf7f519a944a4f22426e86bf3de51a6a2a241dd94c8b7b46c3b063",
+  "20270107790000_forge_relay_user_delivery_content.sql": "41e25040842d2a72d2f71d250bf2872c288823f85cc832a7a4a56c64d8b41296"
 }

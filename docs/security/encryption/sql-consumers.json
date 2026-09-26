@@ -3742,6 +3742,24 @@
         "rotate_project_realtime_generation"
       ]
     },
+    "activate_forge_relay_user_deliveries()": {
+      "sha256": "2037e8c87ff8ad6f334b84b2b28632055163db7b4fbfdddb62eddb3d6c939eb8",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "forge_relay_user_deliveries",
+        "forge_relay_user_delivery_scope"
+      ],
+      "protectedRelations": [
+        "forge_relay_user_deliveries"
+      ],
+      "functionReferences": [
+        "forge_relay_user_delivery_envelope_version"
+      ]
+    },
     "activate_project_git_webhook_secrets()": {
       "sha256": "d99ba6665996969a46bbf57a51964ec9c5b150f88b0a6a42a755201d71ff56ea",
       "securityDefiner": true,
@@ -4105,6 +4123,21 @@
       ],
       "functionReferences": [
         "guard_project_actor"
+      ]
+    },
+    "guard_forge_relay_user_delivery_content()": {
+      "sha256": "84bf191c0363cde667e26593a565d983ba232976199ac615d4936dda3ffd009c",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "forge_relay_user_delivery_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": [
+        "forge_relay_user_delivery_envelope_version"
       ]
     },
     "list_orphan_project_icon_objects(integer)": {
@@ -4863,6 +4896,17 @@
       "functionReferences": [
         "rekey_forge_mention_counter"
       ]
+    },
+    "forge_relay_user_delivery_envelope_version(text)": {
+      "sha256": "2ba578d425524fc3c4220401a7a39a52798721bb756a6f926ef37ea952a6e809",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
     },
     "migrate_numo_worker_checkpoint(uuid,jsonb,jsonb)": {
       "sha256": "82ec939192d0ad3c67e625ee39278ba7691db341dc89e88b995c2bafb8d6e0b9",
@@ -7889,6 +7933,10 @@
     "provider_operation_reservations.provider_operation_resource_guard": {
       "function": "guard_provider_operation_resource()",
       "definition": "CREATE TRIGGER provider_operation_resource_guard BEFORE INSERT OR UPDATE ON provider_operation_reservations FOR EACH ROW EXECUTE FUNCTION guard_provider_operation_resource()"
+    },
+    "forge_relay_user_deliveries.forge_relay_user_delivery_content_guard": {
+      "function": "guard_forge_relay_user_delivery_content()",
+      "definition": "CREATE TRIGGER forge_relay_user_delivery_content_guard BEFORE INSERT OR UPDATE ON forge_relay_user_deliveries FOR EACH ROW EXECUTE FUNCTION guard_forge_relay_user_delivery_content()"
     },
     "numo_automation_operations.numo_automation_operations_set_updated_at": {
       "function": "set_updated_at()",

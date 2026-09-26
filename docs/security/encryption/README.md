@@ -95,7 +95,7 @@ must be checked separately.
 | Histories and derived copies | Page versions, issue events, statistics, durable agent replay journals and run event payloads now have converted repositories and migration. The event-triggered assistant summary and pending question copies are protected with their event. Numo surface destinations and the non-worker durable activity payloads now have protected readers, writers and migrations; initial prompts, other surface projections, checkpoints and conversation content remain to be converted with their source rows. |
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
-| Forge data | Forge mention throttle identities and private repository names use stable system blind indexes. Names have a recoverable encrypted registry and guarded equality keys across linked copies. Default branches use project-bound envelopes. Relay instance configuration, singleton self-hosted provisioning and repository hook secrets are sealed; the unused relay mirror secret copy is removed. Convert remaining user deliveries and OAuth credentials. The generic row codec deliberately refuses sensitive primary keys. |
+| Forge data | Forge mention throttle identities and private repository names use stable system blind indexes. Names have a recoverable encrypted registry and guarded equality keys across linked copies. Default branches use project-bound envelopes. Relay instance configuration, singleton self-hosted provisioning, brokered user deliveries and repository hook secrets are sealed; the unused relay mirror secret copy is removed. Convert remaining persistent OAuth credentials. The generic row codec deliberately refuses sensitive primary keys. |
 | Files and images | Attachment, page-file and project-icon server paths now use opaque names, ciphertext bytes and authorized download routes. The icon bucket switches to private only after the object queue is empty; other object copies still need review. Public avatars have an explicit public-use exception. |
 | Feedback and sharing | Feedback posts, private visitor identities, board SSO secrets and recoverable share tokens have repository and migration checkpoints below. Remaining feedback copies still need conversion; owner dialogs must retain access to share URLs. |
 | Credentials and configuration | `app_config.value` and BYOK credentials, endpoints and private model choices have bounded CAS envelopes and activated old-writer guards. Migrate remaining legacy environment-key envelopes and secret/configuration stores; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
@@ -1868,5 +1868,25 @@ downgrades after activation. The isolated SQL regression covers source fields,
 obsolete writers and metadata updates. A real PostgreSQL dump/restore reads
 the current and historical key versions from a cold cache and rejects a wrong
 root. `MINDDY_RELAY_PROVISIONING_ENCRYPTION_ENABLED` and the global content
-flag remain off in production. Relay user deliveries and OAuth credential
-stores remain open.
+flag remain off in production. Persistent OAuth credential stores remain open.
+
+## Brokered forge OAuth delivery checkpoint — 26 September 2026
+
+`forge_relay_user_deliveries` now seals each access/refresh token pair in one
+system-key row envelope bound to both the delivery ID and destination relay
+instance ID. GitHub and GitLab callbacks share the protected writer. The
+consumer queries by the authenticated instance and delivery ID before
+decrypting, then preserves its delivered status and idempotent retry contract.
+Returning the token pair over the signed relay channel to that authorized
+instance is an intentional external transmission. Cloud retains the sealed
+transient row only until its existing housekeeping deadline.
+
+A bounded 30-row revision-CAS worker migrates old environment-key tokens and
+rotates historical data keys. Activation requires checked format-3 rows;
+SQL rejects old inserts, downgrade updates and instance moves after sealing.
+The isolated SQL regression checks source fields, obsolete writers and status
+updates. A PostgreSQL dump/restore loads delivery children before relay
+instances in separate committed batches, recovers two key versions with cold
+caches and rejects the wrong root. `MINDDY_RELAY_USER_DELIVERY_ENCRYPTION_ENABLED`
+and the global content flag remain off in production. Persistent user OAuth
+credentials remain open.

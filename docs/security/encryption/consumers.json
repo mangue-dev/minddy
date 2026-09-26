@@ -5439,6 +5439,27 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/forge-relay-user-delivery-backfill.ts",
+    "operation": "from",
+    "resource": "forge_relay_user_deliveries",
+    "line": 24,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-relay-user-delivery-backfill.ts",
+    "operation": "from",
+    "resource": "forge_relay_user_deliveries",
+    "line": 52,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-relay-user-delivery-backfill.ts",
+    "operation": "from",
+    "resource": "forge_relay_user_deliveries",
+    "line": 66,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/forge-repository-name-backfill.ts",
     "operation": "from",
     "resource": null,
@@ -7143,7 +7164,7 @@
     "file": "lib/server/forge-relay/provisioning.ts",
     "operation": "from",
     "resource": "forge_relay_provisioning",
-    "line": 205,
+    "line": 211,
     "storage": false
   },
   {
@@ -7199,35 +7220,42 @@
     "file": "lib/server/forge-relay/user-broker.ts",
     "operation": "from",
     "resource": "forge_relay_instances",
-    "line": 205,
+    "line": 203,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/user-broker.ts",
     "operation": "from",
     "resource": "forge_relay_user_deliveries",
-    "line": 280,
+    "line": 283,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/user-broker.ts",
     "operation": "from",
     "resource": "forge_relay_user_deliveries",
-    "line": 327,
+    "line": 328,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/user-broker.ts",
     "operation": "from",
     "resource": "forge_relay_user_deliveries",
-    "line": 362,
+    "line": 361,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/user-broker.ts",
     "operation": "from",
     "resource": "forge_relay_user_deliveries",
-    "line": 392,
+    "line": 389,
+    "storage": false
+  },
+  {
+    "file": "lib/server/forge-relay/user-delivery-content.ts",
+    "operation": "from",
+    "resource": "forge_relay_user_delivery_scope",
+    "line": 32,
     "storage": false
   },
   {

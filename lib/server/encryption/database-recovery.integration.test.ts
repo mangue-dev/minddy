@@ -54,6 +54,7 @@ const userAiKeyTemplate = "minddy_min591_byok_audit";
 const relayInstanceTemplate = "minddy_min591_relay_audit";
 const projectWebhookTemplate = "minddy_min591_repo_hook_audit";
 const relayProvisioningTemplate = "minddy_min591_provisioning_audit";
+const relayUserDeliveryTemplate = "minddy_min591_user_delivery_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -5848,4 +5849,112 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       }
     }
   }, 60_000);
+
+  it("restores brokered OAuth deliveries before relay parents with mixed keys", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_delivery_source_${suffix}`;
+    const restored = `minddy_min591_delivery_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32), instance = randomUUID();
+    const ids = [randomUUID(),randomUUID()];
+    const scope: EncryptionScope = { kind: "system",
+      id: "00000000-0000-0000-0000-000000000000" };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(relayUserDeliveryTemplate,
+        "SELECT count(*) FROM public.forge_relay_user_deliveries;"))
+        .toBe("0");
+      for (const database of [source,restored]) {
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${relayUserDeliveryTemplate};`);
+        created.push(database);
+      }
+      const keys = new ManagedDataKeys(registry(source),wrapper(root));
+      const store = new EncryptedStore(keys);
+      sql(source,`INSERT INTO public.forge_relay_instances(id,name,public_key)
+        VALUES(${quote(instance)},'Fixture relay','public-key');`);
+      for (const [index,id] of ids.entries()) {
+        if (index === 1) await keys.rotate(scope,1);
+        const ciphertext = await store.encrypt({
+          accessToken: `private-access-${index}`,
+          refreshToken: `private-refresh-${index}` },{
+          scope, table: "forge_relay_user_deliveries",
+          column: "encrypted_content", rowId: JSON.stringify([id,instance]),
+        });
+        sql(source,`INSERT INTO public.forge_relay_user_deliveries(
+          id,instance_id,user_id,provider_account_id,
+          encrypted_content,encryption_version)
+          VALUES(${quote(id)},${quote(instance)},'user','42',
+            ${quote(ciphertext)},${index+1});`);
+        keys.invalidate(scope);
+      }
+      expect(sql(source,
+        "SELECT public.activate_forge_relay_user_deliveries();"))
+        .toBe("t");
+      const dump = execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges", ...["public.forge_relay_instances",
+          "public.forge_relay_user_deliveries",
+          "public.forge_relay_user_delivery_scope",
+          "public.envelope_data_keys"].map((table)=>`--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4*1024*1024 });
+      expect(dump).not.toContain("private-access-");
+      expect(dump).not.toContain("private-refresh-");
+      let remainder = dump;
+      const copies = new Map<string,{header:string;lines:string[]}>();
+      for (const table of ["public.forge_relay_user_deliveries",
+        "public.forge_relay_instances"]) {
+        const start = remainder.indexOf(`COPY ${table} `);
+        expect(start).toBeGreaterThanOrEqual(0);
+        const bodyStart = remainder.indexOf("\n",start)+1;
+        const bodyEnd = remainder.indexOf("\\.\n",bodyStart);
+        copies.set(table,{ header: remainder.slice(start,bodyStart),
+          lines: remainder.slice(bodyStart,bodyEnd).trimEnd().split("\n") });
+        remainder = remainder.slice(0,start)+remainder.slice(bodyEnd+3);
+      }
+      for (const table of ["public.forge_relay_user_deliveries",
+        "public.forge_relay_instances"]) {
+        for (const line of copies.get(table)!.lines.reverse()) {
+          sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+            ${copies.get(table)!.header}${line}\n\\.\nCOMMIT;`);
+        }
+      }
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+        ${remainder}\nCOMMIT;`);
+      expect(sql(restored,`SELECT count(*) FROM public.forge_relay_user_deliveries d
+        JOIN public.forge_relay_instances i ON i.id=d.instance_id;`))
+        .toBe("2");
+      const cold = new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(root)));
+      for (const [index,id] of ids.entries()) {
+        const row = JSON.parse(sql(restored,`SELECT row_to_json(d)
+          FROM public.forge_relay_user_deliveries d WHERE id=${quote(id)};`));
+        expect(row.access_token_encrypted).toBeNull();
+        expect(row.refresh_token_encrypted).toBeNull();
+        expect(row.encryption_checked_at).not.toBeNull();
+        expect(await cold.decrypt(cold.fromDatabase(row.encrypted_content),{
+          scope, table: "forge_relay_user_deliveries",
+          column: "encrypted_content", rowId: JSON.stringify([id,instance]),
+        })).toEqual({ accessToken: `private-access-${index}`,
+          refreshToken: `private-refresh-${index}` });
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(randomBytes(32))));
+      const cipher = sql(restored,`SELECT encrypted_content
+        FROM public.forge_relay_user_deliveries WHERE id=${quote(ids[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase(cipher),{
+        scope, table: "forge_relay_user_deliveries",
+        column: "encrypted_content", rowId: JSON.stringify([ids[0],instance]),
+      })).rejects.toThrow();
+      expect(() => sql(restored,`INSERT INTO public.forge_relay_user_deliveries(
+        instance_id,user_id,provider_account_id,access_token_encrypted)
+        VALUES(${quote(instance)},'user','43','old-access');`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const database of created.reverse()) {
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+      }
+    }
+  },60_000);
 });

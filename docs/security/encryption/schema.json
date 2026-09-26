@@ -9542,8 +9542,18 @@
         "nullable": true,
         "generated": false
       },
+      "content_revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
       "token_expires_at": {
         "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "encrypted_content": {
+        "type": "text",
         "nullable": true,
         "generated": false
       },
@@ -9552,14 +9562,29 @@
         "nullable": true,
         "generated": false
       },
+      "encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
       "provider_account_id": {
         "type": "text",
         "nullable": false,
         "generated": false
       },
+      "encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
       "access_token_encrypted": {
         "type": "text",
-        "nullable": false,
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       },
       "refresh_token_encrypted": {
@@ -10593,6 +10618,24 @@
     "foreignKeys": []
   },
   "forge_relay_provisioning_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "forge_relay_user_delivery_scope": {
     "columns": {
       "id": {
         "type": "boolean",
