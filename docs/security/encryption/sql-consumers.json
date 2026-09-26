@@ -2409,6 +2409,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_stripe_webhook_payload()": {
+      "sha256": "2653df97bddb544b4d3f9661eb7867691134ae949b7241c0c2984559f06861e4",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "stripe_webhook_payload_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "issues_sync_objective_status()": {
       "sha256": "fcf377d9f1bdddb645a3ee7077241ce7edffc9ba60e400604e3c953955e71a23",
       "securityDefiner": true,
@@ -4078,6 +4091,20 @@
       "protectedRelations": [
         "forge_relay_instances"
       ],
+      "functionReferences": []
+    },
+    "activate_stripe_webhook_payload_scrub()": {
+      "sha256": "2942c36c51f36397902552bad05e5a983fd59ee26ae5fa3f4a10bd97b6617228",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "stripe_webhook_events",
+        "stripe_webhook_payload_scope"
+      ],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "convert_database_cell(jsonb,text,jsonb)": {
@@ -8055,6 +8082,10 @@
     "project_git_links.project_git_links_authority_lock": {
       "function": "lock_project_authority_mutation()",
       "definition": "CREATE TRIGGER project_git_links_authority_lock AFTER INSERT OR DELETE OR UPDATE ON project_git_links FOR EACH ROW EXECUTE FUNCTION lock_project_authority_mutation()"
+    },
+    "stripe_webhook_events.stripe_webhook_payload_guard": {
+      "function": "guard_stripe_webhook_payload()",
+      "definition": "CREATE TRIGGER stripe_webhook_payload_guard BEFORE INSERT OR UPDATE ON stripe_webhook_events FOR EACH ROW EXECUTE FUNCTION guard_stripe_webhook_payload()"
     },
     "agent_conversations.agent_pr_url_parent_scope_guard": {
       "function": "guard_agent_pr_url_parent_scope()",

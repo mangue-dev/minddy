@@ -1186,14 +1186,14 @@
     "file": "app/api/stripe/webhook/route.ts",
     "operation": "from",
     "resource": "stripe_webhook_events",
-    "line": 75,
+    "line": 74,
     "storage": false
   },
   {
     "file": "app/api/stripe/webhook/route.ts",
     "operation": "from",
     "resource": "stripe_webhook_events",
-    "line": 90,
+    "line": 89,
     "storage": false
   },
   {
@@ -6269,6 +6269,27 @@
     "operation": "from",
     "resource": "stat_events",
     "line": 36,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/stripe-webhook-payload-scrub.ts",
+    "operation": "from",
+    "resource": "stripe_webhook_events",
+    "line": 18,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/stripe-webhook-payload-scrub.ts",
+    "operation": "from",
+    "resource": "stripe_webhook_events",
+    "line": 30,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/stripe-webhook-payload-scrub.ts",
+    "operation": "from",
+    "resource": "stripe_webhook_events",
+    "line": 41,
     "storage": false
   },
   {

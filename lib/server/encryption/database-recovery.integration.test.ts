@@ -60,6 +60,7 @@ const mcpContentTemplate = "minddy_min591_mcp_audit";
 const agentPrefTemplate = "minddy_min591_agent_pref_audit";
 const appTabTemplate = "minddy_min591_app_tab_audit";
 const aiEvaluationTemplate = "minddy_min591_ai_eval_audit";
+const stripePayloadTemplate = "minddy_min591_stripe_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -6513,6 +6514,47 @@ describe.skipIf(!enabled)("decision evaluation PostgreSQL recovery", () => {
         WHERE id=${quote(ids[0])};`)).toThrow();
     }finally{
       root.fill(0);vi.unstubAllEnvs();log.mockRestore();
+      for(const database of created.reverse())
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+    }
+  },60_000);
+});
+
+describe.skipIf(!enabled)("Stripe webhook payload scrub PostgreSQL recovery", () => {
+  it("restores idempotence metadata without the former event body", () => {
+    const suffix=randomUUID().replaceAll("-","").slice(0,12);
+    const source=`minddy_min591_stripe_source_${suffix}`;
+    const restored=`minddy_min591_stripe_restore_${suffix}`;
+    const created:string[]=[];
+    try {
+      for(const database of [source,restored]){
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${stripePayloadTemplate};`);
+        created.push(database);
+      }
+      sql(source,`INSERT INTO public.stripe_webhook_events(
+        stripe_event_id,type,payload) VALUES('evt_private',
+        'checkout.session.completed',
+        '{"email":"private@example.test"}'::jsonb);
+        UPDATE public.stripe_webhook_events SET payload=NULL,
+          processed_at=now() WHERE stripe_event_id='evt_private';`);
+      expect(sql(source,
+        "SELECT public.activate_stripe_webhook_payload_scrub();"))
+        .toBe("t");
+      const dump=execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges",...[
+          "public.stripe_webhook_events","public.stripe_webhook_payload_scope",
+        ].map((table)=>`--table=${table}`)],
+      {encoding:"utf8",maxBuffer:4*1024*1024});
+      expect(dump).not.toContain("private@example.test");
+      sql(restored,dump);
+      expect(sql(restored,`SELECT count(*) FROM public.stripe_webhook_events
+        WHERE stripe_event_id='evt_private' AND payload IS NULL AND
+          processed_at IS NOT NULL;`)).toBe("1");
+      expect(()=>sql(restored,`INSERT INTO public.stripe_webhook_events(
+        stripe_event_id,type,payload) VALUES('evt_old','other',
+        '{"email":"old@example.test"}'::jsonb);`)).toThrow();
+    }finally{
       for(const database of created.reverse())
         sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
     }

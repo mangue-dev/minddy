@@ -3932,9 +3932,7 @@
       "kind": "system",
       "id": "00000000-0000-0000-0000-000000000000"
     },
-    "encrypted": [
-      "payload"
-    ],
+    "encrypted": [],
     "clear": {
       "bounded_metadata": [
         "livemode"
@@ -3945,10 +3943,25 @@
       "routing_identity": [
         "stripe_event_id"
       ],
+      "remove_projection": [
+        "payload"
+      ],
       "timestamp": [
         "created_at",
-        "processed_at"
+        "processed_at",
+        "payload_scrub_attempted_at"
       ]
+    }
+  },
+  "stripe_webhook_payload_scope": {
+    "scope": {
+      "kind": "global",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": ["id"],
+      "timestamp": ["activated_at"]
     }
   },
   "user_agent_preferences": {

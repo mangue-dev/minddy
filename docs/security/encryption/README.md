@@ -9,10 +9,10 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 178 application tables and 1,574 columns, their primary
+- `schema.json` records 179 application tables and 1,577 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
-  column exactly once. Its 174 encryption targets include the original content,
+  column exactly once. Its 173 encryption targets include the original content,
   derived copies, arbitrary user JSON, private identities, credentials and share
   tokens. The relay audit detail target was removed by an action-specific SQL
   guard and historical scrub; opaque attachment object paths replace two path
@@ -20,10 +20,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,622 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,625 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 459 functions, ten views and 238 application triggers. Function
+- `sql-consumers.json` records 461 functions, ten views and 239 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -2004,3 +2004,20 @@ old-writer refusal. A PostgreSQL dump/restore loads evaluation rows before
 their historical keys in independent batches, reads two key versions with
 cold caches and rejects a wrong root. The dedicated and global flags stay off
 in production. Other MIN-591 targets remain open.
+
+## Stripe webhook payload removal checkpoint — 26 September 2026
+
+The verified Stripe event body is processed in memory; the durable
+`stripe_webhook_events` reservation now stores only the event ID, type, mode,
+created time and processing state needed for idempotence. No replay path reads
+the old JSON payload. A bounded 100-row scrub clears historical bodies while
+preserving the reservation and processed marker. Activation waits for every
+payload to be null, then SQL refuses old writers that insert or restore JSON.
+The existing retention pass remains safe and becomes a no-op after scrubbing.
+
+The SQL regression tests source removal, old-writer refusal and preserved
+deduplication state. Webhook replay tests check that new reservations omit the
+body; an isolated PostgreSQL dump/restore confirms that a scrubbed event body
+does not reappear. No key rotation is needed for a value that is removed.
+`MINDDY_STRIPE_WEBHOOK_PAYLOAD_SCRUB_ENABLED` and the global content flag stay
+off in production. Other MIN-591 targets remain open.
