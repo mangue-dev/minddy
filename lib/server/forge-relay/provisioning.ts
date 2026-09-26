@@ -12,10 +12,12 @@ import { getDeploymentEdition } from "@/lib/env";
 import { getServiceClient } from "@/lib/supabase-service";
 import { hasStrongSecret } from "@/lib/server/env-secrets";
 import {
-  decryptForgeToken,
-  encryptForgeToken,
   isForgeTokenCryptoConfigured,
 } from "@/lib/server/git/token-crypto";
+import { decodeProvisioning, encodeProvisioning, type ProvisioningRow } from
+  "./provisioning-content";
+import { shouldProtectProvisioning } from "./provisioning-content";
+import { getContentKeys } from "@/lib/server/encryption/registry";
 import { signRelayRequest } from "./protocol";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
 
@@ -72,10 +74,10 @@ function registrationRefused(): boolean {
  * another one there. Mirrors the `relayMissing` list of the capability
  * catalog (`lib/capabilities.ts`).
  */
-function provisioningBlockers(): string[] {
+async function provisioningBlockers(): Promise<string[]> {
   const blockers: string[] = [];
   if (!hasStrongSecret("GIT_STATE_SECRET")) blockers.push("GIT_STATE_SECRET");
-  if (!isForgeTokenCryptoConfigured()) {
+  if (!await shouldProtectProvisioning() && !isForgeTokenCryptoConfigured()) {
     blockers.push("GIT_TOKEN_ENCRYPTION_SECRET");
   }
   return blockers;
@@ -98,20 +100,15 @@ export async function loadProvisionedRelayConfig(): Promise<boolean> {
   const { data } = await getServiceClient()
     .from("forge_relay_provisioning")
     .select(
-      "relay_url, instance_id, signing_key_encrypted, webhook_secret_encrypted",
+      "relay_url, instance_id, signing_key_encrypted, webhook_secret_encrypted, encrypted_content, encryption_version",
     )
     .eq("id", true)
     .maybeSingle();
-  const row = data as {
-    relay_url: string;
-    instance_id: string;
-    signing_key_encrypted: string;
-    webhook_secret_encrypted: string;
-  } | null;
+  const row = data as (ProvisioningRow & { instance_id: string }) | null;
   if (!row) return false;
-  const secret = decryptForgeToken(row.signing_key_encrypted);
-  const webhookSecret = decryptForgeToken(row.webhook_secret_encrypted);
-  if (!secret || !webhookSecret) {
+  let content;
+  try { content = await decodeProvisioning(row); }
+  catch {
     unreadable = true;
     console.error(
       "[forge-relay] provisioned identity is unreadable (encryption secret changed?); reconnect a forge account to re-provision",
@@ -119,10 +116,10 @@ export async function loadProvisionedRelayConfig(): Promise<boolean> {
     return false;
   }
   cached = {
-    url: row.relay_url,
+    url: content.relay_url,
     instanceId: row.instance_id,
-    secret,
-    webhookSecret,
+    secret: content.signing_key,
+    webhookSecret: content.webhook_secret,
   };
   return true;
 }
@@ -142,7 +139,13 @@ export async function ensureForgeRelayProvisioned(): Promise<boolean> {
       // Configuration errors surface on every attempt and never reach Cloud:
       // the blockers check comes before the failure backoff, which only
       // governs transient registration failures.
-      const blockers = provisioningBlockers();
+      let blockers: string[];
+      try { blockers = await provisioningBlockers(); }
+      catch {
+        lastFailureAt = Date.now();
+        console.error("[forge-relay] automatic registration protection check failed");
+        return false;
+      }
       if (blockers.length > 0) {
         console.error(
           `[forge-relay] automatic registration blocked, missing or weak instance secrets: ${blockers.join(", ")} — generate them with \`openssl rand -hex 32\``,
@@ -151,6 +154,11 @@ export async function ensureForgeRelayProvisioned(): Promise<boolean> {
       }
       if (Date.now() - lastFailureAt < FAILURE_RETRY_DELAY_MS) return false;
       try {
+        if (await shouldProtectProvisioning()) {
+          const key = await getContentKeys().current({ kind: "system",
+            id: "00000000-0000-0000-0000-000000000000" });
+          key.bytes.fill(0);
+        }
         await registerInstance();
         return true;
       } catch (err) {
@@ -198,15 +206,15 @@ async function registerInstance(): Promise<void> {
   }
 
   const webhookSecret = crypto.randomBytes(32).toString("hex");
+  const stored = await encodeProvisioning({ relay_url: url,
+    signing_key: privateKeyPem, webhook_secret: webhookSecret });
   const { error } = await getServiceClient()
     .from("forge_relay_provisioning")
     .upsert(
       {
         id: true,
-        relay_url: url,
+        ...stored,
         instance_id: data.instanceId,
-        signing_key_encrypted: encryptForgeToken(privateKeyPem),
-        webhook_secret_encrypted: encryptForgeToken(webhookSecret),
       },
       { onConflict: "id" },
     );

@@ -95,7 +95,7 @@ must be checked separately.
 | Histories and derived copies | Page versions, issue events, statistics, durable agent replay journals and run event payloads now have converted repositories and migration. The event-triggered assistant summary and pending question copies are protected with their event. Numo surface destinations and the non-worker durable activity payloads now have protected readers, writers and migrations; initial prompts, other surface projections, checkpoints and conversation content remain to be converted with their source rows. |
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
-| Forge data | Forge mention throttle identities and private repository names use stable system blind indexes. Names have a recoverable encrypted registry and guarded equality keys across linked copies. Default branches use project-bound envelopes. Relay instance configuration and repository hook secrets are sealed; the unused relay mirror secret copy is removed. Convert other legacy OAuth and provisioning credentials. The generic row codec deliberately refuses sensitive primary keys. |
+| Forge data | Forge mention throttle identities and private repository names use stable system blind indexes. Names have a recoverable encrypted registry and guarded equality keys across linked copies. Default branches use project-bound envelopes. Relay instance configuration, singleton self-hosted provisioning and repository hook secrets are sealed; the unused relay mirror secret copy is removed. Convert remaining user deliveries and OAuth credentials. The generic row codec deliberately refuses sensitive primary keys. |
 | Files and images | Attachment, page-file and project-icon server paths now use opaque names, ciphertext bytes and authorized download routes. The icon bucket switches to private only after the object queue is empty; other object copies still need review. Public avatars have an explicit public-use exception. |
 | Feedback and sharing | Feedback posts, private visitor identities, board SSO secrets and recoverable share tokens have repository and migration checkpoints below. Remaining feedback copies still need conversion; owner dialogs must retain access to share URLs. |
 | Credentials and configuration | `app_config.value` and BYOK credentials, endpoints and private model choices have bounded CAS envelopes and activated old-writer guards. Migrate remaining legacy environment-key envelopes and secret/configuration stores; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
@@ -1849,3 +1849,24 @@ connection, project and user parents in separate committed batches, recovers
 two key versions from cold caches and rejects an incorrect root key. Both
 encryption flags remain off in production. Other forge credentials and global
 MIN-591 targets remain open.
+
+## Self-hosted forge relay provisioning checkpoint — 26 September 2026
+
+The singleton `forge_relay_provisioning` now stores its relay URL, private
+Ed25519 signing key and webhook HMAC secret in one system-key envelope. Its
+stable singleton binding prevents transplanting the ciphertext into another
+table or scope. The instance ID remains a routing identifier; only the public
+signing key is sent to the control plane. The webhook secret is sent to that
+authorized control plane when registering the fan-out endpoint. A protected
+read populates the local process cache, and an unreadable row fails closed.
+
+Registration verifies that the current system key can be loaded before the
+external control-plane call. A bounded revision-CAS maintenance pass migrates
+the legacy environment-key row and rotates historical data keys. Activation
+requires a checked format-3 row; SQL rejects old clear upserts and key
+downgrades after activation. The isolated SQL regression covers source fields,
+obsolete writers and metadata updates. A real PostgreSQL dump/restore reads
+the current and historical key versions from a cold cache and rejects a wrong
+root. `MINDDY_RELAY_PROVISIONING_ENCRYPTION_ENABLED` and the global content
+flag remain off in production. Relay user deliveries and OAuth credential
+stores remain open.

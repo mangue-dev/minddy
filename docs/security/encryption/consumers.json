@@ -5418,6 +5418,27 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/forge-relay-provisioning-backfill.ts",
+    "operation": "from",
+    "resource": "forge_relay_provisioning",
+    "line": 20,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-relay-provisioning-backfill.ts",
+    "operation": "from",
+    "resource": "forge_relay_provisioning",
+    "line": 44,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-relay-provisioning-backfill.ts",
+    "operation": "from",
+    "resource": "forge_relay_provisioning",
+    "line": 57,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/forge-repository-name-backfill.ts",
     "operation": "from",
     "resource": null,
@@ -7105,17 +7126,24 @@
     "storage": false
   },
   {
-    "file": "lib/server/forge-relay/provisioning.ts",
+    "file": "lib/server/forge-relay/provisioning-content.ts",
     "operation": "from",
-    "resource": "forge_relay_provisioning",
-    "line": 98,
+    "resource": "forge_relay_provisioning_scope",
+    "line": 35,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/provisioning.ts",
     "operation": "from",
     "resource": "forge_relay_provisioning",
-    "line": 201,
+    "line": 100,
+    "storage": false
+  },
+  {
+    "file": "lib/server/forge-relay/provisioning.ts",
+    "operation": "from",
+    "resource": "forge_relay_provisioning",
+    "line": 205,
     "storage": false
   },
   {

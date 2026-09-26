@@ -1957,18 +1957,25 @@
     },
     "encrypted": [
       "signing_key_encrypted",
-      "webhook_secret_encrypted"
+      "webhook_secret_encrypted",
+      "relay_url"
     ],
     "clear": {
-      "operational_configuration": [
-        "relay_url"
-      ],
       "routing_identity": [
         "id",
         "instance_id"
       ],
       "timestamp": [
-        "registered_at"
+        "registered_at",
+        "encryption_checked_at",
+        "encryption_attempted_at"
+      ],
+      "encryption_metadata": [
+        "encryption_version",
+        "encrypted_content"
+      ],
+      "bounded_metadata": [
+        "content_revision"
       ]
     }
   },
@@ -4192,6 +4199,21 @@
       "encryption_metadata": [
         "encrypted_content",
         "encryption_version"
+      ]
+    }
+  },
+  "forge_relay_provisioning_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   }

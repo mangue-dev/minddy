@@ -3967,6 +3967,19 @@
       ],
       "functionReferences": []
     },
+    "guard_forge_relay_provisioning_content()": {
+      "sha256": "69a5f741eff3bf49f8fa1eda36693c32b364d0bff85f3a92d1b8b442ae829400",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "forge_relay_provisioning_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "initialize_project_realtime_generation()": {
       "sha256": "854190bfca60b516a21e103dc893cec07cc98775f5ec96e91af63f1381f99b38",
       "securityDefiner": true,
@@ -4335,6 +4348,24 @@
       ],
       "functionReferences": []
     },
+    "activate_forge_relay_provisioning_content()": {
+      "sha256": "9d86ec8791607a9a57ec6e0f95cd8cbe0e4823f2dbd45eaf68f979cc84ab72b7",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "forge_relay_provisioning",
+        "forge_relay_provisioning_scope"
+      ],
+      "protectedRelations": [
+        "forge_relay_provisioning"
+      ],
+      "functionReferences": [
+        "forge_relay_provisioning_envelope_version"
+      ]
+    },
     "broadcast_private_realtime(text,text,jsonb)": {
       "sha256": "94065a6d7c6ca743e4d6c80fa2318569dad9b01eddc28e2e5a5ce8f8ef55c894",
       "securityDefiner": true,
@@ -4684,6 +4715,17 @@
       "protectedRelations": [
         "projects"
       ],
+      "functionReferences": []
+    },
+    "forge_relay_provisioning_envelope_version(text)": {
+      "sha256": "3f683225a5b31be334d8e86518c37f7b1573aa2767f5cd7f3bdc7c72d75f5a22",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "get_agent_quota_usage(timestamp with time zone)": {
@@ -7831,6 +7873,10 @@
     "forge_relay_installations.forge_relay_single_installation_owner": {
       "function": "enforce_github_installation_single_owner()",
       "definition": "CREATE TRIGGER forge_relay_single_installation_owner BEFORE INSERT OR UPDATE OF installation_id ON forge_relay_installations FOR EACH ROW EXECUTE FUNCTION enforce_github_installation_single_owner()"
+    },
+    "forge_relay_provisioning.forge_relay_provisioning_content_guard": {
+      "function": "guard_forge_relay_provisioning_content()",
+      "definition": "CREATE TRIGGER forge_relay_provisioning_content_guard BEFORE INSERT OR UPDATE ON forge_relay_provisioning FOR EACH ROW EXECUTE FUNCTION guard_forge_relay_provisioning_content()"
     },
     "pull_request_syncs.pull_request_syncs_repository_identity_guard": {
       "function": "guard_forge_repository_identity()",

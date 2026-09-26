@@ -53,6 +53,7 @@ const pageContentTemplate = "minddy_min591_page_audit";
 const userAiKeyTemplate = "minddy_min591_byok_audit";
 const relayInstanceTemplate = "minddy_min591_relay_audit";
 const projectWebhookTemplate = "minddy_min591_repo_hook_audit";
+const relayProvisioningTemplate = "minddy_min591_provisioning_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -5764,6 +5765,80 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       expect(() => sql(restored, `UPDATE public.project_git_links
         SET webhook_secret_encrypted='{"__encrypted":true}'
         WHERE id=${quote(ids[0])};`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const database of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${database} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
+
+  it("restores the sealed relay identity with historical keys and rejects a wrong root", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_provision_source_${suffix}`;
+    const restored = `minddy_min591_provision_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32), instance = randomUUID();
+    const scope: EncryptionScope = { kind: "system",
+      id: "00000000-0000-0000-0000-000000000000" };
+    const context = { scope, table: "forge_relay_provisioning",
+      column: "encrypted_content", rowId: "singleton" };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(relayProvisioningTemplate,
+        "SELECT count(*) FROM public.forge_relay_provisioning;"))
+        .toBe("0");
+      for (const database of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${database} TEMPLATE ${relayProvisioningTemplate};`);
+        created.push(database);
+      }
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      const legacyCipher = await store.encrypt({ relay_url: "https://old-relay.example",
+        signing_key: "historical-private-key",
+        webhook_secret: "historical-webhook-secret" },context);
+      await keys.rotate(scope, 1);
+      keys.invalidate(scope);
+      const current = { relay_url: "https://private-relay.example",
+        signing_key: "current-private-key",
+        webhook_secret: "current-webhook-secret" };
+      const cipher = await store.encrypt(current,context);
+      sql(source, `INSERT INTO public.forge_relay_provisioning(id,instance_id,
+        encrypted_content,encryption_version)
+        VALUES(true,${quote(instance)},${quote(cipher)},2);`);
+      expect(sql(source,
+        "SELECT public.activate_forge_relay_provisioning_content();"))
+        .toBe("t");
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["public.forge_relay_provisioning",
+          "public.forge_relay_provisioning_scope",
+          "public.envelope_data_keys"].map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      for (const value of Object.values(current)) expect(dump).not.toContain(value);
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;
+        ${dump}\nCOMMIT;`);
+      const cold = new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(root)));
+      const row = JSON.parse(sql(restored,
+        "SELECT row_to_json(p) FROM public.forge_relay_provisioning p;"));
+      expect(row.relay_url).toBeNull();
+      expect(row.signing_key_encrypted).toBeNull();
+      expect(row.webhook_secret_encrypted).toBeNull();
+      expect(await cold.decrypt(cold.fromDatabase(row.encrypted_content),context))
+        .toEqual(current);
+      expect(await cold.decrypt(cold.fromDatabase(legacyCipher),context))
+        .toMatchObject({ signing_key: "historical-private-key" });
+      const wrong = new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(randomBytes(32))));
+      await expect(wrong.decrypt(
+        wrong.fromDatabase(row.encrypted_content),context)).rejects.toThrow();
+      expect(() => sql(restored, `UPDATE public.forge_relay_provisioning
+        SET relay_url='https://old-writer.example',
+          signing_key_encrypted='old',webhook_secret_encrypted='old',
+          encrypted_content=NULL,encryption_version=0;`)).toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();

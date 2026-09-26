@@ -8586,7 +8586,7 @@
       },
       "relay_url": {
         "type": "text",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       },
       "instance_id": {
@@ -8599,14 +8599,39 @@
         "nullable": false,
         "generated": false
       },
+      "content_revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "encrypted_content": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
       "signing_key_encrypted": {
         "type": "text",
-        "nullable": false,
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       },
       "webhook_secret_encrypted": {
         "type": "text",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       }
     },
@@ -10550,6 +10575,24 @@
     "foreignKeys": []
   },
   "page_content_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "forge_relay_provisioning_scope": {
     "columns": {
       "id": {
         "type": "boolean",
