@@ -4,7 +4,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { decodeProjectName } from "@/lib/server/project-content";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { GitConnection } from "@/lib/types";
-import { encryptForgeToken } from "./token-crypto";
+import { encodeForgeOAuthTokens } from "./forge-oauth-token-content";
 import type { GitlabTokenSet } from "./gitlab-app";
 
 /**
@@ -152,11 +152,16 @@ export async function updateConnectionAccount(
   const supabase = getServiceClient();
   const { data } = await supabase
     .from("git_connections")
-    .select("provider_account_id, account_login, account_type, repository_selection")
+    .select("provider, provider_account_id, account_login, account_type, repository_selection, encryption_version")
     .eq("id", connectionId)
     .maybeSingle();
   const row = data as Record<string, string | null> | null;
   if (!row) return;
+  if (row.provider === "gitlab" && Number(row.encryption_version ?? 0)>0 &&
+      account.providerAccountId !== undefined &&
+      account.providerAccountId !== row.provider_account_id) {
+    throw new Error("Protected GitLab connection requires reconnection for an account change");
+  }
 
   const patch: Record<string, string | null> = {};
   const put = (column: string, value: string | null | undefined) => {
@@ -281,13 +286,25 @@ export async function upsertGitlabConnection(params: {
   source?: "local" | "relay";
 }): Promise<string> {
   const supabase = getServiceClient();
-  const { data, error } = await supabase.rpc("upsert_gitlab_connection_atomic", {
+  const { data: existing } = await supabase.from("git_connections")
+    .select("encryption_version")
+    .eq("user_id",params.userId).eq("provider","gitlab")
+    .eq("provider_account_id",params.providerAccountId).maybeSingle();
+  const content = await encodeForgeOAuthTokens("git_connections",{
+    user_id: params.userId, provider: "gitlab",
+    provider_account_id: params.providerAccountId,
+  }, { accessToken: params.tokens.accessToken,
+    refreshToken: params.tokens.refreshToken }, { service: supabase,
+      force: Number(existing?.encryption_version ?? 0)>0 });
+  const { data, error } = await supabase.rpc("upsert_gitlab_connection_protected_atomic", {
     p_user_id: params.userId,
     p_provider_account_id: params.providerAccountId,
     p_account_login: params.accountLogin,
     p_source: params.source ?? "local",
-    p_access_token_encrypted: encryptForgeToken(params.tokens.accessToken),
-    p_refresh_token_encrypted: encryptForgeToken(params.tokens.refreshToken),
+    p_access_token_encrypted: content.access_token_encrypted,
+    p_refresh_token_encrypted: content.refresh_token_encrypted,
+    p_encrypted_content: content.encrypted_content,
+    p_encryption_version: content.encryption_version,
     p_token_expires_at: params.tokens.expiresAt,
     p_oauth_scopes: params.tokens.scope,
   });

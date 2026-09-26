@@ -2,10 +2,8 @@ import "server-only";
 import { capability, requireCapability } from "@/lib/server/capabilities";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import {
-  decryptForgeToken,
-  encryptForgeToken,
-} from "./token-crypto";
+import { decodeForgeOAuthTokens, encodeForgeOAuthTokens,
+  type ForgeOAuthTokenRow } from "./forge-oauth-token-content";
 import { SITE_URL } from "@/lib/site";
 import {
   GITLAB_API_BASE,
@@ -223,15 +221,13 @@ export async function getGitlabUser(accessToken: string): Promise<GitlabUser> {
 
 // --- Token mint with lazy refresh ----------------------------------
 
-interface AccountTokenRow {
+interface AccountTokenRow extends ForgeOAuthTokenRow {
   id: string;
-  provider: string | null;
+  provider: string;
   /** "relay" when the connection was established through the managed forge
    * relay — its tokens belong to the MANAGED app's client, so their refresh
    * grant must run Cloud-side, not here (no local client credentials). */
   source: string | null;
-  access_token_encrypted: string | null;
-  refresh_token_encrypted: string | null;
   token_expires_at: string | null;
   oauth_refresh_claim: string | null;
 }
@@ -243,7 +239,7 @@ async function loadAccountTokenRow(
   const { data } = await supabase
     .from("git_connections")
     .select(
-      "id, provider, source, access_token_encrypted, refresh_token_encrypted, token_expires_at, oauth_refresh_claim",
+      "id, user_id, provider, provider_account_id, source, access_token_encrypted, refresh_token_encrypted, encrypted_content, encryption_version, token_expires_at, oauth_refresh_claim",
     )
     .eq("id", connectionId)
     .maybeSingle();
@@ -312,13 +308,14 @@ async function mintGitlabAccessToken(
   }
   const nowMs = Date.now();
   const expiresAtMs = row.token_expires_at ? Date.parse(row.token_expires_at) : 0;
+  const tokens = await decodeForgeOAuthTokens("git_connections",row);
   if (!force && expiresAtMs - nowMs > REFRESH_SKEW_MS) {
-    const token = decryptForgeToken(row.access_token_encrypted);
+    const token = tokens.accessToken;
     if (token) return token;
     // Decryption failed (secret twisted / corruption) → we come across a refresh.
   }
 
-  const refreshToken = decryptForgeToken(row.refresh_token_encrypted);
+  const refreshToken = tokens.refreshToken;
   if (!refreshToken) {
     throw new Error(
       `GitLab connection ${connectionId} has no refresh token; reconnect required`,
@@ -329,7 +326,8 @@ async function mintGitlabAccessToken(
     kind: "connection",
     rowId: row.id,
     expectedExpiresAt: row.token_expires_at,
-    expectedRefreshTokenEncrypted: row.refresh_token_encrypted,
+    expectedRefreshTokenEncrypted: row.encryption_version
+      ? row.encrypted_content ?? null : row.refresh_token_encrypted,
   });
   if (!claimId) {
     // A different instance already owns this single-use grant. Wait for its
@@ -341,9 +339,13 @@ async function mintGitlabAccessToken(
       if (recovered.oauth_refresh_claim == null) {
         const advanced =
           recovered.token_expires_at !== row.token_expires_at ||
-          recovered.refresh_token_encrypted !== row.refresh_token_encrypted;
+          (recovered.encryption_version
+            ? recovered.encrypted_content : recovered.refresh_token_encrypted) !==
+          (row.encryption_version
+            ? row.encrypted_content : row.refresh_token_encrypted);
         if (advanced) {
-          const token = decryptForgeToken(recovered.access_token_encrypted);
+          const token = (await decodeForgeOAuthTokens(
+            "git_connections",recovered)).accessToken;
           if (token) return token;
         }
         return mintGitlabAccessToken(connectionId, force);
@@ -373,11 +375,20 @@ async function mintGitlabAccessToken(
   // On a FORCED rotation, the CAS jumps: it starts from an expiry
   // stored that the forge has denied, and it is our token which is authentic.
   const supabase = getServiceClient();
+  let content;
+  try {
+    content = await encodeForgeOAuthTokens("git_connections",row,{
+      accessToken: refreshed.accessToken,
+      refreshToken: refreshed.refreshToken,
+    },{ service: supabase, force: !!row.encryption_version });
+  } catch (error) {
+    await releaseForgeOAuthRefreshClaim("connection",row.id,claimId);
+    throw error;
+  }
   const persist = supabase
     .from("git_connections")
     .update({
-      access_token_encrypted: encryptForgeToken(refreshed.accessToken),
-      refresh_token_encrypted: encryptForgeToken(refreshed.refreshToken),
+      ...content,
       token_expires_at: refreshed.expiresAt,
       oauth_refresh_claim: null,
       oauth_refresh_claimed_at: null,

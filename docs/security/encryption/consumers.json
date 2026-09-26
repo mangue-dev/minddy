@@ -5369,6 +5369,48 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/forge-oauth-token-backfill.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 27,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-oauth-token-backfill.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 46,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-oauth-token-backfill.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 51,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-oauth-token-backfill.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 80,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-oauth-token-backfill.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 90,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-oauth-token-backfill.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 99,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/forge-relay-audit-backfill.ts",
     "operation": "from",
     "resource": "forge_relay_audit",
@@ -7339,35 +7381,42 @@
     "file": "lib/server/git/connections.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 171,
+    "line": 176,
     "storage": false
   },
   {
     "file": "lib/server/git/connections.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 195,
+    "line": 200,
     "storage": false
   },
   {
     "file": "lib/server/git/connections.ts",
     "operation": "rpc",
     "resource": "upsert_github_connection_atomic",
-    "line": 244,
-    "storage": false
-  },
-  {
-    "file": "lib/server/git/connections.ts",
-    "operation": "rpc",
-    "resource": "upsert_gitlab_connection_atomic",
-    "line": 284,
+    "line": 249,
     "storage": false
   },
   {
     "file": "lib/server/git/connections.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 310,
+    "line": 289,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/connections.ts",
+    "operation": "rpc",
+    "resource": "upsert_gitlab_connection_protected_atomic",
+    "line": 299,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/connections.ts",
+    "operation": "from",
+    "resource": "git_connections",
+    "line": 327,
     "storage": false
   },
   {
@@ -7399,24 +7448,31 @@
     "storage": false
   },
   {
-    "file": "lib/server/git/gitlab-app.ts",
+    "file": "lib/server/git/forge-oauth-token-content.ts",
     "operation": "from",
-    "resource": "git_connections",
-    "line": 243,
+    "resource": "forge_oauth_token_scope",
+    "line": 42,
     "storage": false
   },
   {
     "file": "lib/server/git/gitlab-app.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 376,
+    "line": 239,
     "storage": false
   },
   {
     "file": "lib/server/git/gitlab-app.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 710,
+    "line": 388,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/gitlab-app.ts",
+    "operation": "from",
+    "resource": "git_connections",
+    "line": 721,
     "storage": false
   },
   {
@@ -7668,56 +7724,63 @@
     "file": "lib/server/git/user-identities.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 67,
+    "line": 68,
     "storage": false
   },
   {
     "file": "lib/server/git/user-identities.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 72,
+    "line": 73,
     "storage": false
   },
   {
     "file": "lib/server/git/user-identities.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 121,
+    "line": 122,
     "storage": false
   },
   {
     "file": "lib/server/git/user-identities.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 173,
+    "line": 131,
     "storage": false
   },
   {
     "file": "lib/server/git/user-identities.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 192,
+    "line": 180,
     "storage": false
   },
   {
     "file": "lib/server/git/user-identities.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 213,
+    "line": 199,
     "storage": false
   },
   {
     "file": "lib/server/git/user-identities.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 241,
+    "line": 220,
     "storage": false
   },
   {
     "file": "lib/server/git/user-identities.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 392,
+    "line": 246,
+    "storage": false
+  },
+  {
+    "file": "lib/server/git/user-identities.ts",
+    "operation": "from",
+    "resource": "git_user_identities",
+    "line": 417,
     "storage": false
   },
   {

@@ -95,7 +95,7 @@ must be checked separately.
 | Histories and derived copies | Page versions, issue events, statistics, durable agent replay journals and run event payloads now have converted repositories and migration. The event-triggered assistant summary and pending question copies are protected with their event. Numo surface destinations and the non-worker durable activity payloads now have protected readers, writers and migrations; initial prompts, other surface projections, checkpoints and conversation content remain to be converted with their source rows. |
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
-| Forge data | Forge mention throttle identities and private repository names use stable system blind indexes. Names have a recoverable encrypted registry and guarded equality keys across linked copies. Default branches use project-bound envelopes. Relay instance configuration, singleton self-hosted provisioning, brokered user deliveries and repository hook secrets are sealed; the unused relay mirror secret copy is removed. Convert remaining persistent OAuth credentials. The generic row codec deliberately refuses sensitive primary keys. |
+| Forge data | Forge mention throttle identities and private repository names use stable system blind indexes. Names have a recoverable encrypted registry and guarded equality keys across linked copies. Default branches use project-bound envelopes. Relay instance configuration, singleton self-hosted provisioning, brokered user deliveries, persistent OAuth grants and repository hook secrets are sealed; the unused relay mirror secret copy is removed. Review remaining forge sidecars and MCP credentials. The generic row codec deliberately refuses sensitive primary keys. |
 | Files and images | Attachment, page-file and project-icon server paths now use opaque names, ciphertext bytes and authorized download routes. The icon bucket switches to private only after the object queue is empty; other object copies still need review. Public avatars have an explicit public-use exception. |
 | Feedback and sharing | Feedback posts, private visitor identities, board SSO secrets and recoverable share tokens have repository and migration checkpoints below. Remaining feedback copies still need conversion; owner dialogs must retain access to share URLs. |
 | Credentials and configuration | `app_config.value` and BYOK credentials, endpoints and private model choices have bounded CAS envelopes and activated old-writer guards. Migrate remaining legacy environment-key envelopes and secret/configuration stores; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
@@ -1889,4 +1889,34 @@ updates. A PostgreSQL dump/restore loads delivery children before relay
 instances in separate committed batches, recovers two key versions with cold
 caches and rejects the wrong root. `MINDDY_RELAY_USER_DELIVERY_ENCRYPTION_ENABLED`
 and the global content flag remain off in production. Persistent user OAuth
-credentials remain open.
+credentials are covered by the next checkpoint.
+
+## Persistent forge OAuth grant checkpoint — 26 September 2026
+
+`git_connections` and `git_user_identities` now seal access and refresh tokens
+together under the owning user's data key. The authenticated context binds
+the connection to the user, provider and provider account, and binds an
+identity to its user and provider. GitHub installation connections that carry
+no OAuth token remain metadata-only. GitLab's atomic connection upsert now
+accepts a complete sealed pair while preserving the existing row ID and
+per-user account conflict lock. Reauthorization preserves protected rows even if a write
+flag is later disabled.
+
+The cross-instance refresh claim compares the sealed pair when present, so
+two workers cannot use the same rotating provider refresh token. A losing
+worker rereads the successor pair; the winner persists both tokens and
+releases the claim in one guarded update. Local and managed-relay refresh
+paths retain their provider-specific routing. Sending a refresh token to the
+authorized GitHub, GitLab or relay provider is an intentional external
+transmission. Public settings and account projections continue to omit the
+tokens.
+
+Two bounded 25-row revision-CAS workers migrate legacy environment-key pairs
+and rotate historical user keys. Activation requires checked format-3 rows in
+both tables. SQL refuses old clear RPCs and direct identity writers, scope
+moves and key downgrades. The local SQL regression covers the source, both
+writers and the protected claim; a PostgreSQL dump/restore loads both child
+tables before users in independent batches, reads two key versions with cold
+caches and rejects a wrong root. `MINDDY_FORGE_OAUTH_TOKEN_ENCRYPTION_ENABLED`
+and the global content flag remain off in production. MCP credentials and
+other open MIN-591 targets still require conversion.

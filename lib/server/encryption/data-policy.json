@@ -2145,7 +2145,16 @@
         "created_at",
         "oauth_refresh_claimed_at",
         "token_expires_at",
-        "updated_at"
+        "updated_at",
+        "encryption_checked_at",
+        "encryption_attempted_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ],
+      "bounded_metadata": [
+        "content_revision"
       ]
     }
   },
@@ -2178,7 +2187,16 @@
         "created_at",
         "oauth_refresh_claimed_at",
         "token_expires_at",
-        "updated_at"
+        "updated_at",
+        "encryption_checked_at",
+        "encryption_attempted_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ],
+      "bounded_metadata": [
+        "content_revision"
       ]
     }
   },
@@ -4227,6 +4245,21 @@
     }
   },
   "forge_relay_user_delivery_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "forge_oauth_token_scope": {
     "scope": {
       "kind": "system",
       "id": "00000000-0000-0000-0000-000000000000"

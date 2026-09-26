@@ -1748,6 +1748,26 @@
         "account_storage_quota_allows"
       ]
     },
+    "activate_forge_oauth_tokens()": {
+      "sha256": "a3eca34848460792af00f6f69594ed4dddeff7a16937e23a8efb4bca84cbb429",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "git_connections",
+        "git_user_identities",
+        "forge_oauth_token_scope"
+      ],
+      "protectedRelations": [
+        "git_connections",
+        "git_user_identities"
+      ],
+      "functionReferences": [
+        "forge_oauth_token_envelope_version"
+      ]
+    },
     "backfill_numo_conversations()": {
       "sha256": "ec78308563687bbca0ca588146a5bcea483c056c7e0bd632d082c3df9541e149",
       "securityDefiner": true,
@@ -3164,6 +3184,26 @@
       ],
       "functionReferences": []
     },
+    "guard_forge_oauth_token_content()": {
+      "sha256": "28acfb124917a387c83c9f82634a4151c2afe09f9b1bbcd2bdd816cbc053f96a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "git_connections",
+        "git_user_identities",
+        "forge_oauth_token_scope"
+      ],
+      "protectedRelations": [
+        "git_connections",
+        "git_user_identities"
+      ],
+      "functionReferences": [
+        "forge_oauth_token_envelope_version"
+      ]
+    },
     "guard_forge_repository_identity()": {
       "sha256": "4b6a5332aa478c65a0ba3bda0e4f85bd0915f57ad3872039422229241399f811",
       "securityDefiner": true,
@@ -3967,6 +4007,17 @@
       "protectedRelations": [
         "feedback_posts"
       ],
+      "functionReferences": []
+    },
+    "forge_oauth_token_envelope_version(text)": {
+      "sha256": "57133a03e2b400301b810b856b7e07933b747953788362b65531e68b7111a5ad",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "guard_agent_message_conversation_scope()": {
@@ -6081,7 +6132,7 @@
       "functionReferences": []
     },
     "claim_forge_oauth_refresh(text,uuid,timestamp with time zone,text,uuid)": {
-      "sha256": "e11dbe1ef4e080c5d2b30f0a2fcc206a5b5c4ce45769f1bb4dd0259902796300",
+      "sha256": "96457beead8a481c278564b295adbbac1ae88f28a97a53f9d4359ae76d8d0ce6",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6869,6 +6920,21 @@
       "protectedRelations": [
         "agent_runs",
         "numo_assistant_turns"
+      ],
+      "functionReferences": []
+    },
+    "upsert_gitlab_connection_protected_atomic(uuid,text,text,text,text,text,text,integer,timestamp with time zone,text)": {
+      "sha256": "2403a7c99946a3dda76976408e68ec8dd51e9e7149417be79e6f80ae42b541d3",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "git_connections"
+      ],
+      "protectedRelations": [
+        "git_connections"
       ],
       "functionReferences": []
     },
@@ -7790,6 +7856,10 @@
       "function": "guard_agent_pr_url_parent_scope()",
       "definition": "CREATE TRIGGER agent_pr_url_parent_scope_guard BEFORE UPDATE OF project_id ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_agent_pr_url_parent_scope()"
     },
+    "git_connections.git_connections_oauth_content_guard": {
+      "function": "guard_forge_oauth_token_content()",
+      "definition": "CREATE TRIGGER git_connections_oauth_content_guard BEFORE INSERT OR UPDATE ON git_connections FOR EACH ROW EXECUTE FUNCTION guard_forge_oauth_token_content()"
+    },
     "github_issue_comment_syncs.github_comment_url_guard": {
       "function": "guard_github_comment_url()",
       "definition": "CREATE TRIGGER github_comment_url_guard BEFORE INSERT OR UPDATE ON github_issue_comment_syncs FOR EACH ROW EXECUTE FUNCTION guard_github_comment_url()"
@@ -7893,6 +7963,10 @@
     "forge_repository_names.forge_repository_name_registry_guard": {
       "function": "guard_forge_repository_name_registry()",
       "definition": "CREATE TRIGGER forge_repository_name_registry_guard BEFORE INSERT OR UPDATE ON forge_repository_names FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_name_registry()"
+    },
+    "git_user_identities.git_user_identities_oauth_content_guard": {
+      "function": "guard_forge_oauth_token_content()",
+      "definition": "CREATE TRIGGER git_user_identities_oauth_content_guard BEFORE INSERT OR UPDATE ON git_user_identities FOR EACH ROW EXECUTE FUNCTION guard_forge_oauth_token_content()"
     },
     "pr_comment_edits.pr_comment_edits_repository_identity_guard": {
       "function": "guard_forge_repository_identity()",

@@ -55,6 +55,7 @@ const relayInstanceTemplate = "minddy_min591_relay_audit";
 const projectWebhookTemplate = "minddy_min591_repo_hook_audit";
 const relayProvisioningTemplate = "minddy_min591_provisioning_audit";
 const relayUserDeliveryTemplate = "minddy_min591_user_delivery_audit";
+const forgeOAuthTemplate = "minddy_min591_forge_oauth_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -5948,6 +5949,137 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       expect(() => sql(restored,`INSERT INTO public.forge_relay_user_deliveries(
         instance_id,user_id,provider_account_id,access_token_encrypted)
         VALUES(${quote(instance)},'user','43','old-access');`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const database of created.reverse()) {
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+      }
+    }
+  },60_000);
+
+  it("restores persistent forge grants before users with two key versions", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0,20);
+    const source = `minddy_min591_oauth_source_${suffix}`;
+    const restored = `minddy_min591_oauth_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32), users = [randomUUID(),randomUUID()];
+    const connectionIds = [randomUUID(),randomUUID()];
+    const identityIds = [randomUUID(),randomUUID()];
+    const log = vi.spyOn(console,"info").mockImplementation(()=>{});
+    try {
+      expect(sql(forgeOAuthTemplate,
+        "SELECT count(*) FROM public.git_connections;"))
+        .toBe("0");
+      for (const database of [source,restored]) {
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${forgeOAuthTemplate};`);
+        created.push(database);
+      }
+      const keys = new ManagedDataKeys(registry(source),wrapper(root));
+      const store = new EncryptedStore(keys);
+      for (const [index,user] of users.entries()) {
+        const scope: EncryptionScope = { kind: "user",id:user };
+        sql(source,`INSERT INTO auth.users(id) VALUES(${quote(user)});`);
+        if (index === 1) {
+          const first = await keys.current(scope);
+          first.bytes.fill(0);
+          await keys.rotate(scope,1);
+        }
+        const connection = await store.encrypt({
+          accessToken: `private-gitlab-access-${index}`,
+          refreshToken: `private-gitlab-refresh-${index}` },{
+          scope,table:"git_connections",column:"encrypted_content",
+          rowId:JSON.stringify([user,"gitlab",String(4200+index)]),
+        });
+        const identity = await store.encrypt({
+          accessToken: `private-github-access-${index}`,
+          refreshToken: `private-github-refresh-${index}` },{
+          scope,table:"git_user_identities",column:"encrypted_content",
+          rowId:JSON.stringify([user,"github"]),
+        });
+        sql(source,`INSERT INTO public.git_connections(id,user_id,provider,
+          provider_account_id,encrypted_content,encryption_version)
+          VALUES(${quote(connectionIds[index])},${quote(user)},'gitlab',
+            ${quote(String(4200+index))},${quote(connection)},${index+1});
+          INSERT INTO public.git_user_identities(id,user_id,provider,
+            provider_account_id,encrypted_content,encryption_version)
+          VALUES(${quote(identityIds[index])},${quote(user)},'github',
+            ${quote(String(7200+index))},${quote(identity)},${index+1});`);
+        keys.invalidate(scope);
+      }
+      expect(sql(source,"SELECT public.activate_forge_oauth_tokens();"))
+        .toBe("t");
+      const dump = execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges", ...["auth.users","public.git_connections",
+          "public.git_user_identities","public.forge_oauth_token_scope",
+          "public.envelope_data_keys"].map((table)=>`--table=${table}`)],
+      { encoding:"utf8",maxBuffer:4*1024*1024 });
+      for (const marker of ["private-gitlab-access","private-gitlab-refresh",
+        "private-github-access","private-github-refresh"]) {
+        expect(dump).not.toContain(marker);
+      }
+      let remainder = dump;
+      const copies = new Map<string,{header:string;lines:string[]}>();
+      for (const table of ["public.git_connections",
+        "public.git_user_identities","auth.users"]) {
+        const start = remainder.indexOf(`COPY ${table} `);
+        expect(start).toBeGreaterThanOrEqual(0);
+        const bodyStart = remainder.indexOf("\n",start)+1;
+        const bodyEnd = remainder.indexOf("\\.\n",bodyStart);
+        copies.set(table,{ header:remainder.slice(start,bodyStart),
+          lines:remainder.slice(bodyStart,bodyEnd).trimEnd().split("\n") });
+        remainder = remainder.slice(0,start)+remainder.slice(bodyEnd+3);
+      }
+      for (const table of ["public.git_connections",
+        "public.git_user_identities","auth.users"]) {
+        for (const line of copies.get(table)!.lines.reverse()) {
+          sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+            ${copies.get(table)!.header}${line}\n\\.\nCOMMIT;`);
+        }
+      }
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+        ${remainder}\nCOMMIT;`);
+      expect(sql(restored,`SELECT count(*) FROM public.git_connections c
+        JOIN auth.users u ON u.id=c.user_id;`)).toBe("2");
+      const cold = new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(root)));
+      for (const [index,user] of users.entries()) {
+        const scope: EncryptionScope = { kind:"user",id:user };
+        for (const [table,id,provider,account,expected] of [
+          ["git_connections",connectionIds[index],"gitlab",
+            String(4200+index),`private-gitlab-access-${index}`],
+          ["git_user_identities",identityIds[index],"github",
+            null,`private-github-access-${index}`],
+        ] as const) {
+          const row = JSON.parse(sql(restored,`SELECT row_to_json(t)
+            FROM public.${table} t WHERE id=${quote(id)};`));
+          expect(row.access_token_encrypted).toBeNull();
+          expect(row.refresh_token_encrypted).toBeNull();
+          expect(row.encryption_checked_at).not.toBeNull();
+          const plain = await cold.decrypt<{accessToken:string}>(
+            cold.fromDatabase(row.encrypted_content),{
+              scope,table,column:"encrypted_content",
+              rowId:JSON.stringify(account === null
+                ? [user,provider] : [user,provider,account]),
+            });
+          expect(plain.accessToken).toBe(expected);
+        }
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(randomBytes(32))));
+      const cipher = sql(restored,`SELECT encrypted_content FROM
+        public.git_connections WHERE id=${quote(connectionIds[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase(cipher),{
+        scope:{kind:"user",id:users[0]},table:"git_connections",
+        column:"encrypted_content",
+        rowId:JSON.stringify([users[0],"gitlab","4200"]),
+      })).rejects.toThrow();
+      expect(() => sql(restored,`UPDATE public.git_connections SET
+        access_token_encrypted='old',encrypted_content=NULL,
+        encryption_version=0 WHERE id=${quote(connectionIds[0])};`))
+        .toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();
