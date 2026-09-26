@@ -5,6 +5,8 @@ import crypto from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isManagedForgeEnabled } from "@/lib/managed-services";
 import { decryptForgeToken } from "@/lib/server/git/token-crypto";
+import { decodeRelayInstance, type RelayInstanceContentRow } from
+  "./instance-content";
 import { safeFetch } from "@/lib/server/safe-fetch";
 import { decodeRelayDelivery, encodeRelayDelivery,
   shouldEncryptRelayDelivery } from "./delivery-content";
@@ -39,7 +41,7 @@ interface EnqueueRow {
 
 interface ActiveRelayDeliveryTarget {
   webhook_url: string | null;
-  webhook_secret_encrypted: string | null;
+  webhook_secret: string | null;
 }
 
 async function getActiveRelayDeliveryTarget(
@@ -48,14 +50,22 @@ async function getActiveRelayDeliveryTarget(
 ): Promise<ActiveRelayDeliveryTarget | null> {
   const { data, error } = await supabase
     .from("forge_relay_instances")
-    .select("webhook_url, webhook_secret_encrypted")
+    .select("id,name,webhook_url,webhook_secret_encrypted,encrypted_content,encryption_version")
     .eq("id", instanceId)
     .eq("status", "active")
     .maybeSingle();
   if (error) {
     throw new Error(`relay instance status lookup failed: ${error.message}`);
   }
-  return data as ActiveRelayDeliveryTarget | null;
+  if (!data) return null;
+  if (Number(data.encryption_version ?? 0) > 0) {
+    const plain = await decodeRelayInstance(data as RelayInstanceContentRow);
+    return { webhook_url: plain.webhook_url,
+      webhook_secret: plain.webhook_secret_encrypted };
+  }
+  return { webhook_url: data.webhook_url,
+    webhook_secret: data.webhook_secret_encrypted
+      ? decryptForgeToken(data.webhook_secret_encrypted) : null };
 }
 
 /**
@@ -253,8 +263,7 @@ export async function processDueRelayDeliveries(limit = 25): Promise<FanoutOutco
     }
 
     const endpoint = target.webhook_url;
-    const encryptedSecret = target.webhook_secret_encrypted;
-    const secret = encryptedSecret ? decryptForgeToken(encryptedSecret) : null;
+    const secret = target.webhook_secret;
 
     // Not registered (yet): this pass counts as an attempt on the same
     // backoff ladder as any other failure. Without the cap, a delivery for an

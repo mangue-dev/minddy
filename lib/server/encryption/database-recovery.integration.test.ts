@@ -51,6 +51,7 @@ const routineContentTemplate = "minddy_min591_routine_audit";
 const projectContentTemplate = "minddy_min591_project_audit";
 const pageContentTemplate = "minddy_min591_page_audit";
 const userAiKeyTemplate = "minddy_min591_byok_audit";
+const relayInstanceTemplate = "minddy_min591_relay_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -5540,6 +5541,113 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
         .rejects.toThrow();
       expect(() => sql(restored, `UPDATE public.user_ai_keys
         SET key_encrypted='old writer' WHERE id=${quote(ids[0])};`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const database of created.reverse()) {
+        sql("postgres", `DROP DATABASE ${database} WITH (FORCE);`);
+      }
+    }
+  }, 60_000);
+
+  it("restores sealed relay claims before their instances across key versions", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_relay_source_${suffix}`;
+    const restored = `minddy_min591_relay_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32), ids = [randomUUID(), randomUUID()];
+    const scope: EncryptionScope = { kind: "system",
+      id: "00000000-0000-0000-0000-000000000000" };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(relayInstanceTemplate,
+        "SELECT count(*) FROM public.forge_relay_instances;"))
+        .toBe("0");
+      for (const database of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${database} TEMPLATE ${relayInstanceTemplate};`);
+        created.push(database);
+      }
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const codec = new EncryptedRowCodec(new EncryptedStore(keys));
+      for (const [index, id] of ids.entries()) {
+        if (index === 1) await keys.rotate(scope, 1);
+        const sealed = await codec.encode({ id,
+          name: `private-relay-name-${index}`,
+          webhook_url: `https://private-relay-${index}.example/webhook`,
+          webhook_secret_encrypted: `private-relay-secret-${index}`,
+          encrypted_content: null, encryption_version: 0 },
+        { table: "forge_relay_instances", scope });
+        sql(source, `INSERT INTO public.forge_relay_instances(
+            id,name,public_key,webhook_url,webhook_secret_encrypted,
+            encrypted_content,encryption_version)
+          VALUES(${quote(id)},NULL,${quote(`public-key-${index}`)},
+            NULL,NULL,${quote(sealed.encrypted_content as string)},
+            ${sealed.encryption_version});
+          INSERT INTO public.forge_relay_installations(
+            instance_id,installation_id,account_login)
+          VALUES(${quote(id)},${4100 + index},'public-account');`);
+        keys.invalidate(scope);
+      }
+      expect(sql(source,
+        "SELECT public.activate_forge_relay_instance_content();"))
+        .toBe("t");
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["public.forge_relay_instances",
+          "public.forge_relay_installations",
+          "public.forge_relay_instance_content_scope",
+          "public.envelope_data_keys"].map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      for (const secret of ["private-relay-name", "private-relay-secret",
+        "private-relay-0.example"]) expect(dump).not.toContain(secret);
+      let remainder = dump;
+      const copies = new Map<string, { header: string; lines: string[] }>();
+      for (const table of ["forge_relay_installations", "forge_relay_instances"]) {
+        const start = remainder.indexOf(`COPY public.${table} `);
+        expect(start).toBeGreaterThanOrEqual(0);
+        const bodyStart = remainder.indexOf("\n", start) + 1;
+        const bodyEnd = remainder.indexOf("\\.\n", bodyStart);
+        copies.set(table, { header: remainder.slice(start, bodyStart),
+          lines: remainder.slice(bodyStart, bodyEnd).trimEnd().split("\n") });
+        remainder = remainder.slice(0, start) + remainder.slice(bodyEnd + 3);
+      }
+      for (const table of ["forge_relay_installations", "forge_relay_instances"]) {
+        for (const line of copies.get(table)!.lines.reverse()) {
+          sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;
+            ${copies.get(table)!.header}${line}\n\\.\nCOMMIT;`);
+        }
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;
+        ${remainder}\nCOMMIT;`);
+      expect(sql(restored, `SELECT count(*)
+        FROM public.forge_relay_installations claim
+        JOIN public.forge_relay_instances instance
+          ON instance.id=claim.instance_id;`)).toBe("2");
+      const cold = new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored), wrapper(root))));
+      for (const [index, id] of ids.entries()) {
+        const row = JSON.parse(sql(restored, `SELECT row_to_json(i)
+          FROM public.forge_relay_instances i WHERE id=${quote(id)};`));
+        expect(row.encryption_version).toBe(index + 1);
+        expect(row.name).toBeNull();
+        expect(row.webhook_url).toBeNull();
+        expect(row.webhook_secret_encrypted).toBeNull();
+        const plain = await cold.decode(row,
+          { table: "forge_relay_instances", scope },
+          { actorId: null, reason: "migration_verification" });
+        expect(plain.name).toBe(`private-relay-name-${index}`);
+      }
+      const wrong = new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored), wrapper(randomBytes(32)))));
+      const row = JSON.parse(sql(restored, `SELECT row_to_json(i)
+        FROM public.forge_relay_instances i WHERE id=${quote(ids[0])};`));
+      await expect(wrong.decode(row,
+        { table: "forge_relay_instances", scope },
+        { actorId: null, reason: "migration_verification" }))
+        .rejects.toThrow();
+      expect(() => sql(restored, `UPDATE public.forge_relay_instances
+        SET name='old writer' WHERE id=${quote(ids[0])};`)).toThrow();
     } finally {
       root.fill(0);
       vi.unstubAllEnvs();

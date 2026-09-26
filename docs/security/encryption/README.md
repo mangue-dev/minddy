@@ -9,7 +9,7 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 169 application tables and 1,509 columns, their primary
+- `schema.json` records 170 application tables and 1,516 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 174 encryption targets include the original content,
@@ -95,7 +95,7 @@ must be checked separately.
 | Histories and derived copies | Page versions, issue events, statistics, durable agent replay journals and run event payloads now have converted repositories and migration. The event-triggered assistant summary and pending question copies are protected with their event. Numo surface destinations and the non-worker durable activity payloads now have protected readers, writers and migrations; initial prompts, other surface projections, checkpoints and conversation content remain to be converted with their source rows. |
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
-| Forge data | Forge mention throttle identities and private repository names now use stable system blind indexes. The names have a recoverable encrypted registry and guarded equality keys across linked copies. Default branches use project-bound envelopes. Convert remaining legacy webhook credentials. The generic row codec deliberately refuses sensitive primary keys. |
+| Forge data | Forge mention throttle identities and private repository names use stable system blind indexes. Names have a recoverable encrypted registry and guarded equality keys across linked copies. Default branches use project-bound envelopes. Relay instance labels, webhook destinations and shared secrets are sealed together. Convert other legacy webhook and OAuth credentials. The generic row codec deliberately refuses sensitive primary keys. |
 | Files and images | Attachment, page-file and project-icon server paths now use opaque names, ciphertext bytes and authorized download routes. The icon bucket switches to private only after the object queue is empty; other object copies still need review. Public avatars have an explicit public-use exception. |
 | Feedback and sharing | Feedback posts, private visitor identities, board SSO secrets and recoverable share tokens have repository and migration checkpoints below. Remaining feedback copies still need conversion; owner dialogs must retain access to share URLs. |
 | Credentials and configuration | `app_config.value` and BYOK credentials, endpoints and private model choices have bounded CAS envelopes and activated old-writer guards. Migrate remaining legacy environment-key envelopes and secret/configuration stores; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
@@ -1786,3 +1786,29 @@ in separate batches, reads two key versions with cold caches and rejects an
 incorrect root key. `MINDDY_USER_AI_KEY_ENCRYPTION_ENABLED` and the global
 content flag remain off in production. Other legacy credential stores and the
 remaining MIN-591 boundaries are still open.
+
+## Forge relay instance checkpoint — 26 September 2026
+
+`forge_relay_instances.name`, `webhook_url` and
+`webhook_secret_encrypted` now move together into a system-key envelope bound
+to the instance ID. Admin listing returns only the decoded name and bounded
+status metadata. Authenticated relay registration and webhook-secret rotation
+write the complete envelope; fan-out decodes the destination and secret only
+after selecting an active instance and revalidates the external HTTPS target
+on every delivery. Revocation clears the destination and secret while
+preserving the protected name and invalidating pending deliveries. The
+instance-generated secret signs payloads sent to the registered external relay
+endpoint; the secret itself is not sent with those deliveries. Registration
+uses the existing authenticated relay protocol.
+
+A 20-row CAS worker migrates legacy environment-key secrets and rotates old
+system keys. Failed attempts advance a separate queue timestamp without
+marking a row verified. Activation requires checked sealed rows and rejects
+old clear registration or webhook writers. The isolated SQL regression covers
+the source, old writers and metadata updates. A real PostgreSQL restore loads
+installation children before parent instances in independent batches, reads
+two system-key versions with cold caches and rejects a wrong root key. The
+rehearsal also exposed a table-specific ownership trigger that referenced
+`provider` on installation rows; the migration fixes its branch structure.
+The relay flag and global content flag remain off in production. Other forge
+credentials, sidecars and global MIN-591 targets remain open.

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import crypto from "node:crypto";
+import { EncryptedStore, type DataKeyProvider } from
+  "@/lib/server/encryption/store";
 
 import {
   FakeQuery,
@@ -28,6 +30,10 @@ vi.mock("@/lib/managed-services", () => ({
 }));
 const safeFetch = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/server/safe-fetch", () => ({ safeFetch }));
+const encryption = vi.hoisted(() => ({ store: null as EncryptedStore | null }));
+vi.mock("@/lib/server/encryption/registry", () => ({
+  getEncryptedStore: () => encryption.store,
+}));
 
 const INSTANCE_ID = "0f0e0d0c-0b0a-4948-8272-6d6f64656c79";
 const WEBHOOK_SECRET = "instance-generated-webhook-secret-32ch";
@@ -55,6 +61,7 @@ function seedWorld(overrides: Record<string, unknown> = {}): void {
 }
 
 const { encryptForgeToken } = await import("@/lib/server/git/token-crypto");
+const { encodeRelayInstance } = await import("./instance-content");
 const {
   enqueueRelayDeliveryForPayload,
   enqueueRelayDeliveryForProvider,
@@ -75,6 +82,13 @@ let safeFetchCalls: SafeFetchCall[] = [];
 let deliveryStatus = 200;
 
 beforeEach(() => {
+  const root = crypto.randomBytes(32);
+  const keys: DataKeyProvider = {
+    current: async () => ({ version: 1, bytes: Buffer.from(root) }),
+    byVersion: async (_scope, version) =>
+      ({ version, bytes: Buffer.from(root) }),
+  };
+  encryption.store = new EncryptedStore(keys);
   safeFetchCalls = [];
   deliveryStatus = 200;
   seedWorld();
@@ -233,6 +247,27 @@ describe("processDueRelayDeliveries", () => {
     expect((fakeTables["forge_relay_deliveries"] as unknown[])[0]).toMatchObject({
       status: "delivered",
     });
+  });
+
+  it("delivers through an authorized sealed instance without storing its endpoint or secret", async () => {
+    const delivery = dueDelivery();
+    seedWorld({ deliveries: [delivery] });
+    const sealed = await encodeRelayInstance({ id: INSTANCE_ID,
+      name: "private instance", status: "active",
+      webhook_url: ENDPOINT, webhook_secret_encrypted: WEBHOOK_SECRET },
+    { force: true });
+    setFakeTable("forge_relay_instances", [{ ...sealed, status: "active" }]);
+    expect(JSON.stringify(fakeTables["forge_relay_instances"]))
+      .not.toContain(ENDPOINT);
+    expect(JSON.stringify(fakeTables["forge_relay_instances"]))
+      .not.toContain(WEBHOOK_SECRET);
+    const outcome = await processDueRelayDeliveries();
+    expect(outcome).toEqual({ processed: 1, delivered: 1, dead: 0 });
+    expect(safeFetchCalls[0]?.url).toBe(ENDPOINT);
+    const signed = crypto.createHmac("sha256", WEBHOOK_SECRET)
+      .update(String(safeFetchCalls[0]?.options.body)).digest("hex");
+    expect(new Headers(safeFetchCalls[0]?.options.headers)
+      .get("x-hub-signature-256")).toBe(`sha256=${signed}`);
   });
 
   it("invalidates a queued delivery when revocation races with worker selection", async () => {

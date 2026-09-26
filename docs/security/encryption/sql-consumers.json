@@ -3565,6 +3565,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_forge_relay_instance_content()": {
+      "sha256": "7dc3d90fd0be8eeb8acd298ee9d11a825c539a84f17a6885252e091e8feaefba",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "forge_relay_instance_content_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_private_project_icon_storage()": {
       "sha256": "908176393b59f40be49d2b69a351a1c90896f3119752cd91d56ad4c25f36bec4",
       "securityDefiner": true,
@@ -3803,6 +3816,22 @@
       "relations": [
         "forge_relay_audit",
         "forge_relay_instances"
+      ],
+      "protectedRelations": [
+        "forge_relay_instances"
+      ],
+      "functionReferences": []
+    },
+    "activate_forge_relay_instance_content()": {
+      "sha256": "1401c1ae74823464d75a310feddb90219614ee16c34a3457c24f19c421e3667c",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "forge_relay_instances",
+        "forge_relay_instance_content_scope"
       ],
       "protectedRelations": [
         "forge_relay_instances"
@@ -4174,7 +4203,7 @@
       "functionReferences": []
     },
     "enforce_github_installation_single_owner()": {
-      "sha256": "29b38e0d9421866617327661b212593b0e16cf89d3c4770bd271613eddc2ec2f",
+      "sha256": "53b374a30422e1f6cee933b6949536412a8112a7cb81c3aae6cc888776e81d33",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -7728,6 +7757,10 @@
     "feedback_post_categories.feedback_post_categories_broadcast": {
       "function": "broadcast_feedback_child()",
       "definition": "CREATE TRIGGER feedback_post_categories_broadcast AFTER INSERT OR DELETE OR UPDATE ON feedback_post_categories FOR EACH ROW EXECUTE FUNCTION broadcast_feedback_child()"
+    },
+    "forge_relay_instances.forge_relay_instances_a_content_guard": {
+      "function": "guard_forge_relay_instance_content()",
+      "definition": "CREATE TRIGGER forge_relay_instances_a_content_guard BEFORE INSERT OR UPDATE ON forge_relay_instances FOR EACH ROW EXECUTE FUNCTION guard_forge_relay_instance_content()"
     },
     "forge_repository_names.forge_repository_name_registry_guard": {
       "function": "guard_forge_repository_name_registry()",

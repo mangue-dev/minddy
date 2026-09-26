@@ -1109,35 +1109,42 @@
     "file": "app/api/relay/register/route.ts",
     "operation": "from",
     "resource": "forge_relay_instances",
-    "line": 96,
+    "line": 101,
     "storage": false
   },
   {
     "file": "app/api/relay/register/route.ts",
     "operation": "from",
     "resource": "forge_relay_audit",
-    "line": 104,
+    "line": 112,
     "storage": false
   },
   {
     "file": "app/api/relay/register/route.ts",
     "operation": "from",
     "resource": "forge_relay_instances",
-    "line": 117,
+    "line": 125,
     "storage": false
   },
   {
     "file": "app/api/relay/webhook-secret/route.ts",
     "operation": "from",
     "resource": "forge_relay_instances",
-    "line": 82,
+    "line": 86,
+    "storage": false
+  },
+  {
+    "file": "app/api/relay/webhook-secret/route.ts",
+    "operation": "from",
+    "resource": "forge_relay_instances",
+    "line": 102,
     "storage": false
   },
   {
     "file": "app/api/relay/webhook-secret/route.ts",
     "operation": "from",
     "resource": "forge_relay_audit",
-    "line": 93,
+    "line": 120,
     "storage": false
   },
   {
@@ -5390,6 +5397,27 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/forge-relay-instance-backfill.ts",
+    "operation": "from",
+    "resource": "forge_relay_instances",
+    "line": 24,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-relay-instance-backfill.ts",
+    "operation": "from",
+    "resource": "forge_relay_instances",
+    "line": 59,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-relay-instance-backfill.ts",
+    "operation": "from",
+    "resource": "forge_relay_instances",
+    "line": 76,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/forge-repository-name-backfill.ts",
     "operation": "from",
     "resource": null,
@@ -6849,70 +6877,70 @@
     "file": "lib/server/forge-relay/fanout.ts",
     "operation": "from",
     "resource": "forge_relay_instances",
-    "line": 49,
+    "line": 51,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/fanout.ts",
     "operation": "from",
     "resource": "forge_relay_installations",
-    "line": 89,
+    "line": 99,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/fanout.ts",
     "operation": "from",
     "resource": "forge_relay_deliveries",
-    "line": 107,
+    "line": 117,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/fanout.ts",
     "operation": "from",
     "resource": "forge_relay_deliveries",
-    "line": 153,
+    "line": 163,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/fanout.ts",
     "operation": "from",
     "resource": "forge_relay_deliveries",
-    "line": 213,
+    "line": 223,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/fanout.ts",
     "operation": "from",
     "resource": "forge_relay_deliveries",
-    "line": 293,
+    "line": 302,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/fanout.ts",
     "operation": "from",
     "resource": "forge_relay_deliveries",
-    "line": 324,
+    "line": 333,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/fanout.ts",
     "operation": "from",
     "resource": "forge_relay_deliveries",
-    "line": 351,
+    "line": 360,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/fanout.ts",
     "operation": "from",
     "resource": "forge_relay_deliveries",
-    "line": 389,
+    "line": 398,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/fanout.ts",
     "operation": "from",
     "resource": "forge_relay_deliveries",
-    "line": 404,
+    "line": 413,
     "storage": false
   },
   {
@@ -6930,10 +6958,10 @@
     "storage": false
   },
   {
-    "file": "lib/server/forge-relay/instances.ts",
+    "file": "lib/server/forge-relay/instance-content.ts",
     "operation": "from",
-    "resource": "forge_relay_instances",
-    "line": 44,
+    "resource": "forge_relay_instance_content_scope",
+    "line": 37,
     "storage": false
   },
   {
@@ -6947,21 +6975,35 @@
     "file": "lib/server/forge-relay/instances.ts",
     "operation": "from",
     "resource": "forge_relay_instances",
-    "line": 73,
+    "line": 77,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/instances.ts",
     "operation": "from",
     "resource": "forge_relay_instances",
-    "line": 91,
+    "line": 93,
+    "storage": false
+  },
+  {
+    "file": "lib/server/forge-relay/instances.ts",
+    "operation": "from",
+    "resource": "forge_relay_instances",
+    "line": 105,
+    "storage": false
+  },
+  {
+    "file": "lib/server/forge-relay/instances.ts",
+    "operation": "from",
+    "resource": "forge_relay_instances",
+    "line": 122,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/instances.ts",
     "operation": "from",
     "resource": "forge_relay_deliveries",
-    "line": 102,
+    "line": 133,
     "storage": false
   },
   {
