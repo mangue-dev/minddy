@@ -2387,7 +2387,15 @@ async function runAiMergeJob(
       {
         xTitle: "Merge commit (minddy)",
         logPrefix: "[pr-ai-merge]",
-        maxTokens: 1_024,
+        // The default model (GLM-5.3) reasons MANDATORILY, and without this
+        // field it runs at its family default `max`: the reasoning tokens
+        // count inside the output ceiling and, at 1_024, a thinking burst
+        // ate the whole budget before any tool call — the merge failed
+        // silently in roughly one gesture out of two (MIN-594). Ask for the
+        // cheapest level the model publishes, and give the ceiling room
+        // for both the reasoning trace and the message.
+        reasoning: "low",
+        maxTokens: 2_048,
         timeoutMs: 120_000,
       },
     );
