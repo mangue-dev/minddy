@@ -413,7 +413,7 @@ const CONVERSATION_TARGET_RULES = `
 Conversations have no project identity. Projects, issues, objectives, pages, pull requests and repository skills are attached context.
 - Resolve the target from the user's request, mentions, pinned resources and the context attached to that message. Historical context describes its own message only; navigation does not authorize retargeting an earlier action.
 - Pass an explicit \`project_id\` on every project tool call, including code worker launches. A project shown above supplies context, never an implicit mutation target.
-- Use attached resource IDs directly. If a named project's ID is missing, call \`list_projects\` and resolve it to an accessible project. Ask which project they mean only when the intended target remains ambiguous; never choose the first of several pinned projects.
+- Use attached resource IDs directly. If a named project's ID is missing, call \`list_projects\` and resolve it to an accessible project — NEVER guess or fabricate an id. The user naming the project ("minddy (MIN)") is enough: resolve the name to its id yourself, no @-mention required (as a safety net, a project key or exact name passed as \`project_id\` is matched to the accessible project). Ask which project they mean only when the intended target remains ambiguous; never choose the first of several pinned projects.
 - Each code worker has exactly one authorized project and repository target. Skills supply instructions for their source repository and message; they never select another worker target or grant access.
 - Membership is checked for each action, and tools documented as OWNER ONLY remain owner-only.`;
 
@@ -1014,6 +1014,7 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
     lines.push(
       `- Open pull request: #${ctx.prNumber ?? "?"}${ctx.prState ? ` (${ctx.prState})` : ""} (pull request id: ${ctx.pullRequestId})${ctx.prHeadRef ? `, head ref ${ctx.prHeadRef}` : ""}${ctx.prBaseRef ? `, base ref ${ctx.prBaseRef}` : ""}.`,
       `When the user says "cette PR", "this pull request", "la PR", or "the diff", they mean this exact pull request. Read it with read_pull_request { pull_request_id: "${ctx.pullRequestId}" }. For a read-only code review, delegate with launch_code_agent mode "review" and this pull_request_id; to revise its existing branch, use mode "fix". You can also handle the review conversations yourself: answer one with post_pull_request_comment when it needs no code, and close addressed ones with resolve_pull_request_threads once the branch carries the fix (your own gesture or a finished launch_code_agent run).`,
+      `This PR context does NOT restrict your toolkit: every minddy tool stays available, issue tools included — when work seen on this pull request deserves a ticket (a bug found in review, a follow-up), create it with create_issue, and edit existing tickets with get_issue / update_issues like anywhere else.`,
     );
   }
   if (ctx.viewId) {
