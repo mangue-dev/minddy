@@ -215,6 +215,11 @@ interface PrStatusCardsProps {
   /** A correction run works on this pull request right now (a Numo fix,
       not a reread): its own card, the whole surface opens the Numo panel. */
   fixRun: { startedAt: string | null; onOpen: () => void } | null;
+  /** A "generate then merge" job (MIN-548) runs in the background: Numo
+      writes the commit message, the merge fires the moment it lands. The
+      caller keeps the marker alive across navigation — the job does not
+      belong to the page that launched it. */
+  numoMerge: { startedAt: string | null } | null;
   /** Shared open state of the checks popover: the merge-state popover's
       "View checks" button opens the SAME list from further away. */
   checksOpen: boolean;
@@ -244,6 +249,7 @@ export function PrStatusCards(props: PrStatusCardsProps) {
       props.acting,
       props.numoReview,
       props.fixRun,
+      props.numoMerge,
       props.fix,
     ],
   );
@@ -495,6 +501,24 @@ function buildStatusCards(
       iconKind: "mergeability",
       hoverLabel: t("numoReviewOpenSession"),
       onSelect: props.fixRun.onOpen,
+    });
+  }
+
+  // ── Numo merge ──────────────────────────────────────────────────────────
+  // A "generate then merge" job is running in the background: the card
+  // claims a STATE, not a method — the title stays short, the ticking
+  // duration says the work is alive. No gesture hangs on it: the merge
+  // fires on its own, and the card goes away when the PR turns merged.
+  if (props.numoMerge) {
+    push({
+      id: "numo-merge",
+      tone: "progress",
+      title: t("cardNumoMerging"),
+      durationMs: null,
+      startedAt: props.numoMerge.startedAt,
+      donutParts: null,
+      avatars: null,
+      iconKind: "mergeability",
     });
   }
 
@@ -792,7 +816,9 @@ function PrStatusCardView({
           <Check />
         ) : card.id === "deployment" ? (
           <ArrowUpRight />
-        ) : card.id === "numo-review" || card.id === "numo-fix" ? (
+        ) : card.id === "numo-review" ||
+          card.id === "numo-fix" ||
+          card.id === "numo-merge" ? (
           <NumoIcon animated={false} />
         ) : card.id === "fix" ? (
           <Wrench />
