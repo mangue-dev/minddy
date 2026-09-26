@@ -116,7 +116,7 @@ export function ForgotPasswordForm() {
             <Input
               id="email"
               type="email"
-              className="h-10 bg-card"
+              className="h-10 bg-control"
               autoComplete="email"
               autoFocus
               required

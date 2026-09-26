@@ -30,6 +30,14 @@ describe("commandPaletteShortcut", () => {
     expect(commandPaletteShortcut(keyEvent("P", { ctrlKey: true }))).toBe("toggle");
   });
 
+  it("opens the new-tab palette for the platform T shortcut", () => {
+    expect(commandPaletteShortcut(keyEvent("t", { metaKey: true }))).toBe("newTab");
+    expect(commandPaletteShortcut(keyEvent("T", { ctrlKey: true }))).toBe("newTab");
+    expect(commandPaletteShortcut(keyEvent("t", { metaKey: true, shiftKey: true }))).toBeNull();
+    expect(commandPaletteShortcut(keyEvent("t", { metaKey: true, altKey: true }))).toBeNull();
+    expect(commandPaletteShortcut(keyEvent("t"))).toBeNull();
+  });
+
   it("opens for plain F outside an editing surface", () => {
     expect(commandPaletteShortcut(keyEvent("f"))).toBe("open");
     expect(

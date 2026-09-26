@@ -611,15 +611,9 @@ export function ObjectiveDialog({
                   disabled={submitting}
                 />
               )}
+              {/* No Cancel button: the dialog's own close X already does
+                  that job. */}
               <div className="ml-auto flex items-center justify-end gap-2 max-sm:w-full">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={submitting || numoBusy}
-                  onClick={() => handleOpenChange(false)}
-                >
-                  {tCommon("cancel")}
-                </Button>
                 {showSplit ? (
                   /* The tooltip attaches to the action, not the chevron: its
  props pass through `SplitButton` to the left button,

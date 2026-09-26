@@ -482,8 +482,8 @@ function VisibilityBadge({
       icon={isPublic ? <Globe /> : <Lock />}
       className={cn(
         isPublic
-          ? "border-sky-700/30 bg-sky-500/10 text-sky-700 dark:border-sky-400/30 dark:bg-sky-400/10 dark:text-sky-400"
-          : "border-amber-700/30 bg-amber-500/10 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-400",
+          ? "bg-sky-500/10 text-sky-700 dark:bg-sky-400/10 dark:text-sky-400"
+          : "bg-amber-500/10 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400",
         className
       )}
     >
@@ -560,7 +560,7 @@ function ReviewBadges({
                 variant="secondary"
                 icon={<ShieldAlert />}
                 className={cn(
-                  "border-amber-700/30 bg-amber-500/10 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-400",
+                  "bg-amber-500/10 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400",
                   className
                 )}
               >
@@ -574,7 +574,7 @@ function ReviewBadges({
             variant="secondary"
             icon={<ShieldAlert />}
             className={cn(
-              "border-amber-700/30 bg-amber-500/10 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-400",
+              "bg-amber-500/10 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400",
               className
             )}
           >
@@ -1058,69 +1058,14 @@ export function FeedbackTeamPage() {
     />
   );
 
-  // Nothing at all (not “nothing in this filter”): the two columns no longer have
-  // nothing to show, and the screen should say where the feedback is coming from rather than
-  // to display an empty list next to a "select return". Both
-  // gestures remain within reach: grab one in your hand, and go and adjust the
-  // collection — it is she who then fills the page.
-  if (!isPending && posts.length === 0) {
-    return (
-      <>
-        <div className="flex h-full flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
-            <div className="mx-auto max-w-5xl">
-              <EmptyScene icon={MessagesSquare} title={t("emptyTitle")}>
-                <Button onClick={() => setCreateOpen(true)}>
-                  <Plus />
-                  {t("newFeedback")}
-                </Button>
-                {/* Pay for the collection is done HERE, not at the end of a link:
-                    this is the gesture that the scene proposes, and send it into a
-                    settings tab would make him leave the page he came from
-                    fill. One member only has the ability to read the settings
-                    offer — he therefore keeps the link. */}
-                {isOwner ? (
-                  <Button variant="outline" onClick={() => setSetupOpen(true)}>
-                    <Globe />
-                    {t("emptyConfigure")}
-                  </Button>
-                ) : (
-                  <Button variant="outline" asChild>
-                    <Link href={`/projects/${projectId}/settings?tab=feedback`}>
-                      <Globe />
-                      {t("emptyConfigure")}
-                    </Link>
-                  </Button>
-                )}
-              </EmptyScene>
-            </div>
-          </div>
-        </div>
-
-        {/* The dialog remains edited: it is this that “New Return” opens. */}
-        {createDialog}
-
-        {/* The board was able to turn on during the course, and `board_enabled` comes
-            from the list: refetch it when closing, otherwise the page continues to
-            refuse to post feedback on a board that is now active. */}
-        {isOwner && (
-          <FeedbackSetupWizard
-            projectId={projectId}
-            isOwner={isOwner}
-            open={setupOpen}
-            onOpenChange={(next) => {
-              setSetupOpen(next);
-              if (!next) {
-                void queryClient.invalidateQueries({
-                  queryKey: ["feedback", projectId],
-                });
-              }
-            }}
-          />
-        )}
-      </>
-    );
-  }
+  // Nothing at all (not “nothing in this filter”): the DETAIL pane tells
+  // where the feedback is coming from rather than showing an empty list
+  // next to a "select return" (see the main return below). The sidebar
+  // stays UP, though: its search input fills the frame, and the column
+  // carries the same compact empty scene as any filtered state, so the
+  // bar never reads as a dead strip (MIN-548 review). Both gestures
+  // remain within reach in the pane: grab one in your hand, and go and
+  // adjust the collection — it is she who then fills the page.
 
   return (
     /* “@” when hovering over a row of the column opens Numo on this return
@@ -1177,10 +1122,10 @@ export function FeedbackTeamPage() {
               <Skeleton className="h-16 w-full rounded-lg" />
             </div>
           ) : listedPosts.length === 0 ? (
-            /* Returns necessarily exist here — the entirely empty surface
-               is discussed above. The list can therefore only be empty because
-               that a filter emptied it, and the same scene as the other states
-               blanks says it, to the size of the column.
+            /* The same scene as the other blank states, at the size of the
+               column — including when NOTHING was collected yet: the
+               compact block fills the frame so the bar never reads as a
+               dead strip, and the search input above stays where it is.
                “Nothing matches” and “no returns open” are not the
                same news: the first is repaired by erasing three letters,
                the second asks to reopen the filter — hence the button, which has no
@@ -1189,27 +1134,30 @@ export function FeedbackTeamPage() {
               size="compact"
               icon={MessagesSquare}
               /* The empty column NAMES what we were looking for. “No return in
-                 this filter" returned to reopen the menu to remember which one
-                 was asked — while the answer lies in the sentence.
-                 The order matters: a seizure that does not match anything is repaired in
-                 erasing three letters, and it is this news that takes precedence
-                 on the state, whatever it may be. */
+                  this filter" returned to reopen the menu to remember which one
+                  was asked — while the answer lies in the sentence.
+                  The order matters: a seizure that does not match anything is repaired in
+                  erasing three letters, and it is this news that takes precedence
+                  on the state, whatever it may be. Nothing at all says so
+                  plainly: there is no feedback yet. */
               title={
-                query.trim()
-                  ? tCommon("noFilterMatch")
-                  : onlyToReview
-                    ? t("emptyToReview")
-                    : state === "unresolved"
-                      ? t("emptyUnresolved")
-                      : state === "all"
-                        ? t("emptyFiltered")
-                        : // Key assembled at runtime: it escapes typing
-                          // keys, hence the cast (see CLAUDE.md).
-                          t(`emptyStatus.${state}` as MessageKey<"FeedbackBoard">)
+                posts.length === 0
+                  ? t("emptyTitle")
+                  : query.trim()
+                    ? tCommon("noFilterMatch")
+                    : onlyToReview
+                      ? t("emptyToReview")
+                      : state === "unresolved"
+                        ? t("emptyUnresolved")
+                        : state === "all"
+                          ? t("emptyFiltered")
+                          : // Key assembled at runtime: it escapes typing
+                            // keys, hence the cast (see CLAUDE.md).
+                            t(`emptyStatus.${state}` as MessageKey<"FeedbackBoard">)
               }
               className="py-10"
             >
-              {query.trim() ? null : (
+              {query.trim() || posts.length === 0 ? null : (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1253,7 +1201,8 @@ export function FeedbackTeamPage() {
 
       {/* ── Detail ──────────────────────────── ──────────────────────────── */}
       <div className={cn("min-w-0 flex-1", !mobileDetail && "hidden md:block")}>
-        {selectedId ? (
+        {isPending || selectedId || posts.length > 0 ? (
+          selectedId ? (
           <FeedbackDetail
             key={selectedId}
             projectId={projectId}
@@ -1274,10 +1223,65 @@ export function FeedbackTeamPage() {
           <div className="flex h-full items-center justify-center">
             <p className="text-sm text-muted-foreground">{t("selectPost")}</p>
           </div>
+        )
+        ) : (
+          /* Nothing at all: the pane tells where the feedback is coming from,
+             with the two gestures that fill it — create by hand, or set the
+             collection up. Same scene as the page before the sidebar came
+             to stay. */
+          <div className="flex h-full flex-col">
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+              <div className="mx-auto max-w-5xl">
+                <EmptyScene icon={MessagesSquare} title={t("emptyTitle")}>
+                  <Button onClick={() => setCreateOpen(true)}>
+                    <Plus />
+                    {t("newFeedback")}
+                  </Button>
+                  {/* Pay for the collection is done HERE, not at the end of a link:
+                      this is the gesture that the scene proposes, and send it into a
+                      settings tab would make him leave the page he came from
+                      fill. One member only has the ability to read the settings
+                      offer — he therefore keeps the link. */}
+                  {isOwner ? (
+                    <Button variant="outline" onClick={() => setSetupOpen(true)}>
+                      <Globe />
+                      {t("emptyConfigure")}
+                    </Button>
+                  ) : (
+                    <Button variant="outline" asChild>
+                      <Link href={`/projects/${projectId}/settings?tab=feedback`}>
+                        <Globe />
+                        {t("emptyConfigure")}
+                      </Link>
+                    </Button>
+                  )}
+                </EmptyScene>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
       {createDialog}
+
+      {/* The board was able to turn on during the course, and `board_enabled` comes
+          from the list: refetch it when closing, otherwise the page continues to
+          refuse to post feedback on a board that is now active. */}
+      {isOwner && (
+        <FeedbackSetupWizard
+          projectId={projectId}
+          isOwner={isOwner}
+          open={setupOpen}
+          onOpenChange={(next) => {
+            setSetupOpen(next);
+            if (!next) {
+              void queryClient.invalidateQueries({
+                queryKey: ["feedback", projectId],
+              });
+            }
+          }}
+        />
+      )}
 
       <IssueSidePanel
         issue={openIssue}

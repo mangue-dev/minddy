@@ -18,6 +18,7 @@ import {
   ChevronRight,
   GitMerge,
   GitPullRequest,
+  GitPullRequestDraft,
   IterationCw,
   Link2,
   ListChecks,
@@ -579,7 +580,9 @@ function PlanPick({
     its review. Read-only (a span without a handler) in the drag overlay / public board.
 
     The colors are GitHub's, as everywhere else: GREEN when open,
-    PURPLE when merged. The chip used to be green in every state — announcing
+    PURPLE when merged, NEUTRAL when the PR is still a draft — and the
+    words follow the state: “PR open” once reviewable, “PR available”
+    while it is still a draft. The chip used to be green in every state — announcing
     “PR available” in green for work already delivered, while the side-panel
     chip said “PR merged” in purple one click away. */
 function PrPick({
@@ -591,19 +594,26 @@ function PrPick({
 }) {
   const t = useTranslations("Agent");
   const merged = state === "merged";
+  const draft = state === "draft";
+  const Icon = merged ? GitMerge : draft ? GitPullRequestDraft : GitPullRequest;
   const content = (
     <>
-      {merged ? (
-        <GitMerge className="size-3.5 shrink-0" />
-      ) : (
-        <GitPullRequest className="size-3.5 shrink-0" />
-      )}
-      <span className="truncate">{merged ? t("prMerged") : t("prBadge")}</span>
+      <Icon className="size-3.5 shrink-0" />
+      <span className="truncate">
+        {merged ? t("prMerged") : draft ? t("prBadge") : t("prOpen")}
+      </span>
     </>
   );
   const tone = merged
     ? "text-violet-700 dark:text-violet-400"
-    : "text-emerald-600 dark:text-emerald-500";
+    : draft
+      ? "text-foreground/80"
+      : "text-emerald-600 dark:text-emerald-500";
+  const hover = merged
+    ? "hover:bg-violet-500/10 focus-visible:bg-violet-500/10"
+    : draft
+      ? "hover:bg-muted focus-visible:bg-muted"
+      : "hover:bg-emerald-500/10 focus-visible:bg-emerald-500/10";
   if (!onOpen) {
     return (
       <span
@@ -627,9 +637,7 @@ function PrPick({
           className={cn(
             "flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium outline-none transition-colors",
             tone,
-            merged
-              ? "hover:bg-violet-500/10 focus-visible:bg-violet-500/10"
-              : "hover:bg-emerald-500/10 focus-visible:bg-emerald-500/10",
+            hover,
           )}
         >
           {content}

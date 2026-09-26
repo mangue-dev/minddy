@@ -50,12 +50,12 @@ import {
 const KIND_STYLES: Record<IntegrationKind, { badge: string; avatar: string }> =
   {
     issues: {
-      badge: "border-brand/30 bg-brand/10 text-brand",
+      badge: "bg-brand/10 text-brand",
       avatar: "bg-brand/10 text-brand",
     },
     feedback: {
       badge:
-        "border-amber-600/25 bg-amber-600/10 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/15 dark:text-amber-400",
+        "bg-amber-600/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
       avatar: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
     },
   };

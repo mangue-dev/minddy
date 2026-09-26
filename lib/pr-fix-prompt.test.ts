@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ChecksSummary } from "./agent-api";
+import type { ChecksSummary, PullRequestReviewComment } from "./agent-api";
 import { buildPullRequestFixPrompt } from "./pr-fix-prompt";
 
 function checksOf(
@@ -74,5 +74,54 @@ describe("buildPullRequestFixPrompt", () => {
     );
     expect(prompt).toContain("Pull request: #7 — Pull request #7");
     expect(prompt).not.toContain("URL:");
+  });
+
+  it("spells out the unresolved review conversations and the out-of-date branch", () => {
+    const root = {
+      id: 11,
+      in_reply_to_id: null,
+      created_at: "2026-09-01T00:00:00Z",
+      path: "src/app.tsx",
+      line: 12,
+      original_line: 12,
+      body: "Fix the loop",
+      user: { login: "ada", avatar_url: null },
+    } as PullRequestReviewComment;
+    const prompt = buildPullRequestFixPrompt(
+      { number: 9, title: "Review stories", url: null, base: "main", head: "pr" },
+      null,
+      {
+        unresolvedThreads: [
+          {
+            id: 1,
+            root,
+            comments: [],
+            resolution: {
+              rootCommentId: 11,
+              threadId: "PRRT_1",
+              resolved: false,
+              resolvedBy: null,
+              outdated: true,
+            },
+          },
+        ],
+        branchOutOfDate: true,
+      },
+    );
+    expect(prompt).toContain(
+      "The following review conversations are still unresolved",
+    );
+    expect(prompt).toContain("Conversation 1 on src/app.tsx:12");
+    expect(prompt).toContain("(outdated code context)");
+    expect(prompt).toContain("The head branch is behind its base branch");
+  });
+
+  it("stays silent about conversations and the branch when the card knows neither", () => {
+    const prompt = buildPullRequestFixPrompt(
+      { number: 9, title: "Review stories", url: null, base: "main", head: "pr" },
+      null,
+    );
+    expect(prompt).not.toContain("review conversations");
+    expect(prompt).not.toContain("head branch is behind");
   });
 });

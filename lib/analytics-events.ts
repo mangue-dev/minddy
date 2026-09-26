@@ -261,7 +261,7 @@ export interface AnalyticsEventProps {
   bulk_selection_cleared: { count: number };
 
   // ── Palette de commandes ──
-  command_palette_opened: { source: "shortcut" | "click" | "mobile" };
+  command_palette_opened: { source: "shortcut" | "click" | "mobile" | "new_tab_shortcut" };
   command_executed: { command_id: string; category: string };
   command_palette_no_results: { query_length: number };
   palette_favorite_toggled: { command_id: string; favorited: boolean };

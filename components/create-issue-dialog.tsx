@@ -161,7 +161,6 @@ export function CreateIssueDialog({
   analyticsSource?: AnalyticsPropsFor<"issue_created">["source"];
 }) {
   const t = useTranslations("IssueUI");
-  const tCommon = useTranslations("Common");
   const { user } = useAuth();
   const { track } = useAnalytics();
   const [title, setTitle] = useState("");
@@ -850,16 +849,9 @@ export function CreateIssueDialog({
                 />
               </div>
               {/* The button in its own block: it is he who switches to a
- line, full width, when the bar passes the line. */}
+  line, full width, when the bar passes the line. No Cancel button:
+  the dialog's own close X already does that job. */}
               <div className="flex items-center justify-end gap-2 max-sm:w-full sm:ml-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={submitting || numoBusy}
-                  onClick={() => handleOpenChange(false)}
-                >
-                  {tCommon("cancel")}
-                </Button>
                 {otherProjects.length > 0 && currentProject ? (
                   /* The tooltip clings to the action, not the chevron: its
  props pass through `SplitButton` to the left button,

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Card, CardContent, Spinner } from "mangue-ui";
+import { Button, Card, CardContent } from "mangue-ui";
 import { ShieldCheck } from "lucide-react";
 
 import { useAuth } from "@/lib/auth-context";
@@ -92,9 +92,12 @@ export function DesktopAuthBridge() {
   }, [exchange]);
 
   if (exchanging) {
+    // Full-page takeover with the same plain sentence as the login form's
+    // redirect: the session is being exchanged and the app is about to
+    // land — a spinner alone never said what was happening.
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
-        <Spinner className="size-6" />
+        <p className="text-sm text-muted-foreground">{t("redirecting")}</p>
       </div>
     );
   }

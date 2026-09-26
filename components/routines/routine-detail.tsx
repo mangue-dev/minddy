@@ -417,7 +417,7 @@ export function RoutineDetail({
             // The amber product warning badges (the “Private” one
             // return): a state which is not an error, but which we do not want
             // discover by wondering why nothing happened.
-            className="shrink-0 border-amber-700/30 bg-amber-500/10 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-400"
+            className="shrink-0 bg-amber-500/10 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400"
           >
             {t("paused")}
           </Badge>
