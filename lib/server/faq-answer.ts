@@ -6,6 +6,10 @@ import {
   type Locale,
 } from "@/i18n/config";
 import { responseLanguageInstruction } from "@/lib/locale-language";
+import {
+  MAX_QUESTION_CHARS,
+  MIN_QUESTION_CHARS,
+} from "@/lib/faq-question-limits";
 import type { KnowledgeArticle } from "@/lib/server/assistant/knowledge";
 
 /**
@@ -42,9 +46,12 @@ export interface FaqItem {
   answer: string;
 }
 
-/** Bounds of a legitimate question: long enough to be one, short enough to stay one. */
-export const MIN_QUESTION_CHARS = 8;
-export const MAX_QUESTION_CHARS = 500;
+/**
+ * Bounds of a legitimate question: long enough to be one, short enough to
+ * stay one. Defined once in `lib/faq-question-limits.ts` so the client input
+ * (`components/marketing/faq-ask.tsx`) reads the same values.
+ */
+export { MIN_QUESTION_CHARS, MAX_QUESTION_CHARS };
 
 /** Bound of what we let the model write back. */
 const MAX_ANSWER_CHARS = 900;
