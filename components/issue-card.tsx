@@ -580,9 +580,9 @@ function PlanPick({
     its review. Read-only (a span without a handler) in the drag overlay / public board.
 
     The colors are GitHub's, as everywhere else: GREEN when open,
-    PURPLE when merged, NEUTRAL when the PR is still a draft — “PR
-    available” must not read as good news until the work is actually
-    reviewable. The chip used to be green in every state — announcing
+    PURPLE when merged, NEUTRAL when the PR is still a draft — and the
+    words follow the state: “PR open” once reviewable, “PR available”
+    while it is still a draft. The chip used to be green in every state — announcing
     “PR available” in green for work already delivered, while the side-panel
     chip said “PR merged” in purple one click away. */
 function PrPick({
@@ -599,7 +599,9 @@ function PrPick({
   const content = (
     <>
       <Icon className="size-3.5 shrink-0" />
-      <span className="truncate">{merged ? t("prMerged") : t("prBadge")}</span>
+      <span className="truncate">
+        {merged ? t("prMerged") : draft ? t("prBadge") : t("prOpen")}
+      </span>
     </>
   );
   const tone = merged

@@ -418,31 +418,36 @@ export function PrReadinessControl({
             );
           })}
         </ul>
-        {canMerge && autoMergeAllowed !== false && !readiness.mergeAllowed ? (
-          // Waiting is optional (MIN-548): while any condition is still
-          // running, the viewer can register the merge NOW and let the forge
-          // fire it the moment everything clears. One-way is not an option —
-          // the checkbox reads the forge state and unregisters too.
-          // Checkbox and title only: the long explanation below used to
-          // overweight the row — what the registration does is what the
-          // title already says, and the spinner next to it carries the
-          // write in flight.
-          <label
-            data-testid="pr-auto-merge-toggle"
-            className="flex items-center gap-2.5 border-t border-border px-3.5 py-3"
-          >
-            <Checkbox
-              checked={mergeFlowActive}
-              disabled={autoMerging}
-              onCheckedChange={(checked) => onToggleAutoMerge(checked === true)}
-            />
-            <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 text-sm">
-              {mergeFlowActive ? t("autoMergeOn") : t("autoMergeWhenReady")}
-              {autoMerging ? <Spinner className="size-3 shrink-0" /> : null}
-            </span>
-          </label>
-        ) : null}
-        <div className="flex items-center justify-end gap-3 px-3.5 py-3">
+        {/* ONE row for both gestures (MIN-548 review): the auto-merge
+            checkbox rides the same line as the merge button — they are two
+            ways to reach the same merge, not two stacked steps. Checkbox and
+            title only: what the registration does is what the title says,
+            and the spinner next to it carries the write in flight. */}
+        <div
+          className={cn(
+            "flex items-center justify-between gap-3 px-3.5 py-3",
+            canMerge &&
+              autoMergeAllowed !== false &&
+              !readiness.mergeAllowed &&
+              "border-t border-border",
+          )}
+        >
+          {canMerge && autoMergeAllowed !== false && !readiness.mergeAllowed ? (
+            <label
+              data-testid="pr-auto-merge-toggle"
+              className="flex min-w-0 flex-1 items-center gap-2.5"
+            >
+              <Checkbox
+                checked={mergeFlowActive}
+                disabled={autoMerging}
+                onCheckedChange={(checked) => onToggleAutoMerge(checked === true)}
+              />
+              <span className="inline-flex min-w-0 items-center gap-1.5 text-sm">
+                {mergeFlowActive ? t("autoMergeOn") : t("autoMergeWhenReady")}
+                {autoMerging ? <Spinner className="size-3 shrink-0" /> : null}
+              </span>
+            </label>
+          ) : null}
           {preferredMethod ? (
             <div className="flex shrink-0 items-center">
               {/* Why the merge is (not yet) available used to sit as a
