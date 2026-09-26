@@ -391,7 +391,7 @@ export function PrReadinessControl({
                   // cards' popover, one gesture away — this button opens it.
                   <Button
                     data-testid="pr-readiness-view-checks"
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => {
                       setOpen(false);
@@ -403,7 +403,7 @@ export function PrReadinessControl({
                 ) : available ? (
                   <Button
                     data-testid={`pr-readiness-action-${blocker.action}`}
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     disabled={acting !== null}
                     onClick={() => {
@@ -449,7 +449,10 @@ export function PrReadinessControl({
             </label>
           ) : null}
           {preferredMethod ? (
-            <div className="flex shrink-0 items-center">
+            // ml-auto keeps the merge pinned to the right edge of the row
+            // even when the auto-merge checkbox is not shown — `justify-
+            // between` alone would park a single child on the left.
+            <div className="ml-auto flex shrink-0 items-center">
               {/* Why the merge is (not yet) available used to sit as a
                   sentence to the left of the button; it is now a tooltip ON
                   the button — the information belongs to the gesture. The
