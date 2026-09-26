@@ -23,6 +23,7 @@ import {
 } from "./mcp-client";
 import { mcpSettingsUpdate } from "./mcp-settings";
 import { mcpOAuthCallback, startMcpOAuth } from "./mcp-oauth";
+import { mcpConnectionWrite, mcpContentEnabled } from "./mcp-content";
 
 /**
  * Numo-side MCP connection setup (MIN-541): create or update the user's
@@ -288,13 +289,16 @@ async function createConnection(
 
   let values;
   try {
-    values = mcpSettingsUpdate(parsed.data);
+    const protectedWrite = await mcpContentEnabled();
+    values = await mcpConnectionWrite(userId,
+      mcpSettingsUpdate(parsed.data, undefined, protectedWrite),
+      undefined, protectedWrite);
   } catch {
     return failure("Could not encrypt the credentials.");
   }
   const { data, error } = await getServiceClient()
     .from("user_mcp_connections")
-    .insert({ ...values, user_id: userId })
+    .insert(values)
     .select("id")
     .single();
   if (error || !data) return failure("Could not save the connection.");
@@ -339,7 +343,10 @@ async function updateConnection(
   }
   let values;
   try {
-    values = mcpSettingsUpdate(parsed.data, current);
+    const protectedWrite = !!current.encryption_version || await mcpContentEnabled();
+    values = await mcpConnectionWrite(userId,
+      mcpSettingsUpdate(parsed.data, current, protectedWrite),
+      current, protectedWrite);
   } catch {
     return failure("Could not encrypt the credentials.");
   }
@@ -351,14 +358,15 @@ async function updateConnection(
     .eq("connection_id", current.id)
     .eq("user_id", userId);
   if (pendingError) return failure("Could not save the connection.");
-  const { data, error } = await service
+  let update = service
     .from("user_mcp_connections")
     .update(values)
     .eq("user_id", userId)
-    .eq("id", current.id)
-    .eq("url", current.url)
-    .select("id")
-    .maybeSingle();
+    .eq("id", current.id);
+  update = current.content_revision === undefined
+    ? update.eq("url", current.url)
+    : update.eq("content_revision", current.content_revision);
+  const { data, error } = await update.select("id").maybeSingle();
   if (error) return failure("Could not save the connection.");
   if (!data) return failure("Connection not found.");
   return authenticationResult(userId, current.id, preset, { updated: true });

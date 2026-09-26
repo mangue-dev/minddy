@@ -186,6 +186,26 @@
       ],
       "functionReferences": []
     },
+    "guard_mcp_content()": {
+      "sha256": "e88e2b82620ff9c78bea9d4484999f7037fb87d6bd8a96ad3efe925e64389f70",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "mcp_content_scope",
+        "user_mcp_connections",
+        "user_mcp_oauth_attempts"
+      ],
+      "protectedRelations": [
+        "user_mcp_connections",
+        "user_mcp_oauth_attempts"
+      ],
+      "functionReferences": [
+        "mcp_content_envelope_version"
+      ]
+    },
     "broadcast_page_row()": {
       "sha256": "93798555cd9822a089475573ea755fd9bc9d119a3513b3b6be26e52c7f1da03a",
       "securityDefiner": true,
@@ -287,6 +307,26 @@
         "issue_events"
       ],
       "functionReferences": []
+    },
+    "activate_mcp_content()": {
+      "sha256": "dc85a500ccbb6e9105124faa5884816ace17deda69b5a9305dc588b41edba5b1",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "mcp_content_scope",
+        "user_mcp_connections",
+        "user_mcp_oauth_attempts"
+      ],
+      "protectedRelations": [
+        "user_mcp_connections",
+        "user_mcp_oauth_attempts"
+      ],
+      "functionReferences": [
+        "mcp_content_envelope_version"
+      ]
     },
     "get_ai_run_calls(uuid)": {
       "sha256": "37b2d8cc5cb28b9e28192110323e082e63b1cf6d3b83ad74b43931fc664140ed",
@@ -3447,6 +3487,17 @@
         "conversations",
         "numo_routine_occurrences"
       ],
+      "functionReferences": []
+    },
+    "mcp_content_envelope_version(text)": {
+      "sha256": "6a8e82ababe8b71b2e2226f7f1f03048124582b67701eab65fe0ad7e96fa841b",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "reject_new_local_agent_execution()": {
@@ -7912,6 +7963,10 @@
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER project_invitations_set_updated_at BEFORE UPDATE ON project_invitations FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
+    "user_mcp_connections.user_mcp_connections_content_guard": {
+      "function": "guard_mcp_content()",
+      "definition": "CREATE TRIGGER user_mcp_connections_content_guard BEFORE INSERT OR UPDATE ON user_mcp_connections FOR EACH ROW EXECUTE FUNCTION guard_mcp_content()"
+    },
     "agent_conversation_contexts.agent_context_snapshot_guard": {
       "function": "guard_agent_context_snapshot()",
       "definition": "CREATE TRIGGER agent_context_snapshot_guard BEFORE INSERT OR UPDATE ON agent_conversation_contexts FOR EACH ROW EXECUTE FUNCTION guard_agent_context_snapshot()"
@@ -7983,6 +8038,10 @@
     "project_git_links.project_git_links_repository_identity_guard": {
       "function": "guard_forge_repository_identity()",
       "definition": "CREATE TRIGGER project_git_links_repository_identity_guard BEFORE INSERT OR UPDATE ON project_git_links FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_identity()"
+    },
+    "user_mcp_oauth_attempts.user_mcp_oauth_attempts_content_guard": {
+      "function": "guard_mcp_content()",
+      "definition": "CREATE TRIGGER user_mcp_oauth_attempts_content_guard BEFORE INSERT OR UPDATE ON user_mcp_oauth_attempts FOR EACH ROW EXECUTE FUNCTION guard_mcp_content()"
     },
     "forge_relay_claims.forge_relay_claims_repository_identity_guard": {
       "function": "guard_forge_repository_identity()",

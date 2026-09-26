@@ -108,28 +108,28 @@
     "file": "app/api/account/mcp-connections/[id]/route.ts",
     "operation": "from",
     "resource": "user_mcp_oauth_attempts",
-    "line": 38,
+    "line": 40,
     "storage": false
   },
   {
     "file": "app/api/account/mcp-connections/[id]/route.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 45,
+    "line": 47,
     "storage": false
   },
   {
     "file": "app/api/account/mcp-connections/[id]/route.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 67,
+    "line": 70,
     "storage": false
   },
   {
     "file": "app/api/account/mcp-connections/route.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 48,
+    "line": 49,
     "storage": false
   },
   {
@@ -5852,6 +5852,27 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/personal-mcp-backfill.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 31,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/personal-mcp-backfill.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 78,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/personal-mcp-backfill.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 92,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/pr-comment-edit-backfill.ts",
     "operation": "from",
     "resource": "pr_comment_edits",
@@ -8249,84 +8270,91 @@
     "file": "lib/server/mcp-client.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 37,
+    "line": 40,
     "storage": false
   },
   {
     "file": "lib/server/mcp-client.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 55,
+    "line": 61,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mcp-content.ts",
+    "operation": "from",
+    "resource": "mcp_content_scope",
+    "line": 31,
     "storage": false
   },
   {
     "file": "lib/server/mcp-oauth.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 115,
+    "line": 117,
     "storage": false
   },
   {
     "file": "lib/server/mcp-oauth.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 133,
+    "line": 136,
     "storage": false
   },
   {
     "file": "lib/server/mcp-oauth.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 143,
+    "line": 147,
     "storage": false
   },
   {
     "file": "lib/server/mcp-oauth.ts",
     "operation": "from",
     "resource": "user_mcp_oauth_attempts",
-    "line": 274,
+    "line": 278,
     "storage": false
   },
   {
     "file": "lib/server/mcp-oauth.ts",
     "operation": "from",
     "resource": "user_mcp_oauth_attempts",
-    "line": 279,
+    "line": 290,
     "storage": false
   },
   {
     "file": "lib/server/mcp-oauth.ts",
     "operation": "from",
     "resource": "user_mcp_oauth_attempts",
-    "line": 300,
+    "line": 306,
     "storage": false
   },
   {
     "file": "lib/server/mcp-oauth.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 310,
+    "line": 317,
     "storage": false
   },
   {
     "file": "lib/server/mcp-setup.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 295,
+    "line": 296,
     "storage": false
   },
   {
     "file": "lib/server/mcp-setup.ts",
     "operation": "from",
     "resource": "user_mcp_oauth_attempts",
-    "line": 348,
+    "line": 350,
     "storage": false
   },
   {
     "file": "lib/server/mcp-setup.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
-    "line": 354,
+    "line": 356,
     "storage": false
   },
   {

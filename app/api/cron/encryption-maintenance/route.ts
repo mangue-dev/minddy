@@ -110,6 +110,8 @@ import { backfillRelayUserDeliveriesBatch } from
 import { backfillForgeOAuthConnectionsBatch,
   backfillForgeOAuthIdentitiesBatch } from
   "@/lib/server/encryption/forge-oauth-token-backfill";
+import { backfillMcpConnectionsBatch, backfillMcpAttemptsBatch } from
+  "@/lib/server/encryption/personal-mcp-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -226,6 +228,8 @@ export async function GET(request: NextRequest) {
     process.env.MINDDY_RELAY_USER_DELIVERY_ENCRYPTION_ENABLED === "true";
   const forgeOAuthTokensEnabled = contentEnabled &&
     process.env.MINDDY_FORGE_OAUTH_TOKEN_ENCRYPTION_ENABLED === "true";
+  const mcpContentEnabled = contentEnabled &&
+    process.env.MINDDY_MCP_CONTENT_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -313,6 +317,8 @@ export async function GET(request: NextRequest) {
       relayUserDeliveriesEnabled ? backfillRelayUserDeliveriesBatch(30, request.signal) : Promise.resolve(null),
       forgeOAuthTokensEnabled ? backfillForgeOAuthConnectionsBatch(25, request.signal) : Promise.resolve(null),
       forgeOAuthTokensEnabled ? backfillForgeOAuthIdentitiesBatch(25, request.signal) : Promise.resolve(null),
+      mcpContentEnabled ? backfillMcpConnectionsBatch(25, request.signal) : Promise.resolve(null),
+      mcpContentEnabled ? backfillMcpAttemptsBatch(25, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -392,6 +398,8 @@ export async function GET(request: NextRequest) {
     const relayUserDeliveries = outcomes[75];
     const forgeOAuthConnections = outcomes[76];
     const forgeOAuthIdentities = outcomes[77];
+    const mcpConnections = outcomes[78];
+    const mcpAttempts = outcomes[79];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
@@ -563,6 +571,12 @@ export async function GET(request: NextRequest) {
             ? forgeOAuthConnections.value : { failed: true },
           forge_oauth_identities: forgeOAuthIdentities.status === "fulfilled"
             ? forgeOAuthIdentities.value : { failed: true },
+        } : {}),
+        ...(mcpContentEnabled ? {
+          mcp_connections: mcpConnections.status === "fulfilled"
+            ? mcpConnections.value : { failed: true },
+          mcp_attempts: mcpAttempts.status === "fulfilled"
+            ? mcpAttempts.value : { failed: true },
         } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),

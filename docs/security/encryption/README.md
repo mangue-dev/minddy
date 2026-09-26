@@ -95,7 +95,7 @@ must be checked separately.
 | Histories and derived copies | Page versions, issue events, statistics, durable agent replay journals and run event payloads now have converted repositories and migration. The event-triggered assistant summary and pending question copies are protected with their event. Numo surface destinations and the non-worker durable activity payloads now have protected readers, writers and migrations; initial prompts, other surface projections, checkpoints and conversation content remain to be converted with their source rows. |
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
-| Forge data | Forge mention throttle identities and private repository names use stable system blind indexes. Names have a recoverable encrypted registry and guarded equality keys across linked copies. Default branches use project-bound envelopes. Relay instance configuration, singleton self-hosted provisioning, brokered user deliveries, persistent OAuth grants and repository hook secrets are sealed; the unused relay mirror secret copy is removed. Review remaining forge sidecars and MCP credentials. The generic row codec deliberately refuses sensitive primary keys. |
+| Forge data | Forge mention throttle identities and private repository names use stable system blind indexes. Names have a recoverable encrypted registry and guarded equality keys across linked copies. Default branches use project-bound envelopes. Relay instance configuration, singleton self-hosted provisioning, brokered user deliveries, persistent OAuth grants, repository hook secrets and personal MCP connections are sealed; the unused relay mirror secret copy is removed. Review remaining forge sidecars. The generic row codec deliberately refuses sensitive primary keys. |
 | Files and images | Attachment, page-file and project-icon server paths now use opaque names, ciphertext bytes and authorized download routes. The icon bucket switches to private only after the object queue is empty; other object copies still need review. Public avatars have an explicit public-use exception. |
 | Feedback and sharing | Feedback posts, private visitor identities, board SSO secrets and recoverable share tokens have repository and migration checkpoints below. Remaining feedback copies still need conversion; owner dialogs must retain access to share URLs. |
 | Credentials and configuration | `app_config.value` and BYOK credentials, endpoints and private model choices have bounded CAS envelopes and activated old-writer guards. Migrate remaining legacy environment-key envelopes and secret/configuration stores; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
@@ -1918,5 +1918,32 @@ moves and key downgrades. The local SQL regression covers the source, both
 writers and the protected claim; a PostgreSQL dump/restore loads both child
 tables before users in independent batches, reads two key versions with cold
 caches and rejects a wrong root. `MINDDY_FORGE_OAUTH_TOKEN_ENCRYPTION_ENABLED`
-and the global content flag remain off in production. MCP credentials and
-other open MIN-591 targets still require conversion.
+and the global content flag remain off in production. Other open MIN-591
+targets still require conversion.
+
+## Personal MCP connection checkpoint — 26 September 2026
+
+`user_mcp_connections` now seals the endpoint, display name, bearer token,
+custom headers and OAuth client/discovery/token state in one user-key row
+envelope. Its primary key and owner form the authenticated context. Authorized
+account and Numo setup paths merge complete content before a revision-checked
+write; lists and tools decrypt only after filtering by the owner. OAuth leases
+still serialize refreshes, and the leased writer checks the content revision
+before each save. New protected writes no longer need the legacy environment
+secret. Sending credentials to the configured MCP endpoint or OAuth provider
+is the authorized external transmission.
+
+`user_mcp_oauth_attempts` seals the endpoint snapshot and PKCE/discovery
+payload under its user and single-use state. The callback consumes the state
+atomically, decrypts after the owner check, compares the endpoint with the
+current connection, and claims a revision-checked OAuth lease before exchange.
+Bounded 25-row CAS workers migrate legacy environment-key values and rotate
+historical user keys in both tables. Activation requires checked format-3
+envelopes and SQL refuses old clear writers and scope moves. The isolated SQL
+regression checks source columns, obsolete inserts/updates and metadata edits.
+A PostgreSQL dump/restore loads OAuth attempts before connections and users in
+independent batches, recovers two key versions from cold caches and rejects a
+wrong root. `MINDDY_MCP_CONTENT_ENCRYPTION_ENABLED` and the global flag remain
+off in production. Representative search, latency and key/cache load
+measurements remain a check before production activation; they do not block
+review of the code PR. Other MIN-591 targets remain open.

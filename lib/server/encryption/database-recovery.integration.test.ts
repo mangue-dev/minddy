@@ -56,6 +56,7 @@ const projectWebhookTemplate = "minddy_min591_repo_hook_audit";
 const relayProvisioningTemplate = "minddy_min591_provisioning_audit";
 const relayUserDeliveryTemplate = "minddy_min591_user_delivery_audit";
 const forgeOAuthTemplate = "minddy_min591_forge_oauth_audit";
+const mcpContentTemplate = "minddy_min591_mcp_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -6087,6 +6088,134 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
       for (const database of created.reverse()) {
         sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
       }
+    }
+  },60_000);
+});
+
+describe.skipIf(!enabled)("personal MCP content PostgreSQL recovery", () => {
+  it("restores OAuth children before connections with two keys and rejects a wrong root", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 12);
+    const source = `minddy_min591_mcp_source_${suffix}`;
+    const restored = `minddy_min591_mcp_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const users = [randomUUID(), randomUUID()];
+    const ids = [randomUUID(), randomUUID()];
+    const states = [randomBytes(32).toString("hex"), randomBytes(32).toString("hex")];
+    const log = vi.spyOn(console,"info").mockImplementation(()=>{});
+    try {
+      expect(sql(mcpContentTemplate,
+        "SELECT count(*) FROM public.user_mcp_connections;"))
+        .toBe("0");
+      for (const database of [source, restored]) {
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${mcpContentTemplate};`);
+        created.push(database);
+      }
+      const keys = new ManagedDataKeys(registry(source),wrapper(root));
+      const codec = new EncryptedRowCodec(new EncryptedStore(keys));
+      for (const [index,user] of users.entries()) {
+        const scope: EncryptionScope = { kind:"user",id:user };
+        sql(source,`INSERT INTO auth.users(id) VALUES(${quote(user)});`);
+        if (index === 1) {
+          const first = await keys.current(scope);
+          first.bytes.fill(0);
+          await keys.rotate(scope,1);
+        }
+        const endpoint = `https://private-mcp-${index}.example/mcp`;
+        const connection = await codec.encode({
+          id: ids[index],user_id:user,name:`Private MCP ${index}`,
+          url:endpoint,token_encrypted:`private-token-${index}`,
+          headers_encrypted:`{"X-Key":"private-header-${index}"}`,
+          oauth_encrypted:`{"tokens":{"access_token":"private-oauth-${index}"}}`,
+          encryption_version:0,encrypted_content:null,
+        },{table:"user_mcp_connections",scope});
+        const attempt = await codec.encode({
+          state:states[index],user_id:user,connection_id:ids[index],
+          endpoint,payload_encrypted:`{"verifier":"private-verifier-${index}"}`,
+          encryption_version:0,encrypted_content:null,
+        },{table:"user_mcp_oauth_attempts",scope});
+        sql(source,`INSERT INTO public.user_mcp_connections(id,user_id,
+          encrypted_content,encryption_version) VALUES(
+          ${quote(ids[index])},${quote(user)},
+          ${quote(connection.encrypted_content!)},${index+1});
+          INSERT INTO public.user_mcp_oauth_attempts(state,user_id,
+          connection_id,encrypted_content,encryption_version) VALUES(
+          ${quote(states[index])},${quote(user)},${quote(ids[index])},
+          ${quote(attempt.encrypted_content!)},${index+1});`);
+        keys.invalidate(scope);
+      }
+      expect(sql(source,"SELECT public.activate_mcp_content();")).toBe("t");
+      const dump = execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges", ...["auth.users","public.user_mcp_connections",
+          "public.user_mcp_oauth_attempts","public.mcp_content_scope",
+          "public.envelope_data_keys"].map((table)=>`--table=${table}`)],
+      {encoding:"utf8",maxBuffer:4*1024*1024});
+      for (const marker of ["Private MCP","private-mcp-","private-token",
+        "private-header","private-oauth","private-verifier"])
+        expect(dump).not.toContain(marker);
+      let remainder = dump;
+      const copies = new Map<string,{header:string;lines:string[]}>();
+      for (const table of ["public.user_mcp_oauth_attempts",
+        "public.user_mcp_connections","auth.users"]) {
+        const start = remainder.indexOf(`COPY ${table} `);
+        expect(start).toBeGreaterThanOrEqual(0);
+        const bodyStart = remainder.indexOf("\n",start)+1;
+        const bodyEnd = remainder.indexOf("\\.\n",bodyStart);
+        copies.set(table,{header:remainder.slice(start,bodyStart),
+          lines:remainder.slice(bodyStart,bodyEnd).trimEnd().split("\n")});
+        remainder = remainder.slice(0,start)+remainder.slice(bodyEnd+3);
+      }
+      for (const table of ["public.user_mcp_oauth_attempts",
+        "public.user_mcp_connections","auth.users"]) {
+        for (const line of copies.get(table)!.lines.reverse())
+          sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+            ${copies.get(table)!.header}${line}\n\\.\nCOMMIT;`);
+      }
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+        ${remainder}\nCOMMIT;`);
+      expect(sql(restored,`SELECT count(*) FROM public.user_mcp_oauth_attempts a
+        JOIN public.user_mcp_connections c ON c.id=a.connection_id
+        JOIN auth.users u ON u.id=c.user_id;`)).toBe("2");
+      const cold = new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored),wrapper(root))));
+      for (const [index,user] of users.entries()) {
+        const scope: EncryptionScope = {kind:"user",id:user};
+        const connection = JSON.parse(sql(restored,`SELECT row_to_json(c)
+          FROM public.user_mcp_connections c WHERE id=${quote(ids[index])};`));
+        const attempt = JSON.parse(sql(restored,`SELECT row_to_json(a)
+          FROM public.user_mcp_oauth_attempts a WHERE state=${quote(states[index])};`));
+        for (const column of ["name","url","token_encrypted",
+          "headers_encrypted","oauth_encrypted"])
+          expect(connection[column]).toBeNull();
+        expect(attempt.endpoint).toBeNull();
+        expect(attempt.payload_encrypted).toBeNull();
+        const openedConnection = await cold.decode(connection,
+          {table:"user_mcp_connections",scope},
+          {actorId:null,reason:"migration_verification"});
+        const openedAttempt = await cold.decode(attempt,
+          {table:"user_mcp_oauth_attempts",scope},
+          {actorId:null,reason:"migration_verification"});
+        expect(openedConnection.token_encrypted).toBe(`private-token-${index}`);
+        expect(openedAttempt.payload_encrypted)
+          .toBe(`{"verifier":"private-verifier-${index}"}`);
+      }
+      const wrong = new EncryptedRowCodec(new EncryptedStore(
+        new ManagedDataKeys(registry(restored),wrapper(randomBytes(32)))));
+      const row = JSON.parse(sql(restored,`SELECT row_to_json(c)
+        FROM public.user_mcp_connections c WHERE id=${quote(ids[0])};`));
+      await expect(wrong.decode(row,{table:"user_mcp_connections",
+        scope:{kind:"user",id:users[0]}},
+      {actorId:null,reason:"migration_verification"})).rejects.toThrow();
+      expect(() => sql(restored,`UPDATE public.user_mcp_connections SET
+        name='old',encrypted_content=NULL,encryption_version=0
+        WHERE id=${quote(ids[0])};`)).toThrow();
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const database of created.reverse())
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
     }
   },60_000);
 });
