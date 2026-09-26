@@ -199,6 +199,7 @@ export function ConversationSettings() {
               max={Math.max(0, reasoningLevels.length - 1)}
               step={1}
               aria-label={t("reasoning")}
+              className="[&_[data-slot=slider-range]]:bg-blue-500"
               onValueChange={(values) => {
                 selectReasoningIndex(values[0] ?? 0);
               }}
