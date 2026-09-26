@@ -361,8 +361,13 @@ a.markdown-link::before {
    `aria-expanded:bg-control-hover`), and the off-layer rule beats the
    `bg-background` utility compiled by the dependency. Explicit `bg-*` classes
    a caller passes are lost in the process — they carried the same 0.7-era
-   look (white on white), not a different one. */
-[data-slot="button"][data-variant="ghost"] {
+   look (white on white), not a different one.
+
+   Keyed on `data-variant` alone, NOT on `[data-slot="button"]`: a ghost
+   wrapped in `TooltipTrigger asChild` (every sidebar button) carries the
+   tooltip's `data-slot="tooltip-trigger"` instead. `button` bounds the rule
+   to buttons — menu items and chips use their own data-variant values. */
+button[data-variant="ghost"] {
   background-color: transparent;
 }
 
