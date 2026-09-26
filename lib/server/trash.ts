@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
@@ -351,6 +352,12 @@ export async function listTrash(
     nullColumn?: string
   ): Promise<TrashRow[]> => {
     if (ids.length === 0) return [];
+    if (table === "feedback_posts") {
+      const { data } = await feedbackPostStore(service, userId)
+        .select(columns).in("project_id", ids).not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false }).limit(LIST_LIMIT);
+      return (data ?? []) as TrashRow[];
+    }
     const query = service
       .from(table)
       .select(columns)

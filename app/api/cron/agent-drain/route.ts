@@ -10,6 +10,7 @@ import {
   type QueuedRunRow,
 } from "@/lib/server/agent/deployment";
 import { notifyAgentRun } from "@/lib/server/agent/runs";
+import { decodeAgentDeploymentUrl } from "@/lib/server/agent/run-deployment-content";
 
 /**
  * LAUNCHER of agent runs (MIN-46, reduced to this profession in MIN-225). He doesn't
@@ -52,7 +53,7 @@ const CRON_DRAIN_BUDGET_MS = 270_000;
 async function dueScopedRuns(service: SupabaseClient): Promise<QueuedRunRow[]> {
   const { data, error } = await service
     .from("agent_runs")
-    .select("id, deployment_url, not_before")
+    .select("id, project_id, deployment_url, not_before")
     .eq("status", "queued")
     .not("deployment_url", "is", null)
     .lte("not_before", new Date().toISOString())
@@ -62,7 +63,15 @@ async function dueScopedRuns(service: SupabaseClient): Promise<QueuedRunRow[]> {
     console.error("[agent-drain] preview dispatch read failed:", error.message);
     return [];
   }
-  return (data ?? []) as QueuedRunRow[];
+  const decoded = await Promise.allSettled((data ?? []).map(async (row) => {
+    const clear = await decodeAgentDeploymentUrl(row);
+    return { id: clear.id, deployment_url: clear.deployment_url,
+      not_before: clear.not_before };
+  }));
+  if (decoded.some((result) => result.status === "rejected")) {
+    console.error("[agent-drain] preview dispatch decryption failed");
+  }
+  return decoded.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
 }
 
 /** Wakes A deployment preview. Best effort: production never executes these
@@ -99,6 +108,8 @@ async function failStalledRuns(service: SupabaseClient, ids: string[]): Promise<
       status: "failed",
       error_message: "Preview deployment unreachable",
       checkpoint: null,
+      checkpoint_ciphertext: null,
+      checkpoint_encryption_version: 0,
     })
     .in("id", ids)
     .eq("status", "queued")

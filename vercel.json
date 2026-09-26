@@ -15,6 +15,7 @@
     { "path": "/api/cron/routines", "schedule": "*/5 * * * *" },
     { "path": "/api/cron/billing-sync", "schedule": "15 * * * *" },
     { "path": "/api/cron/fx-rate", "schedule": "30 15 * * *" },
+    { "path": "/api/cron/encryption-maintenance", "schedule": "15 * * * *" },
     { "path": "/api/cron/data-retention", "schedule": "45 3 * * *" }
   ]
 }

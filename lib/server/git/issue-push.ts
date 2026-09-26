@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -157,9 +158,7 @@ async function pushLatestRemoteStateWithClaim(
   service: ReturnType<typeof getServiceClient>,
   params: QueuedRemotePush,
 ): Promise<void> {
-  const { data: issue, error: issueError } = await service
-    .from("issues")
-    .select("project_id, status, remote_provider, remote_repo_id, remote_number")
+  const { data: issue, error: issueError } = await issueStore(service).select("project_id, status, remote_provider, remote_repo_id, remote_number")
     .eq("id", params.issueId)
     .is("deleted_at", null)
     .maybeSingle();

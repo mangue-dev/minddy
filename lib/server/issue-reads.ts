@@ -1,3 +1,10 @@
+import { objectiveStore } from "@/lib/server/objective-store";
+import { commentStore } from "@/lib/server/comment-store";
+import { decodeIssue } from "@/lib/server/issue-store";
+import { decodeGithubIssueMetadata, legacyGithubIssueMetadataSchema } from
+  "@/lib/server/git/issue-sync-content";
+import { decodeGithubCommentUrl, legacyGithubCommentUrlSchema } from
+  "@/lib/server/git/comment-sync-url-content";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -31,6 +38,7 @@ export interface ReadContext {
   service: SupabaseClient;
   projectId: string;
   projectKey: string;
+  actorId?: string;
 }
 
 export const COMPACT_ISSUE_COLUMNS =
@@ -103,8 +111,7 @@ export async function assertObjectiveInProject(
   projectId: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!objectiveId) return { ok: false, error: "objective_id is required." };
-  const { data } = await db
-    .from("objectives")
+  const { data } = await objectiveStore(db)
     .select("id")
     .is("deleted_at", null)
     .eq("id", objectiveId)
@@ -221,8 +228,7 @@ export async function resolveObjectiveRef(
     };
   }
 
-  const query = () => db
-    .from("objectives")
+  const query = () => objectiveStore(db)
     .select("id, name, status, lead_user_id")
     .is("deleted_at", null)
     .eq("project_id", scope.projectId);
@@ -331,22 +337,23 @@ export async function resolveEntityRelations(
     issueIds.length
       ? db
           .from("issues")
-          .select("id, number, title, status")
+          .select("*")
           .is("deleted_at", null)
           .eq("project_id", scope.projectId)
           .in("id", [...new Set(issueIds)])
       : Promise.resolve({ data: [] }),
     objectiveIds.length
-      ? db
-          .from("objectives")
+      ? objectiveStore(db)
           .select("id, name, status, lead_user_id")
           .is("deleted_at", null)
           .eq("project_id", scope.projectId)
           .in("id", [...new Set(objectiveIds)])
       : Promise.resolve({ data: [] }),
   ]);
+  const decodedIssues = await Promise.all(((relatedIssues.data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => decodeIssue(row)));
   const issueMap = new Map(
-    ((relatedIssues.data ?? []) as Array<Record<string, unknown>>).map((o) => [
+    decodedIssues.map((o) => [
       o.id as string,
       o,
     ])
@@ -407,14 +414,9 @@ export async function listIssues(
     typeof args.offset === "number" && args.offset > 0 ? Math.floor(args.offset) : 0;
   const withDescription = args.include_description === true;
 
-  // Typed `string` to bypass the supabase-js type parser,
-  // which does not know how to resolve a conditional select.
-  const columns: string = withDescription
-    ? `${COMPACT_ISSUE_COLUMNS}, description`
-    : COMPACT_ISSUE_COLUMNS;
   let query = ctx.db
     .from("issues")
-    .select(columns)
+    .select("*, issue_categories(category_id)")
     .is("deleted_at", null)
     .eq("project_id", ctx.projectId)
     .order("updated_at", { ascending: false })
@@ -448,7 +450,8 @@ export async function listIssues(
   const { data, error } = await query;
   if (error) return { error: error.message };
 
-  let rows = (data ?? []) as unknown as Array<Record<string, unknown>>;
+  let rows = await Promise.all(((data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => decodeIssue(row, ctx.actorId ?? null)));
   const hasMore = rows.length > limit;
   rows = rows.slice(0, limit);
   // Category filter applies post-query (the N–N join can't be filtered inline
@@ -494,34 +497,39 @@ export async function searchIssues(
   if (number !== null && Number.isFinite(number)) {
     const { data } = await ctx.db
       .from("issues")
-      .select(COMPACT_ISSUE_COLUMNS)
+      .select("*, issue_categories(category_id)")
       .is("deleted_at", null)
       .eq("project_id", ctx.projectId)
       .eq("number", number)
       .maybeSingle();
     if (data) {
       return {
-        issues: [compactIssue(data as Record<string, unknown>, ctx.projectKey)],
+        issues: [compactIssue(await decodeIssue(data as Record<string, unknown>, ctx.actorId ?? null), ctx.projectKey)],
       };
     }
   }
 
-  const pattern = ilikePattern(query);
-  const { data, error } = await ctx.db
-    .from("issues")
-    .select(COMPACT_ISSUE_COLUMNS)
-    .is("deleted_at", null)
-    .eq("project_id", ctx.projectId)
-    .or(`title.ilike.${pattern},description.ilike.${pattern}`)
-    .order("updated_at", { ascending: false })
-    .limit(limit);
-  if (error) return { error: error.message };
-
-  return {
-    issues: ((data ?? []) as Array<Record<string, unknown>>).map((row) =>
-      compactIssue(row, ctx.projectKey)
-    ),
-  };
+  const matches: Array<Record<string, unknown>> = [];
+  const needle = query.toLocaleLowerCase();
+  for (let offset = 0; matches.length < limit; offset += 200) {
+    const { data, error } = await ctx.db.from("issues")
+      .select("*, issue_categories(category_id)")
+      .is("deleted_at", null).eq("project_id", ctx.projectId)
+      .order("updated_at", { ascending: false }).order("id", { ascending: true })
+      .range(offset, offset + 199);
+    if (error) return { error: error.message };
+    const page = data ?? [];
+    for (const stored of page) {
+      const row = await decodeIssue(stored as Record<string, unknown>, ctx.actorId ?? null);
+      if (String(row.title).toLocaleLowerCase().includes(needle) ||
+          String(row.description ?? "").toLocaleLowerCase().includes(needle)) {
+        matches.push(compactIssue(row, ctx.projectKey));
+        if (matches.length === limit) break;
+      }
+    }
+    if (page.length < 200) break;
+  }
+  return { issues: matches };
 }
 
 export interface IssueDetail {
@@ -560,20 +568,20 @@ export async function getIssue(
   } else {
     return { error: "Pass issue_id or number." };
   }
-  const { data: issue, error } = await issueQuery.maybeSingle();
+  const { data: storedIssue, error } = await issueQuery.maybeSingle();
   if (error) return { error: error.message };
-  if (!issue) return { error: "Issue not found in this project." };
+  if (!storedIssue) return { error: "Issue not found in this project." };
+  const issue = await decodeIssue(storedIssue as Record<string, unknown>, ctx.actorId ?? null);
 
   const [
-    { data: comments },
+    { data: comments, error: commentsError },
     { data: subIssues },
     { data: attachmentRows },
-    { data: githubMetadata },
-    { data: githubCommentSyncs },
+    { data: githubMetadata, error: githubMetadataError },
+    { data: githubCommentSyncs, error: githubCommentSyncError },
   ] =
     await Promise.all([
-      ctx.db
-        .from("comments")
+      commentStore(ctx.db, "comments", ctx.actorId ?? null)
         .select(
           "id, author_id, body, parent_id, via_assistant, via_mcp, api_key_id, created_at"
         )
@@ -581,9 +589,10 @@ export async function getIssue(
         .order("created_at", { ascending: true }),
       ctx.db
         .from("issues")
-        .select("id, number, title, status")
+        .select("*")
         .is("deleted_at", null)
         .eq("parent_id", issue.id)
+        .eq("project_id", ctx.projectId)
         .order("number", { ascending: true }),
       // Resource metadata (MIN-24, MIN-184, MIN-275): comment_id null = on the
       // issue itself. A file's contents stay behind the app's signed-URL door —
@@ -596,19 +605,34 @@ export async function getIssue(
         )
         .eq("issue_id", issue.id)
         .order("created_at", { ascending: true }),
-      ctx.db
-        .from("github_issue_sync_metadata")
-        .select(
-          "github_node_id, author_login, author_association, state_reason, locked, active_lock_reason, milestone, created_at_remote, updated_at_remote, closed_at_remote, closed_by_login, metadata, synced_at"
-        )
-        .eq("issue_id", issue.id)
-        .maybeSingle(),
-      ctx.db
-        .from("github_issue_comment_syncs")
-        .select("comment_id, author_login, author_association, html_url, created_at_remote, updated_at_remote, deleted_at_remote")
-        .eq("issue_id", issue.id),
+      (async () => {
+        const first = await ctx.db.from("github_issue_sync_metadata")
+          .select("issue_id,github_node_id,author_login,author_association,state_reason,locked,active_lock_reason,milestone,created_at_remote,updated_at_remote,closed_at_remote,closed_by_login,metadata,synced_at,content_ciphertext,content_encryption_version")
+          .eq("issue_id", issue.id).maybeSingle();
+        return legacyGithubIssueMetadataSchema(first.error)
+          ? ctx.db.from("github_issue_sync_metadata")
+              .select("issue_id,github_node_id,author_login,author_association,state_reason,locked,active_lock_reason,milestone,created_at_remote,updated_at_remote,closed_at_remote,closed_by_login,metadata,synced_at")
+              .eq("issue_id", issue.id).maybeSingle()
+          : first;
+      })(),
+      (async () => {
+        const first = await ctx.db.from("github_issue_comment_syncs")
+          .select("issue_id,remote_comment_id,comment_id,author_login,author_association,html_url,html_url_encryption_version,created_at_remote,updated_at_remote,deleted_at_remote")
+          .eq("issue_id", issue.id);
+        return legacyGithubCommentUrlSchema(first.error)
+          ? ctx.db.from("github_issue_comment_syncs")
+              .select("issue_id,remote_comment_id,comment_id,author_login,author_association,html_url,created_at_remote,updated_at_remote,deleted_at_remote")
+              .eq("issue_id", issue.id)
+          : first;
+      })(),
     ]);
 
+  if (commentsError) return { error: "Unable to read issue comments." };
+  if (githubMetadataError || githubCommentSyncError) {
+    return { error: "Unable to read issue forge metadata." };
+  }
+  const decodedSubIssues = await Promise.all(((subIssues ?? []) as Array<Record<string, unknown>>)
+    .map((row) => decodeIssue(row, ctx.actorId ?? null)));
   const resourcesByComment = new Map<string | null, Record<string, unknown>[]>();
   for (const row of attachmentRows ?? []) {
     const key = (row.comment_id as string | null) ?? null;
@@ -624,8 +648,10 @@ export async function getIssue(
     fetchAuthUsersById(ctx.service, authorIds),
     resolveApiKeyActors((comments ?? []).map((c) => c.api_key_id as string | null)),
   ]);
+  const decodedGithubComments = await Promise.all((githubCommentSyncs ?? []).map((row) =>
+    decodeGithubCommentUrl(issue.project_id as string, row, ctx.actorId ?? null)));
   const githubCommentById = new Map(
-    (githubCommentSyncs ?? []).map((row) => [row.comment_id as string, row]),
+    decodedGithubComments.map((row) => [(row as Record<string, unknown>).comment_id as string, row]),
   );
   const commentRows = (comments ?? []).map((c) => {
     const githubComment = githubCommentById.get(c.id as string);
@@ -668,15 +694,16 @@ export async function getIssue(
     // afterwards with the key of THIS project would be wrong on top of that.
     const { data } = await ctx.db
       .from("issues")
-      .select("id, number, title")
+      .select("*")
       .is("deleted_at", null)
       .eq("id", issue.duplicate_of_id)
       .eq("project_id", ctx.projectId)
       .maybeSingle();
     if (data) {
+      const decoded = await decodeIssue(data as Record<string, unknown>, ctx.actorId ?? null);
       duplicateOf = {
-        ...data,
-        identifier: issueIdentifier(ctx.projectKey, data.number as number),
+        ...decoded,
+        identifier: issueIdentifier(ctx.projectKey, decoded.number as number),
       };
     }
   }
@@ -738,14 +765,18 @@ export async function getIssue(
       resources: resourcesByComment.get(null) ?? [],
     },
     comments: commentRows,
-    sub_issues: ((subIssues ?? []) as Array<Record<string, unknown>>).map((s) => ({
+    sub_issues: decodedSubIssues.map((s) => ({
       ...s,
       identifier: issueIdentifier(ctx.projectKey, s.number as number),
     })),
     relations: relationList,
     ...(duplicateOf ? { duplicate_of: duplicateOf } : {}),
     ...(linkedFeedback.length > 0 ? { linked_feedback: linkedFeedback } : {}),
-    ...(githubMetadata ? { github_metadata: githubMetadata } : {}),
+    ...(githubMetadata ? { github_metadata: await decodeGithubIssueMetadata(
+      issue.project_id as string, githubMetadata as unknown as {
+        issue_id: string; metadata: Record<string, unknown>; milestone: unknown | null;
+        content_ciphertext?: string | null; content_encryption_version?: number },
+      ctx.actorId ?? null) } : {}),
   };
 }
 

@@ -14,6 +14,7 @@ import {
   type AgentDelegationVerification,
 } from "./agent-contract";
 import type { AgentRun } from "./runs";
+import { listRunEvents } from "./run-event-store";
 import { parseAskUserQuestions } from "@/lib/ask-user";
 
 const EXPECTED_DELEGATION_OUTPUT = [
@@ -212,25 +213,21 @@ export async function finalizeAgentDelegationResult(
 ): Promise<AgentDelegationResult | null> {
   if (!run.delegation_brief || !run.parent_numo_turn_id) return null;
   const [eventsResult, artifactsResult] = await Promise.all([
-    service.from("agent_run_events")
-      .select("seq, type, payload")
-      .eq("run_id", run.id)
-      .in("type", ["files_changed", "tool_call", "tool_result", "commit", "pr_opened", "question", "needs_input", "error"])
-      .order("seq", { ascending: true }),
+    listRunEvents(service, run, {
+      types: ["files_changed", "tool_call", "tool_result", "commit", "pr_opened",
+        "question", "needs_input", "error"],
+    }),
     service.from("agent_artifacts")
       .select("kind, ref, url")
       .eq("run_id", run.id)
       .order("created_at", { ascending: true }),
   ]);
-  if (eventsResult.error) {
-    throw new Error(`Delegation event read failed: ${eventsResult.error.message}`);
-  }
   if (artifactsResult.error) {
     throw new Error(`Delegation artifact read failed: ${artifactsResult.error.message}`);
   }
   const result = buildAgentDelegationResult({
     run,
-    events: (eventsResult.data ?? []) as RunEvent[],
+    events: eventsResult as RunEvent[],
     artifactRows: (artifactsResult.data ?? []) as Array<{ kind?: unknown; ref?: unknown; url?: unknown }>,
   });
   const { error } = await service.from("agent_runs")

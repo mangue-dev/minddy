@@ -7,7 +7,7 @@ import {
   reserveCustomDomainMutation,
 } from "@/lib/server/custom-domains";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { sha256Hex } from "@/lib/server/oauth/crypto";
+import { authenticationProof } from "@/lib/server/encryption/auth-proof";
 import { MIN_SHARE_PASSWORD_LENGTH } from "@/lib/share-password";
 import type { PageShare, View, ViewShare } from "@/lib/types";
 import type { Page } from "@/lib/pages";
@@ -50,11 +50,12 @@ export type ViewShareResult =
 
 export const SHARE_UNLOCK_COOKIE = "mdy_share_unlock";
 
-/** Value of the visitor's unlock cookie for a password share. Deterministic on
-    (token, password hash): changing the password or re-creating the share
-    invalidates every cookie in the wild without tracking sessions. */
+/** Bind unlock cookies to the share, password and a server-only secret.
+ * Password changes, share replacement and service-key rotation revoke existing cookies.
+ * A database-only reader cannot mint a cookie from the stored password hash.
+ */
 export function unlockCookieValue(token: string, passwordHash: string): string {
-  return sha256Hex(`${token}:${passwordHash}`);
+  return authenticationProof("share_unlock", [token, passwordHash]);
 }
 
 /**

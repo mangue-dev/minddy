@@ -20,7 +20,7 @@
 import { openDemoWorld, createPlan, callRpc } from "../../lib/guards.mjs";
 import { resolvePeople } from "./_people.mjs";
 import { categoryLabel, ensureCategories } from "./_categories.mjs";
-import { describeMetadata, syncIssueMetadata } from "./_issues.mjs";
+import { assertIssueSeedWritable, describeMetadata, syncIssueMetadata } from "./_issues.mjs";
 import { currentCycleWindow, spreadInWindow } from "./_cycle-window.mjs";
 
 const DRY_RUN = process.argv.includes("--dry-run");
@@ -219,6 +219,7 @@ async function main() {
   } else {
     console.log(`  → projet ${project.key} déjà là, réutilisé`);
   }
+  await assertIssueSeedWritable(world, project.id);
 
   // See 002: categories come from the app, not from a trigger.
   await ensureCategories(world, project.id);

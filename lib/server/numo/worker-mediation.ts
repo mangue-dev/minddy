@@ -12,6 +12,10 @@ import {
 import { requestedRunReservationUsd } from "@/lib/server/agent/run-key";
 import { kickAgentDrain } from "@/lib/server/agent/launch";
 import { getServiceClient } from "@/lib/supabase-service";
+import { shouldEncryptAgentLaunch } from "@/lib/server/agent/run-launch-content";
+import { encodeQueueMessage } from "@/lib/server/agent/run-queue-content";
+import { encodeAgentInputAnswer } from "@/lib/server/agent/run-input-answer-content";
+import { encodeWorkerParentMessage } from "@/lib/server/agent/worker-parent-content";
 import type {
   AssistantMention,
   AssistantPageContext,
@@ -56,7 +60,7 @@ export async function answerNumoWorkerInput(input: {
   messageId?: string;
   persistParentMessage: boolean;
 }): Promise<WorkerMessageDisposition> {
-  const run = await getRun(input.correlation.runId);
+  const run = await getRun(input.correlation.runId, { decode: false });
   if (
     !run
     || run.created_by !== input.userId
@@ -72,14 +76,35 @@ export async function answerNumoWorkerInput(input: {
   if (!budget) return { action: "refused", reason: "quota_exceeded" };
 
   const service = getServiceClient();
+  const messageId = input.messageId ?? randomUUID();
+  let answerPayload = input.answer.trim();
+  if (await shouldEncryptAgentLaunch(service, run.project_id)) {
+    const { data: request, error: requestError } = await service
+      .from("agent_run_input_requests").select("id")
+      .eq("run_id", run.id).eq("question_id", input.correlation.questionId)
+      .maybeSingle();
+    if (requestError) throw new Error("Unable to resolve worker input request");
+    if (!request) return { action: "refused", reason: "worker_input_mismatch" };
+    const [queue, answer, parent] = await Promise.all([
+      encodeQueueMessage(run.project_id, messageId, {
+        content: answerPayload, mentions: null,
+      }),
+      encodeAgentInputAnswer(run.project_id, request.id, answerPayload),
+      encodeWorkerParentMessage(run.project_id, messageId, {
+        content: answerPayload, context: null, metadata: {},
+      }),
+    ]);
+    answerPayload = JSON.stringify({ kind: "encrypted_worker_answer",
+      queue: queue.content, answer: answer.answer, parent: parent.content });
+  }
   const { data, error } = await service.rpc("resume_numo_worker_input", {
     p_conversation_id: input.conversationId,
     p_parent_turn_id: input.correlation.parentTurnId,
     p_run_id: input.correlation.runId,
     p_question_id: input.correlation.questionId,
     p_user_id: input.userId,
-    p_message_id: input.messageId ?? randomUUID(),
-    p_answer: input.answer.trim(),
+    p_message_id: messageId,
+    p_answer: answerPayload,
     p_persist_parent_message: input.persistParentMessage,
     p_not_before: new Date().toISOString(),
     p_usage_since: budget.usageSince,
@@ -118,15 +143,45 @@ export async function steerNumoWorker(input: {
   metadata?: Record<string, unknown>;
 }): Promise<WorkerMessageDisposition> {
   const service = getServiceClient();
+  let queueContent = input.content.trim();
+  let parentContent = input.parentContent?.trim() || queueContent;
+  let mentions = input.mentions ?? null;
+  let context = input.context ?? null;
+  let metadata = input.metadata ?? {};
+  const { data: active, error: activeError } = await service.from("numo_assistant_turns")
+    .select("active_run_id").eq("conversation_id", input.conversationId)
+    .eq("user_id", input.userId).in("status", ["waiting_work", "waiting_input"])
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (activeError) throw new Error("Unable to resolve active worker");
+  if (active?.active_run_id) {
+    const run = await getRun(active.active_run_id, { decode: false });
+    if (!run || run.created_by !== input.userId ||
+        run.parent_numo_conversation_id !== input.conversationId) {
+      return { action: "refused", reason: "worker_steering_mismatch" };
+    }
+    if (await shouldEncryptAgentLaunch(service, run.project_id)) {
+      const [queue, parent] = await Promise.all([
+        encodeQueueMessage(run.project_id, input.messageId,
+          { content: queueContent, mentions }),
+        encodeWorkerParentMessage(run.project_id, input.messageId,
+          { content: parentContent, context, metadata }),
+      ]);
+      queueContent = queue.content;
+      parentContent = parent.content;
+      mentions = null;
+      context = null;
+      metadata = {};
+    }
+  }
   const { data, error } = await service.rpc("steer_numo_worker", {
     p_conversation_id: input.conversationId,
     p_user_id: input.userId,
     p_message_id: input.messageId,
-    p_content: input.content.trim(),
-    p_parent_content: input.parentContent?.trim() || null,
-    p_mentions: input.mentions ?? null,
-    p_context: input.context ?? null,
-    p_metadata: input.metadata ?? {},
+    p_content: queueContent,
+    p_parent_content: parentContent,
+    p_mentions: mentions,
+    p_context: context,
+    p_metadata: metadata,
   });
   if (error) throw new Error(`Worker steering failed: ${error.message}`);
   const result = data as {
@@ -189,7 +244,7 @@ export async function relaunchNumoWorkerRun(input: {
 }): Promise<
   { ok: true; run: AgentRun } | { ok: false; code: string }
 > {
-  const run = await getRun(input.runId);
+  const run = await getRun(input.runId, { decode: false });
   if (!run) return { ok: false, code: "not_found" };
   if (run.parent_numo_conversation_id !== input.conversationId) {
     return { ok: false, code: "not_conversation_worker" };

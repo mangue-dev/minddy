@@ -47,7 +47,7 @@ export const RETENTION_DAYS = {
  * Invitations still pending. After this period, the address of a person
  * who has never joined the project is kept without purpose.
  */
-  pendingInvitations: 90,
+  pendingInvitations: 30,
   /**
  * Agent execution traces (events + control messages) after
  * the terminal state of the run. The recovery `checkpoint` is already set to
@@ -177,14 +177,14 @@ async function purgeReadNotifications(service: Service, now: Date) {
   );
 }
 
-/** Invitations never accepted, issued more than `pendingInvitations` ago. */
+/** Remove invitations as soon as their 30-day validity has expired. */
 async function purgePendingInvitations(service: Service, now: Date) {
   return counted(
     await service
       .from("project_invitations")
       .delete({ count: "exact" })
       .eq("status", "pending")
-      .lt("created_at", cutoff(RETENTION_DAYS.pendingInvitations, now))
+      .lt("expires_at", now.toISOString())
   );
 }
 

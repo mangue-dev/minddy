@@ -1,3 +1,7 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { objectiveStore } from "@/lib/server/objective-store";
+import { feedbackPostStore } from "@/lib/server/feedback-post-store";
+import { decodeAgentTitle, legacyAgentTitleSchema } from "@/lib/server/agent/run-title-content";
 import "server-only";
 
 import { createTranslator } from "next-intl";
@@ -89,7 +93,7 @@ export interface PushContext {
   issues: Map<string, { number: number; title: string }>;
   agentConversations: Map<string, string | null>;
   objectives: Map<string, string>;
-  feedbackPosts: Map<string, string>;
+  feedbackPosts: Map<string, { projectId: string; title: string }>;
   /** Title of a ROUTINE (MIN-185) — the banner only shows him. */
   routines: Map<string, string>;
   /** Number + title of a PULL REQUEST — the banner shows them as the
@@ -157,31 +161,38 @@ export async function loadPushContext(
     keyActors,
   ] =
     await Promise.all([
-    issueIds.length
-      ? service
-          .from("issues")
-          .select("id, number, title")
+    issueIds.length && projectIds.length
+      ? issueStore(service).select("id, number, title")
           .in("id", issueIds)
+          .in("project_id", projectIds)
           .is("deleted_at", null)
       : Promise.resolve({ data: [] as { id: string; number: number; title: string }[],
         }),
     conversationIds.length
-      ? service.from("agent_conversations").select("id, title").in("id", conversationIds)
-      : Promise.resolve({ data: [] as { id: string; title: string | null }[] }),
+      ? (async () => {
+        const first = await service.from("agent_conversations")
+          .select("id, project_id, title, title_ciphertext, title_encryption_version")
+          .in("id", conversationIds);
+        return legacyAgentTitleSchema(first.error)
+          ? service.from("agent_conversations")
+              .select("id, project_id, title").in("id", conversationIds)
+          : first;
+      })()
+      : Promise.resolve({ data: [] as { id: string; project_id: string;
+          title: string | null }[] }),
     objectiveIds.length
-      ? service
-          .from("objectives")
+      ? objectiveStore(service)
           .select("id, name")
           .in("id", objectiveIds)
           .is("deleted_at", null)
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
     feedbackIds.length
-      ? service
-          .from("feedback_posts")
-          .select("id, title")
+      ? feedbackPostStore(service)
+          .select("id, project_id, title")
           .in("id", feedbackIds)
+          .in("project_id", projectIds)
           .is("deleted_at", null)
-      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+      : Promise.resolve({ data: [] as { id: string; project_id: string; title: string }[] }),
     // A ROUTINE (MIN-185): no basket, the line leaves with it.
     routineIds.length
       ? service.from("agent_routines").select("id, title").in("id", routineIds)
@@ -213,9 +224,16 @@ export async function loadPushContext(
   for (const i of issues.data ?? []) {
     ctx.issues.set(i.id, { number: i.number, title: i.title });
   }
-  for (const c of agentConversations.data ?? []) ctx.agentConversations.set(c.id, c.title);
+  for (const c of agentConversations.data ?? []) {
+    if (!rows.some((row) => row.agent_conversation_id === c.id &&
+        row.project_id === c.project_id)) continue;
+    const decoded = await decodeAgentTitle(c as { id: string; project_id: string;
+      title: string | null; title_ciphertext?: string | null;
+      title_encryption_version?: number });
+    ctx.agentConversations.set(c.id, decoded.title);
+  }
   for (const o of objectives.data ?? []) ctx.objectives.set(o.id, o.name);
-  for (const f of feedback.data ?? []) ctx.feedbackPosts.set(f.id, f.title);
+  for (const f of feedback.data ?? []) ctx.feedbackPosts.set(f.id, { projectId: f.project_id, title: f.title });
   for (const r of routines.data ?? []) ctx.routines.set(r.id, r.title);
   for (const p of pullRequests.data ?? []) {
     ctx.pullRequests.set(p.id, { number: p.number, title: p.title });
@@ -259,9 +277,9 @@ export function buildPushPayload(
     if (!name) return null;
     title = name;
   } else if (row.feedback_post_id) {
-    const postTitle = ctx.feedbackPosts.get(row.feedback_post_id);
-    if (!postTitle) return null;
-    title = postTitle;
+    const post = ctx.feedbackPosts.get(row.feedback_post_id);
+    if (!post || post.projectId !== row.project_id) return null;
+    title = post.title;
   } else if (row.routine_id) {
     const routineTitle = ctx.routines.get(row.routine_id);
     if (!routineTitle) return null;

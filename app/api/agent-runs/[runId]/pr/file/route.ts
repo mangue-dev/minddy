@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import { getRun } from "@/lib/server/agent/runs";
+import { decodeAgentBaseBranch } from "@/lib/server/agent/run-base-branch-content";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { forgeFor, isForgeApiError } from "@/lib/server/agent/forge";
 import {
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const user = await getAuthedUser(request);
   if (!user.ok) return user.response;
 
-  const run = await getRun(runId);
+  const run = await getRun(runId, { decode: false });
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
   if (!(await canReadAgentRun(user.user.id, run))) {
@@ -59,7 +60,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     if (!target) return NextResponse.json({ error: "No repository linked" }, { status: 409 });
     const forge = forgeFor(target.provider);
 
-    const base = run.base_branch ?? target.defaultBranch;
+    const base = (await decodeAgentBaseBranch(run, user.user.id)).base_branch
+      ?? target.defaultBranch;
     const head = run.branch_name;
     const compared = await forge.compareBranches({
       token: target.token,

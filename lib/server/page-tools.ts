@@ -326,7 +326,7 @@ export async function readPageForAgent({
     // The WIRES (MIN-282), under the same care as the trackbacks: both
     // answer “what does this text commit to?” ”, and internal readings
     // (add a block, correct a passage) don't want any.
-    threads = await readThreads(page.id);
+    threads = await readThreads(page.id, actorId);
   }
 
   return {
@@ -351,9 +351,9 @@ export async function readPageForAgent({
  * (lib/display-name.ts) —, and an agent's writing is called "minddy": the rule
  * of identity is valid for what an agent reads as well as for what a human reads.
  */
-async function readThreads(pageId: string): Promise<PageThreadForAgent[]> {
+async function readThreads(pageId: string, actorId: string): Promise<PageThreadForAgent[]> {
   const service = getServiceClient();
-  const raw = await openPageThreadsForAgent(service, pageId, (id) => id ?? "");
+  const raw = await openPageThreadsForAgent(service, pageId, (id) => id ?? "", actorId);
   const ids = [
     ...new Set(
       raw.flatMap((thread) => thread.messages.map((m) => m.author)).filter(Boolean)

@@ -1,5 +1,7 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
+import { hasMatchingIssueEvent } from "@/lib/server/issue-event-store";
 import { getServiceClient } from "@/lib/supabase-service";
 import { insertEvents } from "@/lib/server/issue-events";
 import { insertNotifications } from "@/lib/server/notifications";
@@ -174,16 +176,10 @@ export async function isPrActionEcho(opts: {
     login: opts.login,
   });
   if (actorIds.length === 0) return false;
-  const { data } = await getServiceClient()
-    .from("issue_events")
-    .select("id")
-    .in("issue_id", issueIds)
-    .in("actor_id", actorIds)
-    .eq("type", opts.type)
-    .eq("to_value", String(opts.prNumber))
-    .gte("created_at", new Date(Date.now() - ECHO_WINDOW_MS).toISOString())
-    .limit(1);
-  return !!data?.length;
+  return hasMatchingIssueEvent(getServiceClient(), {
+    issueIds, actorIds, type: opts.type, toValue: String(opts.prNumber),
+    after: new Date(Date.now() - ECHO_WINDOW_MS).toISOString(),
+  });
 }
 
 /**
@@ -224,25 +220,11 @@ export async function hasRecentPrEvent(opts: {
   const center = occurredAtOf(opts.at) ?? new Date().toISOString();
   const from = new Date(Date.parse(center) - PR_EVENT_BURST_MS).toISOString();
   const to = new Date(Date.parse(center) + PR_EVENT_BURST_MS).toISOString();
-  let query = getServiceClient()
-    .from("issue_events")
-    .select("id")
-    .in("issue_id", opts.issueIds)
-    .eq("type", opts.type)
-    .eq("to_value", String(opts.prNumber))
-    .gte("created_at", from)
-    .lte("created_at", to)
-    .limit(1);
-  if (opts.actorId) {
-    query = query.eq("actor_id", opts.actorId);
-  } else {
-    query = query.is("actor_id", null);
-    query = opts.fromValue
-      ? query.eq("from_value", opts.fromValue)
-      : query.is("from_value", null);
-  }
-  const { data } = await query;
-  return !!data?.length;
+  return hasMatchingIssueEvent(getServiceClient(), {
+    issueIds: opts.issueIds, type: opts.type, toValue: String(opts.prNumber),
+    after: from, before: to,
+    ...(opts.actorId ? { actorIds: [opts.actorId] } : { fromValue: opts.fromValue ?? null }),
+  });
 }
 
 /** Tickets that do not already have the line (identity: gesture + PR + forge actor). */
@@ -392,9 +374,7 @@ async function repoWriteActor(opts: {
   issueId: string;
 }): Promise<string | null> {
   const service = getServiceClient();
-  const { data: issue } = await service
-    .from("issues")
-    .select("project_id")
+  const { data: issue } = await issueStore(service).select("project_id")
     .eq("id", opts.issueId)
     .is("deleted_at", null)
     .maybeSingle();

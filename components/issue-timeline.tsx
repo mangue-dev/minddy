@@ -491,10 +491,8 @@ export function CommentBlock({
     Date.now() - new Date(comment.created_at).getTime() > 5 * 60_000;
   const working = comment.assistant_status === "working" && !stale;
   const failed = comment.assistant_status === "error" || stale;
-  // The text being written arrives through the topic of the comment, not through the
-  // base: ~4 times per second, without thread refetch. The basic line remains the
-  // fallback — it is she who sees the tab opened along the way, or the one which
-  // missed a broadcast.
+  // Current servers persist encrypted snapshots and broadcast invalidations.
+  // Keep live-topic compatibility while older servers drain during rollout.
   const live = useCommentLive(comment.id, working, liveTable);
   const liveTool = live ? live.tool : comment.assistant_tool;
   const liveBody = live ? live.text : comment.body;

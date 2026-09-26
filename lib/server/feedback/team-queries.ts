@@ -1,8 +1,11 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import type { FeedbackPostRow } from "@/lib/server/feedback/posts";
 import { FEEDBACK_POST_SELECT } from "@/lib/server/feedback/posts";
+import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import {
   sortFeedbackResolvedLast,
   type FeedbackPostStatus,
@@ -62,8 +65,7 @@ export async function listTeamFeedback(
   options: { statuses?: readonly FeedbackPostStatus[] } = {}
 ): Promise<TeamFeedbackListItem[]> {
   const service = getServiceClient();
-  let query = service
-    .from("feedback_posts")
+  let query = feedbackPostStore(service)
     .select(`${FEEDBACK_POST_SELECT}, author:feedback_users!author_id (${AUTHOR_SELECT}), ${CATEGORY_EMBED}`)
     .is("deleted_at", null)
     .eq("project_id", projectId)
@@ -80,7 +82,7 @@ export async function listTeamFeedback(
   } & WithCategoryEmbed)[];
 
   const suggestionTitles = await fetchTitles(
-    rows.map((r) => r.suggested_merge_into_id).filter((x): x is string => !!x)
+    projectId, rows.map((r) => r.suggested_merge_into_id).filter((x): x is string => !!x)
   );
 
   const items = rows.map((row) => ({
@@ -94,13 +96,13 @@ export async function listTeamFeedback(
   return sortFeedbackResolvedLast(items, (item) => item.status);
 }
 
-async function fetchTitles(postIds: string[]): Promise<Map<string, string>> {
+async function fetchTitles(projectId: string, postIds: string[]): Promise<Map<string, string>> {
   if (postIds.length === 0) return new Map();
   const service = getServiceClient();
-  const { data } = await service
-    .from("feedback_posts")
+  const { data } = await feedbackPostStore(service)
     .select("id, title")
     .is("deleted_at", null)
+    .eq("project_id", projectId)
     .in("id", postIds);
   return new Map((data ?? []).map((p) => [p.id as string, p.title as string]));
 }
@@ -129,8 +131,7 @@ export async function getTeamFeedbackDetail(
   postId: string
 ): Promise<TeamFeedbackDetail | null> {
   const service = getServiceClient();
-  const { data } = await service
-    .from("feedback_posts")
+  const { data } = await feedbackPostStore(service)
     .select(`${FEEDBACK_POST_SELECT}, author:feedback_users!author_id (${AUTHOR_SELECT}), ${CATEGORY_EMBED}`)
     .is("deleted_at", null)
     .eq("id", postId)
@@ -144,11 +145,11 @@ export async function getTeamFeedbackDetail(
   );
 
   const [mergedFromRes, eventsRes, suggestionTitles, issueRes] = await Promise.all([
-    service
-      .from("feedback_posts")
+    feedbackPostStore(service)
       .select("id, title")
       .is("deleted_at", null)
       .eq("merged_into_id", postId)
+      .eq("project_id", projectId)
       .order("created_at", { ascending: true }),
     service
       .from("feedback_merge_events")
@@ -157,11 +158,9 @@ export async function getTeamFeedbackDetail(
       .eq("kind", "post")
       .is("undone_at", null)
       .order("created_at", { ascending: false }),
-    fetchTitles(row.suggested_merge_into_id ? [row.suggested_merge_into_id] : []),
+    fetchTitles(projectId, row.suggested_merge_into_id ? [row.suggested_merge_into_id] : []),
     row.issue_id
-      ? service
-          .from("issues")
-          .select("id, number, status")
+      ? issueStore(service).select("id, number, status")
           .is("deleted_at", null)
           .eq("id", row.issue_id)
           .maybeSingle()
@@ -202,8 +201,7 @@ export async function listFeedbackForIssue(
   issueId: string
 ): Promise<IssueLinkedFeedback[]> {
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("feedback_posts")
+  const { data, error } = await feedbackPostStore(service)
     .select("id, title, status, vote_count, is_public")
     .is("deleted_at", null)
     .eq("project_id", projectId)
@@ -219,8 +217,7 @@ export async function listFeedbackForIssue(
   const rows = (data ?? []) as unknown as Omit<IssueLinkedFeedback, "comment_count">[];
   if (rows.length === 0) return [];
 
-  const { data: commentRows } = await service
-    .from("comments")
+  const { data: commentRows } = await commentStore(service, "comments")
     .select("feedback_post_id")
     .in(
       "feedback_post_id",

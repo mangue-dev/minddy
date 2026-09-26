@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { loadIssueTitles } from "@/lib/server/issue-store";
+import { decodeAgentLaunch, legacyAgentLaunchSchema } from "@/lib/server/agent/run-launch-content";
+import { decodeAgentTitle } from "@/lib/server/agent/run-title-content";
+import type { AssistantMention } from "@/lib/assistant-types";
 
 /**
  * GLOBAL list of code agent (Numo) conversations, all projects
@@ -31,6 +35,7 @@ type AgentRunStatus = "queued" | "running" | "completed" | "failed" | "canceled"
 
 interface RunRow {
   id: string;
+  project_id: string;
   conversation_id: string;
   parent_numo_turn_id: string | null;
   issue_id: string | null;
@@ -39,7 +44,12 @@ interface RunRow {
   model: string | null;
   triggered_by: "button" | "chat" | "mention";
   prompt: string | null;
+  prompt_mentions: AssistantMention[] | null;
+  encrypted_launch_content: string | null;
+  launch_encryption_version: number;
   title: string | null;
+  title_ciphertext?: string | null;
+  title_encryption_version?: number;
   pr_number: number | null;
   pr_url: string | null;
   pr_state: "draft" | "open" | "merged" | "closed" | null;
@@ -47,7 +57,8 @@ interface RunRow {
   updated_at: string;
   completed_at: string | null;
   awaiting_input: boolean;
-  conversation: { title: string | null; visibility: "private" | "project" } | null;
+  conversation: { title: string | null; title_ciphertext?: string | null;
+    title_encryption_version?: number; visibility: "private" | "project" } | null;
   issue: { id: string; number: number; title: string } | null;
   project: {
     id: string;
@@ -128,17 +139,22 @@ export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  const { data, error } = await auth.supabase
+  const baseColumns = "id, project_id, conversation_id, parent_numo_turn_id, issue_id, pull_request_id, status, model, triggered_by, prompt, prompt_mentions, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, conversation:agent_conversations(title, visibility), issue:issues(id, number), project:projects(id, key, name, icon_url, orb_seed, deleted_at), pull_request:pull_requests(id, number, title, url)";
+  const readRuns = (columns: string) => auth.supabase
     .from("agent_runs")
-    .select(
-      "id, conversation_id, parent_numo_turn_id, issue_id, pull_request_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, conversation:agent_conversations(title, visibility), issue:issues(id, number, title), project:projects(id, key, name, icon_url, orb_seed, deleted_at), pull_request:pull_requests(id, number, title, url)",
-    )
+    .select(columns)
     // Routine passages and Numo-owned workers are not standalone conversations:
     // the former live in routine history and the latter are mediated only in
     // their parent Numo conversation.
     .is("routine_id", null)
     .is("parent_numo_turn_id", null)
     .order("created_at", { ascending: false });
+  const encryptedColumns = baseColumns.replace(
+    "conversation:agent_conversations(title, visibility)",
+    "conversation:agent_conversations(title, title_ciphertext, title_encryption_version, visibility)",
+  );
+  let { data, error } = await readRuns(`${encryptedColumns}, encrypted_launch_content, launch_encryption_version, title_ciphertext, title_encryption_version`);
+  if (legacyAgentLaunchSchema(error)) ({ data, error } = await readRuns(baseColumns));
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -166,12 +182,28 @@ export async function GET(request: NextRequest) {
   // although its sessions reappeared in the list — under a header bearing the
   // name of a project that the user no longer sees anywhere else. THE
   // restoring brings them back, like the rest of its contents.
-  const rows = ((data ?? []) as unknown as RunRow[]).filter(
+  const visibleRows = ((data ?? []) as unknown as RunRow[]).filter(
     (r) =>
       (r.issue_id === null || r.issue !== null) &&
       (r.pull_request_id === null || r.pull_request !== null) &&
       !r.project?.deleted_at,
   );
+  const titles = await loadIssueTitles(auth.supabase,
+    visibleRows.map((row) => row.issue?.id).filter((id): id is string => !!id),
+    visibleRows.map((row) => row.project?.id).filter((id): id is string => !!id),
+    auth.user.id);
+  const decodedRows = await Promise.all(visibleRows.map(async (row) => {
+    const run = await decodeAgentLaunch(row, auth.user.id);
+    const conversation = run.conversation
+      ? await decodeAgentTitle({ ...run.conversation, id: run.conversation_id,
+          project_id: run.project_id }, auth.user.id)
+      : null;
+    return { ...run, conversation };
+  }));
+  const rows = decodedRows.map((row) => ({ ...row,
+    issue: row.issue && titles.has(row.issue.id)
+      ? { ...row.issue, title: titles.get(row.issue.id)! } : null,
+  })).filter((row) => row.issue_id === null || row.issue !== null);
   // One run, one conversation — no regrouping. What was once read on
   // the representative of a ticket (the status of its last run, its PR, its end) reads
   // now on each line, for this run and him alone.

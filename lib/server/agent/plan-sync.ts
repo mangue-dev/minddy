@@ -1,3 +1,4 @@
+import { issueStore, saveIssuePlanSnapshot } from "@/lib/server/issue-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -18,7 +19,8 @@ import { planStateChanges } from "./plan-sync-core";
  */
 export async function syncIssuePlanStates(
   issueId: string,
-  steps: Array<{ step: string; status: PlanTaskState }>
+  steps: Array<{ step: string; status: PlanTaskState }>,
+  projectId: string,
 ): Promise<void> {
   try {
     if (!issueId || steps.length === 0) return;
@@ -29,11 +31,10 @@ export async function syncIssuePlanStates(
     // concurrent user/MCP edition (loss of update). Best effort: we
     // gives up after a few attempts.
     for (let attempt = 0; attempt < 3; attempt++) {
-      const { data } = await service
-        .from("issues")
-        .select("plan")
+      const { data } = await issueStore(service).select("plan")
         .is("deleted_at", null)
         .eq("id", issueId)
+        .eq("project_id", projectId)
         .maybeSingle();
 
       const plan = (data as { plan?: string | null } | null)?.plan;
@@ -54,16 +55,8 @@ export async function syncIssuePlanStates(
       }
       if (next === plan) return;
 
-      // CAS : garde `.eq("plan", plan)` → l'update ne s'applique que si personne n'a
-      // touched the column in the meantime. Zero line = concurrent edition → we recalculate.
-      const { data: updated } = await service
-        .from("issues")
-        .update({ plan: next })
-        .is("deleted_at", null)
-        .eq("id", issueId)
-        .eq("plan", plan)
-        .select("id");
-      if (updated && updated.length > 0) return;
+      // Compare the complete source revision; ciphertext cannot be a plan CAS.
+      if (await saveIssuePlanSnapshot(service, issueId, projectId, plan, next)) return;
     }
   } catch (err) {
     // Non-blocking: a sync failure should never cause the run to fail.

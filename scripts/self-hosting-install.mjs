@@ -174,6 +174,7 @@ export function generatedValues(capabilities = new Set()) {
   const values = {
     AI_KEY_ENCRYPTION_SECRET: secret(),
     FEEDBACK_SSO_ENCRYPTION_SECRET: secret(),
+    MINDDY_DATA_ROOT_KEY: secret(),
     POSTGRES_PASSWORD: secret(),
     JWT_SECRET: jwtSecret,
     ANON_KEY: createSupabaseJwt(jwtSecret, "anon"),

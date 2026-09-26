@@ -42,6 +42,8 @@ const h = vi.hoisted(() => ({
   byok: null as Record<string, unknown> | null,
   continuedRun: null as Record<string, unknown> | null,
   deliveredRun: null as Record<string, unknown> | null,
+  projectAccess: true,
+  issueSelections: [] as string[],
 }));
 
 vi.mock("@/lib/supabase-service", () => ({
@@ -49,7 +51,10 @@ vi.mock("@/lib/supabase-service", () => ({
     from: (table: string) => {
       const query: Record<string, unknown> = {};
       const chain = () => query;
-      query.select = chain;
+      query.select = (selection: string) => {
+        if (table === "issues") h.issueSelections.push(selection);
+        return query;
+      };
       query.eq = chain;
       query.is = chain;
       query.insert = async () => ({ error: null });
@@ -62,6 +67,10 @@ vi.mock("@/lib/supabase-service", () => ({
       return query;
     },
   }),
+}));
+
+vi.mock("@/lib/server/project-access", () => ({
+  getProjectAccess: vi.fn(async () => h.projectAccess ? { project: { id: PROJECT_ID } } : null),
 }));
 
 vi.mock("./runs", () => ({
@@ -180,6 +189,8 @@ beforeEach(() => {
   h.byok = null;
   h.continuedRun = null;
   h.deliveredRun = null;
+  h.projectAccess = true;
+  h.issueSelections = [];
   h.pr = {
     id: PR_ID,
     provider: "github",
@@ -321,6 +332,37 @@ describe("an explicit PR keeps priority", () => {
       branchName: "minddy/agent/note-92275fe4",
       prNumber: 51,
     });
+  });
+});
+
+describe("issue anchored launch authorization", () => {
+  it("does not read protected issue content before project access", async () => {
+    h.projectAccess = false;
+
+    const result = await launchAgentRun({
+      issueId: ISSUE_ID,
+      userId: USER_ID,
+      triggeredBy: "button",
+      prompt: "Implement the ticket",
+    });
+
+    expect(result).toEqual({ ok: false, error: "issueNotFound" });
+    expect(h.issueSelections).toEqual(["id, project_id"]);
+    expect(h.created).toHaveLength(0);
+  });
+
+  it("binds an issue launch to the requested project", async () => {
+    const result = await launchAgentRun({
+      issueId: ISSUE_ID,
+      projectId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      userId: USER_ID,
+      triggeredBy: "button",
+      prompt: "Implement the ticket",
+    });
+
+    expect(result).toEqual({ ok: false, error: "issueNotFound" });
+    expect(h.issueSelections).toEqual(["id, project_id"]);
+    expect(h.created).toHaveLength(0);
   });
 });
 

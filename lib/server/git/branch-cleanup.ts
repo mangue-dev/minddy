@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { loadIssueTitles } from "@/lib/server/issue-store";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
@@ -53,7 +54,7 @@ export interface BranchDeletionResult {
 interface RunRow {
   branch_name: string | null;
   issue_id: string | null;
-  issues: { id: string; number: number; title: string } | null;
+  issues: { id: string; number: number } | null;
 }
 
 /**
@@ -74,13 +75,16 @@ export async function listAgentBranchesForProject(
     supabase.from("projects").select("key").eq("id", projectId).maybeSingle(),
     supabase
       .from("agent_runs")
-      .select("branch_name, issue_id, issues(id, number, title)")
+      .select("branch_name, issue_id, issues(id, number)")
       .eq("project_id", projectId)
       .not("branch_name", "is", null)
       .order("created_at", { ascending: false }),
   ]);
 
   const projectKey = (project as { key?: string } | null)?.key ?? "";
+  const titles = await loadIssueTitles(supabase,
+    (runs ?? []).map((row) => row.issue_id as string | null).filter((id): id is string => !!id),
+    [projectId]);
   const map = new Map<string, BranchIssueRef | null>();
   for (const row of (runs ?? []) as unknown as RunRow[]) {
     const branch = row.branch_name;
@@ -88,11 +92,11 @@ export async function listAgentBranchesForProject(
     const issue = row.issues;
     map.set(
       branch,
-      issue
+      issue && titles.has(issue.id)
         ? {
             issueId: issue.id,
             identifier: issueIdentifier(projectKey, issue.number),
-            title: issue.title,
+            title: titles.get(issue.id)!,
           }
         : null,
     );

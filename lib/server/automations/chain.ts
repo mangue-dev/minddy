@@ -3,6 +3,8 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { AgentLaunchIntent } from "@/lib/server/agent/launch";
 import type { AgentRunVerdict } from "@/lib/server/agent/runs";
+import { decodeAgentVerdict, legacyAgentVerdictSchema,
+  type StoredAgentVerdict } from "@/lib/server/agent/run-verdict-content";
 import type { NumoAutomationContext, NumoTurn } from "@/lib/server/numo/turns";
 
 /**
@@ -616,15 +618,25 @@ export async function lastVerdictOfChain(chainId: string): Promise<AgentRunVerdi
   }
 
   // Compatibility for verification workers launched before Numo owned steps.
-  const { data } = await service
+  const { data, error } = await service
     .from("agent_runs")
-    .select("verdict")
+    .select("id,project_id,verdict,verdict_ciphertext,verdict_encryption_version")
     .eq("chain_id", chainId)
-    .not("verdict", "is", null)
+    .or("verdict.not.is.null,verdict_ciphertext.not.is.null")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const verdict = (data as { verdict?: AgentRunVerdict | null } | null)?.verdict ?? null;
+  if (legacyAgentVerdictSchema(error)) {
+    const legacy = await service.from("agent_runs").select("verdict")
+      .eq("chain_id", chainId).not("verdict", "is", null)
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (legacy.error) throw new Error("Unable to read chain verdict");
+    const verdict = legacy.data?.verdict as AgentRunVerdict | null | undefined;
+    return verdict && typeof verdict.ok === "boolean" ? verdict : null;
+  }
+  if (error) throw new Error("Unable to read chain verdict");
+  const decoded = data ? await decodeAgentVerdict(data as StoredAgentVerdict) : null;
+  const verdict = decoded?.verdict ?? null;
   return verdict && typeof verdict.ok === "boolean" ? verdict : null;
 }
 

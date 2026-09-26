@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -81,9 +82,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
 
   // RLS: The caller must be able to see the ticket.
-  const { data: issueRow } = await auth.supabase
-    .from("issues")
-    .select(
+  const { data: issueRow } = await issueStore(auth.supabase).select(
       "id, project_id, status, priority, effort, plan, assignee_id, automation_override",
     )
     .eq("id", id)
@@ -154,9 +153,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  const { data: issue } = await auth.supabase
-    .from("issues")
-    .select("id, project_id")
+  const { data: issue } = await issueStore(auth.supabase).select("id, project_id")
     .eq("id", id)
     .maybeSingle();
   if (!issue) return NextResponse.json({ error: "Issue not found" }, { status: 404 });

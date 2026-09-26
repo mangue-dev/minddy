@@ -7,6 +7,13 @@ import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { displayName } from "@/lib/display-name";
 import { claimPendingInvitationsLate } from "@/lib/server/members";
 import type { MyInvitation } from "@/lib/types";
+import {
+  decryptInvitationEmail,
+  legacyInvitationEmailColumns,
+  missingInvitationEncryptionSchema,
+  isInvitationEncryptionEnabled,
+  type InvitationEmailColumns,
+} from "@/lib/server/encryption/invitation-email";
 
 /** GET /api/projects/invitations — the caller's own pending invitations (Home banner). */
 export async function GET(request: NextRequest) {
@@ -101,13 +108,33 @@ export async function PATCH(request: NextRequest) {
   }
 
   const service = getServiceClient();
-  const { data: invitation } = await service
+  const loadInvitation = (columns: string) => service
     .from("project_invitations")
-    .select(
-      "id, project_id, invited_by, invited_user_id, invited_email, status, expires_at"
-    )
+    .select(columns)
     .eq("id", invitationId)
     .maybeSingle();
+  const loadCompatibleInvitation = async () => {
+    const current = await loadInvitation(
+      "id, project_id, invited_by, invited_user_id, invited_email, invited_email_ciphertext, invited_email_blind_index, encryption_version, status, expires_at"
+    );
+    if (!missingInvitationEncryptionSchema(current.error)) return current;
+    const legacy = await loadInvitation("id, project_id, invited_by, invited_user_id, invited_email, status, expires_at");
+    return { ...legacy, data: legacy.data &&
+      legacyInvitationEmailColumns(legacy.data as unknown as { invited_email: string | null }) };
+  };
+  const { data: invitationRaw, error: invitationError } = await loadCompatibleInvitation();
+  if (invitationError) {
+    console.error("[api/invitations] load failed:", invitationError.message);
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+  }
+  const invitation = invitationRaw as InvitationEmailColumns & {
+    id: string;
+    project_id: string;
+    invited_by: string;
+    invited_user_id: string | null;
+    status: string;
+    expires_at: string;
+  } | null;
 
   // Expired = not found. This is the ONLY place where exhalation decides a
   // access: `attachPendingInvitations` already respects it for addresses without
@@ -140,9 +167,16 @@ export async function PATCH(request: NextRequest) {
   // (`inviteMember`), therefore a `invited_by` which is not the owner of the
   // `project_id` of the line signs exactly the diverted invitation.
   const sessionEmail = auth.user.email?.trim().toLowerCase();
-  const invitedEmail = (invitation.invited_email as string | null)
-    ?.trim()
-    .toLowerCase();
+  let invitedEmail: string;
+  try {
+    invitedEmail = (await decryptInvitationEmail(invitation as InvitationEmailColumns & {
+      id: string;
+      project_id: string;
+    }, { actorId: auth.user.id, reason: "invitation_response" })).trim().toLowerCase();
+  } catch (error) {
+    console.error("[api/invitations] email decrypt failed:", error);
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+  }
   if (!sessionEmail || !invitedEmail || sessionEmail !== invitedEmail) {
     return NextResponse.json({ error: t("invitationNotForYou") }, { status: 403 });
   }
@@ -179,13 +213,25 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
-  const { error: updateError } = await service
+  const currentUpdate = await service
     .from("project_invitations")
     .update({
       status: action === "accept" ? "accepted" : "rejected",
       responded_at: now,
+      invited_email: null,
+      invited_email_ciphertext: null,
+      invited_email_blind_index: null,
     })
     .eq("id", invitationId);
+  const updateError = missingInvitationEncryptionSchema(currentUpdate.error) &&
+    !isInvitationEncryptionEnabled()
+    ? (await service.from("project_invitations")
+      .update({
+        status: action === "accept" ? "accepted" : "rejected",
+        responded_at: now,
+      })
+      .eq("id", invitationId)).error
+    : currentUpdate.error;
   if (updateError) {
     console.error("[api/invitations] respond failed:", updateError.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });

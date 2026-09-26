@@ -1,3 +1,5 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -25,8 +27,7 @@ export async function objectiveInProject(
   objectiveId: string,
   projectId: string
 ): Promise<boolean> {
-  const { data } = await service
-    .from("objectives")
+  const { data } = await objectiveStore(service)
     .select("id")
     .eq("id", objectiveId)
     .eq("project_id", projectId)
@@ -41,9 +42,7 @@ export async function issueInProject(
   issueId: string,
   projectId: string
 ): Promise<boolean> {
-  const { data } = await service
-    .from("issues")
-    .select("id")
+  const { data } = await issueStore(service).select("id")
     .eq("id", issueId)
     .eq("project_id", projectId)
     .is("deleted_at", null)

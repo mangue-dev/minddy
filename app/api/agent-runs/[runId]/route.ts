@@ -4,6 +4,10 @@ import { resolveNumoConversation } from "@/lib/server/numo/conversations";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import { getRun, requestInterrupt, type AgentRun } from "@/lib/server/agent/runs";
+import { decodeAgentLaunch } from "@/lib/server/agent/run-launch-content";
+import { encodeAgentTitle, shouldEncryptAgentTitle } from "@/lib/server/agent/run-title-content";
+import { decodeAgentCheckpoint } from "@/lib/server/agent/run-checkpoint-content";
+import { decodeAgentBaseBranch } from "@/lib/server/agent/run-base-branch-content";
 import { revokeRunKey } from "@/lib/server/agent/run-key";
 import { stopSandboxByName } from "@/lib/server/agent/sandbox";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -73,7 +77,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  const run = await getRun(runId);
+  const run = await getRun(runId, { decode: false });
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
   if (!(await canReadAgentRun(auth.user.id, run))) {
@@ -86,7 +90,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   // only recovered on remount). Without an identity the run is returned as-is.
   const identity = await resolveNumoConversation(auth.supabase, "run", run.id)
     .catch(() => null);
-  return NextResponse.json({ run: { ...sanitizeRun(run),
+  const readable = await decodeAgentBaseBranch(
+    await decodeAgentCheckpoint(await decodeAgentLaunch(run, auth.user.id), auth.user.id),
+    auth.user.id);
+  return NextResponse.json({ run: { ...sanitizeRun(readable),
     conversation_id: run.conversation_id,
     numo_conversation_id: identity?.conversationId ?? null,
   } });
@@ -127,7 +134,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Pinned must be a boolean" }, { status: 400 });
   }
 
-  const run = await getRun(runId);
+  const run = await getRun(runId, { decode: false });
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
   if (!(await canReadAgentRun(auth.user.id, run))) {
@@ -135,13 +142,20 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
 
   const conversationId = run.conversation_id ?? run.id;
-  let title = run.title;
+  const readable = await decodeAgentBaseBranch(
+    await decodeAgentCheckpoint(await decodeAgentLaunch(run, auth.user.id), auth.user.id),
+    auth.user.id);
+  let title = readable.title;
   if (hasTitle) {
     const raw = typeof payload.title === "string" ? payload.title.trim() : "";
     title = raw.slice(0, MAX_TITLE) || null;
-    const { error } = await getServiceClient()
+    const service = getServiceClient();
+    const values = await shouldEncryptAgentTitle(service, run.project_id)
+      ? await encodeAgentTitle(run.project_id, conversationId, title)
+      : { title };
+    const { error } = await service
       .from("agent_conversations")
-      .update({ title })
+      .update(values)
       .eq("id", conversationId);
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -164,7 +178,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     }
   }
 
-  return NextResponse.json({ run: sanitizeRun({ ...run, title }) });
+  return NextResponse.json({ run: sanitizeRun({ ...readable, title }) });
 }
 
 /**
@@ -190,7 +204,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  const run = await getRun(runId);
+  const run = await getRun(runId, { decode: false });
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
   if (!(await canReadAgentRun(auth.user.id, run))) {

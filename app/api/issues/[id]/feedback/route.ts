@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -32,9 +33,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   // being RLS deny-all, the following reading goes through customer service — without
   // this explicit control, she would have no custody.
   const service = getServiceClient();
-  const { data: issue } = await service
-    .from("issues")
-    .select("id, project_id")
+  const { data: issue } = await issueStore(service).select("id, project_id")
     .is("deleted_at", null)
     .eq("id", id)
     .maybeSingle();

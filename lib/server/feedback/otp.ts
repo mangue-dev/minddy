@@ -5,13 +5,15 @@ import type { Locale } from "@/i18n/config";
 import { randomInt, randomUUID, timingSafeEqual } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 import { sha256Hex } from "@/lib/server/oauth/crypto";
+import { authenticationProof } from "@/lib/server/encryption/auth-proof";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { sendOtpEmail } from "@/lib/server/feedback/otp-email";
 import { capability } from "@/lib/server/capabilities";
 
 /**
- * Email verification by OTP code (MIN-37). 6-digit codes, sha256
- hashes * salted by the row id (never stored in plain text), 10 minutes of life, 5
+ * Email verification by OTP code (MIN-37). Six-digit codes are HMAC-protected
+ * with a server-only key and bound to the row ID, preventing offline enumeration
+ * from a database dump. Codes have a ten-minute lifetime and five
  * max attempts (incremented BEFORE comparison), return cooldown 60 s
  * in base. The table is RLS deny-all.
  *
@@ -85,7 +87,7 @@ export async function requestFeedbackOtp(params: {
     p_board_id: params.boardId,
     p_email: email,
     p_ip_hash: ipHash,
-    p_code_hash: sha256Hex(`${id}:${code}`),
+    p_code_hash: authenticationProof("feedback_otp", [id, code]),
     p_expires_at: new Date(now.getTime() + OTP_TTL_MS).toISOString(),
     p_now: now.toISOString(),
     p_window_seconds: Math.floor(OTP_COUNTER_WINDOW_MS / 1000),
@@ -142,7 +144,7 @@ export async function verifyFeedbackOtp(params: {
     return { ok: false, error: "invalidCode" };
   }
 
-  const expected = Buffer.from(sha256Hex(`${row.id}:${code}`), "hex");
+  const expected = Buffer.from(authenticationProof("feedback_otp", [row.id, code]), "hex");
   const stored = Buffer.from(row.code_hash, "hex");
   const match = expected.length === stored.length && timingSafeEqual(expected, stored);
   if (!match) return { ok: false, error: "invalidCode" };

@@ -1,3 +1,7 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { objectiveStore } from "@/lib/server/objective-store";
+import { commentStore } from "@/lib/server/comment-store";
+import { decodeAgentTitle, legacyAgentTitleSchema } from "@/lib/server/agent/run-title-content";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -5,6 +9,7 @@ import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { accessibleProjectIds } from "@/lib/server/project-access";
+import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import { displayName } from "@/lib/display-name";
 import type { MyNotification } from "@/lib/types";
 
@@ -72,9 +77,8 @@ export async function readInboxNotifications({
   const commentIds = [
     ...new Set(readable.map((n) => n.comment_id).filter(Boolean)),
   ] as string[];
-  const { data: comments } = commentIds.length
-    ? await service
-        .from("comments")
+  const { data: comments, error: commentsError } = commentIds.length
+    ? await commentStore(service, "comments", userId)
         .select(
           "id, issue_id, objective_id, feedback_post_id, body, via_assistant, via_mcp, api_key_id",
         )
@@ -90,10 +94,12 @@ export async function readInboxNotifications({
           via_mcp: boolean;
           api_key_id: string | null;
         }[],
+        error: null,
       };
+  if (commentsError) return { notifications: [], error: "Unable to read notification comments" };
 
-  // A comment has no project_id of its own. Resolve its immutable parent in the
-  // same bounded batch as direct notification targets, then require that parent
+  // Resolve the immutable parent in the same bounded batch as direct notification
+  // targets, then require that parent
   // to match the notification project before exposing the excerpt.
   const issueIds = [
     ...new Set(
@@ -135,7 +141,7 @@ export async function readInboxNotifications({
   const [
     { data: issues },
     { data: agentConversations },
-    { data: objectives },
+    { data: objectives, error: objectivesError },
     { data: feedbackPosts },
     { data: routines },
     { data: pullRequests },
@@ -145,9 +151,7 @@ export async function readInboxNotifications({
     { data: delegatedWork },
   ] = await Promise.all([
     issueIds.length && projectIds.length
-      ? service
-          .from("issues")
-          .select("id, project_id, number, title")
+      ? issueStore(service).select("id, project_id, number, title")
           .in("id", issueIds)
           .in("project_id", projectIds)
           .is("deleted_at", null)
@@ -160,27 +164,32 @@ export async function readInboxNotifications({
           }[],
         }),
     conversationIds.length && projectIds.length
-      ? service
+      ? (async () => {
+        const first = await service
           .from("agent_conversations")
-          .select("id, project_id, title")
+          .select("id, project_id, title, title_ciphertext, title_encryption_version")
           .in("id", conversationIds)
-          .in("project_id", projectIds)
+          .in("project_id", projectIds);
+        return legacyAgentTitleSchema(first.error)
+          ? service.from("agent_conversations").select("id, project_id, title")
+              .in("id", conversationIds).in("project_id", projectIds)
+          : first;
+      })()
       : Promise.resolve({
           data: [] as { id: string; project_id: string; title: string | null }[],
         }),
     objectiveIds.length && projectIds.length
-      ? service
-          .from("objectives")
+      ? objectiveStore(service)
           .select("id, project_id, name")
           .in("id", objectiveIds)
           .in("project_id", projectIds)
           .is("deleted_at", null)
       : Promise.resolve({
           data: [] as { id: string; project_id: string; name: string }[],
+          error: null,
         }),
     feedbackPostIds.length && projectIds.length
-      ? service
-          .from("feedback_posts")
+      ? feedbackPostStore(service, userId)
           .select("id, project_id, title")
           .in("id", feedbackPostIds)
           .in("project_id", projectIds)
@@ -257,11 +266,13 @@ export async function readInboxNotifications({
           }[],
         }),
   ]);
+  if (objectivesError) return { notifications: [], error: "Unable to read notification objectives" };
 
   const issueMap = new Map((issues ?? []).map((item) => [item.id, item]));
-  const conversationMap = new Map(
-    (agentConversations ?? []).map((item) => [item.id, item]),
-  );
+  const decodedConversations = await Promise.all((agentConversations ?? []).map((item) =>
+    decodeAgentTitle(item as { id: string; project_id: string; title: string | null;
+      title_ciphertext?: string | null; title_encryption_version?: number }, userId)));
+  const conversationMap = new Map(decodedConversations.map((item) => [item.id, item]));
   const objectiveMap = new Map(
     (objectives ?? []).map((item) => [item.id, item]),
   );
@@ -355,7 +366,7 @@ export async function readInboxNotifications({
     (!n.agent_conversation_id ||
       agentConversations === null ||
       !!conversationFor(n)) &&
-    (!n.objective_id || objectives === null || !!objectiveFor(n)) &&
+    (!n.objective_id || !!objectiveFor(n)) &&
     (!n.feedback_post_id || feedbackPosts === null || !!feedbackFor(n)) &&
     (!n.routine_id || routines === null || !!routineFor(n)) &&
     (!n.pull_request_id ||

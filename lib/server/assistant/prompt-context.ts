@@ -1,3 +1,6 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { categoryStore } from "@/lib/server/category-store";
+import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -25,14 +28,12 @@ export async function gatherProjectPromptContext({
     { data: statusRows },
     { data: recentIssues },
     { data: memberRows },
-    { data: objectives },
-    { data: categories },
+    { data: objectives, error: objectiveError },
+    { data: categories, error: categoryError },
     { data: pages },
   ] = await Promise.all([
-    supabase.from("issues").select("status").eq("project_id", project.id).is("deleted_at", null),
-    supabase
-      .from("issues")
-      .select("number, title, status")
+    issueStore(supabase).select("status").eq("project_id", project.id).is("deleted_at", null),
+    issueStore(supabase).select("number, title, status")
       .is("deleted_at", null)
       .eq("project_id", project.id)
       .order("updated_at", { ascending: false })
@@ -41,14 +42,12 @@ export async function gatherProjectPromptContext({
       .from("project_members")
       .select("user_id")
       .eq("project_id", project.id),
-    supabase
-      .from("objectives")
+    objectiveStore(supabase)
       .select("id, name, status")
       .is("deleted_at", null)
       .eq("project_id", project.id)
       .order("created_at", { ascending: true }),
-    supabase
-      .from("categories")
+    categoryStore(supabase)
       .select("id, name")
       .eq("project_id", project.id)
       .order("name", { ascending: true }),
@@ -61,6 +60,8 @@ export async function gatherProjectPromptContext({
       .eq("project_id", project.id)
       .order("position", { ascending: true }),
   ]);
+  if (objectiveError) throw new Error("Unable to read objective prompt context");
+  if (categoryError) throw new Error("Unable to read category prompt context");
 
   const statusCounts: Record<string, number> = {};
   for (const row of statusRows ?? []) {
@@ -90,7 +91,7 @@ export async function gatherProjectPromptContext({
     })),
     members,
     objectives: (objectives ?? []) as PromptProjectContext["objectives"],
-    categories: (categories ?? []) as PromptProjectContext["categories"],
+    categories: (categories ?? []) as unknown as PromptProjectContext["categories"],
     pages: (pages ?? []) as PromptProjectContext["pages"],
   };
 }

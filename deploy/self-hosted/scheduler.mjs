@@ -8,6 +8,7 @@ const JOBS = [
   ["*/5 * * * *", "/api/cron/smart-assign"],
   ["*/5 * * * *", "/api/cron/routines"],
   ["15 * * * *", "/api/cron/billing-sync"],
+  ["15 * * * *", "/api/cron/encryption-maintenance"],
   ["30 15 * * *", "/api/cron/fx-rate"],
   ["45 3 * * *", "/api/cron/data-retention"],
 ];

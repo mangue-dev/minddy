@@ -42,6 +42,8 @@ import {
   type ScratchpadToolContext,
 } from "./scratchpad-tools";
 import { agentRunTopic, broadcastToTopic } from "./live";
+import { decodeAgentLaunch } from "./run-launch-content";
+import { decodeAgentBaseBranch } from "./run-base-branch-content";
 import {
   appendEvent,
   appendRunJournal,
@@ -485,7 +487,7 @@ export async function handleControlPlaneRequest(opts: {
   // which makes the surface stateless, therefore safe to call from a VM which can
   // die between two requests. A deleted run (retention) or sandbox name
   // which does not correspond to anything falls here, no further.
-  const run = await getRun(runId);
+  const run = await getRun(runId, { decode: false });
   if (!run) return { status: 404, body: { error: "unknown run" } };
 
   // The microVM of the run is named once and for all and persisted: another
@@ -837,6 +839,7 @@ export async function handleControlPlaneRequest(opts: {
       await syncIssuePlanStates(
         run.issue_id,
         steps as Parameters<typeof syncIssuePlanStates>[1],
+        run.project_id,
       );
     }
     return ok();
@@ -1324,6 +1327,7 @@ async function runCreatePr(
   args: Record<string, unknown>,
   body: Record<string, unknown>,
 ): Promise<ControlPlaneResult> {
+  run = await decodeAgentBaseBranch(run);
   const [
     { openPullRequestAfterPush, PrLandingAuthorityError },
     { resolveRepoCloneTarget },
@@ -1361,13 +1365,14 @@ async function runCreatePr(
    * this first push in the normal case. Reading it alone here opened the pull request
    * on an empty head, and stamped `branch_name: ""` in passing.
    */
+  const launch = run.branch_name ? null : await decodeAgentLaunch(run, run.created_by);
   const expectedBranch =
     run.branch_name ??
     generatedAgentBranchName({
       runId: run.id,
       issueIdentifier: identifier,
-      conversationTitle: run.title,
-      prompt: run.prompt,
+      conversationTitle: launch?.title ?? run.title,
+      prompt: launch?.prompt ?? run.prompt,
       branchPrefix,
     });
   const suppliedBranch =

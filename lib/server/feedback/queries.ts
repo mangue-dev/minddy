@@ -11,6 +11,7 @@ import {
 } from "@/lib/feedback/types";
 import type { FeedbackPostRow } from "@/lib/server/feedback/posts";
 import { FEEDBACK_POST_SELECT } from "@/lib/server/feedback/posts";
+import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import {
   emptyCommentSummary,
   listPublicComments,
@@ -87,8 +88,7 @@ export async function listPublicPosts(params: {
   statuses?: readonly FeedbackPostStatus[] | null;
 }): Promise<PublicPost[]> {
   const service = getServiceClient();
-  let query = service
-    .from("feedback_posts")
+  let query = feedbackPostStore(service)
     .select(PUBLIC_POST_SELECT)
     .is("deleted_at", null)
     .eq("project_id", params.projectId)
@@ -135,8 +135,7 @@ export async function listPublicPosts(params: {
  */
 export async function hasAnyPublicPost(projectId: string): Promise<boolean> {
   const service = getServiceClient();
-  const { count } = await service
-    .from("feedback_posts")
+  const { count } = await feedbackPostStore(service)
     .select("id", { count: "exact", head: true })
     .is("deleted_at", null)
     .eq("project_id", projectId)
@@ -163,13 +162,21 @@ export async function getPublicPostDetail(params: {
   viewerId: string | null;
 }): Promise<PublicPostDetail | null> {
   const service = getServiceClient();
-  const { data } = await service
-    .from("feedback_posts")
-    .select(PUBLIC_POST_SELECT)
-    .is("deleted_at", null)
-    .eq("id", params.postId)
-    .eq("project_id", params.projectId)
-    .maybeSingle();
+  const { data: visibility } = await service.from("feedback_posts")
+    .select("id, author_id, is_public, review_state, status")
+    .is("deleted_at", null).eq("id", params.postId)
+    .eq("project_id", params.projectId).maybeSingle();
+  if (!visibility) return null;
+  const visible = visibility.is_public && visibility.review_state === "published" &&
+    !isHiddenFeedbackStatus(visibility.status as FeedbackPostStatus);
+  if (!visible && (params.viewerId === null || visibility.author_id !== params.viewerId)) return null;
+  let contentQuery = feedbackPostStore(service)
+    .select(PUBLIC_POST_SELECT).is("deleted_at", null)
+    .eq("id", params.postId).eq("project_id", params.projectId);
+  contentQuery = visible
+    ? contentQuery.eq("is_public", true).eq("review_state", "published").neq("status", "spam")
+    : contentQuery.eq("author_id", params.viewerId);
+  const { data } = await contentQuery.maybeSingle();
   if (!data) return null;
   const row = data as unknown as PostWithAuthor;
   // Publicly visible only if public, published AND not spam
@@ -178,7 +185,7 @@ export async function getPublicPostDetail(params: {
   // the project feedback tab.
   const publiclyVisible =
     row.is_public && row.review_state === "published" && !isHiddenFeedbackStatus(row.status);
-  if (!publiclyVisible && row.author_id !== params.viewerId) return null;
+  if (!publiclyVisible && (params.viewerId === null || row.author_id !== params.viewerId)) return null;
   if (row.merged_into_id !== null) {
     // Tombstone: canonical carries all, caller redirects.
     return {
@@ -191,10 +198,10 @@ export async function getPublicPostDetail(params: {
 
   const [voted, mergedFromRes, comments] = await Promise.all([
     fetchViewerVotes(params.viewerId, [row.id]),
-    service
-      .from("feedback_posts")
+    feedbackPostStore(service)
       .select("title")
       .is("deleted_at", null)
+      .eq("project_id", params.projectId)
       .eq("merged_into_id", row.id)
       .eq("is_public", true)
       .eq("review_state", "published")
@@ -235,12 +242,20 @@ export const getPublicPostMeta = cache(
     postId: string,
   ): Promise<{ title: string; body: string } | null> => {
     const service = getServiceClient();
-    const { data } = await service
-      .from("feedback_posts")
+    const { data: visible } = await service.from("feedback_posts")
+      .select("is_public, status, review_state, merged_into_id")
+      .is("deleted_at", null).eq("id", postId).eq("project_id", projectId)
+      .maybeSingle();
+    if (!visible || !visible.is_public || visible.review_state !== "published" ||
+        isHiddenFeedbackStatus(visible.status as FeedbackPostStatus) ||
+        visible.merged_into_id !== null) return null;
+    const { data } = await feedbackPostStore(service)
       .select("title, body, is_public, status, review_state, merged_into_id")
       .is("deleted_at", null)
       .eq("id", postId)
       .eq("project_id", projectId)
+      .eq("is_public", true).eq("review_state", "published")
+      .neq("status", "spam").is("merged_into_id", null)
       .maybeSingle();
     if (!data) return null;
     if (!data.is_public || data.review_state !== "published") return null;
@@ -277,8 +292,7 @@ export async function listMyFeedback(params: {
   const service = getServiceClient();
 
   const [authoredRes, votedRes] = await Promise.all([
-    service
-      .from("feedback_posts")
+    feedbackPostStore(service)
       .select(PUBLIC_POST_SELECT)
       .is("deleted_at", null)
       .eq("project_id", params.projectId)
@@ -286,16 +300,21 @@ export async function listMyFeedback(params: {
       .order("created_at", { ascending: false }),
     service
       .from("feedback_votes")
-      .select(`post_id, feedback_posts!inner (${PUBLIC_POST_SELECT})`)
-      .eq("user_id", params.viewerId)
-      .eq("feedback_posts.project_id", params.projectId),
+      .select("post_id")
+      .eq("user_id", params.viewerId),
   ]);
 
   const authored = (authoredRes.data ?? []) as unknown as PostWithAuthor[];
-  const votedRows = (votedRes.data ?? []) as unknown as {
-    post_id: string;
-    feedback_posts: PostWithAuthor;
-  }[];
+  const votedIds = (votedRes.data ?? []).map((v) => v.post_id as string);
+  const [publicVotes, ownVotes] = votedIds.length ? await Promise.all([
+    feedbackPostStore(service).select(PUBLIC_POST_SELECT).eq("project_id", params.projectId)
+      .in("id", votedIds).is("deleted_at", null).is("merged_into_id", null)
+      .eq("is_public", true).eq("review_state", "published").neq("status", "spam"),
+    feedbackPostStore(service).select(PUBLIC_POST_SELECT).eq("project_id", params.projectId)
+      .in("id", votedIds).is("deleted_at", null).is("merged_into_id", null)
+      .eq("author_id", params.viewerId),
+  ]) : [{ data: [] }, { data: [] }];
+  const votedRows = [...(publicVotes.data ?? []), ...(ownVotes.data ?? [])] as PostWithAuthor[];
 
   // My merged posts: follow the pointer (depth ≤ 1 by flattening).
   const mergedTargets = authored
@@ -303,19 +322,23 @@ export async function listMyFeedback(params: {
     .filter((id): id is string => id !== null);
   const canonicalById = new Map<string, PostWithAuthor>();
   if (mergedTargets.length > 0) {
-    const { data } = await service
-      .from("feedback_posts")
-      .select(PUBLIC_POST_SELECT)
-      .is("deleted_at", null)
-      .in("id", mergedTargets);
-    for (const row of (data ?? []) as unknown as PostWithAuthor[]) {
+    const [publicTargets, ownTargets] = await Promise.all([
+      feedbackPostStore(service).select(PUBLIC_POST_SELECT).is("deleted_at", null)
+        .eq("project_id", params.projectId).in("id", mergedTargets)
+        .eq("is_public", true).eq("review_state", "published").neq("status", "spam"),
+      feedbackPostStore(service).select(PUBLIC_POST_SELECT).is("deleted_at", null)
+        .eq("project_id", params.projectId).in("id", mergedTargets)
+        .eq("author_id", params.viewerId),
+    ]);
+    for (const row of [...(publicTargets.data ?? []), ...(ownTargets.data ?? [])] as PostWithAuthor[]) {
       canonicalById.set(row.id, row);
     }
   }
 
   /** Readable here only if public, or written by me. */
   const readable = (row: PostWithAuthor) =>
-    row.is_public || row.author_id === params.viewerId;
+    row.is_public && row.review_state === "published" && !isHiddenFeedbackStatus(row.status)
+      || row.author_id === params.viewerId;
 
   const entries: { row: PostWithAuthor; relation: "authored" | "voted"; mergedFromTitle: string | null }[] = [];
   const seen = new Set<string>();
@@ -334,7 +357,7 @@ export async function listMyFeedback(params: {
       mergedFromTitle: canonical ? row.title : null,
     });
   }
-  for (const { feedback_posts: row } of votedRows) {
+  for (const row of votedRows) {
     // The votes already follow the merge (moved to the canonical); A
     // voted tombstone should not exist, we ignore it for safety.
     if (!row || row.merged_into_id !== null || seen.has(row.id)) continue;

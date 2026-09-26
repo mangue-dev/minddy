@@ -1,6 +1,10 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
+import { isContentEncryptionEnabled } from "./encryption/content-config";
+import { getEncryptedStore } from "./encryption/registry";
+import { EncryptedRowCodec } from "./encryption/row-codec";
 
 /**
  * A line from the statistics ledger (`stat_events`). Append-only: we write
@@ -30,9 +34,53 @@ export interface StatEventRow {
  */
 export async function insertStatEvents(
   service: SupabaseClient,
-  rows: StatEventRow[]
+  rows: StatEventRow[],
+  options: { requireEncryption?: boolean } = {},
 ): Promise<void> {
-  if (rows.length === 0) return;
-  const { error } = await service.from("stat_events").insert(rows);
-  if (error) console.error("[stat-events] insert failed:", error.message);
+  try { await appendStatEvents(service, rows, options); }
+  catch { console.error("[stat-events] insert failed"); }
+}
+
+/** Imports must surface failures; best-effort event producers use insertStatEvents. */
+export async function appendStatEvents(
+  service: SupabaseClient,
+  rows: StatEventRow[],
+  { requireEncryption = false }: { requireEncryption?: boolean } = {},
+): Promise<void> {
+  for (let offset = 0; offset < rows.length; offset += 200) {
+    const encoded = [];
+    for (const input of rows.slice(offset, offset + 200)) {
+      const row = { ...input, id: randomUUID(), project_name: input.project_name ?? null,
+        issue_title: input.issue_title ?? null, task_text: input.task_text ?? null };
+      if (isContentEncryptionEnabled() || requireEncryption) {
+        const codec = new EncryptedRowCodec(getEncryptedStore());
+        encoded.push(await codec.encode({ ...row, encryption_version: 0, encrypted_content: null },
+          { table: "stat_events", scope: { kind: "user", id: row.user_id } }));
+      } else encoded.push(row);
+    }
+    const { error } = await service.from("stat_events").insert(encoded);
+    if (error) throw new Error("Unable to append statistics");
+  }
+}
+
+/** User-scoped export; statistics SQL aggregates only the non-sensitive metadata. */
+export async function readStatEvents(service: SupabaseClient, userId: string): Promise<Record<string, unknown>[]> {
+  const { data, error } = await service.from("stat_events").select("*").eq("user_id", userId).order("occurred_at");
+  if (error) throw new Error("Unable to read statistics");
+  const rows: Record<string, unknown>[] = [];
+  for (const row of data ?? []) {
+    if (row.user_id !== userId) throw new Error("Invalid statistics owner");
+    if (row.encryption_version === undefined && row.encrypted_content === undefined ||
+        row.encryption_version === 0 && row.encrypted_content === null) {
+      rows.push(row);
+    } else {
+      const store = getEncryptedStore();
+      rows.push(await new EncryptedRowCodec(store).decode({ ...row,
+        encrypted_content: store.fromDatabase<Record<string, unknown>>(row.encrypted_content),
+      }, { table: "stat_events", scope: { kind: "user", id: userId } },
+      { actorId: userId, reason: "repository_read" }));
+    }
+  }
+  return rows.map(({ kind, occurred_at, project_name, issue_number, issue_title, task_text }) =>
+    ({ kind, occurred_at, project_name, issue_number, issue_title, task_text }));
 }

@@ -1,4 +1,5 @@
 import "server-only";
+import { categoryStore } from "@/lib/server/category-store";
 
 import { after } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -20,6 +21,7 @@ import {
   type EventRow,
 } from "@/lib/server/issue-events";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
+import { decodeIssue, encodeIssue } from "@/lib/server/issue-store";
 import { resolveSmartFillPayer, runSmartFill } from "@/lib/server/smart-fill";
 import { insertNotifications } from "@/lib/server/notifications";
 import { notificationActorSource } from "@/lib/notification-actor";
@@ -372,9 +374,16 @@ export async function createIssueForProject({
   }
   row.number = number;
 
-  const { data, error } = await service
+  let storedRow: Record<string, unknown>;
+  try {
+    storedRow = await encodeIssue(row);
+  } catch {
+    console.error("[create-issue] encryption failed");
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  const { data: storedData, error } = await service
     .from("issues")
-    .insert(row)
+    .insert(storedRow)
     .select("*")
     .single();
 
@@ -401,11 +410,13 @@ export async function createIssueForProject({
         .eq("project_id", projectId)
         .is("deleted_at", null)
         .maybeSingle();
-      if (existing) return { ok: true, issue: mapIssueRow(existing) };
+      if (existing) return { ok: true, issue: mapIssueRow(await decodeIssue(existing)) };
     }
     console.error("[create-issue] create failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
+
+  const data = await decodeIssue(storedData as Record<string, unknown>) as typeof storedData;
 
   // Resource rows — the issue exists from here on, so a failure must not
   // fail the request (the resources just don't get registered). Cross-project files
@@ -462,9 +473,8 @@ export async function createIssueForProject({
       }
     }
     if (requestedNames.length > 0) {
-      const { data: cats, error } = await service
-        .from("categories")
-        .select("id")
+      const { data: cats, error } = await categoryStore(service)
+        .select("id, name")
         .eq("project_id", projectId)
         .in("name", requestedNames);
       if (error) {

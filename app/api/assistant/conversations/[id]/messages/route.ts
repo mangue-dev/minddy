@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { NUMO_UUID } from "@/lib/server/numo/conversations";
 import { publicSkillsMetadata } from "@/lib/server/assistant/skills";
+import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 
 export async function GET(
   request: NextRequest,
@@ -44,8 +45,9 @@ export async function GET(
     return Response.json({ error: error.message }, { status: 500 });
   }
 
+  const hydrated = await hydrateWorkerParentCopies(supabase, data ?? [], auth.user.id);
   return Response.json(
-    data?.map((message) => ({
+    hydrated.map((message) => ({
       ...message,
       metadata: publicSkillsMetadata(message.metadata),
     })),

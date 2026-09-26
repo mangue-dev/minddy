@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { storeIssueEvents } from "./issue-event-store";
 import { dispatchWebhooksForEvents } from "@/lib/server/webhooks";
 import { diffPlanTasks, stripTaskStates, type PlanTaskState } from "@/lib/plan";
 
@@ -233,13 +234,11 @@ export async function insertEvents(
   rows: EventRow[]
 ): Promise<void> {
   if (rows.length === 0) return;
-  // Mixed batches omit attribution flags on ordinary events. PostgREST must
-  // use column defaults for those missing keys instead of inserting NULL.
-  const { error } = await service
-    .from("issue_events")
-    .insert(rows, { defaultToNull: false });
-  if (error) {
-    console.error("[issue-events] insert failed:", error.message);
+  try {
+    await storeIssueEvents(service, rows);
+  } catch {
+    // Database and provider errors can contain private values; never log their payload.
+    console.error("[issue-events] insert failed");
     return;
   }
   // insertEvents is the single funnel of issue events: it is the

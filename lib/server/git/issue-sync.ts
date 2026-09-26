@@ -1,3 +1,7 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { commentStore, syncGithubComment } from "@/lib/server/comment-store";
+import { encodeGithubIssueMetadata, shouldEncryptGithubIssueMetadata } from
+  "./issue-sync-content";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -215,9 +219,7 @@ export async function applyRemoteIssue(
     return;
   }
   const service = getServiceClient();
-  const { data: existing, error } = await service
-    .from("issues")
-    .select("id, status, title, description, assignee_id, priority, effort, due_date, updated_at")
+  const { data: existing, error } = await issueStore(service).select("id, status, title, description, assignee_id, priority, effort, due_date, updated_at")
     .is("deleted_at", null)
     .eq("project_id", target.projectId)
     .eq("remote_provider", remote.provider)
@@ -440,8 +442,18 @@ async function syncGithubMetadata(issueId: string, remote: RemoteIssue): Promise
   }
   if (isOlderThanLocal(remote.updatedAt, data?.updated_at_remote)) return;
   const metadata = remote.githubMetadata;
-  const { error: writeError } = await service.from("github_issue_sync_metadata").upsert(
-    {
+  const { data: issueScope, error: issueScopeError } = await service.from("issues")
+    .select("project_id").eq("id", issueId).maybeSingle();
+  if (issueScopeError || !issueScope?.project_id) {
+    throw new Error("Unable to resolve GitHub issue metadata scope");
+  }
+  const encrypted = await shouldEncryptGithubIssueMetadata(service, issueScope.project_id);
+  const content = encrypted
+    ? await encodeGithubIssueMetadata(issueScope.project_id, issueId, {
+        milestone: metadata.milestone, metadata: { issue_type: metadata.issueType },
+      })
+    : { milestone: metadata.milestone, metadata: { issue_type: metadata.issueType } };
+  const values = {
       issue_id: issueId,
       github_node_id: metadata.nodeId,
       author_login: metadata.authorLogin,
@@ -449,16 +461,19 @@ async function syncGithubMetadata(issueId: string, remote: RemoteIssue): Promise
       state_reason: metadata.stateReason,
       locked: metadata.locked,
       active_lock_reason: metadata.activeLockReason,
-      milestone: metadata.milestone,
+      ...content,
       created_at_remote: metadata.createdAt,
       updated_at_remote: remote.updatedAt,
       closed_at_remote: metadata.closedAt,
       closed_by_login: metadata.closedByLogin,
-      metadata: { issue_type: metadata.issueType },
       synced_at: new Date().toISOString(),
-    },
-    { onConflict: "issue_id" },
-  );
+    };
+  const { error: writeError } = encrypted
+    ? await service.rpc("sync_github_issue_metadata_encrypted", {
+        p_issue_id: issueId, p_project_id: issueScope.project_id, p_values: values,
+      })
+    : await service.from("github_issue_sync_metadata")
+        .upsert(values as Record<string, unknown>, { onConflict: "issue_id" });
   if (writeError) {
     console.error(`[issue-sync] GitHub metadata write failed for issue ${issueId}:`, writeError.message);
   }
@@ -581,18 +596,14 @@ export async function syncGithubIssueDependency(
     try {
       const service = getServiceClient();
       const [blocking, blocked] = await Promise.all([
-        service
-          .from("issues")
-          .select("id")
+        issueStore(service).select("id")
           .is("deleted_at", null)
           .eq("project_id", target.projectId)
           .eq("remote_provider", "github")
           .eq("remote_repo_id", dependency.blockingRepoId)
           .eq("remote_number", dependency.blockingNumber)
           .maybeSingle(),
-        service
-          .from("issues")
-          .select("id")
+        issueStore(service).select("id")
           .is("deleted_at", null)
           .eq("project_id", target.projectId)
           .eq("remote_provider", "github")
@@ -648,9 +659,7 @@ async function applyGithubIssueComment(
   remote: GithubIssueComment,
 ): Promise<void> {
   const service = getServiceClient();
-  const { data: issue, error: issueError } = await service
-    .from("issues")
-    .select("id")
+  const { data: issue, error: issueError } = await issueStore(service).select("id")
     .is("deleted_at", null)
     .eq("project_id", target.projectId)
     .eq("remote_provider", "github")
@@ -670,8 +679,7 @@ async function applyGithubIssueComment(
 
   let commentUpdatedAt: string | null = null;
   if (synced?.comment_id) {
-    const { data: localComment, error: commentError } = await service
-      .from("comments")
+    const { data: localComment, error: commentError } = await commentStore(service, "comments")
       .select("updated_at")
       .eq("id", synced.comment_id as string)
       .eq("issue_id", issueId)
@@ -692,7 +700,7 @@ async function applyGithubIssueComment(
   }
 
   const body = remote.action === "deleted" ? "[Deleted on GitHub]" : remote.body;
-  const { error: writeError } = await service.rpc("sync_github_issue_comment_atomic", {
+  await syncGithubComment(service, {
     p_issue_id: issueId,
     p_remote_comment_id: remote.remoteCommentId,
     p_author_id: target.createdBy,
@@ -707,7 +715,6 @@ async function applyGithubIssueComment(
         ? remote.updatedAt ?? new Date().toISOString()
         : null,
   });
-  if (writeError) throw new Error(writeError.message);
 }
 
 function toGithubIssueComment(
@@ -773,9 +780,7 @@ async function backfillGithubMetadata(
   const numbers = issues.map((issue) => issue.number);
   if (numbers.length === 0) return;
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("issues")
-    .select("id, remote_number")
+  const { data, error } = await issueStore(service).select("id, remote_number")
     .is("deleted_at", null)
     .eq("project_id", target.projectId)
     .eq("remote_provider", "github")
@@ -845,9 +850,7 @@ async function loadImportedNumbers(
   target: IssueSyncTarget,
 ): Promise<Set<number>> {
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("issues")
-    .select("remote_number")
+  const { data, error } = await issueStore(service).select("remote_number")
     .is("deleted_at", null)
     .eq("project_id", target.projectId)
     .eq("remote_provider", target.provider)

@@ -1,3 +1,6 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { objectiveStore } from "@/lib/server/objective-store";
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -83,9 +86,7 @@ export async function addCommentToIssue({
 
   // The issue resolves the project for the access check and carries the
   // owner/assignee we notify below.
-  const { data: issue } = await service
-    .from("issues")
-    .select("project_id, created_by, assignee_id")
+  const { data: issue } = await issueStore(service).select("project_id, created_by, assignee_id")
     .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();
@@ -117,8 +118,7 @@ export async function addCommentToIssue({
   let rootId: string | null = null;
   const threadAuthorIds: (string | null)[] = [];
   if (parentId) {
-    const { data: parent } = await service
-      .from("comments")
+    const { data: parent } = await commentStore(service, "comments", actorId)
       .select("id, parent_id, issue_id, author_id")
       .eq("id", parentId)
       .maybeSingle();
@@ -129,8 +129,7 @@ export async function addCommentToIssue({
     rootId = (parent.parent_id as string | null) ?? (parent.id as string);
     threadAuthorIds.push(parent.author_id as string | null);
     if (parent.parent_id) {
-      const { data: root } = await service
-        .from("comments")
+      const { data: root } = await commentStore(service, "comments", actorId)
         .select("author_id")
         .eq("id", rootId)
         .maybeSingle();
@@ -138,8 +137,7 @@ export async function addCommentToIssue({
     }
   }
 
-  const { data, error } = await service
-    .from("comments")
+  const { data, error } = await commentStore(service, "comments", actorId)
     .insert({
       ...(commentId ? { id: commentId } : {}),
       issue_id: issueId,
@@ -158,8 +156,7 @@ export async function addCommentToIssue({
     // side effects. Missing attachment registrations can be recovered below.
     // Access has already been checked; additionally scope the replay to its
     // original author and parent entity before returning any content.
-    const { data: existing } = await service
-      .from("comments")
+    const { data: existing } = await commentStore(service, "comments", actorId)
       .select("*, attachments(*)")
       .eq("id", commentId)
       .eq("issue_id", issueId)
@@ -174,7 +171,7 @@ export async function addCommentToIssue({
         });
         // Upsert returns only new rows. Read the complete batch, including rows
         // committed by another attempt whose response did not reach the caller.
-        const { data: complete, error: readError } = await service.from("comments")
+        const { data: complete, error: readError } = await commentStore(service, "comments", actorId)
           .select("*, attachments(*)").eq("id", commentId)
           .eq("issue_id", issueId).eq("author_id", actorId).maybeSingle();
         if (readError || !complete) throw new Error("Comment resource reconciliation failed");
@@ -290,8 +287,7 @@ export async function addCommentToObjective({
 
   // The objective resolves the project for the access check and carries the
   // lead we notify below.
-  const { data: objective } = await service
-    .from("objectives")
+  const { data: objective } = await objectiveStore(service)
     .select("project_id, lead_user_id")
     .is("deleted_at", null)
     .eq("id", objectiveId)
@@ -320,8 +316,7 @@ export async function addCommentToObjective({
   let rootId: string | null = null;
   const threadAuthorIds: (string | null)[] = [];
   if (parentId) {
-    const { data: parent } = await service
-      .from("comments")
+    const { data: parent } = await commentStore(service, "comments", actorId)
       .select("id, parent_id, objective_id, author_id")
       .eq("id", parentId)
       .maybeSingle();
@@ -332,8 +327,7 @@ export async function addCommentToObjective({
     rootId = (parent.parent_id as string | null) ?? (parent.id as string);
     threadAuthorIds.push(parent.author_id as string | null);
     if (parent.parent_id) {
-      const { data: root } = await service
-        .from("comments")
+      const { data: root } = await commentStore(service, "comments", actorId)
         .select("author_id")
         .eq("id", rootId)
         .maybeSingle();
@@ -341,8 +335,7 @@ export async function addCommentToObjective({
     }
   }
 
-  const { data, error } = await service
-    .from("comments")
+  const { data, error } = await commentStore(service, "comments", actorId)
     .insert({
       objective_id: objectiveId,
       author_id: actorId,
@@ -505,8 +498,7 @@ export async function addCommentToFeedbackPost({
   let rootId: string | null = null;
   const threadAuthorIds: (string | null)[] = [];
   if (parentId) {
-    const { data: parent } = await service
-      .from("comments")
+    const { data: parent } = await commentStore(service, "comments", actorId)
       .select("id, parent_id, feedback_post_id, author_id, visibility")
       .eq("id", parentId)
       .maybeSingle();
@@ -520,8 +512,7 @@ export async function addCommentToFeedbackPost({
     rootId = (parent.parent_id as string | null) ?? (parent.id as string);
     threadAuthorIds.push(parent.author_id as string | null);
     if (parent.parent_id) {
-      const { data: root } = await service
-        .from("comments")
+      const { data: root } = await commentStore(service, "comments", actorId)
         .select("author_id")
         .eq("id", rootId)
         .maybeSingle();
@@ -529,8 +520,7 @@ export async function addCommentToFeedbackPost({
     }
   }
 
-  const { data, error } = await service
-    .from("comments")
+  const { data, error } = await commentStore(service, "comments", actorId)
     .insert({
       feedback_post_id: postId,
       author_id: actorId,

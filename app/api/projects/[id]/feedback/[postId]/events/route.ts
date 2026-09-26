@@ -1,3 +1,4 @@
+import { readIssueEvents } from "@/lib/server/issue-event-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -24,11 +25,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   }
 
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("issue_events")
-    .select("*, integration:integrations(name)")
-    .eq("feedback_post_id", postId)
-    .order("created_at", { ascending: true });
+  const { data, error } = await readIssueEvents(service, { feedback_post_id: postId }, { projectId: id, actorId: guard.userId, integrations: true });
 
   if (error) {
     console.error("[api/feedback/:id/events] list failed:", error.message);

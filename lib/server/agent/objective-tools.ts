@@ -1,3 +1,6 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { objectiveStore } from "@/lib/server/objective-store";
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -101,8 +104,7 @@ export async function resolveObjectiveRef(
     };
   }
   const service = getServiceClient();
-  const query = service
-    .from("objectives")
+  const query = objectiveStore(service)
     .select("id, name")
     .is("deleted_at", null)
     .eq("project_id", projectId);
@@ -164,15 +166,12 @@ function progressOf(
 async function listObjectives(ctx: ObjectiveToolContext): Promise<ToolOutcome> {
   const service = getServiceClient();
   const [{ data, error }, { data: linked, error: issuesError }] = await Promise.all([
-    service
-      .from("objectives")
+    objectiveStore(service)
       .select("id, name, description, status, lead_user_id, target_date")
       .is("deleted_at", null)
       .eq("project_id", ctx.projectId)
       .order("created_at", { ascending: true }),
-    service
-      .from("issues")
-      .select("objective_id, status, effort")
+    issueStore(service).select("objective_id, status, effort")
       .is("deleted_at", null)
       .eq("project_id", ctx.projectId)
       .not("objective_id", "is", null),
@@ -233,8 +232,7 @@ async function readObjective(
   if ("error" in target) return { result: { error: target.error }, success: false };
 
   const service = getServiceClient();
-  const { data: objective, error } = await service
-    .from("objectives")
+  const { data: objective, error } = await objectiveStore(service)
     .select("id, name, description, status, lead_user_id, target_date, created_at")
     .is("deleted_at", null)
     .eq("id", target.objective.id)
@@ -245,16 +243,13 @@ async function readObjective(
     return { result: { error: "Objective not found in this project." }, success: false };
   }
 
-  const [{ data: issues }, { data: comments }, { data: attachmentRows }] =
+  const [{ data: issues }, { data: comments, error: commentsError }, { data: attachmentRows }] =
     await Promise.all([
-      service
-        .from("issues")
-        .select("id, number, title, status, priority, effort, assignee_id")
+      issueStore(service).select("id, number, title, status, priority, effort, assignee_id")
         .is("deleted_at", null)
         .eq("objective_id", objective.id)
         .order("number", { ascending: true }),
-      service
-        .from("comments")
+      commentStore(service, "comments", ctx.actorId)
         .select("id, author_id, body, parent_id, via_assistant, created_at")
         .eq("objective_id", objective.id)
         .order("created_at", { ascending: true }),
@@ -271,6 +266,7 @@ async function readObjective(
         .order("created_at", { ascending: true }),
     ]);
 
+  if (commentsError) return { result: { error: "Unable to read objective comments." }, success: false };
   const users = await fetchAuthUsersById(service, [
     ...(comments ?? []).map((c) => c.author_id as string),
     ...(issues ?? [])

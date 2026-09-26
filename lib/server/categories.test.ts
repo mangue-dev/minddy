@@ -38,12 +38,17 @@ function table() {
   const query: Record<string, unknown> = {};
 
   query.select = () => query;
+  query.order = () => query;
   query.insert = (payload: Record<string, unknown>[]) => {
     staged = payload;
     return query;
   };
   query.eq = (column: string, value: unknown) => {
     filters.push((row) => row[column] === value);
+    return query;
+  };
+  query.in = (column: string, values: unknown[]) => {
+    filters.push((row) => values.includes(row[column]));
     return query;
   };
 
@@ -67,6 +72,9 @@ function table() {
 
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({ from: () => table() }),
+}));
+vi.mock("@/lib/server/encryption/registry", () => ({
+  SupabaseKeyRegistry: class { loadCurrent() { return Promise.resolve(null); } },
 }));
 
 const { categoryKey, resolveCategoryIdsByName } = await import("@/lib/server/categories");

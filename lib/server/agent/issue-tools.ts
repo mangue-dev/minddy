@@ -1,6 +1,10 @@
+import { objectiveStore } from "@/lib/server/objective-store";
+import { commentStore } from "@/lib/server/comment-store";
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { encodeAgentVerdict, shouldEncryptAgentVerdict } from "./run-verdict-content";
 import {
   assertIssueInProject,
   getIssue,
@@ -206,6 +210,7 @@ async function searchIssuesTool(
     {
       db: service,
       service,
+      actorId: ctx.actorId ?? undefined,
       projectId: ctx.projectId,
       projectKey: ctx.projectKey,
     },
@@ -229,6 +234,7 @@ async function readIssue(
     {
       db: service,
       service,
+      actorId: ctx.actorId ?? undefined,
       projectId: ctx.projectId,
       projectKey: ctx.projectKey,
     },
@@ -255,8 +261,7 @@ async function readIssue(
   const objectiveId = (detail.issue.objective_id as string | null) ?? null;
   let objective: { id: string; name: string; status: unknown } | null = null;
   if (objectiveId) {
-    const { data: row } = await service
-      .from("objectives")
+    const { data: row } = await objectiveStore(service)
       .select("id, name, status")
       .is("deleted_at", null)
       .eq("id", objectiveId)
@@ -370,14 +375,14 @@ async function readFeedback(
   }
 
   const service = getServiceClient();
-  const { data: rows } = await service
-    .from("comments")
+  const { data: rows, error: commentsError } = await commentStore(service, "comments", ctx.actorId)
     .select(
       "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
     )
     .eq("feedback_post_id", postId)
     .order("created_at", { ascending: true });
 
+  if (commentsError) return { result: { error: "Unable to read feedback comments." }, success: false };
   const authorIds = (rows ?? [])
     .map((c) => c.author_id as string | null)
     .filter((v): v is string => !!v);
@@ -746,7 +751,7 @@ async function writeIssuePlan(
   if ("error" in target)
     return { result: { error: target.error }, success: false };
 
-  const current = await readIssueText(target.issue.id);
+  const current = await readIssueText(target.issue.id, ctx.projectId, ctx.actorId);
   if ("error" in current)
     return { result: { error: current.error }, success: false };
 
@@ -791,14 +796,16 @@ async function writeIssuePlan(
  */
 async function readIssueText(
   issueId: string,
+  projectId: string,
+  actorId: string | null,
 ): Promise<
   { plan: string; description: string; updatedAt: string } | { error: string }
 > {
-  const { data, error } = await getServiceClient()
-    .from("issues")
+  const { data, error } = await issueStore(getServiceClient(), actorId)
     .select("plan, description, updated_at")
     .is("deleted_at", null)
     .eq("id", issueId)
+    .eq("project_id", projectId)
     .maybeSingle();
   if (error) return { error: error.message };
   if (!data) return { error: "Issue not found." };
@@ -831,7 +838,7 @@ async function appendToIssuePlan(
   if ("error" in target)
     return { result: { error: target.error }, success: false };
 
-  const current = await readIssueText(target.issue.id);
+  const current = await readIssueText(target.issue.id, ctx.projectId, ctx.actorId);
   if ("error" in current)
     return { result: { error: current.error }, success: false };
 
@@ -901,7 +908,7 @@ async function editIssueTextTool(
   if ("error" in target)
     return { result: { error: target.error }, success: false };
 
-  const current = await readIssueText(target.issue.id);
+  const current = await readIssueText(target.issue.id, ctx.projectId, ctx.actorId);
   if ("error" in current)
     return { result: { error: current.error }, success: false };
 
@@ -1184,19 +1191,24 @@ async function reportVerdict(
     .map((b) => b.trim().slice(0, VERDICT_BLOCKER_MAX_CHARS));
 
   const service = getServiceClient();
-  const { error } = await service
+  const verdict = {
+    ok: args.ok,
+    summary: summary.slice(0, VERDICT_SUMMARY_MAX_CHARS),
+    blockers,
+  };
+  const storedVerdict = await shouldEncryptAgentVerdict(service, ctx.projectId)
+    ? await encodeAgentVerdict(ctx.projectId, ctx.runId, verdict)
+    : { verdict };
+  const { data, error } = await service
     .from("agent_runs")
-    .update({
-      verdict: {
-        ok: args.ok,
-        summary: summary.slice(0, VERDICT_SUMMARY_MAX_CHARS),
-        blockers,
-      },
-    })
-    .eq("id", ctx.runId);
-  if (error) {
+    .update(storedVerdict)
+    .eq("id", ctx.runId)
+    .eq("project_id", ctx.projectId)
+    .select("id")
+    .maybeSingle();
+  if (error || !data) {
     return {
-      result: { error: `Verdict not saved: ${error.message}` },
+      result: { error: `Verdict not saved: ${error?.message ?? "run is unavailable"}` },
       success: false,
     };
   }

@@ -1,4 +1,9 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { categoryStore } from "@/lib/server/category-store";
+import { objectiveStore } from "@/lib/server/objective-store";
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
+import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 
 import { MCP_CLIENT_TOOL_NAMES, MCP_SETUP_TOOL_NAMES } from "@/lib/mcp-client-tools";
 import { executeMcpTool } from "@/lib/server/mcp-client";
@@ -414,11 +419,12 @@ function delegationAuthorizations(raw: unknown): AgentDelegationAuthorization[] 
 async function parentTurnAttachments(ctx: ToolContext): Promise<AttachmentInput[]> {
   if (!ctx.turnId) return [];
   const { data } = await ctx.service.from("assistant_messages")
-    .select("metadata")
+    .select("id,content,metadata")
     .eq("turn_id", ctx.turnId)
     .eq("role", "user")
     .maybeSingle();
-  const raw = (data?.metadata as { attachments?: unknown } | null)?.attachments;
+  const hydrated = data ? (await hydrateWorkerParentCopies(ctx.service, [data]))[0] : null;
+  const raw = (hydrated?.metadata as { attachments?: unknown } | null)?.attachments;
   if (!Array.isArray(raw)) return [];
   return raw.slice(0, 20).flatMap((value) => {
     if (!value || typeof value !== "object" || Array.isArray(value)) return [];
@@ -547,6 +553,7 @@ function readCtx(
   return {
     db: ctx.supabase,
     service: ctx.service,
+    actorId: ctx.userId,
     projectId,
     projectKey: access.project.key,
   };
@@ -582,9 +589,7 @@ async function readIssueText(
 ): Promise<
   { plan: string; description: string; updatedAt: string } | { error: string }
 > {
-  const { data, error } = await ctx.supabase
-    .from("issues")
-    .select("plan, description, updated_at")
+  const { data, error } = await issueStore(ctx.supabase).select("plan, description, updated_at")
     .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();
@@ -755,8 +760,8 @@ async function listGlobalFilterOptions(
   }
 
   const [catsRes, objsRes] = await Promise.all([
-    ctx.service.from("categories").select("id, name").in("project_id", projectIds),
-    ctx.service.from("objectives").select("id, name").in("project_id", projectIds).is("deleted_at", null),
+    categoryStore(ctx.service).select("id, name").in("project_id", projectIds),
+    objectiveStore(ctx.service).select("id, name").in("project_id", projectIds).is("deleted_at", null),
   ]);
   if (catsRes.error) return toolError(catsRes.error.message);
   if (objsRes.error) return toolError(objsRes.error.message);
@@ -1197,7 +1202,7 @@ export async function executeTool(
         if ("error" in r) return toolError(r.error);
         // Owners also see pending invitations (for cancel_invitation).
         const pending_invitations = access.isOwner
-          ? await listPendingInvitations(projectId)
+          ? await listPendingInvitations(projectId, access.project.owner_id)
           : [];
         return {
           result: { ...r, pending_invitations },
@@ -1209,8 +1214,7 @@ export async function executeTool(
         if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(objectiveId)) {
           return toolError("objective_id must be an objective UUID from list_objectives.");
         }
-        const { data: objective, error } = await ctx.supabase
-          .from("objectives")
+        const { data: objective, error } = await objectiveStore(ctx.supabase)
           .select("id, name, description, status, lead_user_id, target_date")
           .is("deleted_at", null)
           .eq("project_id", projectId)
@@ -1256,8 +1260,7 @@ export async function executeTool(
         // basket goes back down `page: null`, and the pill remains inert without
         // that we have to take care of the trash (lib/server/resource-select.ts).
         const [{ data, error }, { data: attachmentRows }] = await Promise.all([
-          ctx.supabase
-            .from("objectives")
+          objectiveStore(ctx.supabase)
             .select("id, name, status, lead_user_id, target_date")
             .is("deleted_at", null)
             .eq("project_id", projectId)
@@ -1301,8 +1304,7 @@ export async function executeTool(
         };
       }
       case "list_categories": {
-        const { data, error } = await ctx.supabase
-          .from("categories")
+        const { data, error } = await categoryStore(ctx.supabase)
           .select("id, name, color")
           .eq("project_id", projectId)
           .order("name", { ascending: true });
@@ -1849,8 +1851,7 @@ export async function executeTool(
           );
           if (!scoped.ok) return toolError(scoped.error);
         } else {
-          const { data: objective } = await ctx.supabase
-            .from("objectives")
+          const { data: objective } = await objectiveStore(ctx.supabase)
             .select("id")
             .is("deleted_at", null)
             .eq("id", objectiveId)
@@ -1990,9 +1991,7 @@ export async function executeTool(
         let issueSource: { number: number; title: string; plan: string | null } | null = null;
         let launchIssue: LaunchMessageIssue | null = null;
         if (issueId) {
-          const { data: row } = await ctx.supabase
-            .from("issues")
-            .select("number, title, plan, effort")
+          const { data: row } = await issueStore(ctx.supabase).select("number, title, plan, effort")
             .is("deleted_at", null)
             .eq("id", issueId)
             .maybeSingle();
@@ -2588,8 +2587,7 @@ export async function executeTool(
           typeof args.objective_id === "string" ? args.objective_id : "";
         if (!objectiveId) return toolError("objective_id is required.");
         // Scope check: the objective must belong to the project in scope.
-        const { data: obj } = await ctx.supabase
-          .from("objectives")
+        const { data: obj } = await objectiveStore(ctx.supabase)
           .select("id")
           .is("deleted_at", null)
           .eq("id", objectiveId)
@@ -2626,9 +2624,7 @@ export async function executeTool(
         ) {
           return toolError("decision must be accept, decline, or duplicate.");
         }
-        const { data: issue } = await ctx.supabase
-          .from("issues")
-          .select("id, status")
+        const { data: issue } = await issueStore(ctx.supabase).select("id, status")
           .is("deleted_at", null)
           .eq("id", issueId)
           .eq("project_id", projectId)
@@ -2770,13 +2766,13 @@ export async function executeTool(
         const detail = await getTeamFeedbackDetail(projectId, postId);
         if (!detail)
           return toolError("Feedback post not found in this project.");
-        const { data: comments } = await ctx.service
-          .from("comments")
+        const { data: comments, error: commentsError } = await commentStore(ctx.service, "comments", ctx.userId)
           .select(
             "author_id, via_assistant, body, created_at, visibility, feedback_users!feedback_user_id (name, email, pseudonym)",
           )
           .eq("feedback_post_id", postId)
           .order("created_at", { ascending: true });
+        if (commentsError) return toolError("Unable to read feedback comments.");
         // Resolve author display names (never surface raw uuids to the model).
         const commentAuthorIds = [
           ...new Set(
@@ -3401,9 +3397,7 @@ async function executeCycleTool(
       if (removing) {
         // Only pull issues out of the user's OWN current cycle — never someone
         // else's (project access alone would otherwise allow it).
-        const { data: row } = await ctx.service
-          .from("issues")
-          .select("cycle_id")
+        const { data: row } = await issueStore(ctx.service).select("cycle_id")
           .is("deleted_at", null)
           .eq("id", issueId)
           .maybeSingle();

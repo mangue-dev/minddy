@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -40,8 +41,7 @@ export async function guardFeedbackComment(
     mode: "edit" | "delete";
   }
 ): Promise<FeedbackCommentGuard> {
-  const { data } = await service
-    .from("comments")
+  const { data } = await commentStore(service, "comments")
     .select("id, author_id, via_assistant, feedback_post_id, feedback_user_id, visibility")
     .eq("id", params.commentId)
     .maybeSingle();

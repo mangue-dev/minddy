@@ -1,3 +1,5 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -125,27 +127,24 @@ type IssueCommentRow = { body: unknown; author_id: unknown; via_assistant: unkno
  */
 export async function loadPrIssueContext(
   issueId: string | null,
+  projectId: string,
 ): Promise<PrReviewIssueContext | null> {
   if (!issueId) return null;
   try {
     const service = getServiceClient();
-    const [{ data }, { data: commentRows }] = await Promise.all([
-      service
-        .from("issues")
-        .select("number, title, description, plan, projects(key)")
-        .eq("id", issueId)
-        .is("deleted_at", null)
-        .maybeSingle(),
-      // The MOST RECENT first on the SQL side, then put back in reading order:
-      // an ascending `limit` would keep the beginning of a discussion, never its end.
-      service
-        .from("comments")
-        .select("body, author_id, via_assistant")
-        .eq("issue_id", issueId)
-        .order("created_at", { ascending: false })
-        .limit(ISSUE_COMMENTS_LIMIT),
-    ]);
+    const { data } = await issueStore(service)
+      .select("number, title, description, plan, projects(key)")
+      .eq("id", issueId).eq("project_id", projectId)
+      .is("deleted_at", null).maybeSingle();
     if (!data) return null;
+    // Read the thread only after the issue has been bound to this run's project.
+    // The MOST RECENT first on the SQL side, then put back in reading order:
+    // an ascending `limit` would keep the beginning of a discussion, never its end.
+    const { data: commentRows } = await commentStore(service, "comments")
+      .select("body, author_id, via_assistant")
+      .eq("issue_id", issueId)
+      .order("created_at", { ascending: false })
+      .limit(ISSUE_COMMENTS_LIMIT);
     const key = ((data.projects as { key?: string } | null)?.key ?? "").toString();
     return {
       identifier: issueIdentifier(key, data.number as number),
@@ -221,6 +220,7 @@ export async function loadPrReviewBoot(input: {
   forge: Forge;
   call: { token: string; repoFullName: string; number: number };
   pr: PrRunContext;
+  projectId: string;
 }): Promise<PrReviewBoot> {
   const { forge, call, pr } = input;
 
@@ -244,7 +244,7 @@ export async function loadPrReviewBoot(input: {
         .catch(unreadable("checks", null))
     : null;
 
-  const issue = await loadPrIssueContext(pr.issueId);
+  const issue = await loadPrIssueContext(pr.issueId, input.projectId);
 
   return {
     issue,

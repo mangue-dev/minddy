@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -26,9 +27,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     getTranslations("ApiErrors"),
     // RLS issues_select scopes to accessible projects; ordering by position then
     // number gives a stable per-column order.
-    auth.supabase
-      .from("issues")
-      .select(ISSUE_SELECT)
+    issueStore(auth.supabase).select(ISSUE_SELECT)
       .eq("project_id", id)
       .order("position", { ascending: true })
       .order("number", { ascending: true }),

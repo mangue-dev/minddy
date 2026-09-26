@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { after, NextResponse, type NextRequest } from "next/server";
@@ -278,7 +279,7 @@ export async function authorizeRunPrRequest(
   const auth = await getAuthedUser(request);
   if (!auth.ok) return { ok: false, response: auth.response };
 
-  const run = await getRun(runId);
+  const run = await getRun(runId, { decode: false });
   if (!run || !(await canReadAgentRun(auth.user.id, run))) {
     return { ok: false, response: NextResponse.json({ error: "Run not found" }, { status: 404 }) };
   }
@@ -1048,9 +1049,7 @@ export async function startNumoPrReview(input: {
 
     let projectId = input.projectId ?? null;
     if (!projectId && scope.pr.issue_id) {
-      const { data: issue } = await supabase
-        .from("issues")
-        .select("project_id")
+      const { data: issue } = await issueStore(supabase).select("project_id")
         .eq("id", scope.pr.issue_id)
         .maybeSingle();
       projectId = (issue?.project_id as string | undefined) ?? null;
@@ -2050,9 +2049,7 @@ export async function prLinkIssueResponse(
 
   // Use the authenticated client. RLS returns nothing for a ticket the user
   // cannot see, which becomes a 404 without revealing that it exists elsewhere.
-  const { data } = await supabase
-    .from("issues")
-    .select("id, number, title, project_id, deleted_at")
+  const { data } = await issueStore(supabase).select("id, number, title, project_id, deleted_at")
     .eq("id", issueId)
     .maybeSingle();
   const issue = data as {

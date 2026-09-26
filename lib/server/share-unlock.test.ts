@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 
 import { hashSharePassword, unlockCookieValue } from "@/lib/server/view-shares";
 
@@ -78,6 +79,7 @@ function passwordShare() {
 }
 
 beforeEach(() => {
+  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-secret-with-at-least-forty-characters");
   cookieJar.clear();
   setCookie.mockClear();
   rateAllowed = true;
@@ -86,6 +88,8 @@ beforeEach(() => {
   clearFailures.mockClear();
   target.current = passwordShare();
 });
+
+afterEach(() => vi.unstubAllEnvs());
 
 describe("unlockShareWithPassword", () => {
   it("rejects a wrong password without setting a cookie", async () => {
@@ -194,6 +198,15 @@ describe("isShareUnlocked", () => {
 });
 
 describe("cookie comparison", () => {
+  it("rejects a cookie forged entirely from database values", async () => {
+    const { share } = passwordShare();
+    cookieJar.set("mdy_share_unlock", createHash("sha256").update(`${share.token}:${share.password_hash}`).digest("hex"));
+    expect(await isShareUnlocked(share)).toBe(false);
+    cookieJar.set("mdy_share_unlock", unlockCookieValue(share.token, share.password_hash));
+    expect(await isShareUnlocked(share)).toBe(true);
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "rotated-service-role-secret-with-at-least-forty-characters");
+    expect(await isShareUnlocked(share)).toBe(false);
+  });
   it("does not compare the secret with `===`", () => {
     // Structural test: the constant time comparison is not visible
     // execution, only the code says if it is there. What is kept is

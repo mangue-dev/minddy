@@ -1,5 +1,6 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { createTranslator } from "next-intl";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -20,6 +21,17 @@ import { capability } from "@/lib/server/capabilities";
 import type { Invitation } from "@/lib/types";
 import { intlLocaleByLocale, type Locale } from "@/i18n/config";
 import { pushMessages, toPushLocale } from "@/lib/server/push/payload";
+import {
+  decryptInvitationEmail,
+  encryptInvitationEmail,
+  invitationEmailIndex,
+  isInvitationEncryptionConfigured,
+  isInvitationEncryptionEnabled,
+  legacyInvitationEmailColumns,
+  missingInvitationEncryptionSchema,
+  type InvitationEmailColumns,
+} from "@/lib/server/encryption/invitation-email";
+import { createInvitationToken } from "@/lib/server/encryption/invitation-token-digest";
 
 /**
  * Shared project-membership cores, used by /api/projects/[id]/members and the
@@ -115,16 +127,42 @@ export async function inviteMember({
   // The RPC locks the project before re-checking ownership, deleting an expired
   // invitation for this address, counting occupied slots, and inserting. Two
   // concurrent requests therefore cannot consume the same final slot.
-  const { data: invitation, error } = await service.rpc(
-    "create_project_invitation_guarded",
-    {
+  const encrypted = isInvitationEncryptionEnabled();
+  if (encrypted && !isInvitationEncryptionConfigured()) {
+    console.error("[members] invitation encryption is enabled without a valid data root key");
+    return { ok: false, status: 503, errorKey: "databaseError" };
+  }
+  const invitationId = encrypted ? randomUUID() : null;
+  const invitationToken = encrypted ? createInvitationToken() : null;
+  let encryptedEmail: Awaited<ReturnType<typeof encryptInvitationEmail>> | null = null;
+  if (encrypted) {
+    try {
+      encryptedEmail = await encryptInvitationEmail(normalized, projectId, invitationId!);
+    } catch (error) {
+      console.error("[members] invitation encryption failed:", error);
+      return { ok: false, status: 503, errorKey: "databaseError" };
+    }
+  }
+  const { data: invitation, error } = encrypted
+    ? await service.rpc("create_project_invitation_encrypted_guarded", {
+      p_id: invitationId,
+      p_project_id: projectId,
+      p_actor_id: actorId,
+      p_legacy_email: normalized,
+      p_email_ciphertext: encryptedEmail!.invited_email_ciphertext,
+      p_email_blind_index: encryptedEmail!.invited_email_blind_index,
+      p_encryption_version: encryptedEmail!.encryption_version,
+      p_token_digest: invitationToken!.digest,
+      p_invited_user_id: memberUser?.id ?? null,
+      p_member_limit: memberLimit,
+    })
+    : await service.rpc("create_project_invitation_guarded", {
       p_project_id: projectId,
       p_actor_id: actorId,
       p_invited_email: normalized,
       p_invited_user_id: memberUser?.id ?? null,
       p_member_limit: memberLimit,
-    },
-  );
+    });
 
   if (error) {
     if (error.message.includes("tenant_guard_forbidden")) {
@@ -176,7 +214,7 @@ export async function inviteMember({
   const row: Invitation = {
     id: raw.id,
     project_id: raw.project_id,
-    invited_email: raw.invited_email,
+    invited_email: normalized,
     status: raw.status,
     created_at: raw.created_at,
   };
@@ -184,7 +222,7 @@ export async function inviteMember({
     process.env.EMAIL_PROVIDER?.trim() === "console" &&
     process.env.NODE_ENV !== "production";
   if (capability("transactionalEmail").configured || consoleEmail) {
-    const token = raw.token;
+    const token = invitationToken?.raw ?? raw.token;
     afterOrNow(async () => {
       const inviters = await fetchAuthUsersById(getServiceClient(), [actorId]);
       const named = toNamed(inviters.get(actorId));
@@ -226,21 +264,32 @@ export async function attachPendingInvitations(user: {
   if (!email || !user.email_confirmed_at) return;
 
   const service = getServiceClient();
-  const { data, error } = await service
+  const attach = (column: string, value: string) => service
     .from("project_invitations")
     .update({ invited_user_id: user.id })
-    .eq("invited_email", email)
+    .eq(column, value)
     .is("invited_user_id", null)
     .eq("status", "pending")
     .gt("expires_at", new Date().toISOString())
     .select("id, invited_by");
 
-  if (error) {
-    console.error("[members] attach invitations failed:", error.message);
-    return;
+  const matches = [attach("invited_email", email)];
+  if (isInvitationEncryptionConfigured()) {
+    try {
+      matches.push(attach("invited_email_blind_index", await invitationEmailIndex(email)));
+    } catch (error) {
+      console.error("[members] invitation index unavailable:", error);
+    }
   }
-  for (const row of data ?? []) {
-    pushInvitation(user.id, row.invited_by as string);
+  const results = await Promise.all(matches);
+  for (const result of results) {
+    if (result.error) {
+      console.error("[members] attach invitations failed:", result.error.message);
+      continue;
+    }
+    for (const row of result.data ?? []) {
+      pushInvitation(user.id, row.invited_by as string);
+    }
   }
 }
 
@@ -275,20 +324,29 @@ export async function claimPendingInvitationsLate(user: {
   if (!email) return false;
 
   const service = getServiceClient();
-  const { data: waiting, error } = await service
+  const probe = (column: string, value: string) => service
     .from("project_invitations")
     .select("id")
-    .eq("invited_email", email)
+    .eq(column, value)
     .is("invited_user_id", null)
     .eq("status", "pending")
     .gt("expires_at", new Date().toISOString())
     .limit(1);
-
-  if (error) {
-    console.error("[members] late claim probe failed:", error.message);
-    return false;
+  const probes = [probe("invited_email", email)];
+  if (isInvitationEncryptionConfigured()) {
+    try {
+      probes.push(probe("invited_email_blind_index", await invitationEmailIndex(email)));
+    } catch (error) {
+      console.error("[members] invitation index unavailable:", error);
+    }
   }
-  if (!waiting || waiting.length === 0) return false;
+  const matches = await Promise.all(probes);
+  for (const result of matches) {
+    if (result.error) {
+      console.error("[members] late claim probe failed:", result.error.message);
+    }
+  }
+  if (!matches.some((result) => result.data && result.data.length > 0)) return false;
 
   const account = (await fetchAuthUsersById(service, [user.id])).get(user.id);
   if (!account) return false;
@@ -401,12 +459,26 @@ export async function cancelInvitation({
   if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
 
   const service = getServiceClient();
-  const { error } = await service
+  const respondedAt = new Date().toISOString();
+  const current = await service
     .from("project_invitations")
-    .update({ status: "cancelled", responded_at: new Date().toISOString() })
+    .update({
+      status: "cancelled",
+      responded_at: respondedAt,
+      invited_email: null,
+      invited_email_ciphertext: null,
+      invited_email_blind_index: null,
+    })
     .eq("id", invitationId)
     .eq("project_id", projectId)
     .eq("status", "pending");
+  const error = missingInvitationEncryptionSchema(current.error) && !isInvitationEncryptionEnabled()
+    ? (await service.from("project_invitations")
+      .update({ status: "cancelled", responded_at: respondedAt })
+      .eq("id", invitationId)
+      .eq("project_id", projectId)
+      .eq("status", "pending")).error
+    : current.error;
   if (error) {
     console.error("[members] cancel invite failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
@@ -419,22 +491,39 @@ export async function cancelInvitation({
  that an invitation is alive (MIN-197). */
 export async function listPendingInvitations(
   projectId: string,
+  actorId: string,
 ): Promise<Array<{ id: string; email: string; created_at: string }>> {
   const service = getServiceClient();
-  const { data, error } = await service
+  const query = (columns: string) => service
     .from("project_invitations")
-    .select("id, invited_email, created_at")
+    .select(columns)
     .eq("project_id", projectId)
     .eq("status", "pending")
     .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false });
+  const loadCompatibleInvitations = async () => {
+    const current = await query("id, project_id, invited_email, invited_email_ciphertext, invited_email_blind_index, encryption_version, created_at");
+    if (!missingInvitationEncryptionSchema(current.error)) return current;
+    const legacy = await query("id, project_id, invited_email, created_at");
+    return { ...legacy, data: legacy.data?.map((row) =>
+      legacyInvitationEmailColumns(row as unknown as { invited_email: string | null })) };
+  };
+  const { data, error } = await loadCompatibleInvitations();
   if (error) {
     console.error("[members] list invitations failed:", error.message);
     return [];
   }
-  return (data ?? []).map((r) => ({
+  const rows = data as Array<InvitationEmailColumns & {
+    id: string;
+    project_id: string;
+    created_at: string;
+  }> | null;
+  return Promise.all((rows ?? []).map(async (r) => ({
     id: r.id as string,
-    email: r.invited_email as string,
+    email: await decryptInvitationEmail(r as InvitationEmailColumns & {
+      id: string;
+      project_id: string;
+    }, { actorId, reason: "assistant_member_list" }),
     created_at: r.created_at as string,
-  }));
+  })));
 }

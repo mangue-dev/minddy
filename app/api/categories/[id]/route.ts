@@ -1,12 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { isValidColor } from "@/lib/category-colors";
+import { updateCategory } from "@/lib/server/categories";
+import { getProjectAccess } from "@/lib/server/project-access";
+import { getServiceClient } from "@/lib/supabase-service";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-// Name length bound (MIN-118) — same cap as lib/server/categories.ts.
-const MAX_NAME_LENGTH = 200;
 
 /** PATCH /api/categories/[id] — rename / recolor (RLS: project access). */
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
@@ -21,39 +20,14 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  const input = (body ?? {}) as Record<string, unknown>;
-  const updates: Record<string, unknown> = {};
-
-  if (typeof input.name === "string") {
-    const name = input.name.trim();
-    if (!name) {
-      return NextResponse.json({ error: t("nameRequired") }, { status: 400 });
-    }
-    updates.name = name.slice(0, MAX_NAME_LENGTH);
-  }
-  if ("color" in input) {
-    if (!isValidColor(input.color)) {
-      return NextResponse.json({ error: t("invalidColor") }, { status: 400 });
-    }
-    updates.color = input.color;
-  }
-  if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ error: t("noFieldsToUpdate") }, { status: 400 });
-  }
-
-  const { data, error } = await auth.supabase
-    .from("categories")
-    .update(updates)
-    .eq("id", id)
-    .select("*")
-    .maybeSingle();
-
-  if (error) {
-    console.error("[api/categories/:id] update failed:", error.message);
-    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
-  }
-  if (!data) return NextResponse.json({ error: t("categoryNotFound") }, { status: 404 });
-  return NextResponse.json(data);
+  const { data: category, error } = await auth.supabase.from("categories")
+    .select("id, project_id").eq("id", id).maybeSingle();
+  if (error) return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+  if (!category) return NextResponse.json({ error: t("categoryNotFound") }, { status: 404 });
+  const result = await updateCategory({ categoryId: id, projectId: category.project_id,
+    actorId: auth.user.id, input: (body ?? {}) as Record<string, unknown> });
+  if (!result.ok) return NextResponse.json({ error: t(result.errorKey ?? "databaseError") }, { status: result.status });
+  return NextResponse.json(result.category);
 }
 
 /** DELETE /api/categories/[id] — removes it (and its issue links via cascade). */
@@ -63,12 +37,15 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await auth.supabase
-    .from("categories")
-    .delete()
-    .eq("id", id)
-    .select("id")
-    .maybeSingle();
+  const { data: category, error: lookupError } = await auth.supabase.from("categories")
+    .select("id, project_id").eq("id", id).maybeSingle();
+  if (lookupError) return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+  if (!category || !await getProjectAccess(auth.user.id, category.project_id)) {
+    return NextResponse.json({ error: t("categoryNotFound") }, { status: 404 });
+  }
+  const { data, error } = await getServiceClient().rpc("delete_category_guarded", {
+    p_id: id, p_project_id: category.project_id, p_actor_id: auth.user.id,
+  });
 
   if (error) {
     console.error("[api/categories/:id] delete failed:", error.message);

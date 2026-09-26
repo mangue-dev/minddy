@@ -1,5 +1,6 @@
 import "server-only";
 
+import { storePageVersion, hasRecentPageVersion } from "./page-version-store";
 import { isDatabaseSchema } from "@/lib/page-databases";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -334,27 +335,25 @@ function stampPageWrite({
 
   afterOrNow(async () => {
     if (!always && authorId === actorId && authorKind === kind) {
-      const { data } = await service
-        .from("page_versions")
-        .select("id")
-        .eq("page_id", previous.id)
-        .gte("created_at", new Date(Date.now() - VERSION_COALESCE_MS).toISOString())
-        .limit(1);
-      if (data && data.length > 0) return;
+      if (await hasRecentPageVersion(service, previous.id,
+        new Date(Date.now() - VERSION_COALESCE_MS).toISOString())) return;
     }
 
-    const { error } = await service.from("page_versions").insert({
-      page_id: previous.id,
-      project_id: previous.project_id,
-      version: previous.version,
-      title: previous.title,
-      icon: previous.icon,
-      content: previous.content ?? { type: "doc", content: [] },
-      author_id: authorId,
-      author_kind: authorKind,
-      author_api_key_id: authorKeyId,
-    });
-    if (error) console.error("[pages] version snapshot failed:", error.message);
+    try {
+      await storePageVersion(service, {
+        page_id: previous.id,
+        project_id: previous.project_id,
+        version: previous.version,
+        title: previous.title,
+        icon: previous.icon,
+        content: previous.content ?? { type: "doc", content: [] },
+        author_id: authorId,
+        author_kind: authorKind,
+        author_api_key_id: authorKeyId,
+      });
+    } catch {
+      console.error("[pages] version snapshot failed");
+    }
   });
 }
 

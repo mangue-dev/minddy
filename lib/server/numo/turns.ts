@@ -1,4 +1,5 @@
 import "server-only";
+import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -509,7 +510,8 @@ async function buildExecutionInput(input: {
     .order("id", { ascending: false })
     .limit(30);
   if (error) throw new Error(error.message);
-  const recentHistory = [...((data ?? []) as StoredMessage[])].reverse();
+  const recentHistory = (await hydrateWorkerParentCopies(service,
+    (data ?? []) as StoredMessage[])).reverse();
   // The bounded window can begin inside an older parallel tool batch. OpenAI
   // rejects a tool result without its preceding assistant call, so start at the
   // first complete message boundary instead of sending a malformed history.
@@ -1020,7 +1022,7 @@ async function executeNumoTurnCore(input: {
       claimed.active_run_id &&
       (status === "completed" || status === "waiting_input")
     ) {
-      const worker = await getRun(claimed.active_run_id);
+      const worker = await getRun(claimed.active_run_id, { decode: false });
       if (worker?.parent_numo_turn_id === claimed.id) {
         const notificationType = status === "waiting_input"
           ? "agent_question"
@@ -1031,7 +1033,7 @@ async function executeNumoTurnCore(input: {
       }
     }
     if (status === "waiting_work" && result.suspension?.kind === "work") {
-      const worker = await getRun(result.suspension.runId);
+      const worker = await getRun(result.suspension.runId, { decode: false });
       if (worker && ["completed", "failed", "canceled"].includes(worker.status)) {
         await deliverAgentDelegationResult(worker);
         const { data: reconciled } = await service.from("numo_assistant_turns")

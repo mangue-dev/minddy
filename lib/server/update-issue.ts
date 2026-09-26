@@ -15,6 +15,7 @@ import {
 } from "@/lib/recurrence";
 import { spawnNextOccurrence } from "@/lib/server/recurrence";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
+import { decodeIssue, encodeIssue, issueContentColumns } from "@/lib/server/issue-store";
 import {
   buildFieldChangeEvents,
   buildPlanChangeEvents,
@@ -309,6 +310,13 @@ export async function updateIssueFields({
   if (!hasAccess) {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
   }
+  const previousEncryptionVersion = (before.encryption_version as number | undefined) ?? 0;
+  try {
+    Object.assign(before, await decodeIssue(before, actorId));
+  } catch {
+    console.error("[update-issue] decryption failed");
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
 
   /**
    * OUTGOING REFERENCES, LIMITED TO THEIR SCOPE (MIN-339).
@@ -470,9 +478,26 @@ export async function updateIssueFields({
     }
   }
 
-  const { data, error } = await service
+  let writeUpdates: Record<string, unknown> = updates;
+  if (issueContentColumns.some((field) => Object.hasOwn(updates, field))) {
+    try {
+      const encoded = await encodeIssue({ ...before, ...updates }, previousEncryptionVersion);
+      writeUpdates = {
+        ...updates,
+        ...Object.fromEntries(issueContentColumns.map((field) => [field, encoded[field]])),
+        ...(encoded.encryption_version !== undefined ? {
+          encryption_version: encoded.encryption_version,
+          encrypted_content: encoded.encrypted_content,
+        } : {}),
+      };
+    } catch {
+      console.error("[update-issue] encryption failed");
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+  }
+  const { data: storedData, error } = await service
     .from("issues")
-    .update(updates)
+    .update(writeUpdates)
     .is("deleted_at", null)
     .eq("id", issueId)
     // Every mutation is a CAS, including callers that did not bring an older
@@ -489,7 +514,7 @@ export async function updateIssueFields({
     console.error("[update-issue] update failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  if (!data) {
+  if (!storedData) {
     return {
       ok: false,
       status: 409,
@@ -497,6 +522,7 @@ export async function updateIssueFields({
         "The issue changed while this update was being prepared. Read it again and reapply the change.",
     };
   }
+  const data = await decodeIssue(storedData as Record<string, unknown>, actorId);
 
   // THE MOMENT OF THE GESTURE, frozen here: the line has just been written. Events
   // go to `after()` (just below) and would otherwise be timestamped to their

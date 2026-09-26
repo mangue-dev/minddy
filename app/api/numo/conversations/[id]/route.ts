@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, { params }: Context) {
   const { id } = await params;
   if (!NUMO_UUID.test(id)) return Response.json({ error: "Invalid conversation ID" }, { status: 400 });
   try {
-    const detail = await getNumoConversationDetail(auth.supabase, id);
+    const detail = await getNumoConversationDetail(auth.supabase, id, auth.user.id);
     return detail ? Response.json(detail) : Response.json({ error: "Not found" }, { status: 404 });
   } catch {
     return Response.json({ error: "Unable to read conversation" }, { status: 500 });

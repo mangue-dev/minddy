@@ -1,3 +1,7 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { categoryStore } from "@/lib/server/category-store";
+import { objectiveStore } from "@/lib/server/objective-store";
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -8,6 +12,14 @@ import {
   CURRENT_ACCOUNT_EXPORT_VERSION,
 } from "@/lib/account-transfer";
 import { projectIconPaths } from "@/lib/server/project-storage";
+import { getScratchpadRow } from "@/lib/server/scratchpad";
+import { readStatEvents } from "@/lib/server/stat-events";
+import { hydrateAgentSummaryCopies } from "@/lib/server/agent/run-event-store";
+import { hydrateAgentLaunchCopies, hydrateImportedAgentMessages } from "@/lib/server/agent/run-launch-content";
+import { hydrateAgentQueueCopies } from "@/lib/server/agent/run-queue-content";
+import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
+import { decodeAgentContextSnapshot, legacyAgentContextSchema } from
+  "@/lib/server/agent/context-snapshot-content";
 
 /**
  * Export of account data (MIN-119, GDPR art. 15 and 20).
@@ -20,8 +32,8 @@ import { projectIconPaths } from "@/lib/server/project-storage";
  * Concretely:
  * • the ENTIRE content of the projects it owns — these are those
  * that the deletion of the account takes away, members included;
- * • her contributions in the projects of others — tickets that she created or
- * that are assigned to her, comments that she wrote;
+ * • tickets she created or was assigned in projects she can currently access,
+ *   plus comments that she wrote;
  * • everything that is strictly personal: cycles, notepads, conversations
  * with the assistant, notifications, statistics, preferences.
  *
@@ -194,6 +206,11 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
   );
   const exportedProjects = await includeProjectIcons(service, ownedProjects);
   const ownedIds = exportedProjects.map((p) => p.id as string);
+  const membershipsResult = await service.from("project_members")
+    .select("project_id, role, created_at").eq("user_id", userId);
+  const memberIds = list("project_members", membershipsResult)
+    .map((membership) => membership.project_id as string);
+  const readableIssueProjectIds = [...new Set([...ownedIds, ...memberIds])];
 
   const [
     preferences,
@@ -222,16 +239,16 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     modelKeys,
   ] = await Promise.all([
     service.from("user_agent_preferences").select("*").eq("user_id", userId).maybeSingle(),
-    service.from("project_members").select("project_id, role, created_at").eq("user_id", userId),
+    Promise.resolve(membershipsResult),
     ownedIds.length
-      ? service.from("issues").select(ISSUE_COLUMNS).in("project_id", ownedIds)
+      ? issueStore(service).select(ISSUE_COLUMNS).in("project_id", ownedIds)
       : Promise.resolve({ data: [] as Row[], error: null }),
-    service
-      .from("issues")
-      .select(ISSUE_COLUMNS)
-      .or(`created_by.eq.${userId},assignee_id.eq.${userId}`),
-    service
-      .from("comments")
+    readableIssueProjectIds.length
+      ? issueStore(service).select(ISSUE_COLUMNS)
+          .in("project_id", readableIssueProjectIds)
+          .or(`created_by.eq.${userId},assignee_id.eq.${userId}`)
+      : Promise.resolve({ data: [] as Row[], error: null }),
+    commentStore(service, "comments", userId)
       .select(
         "id, issue_id, parent_id, body, via_assistant, via_mcp, created_at, updated_at"
       )
@@ -267,22 +284,17 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
           .order("created_at")
       : Promise.resolve({ data: [] as Row[], error: null }),
     ownedIds.length
-      ? service.from("objectives").select("*").in("project_id", ownedIds)
+      ? objectiveStore(service).select("*").in("project_id", ownedIds)
       : Promise.resolve({ data: [] as Row[], error: null }),
     ownedIds.length
-      ? service
-          .from("categories")
+      ? categoryStore(service)
           .select("id, project_id, name, color, created_at")
           .in("project_id", ownedIds)
           .order("created_at")
       : Promise.resolve({ data: [] as Row[], error: null }),
     service.from("views").select("*").eq("user_id", userId),
     service.from("cycles").select("*").eq("user_id", userId).order("start_date"),
-    service
-      .from("user_scratchpad")
-      .select("content, updated_at")
-      .eq("user_id", userId)
-      .maybeSingle(),
+    getScratchpadRow(service, userId),
     service
       .from("conversations")
       .select("id, project_id, title, created_at, updated_at")
@@ -305,11 +317,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       .select("transport, native_installation_id, device_label, enabled, created_at, last_push_at")
       .eq("user_id", userId)
       .order("created_at"),
-    service
-      .from("stat_events")
-      .select("kind, occurred_at, project_name, issue_number, issue_title")
-      .eq("user_id", userId)
-      .order("occurred_at"),
+    readStatEvents(service, userId),
     service
       .from("billing_accounts")
       .select(
@@ -362,14 +370,15 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
   const conversationRows = list("conversations", conversations);
   const conversationIds = conversationRows.map((c) => c.id as string);
   const messages = conversationIds.length
-    ? list(
+    ? (await hydrateWorkerParentCopies(service, list(
         "assistant_messages",
         await service
           .from("assistant_messages")
-          .select("conversation_id, role, content, tool_name, created_at")
+          .select("id, conversation_id, role, content, tool_name, created_at, metadata")
           .in("conversation_id", conversationIds)
           .order("created_at")
-      )
+      ))).map(({ conversation_id, role, content, tool_name, created_at }) =>
+        ({ conversation_id, role, content, tool_name, created_at }))
     : [];
 
   const messagesByConversation = new Map<string, Row[]>();
@@ -380,20 +389,30 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     else messagesByConversation.set(key, [message]);
   }
 
-  const codeConversationRows = list(
-    "agent_conversations",
-    await service
-      .from("agent_conversations")
-      .select("id, project_id, title, visibility, archived_at, created_at, updated_at")
-      .eq("owner_id", userId)
-      .order("created_at"),
+  const { decodeAgentTitle, legacyAgentTitleSchema } = await import(
+    "@/lib/server/agent/run-title-content"
   );
+  const codeConversationQuery = await service.from("agent_conversations")
+    .select("id, project_id, title, title_ciphertext, title_encryption_version, visibility, archived_at, created_at, updated_at")
+    .eq("owner_id", userId).order("created_at");
+  const codeConversationRaw = legacyAgentTitleSchema(codeConversationQuery.error)
+    ? list("agent_conversations", await service.from("agent_conversations")
+      .select("id, project_id, title, visibility, archived_at, created_at, updated_at")
+      .eq("owner_id", userId).order("created_at"))
+    : list("agent_conversations", codeConversationQuery);
+  const codeConversationRows = await Promise.all(codeConversationRaw.map(async (row) => {
+    const decoded = await decodeAgentTitle(row as { id: string; project_id: string;
+      title: string | null; title_ciphertext?: string | null;
+      title_encryption_version?: number }, userId);
+    const { title_ciphertext: _cipher, title_encryption_version: _version, ...exported } = decoded;
+    return exported;
+  }));
   const codeConversationIds = codeConversationRows.map((c) => c.id as string);
   const [codeMessages, codeTurns, codeContexts] = codeConversationIds.length
     ? await Promise.all([
         service
           .from("agent_messages")
-          .select("conversation_id, turn_id, role, content, source, created_at")
+          .select("id, conversation_id, turn_id, run_id, role, content, source, legacy_event_id, legacy_queue_message_id, created_at")
           .in("conversation_id", codeConversationIds)
           .order("created_at"),
         service
@@ -403,11 +422,16 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
           )
           .in("conversation_id", codeConversationIds)
           .order("created_at"),
-        service
-          .from("agent_conversation_contexts")
-          .select("conversation_id, kind, resource_id, role, snapshot, created_at")
-          .in("conversation_id", codeConversationIds)
-          .order("created_at"),
+        (async () => {
+          const first = await service.from("agent_conversation_contexts")
+            .select("conversation_id, kind, resource_id, role, snapshot, snapshot_ciphertext, snapshot_encryption_version, created_at")
+            .in("conversation_id", codeConversationIds).order("created_at");
+          return legacyAgentContextSchema(first.error)
+            ? service.from("agent_conversation_contexts")
+                .select("conversation_id, kind, resource_id, role, snapshot, created_at")
+                .in("conversation_id", codeConversationIds).order("created_at")
+            : first;
+        })(),
       ])
     : [
         { data: [] as Row[], error: null },
@@ -417,6 +441,35 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
 
   const codeRowsFor = (table: string, result: QueryResult, id: string): Row[] =>
     list(table, result).filter((row) => row.conversation_id === id);
+  const exportedCodeConversations = await Promise.all(codeConversationRows.map(async (c) => ({
+    ...c,
+    contexts: await Promise.all(codeRowsFor("agent_conversation_contexts", codeContexts,
+      c.id as string).map(async (row) => {
+      const decoded = await decodeAgentContextSnapshot(c.project_id as string,
+        row as { conversation_id: string; kind: string; resource_id: string;
+          snapshot: Record<string, unknown>; snapshot_ciphertext?: string | null;
+          snapshot_encryption_version?: number }, userId);
+      const { snapshot_ciphertext: _cipher, snapshot_encryption_version: _version,
+        ...exported } = decoded;
+      return exported;
+    })),
+    turns: codeRowsFor("agent_turns", codeTurns, c.id as string),
+    messages: (await hydrateImportedAgentMessages(service,
+      await hydrateAgentQueueCopies(service,
+        await hydrateAgentLaunchCopies(service,
+          await hydrateAgentSummaryCopies(service, c.project_id as string,
+            codeRowsFor("agent_messages", codeMessages, c.id as string), userId),
+          userId, c.project_id as string),
+        userId, c.project_id as string),
+      userId, c.project_id as string)).map((row) => {
+      const exported = { ...row };
+      delete exported.id;
+      delete exported.legacy_event_id;
+      delete exported.legacy_queue_message_id;
+      delete exported.run_id;
+      return exported;
+    }),
+  })));
 
   // A ticket from an owned project can also have been created by the person:
   // deduplicated so as not to output it twice.
@@ -502,20 +555,15 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     issue_categories: issueCategories,
     views: list("views", views),
     cycles: list("cycles", cycles),
-    scratchpad: one("user_scratchpad", scratchpad),
+    scratchpad: scratchpad ? { content: scratchpad.content, updated_at: scratchpad.updated_at } : null,
     assistant_conversations: conversationRows.map((c) => ({
       ...c,
       messages: messagesByConversation.get(c.id as string) ?? [],
     })),
-    code_agent_conversations: codeConversationRows.map((c) => ({
-      ...c,
-      contexts: codeRowsFor("agent_conversation_contexts", codeContexts, c.id as string),
-      turns: codeRowsFor("agent_turns", codeTurns, c.id as string),
-      messages: codeRowsFor("agent_messages", codeMessages, c.id as string),
-    })),
+    code_agent_conversations: exportedCodeConversations,
     notifications: list("notifications", notifications),
     push_devices: list("push_subscriptions", pushDevices),
-    statistics: list("stat_events", statistics),
+    statistics,
     billing: one("billing_accounts", billing),
     ai_usage: list("ai_usage", aiUsage),
     api_keys: list("api_keys", apiKeys),

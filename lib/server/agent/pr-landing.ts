@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -86,7 +87,7 @@ export async function assertPrLandingAuthority(
   ctx: PrLandingContext,
   target: RepoCloneTarget = ctx.target,
 ): Promise<AgentRun> {
-  const current = await getRun(ctx.run.id).catch(() => null);
+  const current = await getRun(ctx.run.id, { decode: false }).catch(() => null);
   if (!current || current.status !== "running" || !current.created_by) {
     throw new PrLandingAuthorityError("run is no longer authorized to land");
   }
@@ -294,7 +295,7 @@ export async function postPrComment(
     const term = prTerm(provider);
     const label = kind === "reopened" ? s.reopened(term) : s.opened(term);
     const body = `**${s.header(identifier)}**\n\n${label}\n\n🔗 [${s.viewPr(term)}](${prUrl})`;
-    await service.from("comments").insert({
+    await commentStore(service, "comments").insert({
       issue_id: run.issue_id,
       author_id: run.created_by,
       body,
@@ -440,7 +441,7 @@ export async function registerPr(
 export async function refreshPrStateFromDb(
   ctx: PrLandingContext,
 ): Promise<void> {
-  const db = await getRun(ctx.run.id).catch(() => null);
+  const db = await getRun(ctx.run.id, { decode: false }).catch(() => null);
   if (!db) return;
   ctx.prState.number = db.pr_number;
   ctx.prState.url = db.pr_url;

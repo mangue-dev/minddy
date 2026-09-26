@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -30,10 +31,10 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("commentEmpty") }, { status: 400 });
   }
 
-  const { data, error } = await auth.supabase
-    .from("comments")
+  const { data, error } = await commentStore(auth.supabase, "comments", auth.user.id)
     .update({ body: text })
     .eq("id", id)
+    .eq("author_id", auth.user.id)
     .select("*")
     .maybeSingle();
 

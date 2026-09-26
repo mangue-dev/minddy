@@ -31,11 +31,12 @@ interface PrRow {
   opened_at: string | null;
   merged_at: string | null;
   updated_at: string;
-  issue: { number: number; title: string; project: { key: string } | null } | null;
+  issue: { id: string; number: number; project: { key: string } | null } | null;
 }
 
 const world = {
   rows: [] as PrRow[],
+  issueRows: [] as Array<{ id: string; project_id: string; title: string }>,
   /** What the query actually asked for — the test reads that, not an intent. */
   query: {} as {
     eq?: Record<string, unknown>;
@@ -47,9 +48,22 @@ const world = {
 };
 
 vi.mock("@/lib/supabase-service", () => {
-  const from = () => {
+  const from = (table: string) => {
     const q: Record<string, unknown> = {};
     const chain = () => q;
+    if (table === "issues") {
+      const filters: Array<(row: typeof world.issueRows[number]) => boolean> = [];
+      q.select = chain;
+      q.in = (column: "id" | "project_id", values: string[]) => {
+        filters.push((row) => values.includes(row[column]));
+        return q;
+      };
+      q.is = chain;
+      q.then = (resolve: (v: unknown) => unknown) =>
+        Promise.resolve({ data: world.issueRows.filter((row) => filters.every((filter) => filter(row))),
+          error: null }).then(resolve);
+      return q;
+    }
     q.select = chain;
     q.order = chain;
     q.eq = (column: string, value: unknown) => {
@@ -143,7 +157,7 @@ function makeRow(over: Partial<PrRow> = {}): PrRow {
     opened_at: "2026-08-03T09:00:00Z",
     merged_at: null,
     updated_at: "2026-08-08T09:00:00Z",
-    issue: { number: 7, title: "Le ticket", project: { key: "MIN" } },
+    issue: { id: "issue-7", number: 7, project: { key: "MIN" } },
     ...over,
   };
 }
@@ -167,6 +181,7 @@ const call = (name: string, args: Record<string, unknown> = {}) =>
 
 beforeEach(() => {
   world.rows = [makeRow()];
+  world.issueRows = [{ id: "issue-7", project_id: "project-1", title: "Le ticket" }];
   world.query = {};
   stale = false;
   noRepo = false;
@@ -220,6 +235,12 @@ describe("list_pull_requests", () => {
 
     const body = res.result as { pull_requests: Array<{ issue: { identifier: string } }> };
     expect(body.pull_requests[0].issue.identifier).toBe("MIN-7");
+  });
+
+  it("hides a linked issue from another project", async () => {
+    world.issueRows = [{ id: "issue-7", project_id: "project-2", title: "Foreign ticket" }];
+    const res = await call("list_pull_requests");
+    expect((res.result as { pull_requests: Array<{ issue: unknown }> }).pull_requests[0].issue).toBeNull();
   });
 
   it("dit que la liste a été COUPÉE quand elle bute sur la limite", async () => {

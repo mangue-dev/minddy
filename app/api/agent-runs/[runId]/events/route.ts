@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import { getRun } from "@/lib/server/agent/runs";
+import { listRunEvents } from "@/lib/server/agent/run-event-store";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  const run = await getRun(runId);
+  const run = await getRun(runId, { decode: false });
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
   if (!(await canReadAgentRun(auth.user.id, run))) {
@@ -32,13 +33,12 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const after = afterParam != null ? Number(afterParam) : -1;
 
   const service = getServiceClient();
-  let query = service
-    .from("agent_run_events")
-    .select("id, seq, type, payload, created_at")
-    .eq("run_id", runId)
-    .order("seq", { ascending: true });
-  if (Number.isFinite(after) && after >= 0) query = query.gt("seq", after);
-
-  const { data } = await query;
-  return NextResponse.json({ events: data ?? [] });
+  try {
+    const events = await listRunEvents(service, run,
+      Number.isFinite(after) && after >= 0
+        ? { after, actorId: auth.user.id } : { actorId: auth.user.id });
+    return NextResponse.json({ events });
+  } catch {
+    return NextResponse.json({ error: "Unable to read run events" }, { status: 503 });
+  }
 }

@@ -1,3 +1,6 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { categoryStore } from "@/lib/server/category-store";
+import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -62,14 +65,12 @@ export async function GET(request: NextRequest) {
 
   const [issuesRes, projectsRes, categoriesRes, objectivesRes, relationsRes] =
     await Promise.all([
-      auth.supabase
-        .from("issues")
-        .select(ISSUE_SELECT)
+      issueStore(auth.supabase).select(ISSUE_SELECT)
         .order("position", { ascending: true })
         .order("number", { ascending: true }),
       auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null),
-      auth.supabase.from("categories").select("*"),
-      auth.supabase.from("objectives").select("*"),
+      categoryStore(auth.supabase, auth.user.id).select("*"),
+      objectiveStore(auth.supabase).select("*"),
       // ALL relation types: `blocks` feeds the cycle reco ordering, and the
       // full set powers the cards' relation chips + the side panel (RLS scopes
       // the rows to my projects).
@@ -92,7 +93,7 @@ export async function GET(request: NextRequest) {
   const issues = (issuesRes.data ?? []).map(mapIssueRow);
 
   const categories: Record<string, Category[]> = {};
-  for (const c of (categoriesRes.data ?? []) as Category[]) {
+  for (const c of (categoriesRes.data ?? []) as unknown as Category[]) {
     (categories[c.project_id] ??= []).push(c);
   }
 

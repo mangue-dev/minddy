@@ -1,5 +1,6 @@
 import "server-only";
 
+import { readPageVersions } from "./page-version-store";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
@@ -34,12 +35,6 @@ import type { Page, PageVersion, PageWriteKind } from "@/lib/pages";
  */
 
 type Service = ReturnType<typeof getServiceClient>;
-
-/** LIST columns: everything except the body, for the same reason that
- `LIST_COLUMNS` on the page side — twenty ProseMirror documents for a list of
- dates would be the heaviest query on the screen. */
-const VERSION_COLUMNS =
-  "id, page_id, version, title, icon, author_id, author_kind, author_api_key_id, created_at";
 
 export type PageVersionResult<T> =
   | { ok: true; data: T }
@@ -147,14 +142,9 @@ export async function listPageVersions(
   const page = await reachable(service, pageId, actorId);
   if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
 
-  const { data, error } = await service
-    .from("page_versions")
-    .select(VERSION_COLUMNS)
-    .eq("page_id", pageId)
-    .order("version", { ascending: false })
-    .limit(200);
+  const { data, error } = await readPageVersions(service, pageId, page.project_id, actorId);
   if (error) {
-    console.error("[page-versions] list failed:", error.message);
+    console.error("[page-versions] list failed");
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
@@ -176,22 +166,14 @@ export async function getPageVersion(
   const page = await reachable(service, pageId, actorId);
   if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
 
-  const { data, error } = await service
-    .from("page_versions")
-    .select(`${VERSION_COLUMNS}, content`)
-    // The `page_id` is in the condition, not just in the URL: a
-    // version of ANOTHER page (so perhaps from another project) cannot be read
-    // going through a page to which we are entitled.
-    .eq("page_id", pageId)
-    .eq("id", versionId)
-    .maybeSingle();
+  const { data, error } = await readPageVersions(service, pageId, page.project_id, actorId, versionId);
   if (error) {
-    console.error("[page-versions] read failed:", error.message);
+    console.error("[page-versions] read failed");
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  if (!data) return { ok: false, status: 404, errorKey: "pageVersionNotFound" };
+  if (!data?.length) return { ok: false, status: 404, errorKey: "pageVersionNotFound" };
 
-  const row = data as unknown as VersionRow;
+  const row = data[0] as unknown as VersionRow;
   const [names, agents] = await Promise.all([
     resolveAuthors(service, [row]),
     resolveAgents([row]),

@@ -1,3 +1,4 @@
+import { issueStore, loadIssueTitles } from "@/lib/server/issue-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -446,9 +447,7 @@ export async function resolveIssueForPr(opts: {
   if (!project) return null;
 
   const service = getServiceClient();
-  const { data } = await service
-    .from("issues")
-    .select("id")
+  const { data } = await issueStore(service).select("id")
     .eq("project_id", project.id)
     .eq("number", parsed.number)
     .is("deleted_at", null)
@@ -835,7 +834,7 @@ export async function listPullRequestsForUser(
 
   let query = supabase
     .from("pull_requests")
-    .select(`${PR_COLUMNS}, issue:issues(id, number, title, project_id)`)
+    .select(`${PR_COLUMNS}, issue:issues(id, number, project_id)`)
     .in("repo_full_name", names)
     .order("updated_at", { ascending: false });
   if (opts?.states) query = query.in("state", opts.states);
@@ -843,9 +842,16 @@ export async function listPullRequestsForUser(
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return ((data ?? []) as unknown as PullRequestWithIssue[]).filter((row) =>
+  const rows = ((data ?? []) as unknown as PullRequestWithIssue[]).filter((row) =>
     pairs.has(`${row.provider}:${row.repo_full_name}`),
   );
+  const titles = await loadIssueTitles(supabase,
+    rows.map((row) => row.issue?.id).filter((id): id is string => !!id),
+    repos.map((repo) => repo.project.id));
+  return rows.map((row) => ({ ...row,
+    issue: row.issue && titles.has(row.issue.id)
+      ? { ...row.issue, title: titles.get(row.issue.id)! } : null,
+  }));
 }
 
 /**

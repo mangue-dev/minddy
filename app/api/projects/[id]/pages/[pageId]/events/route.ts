@@ -1,3 +1,4 @@
+import { readIssueEvents } from "@/lib/server/issue-event-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -25,11 +26,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await auth.supabase
-    .from("issue_events")
-    .select("*")
-    .eq("page_id", pageId)
-    .order("created_at", { ascending: true });
+  const { data, error } = await readIssueEvents(auth.supabase, { page_id: pageId }, { actorId: auth.user.id });
 
   if (error) {
     console.error("[api/pages/:id/events] list failed:", error.message);

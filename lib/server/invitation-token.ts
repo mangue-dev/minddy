@@ -4,6 +4,13 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
 import type { InvitationPreview } from "@/lib/types";
+import {
+  decryptInvitationEmail,
+  legacyInvitationEmailColumns,
+  missingInvitationEncryptionSchema,
+  type InvitationEmailColumns,
+} from "@/lib/server/encryption/invitation-email";
+import { digestInvitationToken } from "@/lib/server/encryption/invitation-token-digest";
 
 /**
  * What the `?invite=<token>` of an invitation email link allows to say
@@ -29,12 +36,35 @@ export async function resolveInvitationToken(
   if (!normalized || normalized.length > 128) return null;
 
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("project_invitations")
-    .select("invited_email, invited_by, expires_at, projects(name)")
-    .eq("token", normalized)
-    .eq("status", "pending")
-    .maybeSingle();
+  const lookup = (storedToken: string, encrypted: boolean) => {
+    const query = service
+      .from("project_invitations")
+      .select("id, project_id, invited_email, invited_email_ciphertext, invited_email_blind_index, encryption_version, invited_by, expires_at, projects(name)")
+      .eq("token", storedToken)
+      .eq("status", "pending");
+    return encrypted
+      ? query.gt("encryption_version", 0).maybeSingle()
+      : query.eq("encryption_version", 0).maybeSingle();
+  };
+  const encryptedResult = await lookup(digestInvitationToken(normalized), true);
+  const legacyLookup = async () => {
+    const legacy = await service
+      .from("project_invitations")
+      .select("id, project_id, invited_email, invited_by, expires_at, projects(name)")
+      .eq("token", normalized)
+      .eq("status", "pending")
+      .maybeSingle();
+    return { ...legacy, data: legacy.data && legacyInvitationEmailColumns(legacy.data) };
+  };
+  const versionedLegacy = !encryptedResult.data && !encryptedResult.error
+    ? await lookup(normalized, false)
+    : null;
+  const { data, error } = missingInvitationEncryptionSchema(encryptedResult.error) ||
+    missingInvitationEncryptionSchema(versionedLegacy?.error ?? null)
+    ? await legacyLookup()
+    : encryptedResult.data || encryptedResult.error
+      ? encryptedResult
+      : versionedLegacy!;
 
   if (error) {
     console.error("[invitation-token] lookup failed:", error.message);
@@ -57,9 +87,20 @@ export async function resolveInvitationToken(
   // Without the project name, the banner would not say anything: we do not display one.
   if (!project?.name) return null;
 
+  let invitedEmail: string;
+  try {
+    invitedEmail = await decryptInvitationEmail(data as InvitationEmailColumns & {
+      id: string;
+      project_id: string;
+    }, { actorId: null, reason: "invitation_preview" });
+  } catch (error) {
+    console.error("[invitation-token] email decrypt failed:", error);
+    return null;
+  }
+
   return {
     projectName: project.name,
     inviterName: displayName(toNamed(inviters.get(inviterId)), ""),
-    invitedEmail: data.invited_email as string,
+    invitedEmail,
   };
 }

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { loadIssueTitles } from "@/lib/server/issue-store";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { forgeFor, isForgeApiError, type MergeMethod } from "./forge";
@@ -175,8 +176,8 @@ interface ListedRow {
   merged_at: string | null;
   updated_at: string;
   issue: {
+    id: string;
     number: number;
-    title: string;
     project: { key: string } | null;
   } | null;
 }
@@ -220,7 +221,7 @@ async function listPullRequests(
     .from("pull_requests")
     .select(
       "number, title, state, url, author_login, head_branch, base_branch, opened_at, merged_at, updated_at, " +
-        "issue:issues(number, title, project:projects(key))",
+        "issue:issues(id, number, project:projects(key))",
     )
     .eq("provider", target.provider)
     .eq("repo_full_name", target.repoFullName)
@@ -234,6 +235,9 @@ async function listPullRequests(
   if (error) return { result: { error: error.message }, success: false };
 
   const rows = (data ?? []) as unknown as ListedRow[];
+  const titles = await loadIssueTitles(getServiceClient(),
+    rows.map((row) => row.issue?.id).filter((id): id is string => !!id),
+    [ctx.projectId]);
   return {
     result: {
       repository: target.repoFullName,
@@ -252,12 +256,12 @@ async function listPullRequests(
         opened_at: row.opened_at,
         merged_at: row.merged_at,
         updated_at: row.updated_at,
-        issue: row.issue
+        issue: row.issue && titles.has(row.issue.id)
           ? {
               identifier: row.issue.project
                 ? `${row.issue.project.key}-${row.issue.number}`
                 : null,
-              title: row.issue.title,
+              title: titles.get(row.issue.id)!,
             }
           : null,
       })),

@@ -1,0 +1,3421 @@
+{
+  "agent_artifacts": {
+    "scope": {
+      "ancestor": "agent_conversations:conversation_id"
+    },
+    "encrypted": [
+      "ref",
+      "url"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "kind"
+      ],
+      "routing_identity": [
+        "conversation_id",
+        "id",
+        "run_id",
+        "state"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ]
+    }
+  },
+  "agent_chains": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "pending_event",
+      "stop_reason"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "budget_usd",
+        "retries",
+        "spent_usd",
+        "step"
+      ],
+      "operational_configuration": [
+        "preset",
+        "status"
+      ],
+      "routing_identity": [
+        "id",
+        "issue_id",
+        "owner_id",
+        "played_rule_ids",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "not_before",
+        "updated_at"
+      ]
+    }
+  },
+  "agent_checkpoint_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "agent_context_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "agent_conversation_contexts": {
+    "scope": {
+      "ancestor": "agent_conversations:conversation_id"
+    },
+    "encrypted": [
+      "snapshot"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "kind",
+        "role"
+      ],
+      "routing_identity": [
+        "conversation_id",
+        "id",
+        "resource_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "snapshot_encryption_checked_at"
+      ],
+      "encryption_metadata": [
+        "snapshot_ciphertext",
+        "snapshot_encryption_version"
+      ]
+    }
+  },
+  "agent_conversation_pins": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "conversation_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "agent_conversation_reads": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "conversation_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "last_read_at"
+      ]
+    }
+  },
+  "agent_conversations": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "title"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "visibility"
+      ],
+      "routing_identity": [
+        "id",
+        "owner_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "archived_at",
+        "created_at",
+        "title_encryption_checked_at",
+        "updated_at"
+      ],
+      "encryption_metadata": [
+        "title_ciphertext",
+        "title_encryption_version"
+      ]
+    }
+  },
+  "agent_delegation_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "agent_event_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "agent_journal_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "agent_launch_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "agent_messages": {
+    "scope": {
+      "ancestor": "agent_conversations:conversation_id"
+    },
+    "encrypted": [
+      "content"
+    ],
+    "clear": {
+      "encryption_metadata": [
+        "content_encryption_version"
+      ],
+      "operational_configuration": [
+        "role",
+        "source"
+      ],
+      "routing_identity": [
+        "conversation_id",
+        "created_by",
+        "id",
+        "legacy_event_id",
+        "legacy_queue_message_id",
+        "run_id",
+        "turn_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "standalone_encryption_checked_at"
+      ]
+    }
+  },
+  "agent_quota_resets": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id",
+        "reset_by",
+        "user_id"
+      ],
+      "timestamp": [
+        "reset_at",
+        "updated_at"
+      ]
+    }
+  },
+  "agent_routines": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "base_branch",
+      "last_error",
+      "prompt",
+      "prompt_mentions",
+      "title"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "days_of_month",
+        "enabled",
+        "hour",
+        "max_spend_percent",
+        "minute",
+        "weekdays"
+      ],
+      "operational_configuration": [
+        "frequency",
+        "timezone"
+      ],
+      "routing_identity": [
+        "deleted_by",
+        "id",
+        "owner_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "deleted_at",
+        "last_run_at",
+        "next_run_at",
+        "updated_at"
+      ]
+    }
+  },
+  "agent_run_events": {
+    "scope": {
+      "ancestor": "agent_runs:run_id"
+    },
+    "encrypted": [
+      "payload"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "has_questions",
+        "has_summary_text",
+        "seq"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ],
+      "operational_configuration": [
+        "type"
+      ],
+      "routing_identity": [
+        "call_id",
+        "id",
+        "question_id",
+        "run_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "encryption_checked_at"
+      ]
+    }
+  },
+  "agent_run_input_requests": {
+    "scope": {
+      "ancestor": "agent_runs:run_id"
+    },
+    "encrypted": [
+      "answer",
+      "questions"
+    ],
+    "clear": {
+      "encryption_metadata": [
+        "answer_encryption_version",
+        "answer_encryption_checked_at",
+        "encrypted_questions",
+        "questions_encryption_version"
+      ],
+      "operational_configuration": [
+        "status"
+      ],
+      "routing_identity": [
+        "answer_message_id",
+        "call_id",
+        "id",
+        "parent_numo_turn_id",
+        "question_id",
+        "run_id",
+        "source_event_id"
+      ],
+      "timestamp": [
+        "answered_at",
+        "created_at"
+      ]
+    }
+  },
+  "agent_run_journal": {
+    "scope": {
+      "ancestor": "agent_runs:run_id"
+    },
+    "encrypted": [
+      "events",
+      "payload"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "event_count",
+        "payload_bytes",
+        "stored_bytes"
+      ],
+      "operational_configuration": [
+        "payload_encoding"
+      ],
+      "one_way_authentication": [
+        "payload_sha256"
+      ],
+      "routing_identity": [
+        "id",
+        "run_id",
+        "session_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ],
+      "encryption_metadata": [
+        "encryption_checked_at",
+        "encryption_version"
+      ]
+    }
+  },
+  "agent_run_messages": {
+    "scope": {
+      "ancestor": "agent_runs:run_id"
+    },
+    "encrypted": [
+      "content",
+      "mentions"
+    ],
+    "clear": {
+      "routing_identity": [
+        "created_by",
+        "id",
+        "run_id"
+      ],
+      "timestamp": [
+        "consumed_at",
+        "created_at"
+      ],
+      "encryption_metadata": [
+        "content_encryption_version",
+        "encryption_checked_at"
+      ]
+    }
+  },
+  "agent_runs": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "base_branch",
+      "branch_name",
+      "checkpoint",
+      "delegation_attachments",
+      "delegation_brief",
+      "delegation_result",
+      "deployment_url",
+      "error_message",
+      "outcome",
+      "pr_url",
+      "prompt",
+      "prompt_mentions",
+      "title",
+      "verdict"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "attempts",
+        "awaiting_input",
+        "budget_usd",
+        "continuations",
+        "cost_usd",
+        "has_launch_prompt",
+        "interrupt_requested",
+        "local_exec",
+        "local_exec_gen",
+        "local_issue_context_confirmed",
+        "local_worktree",
+        "loop_in_vm",
+        "managed_budget_usd",
+        "model_forced",
+        "pr_inline_comments_used",
+        "pr_number"
+      ],
+      "operational_configuration": [
+        "agent_engine",
+        "intent",
+        "key_mode",
+        "model",
+        "pr_state",
+        "reasoning_level",
+        "sandbox_billing",
+        "status",
+        "triggered_by",
+        "worker_model_provider",
+        "worker_model_source"
+      ],
+      "encryption_metadata": [
+        "checkpoint_ciphertext",
+        "checkpoint_encryption_version",
+        "delegation_encryption_version",
+        "encrypted_delegation_input",
+        "encrypted_launch_content",
+        "launch_encryption_version",
+        "title_ciphertext",
+        "title_encryption_version",
+        "verdict_ciphertext",
+        "verdict_encryption_version"
+      ],
+      "routing_identity": [
+        "chain_id",
+        "connection_id",
+        "continued_from_run_id",
+        "conversation_id",
+        "created_by",
+        "id",
+        "issue_id",
+        "local_exec_device_id",
+        "loop_command_id",
+        "parent_numo_conversation_id",
+        "parent_numo_tool_call_id",
+        "parent_numo_turn_id",
+        "pr_head_sha",
+        "project_id",
+        "provider_key_id",
+        "pull_request_id",
+        "repo_external_id",
+        "repo_link_id",
+        "repo_provider",
+        "routine_id",
+        "run_id",
+        "sandbox_id",
+        "sandbox_reap_claim"
+      ],
+      "timestamp": [
+        "base_branch_encryption_checked_at",
+        "checkpoint_encryption_checked_at",
+        "completed_at",
+        "created_at",
+        "delegation_encryption_checked_at",
+        "last_activity_at",
+        "launch_encryption_checked_at",
+        "not_before",
+        "rest_claimed_at",
+        "sandbox_reap_claimed_at",
+        "sandbox_stopped_at",
+        "started_at",
+        "title_encryption_checked_at",
+        "updated_at",
+        "window_started_at",
+        "verdict_encryption_checked_at",
+        "deployment_encryption_checked_at"
+      ]
+    }
+  },
+  "agent_runtime_sessions": {
+    "scope": {
+      "ancestor": "agent_conversations:conversation_id"
+    },
+    "encrypted": [
+      "base_branch",
+      "checkpoint",
+      "work_branch"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "local_worktree"
+      ],
+      "operational_configuration": [
+        "engine",
+        "execution"
+      ],
+      "routing_identity": [
+        "base_branch_bound_run_id",
+        "connection_id",
+        "conversation_id",
+        "current_run_id",
+        "provider_key_id",
+        "repo_link_id",
+        "sandbox_id"
+      ],
+      "timestamp": [
+        "base_branch_encryption_checked_at",
+        "checkpoint_encryption_checked_at",
+        "created_at",
+        "last_activity_at",
+        "sandbox_stopped_at",
+        "updated_at"
+      ],
+      "encryption_metadata": [
+        "checkpoint_ciphertext",
+        "checkpoint_encryption_version"
+      ]
+    }
+  },
+  "agent_session_reads": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "issue_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "last_read_at"
+      ]
+    }
+  },
+  "agent_base_branch_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "agent_title_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "agent_turns": {
+    "scope": {
+      "ancestor": "agent_conversations:conversation_id"
+    },
+    "encrypted": [
+      "error_message",
+      "outcome"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "cost_usd"
+      ],
+      "operational_configuration": [
+        "model",
+        "reasoning_level",
+        "status"
+      ],
+      "routing_identity": [
+        "conversation_id",
+        "id",
+        "initiated_by",
+        "run_id"
+      ],
+      "timestamp": [
+        "completed_at",
+        "created_at",
+        "started_at",
+        "updated_at"
+      ]
+    }
+  },
+  "ai_decision_evaluations": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [
+      "jev_answers",
+      "llm_answers",
+      "subject_id"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "agree",
+        "jev_confidence",
+        "jev_latency_ms",
+        "llm_confidence",
+        "llm_cost",
+        "llm_latency_ms"
+      ],
+      "operational_configuration": [
+        "use_case"
+      ],
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "ai_usage": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "cache_write_tokens",
+        "cached_tokens",
+        "completion_tokens",
+        "cost",
+        "estimated",
+        "prompt_tokens",
+        "seq",
+        "total_tokens"
+      ],
+      "operational_configuration": [
+        "billed_reason",
+        "feature",
+        "idempotency_key",
+        "key_mode",
+        "model",
+        "provider"
+      ],
+      "routing_identity": [
+        "conversation_id",
+        "generation_id",
+        "id",
+        "numo_turn_id",
+        "project_id",
+        "routine_id",
+        "run_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "api_keys": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "agent",
+      "name"
+    ],
+    "clear": {
+      "one_way_authentication": [
+        "key_hash",
+        "key_prefix"
+      ],
+      "routing_identity": [
+        "id",
+        "oauth_client_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "last_used_at",
+        "revoked_at"
+      ]
+    }
+  },
+  "app_config": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [
+      "value"
+    ],
+    "clear": {
+      "routing_identity": [
+        "key"
+      ],
+      "timestamp": [
+        "updated_at"
+      ]
+    }
+  },
+  "app_tabs": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "custom_name",
+      "href"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "pinned",
+        "position",
+        "revision"
+      ],
+      "routing_identity": [
+        "id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ]
+    }
+  },
+  "assistant_active_conversation": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "conversation_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "updated_at"
+      ]
+    }
+  },
+  "assistant_messages": {
+    "scope": {
+      "ancestor": "conversations:conversation_id"
+    },
+    "encrypted": [
+      "content",
+      "context",
+      "metadata",
+      "tool_calls"
+    ],
+    "clear": {
+      "encryption_metadata": [
+        "worker_content_encryption_checked_at",
+        "worker_content_encryption_version"
+      ],
+      "operational_configuration": [
+        "role",
+        "tool_name"
+      ],
+      "routing_identity": [
+        "conversation_id",
+        "id",
+        "tool_call_id",
+        "turn_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "attachments": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "file_name",
+      "icon_data_url",
+      "storage_path",
+      "url"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "size_bytes"
+      ],
+      "operational_configuration": [
+        "kind",
+        "mime_type"
+      ],
+      "routing_identity": [
+        "comment_id",
+        "created_by",
+        "feedback_post_id",
+        "id",
+        "issue_id",
+        "objective_id",
+        "page_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "auth_mfa_amr_epochs": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "epoch"
+      ],
+      "routing_identity": [
+        "authentication_method",
+        "session_id"
+      ]
+    }
+  },
+  "billing_accounts": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "admin_override_note",
+      "email"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "stripe_cancel_at_period_end"
+      ],
+      "operational_configuration": [
+        "stripe_subscription_status"
+      ],
+      "routing_identity": [
+        "admin_override_plan_id",
+        "stripe_checkout_session_id",
+        "stripe_customer_id",
+        "stripe_last_event_id",
+        "stripe_plan_id",
+        "stripe_price_id",
+        "stripe_subscription_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "admin_override_expires_at",
+        "created_at",
+        "stripe_current_period_end",
+        "stripe_current_period_start",
+        "stripe_last_event_created",
+        "updated_at"
+      ]
+    }
+  },
+  "categories": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "name"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "color"
+      ],
+      "routing_identity": [
+        "id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_checked_at",
+        "encryption_revision",
+        "encryption_version"
+      ]
+    }
+  },
+  "comments": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "body"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "via_assistant",
+        "via_mcp"
+      ],
+      "operational_configuration": [
+        "assistant_status",
+        "assistant_tool",
+        "visibility"
+      ],
+      "routing_identity": [
+        "api_key_id",
+        "author_id",
+        "feedback_post_id",
+        "feedback_user_id",
+        "id",
+        "issue_id",
+        "objective_id",
+        "parent_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_checked_at",
+        "encryption_revision",
+        "encryption_version"
+      ]
+    }
+  },
+  "conversations": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "error_message",
+      "title"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "model",
+        "reasoning_level",
+        "status"
+      ],
+      "routing_identity": [
+        "id",
+        "project_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "archived_at",
+        "created_at",
+        "updated_at"
+      ]
+    }
+  },
+  "custom_domains": {
+    "scope": {
+      "ancestors": [
+        "feedback_boards:board_id",
+        "view_shares:share_id"
+      ]
+    },
+    "encrypted": [
+      "verification"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "status"
+      ],
+      "public_identity": [
+        "cname_target",
+        "domain"
+      ],
+      "routing_identity": [
+        "board_id",
+        "created_by",
+        "id",
+        "share_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ]
+    }
+  },
+  "cycles": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "completed_points",
+        "target_points"
+      ],
+      "operational_configuration": [
+        "intensity"
+      ],
+      "routing_identity": [
+        "id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "end_date",
+        "filled_at",
+        "start_date",
+        "updated_at"
+      ]
+    }
+  },
+  "envelope_data_keys": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "encryption_metadata": [
+        "created_at",
+        "is_current",
+        "purpose",
+        "rotation_attempted_at",
+        "scope_id",
+        "scope_kind",
+        "version",
+        "wrapped_key"
+      ]
+    }
+  },
+  "feedback_boards": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "sso_secret"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "allow_comments",
+        "enabled",
+        "show_categories",
+        "show_pages",
+        "show_views"
+      ],
+      "operational_configuration": [
+        "accent_dark",
+        "accent_light"
+      ],
+      "public_identity": [
+        "token"
+      ],
+      "routing_identity": [
+        "id",
+        "project_id",
+        "visible_page_ids",
+        "visible_view_ids"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ]
+    }
+  },
+  "feedback_merge_events": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "payload"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "confidence"
+      ],
+      "operational_configuration": [
+        "kind",
+        "performed_by"
+      ],
+      "routing_identity": [
+        "actor_id",
+        "canonical_id",
+        "dup_id",
+        "id",
+        "project_id",
+        "undone_by"
+      ],
+      "timestamp": [
+        "created_at",
+        "undone_at"
+      ]
+    }
+  },
+  "feedback_merge_rejections": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "operational_configuration": [
+        "kind"
+      ],
+      "routing_identity": [
+        "canonical_id",
+        "dup_id",
+        "project_id",
+        "rejected_by"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "feedback_otp_codes": {
+    "scope": {
+      "ancestor": "feedback_boards:board_id"
+    },
+    "encrypted": [
+      "email"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "attempts"
+      ],
+      "one_way_authentication": [
+        "code_hash",
+        "ip_hash"
+      ],
+      "routing_identity": [
+        "board_id",
+        "id"
+      ],
+      "timestamp": [
+        "consumed_at",
+        "created_at",
+        "expires_at"
+      ]
+    }
+  },
+  "feedback_post_categories": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "category_id",
+        "post_id"
+      ]
+    }
+  },
+  "feedback_posts": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "body",
+      "embedding",
+      "moderation_reason",
+      "submitted_body",
+      "submitted_title",
+      "title",
+      "translated_body",
+      "translated_title"
+    ],
+    "clear": {
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_checked_at",
+        "encryption_revision",
+        "encryption_version"
+      ],
+      "bounded_metadata": [
+        "analysis_failures",
+        "is_public",
+        "suggested_confidence",
+        "vote_count"
+      ],
+      "operational_configuration": [
+        "review_state",
+        "sensitivity",
+        "source",
+        "source_language",
+        "status",
+        "translated_language"
+      ],
+      "routing_identity": [
+        "author_id",
+        "created_by_member",
+        "deleted_by",
+        "id",
+        "issue_id",
+        "merged_into_id",
+        "project_id",
+        "suggested_merge_into_id"
+      ],
+      "timestamp": [
+        "analysis_claimed_at",
+        "analyzed_at",
+        "classified_at",
+        "created_at",
+        "deleted_at",
+        "updated_at"
+      ]
+    }
+  },
+  "feedback_sessions": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "one_way_authentication": [
+        "token_hash"
+      ],
+      "routing_identity": [
+        "board_id",
+        "id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "expires_at",
+        "last_seen_at"
+      ]
+    }
+  },
+  "feedback_sso_replays": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "board_id",
+        "token_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "expires_at"
+      ]
+    }
+  },
+  "feedback_users": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "email",
+      "external_id",
+      "name"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "verified_via"
+      ],
+      "public_identity": [
+        "pseudonym"
+      ],
+      "routing_identity": [
+        "id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "erased_at",
+        "updated_at"
+      ]
+    }
+  },
+  "feedback_voice_attempts": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "one_way_authentication": [
+        "ip_hash"
+      ],
+      "operational_configuration": [
+        "operation"
+      ],
+      "routing_identity": [
+        "board_id",
+        "feedback_user_id",
+        "id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "feedback_votes": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "post_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "forge_mention_throttle": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [
+      "key"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "count"
+      ],
+      "timestamp": [
+        "updated_at",
+        "window_start"
+      ]
+    }
+  },
+  "forge_relay_audit": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [
+      "detail"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "action"
+      ],
+      "routing_identity": [
+        "id",
+        "instance_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "forge_relay_claims": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [
+      "repository_full_name"
+    ],
+    "clear": {
+      "one_way_authentication": [
+        "code_hash"
+      ],
+      "operational_configuration": [
+        "status"
+      ],
+      "public_identity": [
+        "account_login"
+      ],
+      "routing_identity": [
+        "id",
+        "installation_id",
+        "instance_id",
+        "repository_id"
+      ],
+      "timestamp": [
+        "claimed_at",
+        "consumed_at",
+        "created_at"
+      ]
+    }
+  },
+  "forge_relay_deliveries": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [
+      "last_error",
+      "payload"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "attempts"
+      ],
+      "operational_configuration": [
+        "delivery_guid",
+        "event",
+        "provider",
+        "status"
+      ],
+      "routing_identity": [
+        "id",
+        "instance_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "delivered_at",
+        "next_attempt_at"
+      ]
+    }
+  },
+  "forge_relay_installations": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "public_identity": [
+        "account_login"
+      ],
+      "routing_identity": [
+        "id",
+        "installation_id",
+        "instance_id"
+      ],
+      "timestamp": [
+        "claimed_at"
+      ]
+    }
+  },
+  "forge_relay_instances": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [
+      "name",
+      "webhook_secret_encrypted",
+      "webhook_url"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "last_link_snapshot_generation"
+      ],
+      "operational_configuration": [
+        "public_key",
+        "status"
+      ],
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "created_at",
+        "revoked_at"
+      ]
+    }
+  },
+  "forge_relay_link_mirror": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [
+      "repo_full_name",
+      "webhook_secret_encrypted"
+    ],
+    "clear": {
+      "one_way_authentication": [
+        "webhook_secret_digest"
+      ],
+      "routing_identity": [
+        "connection_id",
+        "external_repo_id",
+        "instance_id",
+        "provider"
+      ],
+      "timestamp": [
+        "updated_at"
+      ]
+    }
+  },
+  "forge_relay_nonces": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "nonce"
+      ],
+      "timestamp": [
+        "expires_at"
+      ]
+    }
+  },
+  "forge_relay_provisioning": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [
+      "signing_key_encrypted",
+      "webhook_secret_encrypted"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "relay_url"
+      ],
+      "routing_identity": [
+        "id",
+        "instance_id"
+      ],
+      "timestamp": [
+        "registered_at"
+      ]
+    }
+  },
+  "forge_relay_refresh_lineage": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "one_way_authentication": [
+        "refresh_token_hash"
+      ],
+      "operational_configuration": [
+        "provider"
+      ],
+      "routing_identity": [
+        "id",
+        "instance_id",
+        "provider_account_id",
+        "refresh_claim_id"
+      ],
+      "timestamp": [
+        "refresh_claimed_at",
+        "updated_at"
+      ]
+    }
+  },
+  "forge_relay_user_deliveries": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [
+      "access_token_encrypted",
+      "refresh_token_encrypted"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "oauth_scopes",
+        "provider",
+        "status"
+      ],
+      "public_identity": [
+        "account_avatar_url",
+        "account_login"
+      ],
+      "routing_identity": [
+        "id",
+        "instance_id",
+        "provider_account_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "delivered_at",
+        "token_expires_at"
+      ]
+    }
+  },
+  "forge_webhook_deliveries": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "delivery_id",
+        "provider"
+      ],
+      "timestamp": [
+        "received_at"
+      ]
+    }
+  },
+  "fx_rates": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "usd_eur"
+      ],
+      "timestamp": [
+        "day",
+        "fetched_at"
+      ]
+    }
+  },
+  "git_connections": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "access_token_encrypted",
+      "refresh_token_encrypted"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "account_type",
+        "oauth_scopes",
+        "provider",
+        "repository_selection",
+        "source"
+      ],
+      "public_identity": [
+        "account_login"
+      ],
+      "routing_identity": [
+        "id",
+        "installation_id",
+        "oauth_refresh_claim",
+        "provider_account_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "oauth_refresh_claimed_at",
+        "token_expires_at",
+        "updated_at"
+      ]
+    }
+  },
+  "git_user_identities": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "access_token_encrypted",
+      "refresh_token_encrypted"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "oauth_scopes",
+        "provider",
+        "source"
+      ],
+      "public_identity": [
+        "account_avatar_url",
+        "account_login"
+      ],
+      "routing_identity": [
+        "id",
+        "oauth_refresh_claim",
+        "provider_account_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "oauth_refresh_claimed_at",
+        "token_expires_at",
+        "updated_at"
+      ]
+    }
+  },
+  "github_issue_comment_syncs": {
+    "scope": {
+      "ancestor": "issues:issue_id"
+    },
+    "encrypted": [
+      "html_url"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "author_association"
+      ],
+      "public_identity": [
+        "author_login"
+      ],
+      "routing_identity": [
+        "comment_id",
+        "issue_id",
+        "remote_comment_id"
+      ],
+      "timestamp": [
+        "created_at_remote",
+        "deleted_at_remote",
+        "synced_at",
+        "updated_at_remote",
+        "html_url_encryption_checked_at"
+      ],
+      "encryption_metadata": [
+        "html_url_encryption_version"
+      ]
+    }
+  },
+  "github_issue_comment_url_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "github_issue_metadata_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "github_issue_sync_metadata": {
+    "scope": {
+      "ancestor": "issues:issue_id"
+    },
+    "encrypted": [
+      "metadata",
+      "milestone"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "locked"
+      ],
+      "operational_configuration": [
+        "active_lock_reason",
+        "author_association",
+        "state_reason"
+      ],
+      "public_identity": [
+        "author_login",
+        "closed_by_login"
+      ],
+      "routing_identity": [
+        "github_node_id",
+        "issue_id"
+      ],
+      "timestamp": [
+        "closed_at_remote",
+        "created_at_remote",
+        "synced_at",
+        "updated_at_remote",
+        "content_encryption_checked_at"
+      ],
+      "encryption_metadata": [
+        "content_ciphertext",
+        "content_encryption_version"
+      ]
+    }
+  },
+  "integrations": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "name",
+      "webhook_url"
+    ],
+    "clear": {
+      "one_way_authentication": [
+        "key_hash",
+        "key_prefix"
+      ],
+      "operational_configuration": [
+        "kind",
+        "webhook_events",
+        "webhook_last_status",
+        "webhook_scope"
+      ],
+      "routing_identity": [
+        "created_by",
+        "id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "last_used_at",
+        "revoked_at",
+        "webhook_last_at"
+      ]
+    }
+  },
+  "issue_categories": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "category_id",
+        "issue_id"
+      ]
+    }
+  },
+  "issue_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "issue_events": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "from_value",
+      "to_value"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "smart_assign_ai",
+        "starts_work",
+        "via_assistant",
+        "via_automation",
+        "via_mcp",
+        "via_smart_assign",
+        "via_smart_fill"
+      ],
+      "operational_configuration": [
+        "field",
+        "forge_sync",
+        "type"
+      ],
+      "routing_identity": [
+        "actor_id",
+        "api_key_id",
+        "feedback_post_id",
+        "id",
+        "integration_id",
+        "issue_id",
+        "objective_id",
+        "page_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_checked_at",
+        "encryption_revision",
+        "encryption_version"
+      ]
+    }
+  },
+  "issue_relations": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "operational_configuration": [
+        "source_type",
+        "target_type",
+        "type"
+      ],
+      "routing_identity": [
+        "created_by",
+        "id",
+        "project_id",
+        "source_id",
+        "target_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "issue_remote_status_push_locks": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "claim_id",
+        "issue_id"
+      ],
+      "timestamp": [
+        "claimed_at"
+      ]
+    }
+  },
+  "issues": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "automation_override",
+      "description",
+      "plan",
+      "remote_url",
+      "title"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "number",
+        "position",
+        "remote_number"
+      ],
+      "operational_configuration": [
+        "effort",
+        "priority",
+        "recurrence",
+        "remote_provider",
+        "status"
+      ],
+      "routing_identity": [
+        "assignee_id",
+        "created_by",
+        "cycle_id",
+        "deleted_by",
+        "duplicate_of_id",
+        "id",
+        "integration_id",
+        "objective_id",
+        "parent_id",
+        "project_id",
+        "recurrence_series_id",
+        "remote_repo_id"
+      ],
+      "timestamp": [
+        "completed_at",
+        "created_at",
+        "deleted_at",
+        "due_date",
+        "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_checked_at",
+        "encryption_revision",
+        "encryption_version"
+      ]
+    }
+  },
+  "mfa_recovery_codes": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "one_way_authentication": [
+        "code_hash"
+      ],
+      "routing_identity": [
+        "id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "used_at"
+      ]
+    }
+  },
+  "notifications": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "via_assistant",
+        "via_automation",
+        "via_mcp",
+        "via_smart_assign"
+      ],
+      "operational_configuration": [
+        "type"
+      ],
+      "routing_identity": [
+        "actor_id",
+        "agent_conversation_id",
+        "api_key_id",
+        "block_id",
+        "comment_id",
+        "feedback_post_id",
+        "id",
+        "issue_id",
+        "numo_conversation_id",
+        "numo_work_id",
+        "objective_id",
+        "page_id",
+        "project_id",
+        "pull_request_id",
+        "routine_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "read_at"
+      ]
+    }
+  },
+  "numo_assistant_turns": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "checkpoint",
+      "error_message",
+      "intent",
+      "outcome"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "attempts",
+        "cost_usd",
+        "managed_budget_usd"
+      ],
+      "operational_configuration": [
+        "model",
+        "reasoning_level",
+        "status"
+      ],
+      "routing_identity": [
+        "active_run_id",
+        "claim_token",
+        "conversation_id",
+        "id",
+        "last_event_seq",
+        "request_id",
+        "run_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "claimed_at",
+        "completed_at",
+        "created_at",
+        "not_before",
+        "started_at",
+        "updated_at"
+      ]
+    }
+  },
+  "numo_automation_operations": {
+    "scope": {
+      "ancestor": "agent_chains:chain_id"
+    },
+    "encrypted": [
+      "context",
+      "outcome_blockers",
+      "outcome_summary",
+      "prompt"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "step"
+      ],
+      "operational_configuration": [
+        "locale",
+        "mode",
+        "outcome"
+      ],
+      "routing_identity": [
+        "chain_id",
+        "conversation_id",
+        "id",
+        "request_id",
+        "rule_id",
+        "turn_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ]
+    }
+  },
+  "numo_conversation_ids": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "agent_id",
+        "assistant_id",
+        "id"
+      ]
+    }
+  },
+  "numo_conversation_state": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "conversation_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "last_read_at",
+        "pinned_at"
+      ]
+    }
+  },
+  "numo_routine_occurrences": {
+    "scope": {
+      "ancestor": "agent_routines:routine_id"
+    },
+    "encrypted": [
+      "error_message"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "error_code",
+        "origin"
+      ],
+      "routing_identity": [
+        "conversation_id",
+        "id",
+        "request_id",
+        "routine_id",
+        "turn_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "scheduled_for",
+        "updated_at"
+      ]
+    }
+  },
+  "numo_surface_events": {
+    "scope": {
+      "kind": "user",
+      "column": "actor_id"
+    },
+    "encrypted": [
+      "destination"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "projected_turn_status",
+        "projection_status"
+      ],
+      "routing_identity": [
+        "actor_id",
+        "id",
+        "response_id",
+        "source_event_id",
+        "thread_id",
+        "turn_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "notified_at",
+        "projected_at",
+        "updated_at"
+      ]
+    }
+  },
+  "numo_surface_threads": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "operational_configuration": [
+        "surface"
+      ],
+      "routing_identity": [
+        "actor_id",
+        "conversation_id",
+        "id",
+        "project_id",
+        "source_thread_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ]
+    }
+  },
+  "numo_tool_operations": {
+    "scope": {
+      "ancestor": "numo_assistant_turns:turn_id"
+    },
+    "encrypted": [
+      "arguments",
+      "model_result",
+      "result"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "pause",
+        "success"
+      ],
+      "operational_configuration": [
+        "replay_policy",
+        "status",
+        "tool_name"
+      ],
+      "routing_identity": [
+        "claim_token",
+        "tool_call_id",
+        "turn_id"
+      ],
+      "timestamp": [
+        "completed_at",
+        "started_at"
+      ]
+    }
+  },
+  "numo_turn_events": {
+    "scope": {
+      "ancestor": "numo_assistant_turns:turn_id"
+    },
+    "encrypted": [
+      "payload"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "seq"
+      ],
+      "operational_configuration": [
+        "type"
+      ],
+      "routing_identity": [
+        "id",
+        "turn_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "oauth_authorization_codes": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "redirect_uri",
+      "resource"
+    ],
+    "clear": {
+      "one_way_authentication": [
+        "code_challenge",
+        "code_hash"
+      ],
+      "operational_configuration": [
+        "scope"
+      ],
+      "routing_identity": [
+        "client_id",
+        "code_challenge_method",
+        "grant_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "expires_at",
+        "used_at"
+      ]
+    }
+  },
+  "oauth_clients": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [
+      "client_name",
+      "client_uri",
+      "logo_uri",
+      "redirect_uris"
+    ],
+    "clear": {
+      "routing_identity": [
+        "client_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "last_used_at"
+      ]
+    }
+  },
+  "oauth_grants": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "one_way_authentication": [
+        "access_token_hash",
+        "prev_refresh_token_hash",
+        "refresh_token_hash"
+      ],
+      "operational_configuration": [
+        "scope"
+      ],
+      "routing_identity": [
+        "api_key_id",
+        "client_id",
+        "id",
+        "user_id"
+      ],
+      "timestamp": [
+        "access_token_expires_at",
+        "created_at",
+        "last_used_at",
+        "refresh_token_expires_at",
+        "revoked_at"
+      ]
+    }
+  },
+  "objectives": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "description",
+      "name"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "color",
+        "status"
+      ],
+      "routing_identity": [
+        "deleted_by",
+        "id",
+        "lead_user_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "deleted_at",
+        "target_date",
+        "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_checked_at",
+        "encryption_revision",
+        "encryption_version"
+      ]
+    }
+  },
+  "page_comments": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "body",
+      "quote"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "via_assistant",
+        "via_mcp"
+      ],
+      "operational_configuration": [
+        "assistant_status",
+        "assistant_tool"
+      ],
+      "routing_identity": [
+        "api_key_id",
+        "author_id",
+        "block_id",
+        "id",
+        "page_id",
+        "parent_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_checked_at",
+        "encryption_revision",
+        "encryption_version"
+      ]
+    }
+  },
+  "page_database_imports": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "page_count"
+      ],
+      "routing_identity": [
+        "created_by",
+        "id",
+        "page_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "page_files": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "file_name",
+      "storage_path"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "size_bytes"
+      ],
+      "operational_configuration": [
+        "mime_type"
+      ],
+      "routing_identity": [
+        "created_by",
+        "id",
+        "page_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "page_links": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "page_id",
+        "project_id",
+        "source_id",
+        "source_kind"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "page_versions": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "content",
+      "icon",
+      "title"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "version"
+      ],
+      "operational_configuration": [
+        "author_kind"
+      ],
+      "routing_identity": [
+        "author_api_key_id",
+        "author_id",
+        "id",
+        "page_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_checked_at",
+        "encryption_revision",
+        "encryption_version"
+      ]
+    }
+  },
+  "page_viewers": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "page_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "seen_at"
+      ]
+    }
+  },
+  "pages": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "content",
+      "database_schema",
+      "database_title_name",
+      "icon",
+      "property_values",
+      "title"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "database_revision",
+        "favorite",
+        "parent_block_removed",
+        "version"
+      ],
+      "operational_configuration": [
+        "position",
+        "updated_kind"
+      ],
+      "remove_projection": [
+        "search_text",
+        "search_tsv"
+      ],
+      "routing_identity": [
+        "created_by",
+        "deleted_by",
+        "deleted_root_id",
+        "id",
+        "parent_id",
+        "project_id",
+        "updated_api_key_id",
+        "updated_by"
+      ],
+      "timestamp": [
+        "created_at",
+        "deleted_at",
+        "updated_at"
+      ]
+    }
+  },
+  "plan_storage_quotas": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "bytes"
+      ],
+      "routing_identity": [
+        "plan_id"
+      ]
+    }
+  },
+  "pr_comment_edits": {
+    "scope": {
+      "lookup": "project_git_links",
+      "match": [
+        "provider",
+        "repo_full_name"
+      ]
+    },
+    "encrypted": [
+      "body",
+      "repo_full_name"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "pr_number"
+      ],
+      "operational_configuration": [
+        "edited_by",
+        "provider"
+      ],
+      "routing_identity": [
+        "comment_id",
+        "id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "project_drafts": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "data",
+      "name"
+    ],
+    "clear": {
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_checked_at",
+        "encryption_revision",
+        "encryption_version"
+      ],
+      "operational_configuration": [
+        "step"
+      ],
+      "routing_identity": [
+        "id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ]
+    }
+  },
+  "project_git_links": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "default_branch",
+      "repo_full_name",
+      "repo_name",
+      "repo_owner",
+      "repo_previous_names",
+      "webhook_secret_encrypted"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "issue_sync_enabled"
+      ],
+      "operational_configuration": [
+        "provider"
+      ],
+      "routing_identity": [
+        "connection_id",
+        "created_by",
+        "external_repo_id",
+        "id",
+        "installation_id",
+        "issue_sync_hook_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "issue_sync_backfilled_at",
+        "issue_sync_enabled_at",
+        "updated_at"
+      ]
+    }
+  },
+  "project_invitations": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "invited_email"
+    ],
+    "clear": {
+      "encryption_metadata": [
+        "encryption_version",
+        "invited_email_blind_index",
+        "invited_email_ciphertext"
+      ],
+      "operational_configuration": [
+        "status"
+      ],
+      "routing_identity": [
+        "id",
+        "invited_by",
+        "invited_user_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "expires_at",
+        "responded_at",
+        "updated_at"
+      ],
+      "token_digest": [
+        "token"
+      ]
+    }
+  },
+  "project_members": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "operational_configuration": [
+        "role"
+      ],
+      "routing_identity": [
+        "added_by",
+        "project_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "project_realtime_generations": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "generation"
+      ],
+      "routing_identity": [
+        "project_id"
+      ]
+    }
+  },
+  "project_storage_owners": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "object_count",
+        "project_deleted"
+      ],
+      "routing_identity": [
+        "owner_id",
+        "project_id"
+      ]
+    }
+  },
+  "projects": {
+    "scope": {
+      "kind": "project",
+      "column": "id"
+    },
+    "encrypted": [
+      "automations",
+      "icon_url",
+      "name",
+      "smart_assign_rules"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "auto_assign_enabled",
+        "automations_enabled",
+        "feedback_review_enabled",
+        "feedback_review_skip_over_budget",
+        "feedback_translate_enabled",
+        "smart_assign_enabled"
+      ],
+      "operational_configuration": [
+        "color",
+        "feedback_no_translate_languages",
+        "feedback_team_language",
+        "orb_seed",
+        "smart_triage_mode"
+      ],
+      "routing_identity": [
+        "deleted_by",
+        "id",
+        "issue_seq",
+        "key",
+        "owner_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "deleted_at",
+        "updated_at"
+      ]
+    }
+  },
+  "provider_operation_reservations": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [
+      "resource_key"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "operation",
+        "provider"
+      ],
+      "routing_identity": [
+        "actor_id",
+        "id"
+      ],
+      "timestamp": [
+        "created_at",
+        "lease_expires_at"
+      ]
+    }
+  },
+  "pull_request_syncs": {
+    "scope": {
+      "lookup": "project_git_links",
+      "match": [
+        "provider",
+        "repo_full_name"
+      ]
+    },
+    "encrypted": [
+      "repo_full_name"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "truncated"
+      ],
+      "routing_identity": [
+        "provider"
+      ],
+      "timestamp": [
+        "synced_at"
+      ]
+    }
+  },
+  "pull_requests": {
+    "scope": {
+      "lookup": "project_git_links",
+      "match": [
+        "provider",
+        "repo_full_name"
+      ]
+    },
+    "encrypted": [
+      "base_branch",
+      "head_branch",
+      "repo_full_name",
+      "title",
+      "url"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "number"
+      ],
+      "operational_configuration": [
+        "provider"
+      ],
+      "public_identity": [
+        "author_avatar_url",
+        "author_login"
+      ],
+      "routing_identity": [
+        "head_sha",
+        "id",
+        "issue_id",
+        "state"
+      ],
+      "timestamp": [
+        "created_at",
+        "merged_at",
+        "opened_at",
+        "synced_at",
+        "updated_at"
+      ]
+    }
+  },
+  "push_subscriptions": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "auth",
+      "device_label",
+      "endpoint",
+      "native_installation_id",
+      "p256dh",
+      "user_agent"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "enabled",
+        "failure_count"
+      ],
+      "operational_configuration": [
+        "locale",
+        "transport"
+      ],
+      "routing_identity": [
+        "id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "last_push_at",
+        "last_seen_at"
+      ]
+    }
+  },
+  "saved_views": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "href",
+      "name"
+    ],
+    "clear": {
+      "routing_identity": [
+        "id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ]
+    }
+  },
+  "share_unlock_attempts": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "one_way_authentication": [
+        "ip_hash"
+      ],
+      "routing_identity": [
+        "id",
+        "share_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "stat_events": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "issue_title",
+      "project_name",
+      "task_text"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "issue_number"
+      ],
+      "operational_configuration": [
+        "kind"
+      ],
+      "routing_identity": [
+        "id",
+        "issue_id",
+        "project_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "encryption_checked_at",
+        "occurred_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_revision",
+        "encryption_version"
+      ]
+    }
+  },
+  "stripe_webhook_events": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [
+      "payload"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "livemode"
+      ],
+      "operational_configuration": [
+        "type"
+      ],
+      "routing_identity": [
+        "stripe_event_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "processed_at"
+      ]
+    }
+  },
+  "user_agent_preferences": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "branch_prefix"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "default_model",
+        "default_model_provider",
+        "default_reasoning_level",
+        "sandbox_region",
+        "sandbox_size"
+      ],
+      "routing_identity": [
+        "user_id"
+      ],
+      "timestamp": [
+        "updated_at"
+      ]
+    }
+  },
+  "user_ai_capability_assignments": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "ai_key_id",
+        "capability",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ]
+    }
+  },
+  "user_ai_keys": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "base_url",
+      "feature_models",
+      "key_encrypted"
+    ],
+    "clear": {
+      "one_way_authentication": [
+        "key_prefix"
+      ],
+      "operational_configuration": [
+        "enabled_surfaces",
+        "provider"
+      ],
+      "routing_identity": [
+        "id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "last_used_at",
+        "updated_at",
+        "validated_at"
+      ]
+    }
+  },
+  "user_avatars": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "public_identity": [
+        "image_path",
+        "seed"
+      ],
+      "routing_identity": [
+        "user_id"
+      ],
+      "timestamp": [
+        "updated_at"
+      ]
+    }
+  },
+  "user_mcp_connections": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "headers_encrypted",
+      "name",
+      "oauth_encrypted",
+      "token_encrypted",
+      "url"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "enabled",
+        "oauth_connected"
+      ],
+      "operational_configuration": [
+        "auth_mode",
+        "transport"
+      ],
+      "routing_identity": [
+        "id",
+        "oauth_lock_token",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "oauth_lock_until"
+      ]
+    }
+  },
+  "user_mcp_oauth_attempts": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "endpoint",
+      "payload_encrypted"
+    ],
+    "clear": {
+      "routing_identity": [
+        "connection_id",
+        "state",
+        "user_id"
+      ],
+      "timestamp": [
+        "expires_at"
+      ]
+    }
+  },
+  "user_realtime_generations": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "generation"
+      ],
+      "routing_identity": [
+        "user_id"
+      ]
+    }
+  },
+  "user_scratchpad": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "content"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "rev"
+      ],
+      "routing_identity": [
+        "user_id"
+      ],
+      "timestamp": [
+        "encryption_checked_at",
+        "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ]
+    }
+  },
+  "view_shares": {
+    "scope": {
+      "ancestors": [
+        "views:view_id",
+        "pages:page_id"
+      ]
+    },
+    "encrypted": [
+      "token"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "include_children"
+      ],
+      "one_way_authentication": [
+        "password_hash",
+        "password_salt"
+      ],
+      "operational_configuration": [
+        "level"
+      ],
+      "routing_identity": [
+        "created_by",
+        "id",
+        "page_id",
+        "view_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ]
+    }
+  },
+  "views": {
+    "scope": {
+      "choices": [
+        {
+          "kind": "project",
+          "column": "project_id"
+        },
+        {
+          "kind": "user",
+          "column": "user_id"
+        }
+      ]
+    },
+    "encrypted": [
+      "display",
+      "filters",
+      "name"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "position"
+      ],
+      "operational_configuration": [
+        "kind",
+        "sort"
+      ],
+      "routing_identity": [
+        "id",
+        "project_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ]
+    }
+  },
+  "agent_verdict_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  },
+  "agent_deployment_encryption_scopes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "project_id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
+  }
+}

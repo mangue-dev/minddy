@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -36,8 +37,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("commentEmpty") }, { status: 400 });
   }
 
-  const { data, error } = await auth.supabase
-    .from("page_comments")
+  const { data, error } = await commentStore(auth.supabase, "page_comments", auth.user.id)
     .update({ body: text })
     // Keep ownership and route scope explicit in addition to the policy. The
     // filters make the route's behavior readable and preserve a uniform 404.
@@ -68,8 +68,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await auth.supabase
-    .from("page_comments")
+  const { data, error } = await commentStore(auth.supabase, "page_comments", auth.user.id)
     .delete()
     .eq("id", commentId)
     .eq("page_id", pageId)
