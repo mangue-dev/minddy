@@ -229,7 +229,7 @@ import {
   type InboxReadCategory,
   type InboxReadState,
 } from "@/lib/inbox-tool";
-import { resolveAssistantProjectId } from "./project-scope";
+import { resolveAssistantProjectId, resolveAssistantProjectTarget } from "./project-scope";
 import { readPlanUsageTool, readUserStatsTool } from "./stats-tools";
 
 // ── Tool execution ─────────────────────────────────────────────────────
@@ -1184,10 +1184,15 @@ export async function executeTool(
     }
 
     // ── Project scope resolution (all remaining tools) ──────────────────
-    const projectId = resolveAssistantProjectId(
+    const target = await resolveAssistantProjectTarget(
+      ctx,
       ctx.requireExplicitProjectTarget ? null : ctx.projectId,
       args.project_id,
     );
+    if (target.error) {
+      return toolError(target.error);
+    }
+    const projectId = target.projectId;
     if (!projectId) {
       return toolError(
         "No explicit project target. Pass project_id (use list_projects to discover projects).",
@@ -1195,7 +1200,9 @@ export async function executeTool(
     }
     const access = await getProjectAccess(ctx.userId, projectId);
     if (!access) {
-      return toolError("Project not found or not accessible.");
+      return toolError(
+        "Project not found or not accessible. Pass the project's id (resolve it with list_projects) or its exact key or name.",
+      );
     }
 
     switch (toolName) {

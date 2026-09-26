@@ -9,6 +9,15 @@ type RerunnableCheck = PullRequestCheck & {
 
 export const PULL_REQUEST_POLL_MS = 15_000;
 export const PULL_REQUEST_READINESS_SETTLED_POLL_MS = 60_000;
+/**
+ * Settled backstop (MIN-595): a PR that is NOT moving keeps a slow cadence —
+ * one light request a minute while the reader watches, so a fact that arrived
+ * without a webhook (dev, self-hosted relay, dropped delivery) converges on
+ * its own instead of waiting for a reload. Applied to the badge count, the PR
+ * list and the conversation/commits caches; never faster, so the forge is
+ * never hammered.
+ */
+export const PULL_REQUEST_SETTLED_POLL_MS = 60_000;
 
 /**
  * The merge-flow checkbox is optimistic: the forge's read-back can lag the

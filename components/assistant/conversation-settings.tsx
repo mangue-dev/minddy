@@ -9,7 +9,6 @@ import {
   PopoverContent,
   PopoverTrigger,
   Slider,
-  cn,
 } from "mangue-ui";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { ModelLogo, ProviderLogo } from "@/components/model-logo";
@@ -194,52 +193,17 @@ export function ConversationSettings() {
           </div>
 
           <div className="mt-4 px-1 pb-1">
-            <div className="relative">
-              <Slider
-                value={[reasoningIndex]}
-                min={0}
-                max={Math.max(0, reasoningLevels.length - 1)}
-                step={1}
-                aria-label={t("reasoning")}
-                className="h-8 [&_[data-slot=slider-track]]:h-6 [&_[data-slot=slider-track]]:rounded-full [&_[data-slot=slider-range]]:bg-blue-500 [&_[data-slot=slider-thumb]]:size-8 [&_[data-slot=slider-thumb]]:border-[3px] [&_[data-slot=slider-thumb]]:border-background [&_[data-slot=slider-thumb]]:ring-blue-500/30"
-                onValueChange={(values) => {
-                  selectReasoningIndex(values[0] ?? 0);
-                }}
-              />
-              <div
-                className="pointer-events-none absolute inset-x-0 top-1/2 grid -translate-y-1/2"
-                style={{
-                  gridTemplateColumns: `repeat(${reasoningLevels.length}, minmax(0, 1fr))`,
-                }}
-              >
-                {reasoningLevels.map((level, index) => (
-                  <button
-                    key={level}
-                    type="button"
-                    aria-label={t(REASONING_LABEL_KEYS[level])}
-                    tabIndex={index === reasoningIndex ? -1 : 0}
-                    onClick={() => selectReasoningIndex(index)}
-                    className={cn(
-                      "group mx-auto flex size-6 items-center justify-center rounded-full",
-                      index === reasoningIndex
-                        ? "pointer-events-none"
-                        : "pointer-events-auto",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "size-1.5 rounded-full transition-transform duration-150",
-                        index === reasoningIndex
-                          ? "opacity-0"
-                          : index < reasoningIndex
-                            ? "bg-blue-300"
-                            : "bg-muted-foreground/35 group-hover:scale-150 group-focus-visible:scale-150",
-                      )}
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
+            <Slider
+              value={[reasoningIndex]}
+              min={0}
+              max={Math.max(0, reasoningLevels.length - 1)}
+              step={1}
+              aria-label={t("reasoning")}
+              className="[&_[data-slot=slider-range]]:bg-blue-500"
+              onValueChange={(values) => {
+                selectReasoningIndex(values[0] ?? 0);
+              }}
+            />
           </div>
         </PopoverContent>
       </Popover>

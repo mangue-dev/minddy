@@ -130,3 +130,54 @@ describe("forcedToolCall — repli du raccourci de routage", () => {
     expect(modelsSent).toEqual(["openai/gpt-5:nitro", "openai/gpt-5"]);
   });
 });
+
+describe("forcedToolCall — demande de raisonnement", () => {
+  it("ne pose aucun champ de raisonnement quand l'effort n'est pas demandé", async () => {
+    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation((async (
+      _url: string,
+      init: { body: string },
+    ) => {
+      expect(JSON.parse(init.body).reasoning).toBeUndefined();
+      return okResponse("m");
+    }) as unknown as typeof fetch);
+    await call("z-ai/glm-5.3");
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("demande l'effort demandé, tel quel, au fournisseur", async () => {
+    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation((async (
+      _url: string,
+      init: { body: string },
+    ) => {
+      expect(JSON.parse(init.body).reasoning).toEqual({ effort: "low" });
+      return okResponse("z-ai/glm-5.3");
+    }) as unknown as typeof fetch);
+    await forcedToolCall("z-ai/glm-5.3", "system", "user", "pick", { type: "object" }, {
+      logPrefix: "[test]",
+      reasoning: "low",
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("repose le même effort sur le modèle nu après un repli de suffixe", async () => {
+    stubFetch((model) => (model.includes(":") ? refusal() : okResponse(model)));
+    const bodyModels: unknown[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation((async (
+      _url: string,
+      init: { body: string },
+    ) => {
+      bodyModels.push(JSON.parse(init.body).reasoning);
+      const model = JSON.parse(init.body).model as string;
+      return model.includes(":") ? refusal() : okResponse(model);
+    }) as unknown as typeof fetch);
+    const out = await forcedToolCall("z-ai/glm-5.3:exacto", "system", "user", "pick", { type: "object" }, {
+      logPrefix: "[test]",
+      reasoning: "low",
+    });
+    expect(out).toEqual({ model: "z-ai/glm-5.3" });
+    expect(bodyModels).toEqual([
+      { effort: "low", exclude: false },
+      { effort: "low", exclude: false },
+    ]);
+  });
+});

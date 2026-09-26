@@ -1561,10 +1561,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     },
     [armSearchIndex, refreshSearchIndex, warmPalette]
   );
-  useCommandPaletteLauncher({
-    open: paletteOpen,
-    onOpenChange: handlePaletteOpenChange,
-  });
   const openDestinationPalette = useCallback(() => {
     warmPalette();
     setPaletteMode("destination");
@@ -1572,6 +1568,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     armSearchIndex();
     refreshSearchIndex();
   }, [armSearchIndex, refreshSearchIndex, warmPalette]);
+  useCommandPaletteLauncher({
+    open: paletteOpen,
+    onOpenChange: handlePaletteOpenChange,
+    onNewTab: openDestinationPalette,
+  });
   const handlePaletteContentOpenChange = useCallback((next: boolean) => {
     setPaletteOpen(next);
     if (!next) setPaletteMode("default");

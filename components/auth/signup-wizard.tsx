@@ -347,7 +347,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
                       <Input
                         id="email"
                         type="email"
-                        className="h-10 bg-card"
+                        className="h-10 bg-control"
                         autoComplete="email"
                         autoFocus
                         required
@@ -391,7 +391,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
                       <Input
                         id="full-name"
                         type="text"
-                        className="h-10 bg-card"
+                        className="h-10 bg-control"
                         autoComplete="name"
                         autoFocus
                         required
@@ -418,7 +418,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
                       <Input
                         id="password"
                         type="password"
-                        className="h-10 bg-card"
+                        className="h-10 bg-control"
                         autoComplete="new-password"
                         autoFocus
                         required
@@ -433,7 +433,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
                     <Input
                       id="confirm-password"
                       type="password"
-                      className="h-10 bg-card"
+                      className="h-10 bg-control"
                       autoComplete="new-password"
                       required
                       minLength={MIN_PASSWORD_LENGTH}

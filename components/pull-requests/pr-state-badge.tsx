@@ -22,8 +22,8 @@ import type { PullRequestListItem } from "@/lib/agent-api";
  * follows the same logic: GitHub has one per state, and it carries the information
  * without the color (so without excluding who does not distinguish it).
  *
- * The SHAPE, for its part, remains that of minddy's badges: tint at 10%, edge at
- * 20%, never a solid — that's what we have.
+ * The SHAPE, for its part, remains that of minddy's badges: tint at 10%, no
+ * border — the borderless badge that the landing-page page illustrations use.
  *
  * `PR_STATE_STYLES` is exported because the status of a PR reads ELSEWHERE than
  * in this badge — the list of agent sessions, the header of a conversation —
@@ -34,11 +34,10 @@ import type { PullRequestListItem } from "@/lib/agent-api";
 type PrState = PullRequestListItem["pr_state"];
 
 export const PR_STATE_STYLES: Record<PrState, string> = {
-  open: "border-green-600/20 bg-green-600/10 text-green-700 dark:border-green-500/25 dark:bg-green-500/15 dark:text-green-400",
+  open: "bg-green-600/10 text-green-700 dark:bg-green-500/15 dark:text-green-400",
   merged:
-    "border-violet-600/20 bg-violet-600/10 text-violet-700 dark:border-violet-500/25 dark:bg-violet-500/15 dark:text-violet-400",
-  closed:
-    "border-destructive/20 bg-destructive/10 text-destructive dark:bg-destructive/15",
+    "bg-violet-600/10 text-violet-700 dark:bg-violet-500/15 dark:text-violet-400",
+  closed: "bg-destructive/10 text-destructive dark:bg-destructive/15",
   // The draft keeps the gray of `secondary`: it is already that of GitHub.
   draft: "",
 };

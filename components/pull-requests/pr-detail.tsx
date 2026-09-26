@@ -579,6 +579,55 @@ function ThreadComment({
   );
 }
 
+/** How long a pending Numo merge may pin the panel: the job usually lands
+    in well under a minute, the ceiling only exists so a lost background
+    job does not pin the card forever. */
+const NUMO_MERGE_WAIT_MS = 5 * 60_000;
+
+/** The pending "generate then merge" marker, kept in sessionStorage: the
+    job runs server-side and survives navigation, the marker must too.
+    Session scope (not local): a job is a gesture of THIS tab, and a stale
+    marker across days would claim a merge that no longer runs. */
+const NUMO_MERGE_MARKER_KEY = "minddy:numo-merge-pending";
+
+interface NumoMergeMarker {
+  prId: string;
+  /** Epoch ms of the launch — both the card's ticking clock and the
+      expiry: past the wait ceiling, the marker is dropped, not restored. */
+  startedAt: number;
+}
+
+function writeNumoMergeMarker(marker: NumoMergeMarker | null): void {
+  try {
+    if (marker) {
+      sessionStorage.setItem(NUMO_MERGE_MARKER_KEY, JSON.stringify(marker));
+    } else {
+      sessionStorage.removeItem(NUMO_MERGE_MARKER_KEY);
+    }
+  } catch {
+    // Storage unavailable (private mode, quota): the marker is an
+    // affordance, not data — the flow works without it.
+  }
+}
+
+function readNumoMergeMarker(): NumoMergeMarker | null {
+  try {
+    const raw = sessionStorage.getItem(NUMO_MERGE_MARKER_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      typeof (parsed as NumoMergeMarker).prId === "string" &&
+      typeof (parsed as NumoMergeMarker).startedAt === "number"
+    ) {
+      return parsed as NumoMergeMarker;
+    }
+  } catch {
+    // Unreadable marker = no marker.
+  }
+  return null;
+}
+
 export function PrDetail({
   item,
   onBack,
@@ -700,8 +749,13 @@ export function PrDetail({
   const [mergeCommitDraftEdited, setMergeCommitDraftEdited] = useState(false);
   // "Generate then merge" (MIN-548): the generation runs in the
   // background and the merge fires the moment it lands; the panel marks the
-  // wait until the broadcast settles it one way or the other.
+  // wait until the broadcast settles it one way or the other. The marker
+  // survives navigation (sessionStorage): the job belongs to the PR, not to
+  // the page that launched it — coming back must still show it running.
   const [numoMerging, setNumoMerging] = useState(false);
+  const [numoMergeStartedAt, setNumoMergeStartedAt] = useState<string | null>(
+    null,
+  );
   const numoMergeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mergeTab, setMergeTab] = useState<"numo" | "manual">("numo");
   const [reviewVerdict, setReviewVerdict] = useState<ReviewVerdict | null>(null);
@@ -807,6 +861,8 @@ export function PrDetail({
     if (!numoMerging) return;
     if (pr?.state === "merged" || item.pr_state === "merged") {
       setNumoMerging(false);
+      setNumoMergeStartedAt(null);
+      writeNumoMergeMarker(null);
     }
   }, [numoMerging, pr?.state, item.pr_state]);
   useEffect(() => {
@@ -814,6 +870,33 @@ export function PrDetail({
       if (numoMergeTimer.current) clearTimeout(numoMergeTimer.current);
     };
   }, []);
+  // Coming back to this PR while a Numo merge runs elsewhere in the
+  // session: restore the pending marker (card + expiry) from where it
+  // left. A terminal state drops it — the job is over, whatever it did.
+  useEffect(() => {
+    if (item.pr_state === "merged" || item.pr_state === "closed") {
+      if (readNumoMergeMarker()?.prId === item.prId) writeNumoMergeMarker(null);
+      return;
+    }
+    const marker = readNumoMergeMarker();
+    if (!marker || marker.prId !== item.prId) return;
+    const elapsed = Date.now() - marker.startedAt;
+    if (elapsed < 0 || elapsed >= NUMO_MERGE_WAIT_MS) {
+      writeNumoMergeMarker(null);
+      return;
+    }
+    setNumoMerging(true);
+    setNumoMergeStartedAt(new Date(marker.startedAt).toISOString());
+    numoMergeTimer.current = setTimeout(() => {
+      setNumoMerging(false);
+      setNumoMergeStartedAt(null);
+      writeNumoMergeMarker(null);
+      toast.error(t("numoMergeFailed"));
+    }, NUMO_MERGE_WAIT_MS - elapsed);
+    // Mount only: the marker is read once per PR page, the timer and the
+    // broadcast own everything after.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.prId]);
 
   const prevWorking = useRef(isWorking);
   useEffect(() => {
@@ -1134,7 +1217,10 @@ export function PrDetail({
 
   const startNumoMerge = async (method?: MergeMethod) => {
     if (numoMerging || !prPageContext) return;
+    const startedAt = Date.now();
     setNumoMerging(true);
+    setNumoMergeStartedAt(new Date(startedAt).toISOString());
+    writeNumoMergeMarker({ prId: item.prId, startedAt });
     setConfirmAction(null);
     setMergeCommitDraft(null);
     setMergeCommitDraftEdited(false);
@@ -1146,10 +1232,14 @@ export function PrDetail({
       // a lost background job must not pin the panel forever.
       numoMergeTimer.current = setTimeout(() => {
         setNumoMerging(false);
+        setNumoMergeStartedAt(null);
+        writeNumoMergeMarker(null);
         toast.error(t("numoMergeFailed"));
-      }, 5 * 60_000);
+      }, NUMO_MERGE_WAIT_MS);
     } catch (err) {
       setNumoMerging(false);
+      setNumoMergeStartedAt(null);
+      writeNumoMergeMarker(null);
       toast.error((err as Error).message);
     }
   };
@@ -1517,18 +1607,33 @@ export function PrDetail({
     ],
   );
 
-  // The FIX gesture of a failing PR (MIN-548 review): one prompt — identify
-  // what is wrong, fix it — that either lands in the clipboard or wakes
-  // Numo directly. A red card is only half the story; this card is the way
-  // out.
+  // The FIX gesture of a PR that needs a hand (MIN-548 review): one prompt —
+  // identify what is wrong, fix it — that either lands in the clipboard or
+  // wakes Numo directly. A red card is only half the story; this card is the
+  // way out.
+  //
+  // The card appears as soon as ANYTHING stands between the PR and its
+  // merge, not only once the whole CI suite has settled: one failing check
+  // is enough, and so is one unresolved review conversation, an
+  // out-of-date branch, or a conflict. The prompt carries the same stories.
+  const fixExtras = useMemo(
+    () => ({
+      unresolvedThreads,
+      branchOutOfDate: !!effectiveReadiness?.blockers.some(
+        (blocker) => blocker.kind === "branch",
+      ),
+    }),
+    [unresolvedThreads, effectiveReadiness?.blockers],
+  );
   const fixPrompt = useMemo(
-    () => buildPullRequestFixPrompt(feedbackContext, checks),
-    [feedbackContext, checks],
+    () => buildPullRequestFixPrompt(feedbackContext, checks, fixExtras),
+    [feedbackContext, checks, fixExtras],
   );
   const prFailing =
-    checks?.state === "failure" ||
+    !!checks?.checks.some((check) => check.state === "failure") ||
+    unresolvedThreads.length > 0 ||
     !!effectiveReadiness?.blockers.some(
-      (blocker) => blocker.kind === "conflicts",
+      (blocker) => blocker.kind === "conflicts" || blocker.kind === "branch",
     );
   const fixCard = useMemo(() => {
     if (!prFailing) return null;
@@ -1662,10 +1767,12 @@ export function PrDetail({
             </span>
           )}
         </span>
-        {isWorking || numoMerging ? (
+        {/* A Numo merge in progress has its own card in the status grid —
+            it survives navigation there, which a header spinner never did. */}
+        {isWorking ? (
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <Spinner />
-            {t(isWorking ? "numoWorking" : "numoMerging")}
+            {t("numoWorking")}
           </span>
         ) : null}
 
@@ -2037,6 +2144,7 @@ export function PrDetail({
             onStartFileReview={startFileReview}
             numoReview={numoReviewCard}
             fixRun={fixRunCard}
+            numoMerge={numoMerging ? { startedAt: numoMergeStartedAt } : null}
             checksOpen={checksPopoverOpen}
             onChecksOpenChange={setChecksPopoverOpen}
             onRequestReview={openAiReviewDialog}
@@ -2323,7 +2431,7 @@ export function PrDetail({
             onChange={(event) => setTitleDraft(event.target.value)}
             maxLength={256}
             autoFocus
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-9 w-full rounded-md bg-control px-3 text-sm outline-none focus-visible:bg-control-hover"
             onKeyDown={(event) => {
               if (event.key === "Enter" && titleDraft.trim()) void saveTitle();
             }}
@@ -2348,7 +2456,9 @@ export function PrDetail({
             setConfirmAction(null);
             setMergeCommitDraft(null);
             setMergeCommitDraftEdited(false);
+            if (numoMerging) writeNumoMergeMarker(null);
             setNumoMerging(false);
+            setNumoMergeStartedAt(null);
           }
         }}
       >
@@ -2404,7 +2514,7 @@ export function PrDetail({
                       current ? { ...current, title: event.target.value } : current,
                     );
                   }}
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="h-9 w-full rounded-md bg-control px-3 text-sm font-normal outline-none focus-visible:bg-control-hover"
                 />
               </label>
               <label className="grid gap-1.5 text-sm font-medium">
@@ -2652,8 +2762,8 @@ export function PrDetail({
 
           <div
             className={cn(
-              "relative min-w-0 max-w-full overflow-clip rounded-md border border-border transition-colors focus-within:border-ring",
-              reviewDrop.dragging && "border-brand",
+              "relative min-w-0 max-w-full overflow-clip rounded-md bg-control transition-colors",
+              reviewDrop.dragging && "ring-2 ring-brand/20",
             )}
             onPaste={pasteFileHandler(reviewUploads.addFiles)}
             {...reviewDrop.handlers}

@@ -40,15 +40,15 @@ const STATUS_BADGE_CLASSES: Record<FeedbackPostStatus, string | null> = {
   open: null,
   planned: null,
   in_progress:
-    "border-amber-700/30 bg-amber-500/10 text-amber-700 dark:border-yellow-300/30 dark:bg-yellow-300/10 dark:text-yellow-300",
+    "bg-amber-500/10 text-amber-700 dark:bg-yellow-300/10 dark:text-yellow-300",
   shipped:
-    "border-green-700/30 bg-green-500/10 text-green-700 dark:border-green-400/30 dark:bg-green-400/10 dark:text-green-400",
+    "bg-green-500/10 text-green-700 dark:bg-green-400/10 dark:text-green-400",
   declined:
-    "border-red-700/30 bg-red-500/10 text-red-700 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-400",
+    "bg-red-500/10 text-red-700 dark:bg-red-400/10 dark:text-red-400",
   // Spam cannot be painted off: it goes out. An alert color would give it
   // the weight of a decision to reread, when it is precisely what we have
   // fini de regarder.
-  spam: "border-border bg-muted text-muted-foreground",
+  spam: "bg-muted text-muted-foreground",
 };
 
 /**

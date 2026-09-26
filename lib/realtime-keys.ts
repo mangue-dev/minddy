@@ -457,6 +457,10 @@ export function keysForProjectEvent(
         active(ALL_PULL_REQUESTS_KEY),
         active(OPEN_PULL_REQUEST_COUNT_KEY),
         active(["app-tab-metadata"]),
+        // The readiness caches — the single key AND the batch (prefix, one key
+        // per set of rows): a sweep write moves the checks state of the rows,
+        // and the batch polls every 60 s only — without these invalidations a
+        // row that just settled stayed "checks running" up to its next tick.
         active(["pull-request-readiness"]),
         ...(prId ? [active(["pull-request", prId])] : []),
         ...(issueId ? [active(["agent-runs", "issue", issueId])] : []),

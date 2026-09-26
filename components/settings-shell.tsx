@@ -402,8 +402,9 @@ function SettingsTabs({
 
                 Spacing lives BETWEEN the cards: each group carries its
                 own frame, a `space-y-10` (which separated blocks without borders)
-                laisserait des trous. */}
-            <div key={activeTab} className="flex flex-col gap-4">
+                would leave gaps. The gap between groups is generous
+                (`gap-8`, MIN-593): each card reads as its own section. */}
+            <div key={activeTab} className="flex flex-col gap-8">
               {visibleTabs.find((tab) => tab.value === activeTab)?.content}
             </div>
           </div>

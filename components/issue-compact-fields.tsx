@@ -49,7 +49,7 @@ import {
 const BARE =
   "flex items-center gap-1.5 rounded-md p-1.5 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted max-sm:p-2";
 const SMART_FILL_PILL =
-  "flex h-8 items-center gap-1.5 rounded-full border border-input bg-transparent px-3 text-sm text-foreground outline-none transition-colors hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:border-ring max-sm:h-9";
+  "flex h-8 items-center gap-1.5 rounded-full bg-transparent px-3 text-sm text-foreground outline-none transition-colors hover:bg-muted/40 focus-visible:bg-muted/40 aria-expanded:bg-muted/40 max-sm:h-9";
 
 // Lets the create-issue dialog drive each picker's open state from a keyboard
 // shortcut and surface the key in the trigger's tooltip. All optional — the

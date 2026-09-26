@@ -20,7 +20,7 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,568 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,571 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
 - `sql-consumers.json` records 427 functions, ten views and 226 application triggers. Function

@@ -160,15 +160,16 @@ export function PrCommentComposer({
     <div ref={composerRef} className="flex min-w-0 max-w-full flex-col gap-2 font-sans">
       <div
         className={cn(
-          "relative min-w-0 w-full max-w-full border border-border transition-colors focus-within:border-ring",
+          "relative min-w-0 w-full max-w-full transition-colors",
           // The wire dial carries the radius of the Numo field on the page
           // Agents (`chat-input`, rounded-2xl): it's the same gesture, the same
           // space on the screen, there was no reason for it to have another
           // silhouette. That of a LINE remark keeps a radius more
           // tight — it is anchored in the diff, at the size of a line of code,
-          // and 24px of corners would weigh more than the box itself.
-          line ? "rounded-lg bg-background" : "rounded-2xl bg-card",
-          drop.dragging && "border-brand",
+          // and 24px of corners would weigh more than the box itself. Like the
+          // Numo composer since mango-ui 0.8.0, it is a borderless `bg-control`.
+          line ? "rounded-lg bg-control" : "rounded-2xl bg-control",
+          drop.dragging && "ring-2 ring-brand/20",
         )}
         onPaste={pasteFileHandler(uploads.addFiles)}
         {...drop.handlers}

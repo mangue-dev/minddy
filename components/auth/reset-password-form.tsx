@@ -181,7 +181,7 @@ export function ResetPasswordForm() {
             <Input
               id="password"
               type="password"
-              className="h-10 bg-card"
+              className="h-10 bg-control"
               autoComplete="new-password"
               autoFocus
               required
@@ -198,7 +198,7 @@ export function ResetPasswordForm() {
             <Input
               id="confirmPassword"
               type="password"
-              className="h-10 bg-card"
+              className="h-10 bg-control"
               autoComplete="new-password"
               required
               minLength={MIN_PASSWORD_LENGTH}

@@ -9,6 +9,7 @@ import {
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
 import { getAgentProvider } from "@/lib/agent-providers";
+import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
 import {
   fetchAiChat,
@@ -81,6 +82,14 @@ export async function forcedToolCall(
  * hold the `maxDuration` from the road above.
  */
     timeoutMs?: number;
+    /**
+ * Reasoning effort to request, when the provider knows how to express one.
+ * Absent = nothing is sent, and the model applies its family default — which
+ * on a mandatory-reasoning model can be its MOST expensive level, counted
+ * inside `maxTokens` and able to eat the whole budget before the tool call
+ * is emitted (MIN-594).
+ */
+    reasoning?: ReasoningLevel;
   }
 ): Promise<Record<string, unknown> | null> {
   const logPrefix = options?.logPrefix ?? "[feedback-llm]";
@@ -144,6 +153,7 @@ export async function forcedToolCall(
         ],
         toolChoice: { type: "function", function: { name: toolName } },
         maxOutputTokens: options?.maxTokens ?? 1024,
+        ...(options?.reasoning ? { reasoning: { effort: options.reasoning } } : {}),
       }),
       options?.xTitle ?? "Feedback (minddy)",
       logPrefix,

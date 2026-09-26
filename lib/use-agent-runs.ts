@@ -28,6 +28,7 @@ import {
 } from "./agent-local-diff";
 import { DESKTOP_LOCAL_DIFF_PATCH_CAP } from "./desktop/local-run-diff";
 import {
+  PULL_REQUEST_SETTLED_POLL_MS,
   pullRequestReadinessBatchRefetchInterval,
   pullRequestRefetchInterval,
 } from "./pr-readiness-actions";
@@ -342,7 +343,12 @@ export function allPullRequestsQueryKey(
 
 /**
  * Global list of PRs of linked repositories (Pull Requests page). Polling ~5 seconds
- * that a PR has an active run (Numo is reworking on it), otherwise no polling.
+ * that a PR has an active run (Numo is reworking on it), otherwise a light
+ * one-minute backstop (MIN-595): the list endpoint triggers the out-of-band
+ * sweeps of stale repositories, so this backstop is what keeps the list — and,
+ * through the sweep, the badge — converging without the user reloading. One
+ * request a minute per open page, and the sweep stamp coalesces concurrent
+ * callers into one forge read per TTL window.
  *
  * The STATUS filter is served by the server (MIN-143): since the list
  * shows the entire repository and not just the Numo PRs, “all” means
@@ -374,7 +380,9 @@ export function useAllPullRequestsQuery(
     refetchOnMount: "always",
     refetchInterval: (query) => {
       const prs = query.state.data?.pullRequests ?? [];
-      return prs.some((p) => p.activeRunId) ? 5000 : false;
+      return prs.some((p) => p.activeRunId)
+        ? 5000
+        : PULL_REQUEST_SETTLED_POLL_MS;
     },
   });
   return {
@@ -421,10 +429,24 @@ export function patchAgentConversationPinnedInCache(
 /** Lightweight cache key for the persistent navigation badge. */
 export const openPullRequestCountQueryKey = ["pull-requests", "open-count"] as const;
 
+/**
+ * Badge count of open PRs, read on EVERY page (sidebar + tab strip).
+ *
+ * Two refresh paths (MIN-595), the same ones as the list:
+ * - the realtime bridge invalidates this key on every `pull_requests` write
+ *   broadcast on a project topic — a webhook-delivered fact moves the badge
+ *   immediately, from any page;
+ * - a one-minute backstop for everything that only a sweep can see (lost or
+ *   absent webhook). The count is a `head: true` aggregate — light enough to
+ *   poll — and its endpoint sweeps stale repositories out of band, so this
+ *   timer is what retires the old rule “go to the PR page to sync”.
+ */
 export function useOpenPullRequestCountQuery() {
   const { data } = useQuery({
     queryKey: openPullRequestCountQueryKey,
     queryFn: fetchOpenPullRequestCountApi,
+    refetchOnMount: "always",
+    refetchInterval: PULL_REQUEST_SETTLED_POLL_MS,
   });
   return data?.count ?? 0;
 }
@@ -450,13 +472,21 @@ export function useAgentSessionsQuery() {
   return { sessions: data?.sessions ?? [], loading: isPending, refetch };
 }
 
-/** PR conversation thread (GitHub comments) and their reactions. */
+/**
+ * PR conversation thread (GitHub comments) and their reactions.
+ *
+ * Live-topic invalidation (`usePrLive`) carries webhook-delivered facts; the
+ * one-minute backstop (MIN-595) is the net for everything else — a timeline
+ * entry that only a sweep caught, a delivery that never arrived. Light: one
+ * request a minute, per open panel.
+ */
 export function usePrCommentsQuery(prId: string | null) {
   const enabled = !!prId;
   const { data, isPending, refetch } = useQuery({
     queryKey: ["pr-comments", prId],
     queryFn: () => fetchPullRequestCommentsApi(prId as string),
     enabled,
+    refetchInterval: PULL_REQUEST_SETTLED_POLL_MS,
   });
   return {
     comments: data?.comments ?? [],
@@ -472,9 +502,11 @@ export function usePrCommentsQuery(prId: string | null) {
 }
 
 /**
- * Commits of a PR (Commitments tab). No polling: a list of commits does not
- * moves only at a push, and the caller refreshes it when Numo finishes
- * work — this is the only moment when it changes before the reader's eyes.
+ * Commits of a PR (Commitments tab). Same refresh contract as the
+ * conversation (MIN-595): the `commits` part of the live topic covers the
+ * normal path (a push, Numo's push, a webhook), and the slow backstop below
+ * catches what no webhook announced — the list is cheap, the reader is
+ * looking, and a push that lands is one request a minute away.
  */
 export function usePrCommitsQuery(prId: string | null) {
   const enabled = !!prId;
@@ -482,6 +514,7 @@ export function usePrCommitsQuery(prId: string | null) {
     queryKey: ["pr-commits", prId],
     queryFn: () => fetchPullRequestCommitsApi(prId as string),
     enabled,
+    refetchInterval: PULL_REQUEST_SETTLED_POLL_MS,
   });
   return {
     commits: data?.commits ?? [],

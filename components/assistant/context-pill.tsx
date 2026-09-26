@@ -149,6 +149,7 @@ export function ContextPill({
         <EntityPill
           radius={radius}
           dimmed={disabled}
+          bordered={false}
           ariaLabel={chip.tooltip}
           className={cn("max-w-[14rem] shrink-0", className)}
           action={

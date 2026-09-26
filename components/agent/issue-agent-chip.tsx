@@ -59,6 +59,7 @@ export function IssueAgentChip({
   // leads anyway — that's what happened on this ticket.
   if (!isPrWorthShowing(pr)) return null;
   const merged = pr?.state === "merged";
+  const draft = pr?.state === "draft";
 
   return (
     <Tooltip>
@@ -75,7 +76,9 @@ export function IssueAgentChip({
           )}
         >
           <GitPullRequest className="size-3.5 shrink-0" />
-          <span className="truncate">{merged ? t("prMerged") : t("prBadge")}</span>
+          <span className="truncate">
+            {merged ? t("prMerged") : draft ? t("prBadge") : t("prOpen")}
+          </span>
         </button>
       </TooltipTrigger>
       <TooltipContent>{t("viewPullRequest")}</TooltipContent>

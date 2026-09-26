@@ -24,7 +24,7 @@
  * matching surface directly.
  */
 
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNow, useTranslations } from "next-intl";
 import {
   ArrowUpRight,
@@ -53,6 +53,7 @@ import type {
   ChecksSummary,
 } from "@/lib/agent-api";
 import type { RepoProviderId } from "@/lib/repo-providers";
+import type { MessageKey } from "@/lib/i18n-keys";
 import type { PullRequestFeedbackThread } from "@/lib/pr-unresolved-conversations";
 import type {
   PullRequestReadiness,
@@ -67,16 +68,19 @@ export type PrStatusCardTone =
   | "success"
   | "neutral";
 
-/** The tone grammar, shared by the merge-state control and the state badges. */
+/** The tone grammar, shared by the merge-state control and the state badges.
+ *  Since mango-ui 0.8.0 the badges carry no border — a tinted chip reads on
+ *  its background alone — and the tinted cards follow them: no border, only
+ *  the wash. The border belongs to the NEUTRAL card: idle, it is a plain
+ *  card (white in light, ink-dark in dark) and needs its edge to be seen. */
 const TONE_CARD: Record<PrStatusCardTone, string> = {
-  success:
-    "border-emerald-600/30 bg-emerald-600/10 dark:border-emerald-400/30",
-  progress: "border-amber-600/30 bg-amber-600/10 dark:border-amber-400/30",
-  danger: "border-destructive/30 bg-destructive/10",
+  success: "bg-emerald-600/10",
+  progress: "bg-amber-600/10",
+  danger: "bg-destructive/10",
   // A card that carries a GESTURE, not a verdict: it says nothing about the
   // merge state, so it reads in the plain card palette instead of borrowing
   // a meaning (red = blocked) it does not have.
-  neutral: "border-border bg-card",
+  neutral: "border border-border bg-card",
 };
 
 const TONE_TITLE: Record<PrStatusCardTone, string> = {
@@ -85,6 +89,23 @@ const TONE_TITLE: Record<PrStatusCardTone, string> = {
   danger: "text-destructive",
   neutral: "text-foreground",
 };
+
+/** The word a clicked split option replaces its label with, for a moment —
+    the visual proof the gesture landed (Copied, Opened, Launched). */
+export type PrSplitFeedback = "copied" | "opened" | "launched";
+
+const FEEDBACK_KEYS: Record<
+  PrSplitFeedback,
+  MessageKey<"PullRequests">
+> = {
+  copied: "cardFeedbackCopied",
+  opened: "cardFeedbackOpened",
+  launched: "cardFeedbackLaunched",
+};
+
+/** How long a clicked split option keeps its feedback word before the
+    regular label comes back. */
+const SPLIT_FEEDBACK_MS = 1_600;
 
 /** Alpha background of a check row, tinted by its own state. */
 const CHECK_ROW_BG: Record<CheckState, string> = {
@@ -144,10 +165,22 @@ interface PrStatusCard {
     disabled?: boolean;
   };
   /** Hover overlay SPLIT in two: the card halves vertically, one option
-      on top, one below (MIN-548 review). */
+      on top, one below (MIN-548 review). A clicked option flashes its
+      feedback word (`feedback`) so the gesture visibly landed. */
   actions?: {
-    top: { label: string; onClick: () => void; testId?: string };
-    bottom: { label: string; onClick: () => void; testId?: string; disabled?: boolean };
+    top: {
+      label: string;
+      onClick: () => void;
+      testId?: string;
+      feedback?: PrSplitFeedback;
+    };
+    bottom: {
+      label: string;
+      onClick: () => void;
+      testId?: string;
+      disabled?: boolean;
+      feedback?: PrSplitFeedback;
+    };
   };
 }
 
@@ -182,6 +215,11 @@ interface PrStatusCardsProps {
   /** A correction run works on this pull request right now (a Numo fix,
       not a reread): its own card, the whole surface opens the Numo panel. */
   fixRun: { startedAt: string | null; onOpen: () => void } | null;
+  /** A "generate then merge" job (MIN-548) runs in the background: Numo
+      writes the commit message, the merge fires the moment it lands. The
+      caller keeps the marker alive across navigation — the job does not
+      belong to the page that launched it. */
+  numoMerge: { startedAt: string | null } | null;
   /** Shared open state of the checks popover: the merge-state popover's
       "View checks" button opens the SAME list from further away. */
   checksOpen: boolean;
@@ -211,6 +249,7 @@ export function PrStatusCards(props: PrStatusCardsProps) {
       props.acting,
       props.numoReview,
       props.fixRun,
+      props.numoMerge,
       props.fix,
     ],
   );
@@ -280,12 +319,14 @@ function buildStatusCards(
           label: t("cardFixCopyPrompt"),
           onClick: props.fix.onCopy,
           testId: "pr-card-fix-copy",
+          feedback: "copied",
         },
         bottom: {
           label: t("cardFixLaunchNumo"),
           onClick: props.fix.onLaunch,
           disabled: !props.fix.canLaunch,
           testId: "pr-card-fix-launch",
+          feedback: "launched",
         },
       },
     });
@@ -352,7 +393,26 @@ function buildStatusCards(
   // The story is sticky: a poll that comes back empty must not tear the
   // card down while the build goes on. The card never hides behind the
   // checks: an environment can exist whether or not the CI has spoken.
+  //
+  // When a URL exists the card is a SPLIT card, like the fix card: copy the
+  // link on top, open the deployment below.
   const deployment = props.deployment;
+  const deploymentActions = (url: string): PrStatusCard["actions"] => ({
+    top: {
+      label: t("cardCopyLink"),
+      onClick: () => {
+        void navigator.clipboard.writeText(url).catch(() => {});
+      },
+      testId: "pr-card-copy-deployment",
+      feedback: "copied",
+    },
+    bottom: {
+      label: t("viewDeployment"),
+      onClick: () => window.open(url, "_blank", "noreferrer"),
+      testId: "pr-card-view-deployment",
+      feedback: "opened",
+    },
+  });
   if (deployment?.status === "in_progress") {
     push({
       id: "deployment",
@@ -363,13 +423,7 @@ function buildStatusCards(
       donutParts: null,
       avatars: null,
       iconKind: "mergeability",
-      action: deployment.url
-        ? {
-            label: t("viewDeployment"),
-            onClick: () => window.open(deployment.url as string, "_blank", "noreferrer"),
-            testId: "pr-card-view-deployment",
-          }
-        : undefined,
+      actions: deployment.url ? deploymentActions(deployment.url) : undefined,
     });
   } else if (deployment?.status === "success" && deployment.url) {
     push({
@@ -381,11 +435,7 @@ function buildStatusCards(
       donutParts: null,
       avatars: null,
       iconKind: "mergeability",
-      action: {
-        label: t("viewDeployment"),
-        onClick: () => window.open(deployment.url as string, "_blank", "noreferrer"),
-        testId: "pr-card-view-deployment",
-      },
+      actions: deploymentActions(deployment.url),
     });
   }
 
@@ -451,6 +501,24 @@ function buildStatusCards(
       iconKind: "mergeability",
       hoverLabel: t("numoReviewOpenSession"),
       onSelect: props.fixRun.onOpen,
+    });
+  }
+
+  // ── Numo merge ──────────────────────────────────────────────────────────
+  // A "generate then merge" job is running in the background: the card
+  // claims a STATE, not a method — the title stays short, the ticking
+  // duration says the work is alive. No gesture hangs on it: the merge
+  // fires on its own, and the card goes away when the PR turns merged.
+  if (props.numoMerge) {
+    push({
+      id: "numo-merge",
+      tone: "progress",
+      title: t("cardNumoMerging"),
+      durationMs: null,
+      startedAt: props.numoMerge.startedAt,
+      donutParts: null,
+      avatars: null,
+      iconKind: "mergeability",
     });
   }
 
@@ -715,6 +783,21 @@ function PrStatusCardView({
   onChecksOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("PullRequests");
+  // A clicked split option flashes its feedback word (Copied, Opened,
+  // Launched…): the gesture visibly landed. The regular label comes back
+  // after a beat.
+  const [pressed, setPressed] = useState<"top" | "bottom" | null>(null);
+  useEffect(() => {
+    if (!pressed) return;
+    const timer = setTimeout(() => setPressed(null), SPLIT_FEEDBACK_MS);
+    return () => clearTimeout(timer);
+  }, [pressed]);
+  const splitLabel = (which: "top" | "bottom", label: string) => {
+    if (pressed !== which) return label;
+    const feedback =
+      which === "top" ? card.actions?.top.feedback : card.actions?.bottom.feedback;
+    return feedback ? t(FEEDBACK_KEYS[feedback]) : label;
+  };
   const body = (
     <>
       {/* Illustration: donut for a mixed checks story, avatars for the
@@ -733,7 +816,9 @@ function PrStatusCardView({
           <Check />
         ) : card.id === "deployment" ? (
           <ArrowUpRight />
-        ) : card.id === "numo-review" || card.id === "numo-fix" ? (
+        ) : card.id === "numo-review" ||
+          card.id === "numo-fix" ||
+          card.id === "numo-merge" ? (
           <NumoIcon animated={false} />
         ) : card.id === "fix" ? (
           <Wrench />
@@ -769,7 +854,8 @@ function PrStatusCardView({
   // The split card carries NO padding: the whole top half is the copy
   // gesture, the whole bottom half is Numo, edge to edge — only the
   // separating hairline between them (MIN-548 review).
-  const inner = card.actions ? (
+  const actions = card.actions;
+  const inner = actions ? (
     <div className="group relative flex h-24 min-w-0 flex-col">
       <div className="pointer-events-none flex h-full min-w-0 flex-col gap-2.5 p-3 transition duration-150 group-hover:opacity-0 group-hover:blur-[2px]">
         {body}
@@ -777,30 +863,36 @@ function PrStatusCardView({
       <div className="pointer-events-none absolute inset-0 flex flex-col opacity-0 transition duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
         <button
           type="button"
-          data-testid={card.actions.top.testId}
-          onClick={card.actions.top.onClick}
+          data-testid={actions.top.testId}
+          onClick={() => {
+            setPressed("top");
+            actions.top.onClick();
+          }}
           className={cn(
             "flex min-h-0 flex-1 items-center justify-center rounded-t-xl text-sm font-medium outline-none",
             TONE_TITLE[card.tone],
             "hover:bg-muted/50 focus-visible:bg-muted/50",
           )}
         >
-          {card.actions.top.label}
+          {splitLabel("top", actions.top.label)}
         </button>
         <div className="h-px shrink-0 bg-border" />
         <button
           type="button"
-          data-testid={card.actions.bottom.testId}
-          onClick={card.actions.bottom.onClick}
-          disabled={card.actions.bottom.disabled}
+          data-testid={actions.bottom.testId}
+          onClick={() => {
+            setPressed("bottom");
+            actions.bottom.onClick();
+          }}
+          disabled={actions.bottom.disabled}
           className={cn(
             "flex min-h-0 flex-1 items-center justify-center rounded-b-xl text-sm font-medium outline-none",
             TONE_TITLE[card.tone],
-            card.actions.bottom.disabled && "opacity-50",
+            actions.bottom.disabled && "opacity-50",
             "hover:bg-muted/50 focus-visible:bg-muted/50",
           )}
         >
-          {card.actions.bottom.label}
+          {splitLabel("bottom", actions.bottom.label)}
         </button>
       </div>
     </div>
@@ -865,7 +957,7 @@ function PrStatusCardView({
       data-card-id={card.id}
       data-testid={card.action?.testId ?? `pr-status-card-${card.id}`}
       className={cn(
-        "max-w-full rounded-xl border text-left",
+        "max-w-full rounded-xl text-left",
         TONE_CARD[card.tone],
         activate &&
           "outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
@@ -903,7 +995,7 @@ function ChecksPopoverCard({
           role="button"
           tabIndex={0}
           className={cn(
-            "max-w-full rounded-xl border outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
+            "max-w-full rounded-xl outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring",
             TONE_CARD[tone],
           )}
         >

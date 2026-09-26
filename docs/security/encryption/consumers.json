@@ -1046,14 +1046,14 @@
     "file": "app/api/pull-requests/route.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 279,
+    "line": 255,
     "storage": false
   },
   {
     "file": "app/api/pull-requests/route.ts",
     "operation": "from",
     "resource": "agent_run_events",
-    "line": 307,
+    "line": 283,
     "storage": false
   },
   {
@@ -2271,7 +2271,7 @@
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 2570,
+    "line": 2578,
     "storage": false
   },
   {
@@ -2369,126 +2369,126 @@
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 177,
+    "line": 178,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "rpc",
     "resource": "upsert_pull_request_monotonic",
-    "line": 193,
+    "line": 194,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 223,
+    "line": 224,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 240,
+    "line": 241,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 267,
+    "line": 268,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 302,
+    "line": 303,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 318,
+    "line": 319,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "rpc",
     "resource": "link_pull_request_to_issue_atomic",
-    "line": 393,
+    "line": 394,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 424,
+    "line": 425,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 449,
+    "line": 450,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 477,
+    "line": 478,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_syncs",
-    "line": 621,
+    "line": 628,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_syncs",
-    "line": 657,
+    "line": 664,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 703,
+    "line": 710,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_syncs",
-    "line": 795,
+    "line": 834,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 852,
+    "line": 891,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 916,
+    "line": 955,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 962,
+    "line": 1001,
     "storage": false
   },
   {
@@ -3356,28 +3356,28 @@
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1306,
+    "line": 1313,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 1355,
+    "line": 1362,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 1909,
+    "line": 1916,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_routine_occurrences",
-    "line": 2347,
+    "line": 2354,
     "storage": false
   },
   {
@@ -3434,6 +3434,27 @@
     "operation": "from",
     "resource": "cycles",
     "line": 107,
+    "storage": false
+  },
+  {
+    "file": "lib/server/assistant/project-scope.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 47,
+    "storage": false
+  },
+  {
+    "file": "lib/server/assistant/project-scope.ts",
+    "operation": "from",
+    "resource": "project_members",
+    "line": 52,
+    "storage": false
+  },
+  {
+    "file": "lib/server/assistant/project-scope.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 60,
     "storage": false
   },
   {
@@ -6261,7 +6282,7 @@
     "file": "lib/server/feedback/forced-tool-call.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 93,
+    "line": 102,
     "storage": false
   },
   {

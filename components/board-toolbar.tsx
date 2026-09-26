@@ -331,7 +331,7 @@ function FiltersPopover({
       <Tooltip>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon-sm" aria-label={tc("filters")}>
+            <Button variant="ghost" size="icon-sm" aria-label={tc("filters")}>
               <ListFilter className={cn(count > 0 && "text-primary")} />
             </Button>
           </DropdownMenuTrigger>
@@ -1086,7 +1086,7 @@ export function BoardToolbar({
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="icon-sm"
                     disabled={!activeView}
                     aria-label={t("viewOptions", { name: activeView?.name ?? "" })}
