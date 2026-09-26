@@ -849,6 +849,21 @@
         "type": "text",
         "nullable": true,
         "generated": false
+      },
+      "encryption_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "href_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "custom_name_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -3133,24 +3148,6 @@
         "targetColumn": "id"
       }
     ]
-  },
-  "user_ai_key_content_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
   },
   "user_ai_keys": {
     "columns": {
@@ -5694,7 +5691,7 @@
       }
     ]
   },
-  "project_git_webhook_secret_scope": {
+  "mcp_content_scope": {
     "columns": {
       "id": {
         "type": "boolean",
@@ -7393,6 +7390,24 @@
       }
     ]
   },
+  "app_tab_content_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
   "feedback_merge_events": {
     "columns": {
       "id": {
@@ -7481,24 +7496,6 @@
         "targetColumn": "id"
       }
     ]
-  },
-  "forge_relay_instance_content_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
   },
   "forge_relay_instances": {
     "columns": {
@@ -8288,6 +8285,24 @@
       }
     ]
   },
+  "forge_oauth_token_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
   "forge_relay_link_mirror": {
     "columns": {
       "provider": {
@@ -8894,6 +8909,24 @@
       }
     ]
   },
+  "agent_branch_prefix_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
   "attachment_object_aliases": {
     "columns": {
       "new_path": {
@@ -9095,6 +9128,24 @@
         "targetColumn": "id"
       }
     ]
+  },
+  "user_ai_key_content_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
   },
   "user_realtime_generations": {
     "columns": {
@@ -9904,6 +9955,24 @@
     ],
     "foreignKeys": []
   },
+  "page_content_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
   "project_icon_encryption_scope": {
     "columns": {
       "id": {
@@ -10011,6 +10080,24 @@
         "targetColumn": "id"
       }
     ]
+  },
+  "forge_relay_provisioning_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
   },
   "issue_remote_status_push_locks": {
     "columns": {
@@ -10216,6 +10303,24 @@
       }
     ]
   },
+  "forge_relay_user_delivery_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
   "provider_operation_reservations": {
     "columns": {
       "id": {
@@ -10284,6 +10389,24 @@
     "foreignKeys": []
   },
   "project_content_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "project_git_webhook_secret_scope": {
     "columns": {
       "id": {
         "type": "boolean",
@@ -10446,6 +10569,24 @@
     "foreignKeys": []
   },
   "forge_mention_key_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "forge_relay_instance_content_scope": {
     "columns": {
       "id": {
         "type": "boolean",
@@ -10692,114 +10833,6 @@
     ]
   },
   "provider_operation_resource_encryption_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
-  },
-  "page_content_encryption_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
-  },
-  "forge_relay_provisioning_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
-  },
-  "forge_relay_user_delivery_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
-  },
-  "forge_oauth_token_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
-  },
-  "mcp_content_scope": {
-    "columns": {
-      "id": {
-        "type": "boolean",
-        "nullable": false,
-        "generated": false
-      },
-      "activated_at": {
-        "type": "timestamp with time zone",
-        "nullable": false,
-        "generated": false
-      }
-    },
-    "primaryKey": [
-      "id"
-    ],
-    "foreignKeys": []
-  },
-  "agent_branch_prefix_scope": {
     "columns": {
       "id": {
         "type": "boolean",

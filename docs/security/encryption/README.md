@@ -9,10 +9,10 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 171 application tables and 1,519 columns, their primary
+- `schema.json` records 177 application tables and 1,566 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
-  column exactly once. Its 173 encryption targets include the original content,
+  column exactly once. Its 174 encryption targets include the original content,
   derived copies, arbitrary user JSON, private identities, credentials and share
   tokens. The relay audit detail target was removed by an action-specific SQL
   guard and historical scrub; opaque attachment object paths replace two path
@@ -20,10 +20,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,588 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,618 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 427 functions, ten views and 226 application triggers. Function
+- `sql-consumers.json` records 456 functions, ten views and 237 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -1966,3 +1966,23 @@ obsolete writers and partial updates. A real PostgreSQL dump/restore loads
 preference children before users in independent batches, recovers two key
 versions with cold caches and rejects the wrong root. The dedicated and global
 encryption flags remain off in production. Other MIN-591 targets remain open.
+
+## Personal application tab checkpoint — 26 September 2026
+
+`app_tabs.href` and `custom_name` now use format-3 user-key field envelopes
+bound to the tab ID, owner and column. Create and ensure preassign the tab ID
+and send a sealed Home destination to the serialized owner RPC. Update, move,
+conflict and list responses decrypt only after checking the row owner. Realtime
+continues to broadcast an ID-only invalidation. There is no account transfer
+copy of these session tabs.
+
+A bounded 25-row worker migrates and rotates both fields together under an
+exact-value and revision compare-and-swap. Activation checks every source row;
+SQL then refuses direct plaintext writes and older create/update RPCs, scope
+moves and key downgrades. The SQL regression covers the source and both RPC
+directions. A PostgreSQL dump/restore loads tabs before users and keys in
+independent batches, reads two key versions from cold caches and rejects a
+wrong root. `MINDDY_APP_TABS_ENCRYPTION_ENABLED` and the global content flag
+remain off in production. Representative search, latency and key/cache load
+measurements remain a pre-activation check, not a code PR blocker. Other
+MIN-591 targets remain open.

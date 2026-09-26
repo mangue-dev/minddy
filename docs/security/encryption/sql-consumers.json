@@ -502,6 +502,21 @@
       ],
       "functionReferences": []
     },
+    "guard_app_tab_content()": {
+      "sha256": "e228c5fc4990f11b8ebc6f9f1b68efba13348aea60427cad2d75185f8a6cfc93",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "app_tab_content_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": [
+        "app_tab_content_version"
+      ]
+    },
     "guard_project_content()": {
       "sha256": "60aeabc2e0922f746793146f2d57a74a34d9b573392ac218ddbca20f53cb33fa",
       "securityDefiner": true,
@@ -995,6 +1010,24 @@
       "protectedRelations": [],
       "functionReferences": [
         "rotate_user_realtime_generation"
+      ]
+    },
+    "activate_app_tab_content()": {
+      "sha256": "8d62a4bd4051f7c4ea69ae5c0b7f59f4b33cde5372b1af182f44268b05a91459",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "app_tabs",
+        "app_tab_content_scope"
+      ],
+      "protectedRelations": [
+        "app_tabs"
+      ],
+      "functionReferences": [
+        "app_tab_content_version"
       ]
     },
     "activate_project_content()": {
@@ -1822,6 +1855,17 @@
       "functionReferences": [
         "forge_oauth_token_envelope_version"
       ]
+    },
+    "app_tab_content_version(text)": {
+      "sha256": "9a1e1006e02e8f632d54f0b67a98668f63aea15538f816995d88e34283133d40",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
     },
     "backfill_numo_conversations()": {
       "sha256": "ec78308563687bbca0ca588146a5bcea483c056c7e0bd632d082c3df9541e149",
@@ -3975,7 +4019,7 @@
       "functionReferences": []
     },
     "mutate_app_tab(text,uuid,bigint,jsonb)": {
-      "sha256": "8045c64f5ac1011fa5005fbf4a2c7acc39c0b8dad5b3bca306ed5a8a919f4e07",
+      "sha256": "f179189a3cb339dd602481daa7c5adf3383dc709be17721e092def842ff79831",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -7303,6 +7347,10 @@
     "projects.project_content_guard": {
       "function": "guard_project_content()",
       "definition": "CREATE TRIGGER project_content_guard BEFORE INSERT OR UPDATE ON projects FOR EACH ROW EXECUTE FUNCTION guard_project_content()"
+    },
+    "app_tabs.app_tabs_content_guard": {
+      "function": "guard_app_tab_content()",
+      "definition": "CREATE TRIGGER app_tabs_content_guard BEFORE INSERT OR UPDATE ON app_tabs FOR EACH ROW EXECUTE FUNCTION guard_app_tab_content()"
     },
     "categories.categories_broadcast": {
       "function": "broadcast_category_metadata()",

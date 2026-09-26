@@ -955,8 +955,22 @@
       ],
       "timestamp": [
         "created_at",
-        "updated_at"
+        "updated_at",
+        "href_encryption_checked_at",
+        "custom_name_encryption_checked_at",
+        "encryption_attempted_at"
       ]
+    }
+  },
+  "app_tab_content_scope": {
+    "scope": {
+      "kind": "global",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": ["id"],
+      "timestamp": ["activated_at"]
     }
   },
   "assistant_active_conversation": {

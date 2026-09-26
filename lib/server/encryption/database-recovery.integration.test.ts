@@ -58,6 +58,7 @@ const relayUserDeliveryTemplate = "minddy_min591_user_delivery_audit";
 const forgeOAuthTemplate = "minddy_min591_forge_oauth_audit";
 const mcpContentTemplate = "minddy_min591_mcp_audit";
 const agentPrefTemplate = "minddy_min591_agent_pref_audit";
+const appTabTemplate = "minddy_min591_app_tab_audit";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -6308,6 +6309,113 @@ describe.skipIf(!enabled)("agent branch preference PostgreSQL recovery", () => {
       })).rejects.toThrow();
       expect(()=>sql(restored,`UPDATE public.user_agent_preferences SET
         branch_prefix='old/' WHERE user_id=${quote(users[0])};`)).toThrow();
+    }finally{
+      root.fill(0);vi.unstubAllEnvs();log.mockRestore();
+      for(const database of created.reverse())
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+    }
+  },60_000);
+});
+
+describe.skipIf(!enabled)("application tab PostgreSQL recovery", () => {
+  it("restores tabs before users and keys with two versions and rejects a wrong root", async () => {
+    const suffix=randomUUID().replaceAll("-","").slice(0,12);
+    const source=`minddy_min591_tab_source_${suffix}`;
+    const restored=`minddy_min591_tab_restore_${suffix}`;
+    const created:string[]=[];
+    const root=randomBytes(32);
+    const users=[randomUUID(),randomUUID()];
+    const tabs=[randomUUID(),randomUUID()];
+    const log=vi.spyOn(console,"info").mockImplementation(()=>{});
+    try {
+      expect(sql(appTabTemplate,"SELECT count(*) FROM public.app_tabs;"))
+        .toBe("0");
+      for(const database of [source,restored]){
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${appTabTemplate};`);
+        created.push(database);
+      }
+      const keys=new ManagedDataKeys(registry(source),wrapper(root));
+      const store=new EncryptedStore(keys);
+      for(const [index,user] of users.entries()){
+        const scope:EncryptionScope={kind:"user",id:user};
+        sql(source,`INSERT INTO auth.users(id) VALUES(${quote(user)});`);
+        if(index===1){
+          const first=await keys.current(scope);
+          first.bytes.fill(0);
+          await keys.rotate(scope,1);
+        }
+        const href=await store.encrypt(
+          `/all?private=issue-${index}`,{
+            scope,table:"app_tabs",column:"href",rowId:tabs[index],
+          });
+        const name=await store.encrypt(`Private tab ${index}`,{
+          scope,table:"app_tabs",column:"custom_name",rowId:tabs[index],
+        });
+        sql(source,`INSERT INTO public.app_tabs(id,user_id,href,
+          custom_name,position) VALUES(${quote(tabs[index])},
+          ${quote(user)},${quote(`mdye3:${href}`)},
+          ${quote(`mdye3:${name}`)},0);`);
+        keys.invalidate(scope);
+      }
+      expect(sql(source,"SELECT public.activate_app_tab_content();"))
+        .toBe("t");
+      const dump=execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges",...["auth.users","public.app_tabs",
+          "public.app_tab_content_scope","public.envelope_data_keys"]
+          .map((table)=>`--table=${table}`)],
+      {encoding:"utf8",maxBuffer:4*1024*1024});
+      for(const marker of ["private=issue-0","private=issue-1",
+        "Private tab 0","Private tab 1"])
+        expect(dump).not.toContain(marker);
+      let remainder=dump;
+      const copies=new Map<string,{header:string;lines:string[]}>();
+      for(const table of ["public.app_tabs","auth.users"]){
+        const start=remainder.indexOf(`COPY ${table} `);
+        expect(start).toBeGreaterThanOrEqual(0);
+        const bodyStart=remainder.indexOf("\n",start)+1;
+        const bodyEnd=remainder.indexOf("\\.\n",bodyStart);
+        copies.set(table,{header:remainder.slice(start,bodyStart),
+          lines:remainder.slice(bodyStart,bodyEnd).trimEnd().split("\n")});
+        remainder=remainder.slice(0,start)+remainder.slice(bodyEnd+3);
+      }
+      for(const table of ["public.app_tabs","auth.users"])
+        for(const line of copies.get(table)!.lines.reverse())
+          sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+            ${copies.get(table)!.header}${line}\n\\.\nCOMMIT;`);
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+        ${remainder}\nCOMMIT;`);
+      expect(sql(restored,`SELECT count(*) FROM public.app_tabs t
+        JOIN auth.users u ON u.id=t.user_id;`)).toBe("2");
+      const cold=new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(root)));
+      for(const [index,user] of users.entries()){
+        const row=JSON.parse(sql(restored,`SELECT row_to_json(t) FROM
+          public.app_tabs t WHERE id=${quote(tabs[index])};`));
+        expect(row.href_encryption_checked_at).not.toBeNull();
+        expect(row.custom_name_encryption_checked_at).not.toBeNull();
+        expect(cold.versionOf(cold.fromDatabase(row.href.slice(6))))
+          .toBe(index+1);
+        for(const [column,expected] of [
+          ["href",`/all?private=issue-${index}`],
+          ["custom_name",`Private tab ${index}`],
+        ]){
+          expect(await cold.decrypt(cold.fromDatabase(row[column].slice(6)),{
+            scope:{kind:"user",id:user},table:"app_tabs",column,
+            rowId:tabs[index],
+          })).toBe(expected);
+        }
+      }
+      const wrong=new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(randomBytes(32))));
+      const cipher=sql(restored,`SELECT href FROM public.app_tabs
+        WHERE id=${quote(tabs[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase(cipher.slice(6)),{
+        scope:{kind:"user",id:users[0]},table:"app_tabs",column:"href",
+        rowId:tabs[0],
+      })).rejects.toThrow();
+      expect(()=>sql(restored,`UPDATE public.app_tabs SET href='/home'
+        WHERE id=${quote(tabs[0])};`)).toThrow();
     }finally{
       root.fill(0);vi.unstubAllEnvs();log.mockRestore();
       for(const database of created.reverse())

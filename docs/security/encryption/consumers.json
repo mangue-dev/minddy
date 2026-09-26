@@ -3255,24 +3255,31 @@
     "storage": false
   },
   {
+    "file": "lib/server/app-tabs-content.ts",
+    "operation": "from",
+    "resource": "app_tab_content_scope",
+    "line": 25,
+    "storage": false
+  },
+  {
     "file": "lib/server/app-tabs.ts",
     "operation": "rpc",
     "resource": "move_app_tab",
-    "line": 12,
+    "line": 13,
     "storage": false
   },
   {
     "file": "lib/server/app-tabs.ts",
     "operation": "rpc",
     "resource": "mutate_app_tab",
-    "line": 29,
+    "line": 44,
     "storage": false
   },
   {
     "file": "lib/server/app-tabs.ts",
     "operation": "from",
     "resource": "app_tabs",
-    "line": 44,
+    "line": 61,
     "storage": false
   },
   {
@@ -5170,6 +5177,27 @@
     "operation": "rpc",
     "resource": "mark_app_config_attempt",
     "line": 58,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/app-tab-backfill.ts",
+    "operation": "from",
+    "resource": "app_tabs",
+    "line": 22,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/app-tab-backfill.ts",
+    "operation": "from",
+    "resource": "app_tabs",
+    "line": 50,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/app-tab-backfill.ts",
+    "operation": "from",
+    "resource": "app_tabs",
+    "line": 66,
     "storage": false
   },
   {
