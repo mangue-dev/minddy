@@ -1711,28 +1711,28 @@
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "user_avatars",
-    "line": 227,
+    "line": 225,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 246,
+    "line": 244,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 253,
+    "line": 251,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 269,
+    "line": 267,
     "storage": false
   },
   {
@@ -10706,42 +10706,35 @@
     "file": "lib/server/project-storage.ts",
     "operation": "from",
     "resource": null,
-    "line": 41,
+    "line": 38,
     "storage": true
   },
   {
     "file": "lib/server/project-storage.ts",
     "operation": "from",
     "resource": "project-icons",
-    "line": 71,
+    "line": 68,
     "storage": true
   },
   {
     "file": "lib/server/project-storage.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 103,
+    "line": 99,
     "storage": false
   },
   {
     "file": "lib/server/project-storage.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 125,
-    "storage": false
-  },
-  {
-    "file": "lib/server/project-storage.ts",
-    "operation": "from",
-    "resource": "forge_attachment_objects",
-    "line": 134,
+    "line": 120,
     "storage": false
   },
   {
     "file": "lib/server/project-storage.ts",
     "operation": "from",
     "resource": null,
-    "line": 161,
+    "line": 150,
     "storage": true
   },
   {
