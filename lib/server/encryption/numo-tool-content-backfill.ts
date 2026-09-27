@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markNumoAttempt } from "./numo-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeNumoCheckpoint, decodeNumoToolMessage,
   encodeNumoCheckpoint, encodeNumoToolMessage, numoToolMessageState,
@@ -102,14 +104,8 @@ async function convertCheckpoint(turn: Turn, version: number) {
 }
 
 async function markAttempt(kind: "message" | "checkpoint" | "operation",
-  id: string, callId: string | null = null) {
-  try {
-    await getServiceClient().rpc("mark_numo_tool_content_attempt", {
-      p_kind:kind,p_id:id,p_call_id:callId,
-    });
-  } catch {
-    // A failed attempt marker must not hide the original row failure.
-  }
+  id: string, old: Record<string, unknown>, callId?: string) {
+  await markNumoAttempt(`tool_${kind}`, id, old, callId);
 }
 
 function uuid(value: unknown): string | null {
@@ -134,7 +130,7 @@ export async function backfillNumoToolContentBatch(limit = 30,
   const messages = await service.from("assistant_messages")
     .select("id,turn_id,role,content,tool_calls,context,metadata,tool_payload_version,conversation:conversations!inner(user_id)")
     .or("role.eq.tool,and(role.eq.assistant,tool_calls.not.is.null),tool_payload_version.gt.0")
-    .order("tool_payload_checked_at",{ ascending:true,nullsFirst:true })
+    .order("tool_payload_attempted_at",{ ascending:true,nullsFirst:true })
     .order("id",{ ascending:true }).limit(limit);
   if (messages.error) throw new Error("Unable to scan Numo tool messages");
   for (const row of messages.data ?? []) {
@@ -173,9 +169,11 @@ export async function backfillNumoToolContentBatch(limit = 30,
       if (write.error) throw new Error("Unable to migrate Numo tool message");
       if (!write.data) {
         result.conflicted++;
-        await markAttempt("message",message.id);
+        await markAttempt("message",message.id,{ content:message.content,
+          tool_calls:message.tool_calls,context:message.context,
+          metadata:message.metadata,tool_payload_version:message.tool_payload_version });
         if (oldCheckpoint && message.turn_id) {
-          await markAttempt("checkpoint",message.turn_id);
+          await markAttempt("checkpoint",message.turn_id,{ checkpoint:oldCheckpoint });
         }
       }
       else if (converted.fresh && (!oldCheckpoint ||
@@ -183,12 +181,14 @@ export async function backfillNumoToolContentBatch(limit = 30,
       else result.migrated++;
     } catch {
       result.failed++;
-      await markAttempt("message",row.id);
+      await markAttempt("message",row.id,{ content:row.content,
+        tool_calls:row.tool_calls,context:row.context,metadata:row.metadata,
+        tool_payload_version:row.tool_payload_version });
     }
   }
   const turns = await service.from("numo_assistant_turns")
     .select("id,user_id,checkpoint")
-    .order("tool_checkpoint_checked_at",{ ascending:true,nullsFirst:true })
+    .order("tool_checkpoint_attempted_at",{ ascending:true,nullsFirst:true })
     .order("id",{ ascending:true }).limit(limit);
   if (turns.error) throw new Error("Unable to scan Numo tool checkpoints");
   for (const row of turns.data ?? []) {
@@ -229,18 +229,18 @@ export async function backfillNumoToolContentBatch(limit = 30,
       if (write.error) throw new Error("Unable to migrate Numo tool checkpoint");
       if (!write.data) {
         result.conflicted++;
-        await markAttempt("checkpoint",turn.id);
+        await markAttempt("checkpoint",turn.id,{ checkpoint:turn.checkpoint });
       }
       else if (converted.fresh && linkedFresh) result.unchanged++;
       else result.migrated++;
     } catch {
       result.failed++;
-      await markAttempt("checkpoint",row.id);
+      await markAttempt("checkpoint",row.id,{ checkpoint:row.checkpoint });
     }
   }
   const operations = await service.from("numo_tool_operations")
     .select("turn_id,tool_call_id,tool_name,arguments,result,model_result,arguments_version,result_version,model_result_version,arguments_digest,status,success,result_run_id,turn:numo_assistant_turns!inner(user_id)")
-    .order("encryption_checked_at",{ ascending:true,nullsFirst:true })
+    .order("encryption_attempted_at",{ ascending:true,nullsFirst:true })
     .order("turn_id",{ ascending:true })
     .order("tool_call_id",{ ascending:true }).limit(limit);
   if (operations.error) throw new Error("Unable to scan Numo tool operations");
@@ -301,7 +301,11 @@ export async function backfillNumoToolContentBatch(limit = 30,
       if (write.error) throw new Error("Unable to migrate Numo tool operation");
       if (!write.data) {
         result.conflicted++;
-        await markAttempt("operation",operation.turn_id,operation.tool_call_id);
+        await markAttempt("operation",operation.turn_id,{ arguments:operation.arguments,
+          result:operation.result,model_result:operation.model_result,
+          arguments_version:operation.arguments_version,
+          result_version:operation.result_version,
+          model_result_version:operation.model_result_version },operation.tool_call_id);
       }
       else if (operation.arguments_version===version &&
           (operation.status!=="completed" || operation.result_version===version &&
@@ -309,7 +313,10 @@ export async function backfillNumoToolContentBatch(limit = 30,
       else result.migrated++;
     } catch {
       result.failed++;
-      await markAttempt("operation",row.turn_id,row.tool_call_id);
+      await markAttempt("operation",row.turn_id,{ arguments:row.arguments,
+        result:row.result,model_result:row.model_result,
+        arguments_version:row.arguments_version,result_version:row.result_version,
+        model_result_version:row.model_result_version },row.tool_call_id);
     }
   }
   return result;

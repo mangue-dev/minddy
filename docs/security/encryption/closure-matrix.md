@@ -83,3 +83,23 @@ effective partition and applies its corrective migration between the clear
 sentinel reproduction and refusal assertions. Neither proof covers production
 data, old backups or a real Storage-service restore. Production flags remain
 off; retain MIN-591 in progress and PR #289 in draft.
+
+## Follow-up security review of draft PR #289
+
+| Confirmed gap | Correction | Evidence and remaining boundary |
+| --- | --- | --- |
+| A stale `REPEATABLE READ` snapshot can commit clear data after activation; Feedback also races in `READ COMMITTED` | All current encrypted table guards and activation functions require `READ COMMITTED`. Writers, direct scope writes, key creation and activation use common transaction locks. Marker rollback is refused. | The two-session PostgreSQL test reproduces the old commits and verifies both validation orders, paused flags, old writers and updates after `NULL`. The final-schema trigger inventory covers 68 protected table families and 28 activation functions. A newly added family requires the same audit. |
+| Deleting the final project after a twin-PR rename leaves an old PR-ID Storage object readable | Project deletion collects historical PR aliases before cascade; a bounded orphan scan handles paths already ownerless. Explicit owners determine deletion when a project survives. | Simulated-Storage tests verify bytes removed and `/api/pr-attachments/...` returning 404; surviving project paths remain. PostgreSQL SQL verifies alias and orphan selection. Restore of the actual Storage service remains unverified. |
+| Failed Numo intent and related conversion rows can occupy the first batch forever | Separate attempt timestamps order all similarly shaped workers. Successful verification timestamps remain separate; exact-row CAS protects both outcomes. The obsolete tool marker is refused and suspect historical checks are reset for verification. | Multi-pass worker fixtures prove healthy later rows advance despite a failed first batch. SQL checks unverified rows stay activation blockers. |
+| Historical comment Realtime rows and Agent live startup prerequisites | Effective comment partitions purge clear history and reject old content broadcasts. Stream and diff acknowledge only after an encrypted snapshot write succeeds. | Isolated pre/post PostgreSQL Realtime regression and live endpoint tests pass. Old backups and external sinks need a retention inventory; every deployed live writer needs the root key, snapshot schema and RPC before traffic. |
+
+This follow-up proves code behavior on isolated PostgreSQL and simulated
+Storage. It does not establish production ciphertext inventory, actual Storage
+service restoration or historic backup deletion. Run representative search,
+latency, key-cache and load measurements in staging before activation. Leave
+MIN-591 in progress and PR #289 in draft through those operational gates.
+On the final isolated schema, 91 post-migration SQL regressions, both historical
+pre/post migration replays, the two-session fence test, all 69 independent
+parent/child restore scenarios, 106 targeted tests and 8,669 full-suite tests
+pass. The PostgreSQL search oracle, build, typecheck, lint and repository
+encryption/English checks also pass.

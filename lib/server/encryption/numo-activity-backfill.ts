@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markNumoAttempt } from "./numo-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { isContentEncryptionEnabled } from "./content-config";
 import { getContentKeys } from "./registry";
@@ -21,7 +23,7 @@ export async function backfillNumoActivityBatch(limit = 30,
   const { data, error } = await service.from("numo_turn_events")
     .select("id,turn_id,type,payload,turn:numo_assistant_turns!inner(user_id)")
     .not("type", "in", "(worker_completed,worker_failed,worker_input)")
-    .order("payload_user_encryption_checked_at", { ascending: true,
+    .order("payload_user_encryption_attempted_at", { ascending: true,
       nullsFirst: true }).order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan Numo activity");
   const result = { scanned: 0, migrated: 0, unchanged: 0,
@@ -54,10 +56,16 @@ export async function backfillNumoActivityBatch(limit = 30,
         p_id: row.id, p_old: row.payload, p_new: stored,
       });
       if (write.error) throw new Error("Unable to migrate Numo activity");
-      if (!write.data) result.conflicted++;
+      if (!write.data) {
+        result.conflicted++;
+        await markNumoAttempt("activity", row.id, { payload: row.payload });
+      }
       else if (fresh) result.unchanged++;
       else result.migrated++;
-    } catch { result.failed++; }
+    } catch {
+      result.failed++;
+      await markNumoAttempt("activity", row.id, { payload: row.payload });
+    }
   }
   return result;
 }

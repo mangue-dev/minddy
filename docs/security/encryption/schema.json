@@ -3398,6 +3398,16 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "error_encryption_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "title_encryption_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -5583,6 +5593,11 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "payload_user_encryption_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -6179,6 +6194,21 @@
         "generated": false
       },
       "final_payload_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "tool_payload_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "user_payload_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "final_payload_attempted_at": {
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
@@ -6961,6 +6991,11 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "destination_encryption_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -7273,7 +7308,27 @@
         "nullable": true,
         "generated": false
       },
+      "tool_checkpoint_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "error_encryption_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
       "outcome_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "intent_encryption_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "outcome_encryption_attempted_at": {
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
@@ -7467,6 +7522,11 @@
         "generated": false
       },
       "encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_attempted_at": {
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
@@ -9313,6 +9373,11 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "error_encryption_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -9982,6 +10047,11 @@
         "generated": false
       },
       "content_encryption_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "content_encryption_attempted_at": {
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false

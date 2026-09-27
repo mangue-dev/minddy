@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markNumoAttempt } from "./numo-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeNumoError, encodeNumoError, isEncryptedNumoError,
   numoErrorState, type NumoErrorSource } from
@@ -70,7 +72,7 @@ export async function backfillNumoErrorsBatch(limit = 30, signal?: AbortSignal) 
     "numo_routine_occurrences", "conversations"] as const) {
     const query = service.from(source)
       .select("*")
-      .order("error_encryption_checked_at", { ascending: true,
+      .order("error_encryption_attempted_at", { ascending: true,
         nullsFirst: true }).order("id", { ascending: true }).limit(limit);
     const { data, error } = await query;
     if (error) throw new Error("Unable to scan Numo errors");
@@ -98,10 +100,22 @@ export async function backfillNumoErrorsBatch(limit = 30, signal?: AbortSignal) 
         const converted = await convert(conversation,
           source === "numo_assistant_turns" ? row as Copy : null,
           source === "numo_routine_occurrences" ? row as Copy : null);
-        if (!converted.committed) result.conflicted++;
+        if (!converted.committed) {
+          result.conflicted++;
+          await markNumoAttempt(source === "conversations" ? "error_conversation"
+            : source === "numo_assistant_turns" ? "error_turn"
+              : "error_occurrence", row.id,
+          { error_message: row.error_message });
+        }
         else if (converted.changed) result.migrated++;
         else result.unchanged++;
-      } catch { result.failed++; }
+      } catch {
+        result.failed++;
+        await markNumoAttempt(source === "conversations" ? "error_conversation"
+          : source === "numo_assistant_turns" ? "error_turn"
+            : "error_occurrence", row.id,
+        { error_message: row.error_message });
+      }
     }
   }
   return result;

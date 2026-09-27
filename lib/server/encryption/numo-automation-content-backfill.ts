@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markNumoAttempt } from "./numo-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeOperationJson, decodeOperationText, encodeOperationJson,
   encodeOperationText, isEncryptedOperationJson, isEncryptedOperationText,
@@ -21,7 +23,7 @@ export async function backfillNumoAutomationContentBatch(limit = 30,
   const service = getServiceClient();
   const { data, error } = await service.from("numo_automation_operations")
     .select("id,chain_id,step,prompt,context,outcome,outcome_summary,outcome_blockers,chain:agent_chains!inner(project_id)")
-    .order("content_encryption_checked_at", { ascending: true,
+    .order("content_encryption_attempted_at", { ascending: true,
       nullsFirst: true }).order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan Numo automation operations");
   const result = { scanned: 0, migrated: 0, unchanged: 0,
@@ -90,10 +92,16 @@ export async function backfillNumoAutomationContentBatch(limit = 30,
         p_new_summary: newSummary, p_new_blockers: newBlockers,
       });
       if (write.error) throw new Error("Unable to migrate Numo automation operation");
-      if (!write.data) result.conflicted++;
+      if (!write.data) {
+        result.conflicted++;
+        await markNumoAttempt("automation", row.id, { prompt: row.prompt, context: row.context, outcome_summary: row.outcome_summary, outcome_blockers: row.outcome_blockers });
+      }
       else if (fresh) result.unchanged++;
       else result.migrated++;
-    } catch { result.failed++; }
+    } catch {
+      result.failed++;
+      await markNumoAttempt("automation", row.id, { prompt: row.prompt, context: row.context, outcome_summary: row.outcome_summary, outcome_blockers: row.outcome_blockers });
+    }
   }
   return result;
 }

@@ -34,7 +34,7 @@ const service = {
   },
   rpc: async (name: string, args: Record<string, unknown>) => {
     state.calls.push({ name, args });
-    if (name === "mark_numo_tool_content_attempt") {
+    if (name === "mark_numo_content_attempt") {
       state.attempted.push(String(args.p_id));
       return { data: null, error: null };
     }
@@ -90,14 +90,15 @@ describe("Numo tool checkpoint worker", () => {
   it("moves a failed checkpoint behind later candidates", async () => {
     state.turns = [
       { id: "bad", user_id: "user-1", checkpoint: { phase: "unknown", text: "Private" } },
+      { id: "bad-2", user_id: "user-1", checkpoint: { phase: "unknown", text: "Private" } },
       { id: "good", user_id: "user-1", checkpoint: { phase: "done" } },
     ];
-    expect(await backfillNumoToolContentBatch(1)).toMatchObject({
-      scanned: 1, failed: 1, unchanged: 0,
+    expect(await backfillNumoToolContentBatch(2)).toMatchObject({
+      scanned: 2, failed: 2, unchanged: 0,
     });
-    expect(state.attempted).toEqual(["bad"]);
-    expect(await backfillNumoToolContentBatch(1)).toMatchObject({
-      scanned: 1, failed: 0, unchanged: 1,
+    expect(state.attempted).toEqual(["bad", "bad-2"]);
+    expect(await backfillNumoToolContentBatch(2)).toMatchObject({
+      scanned: 2, failed: 1, unchanged: 1,
     });
   });
 });

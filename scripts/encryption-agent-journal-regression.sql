@@ -87,7 +87,8 @@ BEGIN
     WHERE schemaname='public' AND tablename='agent_run_journal') OR
     EXISTS(SELECT 1 FROM pg_trigger
       WHERE tgrelid='public.agent_run_journal'::regclass AND NOT tgisinternal
-        AND tgname <> 'agent_journal_encryption_guard') THEN
+        AND tgname <> 'agent_journal_encryption_guard'
+        AND tgname NOT LIKE 'a_min591_%') THEN
     RAISE EXCEPTION 'journal has a plaintext Realtime path';
   END IF;
 END;

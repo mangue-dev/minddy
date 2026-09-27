@@ -20,7 +20,7 @@ export async function backfillNumoTurnIntentsBatch(limit = 30,
   const service = getServiceClient();
   const { data, error } = await service.from("numo_assistant_turns")
     .select("id,user_id,conversation_id,request_id,intent")
-    .order("intent_encryption_checked_at", { ascending: true,
+    .order("intent_encryption_attempted_at", { ascending: true,
       nullsFirst: true }).order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan Numo turn intents");
   const result = { scanned: 0, migrated: 0, unchanged: 0,
@@ -51,10 +51,22 @@ export async function backfillNumoTurnIntentsBatch(limit = 30,
         p_id: row.id, p_old: row.intent, p_new: stored,
       });
       if (write.error) throw new Error("Unable to migrate Numo turn intent");
-      if (!write.data) result.conflicted++;
+      if (!write.data) {
+        result.conflicted++;
+        const marked = await service.rpc("mark_numo_turn_intent_attempt", {
+          p_id: row.id, p_old: row.intent,
+        });
+        if (marked.error) throw new Error("Unable to mark Numo intent attempt");
+      }
       else if (fresh) result.unchanged++;
       else result.migrated++;
-    } catch { result.failed++; }
+    } catch {
+      result.failed++;
+      const marked = await service.rpc("mark_numo_turn_intent_attempt", {
+        p_id: row.id, p_old: row.intent,
+      });
+      if (marked.error) throw new Error("Unable to mark Numo intent attempt");
+    }
   }
   return result;
 }

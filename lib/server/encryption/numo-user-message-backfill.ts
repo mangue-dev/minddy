@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markNumoAttempt } from "./numo-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeNumoUserMessage, encodeNumoUserMessage,
   numoUserMessageState } from "@/lib/server/numo/user-message-content";
@@ -20,7 +22,7 @@ export async function backfillNumoUserMessagesBatch(limit = 30,
   const { data, error } = await service.from("assistant_messages")
     .select("id,content,context,metadata,tool_calls,tool_call_id,tool_name,user_payload_version,conversation:conversations!inner(user_id)")
     .eq("role", "user").eq("worker_content_encryption_version", 0)
-    .order("user_payload_checked_at", { ascending: true, nullsFirst: true })
+    .order("user_payload_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan Numo user messages");
   const result = { scanned: 0, migrated: 0, unchanged: 0,
@@ -69,10 +71,16 @@ export async function backfillNumoUserMessagesBatch(limit = 30,
         p_new_content: stored.content, p_new_version: stored.user_payload_version,
       });
       if (write.error) throw new Error("Unable to migrate Numo user message");
-      if (!write.data) result.conflicted++;
+      if (!write.data) {
+        result.conflicted++;
+        await markNumoAttempt("user_message", row.id, { content: row.content, context: row.context, metadata: row.metadata, tool_calls: row.tool_calls, tool_call_id: row.tool_call_id, tool_name: row.tool_name, user_payload_version: row.user_payload_version });
+      }
       else if (fresh) result.unchanged++;
       else result.migrated++;
-    } catch { result.failed++; }
+    } catch {
+      result.failed++;
+      await markNumoAttempt("user_message", row.id, { content: row.content, context: row.context, metadata: row.metadata, tool_calls: row.tool_calls, tool_call_id: row.tool_call_id, tool_name: row.tool_name, user_payload_version: row.user_payload_version });
+    }
   }
   return result;
 }

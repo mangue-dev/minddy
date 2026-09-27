@@ -40,11 +40,11 @@ export async function saveAgentLiveSnapshot(input: {
   if (JSON.stringify(decoded) !== JSON.stringify(input.payload)) {
     throw new Error("Agent snapshot verification failed");
   }
-  const { error } = await getServiceClient().rpc("set_agent_run_live_snapshot", {
+  const { data, error } = await getServiceClient().rpc("set_agent_run_live_snapshot", {
     p_run_id: input.runId, p_kind: input.kind, p_content: content,
     p_version: store.versionOf(content), p_at: input.at,
   });
-  if (error) throw new Error("Unable to save agent live snapshot");
+  if (error || data !== true) throw new Error("Unable to save agent live snapshot");
 }
 
 /** The caller must authorize the run before using this service-role read. */

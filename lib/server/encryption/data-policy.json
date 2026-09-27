@@ -1063,8 +1063,11 @@
       "timestamp": [
         "created_at",
         "final_payload_checked_at",
+        "final_payload_attempted_at",
         "tool_payload_checked_at",
-        "user_payload_checked_at"
+        "tool_payload_attempted_at",
+        "user_payload_checked_at",
+        "user_payload_attempted_at"
       ]
     }
   },
@@ -1349,7 +1352,9 @@
         "archived_at",
         "created_at",
         "error_encryption_checked_at",
+        "error_encryption_attempted_at",
         "title_encryption_checked_at",
+        "title_encryption_attempted_at",
         "updated_at"
       ]
     }
@@ -2720,11 +2725,15 @@
         "completed_at",
         "created_at",
         "error_encryption_checked_at",
+        "error_encryption_attempted_at",
         "intent_encryption_checked_at",
+        "intent_encryption_attempted_at",
         "not_before",
         "outcome_encryption_checked_at",
+        "outcome_encryption_attempted_at",
         "started_at",
         "tool_checkpoint_checked_at",
+        "tool_checkpoint_attempted_at",
         "updated_at",
         "worker_checkpoint_encryption_checked_at",
         "worker_checkpoint_encryption_attempted_at"
@@ -2778,6 +2787,7 @@
       ],
       "timestamp": [
         "content_encryption_checked_at",
+        "content_encryption_attempted_at",
         "created_at",
         "updated_at"
       ]
@@ -2896,6 +2906,7 @@
       "timestamp": [
         "created_at",
         "error_encryption_checked_at",
+        "error_encryption_attempted_at",
         "scheduled_for",
         "updated_at"
       ]
@@ -2941,7 +2952,8 @@
         "notified_at",
         "projected_at",
         "updated_at",
-        "destination_encryption_checked_at"
+        "destination_encryption_checked_at",
+        "destination_encryption_attempted_at"
       ]
     }
   },
@@ -3011,6 +3023,7 @@
       "timestamp": [
         "completed_at",
         "encryption_checked_at",
+        "encryption_attempted_at",
         "started_at"
       ],
       "encryption_metadata": [
@@ -3045,6 +3058,7 @@
         "created_at",
         "payload_encryption_checked_at",
         "payload_user_encryption_checked_at",
+        "payload_user_encryption_attempted_at",
         "payload_encryption_attempted_at"
       ],
       "encryption_metadata": [

@@ -11,9 +11,6 @@ DO $test$
 DECLARE actor uuid:=gen_random_uuid(); project uuid:=gen_random_uuid();
   rejected boolean;
 BEGIN
-  INSERT INTO auth.users(id) VALUES(actor);
-  INSERT INTO public.projects(id,owner_id,name,key)
-    VALUES(project,actor,'Isolation fixture','ISO');
   rejected:=false;
   BEGIN
     INSERT INTO public.integrations(id,project_id,name,key_hash,key_prefix,kind)

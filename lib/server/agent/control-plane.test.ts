@@ -25,9 +25,6 @@ const h = vi.hoisted(() => ({
   events: [] as Array<{ runId: string; type: string }>,
   stamped: [] as Array<Record<string, unknown>>,
   issueCalls: [] as Array<{ ctx: Record<string, unknown>; name: string }>,
-  /** What has been entrusted to `afterOrNow` — therefore to the channel which maintains
-   * the invocation alive after the response, and never detached. */
-  afterWork: [] as Array<() => void | Promise<void>>,
   prIssueId: null as string | null,
   stampReturnsNull: false,
   /** The BASE refuses the write (null byte, failure) — not the transition guard. */
@@ -158,16 +155,6 @@ vi.mock("./live-snapshot", () => ({
       event: input.kind, text: input.payload.text });
     h.streamPayloads.push(input.payload);
   }),
-}));
-
-// `afterOrNow` does NOTHING here: the tests trigger it themselves. This is what
-// which makes visible the difference between “entrusted to the background channel” and “detached”
-// — a `void fetch(…)` placed before the response would never appear in this
-// file, and he would die with the summon in real life.
-vi.mock("@/lib/server/after-safe", () => ({
-  afterOrNow: (work: () => void | Promise<void>) => {
-    h.afterWork.push(work);
-  },
 }));
 
 vi.mock("./pr-run", () => ({
@@ -380,7 +367,6 @@ beforeEach(() => {
   h.events.length = 0;
   h.stamped.length = 0;
   h.issueCalls.length = 0;
-  h.afterWork.length = 0;
   h.requeued.length = 0;
   h.journal.length = 0;
   h.scratchpadCalls.length = 0;
@@ -506,7 +492,6 @@ describe("active authority revocation", () => {
   it("stops live broadcast immediately after membership revocation", async () => {
     h.creatorHasAccess = false;
     expect((await call("POST", "/stream", { text: "stale" })).status).toBe(409);
-    expect(h.afterWork).toEqual([]);
     expect(h.streams).toEqual([]);
   });
 
@@ -623,26 +608,18 @@ describe("le direct — le topic vient du run, pas du corps", () => {
       topic: "x",
     });
     expect(res.status).toBe(200);
-    await Promise.all(h.afterWork.map((w) => w()));
     expect(h.streams).toEqual([
       { topic: `agent-run:${RUN_ID}`, event: "stream", text: "salut" },
     ]);
   });
 
-  it("confie la diffusion au canal de fond, au lieu de la détacher", async () => {
-    // Direct is not written ANYWHERE: unlike events, no poll
-    // catches up with him. Detached just before the response, its fetch dies frozen with
-    // the invocation and the thread never sees the agent writing (cf. after-safe.ts).
-    await call("POST", "/stream", { text: "salut" });
-    // Nothing happened during the request: the broadcast is waiting for the hook.
-    expect(h.streams).toHaveLength(0);
-    expect(h.afterWork).toHaveLength(1);
-    // And work must RENDER its promise: detach it from within the
-    // hook would do exactly the same breakdown, one notch lower.
-    const returned = h.afterWork[0]();
-    expect(returned).toBeInstanceOf(Promise);
-    await returned;
-    expect(h.streams).toHaveLength(1);
+  it("returns an unavailable response when the protected snapshot cannot be saved", async () => {
+    const snapshot = await import("./live-snapshot");
+    vi.mocked(snapshot.saveAgentLiveSnapshot).mockRejectedValueOnce(
+      new Error("Missing root key or snapshot schema"));
+    const result = await call("POST", "/stream", { text: "Private stream" });
+    expect(result.status).toBe(503);
+    expect(h.streams).toEqual([]);
   });
 
   it("revalidates the run before every live broadcast", async () => {
@@ -655,7 +632,6 @@ describe("le direct — le topic vient du run, pas du corps", () => {
   it("does not broadcast after the run row disappears", async () => {
     h.run = null;
     expect((await call("POST", "/stream", { text: "salut" })).status).toBe(404);
-    expect(h.afterWork).toEqual([]);
   });
 
   it("ne rediffuse pas la liste de fichiers telle quelle : chemins vides, statuts inventés et surplus tombent", async () => {
@@ -676,7 +652,6 @@ describe("le direct — le topic vient du run, pas du corps", () => {
         },
       ],
     });
-    await Promise.all(h.afterWork.map((w) => w()));
     expect(h.streamPayloads[0].files).toEqual([
       { path: "a.ts", status: "deleted" },
       { path: "b.ts", status: "modified" },
@@ -696,7 +671,6 @@ describe("le direct — le topic vient du run, pas du corps", () => {
         status: "modified",
       })),
     });
-    await Promise.all(h.afterWork.map((w) => w()));
     expect((h.streamPayloads[0].files as unknown[]).length).toBe(
       CHANGED_FILES_CAP,
     );
@@ -712,7 +686,6 @@ describe("le direct — le topic vient du run, pas du corps", () => {
       files: [{ path: "a.ts", status: "modified" }],
       filesTruncated: true,
     });
-    await Promise.all(h.afterWork.map((w) => w()));
     expect(h.streamPayloads[0].filesTruncated).toBe(true);
   });
 
@@ -724,7 +697,6 @@ describe("le direct — le topic vient du run, pas du corps", () => {
         { path: "", additions: 20, deletions: 1 },
       ],
     });
-    await Promise.all(h.afterWork.map((w) => w()));
     expect(h.streamPayloads[0].fileStats).toEqual([
       { path: "lib/a.ts", status: "modified", additions: 9, deletions: 0 },
     ]);
@@ -734,7 +706,6 @@ describe("le direct — le topic vient du run, pas du corps", () => {
     // `clearLive` goes through here: an empty list must not become a `files: []`
     // that the thread would read as "the trick didn't hit anything".
     await call("POST", "/stream", { text: "salut" });
-    await Promise.all(h.afterWork.map((w) => w()));
     expect(h.streamPayloads[0]).not.toHaveProperty("files");
     expect(h.streamPayloads[0]).not.toHaveProperty("filesTruncated");
   });
@@ -1447,8 +1418,6 @@ describe("le plan de contrôle vu depuis une machine", () => {
       ],
     });
     expect(res.status).toBe(200);
-    expect(h.afterWork).toHaveLength(1);
-    await h.afterWork[0]();
     expect(h.streams[0]).toMatchObject({
       topic: `agent-run:${RUN_ID}`,
       event: "diff",
@@ -1645,7 +1614,6 @@ describe("le plan de contrôle vu depuis une machine", () => {
     );
     expect(res.status).toBe(403);
     expect(h.runReads).toBe(1);
-    expect(h.afterWork).toEqual([]);
   });
 
   it("rejects completed cloud runs on every privileged surface", async () => {

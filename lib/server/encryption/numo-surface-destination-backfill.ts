@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markNumoAttempt } from "./numo-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { isContentEncryptionEnabled } from "./content-config";
 import { getContentKeys } from "./registry";
@@ -20,7 +22,7 @@ export async function backfillNumoSurfaceDestinationsBatch(limit = 30,
   const service = getServiceClient();
   const { data, error } = await service.from("numo_surface_events")
     .select("id,actor_id,destination")
-    .order("destination_encryption_checked_at", { ascending: true,
+    .order("destination_encryption_attempted_at", { ascending: true,
       nullsFirst: true }).order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan Numo surface destinations");
   const result = { scanned: 0, migrated: 0, unchanged: 0,
@@ -49,10 +51,16 @@ export async function backfillNumoSurfaceDestinationsBatch(limit = 30,
         p_id: row.id, p_old: old, p_new: cipher,
       });
       if (write.error) throw new Error("Unable to migrate Numo surface destination");
-      if (!write.data) result.conflicted++;
+      if (!write.data) {
+        result.conflicted++;
+        await markNumoAttempt("surface", row.id, { destination: row.destination });
+      }
       else if (fresh) result.unchanged++;
       else result.migrated++;
-    } catch { result.failed++; }
+    } catch {
+      result.failed++;
+      await markNumoAttempt("surface", row.id, { destination: row.destination });
+    }
   }
   return result;
 }

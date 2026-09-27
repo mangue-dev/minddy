@@ -234,3 +234,39 @@ and the actual `search_pages` function under RLS and `limit=1`. Retain the real
 Storage-service backup and restore as a distinct gate:
 the in-memory object fixture and PostgreSQL metadata restore do not establish
 that Storage bytes survive service restoration.
+
+## Follow-up activation controls for MIN-591
+
+Before lifting any encryption flag, apply the follow-up migrations in staging,
+then run the two-session snapshot regression against an isolated clone. Keep
+the scope marker and content-key writes at `READ COMMITTED`; a transaction at
+`REPEATABLE READ` or `SERIALIZABLE` must fail before it can cross a marker.
+Audit all protected table triggers and activation functions when the schema
+changes. Review every Numo queue where `*_encryption_attempted_at` advances
+while the corresponding `*_encryption_checked_at` is still null. A failed
+attempt is evidence of a blocker, never of completion. In particular, inspect
+the intent queue and the previously used tool marker:
+
+```sql
+SELECT count(*) AS unverified_intents FROM public.numo_assistant_turns
+ WHERE intent_encryption_checked_at IS NULL
+   OR NOT COALESCE(intent ? 'encrypted_intent', false);
+SELECT count(*) AS unverified_tool_messages FROM public.assistant_messages
+ WHERE tool_payload_attempted_at IS NOT NULL
+   AND tool_payload_checked_at IS NULL;
+```
+
+Inventory effective Realtime comment partitions plus older backups, replica
+logs, analytics exports and external sinks under their retention policy. The
+active partition purge and old-writer guard do not erase prior backups or
+copies already delivered to another service. For Agent live, install the
+`agent_run_live_snapshots` schema and `set_agent_run_live_snapshot` RPC, and
+configure the same valid root key on every live writer before routing stream
+or diff traffic. Verify the endpoint returns 503 if any prerequisite is
+missing, then retest after it is restored.
+
+For forge attachments, test backup and restore of the actual Storage service,
+including old PR-ID paths and current opaque objects. The simulated object
+fixture and PostgreSQL metadata restore cover separate, narrower boundaries.
+Measure representative search results, latency and key/cache load in staging
+before activation; a production performance measurement is not a code PR gate.

@@ -325,7 +325,7 @@
       "functionReferences": []
     },
     "activate_mcp_content()": {
-      "sha256": "dc85a500ccbb6e9105124faa5884816ace17deda69b5a9305dc588b41edba5b1",
+      "sha256": "576075daab65aafc3b8b653f9d7295ca70aa5bdbbb1ddd9a180de2ce5681088a",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -341,7 +341,8 @@
         "user_mcp_oauth_attempts"
       ],
       "functionReferences": [
-        "mcp_content_envelope_version"
+        "mcp_content_envelope_version",
+        "require_encryption_read_committed"
       ]
     },
     "get_ai_run_calls(uuid)": {
@@ -437,7 +438,7 @@
       ]
     },
     "activate_page_content()": {
-      "sha256": "bb0ef6f6639911730782f1a2fa81ea45e012a7b8b1610d3b187530b8a8e62263",
+      "sha256": "0f24b6c80e0734d4992473a45d9676282b1db14277074acb567b2f45a9cad0b0",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -450,10 +451,12 @@
       "protectedRelations": [
         "pages"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "activate_push_content()": {
-      "sha256": "7a2693e07f2d9744d4bd05d65ea594708c1bfb55d197e90a1cb1a901cc0cdd5f",
+      "sha256": "6d2d6f0f2aaf0ac456ec7250362ccce8cc638666fb7f2ff5d5b51944cde296d8",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -467,11 +470,12 @@
         "push_subscriptions"
       ],
       "functionReferences": [
-        "push_content_version"
+        "push_content_version",
+        "require_encryption_read_committed"
       ]
     },
     "activate_view_content()": {
-      "sha256": "6c60522593a13aadc51709f28d54ac0d721c173aca9b6fc0b6ef40df6ccbea5c",
+      "sha256": "624a85189d080f67915f2b1a5802986c23161dbb8e5082038854f2ed9985457c",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -484,7 +488,9 @@
       "protectedRelations": [
         "views"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "advance_mfa_amr_epoch()": {
       "sha256": "e92ac43d459b55ac24b3dd5890e82a57a872cec0d411f9c1cae039a04415447b",
@@ -1010,7 +1016,7 @@
       "functionReferences": []
     },
     "guard_numo_tool_message()": {
-      "sha256": "9a391b970cd9801c460eb11d8b6df4d2ddca41d05d1763c88478432932e2f0b1",
+      "sha256": "319b93fa879a0c9211a1aa86b4d75fb7849992e17addac1c5763bc19338dde85",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1036,7 +1042,7 @@
       "functionReferences": []
     },
     "guard_numo_user_message()": {
-      "sha256": "e5d30f6bda149f28d981e78c71bbf0cb1ed14a189ca56b7d4901b49b0b56a7c1",
+      "sha256": "d7011886ab4a452521cdd2f26f2e9d042ed344aafa5831695e910e8def881bda",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1075,7 +1081,7 @@
       ]
     },
     "activate_api_key_content()": {
-      "sha256": "838f078405b381883ce26ad56450e2e7dce78e0b51fcfa1410fc1ecad108a2d6",
+      "sha256": "df8d60fa3f20f2deee5fb1d028751971192fef0de10d60d3fe58f8b022edeef3",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1088,10 +1094,12 @@
       "protectedRelations": [
         "api_keys"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "activate_app_tab_content()": {
-      "sha256": "8d62a4bd4051f7c4ea69ae5c0b7f59f4b33cde5372b1af182f44268b05a91459",
+      "sha256": "d912d19750768e93692da1d4d22f96c5b85e9f135344bf65ba02ffd3545d40b6",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1105,11 +1113,12 @@
         "app_tabs"
       ],
       "functionReferences": [
-        "app_tab_content_version"
+        "app_tab_content_version",
+        "require_encryption_read_committed"
       ]
     },
     "activate_project_content()": {
-      "sha256": "0415abfb958a4579fcc6c8838ba486e0f926cc41000c7979ddb0177d717886e5",
+      "sha256": "6dbc118578ccdb4d9f876391ae9eb52d4c0583432b7e0e6d02a3304aca3b758c",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1123,7 +1132,9 @@
       "protectedRelations": [
         "projects"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "broadcast_feedback_child()": {
       "sha256": "35dae12680d64d30dd346b0ef36d560a5c0f7fcacca2cd1cd4370c25cf0f9ee6",
@@ -1338,7 +1349,7 @@
       "functionReferences": []
     },
     "guard_numo_final_message()": {
-      "sha256": "5d9437fb0120ba0b350f7f185f3cde4ee35b41538f1b216be06840b2b3bb7a47",
+      "sha256": "a6343bb954bb33f127f5c8a70a927dd4b855e53e6b5fef2a11b3405441fb49e5",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1479,7 +1490,7 @@
       ]
     },
     "activate_billing_identity()": {
-      "sha256": "0539c76296e107bc58c77d8a0d89cba91bd39369a0089ed953ec30ba71114774",
+      "sha256": "911d69ef499ffa3fe3367555f2dbd91413ccaeef9b2d7bba01a12abd8904b1ca",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1493,11 +1504,12 @@
         "billing_accounts"
       ],
       "functionReferences": [
-        "billing_identity_version"
+        "billing_identity_version",
+        "require_encryption_read_committed"
       ]
     },
     "activate_invitation_email()": {
-      "sha256": "43329a81269a2732853baf1c5d686b5a957ddf7cc029e00d11a256a9c6936590",
+      "sha256": "3e8c97cd589c8e44e885fa8c380d8d303aedbe98fd66fb220c873876d5b0d453",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1510,7 +1522,9 @@
       "protectedRelations": [
         "project_invitations"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "broadcast_activity_scoped()": {
       "sha256": "2005c805d6dac7ecbfd62b1bf67ade6a36256adcbd0c5c2de7a3f1bd2abd25c2",
@@ -1696,7 +1710,7 @@
       ]
     },
     "guard_numo_tool_operation()": {
-      "sha256": "b3ad371022856b15ac1333a01cf70aff967c8d890c68ec030c3444e9b74f5eeb",
+      "sha256": "298b08968d1ff386636684f84bdd5e5c5a0dffcc518ff554eaca59fa063d0285",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1985,6 +1999,17 @@
         "can_watch_numo_page_comment"
       ]
     },
+    "stamp_numo_success_attempt()": {
+      "sha256": "19a51cbad1a2b2176414f3de1c7d9129c577353d9be5a72702350c8be4046c97",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{=X/supabase_admin,supabase_admin=X/supabase_admin,postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "sync_project_storage_owner()": {
       "sha256": "18ebc099a619ac83db07583e3401b58e0bfcea7cacb4db75f8f86fcde1952583",
       "securityDefiner": true,
@@ -2001,7 +2026,7 @@
       ]
     },
     "activate_forge_oauth_tokens()": {
-      "sha256": "a3eca34848460792af00f6f69594ed4dddeff7a16937e23a8efb4bca84cbb429",
+      "sha256": "60221ad79180381d9d5b368ec1b6d51c483563f02a33e5eeb24af795f408e430",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2017,11 +2042,12 @@
         "git_user_identities"
       ],
       "functionReferences": [
+        "require_encryption_read_committed",
         "forge_oauth_token_envelope_version"
       ]
     },
     "activate_oauth_code_content()": {
-      "sha256": "2bb54d3d6391b1c84f4358d79c051ec51b36a488d19a84d34d0ac27b69f4bbfc",
+      "sha256": "201233360565c34dfee426787c5153b1fab7caa8d380a9d907b3701962929057",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2034,7 +2060,9 @@
       "protectedRelations": [
         "oauth_authorization_codes"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "app_tab_content_version(text)": {
       "sha256": "9a1e1006e02e8f632d54f0b67a98668f63aea15538f816995d88e34283133d40",
@@ -2378,7 +2406,7 @@
       "functionReferences": []
     },
     "activate_agent_branch_prefix()": {
-      "sha256": "80bf3a2846c98c0f82e8a14324549e4ed282600209f0fabf67e261e036a6821d",
+      "sha256": "69ba4936cf1908dcdbf222f04850197e91f995c2d9950bf76525494b5e3a8acd",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2392,11 +2420,12 @@
         "user_agent_preferences"
       ],
       "functionReferences": [
-        "agent_branch_prefix_version"
+        "agent_branch_prefix_version",
+        "require_encryption_read_committed"
       ]
     },
     "activate_integration_content()": {
-      "sha256": "bdbb383bc2cdd33a000b375d5da50d90ea74e79bebdf3268c9b5746d7536c382",
+      "sha256": "028f823e206c463d99f83f9740da66d215df5297c60b1856c7ed76d0c142363e",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2410,11 +2439,12 @@
         "integrations"
       ],
       "functionReferences": [
-        "integration_content_version"
+        "integration_content_version",
+        "require_encryption_read_committed"
       ]
     },
     "activate_user_ai_key_content()": {
-      "sha256": "c5ee3b4a79a41d5bb2472f36e24ff22464c7faaa88c960922632752b7136f51b",
+      "sha256": "9c2b5fd8a9c9a853b1ada956df3c10eb700a24aefc2db7cedc966a893f934561",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2427,7 +2457,9 @@
       "protectedRelations": [
         "user_ai_keys"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "billing_identity_version(text)": {
       "sha256": "704e4b3987057c779e47b2b3405e6df64a6182e6c3a7ee1a6e729cfd93c1e15f",
@@ -2768,7 +2800,7 @@
       "functionReferences": []
     },
     "activate_oauth_client_content()": {
-      "sha256": "40f79c70cf9f37875e89bbabac80ebe80062c5233b49f92d8ea7adc7116ad03c",
+      "sha256": "984433664ae28905f5ebcc872a974af1a0ad76ff7c215fa05bab1c4727c848fb",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2781,10 +2813,12 @@
       "protectedRelations": [
         "oauth_clients"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "activate_saved_view_bookmarks()": {
-      "sha256": "93a93ba2930de00f33663c8386a34d40f1547ba1d39b24d10ce8d36a92284fd1",
+      "sha256": "c6b02724c40e5e1e261891e2c8aafff707e6ace303dffb34d28d8e40221b2a4f",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2797,7 +2831,9 @@
       "protectedRelations": [
         "saved_views"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "agent_runs_stamp_completed_at()": {
       "sha256": "4b5986414a1f718172034c7b4c64221c79ec5ed579da1e60637180cce2ed6c30",
@@ -2891,6 +2927,19 @@
       ],
       "protectedRelations": [],
       "functionReferences": []
+    },
+    "guard_envelope_key_activation()": {
+      "sha256": "daaa441d0fcb1b8d63cb5fb26f46bd07a8e907b1250fac86bab80ba3ed613124",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "guard_numo_automation_content()": {
       "sha256": "da886466cc87e41813da7414b50a2e2a446140a33ad55827632f539954220127",
@@ -3008,7 +3057,7 @@
       "functionReferences": []
     },
     "activate_agent_routine_content()": {
-      "sha256": "77e0be6a3a4ffca722b07ec53ff30c4e0d78faf4318b0f19f5b4dade16596167",
+      "sha256": "f7aa3e876ec58096a6b3cc46bdbb21387cdfe5a535d5f38d311b0c285e46bf2d",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3021,10 +3070,12 @@
       "protectedRelations": [
         "agent_routines"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "activate_private_project_icons()": {
-      "sha256": "dcdf914a68df42320964c261de023ccbf02e1802ce32eaf4f56592ddc82c6597",
+      "sha256": "ff8e12ae158293bca18a1986be9bca142e86c9c64ff236d5e175d4dfbf4f92c0",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3038,7 +3089,9 @@
       "protectedRelations": [
         "projects"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "attachment_object_owners(text[])": {
       "sha256": "5d41918325841dca94af618df7594bb5991dc29fe4a27e6580c4bd14bb8dc706",
@@ -3177,6 +3230,19 @@
         "agent_conversations"
       ],
       "functionReferences": []
+    },
+    "guard_encryption_marker_change()": {
+      "sha256": "c86939773668bcb055be09f824928a3e5026da8e2345e9cec3f5bdd89bf2caab",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "guard_feedback_post_encryption()": {
       "sha256": "c3d25f3dddc47f3f98d9797558600ecadcbdd964d29d14d302f98ee11b1c2526",
@@ -3333,7 +3399,7 @@
       ]
     },
     "activate_forge_default_branches()": {
-      "sha256": "b57ee164cba40249bee7a3871698ad0149230a3088ccc0853074ce32368ca651",
+      "sha256": "f67ad080b06281228878e82c4e7f137ce762c10c673834d042910a1b584e4007",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3346,10 +3412,12 @@
       "protectedRelations": [
         "project_git_links"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "activate_forge_repository_names()": {
-      "sha256": "8c2992016804264c515f2027df5b622c9b0144a16178cbfedd0c66e1bfc7c0a5",
+      "sha256": "abdbf64c34db6e3c374882e30329d751ddef334182dc8f67ccb88c2ed856c85b",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3371,7 +3439,9 @@
         "project_git_links",
         "forge_repository_names"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "agent_branch_prefix_version(text)": {
       "sha256": "baec6afb0d82ce297b09b0987ba013a0941165ab07db8d82f0573fab96f695ae",
@@ -3549,6 +3619,31 @@
         "agent_conversations"
       ],
       "functionReferences": []
+    },
+    "guard_encryption_snapshot_write()": {
+      "sha256": "09df0a54a28d717ccff1ad2117b443c0633170feaa88d00c4c2ac58a7c409664",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "issues",
+        "comments",
+        "objectives",
+        "issue_events",
+        "feedback_posts"
+      ],
+      "protectedRelations": [
+        "issues",
+        "comments",
+        "objectives",
+        "issue_events",
+        "feedback_posts"
+      ],
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "guard_feedback_private_identity()": {
       "sha256": "62f8ee23e767d13e10e9992e1f3cf6b4acac1d32fe66cf9261d728a6b93ae593",
@@ -3988,6 +4083,17 @@
         "rotate_project_realtime_generation"
       ]
     },
+    "require_encryption_read_committed()": {
+      "sha256": "bbf45c4afb28523efd44676478c570a7a9ca040dcc203219cb42944df015bf5a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "verify_project_icon(uuid,text,text)": {
       "sha256": "9f1c887277d9520178c825d7dcb447a167041cc0f416a90416d182e15d112f7d",
       "securityDefiner": true,
@@ -4154,7 +4260,7 @@
       ]
     },
     "activate_custom_domain_verification()": {
-      "sha256": "db280caa595543fbf2847b35b1a32468b5ca0e618f7ce201e949fd87006e4a56",
+      "sha256": "0751c5fe1993126e7f3fdcaf4693db87451d489a0db87df3f61949f5aca227cf",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4168,6 +4274,7 @@
         "custom_domains"
       ],
       "functionReferences": [
+        "require_encryption_read_committed",
         "custom_domain_verification_version"
       ]
     },
@@ -4329,7 +4436,7 @@
       ]
     },
     "activate_forge_attachment_encryption()": {
-      "sha256": "155a206af063721803e78f61958aae196508718360207fb89c191729e93441a4",
+      "sha256": "0f26abc31b914e97a29091a5bb4e2dcca34af39ac66463901cd8d3d0b968645f",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4339,10 +4446,12 @@
         "forge_attachment_encryption_scope"
       ],
       "protectedRelations": [],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "activate_forge_relay_user_deliveries()": {
-      "sha256": "2037e8c87ff8ad6f334b84b2b28632055163db7b4fbfdddb62eddb3d6c939eb8",
+      "sha256": "bf5a9d79362e796c35d617845b29a20395875447d4c7a8eb7298708a7453e0e7",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4356,11 +4465,12 @@
         "forge_relay_user_deliveries"
       ],
       "functionReferences": [
+        "require_encryption_read_committed",
         "forge_relay_user_delivery_envelope_version"
       ]
     },
     "activate_project_git_webhook_secrets()": {
-      "sha256": "d99ba6665996969a46bbf57a51964ec9c5b150f88b0a6a42a755201d71ff56ea",
+      "sha256": "fc1a7a4b019180c0626b1f8bd3e87e63de6780d1cdc801f6ae1a515db804542a",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4374,6 +4484,7 @@
         "project_git_links"
       ],
       "functionReferences": [
+        "require_encryption_read_committed",
         "project_git_webhook_secret_version"
       ]
     },
@@ -4467,7 +4578,7 @@
       "functionReferences": []
     },
     "list_forge_attachment_orphans(integer)": {
-      "sha256": "8cd8748a5bd79498111ca2a4c7746de9e110d42ea49bf4c73475a509cfe62aa8",
+      "sha256": "84f20a5d6586ce821829b6441e8df584c3fb54663df5581ac0545a46679fc313",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4476,11 +4587,16 @@
       "relations": [
         "projects",
         "attachments",
-        "forge_attachment_objects"
+        "pull_requests",
+        "project_git_links",
+        "forge_attachment_objects",
+        "forge_attachment_legacy_pr_aliases"
       ],
       "protectedRelations": [
         "projects",
-        "attachments"
+        "attachments",
+        "pull_requests",
+        "project_git_links"
       ],
       "functionReferences": []
     },
@@ -4516,7 +4632,7 @@
       "functionReferences": []
     },
     "activate_forge_relay_instance_content()": {
-      "sha256": "1401c1ae74823464d75a310feddb90219614ee16c34a3457c24f19c421e3667c",
+      "sha256": "bba9fabc0e1a1382f4bb1af7680f5afc182852d327be67d91f21cb81086bd0de",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4529,10 +4645,12 @@
       "protectedRelations": [
         "forge_relay_instances"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "activate_stripe_webhook_payload_scrub()": {
-      "sha256": "2942c36c51f36397902552bad05e5a983fd59ee26ae5fa3f4a10bd97b6617228",
+      "sha256": "c7cb0999d58307e5188090ed5515137af52841d571ae11d6012841ef2f681420",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4543,7 +4661,9 @@
         "stripe_webhook_payload_scope"
       ],
       "protectedRelations": [],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "convert_database_cell(jsonb,text,jsonb)": {
       "sha256": "68cdfd87fd0fef26d63bd32d17cdf11fa3f84eb6ac016f1ce69345c79b4ab4e7",
@@ -4654,6 +4774,24 @@
         "agent_messages"
       ],
       "functionReferences": []
+    },
+    "guard_attachment_object_snapshot_write()": {
+      "sha256": "7dd7ed2d5b08a460624298773fa760703c70b2b15ebe2ec40c69e3db76f0821d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "attachments",
+        "attachment_object_encryption_scope"
+      ],
+      "protectedRelations": [
+        "attachments"
+      ],
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "guard_forge_relay_provisioning_content()": {
       "sha256": "69a5f741eff3bf49f8fa1eda36693c32b364d0bff85f3a92d1b8b442ae829400",
@@ -4776,7 +4914,7 @@
       ]
     },
     "activate_ai_decision_evaluation_content()": {
-      "sha256": "73c8c3333c5ef15763df48a699644c1c4a91ecc124a2d60c39cf0d6cd4530424",
+      "sha256": "d889780e12a177887811e75f435a52051a6a2429e34f1433e22207493ad8dba9",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4790,6 +4928,7 @@
         "ai_decision_evaluations"
       ],
       "functionReferences": [
+        "require_encryption_read_committed",
         "ai_decision_evaluation_cipher_version"
       ]
     },
@@ -4903,6 +5042,21 @@
       ],
       "protectedRelations": [
         "projects"
+      ],
+      "functionReferences": []
+    },
+    "mark_numo_turn_intent_attempt(uuid,jsonb)": {
+      "sha256": "9ddd03dfe78352d75c75619edce46bdcdc58adb6755f176db7ff4f7c738fcc1d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "numo_assistant_turns"
+      ],
+      "protectedRelations": [
+        "numo_assistant_turns"
       ],
       "functionReferences": []
     },
@@ -5099,7 +5253,7 @@
       "functionReferences": []
     },
     "migrate_numo_turn_intent(uuid,jsonb,jsonb)": {
-      "sha256": "444531d9b503ce5a7b99b77438771821756d5dac8adb6565582c7680a5c47978",
+      "sha256": "46a94c0d411ca121e869f1ae999a0fca8e10e0a7e1f0cbf3925972d7c7abb68c",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -5129,7 +5283,7 @@
       "functionReferences": []
     },
     "activate_forge_relay_provisioning_content()": {
-      "sha256": "9d86ec8791607a9a57ec6e0f95cd8cbe0e4823f2dbd45eaf68f979cc84ab72b7",
+      "sha256": "29c3b6ab0a3669eb5d5cfa3f97fc0f18d9ee71a5713d8388c74c9849a60f13bf",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -5143,6 +5297,7 @@
         "forge_relay_provisioning"
       ],
       "functionReferences": [
+        "require_encryption_read_committed",
         "forge_relay_provisioning_envelope_version"
       ]
     },
@@ -5531,22 +5686,14 @@
       "functionReferences": []
     },
     "mark_numo_tool_content_attempt(text,uuid,text)": {
-      "sha256": "6bab270bcc54e23d9368b1711c78991831360a54e04fd53305dd86c1751ab5b0",
+      "sha256": "198b1c8657b71020d2b9dff6f5a3db691ba1e4ea88b0c514bfdd375c7235c730",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
-      "relations": [
-        "assistant_messages",
-        "numo_assistant_turns",
-        "numo_tool_operations"
-      ],
-      "protectedRelations": [
-        "assistant_messages",
-        "numo_assistant_turns",
-        "numo_tool_operations"
-      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "merge_feedback_posts(uuid,uuid,text,uuid,real)": {
@@ -5650,6 +5797,35 @@
       ],
       "protectedRelations": [
         "app_config"
+      ],
+      "functionReferences": []
+    },
+    "mark_numo_content_attempt(text,uuid,jsonb,text)": {
+      "sha256": "df4d047c608bce82fbb0249ae48dcce4d55d51322bb1f96e699bdbf5ef89768c",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "conversations",
+        "numo_turn_events",
+        "assistant_messages",
+        "numo_surface_events",
+        "numo_assistant_turns",
+        "numo_tool_operations",
+        "numo_routine_occurrences",
+        "numo_automation_operations"
+      ],
+      "protectedRelations": [
+        "conversations",
+        "numo_turn_events",
+        "assistant_messages",
+        "numo_surface_events",
+        "numo_assistant_turns",
+        "numo_tool_operations",
+        "numo_routine_occurrences",
+        "numo_automation_operations"
       ],
       "functionReferences": []
     },
@@ -6227,7 +6403,7 @@
       ]
     },
     "rotate_envelope_data_key(text,uuid,text,integer,text)": {
-      "sha256": "d9e304876eebdddf864a8e26ddcc773acc554785bf12922b96e6ef7135993a98",
+      "sha256": "baa175900c4034622169f3292541b33386686de8fe3ca23070eddf7da00b7af9",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6237,7 +6413,9 @@
         "envelope_data_keys"
       ],
       "protectedRelations": [],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "sync_github_issue_metadata_encrypted(uuid,uuid,jsonb)": {
       "sha256": "99f79b14be3d8c0c4a7c4fe0d78aa979c70174d7f14ad93b996b7f1129f2efbe",
@@ -6344,7 +6522,7 @@
       "functionReferences": []
     },
     "create_envelope_data_key_if_absent(text,uuid,text,text)": {
-      "sha256": "91d41cb223df34da3ded1e9561598aaf5d678061d62daa2beaaaf49979f4e36e",
+      "sha256": "65baf114dacf6cdf1b6a5dc217f3c1e568b777831f363611bc00676ab72c1cfc",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6354,7 +6532,9 @@
         "envelope_data_keys"
       ],
       "protectedRelations": [],
-      "functionReferences": []
+      "functionReferences": [
+        "require_encryption_read_committed"
+      ]
     },
     "mark_feedback_merge_payload_attempt(uuid,jsonb,boolean)": {
       "sha256": "0b0faa74dfecdc90746c956e72a95624238f88958086b185f3de8ddc47f07b86",
@@ -8423,6 +8603,10 @@
       "function": "broadcast_comment_metadata()",
       "definition": "CREATE TRIGGER page_comments_broadcast AFTER INSERT OR DELETE OR UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION broadcast_comment_metadata()"
     },
+    "pages.a_min591_fence_c92d5d4040f97b81": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_c92d5d4040f97b81 BEFORE INSERT OR UPDATE ON pages FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('page_content_encryption_scope', 'global')"
+    },
     "projects.project_icon_reference_guard": {
       "function": "guard_project_icon_reference()",
       "definition": "CREATE TRIGGER project_icon_reference_guard BEFORE INSERT OR UPDATE ON projects FOR EACH ROW EXECUTE FUNCTION guard_project_icon_reference()"
@@ -8434,6 +8618,10 @@
     "saved_views.saved_view_bookmark_guard": {
       "function": "guard_saved_view_bookmark()",
       "definition": "CREATE TRIGGER saved_view_bookmark_guard BEFORE INSERT OR UPDATE ON saved_views FOR EACH ROW EXECUTE FUNCTION guard_saved_view_bookmark()"
+    },
+    "views.a_min591_fence_050429eb83ef37a2": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_050429eb83ef37a2 BEFORE INSERT OR UPDATE ON views FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('view_content_encryption_scope', 'global')"
     },
     "agent_runs.agent_run_base_branch_guard": {
       "function": "guard_agent_run_base_branch()",
@@ -8470,6 +8658,18 @@
     "integrations.integration_content_guard": {
       "function": "guard_integration_content()",
       "definition": "CREATE TRIGGER integration_content_guard BEFORE INSERT OR UPDATE ON integrations FOR EACH ROW EXECUTE FUNCTION guard_integration_content()"
+    },
+    "issues.a_min591_fence_892f65a23726e057": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_892f65a23726e057 BEFORE INSERT OR UPDATE ON issues FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('github_issue_metadata_encryption_scopes', 'global')"
+    },
+    "issues.a_min591_fence_cc4d6cc2ebca99ba": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_cc4d6cc2ebca99ba BEFORE INSERT OR UPDATE ON issues FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('issue_encryption_scopes', 'global')"
+    },
+    "issues.a_min591_fence_fb38b7482057f8c2": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_fb38b7482057f8c2 BEFORE INSERT OR UPDATE ON issues FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('github_issue_comment_url_encryption_scopes', 'global')"
     },
     "objectives.objectives_encryption_guard": {
       "function": "guard_objective_encryption()",
@@ -8555,9 +8755,33 @@
       "function": "guard_agent_delegation_input()",
       "definition": "CREATE TRIGGER zz_agent_run_delegation_guard BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_delegation_input()"
     },
+    "api_keys.a_min591_fence_9e4dc03ef76fd8d2": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_9e4dc03ef76fd8d2 BEFORE INSERT OR UPDATE ON api_keys FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('api_key_content_scope', 'global')"
+    },
+    "app_tabs.a_min591_fence_8a10021d29884b93": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_8a10021d29884b93 BEFORE INSERT OR UPDATE ON app_tabs FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('app_tab_content_scope', 'global')"
+    },
+    "comments.a_min591_fence_7f20344b87b75b31": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_7f20344b87b75b31 BEFORE INSERT OR UPDATE ON comments FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('envelope-key', 'project')"
+    },
+    "mcp_content_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON mcp_content_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "oauth_clients.oauth_client_content_guard": {
       "function": "guard_oauth_client_content()",
       "definition": "CREATE TRIGGER oauth_client_content_guard BEFORE INSERT OR UPDATE ON oauth_clients FOR EACH ROW EXECUTE FUNCTION guard_oauth_client_content()"
+    },
+    "projects.a_min591_fence_564c6c8cbaa514ee": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_564c6c8cbaa514ee BEFORE INSERT OR UPDATE ON projects FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('project_icon_encryption_scope', 'global')"
+    },
+    "projects.a_min591_fence_7a377d83a5381dc8": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_7a377d83a5381dc8 BEFORE INSERT OR UPDATE ON projects FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('project_content_encryption_scope', 'global')"
     },
     "pull_requests.pull_request_content_guard": {
       "function": "guard_pull_request_content()",
@@ -8587,6 +8811,10 @@
       "function": "broadcast_members_row()",
       "definition": "CREATE TRIGGER project_members_broadcast AFTER INSERT OR DELETE OR UPDATE ON project_members FOR EACH ROW EXECUTE FUNCTION broadcast_members_row()"
     },
+    "push_content_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON push_content_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "user_ai_keys.user_ai_keys_a_content_guard": {
       "function": "guard_user_ai_key_content()",
       "definition": "CREATE TRIGGER user_ai_keys_a_content_guard BEFORE INSERT OR UPDATE ON user_ai_keys FOR EACH ROW EXECUTE FUNCTION guard_user_ai_key_content()"
@@ -8611,6 +8839,50 @@
       "function": "guard_agent_routine_content()",
       "definition": "CREATE TRIGGER agent_routine_content_guard BEFORE INSERT OR UPDATE ON agent_routines FOR EACH ROW EXECUTE FUNCTION guard_agent_routine_content()"
     },
+    "agent_runs.a_min591_fence_167e09359bef18f5": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_167e09359bef18f5 BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_deployment_encryption_scopes', 'global')"
+    },
+    "agent_runs.a_min591_fence_27d100ac26aed51d": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_27d100ac26aed51d BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_verdict_encryption_scopes', 'global')"
+    },
+    "agent_runs.a_min591_fence_38bde2ccb2cb2514": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_38bde2ccb2cb2514 BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_launch_encryption_scopes', 'global')"
+    },
+    "agent_runs.a_min591_fence_9743022757f84dfb": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_9743022757f84dfb BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_checkpoint_encryption_scopes', 'global')"
+    },
+    "agent_runs.a_min591_fence_a86c167c9c943dc7": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_a86c167c9c943dc7 BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_summary_encryption_scopes', 'global')"
+    },
+    "agent_runs.a_min591_fence_ab7d53d9e9067da5": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_ab7d53d9e9067da5 BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_base_branch_encryption_scopes', 'global')"
+    },
+    "agent_runs.a_min591_fence_d174bf4750bb15c3": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_d174bf4750bb15c3 BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_title_encryption_scopes', 'global')"
+    },
+    "agent_runs.a_min591_fence_d8d95a9ab3db2741": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_d8d95a9ab3db2741 BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_result_encryption_scopes', 'global')"
+    },
+    "agent_runs.a_min591_fence_df626da49e1bcd62": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_df626da49e1bcd62 BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_work_branch_encryption_scopes', 'global')"
+    },
+    "agent_runs.a_min591_fence_eab222ba676111b7": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_eab222ba676111b7 BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_pr_url_encryption_scopes', 'global')"
+    },
+    "agent_runs.a_min591_fence_ec9322acb03ffcea": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_ec9322acb03ffcea BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_delegation_encryption_scopes', 'global')"
+    },
     "agent_runs.agent_runs_cancel_pending_input": {
       "function": "cancel_agent_run_input_request()",
       "definition": "CREATE TRIGGER agent_runs_cancel_pending_input AFTER UPDATE OF status, awaiting_input ON agent_runs FOR EACH ROW EXECUTE FUNCTION cancel_agent_run_input_request()"
@@ -8623,6 +8895,10 @@
       "function": "sync_agent_run_conversation()",
       "definition": "CREATE TRIGGER trg_agent_run_sync_conversation AFTER INSERT OR UPDATE OF title, title_ciphertext, title_encryption_version, issue_id, pull_request_id, status, completed_at ON agent_runs FOR EACH ROW EXECUTE FUNCTION sync_agent_run_conversation()"
     },
+    "app_config.a_min591_fence_dc8f2a56aa98652d": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_dc8f2a56aa98652d BEFORE INSERT OR UPDATE ON app_config FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('app_config_encryption_scope', 'global')"
+    },
     "assistant_messages.numo_tool_message_guard": {
       "function": "guard_numo_tool_message()",
       "definition": "CREATE TRIGGER numo_tool_message_guard BEFORE INSERT OR UPDATE ON assistant_messages FOR EACH ROW EXECUTE FUNCTION guard_numo_tool_message()"
@@ -8630,6 +8906,10 @@
     "assistant_messages.numo_user_message_guard": {
       "function": "guard_numo_user_message()",
       "definition": "CREATE TRIGGER numo_user_message_guard BEFORE INSERT OR UPDATE ON assistant_messages FOR EACH ROW EXECUTE FUNCTION guard_numo_user_message()"
+    },
+    "categories.a_min591_fence_7f20344b87b75b31": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_7f20344b87b75b31 BEFORE INSERT OR UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('envelope-key', 'project')"
     },
     "conversations.conversations_set_updated_at": {
       "function": "set_updated_at()",
@@ -8643,6 +8923,10 @@
       "function": "guard_numo_error_message()",
       "definition": "CREATE TRIGGER numo_turn_error_guard BEFORE INSERT OR UPDATE ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION guard_numo_error_message()"
     },
+    "objectives.a_min591_fence_7f20344b87b75b31": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_7f20344b87b75b31 BEFORE INSERT OR UPDATE ON objectives FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('envelope-key', 'project')"
+    },
     "page_comments.page_comments_set_updated_at": {
       "function": "set_comment_updated_at()",
       "definition": "CREATE TRIGGER page_comments_set_updated_at BEFORE UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION set_comment_updated_at()"
@@ -8650,6 +8934,14 @@
     "page_comments.page_comments_validate_scope": {
       "function": "validate_page_comment_scope()",
       "definition": "CREATE TRIGGER page_comments_validate_scope BEFORE INSERT OR UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION validate_page_comment_scope()"
+    },
+    "page_files.a_min591_fence_ebfaac8efae1c394": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_ebfaac8efae1c394 BEFORE INSERT OR UPDATE ON page_files FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('attachment_metadata_encryption_scope', 'global')"
+    },
+    "page_files.a_min591_fence_fdfd6906f0387b31": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_fdfd6906f0387b31 BEFORE INSERT OR UPDATE ON page_files FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('attachment_object_encryption_scope', 'global')"
     },
     "agent_artifacts.agent_artifact_branch_guard": {
       "function": "guard_agent_artifact_branch()",
@@ -8663,9 +8955,21 @@
       "function": "lock_agent_run_anchor_on_insert()",
       "definition": "CREATE TRIGGER agent_runs_lock_anchor_on_insert BEFORE INSERT ON agent_runs FOR EACH ROW EXECUTE FUNCTION lock_agent_run_anchor_on_insert()"
     },
+    "agent_turns.a_min591_fence_a86c167c9c943dc7": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_a86c167c9c943dc7 BEFORE INSERT OR UPDATE ON agent_turns FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_summary_encryption_scopes', 'global')"
+    },
     "assistant_messages.numo_final_message_guard": {
       "function": "guard_numo_final_message()",
       "definition": "CREATE TRIGGER numo_final_message_guard BEFORE INSERT OR UPDATE ON assistant_messages FOR EACH ROW EXECUTE FUNCTION guard_numo_final_message()"
+    },
+    "attachments.a_min591_fence_ebfaac8efae1c394": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_ebfaac8efae1c394 BEFORE INSERT OR UPDATE ON attachments FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('attachment_metadata_encryption_scope', 'global')"
+    },
+    "attachments.a_min591_fence_fdfd6906f0387b31": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_fdfd6906f0387b31 BEFORE INSERT OR UPDATE ON attachments FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('attachment_object_encryption_scope', 'global')"
     },
     "billing_accounts.billing_accounts_broadcast": {
       "function": "broadcast_billing_row()",
@@ -8674,6 +8978,10 @@
     "conversations.numo_conversation_title_guard": {
       "function": "guard_numo_conversation_title()",
       "definition": "CREATE TRIGGER numo_conversation_title_guard BEFORE INSERT OR UPDATE ON conversations FOR EACH ROW EXECUTE FUNCTION guard_numo_conversation_title()"
+    },
+    "conversations.numo_title_attempt_on_success": {
+      "function": "stamp_numo_success_attempt()",
+      "definition": "CREATE TRIGGER numo_title_attempt_on_success BEFORE UPDATE OF title_encryption_checked_at ON conversations FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('title_encryption_checked_at', 'title_encryption_attempted_at')"
     },
     "issue_categories.issue_categories_broadcast": {
       "function": "broadcast_issue_scoped()",
@@ -8695,6 +9003,18 @@
       "function": "guard_pr_comment_edit_body()",
       "definition": "CREATE TRIGGER pr_comment_edit_body_guard BEFORE INSERT OR UPDATE ON pr_comment_edits FOR EACH ROW EXECUTE FUNCTION guard_pr_comment_edit_body()"
     },
+    "saved_views.a_min591_fence_8bbf57a23c751e76": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_8bbf57a23c751e76 BEFORE INSERT OR UPDATE ON saved_views FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('saved_view_bookmark_encryption_scope', 'global')"
+    },
+    "stat_events.a_min591_fence_cb9872e98fe638be": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_cb9872e98fe638be BEFORE INSERT OR UPDATE ON stat_events FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('stat_events', 'global')"
+    },
+    "view_shares.a_min591_fence_f13aeedea38b4a67": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_f13aeedea38b4a67 BEFORE INSERT OR UPDATE ON view_shares FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('view_share_token_encryption_scope', 'global')"
+    },
     "agent_routines.agent_routines_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER agent_routines_set_updated_at BEFORE UPDATE ON agent_routines FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
@@ -8706,6 +9026,14 @@
     "agent_runs.trg_agent_run_ensure_conversation": {
       "function": "ensure_agent_run_conversation()",
       "definition": "CREATE TRIGGER trg_agent_run_ensure_conversation BEFORE INSERT ON agent_runs FOR EACH ROW EXECUTE FUNCTION ensure_agent_run_conversation()"
+    },
+    "api_key_content_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON api_key_content_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "app_tab_content_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON app_tab_content_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
     },
     "comments.comments_freeze_numo_realtime_scope": {
       "function": "freeze_numo_comment_scope()",
@@ -8726,6 +9054,14 @@
     "feedback_users.feedback_users_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER feedback_users_set_updated_at BEFORE UPDATE ON feedback_users FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    "integrations.a_min591_fence_9a502449529f58f9": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_9a502449529f58f9 BEFORE INSERT OR UPDATE ON integrations FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('integration_content_scope', 'global')"
+    },
+    "issue_events.a_min591_fence_7f20344b87b75b31": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_7f20344b87b75b31 BEFORE INSERT OR UPDATE ON issue_events FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('envelope-key', 'project')"
     },
     "issues.github_comment_url_parent_scope_guard": {
       "function": "guard_github_comment_url_parent_scope()",
@@ -8767,6 +9103,10 @@
       "function": "broadcast_pull_request_row()",
       "definition": "CREATE TRIGGER pull_requests_broadcast_update AFTER UPDATE ON pull_requests FOR EACH ROW WHEN (old.state IS DISTINCT FROM new.state OR old.title IS DISTINCT FROM new.title OR old.url IS DISTINCT FROM new.url OR old.head_sha IS DISTINCT FROM new.head_sha OR old.issue_id IS DISTINCT FROM new.issue_id OR old.merged_at IS DISTINCT FROM new.merged_at) EXECUTE FUNCTION broadcast_pull_request_row()"
     },
+    "user_ai_keys.a_min591_fence_9f8004cca4b008de": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_9f8004cca4b008de BEFORE INSERT OR UPDATE ON user_ai_keys FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('user_ai_key_content_scope', 'global')"
+    },
     "agent_messages.agent_message_event_copy_guard": {
       "function": "guard_agent_event_copies()",
       "definition": "CREATE TRIGGER agent_message_event_copy_guard BEFORE INSERT OR UPDATE ON agent_messages FOR EACH ROW EXECUTE FUNCTION guard_agent_event_copies()"
@@ -8787,21 +9127,73 @@
       "function": "enforce_storage_insert_quota()",
       "definition": "CREATE TRIGGER attachments_enforce_storage_quota BEFORE INSERT OR UPDATE OF project_id, storage_path, size_bytes ON attachments FOR EACH ROW EXECUTE FUNCTION enforce_storage_insert_quota()"
     },
+    "billing_identity_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON billing_identity_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "conversations.a_min591_fence_4cedac687745c6a6": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_4cedac687745c6a6 BEFORE INSERT OR UPDATE ON conversations FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('numo_conversation_title_scope', 'global')"
+    },
+    "conversations.a_min591_fence_aabacdc578ab9ac4": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_aabacdc578ab9ac4 BEFORE INSERT OR UPDATE ON conversations FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('numo_error_encryption_scope', 'global')"
+    },
     "conversations.conversations_freeze_project_id": {
       "function": "freeze_project_id()",
       "definition": "CREATE TRIGGER conversations_freeze_project_id BEFORE UPDATE OF project_id ON conversations FOR EACH ROW EXECUTE FUNCTION freeze_project_id()"
+    },
+    "invitation_email_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON invitation_email_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
     },
     "notifications.notifications_freeze_project_id": {
       "function": "freeze_project_id()",
       "definition": "CREATE TRIGGER notifications_freeze_project_id BEFORE UPDATE OF project_id ON notifications FOR EACH ROW EXECUTE FUNCTION freeze_project_id()"
     },
+    "numo_turn_intent_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON numo_turn_intent_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "oauth_clients.a_min591_fence_34b90eda91decc73": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_34b90eda91decc73 BEFORE INSERT OR UPDATE ON oauth_clients FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('oauth_client_content_scope', 'global')"
+    },
+    "page_comments.a_min591_fence_7f20344b87b75b31": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_7f20344b87b75b31 BEFORE INSERT OR UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('envelope-key', 'project')"
+    },
     "page_comments.page_comments_freeze_project_id": {
       "function": "freeze_project_id()",
       "definition": "CREATE TRIGGER page_comments_freeze_project_id BEFORE UPDATE OF project_id ON page_comments FOR EACH ROW EXECUTE FUNCTION freeze_project_id()"
     },
+    "page_versions.a_min591_fence_7f20344b87b75b31": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_7f20344b87b75b31 BEFORE INSERT OR UPDATE ON page_versions FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('envelope-key', 'project')"
+    },
+    "pull_requests.a_min591_fence_d5fc4d318087b244": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_d5fc4d318087b244 BEFORE INSERT OR UPDATE ON pull_requests FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('pull_request_url_encryption_scope', 'global')"
+    },
+    "pull_requests.a_min591_fence_ec7ac6e7f9718633": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_ec7ac6e7f9718633 BEFORE INSERT OR UPDATE ON pull_requests FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('pull_request_content_encryption_scope', 'global')"
+    },
+    "agent_messages.a_min591_fence_38bde2ccb2cb2514": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_38bde2ccb2cb2514 BEFORE INSERT OR UPDATE ON agent_messages FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_launch_encryption_scopes', 'global')"
+    },
+    "agent_messages.a_min591_fence_b056af41327ab781": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_b056af41327ab781 BEFORE INSERT OR UPDATE ON agent_messages FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_event_encryption_scopes', 'global')"
+    },
     "agent_messages.agent_initial_prompt_copy_guard": {
       "function": "guard_agent_initial_prompt_copy()",
       "definition": "CREATE TRIGGER agent_initial_prompt_copy_guard BEFORE INSERT OR UPDATE ON agent_messages FOR EACH ROW EXECUTE FUNCTION guard_agent_initial_prompt_copy()"
+    },
+    "agent_routines.a_min591_fence_85a5d6f7b32e5fc2": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_85a5d6f7b32e5fc2 BEFORE INSERT OR UPDATE ON agent_routines FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_routine_content_encryption_scope', 'global')"
     },
     "assistant_messages.worker_parent_message_guard": {
       "function": "guard_worker_parent_message()",
@@ -8811,6 +9203,10 @@
       "function": "guard_attachment_object_reference()",
       "definition": "CREATE TRIGGER attachments_object_reference_guard BEFORE INSERT OR UPDATE ON attachments FOR EACH ROW EXECUTE FUNCTION guard_attachment_object_reference()"
     },
+    "custom_domains.a_min591_fence_90bb0eab8a1ed78a": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_90bb0eab8a1ed78a BEFORE INSERT OR UPDATE ON custom_domains FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('custom_domain_verification_scope', 'global')"
+    },
     "feedback_boards.feedback_boards_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER feedback_boards_set_updated_at BEFORE UPDATE ON feedback_boards FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
@@ -8819,21 +9215,49 @@
       "function": "guard_feedback_private_identity()",
       "definition": "CREATE TRIGGER feedback_otp_identity_guard BEFORE INSERT OR UPDATE ON feedback_otp_codes FOR EACH ROW EXECUTE FUNCTION guard_feedback_private_identity()"
     },
+    "feedback_posts.a_min591_fence_7f20344b87b75b31": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_7f20344b87b75b31 BEFORE INSERT OR UPDATE ON feedback_posts FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('envelope-key', 'project')"
+    },
     "feedback_posts.feedback_posts_encryption_guard": {
       "function": "guard_feedback_post_encryption()",
       "definition": "CREATE TRIGGER feedback_posts_encryption_guard BEFORE INSERT OR UPDATE ON feedback_posts FOR EACH ROW EXECUTE FUNCTION guard_feedback_post_encryption()"
+    },
+    "feedback_users.a_min591_fence_e3e9708798f70b94": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_e3e9708798f70b94 BEFORE INSERT OR UPDATE ON feedback_users FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('feedback_identity_encryption_scope', 'global')"
     },
     "forge_mention_throttle.forge_mention_key_guard": {
       "function": "guard_forge_mention_key()",
       "definition": "CREATE TRIGGER forge_mention_key_guard BEFORE INSERT OR UPDATE ON forge_mention_throttle FOR EACH ROW EXECUTE FUNCTION guard_forge_mention_key()"
     },
+    "forge_oauth_token_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON forge_oauth_token_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "issue_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON issue_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "numo_tool_content_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON numo_tool_content_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "numo_tool_operations.numo_tool_operation_guard": {
       "function": "guard_numo_tool_operation()",
       "definition": "CREATE TRIGGER numo_tool_operation_guard BEFORE INSERT OR UPDATE ON numo_tool_operations FOR EACH ROW EXECUTE FUNCTION guard_numo_tool_operation()"
     },
+    "numo_user_message_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON numo_user_message_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "pages.pages_remove_deleted_database_properties": {
       "function": "remove_deleted_database_properties()",
       "definition": "CREATE TRIGGER pages_remove_deleted_database_properties AFTER UPDATE OF database_schema ON pages FOR EACH ROW WHEN (old.database_schema IS DISTINCT FROM new.database_schema) EXECUTE FUNCTION remove_deleted_database_properties()"
+    },
+    "project_drafts.a_min591_fence_7f20344b87b75b31": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_7f20344b87b75b31 BEFORE INSERT OR UPDATE ON project_drafts FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('envelope-key', 'user')"
     },
     "project_drafts.project_drafts_encryption_guard": {
       "function": "guard_project_draft_encryption()",
@@ -8846,6 +9270,14 @@
     "user_scratchpad.user_scratchpad_set_updated_at": {
       "function": "set_scratchpad_updated_at()",
       "definition": "CREATE TRIGGER user_scratchpad_set_updated_at BEFORE UPDATE ON user_scratchpad FOR EACH ROW EXECUTE FUNCTION set_scratchpad_updated_at()"
+    },
+    "agent_artifacts.a_min591_fence_df626da49e1bcd62": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_df626da49e1bcd62 BEFORE INSERT OR UPDATE ON agent_artifacts FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_work_branch_encryption_scopes', 'global')"
+    },
+    "agent_artifacts.a_min591_fence_eab222ba676111b7": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_eab222ba676111b7 BEFORE INSERT OR UPDATE ON agent_artifacts FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_pr_url_encryption_scopes', 'global')"
     },
     "agent_run_events.agent_run_events_capture_input": {
       "function": "capture_agent_run_input_request()",
@@ -8863,9 +9295,17 @@
       "function": "guard_custom_domain_verification()",
       "definition": "CREATE TRIGGER custom_domain_verification_guard BEFORE INSERT OR UPDATE ON custom_domains FOR EACH ROW EXECUTE FUNCTION guard_custom_domain_verification()"
     },
+    "feedback_boards.a_min591_fence_53e040d201d6b265": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_53e040d201d6b265 BEFORE INSERT OR UPDATE ON feedback_boards FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('feedback_sso_encryption_scope', 'global')"
+    },
     "feedback_posts.feedback_posts_freeze_project_id": {
       "function": "freeze_project_id()",
       "definition": "CREATE TRIGGER feedback_posts_freeze_project_id BEFORE UPDATE OF project_id ON feedback_posts FOR EACH ROW EXECUTE FUNCTION freeze_project_id()"
+    },
+    "git_connections.a_min591_fence_badcb1dcf192ca42": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_badcb1dcf192ca42 BEFORE INSERT OR UPDATE ON git_connections FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('forge_oauth_token_scope', 'global')"
     },
     "issues.github_issue_metadata_parent_scope_guard": {
       "function": "guard_github_issue_metadata_parent_scope()",
@@ -8879,6 +9319,18 @@
       "function": "guard_numo_tool_checkpoint()",
       "definition": "CREATE TRIGGER numo_tool_checkpoint_guard BEFORE INSERT OR UPDATE OF checkpoint ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION guard_numo_tool_checkpoint()"
     },
+    "numo_event_content_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON numo_event_content_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "numo_final_content_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON numo_final_content_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "oauth_code_content_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON oauth_code_content_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "page_comments.page_comments_guard_client_update": {
       "function": "guard_comment_client_update()",
       "definition": "CREATE TRIGGER page_comments_guard_client_update BEFORE UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION guard_comment_client_update()"
@@ -8887,9 +9339,33 @@
       "function": "rekey_project_realtime_membership()",
       "definition": "CREATE TRIGGER project_members_authority_rekey AFTER INSERT OR DELETE OR UPDATE ON project_members FOR EACH ROW EXECUTE FUNCTION rekey_project_realtime_membership()"
     },
+    "push_content_write_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON push_content_write_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "user_scratchpad.a_min591_fence_a6ab4b0d4f1f3895": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_a6ab4b0d4f1f3895 BEFORE INSERT OR UPDATE ON user_scratchpad FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('user_scratchpad', 'global')"
+    },
+    "agent_branch_prefix_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_branch_prefix_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "agent_run_events.a_min591_fence_b056af41327ab781": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_b056af41327ab781 BEFORE INSERT OR UPDATE ON agent_run_events FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_event_encryption_scopes', 'global')"
+    },
     "agent_run_journal.agent_journal_encryption_guard": {
       "function": "guard_agent_journal_encryption()",
       "definition": "CREATE TRIGGER agent_journal_encryption_guard BEFORE INSERT OR UPDATE ON agent_run_journal FOR EACH ROW EXECUTE FUNCTION guard_agent_journal_encryption()"
+    },
+    "assistant_messages.numo_final_attempt_on_success": {
+      "function": "stamp_numo_success_attempt()",
+      "definition": "CREATE TRIGGER numo_final_attempt_on_success BEFORE UPDATE OF final_payload_checked_at ON assistant_messages FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('final_payload_checked_at', 'final_payload_attempted_at')"
+    },
+    "billing_accounts.a_min591_fence_a8913717631667d0": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_a8913717631667d0 BEFORE INSERT OR UPDATE ON billing_accounts FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('billing_identity_scope', 'global')"
     },
     "billing_accounts.billing_accounts_identity_guard": {
       "function": "guard_billing_identity()",
@@ -8899,9 +9375,29 @@
       "function": "guard_forge_relay_audit_detail()",
       "definition": "CREATE TRIGGER forge_relay_audit_detail_guard BEFORE INSERT OR UPDATE ON forge_relay_audit FOR EACH ROW EXECUTE FUNCTION guard_forge_relay_audit_detail()"
     },
+    "integration_content_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON integration_content_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "numo_turn_events.a_min591_fence_d8d95a9ab3db2741": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_d8d95a9ab3db2741 BEFORE INSERT OR UPDATE ON numo_turn_events FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_result_encryption_scopes', 'global')"
+    },
+    "numo_turn_events.a_min591_fence_df626da49e1bcd62": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_df626da49e1bcd62 BEFORE INSERT OR UPDATE ON numo_turn_events FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_work_branch_encryption_scopes', 'global')"
+    },
+    "numo_turn_events.a_min591_fence_e18a8eabebf02c2e": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_e18a8eabebf02c2e BEFORE INSERT OR UPDATE ON numo_turn_events FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('numo_event_content_scope', 'global')"
+    },
     "numo_turn_events.numo_worker_event_payload_guard": {
       "function": "guard_numo_worker_event_payload()",
       "definition": "CREATE TRIGGER numo_worker_event_payload_guard BEFORE INSERT OR UPDATE ON numo_turn_events FOR EACH ROW EXECUTE FUNCTION guard_numo_worker_event_payload()"
+    },
+    "pr_comment_edits.a_min591_fence_1864e42b73e0d9b8": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_1864e42b73e0d9b8 BEFORE INSERT OR UPDATE ON pr_comment_edits FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('pr_comment_edit_encryption_scope', 'global')"
     },
     "project_members.project_members_auth_insert_lock": {
       "function": "lock_project_member_auth_insert()",
@@ -8915,6 +9411,10 @@
       "function": "rekey_pull_request_scope()",
       "definition": "CREATE TRIGGER pull_requests_rekey_realtime_scope BEFORE UPDATE OF provider, repo_full_name ON pull_requests FOR EACH ROW EXECUTE FUNCTION rekey_pull_request_scope()"
     },
+    "user_ai_key_content_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON user_ai_key_content_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "user_scratchpad.user_scratchpad_encryption_guard": {
       "function": "guard_scratchpad_encryption()",
       "definition": "CREATE TRIGGER user_scratchpad_encryption_guard BEFORE UPDATE ON user_scratchpad FOR EACH ROW EXECUTE FUNCTION guard_scratchpad_encryption()"
@@ -8923,6 +9423,14 @@
       "function": "guard_agent_input_answer()",
       "definition": "CREATE TRIGGER agent_input_answer_guard BEFORE INSERT OR UPDATE ON agent_run_input_requests FOR EACH ROW EXECUTE FUNCTION guard_agent_input_answer()"
     },
+    "agent_run_journal.a_min591_fence_3d9238e357219ab5": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_3d9238e357219ab5 BEFORE INSERT OR UPDATE ON agent_run_journal FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_journal_encryption_scopes', 'global')"
+    },
+    "forge_default_branch_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON forge_default_branch_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "notifications.notifications_validate_target_scope": {
       "function": "validate_notification_target_scope()",
       "definition": "CREATE TRIGGER notifications_validate_target_scope BEFORE INSERT OR UPDATE OF user_id, project_id, issue_id, objective_id, feedback_post_id, routine_id, page_id, agent_conversation_id, comment_id, pull_request_id ON notifications FOR EACH ROW EXECUTE FUNCTION validate_notification_target_scope()"
@@ -8930,6 +9438,22 @@
     "numo_assistant_turns.numo_worker_checkpoint_guard": {
       "function": "guard_numo_worker_checkpoint()",
       "definition": "CREATE TRIGGER numo_worker_checkpoint_guard BEFORE INSERT OR UPDATE OF checkpoint, worker_checkpoint_revision ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION guard_numo_worker_checkpoint()"
+    },
+    "numo_turn_events.numo_activity_attempt_on_success": {
+      "function": "stamp_numo_success_attempt()",
+      "definition": "CREATE TRIGGER numo_activity_attempt_on_success BEFORE UPDATE OF payload_user_encryption_checked_at ON numo_turn_events FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('payload_user_encryption_checked_at', 'payload_user_encryption_attempted_at')"
+    },
+    "oauth_client_content_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON oauth_client_content_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "project_git_links.a_min591_fence_1f39fedb4b27d9d7": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_1f39fedb4b27d9d7 BEFORE INSERT OR UPDATE ON project_git_links FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('forge_default_branch_scope', 'global')"
+    },
+    "project_git_links.a_min591_fence_cbe74dc8e079c461": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_cbe74dc8e079c461 BEFORE INSERT OR UPDATE ON project_git_links FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('project_git_webhook_secret_scope', 'global')"
     },
     "project_invitations.project_invitations_broadcast": {
       "function": "broadcast_invitations_row()",
@@ -8943,6 +9467,10 @@
       "function": "guard_agent_title()",
       "definition": "CREATE TRIGGER agent_conversation_title_guard BEFORE INSERT OR UPDATE ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_agent_title()"
     },
+    "agent_run_messages.a_min591_fence_38bde2ccb2cb2514": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_38bde2ccb2cb2514 BEFORE INSERT OR UPDATE ON agent_run_messages FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_launch_encryption_scopes', 'global')"
+    },
     "agent_run_messages.trg_agent_queue_message_capture": {
       "function": "capture_agent_queue_message()",
       "definition": "CREATE TRIGGER trg_agent_queue_message_capture AFTER INSERT ON agent_run_messages FOR EACH ROW EXECUTE FUNCTION capture_agent_queue_message()"
@@ -8951,9 +9479,41 @@
       "function": "clear_agent_run_live_snapshot()",
       "definition": "CREATE TRIGGER clear_agent_run_live_snapshot_on_finish AFTER UPDATE OF status ON agent_runs FOR EACH ROW EXECUTE FUNCTION clear_agent_run_live_snapshot()"
     },
+    "app_config_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON app_config_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "assistant_messages.a_min591_fence_121588ee646da43d": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_121588ee646da43d BEFORE INSERT OR UPDATE ON assistant_messages FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('numo_final_content_scope', 'global')"
+    },
+    "assistant_messages.a_min591_fence_3423a3568546297e": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_3423a3568546297e BEFORE INSERT OR UPDATE ON assistant_messages FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('numo_tool_content_scope', 'global')"
+    },
+    "assistant_messages.a_min591_fence_38bde2ccb2cb2514": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_38bde2ccb2cb2514 BEFORE INSERT OR UPDATE ON assistant_messages FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_launch_encryption_scopes', 'global')"
+    },
+    "assistant_messages.a_min591_fence_6adbc49a7e646671": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_6adbc49a7e646671 BEFORE INSERT OR UPDATE ON assistant_messages FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('numo_user_message_scope', 'global')"
+    },
     "feedback_merge_events.feedback_merge_payload_guard": {
       "function": "guard_feedback_merge_payload()",
       "definition": "CREATE TRIGGER feedback_merge_payload_guard BEFORE INSERT OR UPDATE ON feedback_merge_events FOR EACH ROW EXECUTE FUNCTION guard_feedback_merge_payload()"
+    },
+    "feedback_otp_codes.a_min591_fence_e3e9708798f70b94": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_e3e9708798f70b94 BEFORE INSERT OR UPDATE ON feedback_otp_codes FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('feedback_identity_encryption_scope', 'global')"
+    },
+    "forge_repository_name_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON forge_repository_name_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "numo_error_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON numo_error_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
     },
     "numo_surface_events.numo_surface_destination_guard": {
       "function": "guard_numo_surface_destination()",
@@ -8967,33 +9527,177 @@
       "function": "lock_project_authority_mutation()",
       "definition": "CREATE TRIGGER project_git_links_authority_lock AFTER INSERT OR DELETE OR UPDATE ON project_git_links FOR EACH ROW EXECUTE FUNCTION lock_project_authority_mutation()"
     },
+    "push_subscriptions.a_min591_fence_529f3ec3b6ad9218": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_529f3ec3b6ad9218 BEFORE INSERT OR UPDATE ON push_subscriptions FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('push_content_write_scope', 'global')"
+    },
+    "push_subscriptions.a_min591_fence_7471633ca80e6b4c": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_7471633ca80e6b4c BEFORE INSERT OR UPDATE ON push_subscriptions FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('push_content_scope', 'global')"
+    },
     "stripe_webhook_events.stripe_webhook_payload_guard": {
       "function": "guard_stripe_webhook_payload()",
       "definition": "CREATE TRIGGER stripe_webhook_payload_guard BEFORE INSERT OR UPDATE ON stripe_webhook_events FOR EACH ROW EXECUTE FUNCTION guard_stripe_webhook_payload()"
+    },
+    "agent_conversations.a_min591_fence_38bde2ccb2cb2514": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_38bde2ccb2cb2514 BEFORE INSERT OR UPDATE ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_launch_encryption_scopes', 'global')"
+    },
+    "agent_conversations.a_min591_fence_39fa39daf1516f3a": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_39fa39daf1516f3a BEFORE INSERT OR UPDATE ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_context_encryption_scopes', 'global')"
+    },
+    "agent_conversations.a_min591_fence_ab7d53d9e9067da5": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_ab7d53d9e9067da5 BEFORE INSERT OR UPDATE ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_base_branch_encryption_scopes', 'global')"
+    },
+    "agent_conversations.a_min591_fence_d174bf4750bb15c3": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_d174bf4750bb15c3 BEFORE INSERT OR UPDATE ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_title_encryption_scopes', 'global')"
+    },
+    "agent_conversations.a_min591_fence_df626da49e1bcd62": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_df626da49e1bcd62 BEFORE INSERT OR UPDATE ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_work_branch_encryption_scopes', 'global')"
+    },
+    "agent_conversations.a_min591_fence_eab222ba676111b7": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_eab222ba676111b7 BEFORE INSERT OR UPDATE ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_pr_url_encryption_scopes', 'global')"
     },
     "agent_conversations.agent_pr_url_parent_scope_guard": {
       "function": "guard_agent_pr_url_parent_scope()",
       "definition": "CREATE TRIGGER agent_pr_url_parent_scope_guard BEFORE UPDATE OF project_id ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_agent_pr_url_parent_scope()"
     },
+    "ai_decision_evaluation_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON ai_decision_evaluation_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "envelope_data_keys.a_min591_envelope_key_activation": {
+      "function": "guard_envelope_key_activation()",
+      "definition": "CREATE TRIGGER a_min591_envelope_key_activation BEFORE INSERT OR UPDATE ON envelope_data_keys FOR EACH ROW EXECUTE FUNCTION guard_envelope_key_activation()"
+    },
     "git_connections.git_connections_oauth_content_guard": {
       "function": "guard_forge_oauth_token_content()",
       "definition": "CREATE TRIGGER git_connections_oauth_content_guard BEFORE INSERT OR UPDATE ON git_connections FOR EACH ROW EXECUTE FUNCTION guard_forge_oauth_token_content()"
+    },
+    "git_user_identities.a_min591_fence_badcb1dcf192ca42": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_badcb1dcf192ca42 BEFORE INSERT OR UPDATE ON git_user_identities FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('forge_oauth_token_scope', 'global')"
     },
     "github_issue_comment_syncs.github_comment_url_guard": {
       "function": "guard_github_comment_url()",
       "definition": "CREATE TRIGGER github_comment_url_guard BEFORE INSERT OR UPDATE ON github_issue_comment_syncs FOR EACH ROW EXECUTE FUNCTION guard_github_comment_url()"
     },
+    "numo_assistant_turns.numo_intent_attempt_on_success": {
+      "function": "stamp_numo_success_attempt()",
+      "definition": "CREATE TRIGGER numo_intent_attempt_on_success BEFORE UPDATE OF intent_encryption_checked_at ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('intent_encryption_checked_at', 'intent_encryption_attempted_at')"
+    },
+    "numo_surface_events.a_min591_fence_1968ccc6579d0c8a": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_1968ccc6579d0c8a BEFORE INSERT OR UPDATE ON numo_surface_events FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('numo_surface_destination_encryption_scope', 'global')"
+    },
+    "numo_surface_events.numo_surface_attempt_on_success": {
+      "function": "stamp_numo_success_attempt()",
+      "definition": "CREATE TRIGGER numo_surface_attempt_on_success BEFORE UPDATE OF destination_encryption_checked_at ON numo_surface_events FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('destination_encryption_checked_at', 'destination_encryption_attempted_at')"
+    },
+    "project_invitations.a_min591_fence_ce1b78ea6525dc02": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_ce1b78ea6525dc02 BEFORE INSERT OR UPDATE ON project_invitations FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('invitation_email_scope', 'global')"
+    },
+    "stripe_webhook_payload_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON stripe_webhook_payload_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "agent_conversations.agent_context_parent_scope_guard": {
       "function": "guard_agent_context_parent_scope()",
       "definition": "CREATE TRIGGER agent_context_parent_scope_guard BEFORE UPDATE OF project_id ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_agent_context_parent_scope()"
+    },
+    "agent_event_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_event_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
     },
     "agent_run_events.trg_agent_assistant_message_capture": {
       "function": "capture_agent_assistant_message()",
       "definition": "CREATE TRIGGER trg_agent_assistant_message_capture AFTER INSERT ON agent_run_events FOR EACH ROW EXECUTE FUNCTION capture_agent_assistant_message()"
     },
+    "agent_title_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_title_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "feedback_sso_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON feedback_sso_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "numo_assistant_turns.a_min591_fence_121588ee646da43d": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_121588ee646da43d BEFORE INSERT OR UPDATE ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('numo_final_content_scope', 'global')"
+    },
+    "numo_assistant_turns.a_min591_fence_3423a3568546297e": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_3423a3568546297e BEFORE INSERT OR UPDATE ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('numo_tool_content_scope', 'global')"
+    },
+    "numo_assistant_turns.a_min591_fence_45142264c08196c3": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_45142264c08196c3 BEFORE INSERT OR UPDATE ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('numo_turn_intent_scope', 'global')"
+    },
+    "numo_assistant_turns.a_min591_fence_aabacdc578ab9ac4": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_aabacdc578ab9ac4 BEFORE INSERT OR UPDATE ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('numo_error_encryption_scope', 'global')"
+    },
+    "numo_assistant_turns.a_min591_fence_d8d95a9ab3db2741": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_d8d95a9ab3db2741 BEFORE INSERT OR UPDATE ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_result_encryption_scopes', 'global')"
+    },
+    "numo_assistant_turns.a_min591_fence_df626da49e1bcd62": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_df626da49e1bcd62 BEFORE INSERT OR UPDATE ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_work_branch_encryption_scopes', 'global')"
+    },
+    "numo_assistant_turns.numo_outcome_attempt_on_success": {
+      "function": "stamp_numo_success_attempt()",
+      "definition": "CREATE TRIGGER numo_outcome_attempt_on_success BEFORE UPDATE OF outcome_encryption_checked_at ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('outcome_encryption_checked_at', 'outcome_encryption_attempted_at')"
+    },
+    "numo_automation_content_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON numo_automation_content_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "numo_conversation_title_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON numo_conversation_title_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "numo_routine_occurrences.numo_occurrence_error_guard": {
       "function": "guard_numo_error_message()",
       "definition": "CREATE TRIGGER numo_occurrence_error_guard BEFORE INSERT OR UPDATE ON numo_routine_occurrences FOR EACH ROW EXECUTE FUNCTION guard_numo_error_message()"
+    },
+    "numo_tool_operations.a_min591_fence_3423a3568546297e": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_3423a3568546297e BEFORE INSERT OR UPDATE ON numo_tool_operations FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('numo_tool_content_scope', 'global')"
+    },
+    "page_content_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON page_content_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "project_icon_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON project_icon_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "user_mcp_connections.a_min591_fence_1d534280c7f05c44": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_1d534280c7f05c44 BEFORE INSERT OR UPDATE ON user_mcp_connections FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('mcp_content_scope', 'global')"
+    },
+    "view_content_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON view_content_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "agent_launch_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_launch_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "agent_pr_url_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_pr_url_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "agent_result_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_result_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
     },
     "agent_run_input_requests.agent_input_event_copy_guard": {
       "function": "guard_agent_event_copies()",
@@ -9003,6 +9707,14 @@
       "function": "guard_agent_checkpoint()",
       "definition": "CREATE TRIGGER agent_runtime_checkpoint_guard BEFORE INSERT OR UPDATE ON agent_runtime_sessions FOR EACH ROW EXECUTE FUNCTION guard_agent_checkpoint()"
     },
+    "forge_relay_instances.a_min591_fence_454f6f9927fbfacd": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_454f6f9927fbfacd BEFORE INSERT OR UPDATE ON forge_relay_instances FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('forge_relay_instance_content_scope', 'global')"
+    },
+    "forge_relay_provisioning_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON forge_relay_provisioning_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "project_invitations.invitation_email_transition_guard": {
       "function": "guard_invitation_email_transition()",
       "definition": "CREATE TRIGGER invitation_email_transition_guard BEFORE INSERT OR UPDATE ON project_invitations FOR EACH ROW EXECUTE FUNCTION guard_invitation_email_transition()"
@@ -9011,13 +9723,33 @@
       "function": "guard_forge_repository_identity()",
       "definition": "CREATE TRIGGER pull_requests_repository_identity_guard BEFORE INSERT OR UPDATE ON pull_requests FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_identity()"
     },
+    "agent_context_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_context_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "agent_conversations.agent_conversations_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER agent_conversations_set_updated_at BEFORE UPDATE ON agent_conversations FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
+    "agent_journal_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_journal_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "agent_runs.guard_agent_run_live_snapshot_scope_on_move": {
       "function": "guard_agent_run_live_snapshot_scope()",
       "definition": "CREATE TRIGGER guard_agent_run_live_snapshot_scope_on_move BEFORE UPDATE OF project_id ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_run_live_snapshot_scope()"
+    },
+    "agent_runtime_sessions.a_min591_fence_9743022757f84dfb": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_9743022757f84dfb BEFORE INSERT OR UPDATE ON agent_runtime_sessions FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_checkpoint_encryption_scopes', 'global')"
+    },
+    "agent_runtime_sessions.a_min591_fence_ab7d53d9e9067da5": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_ab7d53d9e9067da5 BEFORE INSERT OR UPDATE ON agent_runtime_sessions FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_base_branch_encryption_scopes', 'global')"
+    },
+    "agent_runtime_sessions.a_min591_fence_df626da49e1bcd62": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_df626da49e1bcd62 BEFORE INSERT OR UPDATE ON agent_runtime_sessions FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_work_branch_encryption_scopes', 'global')"
     },
     "agent_runtime_sessions.agent_runtime_base_branch_guard": {
       "function": "guard_agent_runtime_base_branch()",
@@ -9026,6 +9758,30 @@
     "agent_runtime_sessions.agent_runtime_work_branch_guard": {
       "function": "guard_agent_runtime_work_branch()",
       "definition": "CREATE TRIGGER agent_runtime_work_branch_guard BEFORE INSERT OR UPDATE ON agent_runtime_sessions FOR EACH ROW EXECUTE FUNCTION guard_agent_runtime_work_branch()"
+    },
+    "agent_summary_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_summary_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "agent_verdict_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_verdict_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "forge_mention_throttle.a_min591_fence_663270aabe93763b": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_663270aabe93763b BEFORE INSERT OR UPDATE ON forge_mention_throttle FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('forge_mention_key_encryption_scope', 'global')"
+    },
+    "forge_relay_deliveries.a_min591_fence_b039705614eabbec": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_b039705614eabbec BEFORE INSERT OR UPDATE ON forge_relay_deliveries FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('forge_relay_delivery_encryption_scope', 'global')"
+    },
+    "forge_relay_user_delivery_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON forge_relay_user_delivery_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "forge_repository_names.a_min591_fence_d93fb1ba0c837759": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_d93fb1ba0c837759 BEFORE INSERT OR UPDATE ON forge_repository_names FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('forge_repository_name_scope', 'global')"
     },
     "github_issue_sync_metadata.github_issue_metadata_guard": {
       "function": "guard_github_issue_metadata()",
@@ -9039,9 +9795,49 @@
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER project_invitations_set_updated_at BEFORE UPDATE ON project_invitations FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
+    "user_agent_preferences.a_min591_fence_1321d393f1f62f47": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_1321d393f1f62f47 BEFORE INSERT OR UPDATE ON user_agent_preferences FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_branch_prefix_scope', 'global')"
+    },
+    "ai_decision_evaluations.a_min591_fence_9016d101ab93d771": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_9016d101ab93d771 BEFORE INSERT OR UPDATE ON ai_decision_evaluations FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('ai_decision_evaluation_scope', 'global')"
+    },
+    "assistant_messages.numo_tool_message_attempt_on_success": {
+      "function": "stamp_numo_success_attempt()",
+      "definition": "CREATE TRIGGER numo_tool_message_attempt_on_success BEFORE UPDATE OF tool_payload_checked_at ON assistant_messages FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('tool_payload_checked_at', 'tool_payload_attempted_at')"
+    },
+    "assistant_messages.numo_user_message_attempt_on_success": {
+      "function": "stamp_numo_success_attempt()",
+      "definition": "CREATE TRIGGER numo_user_message_attempt_on_success BEFORE UPDATE OF user_payload_checked_at ON assistant_messages FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('user_payload_checked_at', 'user_payload_attempted_at')"
+    },
+    "custom_domain_verification_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON custom_domain_verification_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "numo_assistant_turns.numo_error_turn_attempt_on_success": {
+      "function": "stamp_numo_success_attempt()",
+      "definition": "CREATE TRIGGER numo_error_turn_attempt_on_success BEFORE UPDATE OF error_encryption_checked_at ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('error_encryption_checked_at', 'error_encryption_attempted_at')"
+    },
+    "pr_comment_edit_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON pr_comment_edit_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "project_content_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON project_content_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "project_git_webhook_secret_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON project_git_webhook_secret_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "user_mcp_connections.user_mcp_connections_content_guard": {
       "function": "guard_mcp_content()",
       "definition": "CREATE TRIGGER user_mcp_connections_content_guard BEFORE INSERT OR UPDATE ON user_mcp_connections FOR EACH ROW EXECUTE FUNCTION guard_mcp_content()"
+    },
+    "user_mcp_oauth_attempts.a_min591_fence_1d534280c7f05c44": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_1d534280c7f05c44 BEFORE INSERT OR UPDATE ON user_mcp_oauth_attempts FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('mcp_content_scope', 'global')"
     },
     "agent_conversation_contexts.agent_context_snapshot_guard": {
       "function": "guard_agent_context_snapshot()",
@@ -9055,17 +9851,77 @@
       "function": "guard_agent_work_branch_parent_scope()",
       "definition": "CREATE TRIGGER agent_work_branch_parent_scope_guard BEFORE UPDATE OF project_id ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_agent_work_branch_parent_scope()"
     },
+    "agent_run_input_requests.a_min591_fence_38bde2ccb2cb2514": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_38bde2ccb2cb2514 BEFORE INSERT OR UPDATE ON agent_run_input_requests FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_launch_encryption_scopes', 'global')"
+    },
+    "agent_run_input_requests.a_min591_fence_b056af41327ab781": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_b056af41327ab781 BEFORE INSERT OR UPDATE ON agent_run_input_requests FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_event_encryption_scopes', 'global')"
+    },
+    "conversations.numo_error_conversation_attempt_on_success": {
+      "function": "stamp_numo_success_attempt()",
+      "definition": "CREATE TRIGGER numo_error_conversation_attempt_on_success BEFORE UPDATE OF error_encryption_checked_at ON conversations FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('error_encryption_checked_at', 'error_encryption_attempted_at')"
+    },
+    "forge_attachment_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON forge_attachment_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "forge_relay_provisioning.a_min591_fence_2a5c781afaa0ddad": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_2a5c781afaa0ddad BEFORE INSERT OR UPDATE ON forge_relay_provisioning FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('forge_relay_provisioning_scope', 'global')"
+    },
     "numo_automation_operations.numo_automation_content_guard": {
       "function": "guard_numo_automation_content()",
       "definition": "CREATE TRIGGER numo_automation_content_guard BEFORE INSERT OR UPDATE ON numo_automation_operations FOR EACH ROW EXECUTE FUNCTION guard_numo_automation_content()"
+    },
+    "numo_routine_occurrences.a_min591_fence_aabacdc578ab9ac4": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_aabacdc578ab9ac4 BEFORE INSERT OR UPDATE ON numo_routine_occurrences FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('numo_error_encryption_scope', 'global')"
     },
     "project_git_links.project_git_links_rekey_realtime_after": {
       "function": "rekey_project_git_link_after()",
       "definition": "CREATE TRIGGER project_git_links_rekey_realtime_after AFTER INSERT OR DELETE OR UPDATE ON project_git_links FOR EACH ROW EXECUTE FUNCTION rekey_project_git_link_after()"
     },
+    "pull_request_url_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON pull_request_url_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "view_share_token_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON view_share_token_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "agent_checkpoint_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_checkpoint_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "agent_delegation_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_delegation_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "agent_deployment_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_deployment_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "attachment_object_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON attachment_object_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "feedback_identity_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON feedback_identity_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "forge_mention_key_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON forge_mention_key_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "forge_relay_deliveries.forge_relay_delivery_content_guard": {
       "function": "guard_forge_relay_delivery_content()",
       "definition": "CREATE TRIGGER forge_relay_delivery_content_guard BEFORE INSERT OR UPDATE ON forge_relay_deliveries FOR EACH ROW EXECUTE FUNCTION guard_forge_relay_delivery_content()"
+    },
+    "forge_relay_instance_content_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON forge_relay_instance_content_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
     },
     "git_connections.git_connections_single_installation_owner": {
       "function": "enforce_github_installation_single_owner()",
@@ -9075,17 +9931,49 @@
       "function": "cleanup_numo_worker_legacy_event_binding()",
       "definition": "CREATE TRIGGER numo_worker_legacy_event_binding_cleanup AFTER DELETE ON numo_turn_events FOR EACH ROW EXECUTE FUNCTION cleanup_numo_worker_legacy_event_binding()"
     },
+    "oauth_authorization_codes.a_min591_fence_f1aa977808df06ce": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_f1aa977808df06ce BEFORE INSERT OR UPDATE ON oauth_authorization_codes FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('oauth_code_content_scope', 'global')"
+    },
     "project_invitations.project_invitations_freeze_project_id": {
       "function": "freeze_project_id()",
       "definition": "CREATE TRIGGER project_invitations_freeze_project_id BEFORE UPDATE OF project_id ON project_invitations FOR EACH ROW EXECUTE FUNCTION freeze_project_id()"
+    },
+    "agent_base_branch_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_base_branch_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
     },
     "agent_conversations.agent_message_conversation_scope_guard": {
       "function": "guard_agent_message_conversation_scope()",
       "definition": "CREATE TRIGGER agent_message_conversation_scope_guard BEFORE UPDATE OF project_id ON agent_conversations FOR EACH ROW EXECUTE FUNCTION guard_agent_message_conversation_scope()"
     },
+    "agent_work_branch_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_work_branch_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "github_issue_comment_syncs.a_min591_fence_fb38b7482057f8c2": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_fb38b7482057f8c2 BEFORE INSERT OR UPDATE ON github_issue_comment_syncs FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('github_issue_comment_url_encryption_scopes', 'global')"
+    },
+    "github_issue_sync_metadata.a_min591_fence_892f65a23726e057": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_892f65a23726e057 BEFORE INSERT OR UPDATE ON github_issue_sync_metadata FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('github_issue_metadata_encryption_scopes', 'global')"
+    },
+    "numo_automation_operations.a_min591_fence_7d5104d471eddec1": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_7d5104d471eddec1 BEFORE INSERT OR UPDATE ON numo_automation_operations FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('numo_automation_content_scope', 'global')"
+    },
     "project_git_links.project_git_links_a_webhook_secret_guard": {
       "function": "guard_project_git_webhook_secret()",
       "definition": "CREATE TRIGGER project_git_links_a_webhook_secret_guard BEFORE INSERT OR UPDATE ON project_git_links FOR EACH ROW EXECUTE FUNCTION guard_project_git_webhook_secret()"
+    },
+    "agent_conversation_contexts.a_min591_fence_39fa39daf1516f3a": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_39fa39daf1516f3a BEFORE INSERT OR UPDATE ON agent_conversation_contexts FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_context_encryption_scopes', 'global')"
+    },
+    "attachment_metadata_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON attachment_metadata_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
     },
     "feedback_post_categories.feedback_post_categories_broadcast": {
       "function": "broadcast_feedback_child()",
@@ -9095,6 +9983,10 @@
       "function": "guard_forge_relay_instance_content()",
       "definition": "CREATE TRIGGER forge_relay_instances_a_content_guard BEFORE INSERT OR UPDATE ON forge_relay_instances FOR EACH ROW EXECUTE FUNCTION guard_forge_relay_instance_content()"
     },
+    "forge_relay_user_deliveries.a_min591_fence_73143a3cd1fa29b5": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_73143a3cd1fa29b5 BEFORE INSERT OR UPDATE ON forge_relay_user_deliveries FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('forge_relay_user_delivery_scope', 'global')"
+    },
     "forge_repository_names.forge_repository_name_registry_guard": {
       "function": "guard_forge_repository_name_registry()",
       "definition": "CREATE TRIGGER forge_repository_name_registry_guard BEFORE INSERT OR UPDATE ON forge_repository_names FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_name_registry()"
@@ -9103,9 +9995,17 @@
       "function": "guard_forge_oauth_token_content()",
       "definition": "CREATE TRIGGER git_user_identities_oauth_content_guard BEFORE INSERT OR UPDATE ON git_user_identities FOR EACH ROW EXECUTE FUNCTION guard_forge_oauth_token_content()"
     },
+    "numo_tool_operations.numo_tool_operation_attempt_on_success": {
+      "function": "stamp_numo_success_attempt()",
+      "definition": "CREATE TRIGGER numo_tool_operation_attempt_on_success BEFORE UPDATE OF encryption_checked_at ON numo_tool_operations FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('encryption_checked_at', 'encryption_attempted_at')"
+    },
     "pr_comment_edits.pr_comment_edits_repository_identity_guard": {
       "function": "guard_forge_repository_identity()",
       "definition": "CREATE TRIGGER pr_comment_edits_repository_identity_guard BEFORE INSERT OR UPDATE ON pr_comment_edits FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_identity()"
+    },
+    "saved_view_bookmark_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON saved_view_bookmark_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
     },
     "agent_conversations.agent_conversations_rekey_realtime_scope": {
       "function": "rekey_agent_conversation_scope()",
@@ -9119,9 +10019,29 @@
       "function": "guard_forge_attachment_registration()",
       "definition": "CREATE TRIGGER forge_attachment_registration_guard BEFORE INSERT OR UPDATE ON forge_attachment_objects FOR EACH ROW EXECUTE FUNCTION guard_forge_attachment_registration()"
     },
+    "forge_relay_delivery_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON forge_relay_delivery_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "numo_assistant_turns.numo_tool_checkpoint_attempt_on_success": {
+      "function": "stamp_numo_success_attempt()",
+      "definition": "CREATE TRIGGER numo_tool_checkpoint_attempt_on_success BEFORE UPDATE OF tool_checkpoint_checked_at ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('tool_checkpoint_checked_at', 'tool_checkpoint_attempted_at')"
+    },
+    "pull_request_content_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON pull_request_content_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "user_agent_preferences.user_agent_preferences_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER user_agent_preferences_set_updated_at BEFORE UPDATE ON user_agent_preferences FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    "agent_routine_content_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_routine_content_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "numo_automation_operations.numo_automation_attempt_on_success": {
+      "function": "stamp_numo_success_attempt()",
+      "definition": "CREATE TRIGGER numo_automation_attempt_on_success BEFORE UPDATE OF content_encryption_checked_at ON numo_automation_operations FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('content_encryption_checked_at', 'content_encryption_attempted_at')"
     },
     "project_git_links.project_git_links_repository_identity_guard": {
       "function": "guard_forge_repository_identity()",
@@ -9130,6 +10050,10 @@
     "user_mcp_oauth_attempts.user_mcp_oauth_attempts_content_guard": {
       "function": "guard_mcp_content()",
       "definition": "CREATE TRIGGER user_mcp_oauth_attempts_content_guard BEFORE INSERT OR UPDATE ON user_mcp_oauth_attempts FOR EACH ROW EXECUTE FUNCTION guard_mcp_content()"
+    },
+    "github_issue_metadata_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON github_issue_metadata_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
     },
     "forge_relay_claims.forge_relay_claims_repository_identity_guard": {
       "function": "guard_forge_repository_identity()",
@@ -9143,6 +10067,10 @@
       "function": "guard_forge_relay_provisioning_content()",
       "definition": "CREATE TRIGGER forge_relay_provisioning_content_guard BEFORE INSERT OR UPDATE ON forge_relay_provisioning FOR EACH ROW EXECUTE FUNCTION guard_forge_relay_provisioning_content()"
     },
+    "provider_operation_reservations.a_min591_fence_ead15c3461b0f2cd": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_ead15c3461b0f2cd BEFORE INSERT OR UPDATE ON provider_operation_reservations FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('provider_operation_resource_encryption_scope', 'global')"
+    },
     "pull_request_syncs.pull_request_syncs_repository_identity_guard": {
       "function": "guard_forge_repository_identity()",
       "definition": "CREATE TRIGGER pull_request_syncs_repository_identity_guard BEFORE INSERT OR UPDATE ON pull_request_syncs FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_identity()"
@@ -9151,9 +10079,21 @@
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER numo_routine_occurrences_set_updated_at BEFORE UPDATE ON numo_routine_occurrences FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
+    "numo_surface_destination_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON numo_surface_destination_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "numo_worker_legacy_bindings.numo_worker_legacy_binding_immutable": {
       "function": "guard_numo_worker_legacy_binding()",
       "definition": "CREATE TRIGGER numo_worker_legacy_binding_immutable BEFORE UPDATE ON numo_worker_legacy_bindings FOR EACH ROW EXECUTE FUNCTION guard_numo_worker_legacy_binding()"
+    },
+    "github_issue_comment_url_encryption_scopes.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON github_issue_comment_url_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "numo_routine_occurrences.numo_error_occurrence_attempt_on_success": {
+      "function": "stamp_numo_success_attempt()",
+      "definition": "CREATE TRIGGER numo_error_occurrence_attempt_on_success BEFORE UPDATE OF error_encryption_checked_at ON numo_routine_occurrences FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('error_encryption_checked_at', 'error_encryption_attempted_at')"
     },
     "provider_operation_reservations.provider_operation_resource_guard": {
       "function": "guard_provider_operation_resource()",
@@ -9163,6 +10103,10 @@
       "function": "guard_agent_branch_prefix()",
       "definition": "CREATE TRIGGER user_agent_preferences_branch_prefix_guard BEFORE INSERT OR UPDATE ON user_agent_preferences FOR EACH ROW EXECUTE FUNCTION guard_agent_branch_prefix()"
     },
+    "attachment_object_encryption_scope.a_min591_fence_fdfd6906f0387b31": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_fdfd6906f0387b31 BEFORE INSERT OR UPDATE ON attachment_object_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('attachment_object_encryption_scope', 'global')"
+    },
     "forge_attachment_legacy_owners.forge_attachment_legacy_owner_guard": {
       "function": "guard_forge_attachment_legacy_owner()",
       "definition": "CREATE TRIGGER forge_attachment_legacy_owner_guard BEFORE INSERT ON forge_attachment_legacy_owners FOR EACH ROW EXECUTE FUNCTION guard_forge_attachment_legacy_owner()"
@@ -9171,9 +10115,17 @@
       "function": "guard_forge_relay_user_delivery_content()",
       "definition": "CREATE TRIGGER forge_relay_user_delivery_content_guard BEFORE INSERT OR UPDATE ON forge_relay_user_deliveries FOR EACH ROW EXECUTE FUNCTION guard_forge_relay_user_delivery_content()"
     },
+    "provider_operation_resource_encryption_scope.a_min591_marker_change": {
+      "function": "guard_encryption_marker_change()",
+      "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON provider_operation_resource_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
     "numo_automation_operations.numo_automation_operations_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER numo_automation_operations_set_updated_at BEFORE UPDATE ON numo_automation_operations FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    "attachment_object_encryption_scope.a_min591_attachment_scope_activation": {
+      "function": "guard_attachment_object_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_attachment_scope_activation BEFORE INSERT OR UPDATE ON attachment_object_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_attachment_object_snapshot_write()"
     },
     "forge_relay_link_mirror.forge_relay_link_mirror_repository_identity_guard": {
       "function": "guard_forge_repository_identity()",

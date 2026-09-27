@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { createHash } from "node:crypto";
 
 vi.mock("server-only", () => ({}));
 
@@ -20,14 +21,30 @@ const service = vi.hoisted(() => {
 
   /** Minimal query constructor: any string, and the object is awaitable. */
   const query = (rows: Record<string, unknown>[]) => {
+    let filtered = rows;
+    let first = 0;
+    let last = 999;
     const builder: Record<string, unknown> = {
-      maybeSingle: async () => ({ data: rows[0] ?? null, error: null }),
+      maybeSingle: async () => ({ data: filtered[0] ?? null, error: null }),
       then: (resolve: (v: unknown) => unknown) =>
-        Promise.resolve({ data: rows, error: null }).then(resolve),
+        Promise.resolve({ data: filtered.slice(first, last + 1), error: null }).then(resolve),
+      select: () => builder,
+      order: () => builder,
+      range: (start: number, end: number) => {
+        first = start;
+        last = Math.min(end, start + 999);
+        return builder;
+      },
+      eq: (column: string, value: unknown) => {
+        filtered = filtered.filter((row) => !(column in row) || row[column] === value);
+        return builder;
+      },
+      in: (column: string, values: unknown[]) => {
+        filtered = filtered.filter((row) => !(column in row) || values.includes(row[column]));
+        return builder;
+      },
+      not: () => builder,
     };
-    for (const method of ["select", "eq", "in", "not"]) {
-      builder[method] = () => builder;
-    }
     return builder;
   };
 
@@ -59,8 +76,12 @@ const service = vi.hoisted(() => {
         },
         remove: async (paths: string[]) => {
           removed.push({ bucket, paths });
+          objects[bucket] = (objects[bucket] ?? []).filter((path) => !paths.includes(path));
           return { data: null, error: null };
         },
+        download: async (path: string) => (objects[bucket] ?? []).includes(path)
+          ? { data: new Blob([Uint8Array.from([0x89, 0x50, 0x4e, 0x47])]), error: null }
+          : { data: null, error: { message: "Object not found" } },
       }),
     },
     auth: { admin: { deleteUser } },
@@ -83,6 +104,7 @@ vi.mock("@/lib/server/page-files", () => ({
 }));
 
 const { deleteAccount } = await import("./account-deletion");
+const { GET: readForgeAttachment } = await import("@/app/api/pr-attachments/[...path]/route");
 
 const USER = "11111111-1111-4111-8111-111111111111";
 const PROJECT = "22222222-2222-4222-8222-222222222222";
@@ -102,7 +124,7 @@ beforeEach(() => {
   service.tables.project_git_links = [
     { project_id: PROJECT, provider: "github", repo_full_name: "acme/app" },
   ];
-  service.tables.pull_requests = [{ id: PR }];
+  service.tables.pull_requests = [{ id: PR, provider: "github", repo_full_name: "acme/app" }];
   service.tables.user_avatars = [{ image_path: `users/${USER}.webp` }];
 
   service.objects.attachments = [
@@ -127,6 +149,104 @@ describe("deleteAccount storage cleanup", () => {
     ];
     await deleteAccount(USER);
     expect(removedPaths()).not.toContain(`${PR}/abcd/diagram.png`);
+  });
+
+  it("removes a merged PR's old object before deleting its last linked project", async () => {
+    const oldPr = "55555555-5555-4555-8555-555555555555";
+    const asset = "66666666-6666-4666-8666-666666666666";
+    const oldPath = `${oldPr}/${asset}/historical.png`;
+    service.tables.forge_attachment_legacy_pr_aliases = [
+      { old_pr_id: oldPr, current_pr_id: PR },
+    ];
+    service.objects["forge-attachments"].push(oldPath);
+
+    const request = new Request(`https://minddy.test/api/pr-attachments/${oldPath}`);
+    const context = { params: Promise.resolve({ path: oldPath.split("/") }) };
+    expect((await readForgeAttachment(request, context)).status).toBe(200);
+
+    await deleteAccount(USER);
+
+    expect(service.objects["forge-attachments"]).not.toContain(oldPath);
+    const response = await readForgeAttachment(request, context);
+    expect(response.status).toBe(404);
+  });
+
+  it("keeps a surviving project's historical objects in a shared repository", async () => {
+    const survivor = "44444444-4444-4444-8444-444444444444";
+    const oldPr = "55555555-5555-4555-8555-555555555555";
+    const doomedPath = `${oldPr}/66666666-6666-4666-8666-666666666666/doomed.png`;
+    const survivingPath = `${oldPr}/77777777-7777-4777-8777-777777777777/survivor.png`;
+    const ownerlessPath = `${oldPr}/88888888-8888-4888-8888-888888888888/unknown.png`;
+    const digest = (path: string) => createHash("sha256").update(path).digest("hex");
+    service.tables.project_git_links.push({
+      project_id: survivor, provider: "github", repo_full_name: "acme/app",
+    });
+    service.tables.forge_attachment_legacy_pr_aliases = [
+      { old_pr_id: oldPr, current_pr_id: PR },
+    ];
+    service.tables.forge_attachment_legacy_owners = [
+      { old_path_digest: digest(doomedPath), project_id: PROJECT },
+      { old_path_digest: digest(survivingPath), project_id: survivor },
+    ];
+    service.objects["forge-attachments"].push(
+      doomedPath, survivingPath, ownerlessPath,
+    );
+
+    await deleteAccount(USER);
+
+    expect(service.objects["forge-attachments"]).not.toContain(doomedPath);
+    expect(service.objects["forge-attachments"]).toEqual(expect.arrayContaining([
+      survivingPath, ownerlessPath,
+    ]));
+  });
+
+  it("finds a surviving project beyond PostgREST's first result page", async () => {
+    const oldPr = "55555555-5555-4555-8555-555555555555";
+    const oldPath = `${oldPr}/66666666-6666-4666-8666-666666666666/retained.png`;
+    service.tables.forge_attachment_legacy_pr_aliases = [
+      { old_pr_id: oldPr, current_pr_id: PR },
+    ];
+    service.objects["forge-attachments"].push(oldPath);
+    for (let index = 0; index < 999; index++) {
+      service.tables.project_git_links.push({
+        project_id: `unrelated-${index}`, provider: "github",
+        repo_full_name: `unrelated/repo-${index}`,
+      });
+    }
+    service.tables.project_git_links.push({
+      project_id: "survivor", provider: "github", repo_full_name: "acme/app",
+    });
+
+    await deleteAccount(USER);
+
+    expect(service.objects["forge-attachments"]).toContain(oldPath);
+  });
+
+  it("collects historical paths beyond the first PR and alias result pages", async () => {
+    const finalPr = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+    const finalAlias = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+    const oldPath = `${finalAlias}/66666666-6666-4666-8666-666666666666/paged.png`;
+    const pagedId = (index: number) =>
+      `00000000-0000-4000-8000-${index.toString(16).padStart(12, "0")}`;
+    service.tables.pull_requests = Array.from({ length: 1000 }, (_, index) => ({
+      id: pagedId(index), provider: "github", repo_full_name: "acme/app",
+    }));
+    service.tables.pull_requests.push({
+      id: finalPr, provider: "github", repo_full_name: "acme/app",
+    });
+    service.tables.forge_attachment_legacy_pr_aliases = Array.from(
+      { length: 1000 }, (_, index) => ({
+        old_pr_id: pagedId(index), current_pr_id: finalPr,
+      }),
+    );
+    service.tables.forge_attachment_legacy_pr_aliases.push({
+      old_pr_id: finalAlias, current_pr_id: finalPr,
+    });
+    service.objects["forge-attachments"] = [oldPath];
+
+    await deleteAccount(USER);
+
+    expect(service.objects["forge-attachments"]).not.toContain(oldPath);
   });
 
   it("removes only the deleted project's opaque forge objects when a repository is shared", async () => {

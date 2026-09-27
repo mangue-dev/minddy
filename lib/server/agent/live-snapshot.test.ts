@@ -66,4 +66,12 @@ describe("protected agent live snapshots", () => {
       diff: { files: [{ patch: "Private local diff" }] },
     });
   });
+
+  it("reports a rejected snapshot write to the caller", async () => {
+    await saveAgentLiveSnapshot({ projectId: "project-1", runId: "run-1",
+      kind: "stream", payload: { text: "Newer" }, at: 20 });
+    await expect(saveAgentLiveSnapshot({ projectId: "project-1", runId: "run-1",
+      kind: "stream", payload: { text: "Stale" }, at: 19 }))
+      .rejects.toThrow("Unable to save agent live snapshot");
+  });
 });

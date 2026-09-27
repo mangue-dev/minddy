@@ -2220,3 +2220,36 @@ clear writers. The isolated SQL regression covers web/native registration,
 account transfer, rotation, access and old-writer refusal. Codec and route
 tests and child-first mixed-key PostgreSQL restore pass, including cold caches
 and wrong-root rejection. Flags remain off; no production data was migrated.
+
+## MIN-591 security review follow-up — 27 September 2026
+
+The follow-up SQL migration rejects non-`READ COMMITTED` transactions in
+encryption guards and activation functions. Row writers, content-key creation,
+direct marker writes and activation scans now share transaction locks. The
+isolated two-session regression first reproduces stale-snapshot clear commits
+and the Feedback race, then checks both commit orders, paused flags, old writers
+and edits after `NULL`. The trigger inventory covers every currently protected
+table family; a future protected table must be added to the same review.
+
+Project deletion collects current PR IDs and historical alias IDs before the
+repository cascade. It removes legacy Storage paths when the last linked
+project is deleted, retains paths belonging to surviving projects, and exposes
+unowned historical paths to bounded cleanup. The route and deletion tests use
+simulated Storage bytes, while SQL tests use isolated PostgreSQL metadata.
+They do not prove a backup and restore of the real Storage service.
+
+Numo conversion workers now order by a separate attempt timestamp. Exact-row
+CAS updates record failed attempts without claiming successful verification;
+unverified rows still block activation. Historical clear comment messages in
+the effective Realtime partition are purged, and old content broadcasts are
+refused. Backups, external Realtime sinks and retention exports require a
+separate inventory and cleanup under the deployment plan. Agent live stream
+and diff writes fail with 503 if the root key, snapshot schema or RPC is
+unavailable; deployment must install the schema and a valid root key on every
+live writer before enabling this path.
+
+These are isolated code proofs. The draft PR and MIN-591 remain open. A real
+Storage-service restore, retention inventory, deployment sequencing and
+representative staging search, latency, key-cache and load measurements remain
+checks before activation. No production migration, flag change or deployment
+is part of this follow-up.

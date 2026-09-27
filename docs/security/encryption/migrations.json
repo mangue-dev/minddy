@@ -195,5 +195,8 @@
   "20270108040000_historical_encryption_rotation.sql": "940fe402f4bced92c7cadff23a13ab13188ac351bc62a2afe2eb632a2c999a64",
   "20270108050000_min591_numo_feedback_progress.sql": "59aa9292ea4ec9c99bfba19526379bdcd7dafe318ea90eefd59661fcb7cbe741",
   "20270108070000_identity_content_row_fences.sql": "dae8bd393b082b79dee47d9b541fa84b349fc7a90c99c08985b1baf6c0c6499b",
-  "20270108080000_forge_attachment_fence_and_rename.sql": "d665d9d561475f8dd9a8fe66343726e8e217e88566c95d0a9a8ce78f55d725bd"
+  "20270108080000_forge_attachment_fence_and_rename.sql": "d665d9d561475f8dd9a8fe66343726e8e217e88566c95d0a9a8ce78f55d725bd",
+  "20270108090000_encryption_snapshot_write_fences.sql": "4cf84f37d16b85fda40de6c68f3aa694e657e1bdd65f64b16dac39668aa5346d",
+  "20270108091000_forge_attachment_legacy_orphans.sql": "5da122cd5bccf03a5411d33f342df296b74f86429f0134bfba43026bdbf8871c",
+  "20270108100000_min591_numo_attempts_and_comment_realtime.sql": "591ad429d0c81695ad2e7a7d1a148666c15834fa5c90e899a53269ddd2d6340b"
 }

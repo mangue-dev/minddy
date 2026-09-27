@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markNumoAttempt } from "./numo-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeNumoFinalMessage, decodeNumoTurnOutcome,
   encodeNumoFinalMessage, encodeNumoTurnOutcome,
@@ -90,7 +92,7 @@ export async function backfillNumoFinalContentBatch(limit = 30,
     conflicted: 0, failed: 0, interrupted: false };
   const turns = await service.from("numo_assistant_turns")
     .select("id,user_id,conversation_id,outcome")
-    .order("outcome_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("outcome_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (turns.error) throw new Error("Unable to scan Numo turn outcomes");
   for (const turn of turns.data ?? []) {
@@ -107,17 +109,23 @@ export async function backfillNumoFinalContentBatch(limit = 30,
       key.bytes.fill(0);
       const outcome = await convert({ turn, message: read.data as FinalRow | null,
         userId: turn.user_id, keyVersion: version });
-      if (!outcome.committed) result.conflicted++;
+      if (!outcome.committed) {
+        result.conflicted++;
+        await markNumoAttempt("outcome", turn.id, { outcome: turn.outcome });
+      }
       else if (outcome.changed) result.migrated++;
       else result.unchanged++;
-    } catch { result.failed++; }
+    } catch {
+      result.failed++;
+      await markNumoAttempt("outcome", turn.id, { outcome: turn.outcome });
+    }
   }
   if (result.interrupted) return result;
   const standalone = await service.from("assistant_messages")
     .select("id,conversation_id,turn_id,content,context,metadata,tool_call_id,tool_name,final_payload_version,conversation:conversations!inner(user_id)")
     .eq("role", "assistant").is("tool_calls", null)
     .eq("tool_payload_version", 0).is("turn_id", null)
-    .order("final_payload_checked_at", { ascending: true, nullsFirst: true })
+    .order("final_payload_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (standalone.error) throw new Error("Unable to scan standalone Numo answers");
   for (const row of standalone.data ?? []) {
@@ -133,10 +141,16 @@ export async function backfillNumoFinalContentBatch(limit = 30,
       key.bytes.fill(0);
       const outcome = await convert({ turn: null, message: row as FinalRow,
         userId, keyVersion: version });
-      if (!outcome.committed) result.conflicted++;
+      if (!outcome.committed) {
+        result.conflicted++;
+        await markNumoAttempt("final_message", row.id, { content: row.content, context: row.context, metadata: row.metadata, tool_call_id: row.tool_call_id, tool_name: row.tool_name, final_payload_version: row.final_payload_version });
+      }
       else if (outcome.changed) result.migrated++;
       else result.unchanged++;
-    } catch { result.failed++; }
+    } catch {
+      result.failed++;
+      await markNumoAttempt("final_message", row.id, { content: row.content, context: row.context, metadata: row.metadata, tool_call_id: row.tool_call_id, tool_name: row.tool_name, final_payload_version: row.final_payload_version });
+    }
   }
   return result;
 }

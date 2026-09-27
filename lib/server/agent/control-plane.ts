@@ -9,7 +9,6 @@ import {
   type AiFeature,
 } from "@/lib/server/ai-usage";
 import { getAccountSettings } from "@/lib/server/account-settings";
-import { afterOrNow } from "@/lib/server/after-safe";
 import { defaultLocale } from "@/i18n/config";
 import { DEFAULT_NUMO_STATUS } from "@/lib/numo-default-status";
 
@@ -580,8 +579,8 @@ export async function handleControlPlaneRequest(opts: {
   if (method === "POST" && surface === "/stream") {
     const fileStats = liveFileStats(body.fileStats);
     const at = Date.now();
-    afterOrNow(() =>
-      saveAgentLiveSnapshot({ projectId: run.project_id, runId, kind: "stream",
+    try {
+      await saveAgentLiveSnapshot({ projectId: run.project_id, runId, kind: "stream",
         at, payload: {
         text: typeof body.text === "string" ? body.text : "",
         tools: num(body.tools) ?? 0,
@@ -590,8 +589,10 @@ export async function handleControlPlaneRequest(opts: {
         ...liveFiles(body.files, body.filesTruncated),
         ...(fileStats ? { fileStats } : {}),
         },
-      }),
-    );
+      });
+    } catch {
+      return { status: 503, body: { error: "agent live snapshot unavailable" } };
+    }
     return ok();
   }
 
@@ -613,11 +614,14 @@ export async function handleControlPlaneRequest(opts: {
       return forbidden("local diff requires a local execution token");
     const diff = localDiffPayload(body);
     const at = Date.now();
-    afterOrNow(() => saveAgentLiveSnapshot({
-      projectId: run.project_id, runId, kind: "diff", at,
-      payload: { ...diff },
-    }),
-    );
+    try {
+      await saveAgentLiveSnapshot({
+        projectId: run.project_id, runId, kind: "diff", at,
+        payload: { ...diff },
+      });
+    } catch {
+      return { status: 503, body: { error: "agent live snapshot unavailable" } };
+    }
     return ok();
   }
 

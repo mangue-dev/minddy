@@ -6,7 +6,7 @@ import { EncryptedStore, type EncryptionScope } from "./store";
 
 const enabled = process.env.MINDDY_ENCRYPTION_DB_TEST === "true";
 const container = "supabase_db_minddy-encryption-test";
-const template = "minddy_min591_full_audit";
+const template = "minddy_min591_final_review";
 const state = vi.hoisted(() => ({
   database: "", userId: "", turnId: "", messageId: "", conflictId: "", badId: "",
   version: 1, conflictNext: false,
@@ -92,9 +92,10 @@ const service = {
     } else if (name === "migrate_numo_tool_checkpoint") {
       call = `public.migrate_numo_tool_checkpoint(${quote(String(args.p_id))},
         ${json(args.p_old)},${json(args.p_new)})`;
-    } else if (name === "mark_numo_tool_content_attempt") {
-      call = `public.mark_numo_tool_content_attempt(${quote(String(args.p_kind))},
-        ${quote(String(args.p_id))},${args.p_call_id ? quote(String(args.p_call_id)) : "NULL"})`;
+    } else if (name === "mark_numo_content_attempt") {
+      call = `public.mark_numo_content_attempt(${quote(String(args.p_kind))},
+        ${quote(String(args.p_id))},${json(args.p_old)},
+        ${args.p_call_id ? quote(String(args.p_call_id)) : "NULL"})`;
     } else return { data: false, error: null };
     try { return { data: sql(state.database, `SET ROLE service_role; SELECT ${call};`).split("\n").at(-1) === "t", error: null }; }
     catch { return { data: null, error: { message: "RPC failed" } }; }
@@ -118,8 +119,7 @@ describe.skipIf(!enabled)("Numo tool worker against isolated PostgreSQL", () => 
       EXECUTE format('CREATE TABLE IF NOT EXISTS realtime.%I PARTITION OF realtime.messages FOR VALUES FROM (%L) TO (%L)',
         'messages_' || to_char(current_date,'YYYY_MM_DD'), current_date, current_date + 1);
     END $partition$;`);
-    sql(state.database, readFileSync("supabase/migrations/20270107650000_numo_tool_content_encryption.sql", "utf8"));
-    sql(state.database, readFileSync("supabase/migrations/20270108025000_numo_tool_attempt_progress.sql", "utf8"));
+    sql(state.database, readFileSync("supabase/migrations/20270108100000_min591_numo_attempts_and_comment_realtime.sql", "utf8"));
     sql(state.database, `INSERT INTO auth.users(id) VALUES(${quote(state.userId)});
       INSERT INTO public.projects(id,owner_id,name,key)
         VALUES(${quote(project)},${quote(state.userId)},'Fixture project','NWW');
@@ -153,8 +153,10 @@ describe.skipIf(!enabled)("Numo tool worker against isolated PostgreSQL", () => 
     expect(await backfillNumoToolContentBatch(5)).toMatchObject({
       conflicted: 1, failed: 1,
     });
-    expect(rows(`SELECT tool_checkpoint_checked_at FROM public.numo_assistant_turns
-      WHERE id=${quote(state.badId)}`)[0].tool_checkpoint_checked_at).not.toBeNull();
+    expect(rows(`SELECT tool_checkpoint_checked_at,tool_checkpoint_attempted_at
+      FROM public.numo_assistant_turns WHERE id=${quote(state.badId)}`)[0])
+      .toMatchObject({ tool_checkpoint_checked_at: null,
+        tool_checkpoint_attempted_at: expect.any(String) });
     const first = rows(`SELECT m.id,m.turn_id,m.role,m.content,m.tool_calls,m.context,m.metadata,
       m.tool_payload_version,jsonb_build_object('user_id',c.user_id) AS conversation
       FROM public.assistant_messages m JOIN public.conversations c ON c.id=m.conversation_id
