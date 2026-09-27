@@ -7,11 +7,12 @@ DO $$ BEGIN
 END $$;
 DO $test$
 DECLARE owner uuid:=gen_random_uuid(); other_user uuid:=gen_random_uuid();
+  third_user uuid:=gen_random_uuid();
   email_cipher text:='mdye3:{"format":3,"keyVersion":2,"data":"email"}';
   note_cipher text:='mdye3:{"format":3,"keyVersion":2,"data":"note"}';
   rejected boolean; applied jsonb;
 BEGIN
-  INSERT INTO auth.users(id) VALUES(owner),(other_user);
+  INSERT INTO auth.users(id) VALUES(owner),(other_user),(third_user);
   INSERT INTO public.billing_accounts(user_id,email,admin_override_note)
     VALUES(owner,'private@example.test','Private admin rationale');
   IF public.activate_billing_identity() THEN
@@ -19,6 +20,45 @@ BEGIN
   END IF;
   UPDATE public.billing_accounts SET email=email_cipher,
     admin_override_note=note_cipher WHERE user_id=owner;
+  UPDATE public.billing_accounts SET admin_override_note=NULL WHERE user_id=owner;
+  IF NOT (SELECT admin_override_note_protected FROM public.billing_accounts
+      WHERE user_id=owner) THEN
+    RAISE EXCEPTION 'Clearing note lost its protection state';
+  END IF;
+  rejected:=false;
+  BEGIN
+    UPDATE public.billing_accounts SET admin_override_note_protected=false
+      WHERE user_id=owner;
+  EXCEPTION WHEN check_violation THEN rejected:=true; END;
+  IF NOT rejected THEN RAISE EXCEPTION 'Billing marker was reset'; END IF;
+  rejected:=false;
+  BEGIN
+    PERFORM public.upsert_billing_account_patch(owner,
+      '{"admin_override_note":"clear replacement"}'::jsonb);
+  EXCEPTION WHEN check_violation THEN rejected:=true; END;
+  IF NOT rejected THEN
+    RAISE EXCEPTION 'Paused patch accepted clear note replacement';
+  END IF;
+  INSERT INTO public.billing_accounts(user_id,email)
+    VALUES(other_user,'mixed@example.test');
+  IF (SELECT email_protected FROM public.billing_accounts
+      WHERE user_id=other_user) THEN
+    RAISE EXCEPTION 'Legacy tenant was marked protected';
+  END IF;
+  UPDATE public.billing_accounts SET email=email_cipher
+    WHERE user_id=other_user;
+  UPDATE public.billing_accounts SET admin_override_note=note_cipher
+    WHERE user_id=owner;
+  UPDATE public.billing_accounts SET email=NULL WHERE user_id=owner;
+  rejected:=false;
+  BEGIN
+    UPDATE public.billing_accounts SET email='clear@example.test'
+      WHERE user_id=owner;
+  EXCEPTION WHEN check_violation THEN rejected:=true; END;
+  IF NOT rejected THEN
+    RAISE EXCEPTION 'Paused writer accepted clear email replacement';
+  END IF;
+  UPDATE public.billing_accounts SET email=email_cipher WHERE user_id=owner;
   IF EXISTS(SELECT 1 FROM public.billing_accounts WHERE user_id=owner
       AND (email LIKE '%private@example.test%' OR
         admin_override_note LIKE '%Private admin%' OR
@@ -32,7 +72,7 @@ BEGIN
   rejected:=false;
   BEGIN
     INSERT INTO public.billing_accounts(user_id,email)
-      VALUES(other_user,'old@example.test');
+      VALUES(third_user,'old@example.test');
   EXCEPTION WHEN check_violation THEN rejected:=true; END;
   IF NOT rejected THEN RAISE EXCEPTION 'Old billing insert accepted'; END IF;
   rejected:=false;

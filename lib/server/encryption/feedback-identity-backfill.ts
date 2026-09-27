@@ -13,6 +13,19 @@ type Row = { id: string; project_id?: string; email: string | null;
   name?: string | null; external_id?: string | null;
   email_lookup?: string | null; external_id_lookup?: string | null };
 
+async function markAttempt(table: Table, row: Row) {
+  const marked = await getServiceClient().rpc("mark_feedback_identity_attempt", {
+    p_kind: table === "feedback_users" ? "user" : "otp",
+    p_id: row.id, p_old_email: row.email,
+    p_old_name: row.name ?? null,
+    p_old_external: row.external_id ?? null,
+    p_allow_stale: true,
+  });
+  if (marked.error || !marked.data) {
+    throw new Error("Unable to mark feedback identity attempt");
+  }
+}
+
 /** Convert or rotate a fair, bounded batch of private feedback identities. */
 export async function backfillFeedbackIdentityBatch(table: Table,
   limit = 30, signal?: AbortSignal) {
@@ -30,7 +43,7 @@ export async function backfillFeedbackIdentityBatch(table: Table,
     ? "id,project_id,email,name,external_id,email_lookup,external_id_lookup"
     : "id,email,email_lookup";
   const { data, error } = await service.from(table).select(columns)
-    .order("content_encryption_checked_at", { ascending: true,
+    .order("content_encryption_attempted_at", { ascending: true,
       nullsFirst: true }).order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan feedback identities");
   for (const row of (data ?? []) as unknown as Row[]) {
@@ -63,7 +76,10 @@ export async function backfillFeedbackIdentityBatch(table: Table,
           p_email_lookup: lookup,
         });
         if (write.error) throw new Error("Unable to migrate feedback OTP email");
-        if (!write.data) result.conflicted++;
+        if (!write.data) {
+          result.conflicted++;
+          await markAttempt(table, row);
+        }
         else if (fresh && row.email_lookup === lookup) result.unchanged++;
         else result.migrated++;
         continue;
@@ -105,11 +121,17 @@ export async function backfillFeedbackIdentityBatch(table: Table,
         p_external_lookup: lookups.external_id_lookup ?? null,
       });
       if (write.error) throw new Error("Unable to migrate feedback identity");
-      if (!write.data) result.conflicted++;
+      if (!write.data) {
+        result.conflicted++;
+        await markAttempt(table, row);
+      }
       else if (Object.keys(replacements).length || Object.keys(lookups).length)
         result.migrated++;
       else result.unchanged++;
-    } catch { result.failed++; }
+    } catch {
+      result.failed++;
+      await markAttempt(table, row);
+    }
   }
   return result;
 }

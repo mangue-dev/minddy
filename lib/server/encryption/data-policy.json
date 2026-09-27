@@ -1212,6 +1212,10 @@
       "email"
     ],
     "clear": {
+      "encryption_metadata": [
+        "email_protected",
+        "admin_override_note_protected"
+      ],
       "bounded_metadata": [
         "content_revision",
         "stripe_cancel_at_period_end"
@@ -1472,7 +1476,8 @@
       "timestamp": [
         "created_at",
         "updated_at",
-        "sso_encryption_checked_at"
+        "sso_encryption_checked_at",
+        "sso_encryption_attempted_at"
       ]
     }
   },
@@ -1532,7 +1537,8 @@
       "timestamp": [
         "created_at",
         "payload_checked_at",
-        "undone_at"
+        "undone_at",
+        "payload_attempted_at"
       ]
     }
   },
@@ -1580,7 +1586,8 @@
         "consumed_at",
         "content_encryption_checked_at",
         "created_at",
-        "expires_at"
+        "expires_at",
+        "content_encryption_attempted_at"
       ],
       "encryption_metadata": [
         "email_lookup"
@@ -1734,7 +1741,8 @@
         "content_encryption_checked_at",
         "created_at",
         "erased_at",
-        "updated_at"
+        "updated_at",
+        "content_encryption_attempted_at"
       ],
       "encryption_metadata": [
         "email_lookup",
@@ -2400,6 +2408,9 @@
       "webhook_url"
     ],
     "clear": {
+      "encryption_metadata": [
+        "webhook_url_protected"
+      ],
       "bounded_metadata": [
         "content_revision"
       ],
@@ -2715,7 +2726,11 @@
         "started_at",
         "tool_checkpoint_checked_at",
         "updated_at",
-        "worker_checkpoint_encryption_checked_at"
+        "worker_checkpoint_encryption_checked_at",
+        "worker_checkpoint_encryption_attempted_at"
+      ],
+      "encryption_metadata": [
+        "worker_checkpoint_revision"
       ]
     }
   },
@@ -3029,7 +3044,11 @@
       "timestamp": [
         "created_at",
         "payload_encryption_checked_at",
-        "payload_user_encryption_checked_at"
+        "payload_user_encryption_checked_at",
+        "payload_encryption_attempted_at"
+      ],
+      "encryption_metadata": [
+        "payload_revision"
       ]
     }
   },
@@ -3060,6 +3079,33 @@
       ],
       "timestamp": [
         "activated_at"
+      ]
+    }
+  },
+  "numo_worker_legacy_bindings": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "kind",
+        "target_id",
+        "run_id",
+        "turn_id",
+        "conversation_id",
+        "project_id"
+      ],
+      "encryption_metadata": [
+        "source_revision",
+        "checkpoint_revision"
+      ],
+      "operational_configuration": [
+        "review_reference"
+      ],
+      "timestamp": [
+        "reviewed_at"
       ]
     }
   },
@@ -4525,6 +4571,18 @@
     "scope": { "kind": "system", "id": "forge-attachments" },
     "encrypted": [],
     "clear": { "routing_identity": ["id"], "timestamp": ["activated_at"] }
+  },
+  "forge_attachment_legacy_pr_aliases": {
+    "scope": {
+      "ancestor": "pull_requests:current_pr_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "old_pr_id",
+        "current_pr_id"
+      ]
+    }
   },
   "forge_attachment_legacy_owners": {
     "scope": { "kind": "project", "column": "project_id" },

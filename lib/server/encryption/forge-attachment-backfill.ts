@@ -5,13 +5,31 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { FORGE_ATTACHMENTS_BUCKET } from "@/lib/forge-image-assets";
 import { attachmentObjectMetadata, decodeAttachmentObject,
   encodeAttachmentObject } from "./attachment-object-content";
+import { hasDataRootKey } from "./local-key-wrapper";
 
 /** Move historical forge uploads to verified ciphertext and opaque paths. */
 export async function backfillForgeAttachmentsBatch(limit = 10) {
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
     throw new Error("Invalid forge attachment batch size");
   }
+  if (!hasDataRootKey()) throw new Error("Forge attachment root key is unavailable");
   const service = getServiceClient();
+  const candidates = await service.rpc("list_forge_attachment_migration_candidates",
+    { p_limit: limit });
+  if (candidates.error) throw new Error("Unable to scan forge attachments");
+  const probe = (candidates.data ?? []).find((row: { migrated_path?: string | null }) =>
+    !row.migrated_path);
+  if (probe) {
+    const path = `projects/${probe.project_id}/forge/preflight/${randomUUID()}`;
+    const sealed = await encodeAttachmentObject(path, Buffer.alloc(0));
+    if ((await decodeAttachmentObject(path, sealed)).length !== 0) {
+      throw new Error("Forge attachment crypto preflight failed");
+    }
+  }
+  const activated = await service.rpc("activate_forge_attachment_encryption");
+  if (activated.error || activated.data !== true) {
+    throw new Error("Unable to protect forge attachment writers");
+  }
   const rows = await service.rpc("list_forge_attachment_migration_candidates",
     { p_limit: limit });
   if (rows.error) throw new Error("Unable to scan forge attachments");

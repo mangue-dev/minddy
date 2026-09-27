@@ -13,6 +13,7 @@ DECLARE actor uuid := gen_random_uuid(); project uuid := gen_random_uuid();
   abandoned uuid := gen_random_uuid(); abandoned_path text;
   unrelated_project uuid := gen_random_uuid(); unrelated_id uuid := gen_random_uuid();
   duplicate_link uuid := gen_random_uuid();
+  unmarked uuid := gen_random_uuid(); unmarked_path text;
 BEGIN
   INSERT INTO auth.users(id) VALUES(actor);
   INSERT INTO public.projects(id,owner_id,name,key)
@@ -24,10 +25,28 @@ BEGIN
     VALUES(project,connection,'github','fixture-repo','fixture/repo');
   INSERT INTO public.pull_requests(id,provider,repo_full_name,number)
     VALUES(pr,'github','fixture/repo',1);
+  IF public.forge_attachment_migration_complete() THEN
+    RAISE EXCEPTION 'Forge migration completed without a writer fence';
+  END IF;
+  IF has_table_privilege('service_role',
+      'public.forge_attachment_encryption_scope','INSERT') OR
+      has_table_privilege('service_role',
+        'public.forge_attachment_encryption_scope','DELETE') OR
+      NOT has_function_privilege('service_role',
+        'public.activate_forge_attachment_encryption()','EXECUTE') THEN
+    RAISE EXCEPTION 'Forge writer fence bypass privilege is available';
+  END IF;
   IF (SELECT public FROM storage.buckets WHERE id='forge-attachments')
       IS DISTINCT FROM false THEN
     RAISE EXCEPTION 'Forge attachment bucket remains public';
   END IF;
+  unmarked_path := 'projects/' || project || '/forge/' || unmarked ||
+    '/' || gen_random_uuid();
+  INSERT INTO storage.objects(bucket_id,name)
+    VALUES('forge-attachments',unmarked_path);
+  INSERT INTO public.forge_attachment_objects(id,pr_id,project_id,storage_path,
+    content_key_version,format_version)
+    VALUES(unmarked,pr,project,unmarked_path,1,4);
   legacy := pr || '/' || gen_random_uuid() || '/human-name.png';
   INSERT INTO storage.objects(bucket_id,name)
     VALUES('forge-attachments',legacy);
@@ -57,7 +76,9 @@ BEGIN
   IF public.forge_attachment_migration_complete() THEN
     RAISE EXCEPTION 'Forge migration accepted a historical clear object';
   END IF;
-  INSERT INTO public.forge_attachment_encryption_scope(id) VALUES(true);
+  IF NOT public.activate_forge_attachment_encryption() THEN
+    RAISE EXCEPTION 'Forge attachment writer fence did not activate';
+  END IF;
   BEGIN
     INSERT INTO storage.objects(bucket_id,name)
       VALUES('forge-attachments',pr || '/' || gen_random_uuid() || '/another.png');
@@ -79,6 +100,14 @@ BEGIN
   INSERT INTO public.forge_attachment_objects(id,pr_id,project_id,storage_path,
     content_key_version,format_version)
     VALUES(capability,pr,project,first_path,1,4);
+  INSERT INTO storage.buckets(id,name,public)
+    VALUES('forge-attachment-test-other','forge-attachment-test-other',false);
+  BEGIN
+    UPDATE storage.objects SET bucket_id='forge-attachment-test-other'
+      WHERE bucket_id='forge-attachments' AND name=first_path;
+    RAISE EXCEPTION 'Protected forge object escaped its bucket';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
   BEGIN
     INSERT INTO public.forge_attachment_objects(id,pr_id,project_id,storage_path,
       content_key_version,format_version)
@@ -132,6 +161,12 @@ BEGIN
   PERFORM set_config('storage.allow_delete_query','true',true);
   DELETE FROM storage.objects WHERE bucket_id='forge-attachments'
     AND name IN (legacy,first_path,abandoned_path);
+  IF public.forge_attachment_migration_complete() THEN
+    RAISE EXCEPTION 'Unmarked protected-looking object passed completion';
+  END IF;
+  DELETE FROM public.forge_attachment_objects WHERE id=unmarked;
+  DELETE FROM storage.objects WHERE bucket_id='forge-attachments'
+    AND name=unmarked_path;
   IF NOT public.forge_attachment_migration_complete() THEN
     RAISE EXCEPTION 'Forge migration did not complete after cleanup';
   END IF;

@@ -11,59 +11,60 @@ import { buildRootSwapSql, parseRegistryOutput, planRootRewrap } from "@/scripts
 
 const enabled = process.env.MINDDY_ENCRYPTION_DB_TEST === "true";
 const container = "supabase_db_minddy-encryption-test";
-const template = "minddy_min591_full_audit";
-const objectiveTemplate = "minddy_min591_objective_audit";
-const categoryTemplate = "minddy_min591_category_audit";
-const draftTemplate = "minddy_min591_draft_audit";
-const feedbackTemplate = "minddy_min591_feedback_audit";
-const issueTemplate = "minddy_min591_issue_audit";
-const journalTemplate = "minddy_min591_journal_audit";
-const eventTemplate = "minddy_min591_event_audit";
-const launchTemplate = "minddy_min591_launch_audit";
-const titleTemplate = "minddy_min591_title_audit";
-const checkpointTemplate = "minddy_min591_checkpoint_audit";
-const delegationTemplate = "minddy_min591_delegation_audit";
-const standaloneMessageTemplate = "minddy_min591_standalone_audit";
-const queueTemplate = "minddy_min591_queue_audit";
-const answerTemplate = "minddy_min591_answer_audit";
-const contextTemplate = "minddy_min591_context_audit";
-const verdictTemplate = "minddy_min591_verdict_audit";
-const deploymentTemplate = "minddy_min591_deployment_audit";
-const baseBranchTemplate = "minddy_min591_base_branch_audit";
-const workBranchTemplate = "minddy_min591_work_branch_audit";
-const resultTemplate = "minddy_min591_result_audit";
-const summaryTemplate = "minddy_min591_summary_audit";
-const prUrlTemplate = "minddy_min591_pr_url_audit";
-const sharedPrUrlTemplate = "minddy_min591_relay_audit_audit";
-const attachmentTemplate = "minddy_min591_attachment_metadata_audit";
-const operationTemplate = "minddy_min591_operation_audit";
-const conversationTemplate = "minddy_min591_conversation_audit";
-const userMessageTemplate = "minddy_min591_user_message_audit";
-const finalTemplate = "minddy_min591_final_audit";
-const errorTemplate = "minddy_min591_error_audit";
-const toolTemplate = "minddy_min591_tool_audit";
-const repositoryTemplate = "minddy_min591_repo_audit";
-const defaultBranchTemplate = "minddy_min591_branch_audit";
-const projectIconTemplate = "minddy_min591_icon_audit";
-const viewContentTemplate = "minddy_min591_view_audit";
-const bookmarkTemplate = "minddy_min591_bookmark_audit";
-const routineContentTemplate = "minddy_min591_routine_audit";
-const projectContentTemplate = "minddy_min591_project_audit";
-const pageContentTemplate = "minddy_min591_page_audit";
-const userAiKeyTemplate = "minddy_min591_byok_audit";
-const relayInstanceTemplate = "minddy_min591_relay_audit";
-const projectWebhookTemplate = "minddy_min591_repo_hook_audit";
-const relayProvisioningTemplate = "minddy_min591_provisioning_audit";
-const relayUserDeliveryTemplate = "minddy_min591_user_delivery_audit";
-const forgeOAuthTemplate = "minddy_min591_forge_oauth_audit";
-const mcpContentTemplate = "minddy_min591_mcp_audit";
-const agentPrefTemplate = "minddy_min591_agent_pref_audit";
-const appTabTemplate = "minddy_min591_app_tab_audit";
-const aiEvaluationTemplate = "minddy_min591_ai_eval_audit";
-const stripePayloadTemplate = "minddy_min591_stripe_audit";
-const customDomainTemplate = "minddy_min591_custom_domain_audit";
-const billingIdentityTemplate = "minddy_min591_billing_audit";
-const oauthClientTemplate = "minddy_min591_oauth_client_work";
+const schemaOverride = process.env.MINDDY_ENCRYPTION_FINAL_TEMPLATE;
+const template = schemaOverride ?? "minddy_min591_full_audit";
+const objectiveTemplate = schemaOverride ?? "minddy_min591_objective_audit";
+const categoryTemplate = schemaOverride ?? "minddy_min591_category_audit";
+const draftTemplate = schemaOverride ?? "minddy_min591_draft_audit";
+const feedbackTemplate = schemaOverride ?? "minddy_min591_feedback_audit";
+const issueTemplate = schemaOverride ?? "minddy_min591_issue_audit";
+const journalTemplate = schemaOverride ?? "minddy_min591_journal_audit";
+const eventTemplate = schemaOverride ?? "minddy_min591_event_audit";
+const launchTemplate = schemaOverride ?? "minddy_min591_launch_audit";
+const titleTemplate = schemaOverride ?? "minddy_min591_title_audit";
+const checkpointTemplate = schemaOverride ?? "minddy_min591_checkpoint_audit";
+const delegationTemplate = schemaOverride ?? "minddy_min591_delegation_audit";
+const standaloneMessageTemplate = schemaOverride ?? "minddy_min591_standalone_audit";
+const queueTemplate = schemaOverride ?? "minddy_min591_queue_audit";
+const answerTemplate = schemaOverride ?? "minddy_min591_answer_audit";
+const contextTemplate = schemaOverride ?? "minddy_min591_context_audit";
+const verdictTemplate = schemaOverride ?? "minddy_min591_verdict_audit";
+const deploymentTemplate = schemaOverride ?? "minddy_min591_deployment_audit";
+const baseBranchTemplate = schemaOverride ?? "minddy_min591_base_branch_audit";
+const workBranchTemplate = schemaOverride ?? "minddy_min591_work_branch_audit";
+const resultTemplate = schemaOverride ?? "minddy_min591_result_audit";
+const summaryTemplate = schemaOverride ?? "minddy_min591_summary_audit";
+const prUrlTemplate = schemaOverride ?? "minddy_min591_pr_url_audit";
+const sharedPrUrlTemplate = schemaOverride ?? "minddy_min591_relay_audit_audit";
+const attachmentTemplate = schemaOverride ?? "minddy_min591_attachment_metadata_audit";
+const operationTemplate = schemaOverride ?? "minddy_min591_operation_audit";
+const conversationTemplate = schemaOverride ?? "minddy_min591_conversation_audit";
+const userMessageTemplate = schemaOverride ?? "minddy_min591_user_message_audit";
+const finalTemplate = schemaOverride ?? "minddy_min591_final_audit";
+const errorTemplate = schemaOverride ?? "minddy_min591_error_audit";
+const toolTemplate = schemaOverride ?? "minddy_min591_tool_audit";
+const repositoryTemplate = schemaOverride ?? "minddy_min591_repo_audit";
+const defaultBranchTemplate = schemaOverride ?? "minddy_min591_branch_audit";
+const projectIconTemplate = schemaOverride ?? "minddy_min591_icon_audit";
+const viewContentTemplate = schemaOverride ?? "minddy_min591_view_audit";
+const bookmarkTemplate = schemaOverride ?? "minddy_min591_bookmark_audit";
+const routineContentTemplate = schemaOverride ?? "minddy_min591_routine_audit";
+const projectContentTemplate = schemaOverride ?? "minddy_min591_project_audit";
+const pageContentTemplate = schemaOverride ?? "minddy_min591_page_audit";
+const userAiKeyTemplate = schemaOverride ?? "minddy_min591_byok_audit";
+const relayInstanceTemplate = schemaOverride ?? "minddy_min591_relay_audit";
+const projectWebhookTemplate = schemaOverride ?? "minddy_min591_repo_hook_audit";
+const relayProvisioningTemplate = schemaOverride ?? "minddy_min591_provisioning_audit";
+const relayUserDeliveryTemplate = schemaOverride ?? "minddy_min591_user_delivery_audit";
+const forgeOAuthTemplate = schemaOverride ?? "minddy_min591_forge_oauth_audit";
+const mcpContentTemplate = schemaOverride ?? "minddy_min591_mcp_audit";
+const agentPrefTemplate = schemaOverride ?? "minddy_min591_agent_pref_audit";
+const appTabTemplate = schemaOverride ?? "minddy_min591_app_tab_audit";
+const aiEvaluationTemplate = schemaOverride ?? "minddy_min591_ai_eval_audit";
+const stripePayloadTemplate = schemaOverride ?? "minddy_min591_stripe_audit";
+const customDomainTemplate = schemaOverride ?? "minddy_min591_custom_domain_audit";
+const billingIdentityTemplate = schemaOverride ?? "minddy_min591_billing_audit";
+const oauthClientTemplate = schemaOverride ?? "minddy_min591_oauth_client_work";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -2112,16 +2113,28 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
         const resultCipher = await store.encrypt(result, {
           scope, table: "agent_runs", column: "delegation_result", rowId: run,
         });
-        sql(source, `INSERT INTO public.agent_runs(id,project_id,created_by,
-          delegation_result_ciphertext,delegation_result_encryption_version)
-          VALUES(${quote(run)},${quote(project)},${quote(actor)},
-            ${quote(resultCipher)},${store.versionOf(resultCipher)});
-          INSERT INTO public.conversations(id,user_id,project_id)
+        const toolCall = `restore-${number}`;
+        const brief = { version: 1, correlation: { parentConversationId: conversation,
+          parentTurnId: turn, toolCallId: toolCall },
+        targetRepository: { projectId: project }, objective: "Verify restored worker result",
+        sourceReferences: [], constraints: [], authorizedWork: ["test"],
+        expectedOutput: ["test"] };
+        sql(source, `INSERT INTO public.conversations(id,user_id,project_id)
           VALUES(${quote(conversation)},${quote(actor)},${quote(project)});
           INSERT INTO public.numo_assistant_turns(id,conversation_id,user_id,
-            request_id,run_id,status,active_run_id)
+            request_id,run_id,status)
           VALUES(${quote(turn)},${quote(conversation)},${quote(actor)},
-            ${quote(randomUUID())},${quote(randomUUID())},'waiting_work',${quote(run)});`);
+            ${quote(randomUUID())},${quote(randomUUID())},'queued');
+          INSERT INTO public.agent_runs(id,project_id,created_by,
+            delegation_result_ciphertext,delegation_result_encryption_version,
+            parent_numo_turn_id,parent_numo_conversation_id,parent_numo_tool_call_id,
+            delegation_brief)
+          VALUES(${quote(run)},${quote(project)},${quote(actor)},
+            ${quote(resultCipher)},${store.versionOf(resultCipher)},
+            ${quote(turn)},${quote(conversation)},${quote(toolCall)},
+            ${quote(JSON.stringify(brief))}::jsonb);
+          UPDATE public.numo_assistant_turns SET status='waiting_work',
+            active_run_id=${quote(run)} WHERE id=${quote(turn)};`);
         const worker = { run_id: run, status: "completed", result };
         const eventCipher = await store.encrypt(worker, {
           scope, table: "numo_turn_events", column: "payload", rowId: event,
@@ -2876,6 +2889,8 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
         expect(dump).not.toContain(secret);
         for (const payload of payloads) expect(payload).not.toContain(secret);
       }
+      // The final schema already creates shared buckets, which the dump restores.
+      sql(restored, "BEGIN; SET LOCAL storage.allow_delete_query='true'; DELETE FROM storage.buckets; COMMIT;");
       let dependencies = dump;
       const children = new Map<string, { header: string; lines: string[]; footer: string }>();
       for (const table of ["attachments", "attachment_object_aliases",
@@ -5051,6 +5066,7 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
           "public.envelope_data_keys"].map((table)=>`--table=${table}`)],
       { encoding:"utf8",maxBuffer:4*1024*1024 });
       expect(dump).not.toContain("private-icon-");
+      sql(restored,"BEGIN; SET LOCAL storage.allow_delete_query='true'; DELETE FROM storage.buckets; COMMIT;");
       let parents=dump;
       for (const table of ["storage.objects",
         "public.project_icon_encrypted_objects"]) {

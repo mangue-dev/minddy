@@ -63,3 +63,23 @@ or other copies. Keep the PR draft and MIN-591 open until the remaining
 preactivation checks, production migration and ciphertext inventory are done.
 No production flag, deployment or production data migration is part of this
 matrix.
+
+## Follow-up review of `0ee91f97a`
+
+| Defect | Correction | Isolated proof and limit |
+| --- | --- | --- |
+| Historical Numo event A stalls after worker B starts | Migration authenticates the event's frozen run, turn, conversation and project association without demanding that A remain active. Pre-parent rows with no trustworthy run ID require a manually reviewed service-only association; opaque source revisions invalidate stale review. New events retain the live-worker guard; CAS and attempted-at ordering preserve fair progress. | Final-schema A→B SQL and worker regressions cover migration, pre-parent quarantine and reviewed repair, malformed rows, conflict retries and old-writer refusal. The review reference is an audit pointer; unresolved ambiguous rows block activation. |
+| Forge migration can report complete without a writer fence | The backfill activates a durable SQL marker even with zero candidates. Storage writes and marker activation share a lock; completion also requires the private bucket, protected object metadata and registrations. Non-READ-COMMITTED writes are refused to close a stale-snapshot race. Root and codec preflight precede the marker; historical object encoding and upload follow it. | Final-schema SQL, upload order and two-session READ COMMITTED/REPEATABLE READ tests pass. A real Storage-service backup and restore is still required before activation. |
+| Webhook URL and billing note can return to clear storage after NULL | Irreversible row/field markers survive deletion; writers consult them with flags paused. SQL guards reject clear replacements and marker rollback. Activation and writer transactions require READ COMMITTED so a pre-marker snapshot cannot bypass the fence. | Final-schema SQL, mixed-tenant, webhook CAS, atomic billing patch and two-session race tests pass. A value cleared before the new marker migration has no row evidence; pre-migration audit and activation checks must account for it. |
+| Twin-PR repository rename deletes forge attachment bindings | A service-only atomic SQL reconcile transfers registered objects, explicit historical owners and old-path aliases to the retained PR before deleting the old row. The plain-name fallback uses the same validated transaction boundary. Direct service updates and internal merge execution are revoked. | Published object, historical alias, fallback, orphan cleanup, privilege and isolation regressions pass on final-schema PostgreSQL. |
+| Agent journal duplicate batch fails on second rotation | The alternate ID-bound digest is retained on every rotation so the unique deduplication key remains stable. | Real codec plus PostgreSQL conversion → key rotation → replay regression passes. |
+| Feedback first-page failures starve later rows | Identity, OTP, SSO and neighboring merge workers order by separate attempted-at timestamps; failures and CAS conflicts advance attempts without recording a successful verification. | Multi-pass all-failing first-page and following-valid-row tests plus final-schema SQL pass. |
+| Protected page search changes `limit=1` ordering | In-memory cover density counts occurrences and proximity with title/body weights and handles OR, exclusion, phrases and tested PostgreSQL punctuation, email, IP and CJK classes. Excerpt selection prefers a complete matching passage when the first hit is less relevant. | PostgreSQL oracle compares 9,200 deterministic match/rank/order cases and exact selected excerpts, including a later best fragment, and exercises the real `search_pages` function with RLS and `limit=1`; route tests cover permissions and ties. Other unusual token classes remain a staging corpus gate, along with representative latency. |
+
+All 69 dump/restore scenarios pass on a final-schema isolated PostgreSQL clone,
+including independent parent/child batches, historical key versions, cold
+caches, constraints and wrong-root rejection. The Realtime test uses an
+effective partition and applies its corrective migration between the clear
+sentinel reproduction and refusal assertions. Neither proof covers production
+data, old backups or a real Storage-service restore. Production flags remain
+off; retain MIN-591 in progress and PR #289 in draft.

@@ -10,6 +10,7 @@ DO $test$
 DECLARE
   actor uuid := gen_random_uuid(); project uuid := gen_random_uuid();
   legacy_run uuid := gen_random_uuid(); encrypted_run uuid := gen_random_uuid();
+  orphan_run uuid := gen_random_uuid();
   parent_conversation uuid := gen_random_uuid(); parent_turn uuid := gen_random_uuid();
   event_id uuid := gen_random_uuid();
   sidecar_event uuid := gen_random_uuid();
@@ -20,19 +21,40 @@ DECLARE
     'verificationPerformed','[]'::jsonb,'artifacts','[]'::jsonb,
     'unresolvedDecisions','[]'::jsonb);
   cipher text := '{"format":3,"keyVersion":1}';
-  worker_payload jsonb; rejected boolean;
+  worker_payload jsonb; brief jsonb; rejected boolean;
 BEGIN
   INSERT INTO auth.users(id) VALUES(actor);
   INSERT INTO public.projects(id,owner_id,name,key)
     VALUES(project,actor,'Agent result fixture','ARS');
-  INSERT INTO public.agent_runs(id,project_id,created_by,delegation_result)
-    VALUES(legacy_run,project,actor,clear_result);
   INSERT INTO public.conversations(id,user_id,project_id)
     VALUES(parent_conversation,actor,project);
   INSERT INTO public.numo_assistant_turns(id,conversation_id,user_id,
-    request_id,run_id,status,active_run_id)
+    request_id,run_id,status)
     VALUES(legacy_turn,parent_conversation,actor,gen_random_uuid(),
-      gen_random_uuid(),'waiting_work',legacy_run);
+      gen_random_uuid(),'queued'),
+      (orphan_turn,parent_conversation,actor,gen_random_uuid(),
+        gen_random_uuid(),'queued'),
+      (parent_turn,parent_conversation,actor,gen_random_uuid(),
+        gen_random_uuid(),'queued');
+  brief := jsonb_build_object('version',1,'correlation',jsonb_build_object(
+    'parentConversationId',parent_conversation,'parentTurnId',legacy_turn,
+    'toolCallId','call-legacy'),'targetRepository',jsonb_build_object(
+      'projectId',project),'objective','Verify worker result encryption',
+    'sourceReferences','[]'::jsonb,'constraints','[]'::jsonb,
+    'authorizedWork','["test"]'::jsonb,'expectedOutput','["test"]'::jsonb);
+  INSERT INTO public.agent_runs(id,project_id,created_by,delegation_result,
+    parent_numo_turn_id,parent_numo_conversation_id,parent_numo_tool_call_id,
+    delegation_brief) VALUES(legacy_run,project,actor,clear_result,
+      legacy_turn,parent_conversation,'call-legacy',brief);
+  INSERT INTO public.agent_runs(id,project_id,created_by,
+    parent_numo_turn_id,parent_numo_conversation_id,parent_numo_tool_call_id,
+    delegation_brief) VALUES(orphan_run,project,actor,
+      orphan_turn,parent_conversation,'call-orphan',jsonb_set(jsonb_set(brief,
+        '{correlation,parentTurnId}',to_jsonb(orphan_turn)),
+        '{correlation,toolCallId}','"call-orphan"'));
+  UPDATE public.numo_assistant_turns SET status='waiting_work',active_run_id=CASE id
+    WHEN legacy_turn THEN legacy_run ELSE orphan_run END
+    WHERE id IN (legacy_turn,orphan_turn);
   INSERT INTO public.numo_turn_events(id,turn_id,seq,type,payload)
     VALUES(legacy_event_id,legacy_turn,1,'worker_completed',
       jsonb_build_object('run_id',legacy_run,'result',clear_result));
@@ -40,16 +62,19 @@ BEGIN
     'phase','worker_result','worker_event',jsonb_build_object(
       'type','worker_completed','payload',jsonb_build_object(
         'run_id',legacy_run,'result',clear_result))) WHERE id=legacy_turn;
-  INSERT INTO public.numo_assistant_turns(id,conversation_id,user_id,
-    request_id,run_id,status,active_run_id,checkpoint)
-    VALUES(orphan_turn,parent_conversation,actor,gen_random_uuid(),
-      gen_random_uuid(),'waiting_work',legacy_run,jsonb_build_object(
+  UPDATE public.numo_assistant_turns SET checkpoint=jsonb_build_object(
         'phase','worker_result','worker_event',jsonb_build_object(
           'type','worker_completed','payload',jsonb_build_object(
-            'run_id',legacy_run,'result',clear_result))));
+            'run_id',orphan_run,'result',clear_result))) WHERE id=orphan_turn;
   INSERT INTO public.agent_runs(id,project_id,created_by,
-    delegation_result_ciphertext,delegation_result_encryption_version)
-    VALUES(encrypted_run,project,actor,cipher,1);
+    delegation_result_ciphertext,delegation_result_encryption_version,
+    parent_numo_turn_id,parent_numo_conversation_id,parent_numo_tool_call_id,
+    delegation_brief) VALUES(encrypted_run,project,actor,cipher,1,
+      parent_turn,parent_conversation,'call-encrypted',jsonb_set(jsonb_set(
+        brief,'{correlation,parentTurnId}',to_jsonb(parent_turn)),
+        '{correlation,toolCallId}','"call-encrypted"'));
+  UPDATE public.numo_assistant_turns SET status='waiting_work',
+    active_run_id=encrypted_run WHERE id=parent_turn;
   IF NOT EXISTS (SELECT 1 FROM public.agent_runs
       WHERE id=encrypted_run AND delegation_result IS NULL AND
         delegation_result_ciphertext=cipher) THEN
@@ -98,12 +123,12 @@ BEGIN
   IF NOT public.migrate_numo_worker_checkpoint(orphan_turn,
       jsonb_build_object('phase','worker_result','worker_event',
         jsonb_build_object('type','worker_completed','payload',
-          jsonb_build_object('run_id',legacy_run,'result',clear_result))),
+          jsonb_build_object('run_id',orphan_run,'result',clear_result))),
       jsonb_build_object('phase','worker_result','worker_event',
         jsonb_build_object('type','worker_completed','payload',
           jsonb_build_object('encrypted_worker_payload',cipher,
             'encryption_version',1,'project_id',project,'event_id',orphan_turn,
-            'run_id',legacy_run)))) THEN
+            'run_id',orphan_run)))) THEN
     RAISE EXCEPTION 'orphan Numo worker checkpoint compare-and-swap failed';
   END IF;
   IF EXISTS (SELECT 1 FROM public.numo_assistant_turns WHERE id=orphan_turn
@@ -111,10 +136,6 @@ BEGIN
     RAISE EXCEPTION 'orphan Numo worker checkpoint plaintext remains';
   END IF;
 
-  INSERT INTO public.numo_assistant_turns(id,conversation_id,user_id,
-    request_id,run_id,status,active_run_id)
-    VALUES(parent_turn,parent_conversation,actor,gen_random_uuid(),
-      gen_random_uuid(),'waiting_work',encrypted_run);
   worker_payload := jsonb_build_object('encrypted_worker_payload',cipher,
     'encryption_version',1,'project_id',project,'event_id',event_id,
     'run_id',encrypted_run);

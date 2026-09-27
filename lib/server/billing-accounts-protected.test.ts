@@ -2,9 +2,15 @@ import { randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({ calls: [] as Array<{ name: string;
-  args: Record<string, unknown> }> }));
+  args: Record<string, unknown> }>, protectedByScope: true,
+  row: { email_protected: false, admin_override_note_protected: true },
+  rowReads: 0 }));
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => {
+      state.rowReads += 1;
+      return { data: state.row, error: null };
+    } }) }) }),
     rpc: async (name: string, args: Record<string, unknown>) => {
       state.calls.push({ name, args });
       return { data: { user_id: args.p_user_id,
@@ -14,7 +20,7 @@ vi.mock("@/lib/supabase-service", () => ({
   }),
 }));
 vi.mock("./billing-content", () => ({
-  shouldProtectBillingIdentity: async () => true,
+  shouldProtectBillingIdentity: async () => state.protectedByScope,
   encodeBillingField: async (_user: string, field: string, value: string) =>
     `sealed:${field}:${value}`,
   decodeBillingAccount: async (_user: string, row: Record<string, unknown>) =>
@@ -48,5 +54,24 @@ describe("billing identity service adapters", () => {
     expect(state.calls.at(-1)?.name).toBe("apply_stripe_billing_event");
     expect(account.email).toBe("private@example.test");
     expect(account.admin_override_note).toBe("Private administrative reason");
+  });
+
+  it("keeps a cleared note protected while allowing a legacy email during a flag pause", async () => {
+    state.protectedByScope = false;
+    try {
+      const userId = randomUUID();
+      await upsertBillingAccount(userId, { admin_override_note: null });
+      expect(state.calls.at(-1)?.args.p_patch).toEqual({ admin_override_note: null });
+      const readsAfterClear = state.rowReads;
+      await upsertBillingAccount(userId, { email: "legacy@example.test",
+        admin_override_note: "Replacement note" });
+      expect(state.rowReads).toBe(readsAfterClear + 1);
+      expect(state.calls.at(-1)?.args.p_patch).toEqual({
+        email: "legacy@example.test",
+        admin_override_note: "sealed:admin_override_note:Replacement note",
+      });
+    } finally {
+      state.protectedByScope = true;
+    }
   });
 });

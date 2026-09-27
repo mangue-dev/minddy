@@ -185,6 +185,29 @@ describe("EncryptedStore", () => {
     expect(new Set(ciphertexts.map((value) => JSON.parse(value).salt)).size).toBe(100);
   });
 
+  it("accounts for registry reads separately from cached unwraps", async () => {
+    const registry = new MemoryRegistry();
+    const wrapper = new MemoryWrapper();
+    await new EncryptedStore(new ManagedDataKeys(registry, wrapper))
+      .encrypt("seed", context);
+    const loadCurrent = vi.spyOn(registry, "loadCurrent");
+    const keys = new ManagedDataKeys(registry, wrapper);
+    const store = new EncryptedStore(keys);
+    for (let i = 0; i < 100; i += 1) await store.encrypt(`value-${i}`, context);
+    expect(loadCurrent).toHaveBeenCalledTimes(100);
+    expect(wrapper.generateCalls).toBe(1);
+    expect(wrapper.unwrapCalls).toBe(1);
+
+    const other = new ManagedDataKeys(registry, wrapper);
+    expect(await other.rotate(scope)).toBe(2);
+    expect(JSON.parse(await store.encrypt("after rotation", context)).keyVersion).toBe(2);
+    expect(loadCurrent).toHaveBeenCalledTimes(102);
+    expect(wrapper.unwrapCalls).toBe(2);
+
+    registry.records.pop();
+    await expect(store.encrypt("regressed", context)).rejects.toThrow("version regressed");
+  });
+
   it("round-trips raw binary and empty buffers without confusing them with JSON envelopes", async () => {
     const store = new EncryptedStore(new ManagedDataKeys(new MemoryRegistry(), new MemoryWrapper()));
     for (const bytes of [Buffer.alloc(0), Buffer.from([0, 255, 128, 32]), Buffer.from('"valid JSON"')]) {

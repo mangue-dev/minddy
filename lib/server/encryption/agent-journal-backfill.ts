@@ -59,7 +59,15 @@ export async function backfillAgentJournalBatch(limit = 5, signal?: AbortSignal)
       }
       const encoded = journalEncodedRow(row.run_id, row.session_id, decoded.events);
       let alternateLookup = false;
-      if (row.encryption_version === 0 && row.events !== null) {
+      if ((row.encryption_version ?? 0) > 0) {
+        const alternateDigest = await journalLookup(projectId,
+          `${encoded.payload_sha256}:${row.id}`);
+        alternateLookup = row.payload_sha256 === alternateDigest;
+        if (!alternateLookup && row.payload_sha256 !==
+            await journalLookup(projectId, encoded.payload_sha256)) {
+          throw new Error("Agent journal lookup identity changed");
+        }
+      } else if (row.events !== null) {
         const digest = await journalLookup(projectId, encoded.payload_sha256);
         const collision = await service.from("agent_run_journal").select("id")
           .eq("run_id", row.run_id).eq("session_id", row.session_id)

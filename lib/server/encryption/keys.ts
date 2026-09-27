@@ -41,6 +41,7 @@ function scopeId(scope: EncryptionScope): string {
 /** Keeps decrypted keys only in process memory for a bounded time. */
 export class ManagedDataKeys implements DataKeyProvider {
   private readonly cache = new Map<string, CacheEntry>();
+  private readonly currentVersions = new Map<string, number>();
   private readonly pending = new Map<string, { promise: Promise<DataKey>; readers: number }>();
   private readonly initialPending = new Map<string, Promise<number>>();
 
@@ -94,6 +95,20 @@ export class ManagedDataKeys implements DataKeyProvider {
     key.bytes.fill(0);
   }
 
+  private observeCurrentVersion(scope: string, version: number): void {
+    const seen = this.currentVersions.get(scope);
+    if (seen !== undefined && version < seen) {
+      throw new Error("Current data key version regressed");
+    }
+    this.currentVersions.delete(scope);
+    this.currentVersions.set(scope, version);
+    while (this.currentVersions.size > this.maxEntries) {
+      const oldest = this.currentVersions.keys().next().value;
+      if (oldest === undefined) break;
+      this.currentVersions.delete(oldest);
+    }
+  }
+
   private async singleFlight(id: string, load: () => Promise<DataKey>): Promise<DataKey> {
     let running = this.pending.get(id);
     if (!running) {
@@ -123,8 +138,11 @@ export class ManagedDataKeys implements DataKeyProvider {
 
   async current(scope: EncryptionScope): Promise<DataKey> {
     const prefix = scopeId(scope);
+    // A registry read on every write observes rotations from other processes.
+    // The TTL bounds unwraps, not registry lookups.
     const record = await this.registry.loadCurrent(scope);
     if (record) {
+      this.observeCurrentVersion(prefix, record.version);
       const id = `${prefix}:${record.version}`;
       const cached = this.cached(id);
       if (cached) return { version: cached.version, bytes: Buffer.from(cached.bytes) };
@@ -132,6 +150,9 @@ export class ManagedDataKeys implements DataKeyProvider {
         version: record.version,
         bytes: await this.wrapper.unwrap(record),
       }));
+    }
+    if (this.currentVersions.has(prefix)) {
+      throw new Error("Current data key disappeared");
     }
 
     let initial = this.initialPending.get(prefix);
@@ -145,6 +166,7 @@ export class ManagedDataKeys implements DataKeyProvider {
             wrappedKey: generated.wrappedKey,
           });
           const id = `${prefix}:${winner.version}`;
+          this.observeCurrentVersion(prefix, winner.version);
           if (winner.version === 1 &&
               Buffer.from(winner.wrappedKey).equals(Buffer.from(generated.wrappedKey))) {
             this.remember(id, { version: 1, bytes: generated.bytes });
@@ -187,6 +209,7 @@ export class ManagedDataKeys implements DataKeyProvider {
       throw new Error("Invalid expected data key version");
     }
     const prior = await this.registry.loadCurrent(scope);
+    if (prior) this.observeCurrentVersion(scopeId(scope), prior.version);
     if (expectedVersion !== undefined && prior?.version !== expectedVersion) {
       if (!prior) throw new Error("Rotation data key disappeared");
       if (prior.version < expectedVersion) throw new Error("Current data key version regressed");
@@ -208,10 +231,12 @@ export class ManagedDataKeys implements DataKeyProvider {
       }, prior.version);
       if (!updated) {
         const winner = await this.registry.loadCurrent(scope);
+        if (winner) this.observeCurrentVersion(scopeId(scope), winner.version);
         if (expectedVersion !== undefined && winner && winner.version > prior.version) return winner.version;
         throw new Error("Concurrent data key rotation");
       }
       this.invalidate(scope);
+      this.observeCurrentVersion(scopeId(scope), nextVersion);
       return nextVersion;
     } finally {
       generated.bytes.fill(0);

@@ -16,7 +16,8 @@ interface Row {
 }
 
 type TableName = "project_git_links" | "pull_requests" | "pull_request_syncs" |
-  "pr_comment_edits" |
+  "pr_comment_edits" | "forge_attachment_objects" |
+  "forge_attachment_legacy_owners" | "forge_attachment_legacy_pr_aliases" |
   "forge_repository_name_scope";
 
 const db: Record<TableName, Row[]> = {
@@ -24,6 +25,9 @@ const db: Record<TableName, Row[]> = {
   pull_requests: [],
   pull_request_syncs: [],
   pr_comment_edits: [],
+  forge_attachment_objects: [],
+  forge_attachment_legacy_owners: [],
+  forge_attachment_legacy_pr_aliases: [],
   forge_repository_name_scope: [],
 };
 
@@ -93,6 +97,47 @@ function makeChain(name: TableName) {
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
     from: (name: string) => makeChain(name as TableName),
+    rpc: async (name: string, args: Record<string, unknown>) => {
+      if (name !== "reconcile_forge_repository_plain" ||
+          !db.project_git_links.some((row) =>
+            row.external_repo_id === args.p_external_repo_id &&
+            row.provider === args.p_provider)) {
+        return { data: false, error: { message: "invalid merge" } };
+      }
+      for (const change of args.p_links as Array<{ id: string; old: string;
+        aliases: string[] }>) {
+        for (const oldPr of [...db.pull_requests].filter((row) =>
+          row.provider === args.p_provider && row.repo_full_name === change.old)) {
+          const twin = db.pull_requests.find((row) => row.provider === args.p_provider &&
+            row.repo_full_name === args.p_new && row.number === oldPr.number);
+          if (!twin) {
+            oldPr.repo_full_name = args.p_new;
+            continue;
+          }
+          if (!twin.issue_id) twin.issue_id = oldPr.issue_id;
+          for (const row of db.forge_attachment_objects) {
+            if (row.pr_id === oldPr.id) row.pr_id = twin.id;
+          }
+          for (const row of db.forge_attachment_legacy_owners) {
+            if (row.pr_id === oldPr.id) row.pr_id = twin.id;
+          }
+          db.forge_attachment_legacy_pr_aliases.push({
+            old_pr_id: oldPr.id, current_pr_id: twin.id,
+          });
+          db.pull_requests = db.pull_requests.filter((row) => row.id !== oldPr.id);
+        }
+        for (const row of db.pr_comment_edits) {
+          if (row.repo_full_name === change.old) row.repo_full_name = args.p_new;
+        }
+        db.pull_request_syncs = db.pull_request_syncs.filter((row) =>
+          row.repo_full_name !== change.old);
+        const link = db.project_git_links.find((row) => row.id === change.id)!;
+        Object.assign(link, { repo_full_name: args.p_new,
+          repo_previous_names: change.aliases, repo_owner: args.p_owner,
+          repo_name: args.p_name });
+      }
+      return { data: true, error: null };
+    },
   }),
 }));
 
@@ -115,6 +160,9 @@ beforeEach(() => {
   db.pull_requests = [];
   db.pull_request_syncs = [];
   db.pr_comment_edits = [];
+  db.forge_attachment_objects = [];
+  db.forge_attachment_legacy_owners = [];
+  db.forge_attachment_legacy_pr_aliases = [];
   relayPushes.length = 0;
   relayConfigured = false;
 });
@@ -195,6 +243,9 @@ describe("reconcileRepoRename", () => {
       // Old-name row WITHOUT a twin: plain rename.
       { id: "lone", number: 79, issue_id: null, repo_full_name: "mangue-dev/minddy-issues", provider: "github" },
     ];
+    db.forge_attachment_objects = [{ id: "attachment-1", pr_id: "old",
+      published_at: "2026-08-21T10:00:00Z" }];
+    db.forge_attachment_legacy_owners = [{ old_path_digest: "digest", pr_id: "old" }];
 
     const result = await reconcileRepoRename({
       provider: "github",
@@ -211,6 +262,14 @@ describe("reconcileRepoRename", () => {
     expect(db.pull_requests.find((r) => r.number === 79)).toMatchObject({
       repo_full_name: "mangue-dev/minddy",
     });
+    expect(db.forge_attachment_objects[0]).toMatchObject({
+      id: "attachment-1", pr_id: "twin",
+      published_at: "2026-08-21T10:00:00Z",
+    });
+    expect(db.forge_attachment_legacy_owners[0].pr_id).toBe("twin");
+    expect(db.forge_attachment_legacy_pr_aliases).toEqual([
+      { old_pr_id: "old", current_pr_id: "twin" },
+    ]);
   });
 
   it("announces the new name to the relay mirror for a RELAYED link", async () => {

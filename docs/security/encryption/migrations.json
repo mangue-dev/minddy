@@ -192,5 +192,8 @@
   "20270108020000_forge_attachment_encryption.sql": "fb3f5fe9c052e46d90d069dffe70defe77f54e9edbae0493ab458a75738dc6d9",
   "20270108025000_numo_tool_attempt_progress.sql": "d3fdcfe0e21ef917775a0633b76a8d995327e3f8198dd23a109a31dc3ecb0a29",
   "20270108030000_invitation_push_write_fences.sql": "7e5077fb021683aa7ac921f37db7f3d760cf8bedfab66827dadf72ec8db7c4d4",
-  "20270108040000_historical_encryption_rotation.sql": "940fe402f4bced92c7cadff23a13ab13188ac351bc62a2afe2eb632a2c999a64"
+  "20270108040000_historical_encryption_rotation.sql": "940fe402f4bced92c7cadff23a13ab13188ac351bc62a2afe2eb632a2c999a64",
+  "20270108050000_min591_numo_feedback_progress.sql": "59aa9292ea4ec9c99bfba19526379bdcd7dafe318ea90eefd59661fcb7cbe741",
+  "20270108070000_identity_content_row_fences.sql": "dae8bd393b082b79dee47d9b541fa84b349fc7a90c99c08985b1baf6c0c6499b",
+  "20270108080000_forge_attachment_fence_and_rename.sql": "d665d9d561475f8dd9a8fe66343726e8e217e88566c95d0a9a8ce78f55d725bd"
 }

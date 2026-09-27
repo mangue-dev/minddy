@@ -112,8 +112,9 @@ BEGIN
   BEGIN
     UPDATE public.pages SET project_id = other_project WHERE id = page;
     RAISE EXCEPTION 'snapshot key scope changed through its parent';
-  EXCEPTION WHEN foreign_key_violation OR insufficient_privilege THEN
-    IF SQLERRM <> 'cross_project_move' AND SQLSTATE <> '23503' THEN RAISE; END IF;
+  EXCEPTION WHEN check_violation OR foreign_key_violation OR insufficient_privilege THEN
+    IF SQLERRM NOT IN ('cross_project_move', 'page_content_scope_immutable')
+        AND SQLSTATE <> '23503' THEN RAISE; END IF;
   END;
   UPDATE public.issue_events SET encrypted_content = '{"keyVersion":2}', encryption_version = 2,
     encryption_revision = 2 WHERE id = event AND encryption_revision = 1;

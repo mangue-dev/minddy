@@ -6,6 +6,15 @@ import { getContentKeys } from "./registry";
 import { boardSsoState, decodeBoardSso, encodeBoardSso,
   isEncryptedBoardSso } from "@/lib/server/feedback/board-sso-content";
 
+async function markAttempt(id: string, old: string | null) {
+  const marked = await getServiceClient().rpc("mark_feedback_sso_attempt", {
+    p_id: id, p_old: old, p_allow_stale: true,
+  });
+  if (marked.error || !marked.data) {
+    throw new Error("Unable to mark feedback SSO attempt");
+  }
+}
+
 /** Replace legacy board secrets and rotate project keys in a bounded CAS pass. */
 export async function backfillFeedbackSsoBatch(limit = 30,
   signal?: AbortSignal) {
@@ -20,7 +29,7 @@ export async function backfillFeedbackSsoBatch(limit = 30,
   const { data, error } = await service.from("feedback_boards")
     .select("id,project_id,sso_secret")
     .not("sso_secret", "is", null)
-    .order("sso_encryption_checked_at", { ascending: true,
+    .order("sso_encryption_attempted_at", { ascending: true,
       nullsFirst: true }).order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan feedback SSO secrets");
   const result = { scanned: 0, migrated: 0, unchanged: 0,
@@ -50,10 +59,16 @@ export async function backfillFeedbackSsoBatch(limit = 30,
         p_id: row.id, p_old: row.sso_secret, p_new: cipher,
       });
       if (write.error) throw new Error("Unable to migrate feedback SSO secret");
-      if (!write.data) result.conflicted++;
+      if (!write.data) {
+        result.conflicted++;
+        await markAttempt(row.id, row.sso_secret);
+      }
       else if (fresh) result.unchanged++;
       else result.migrated++;
-    } catch { result.failed++; }
+    } catch {
+      result.failed++;
+      await markAttempt(row.id, row.sso_secret);
+    }
   }
   return result;
 }

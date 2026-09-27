@@ -1737,12 +1737,11 @@ export async function prAttachmentResponse(
   }
   const projectId = link.data.project_id;
   const path = `projects/${projectId}/forge/${id}/${crypto.randomUUID()}`;
-  const activated = await service.from("forge_attachment_encryption_scope")
-    .upsert({ id: true }, { onConflict: "id", ignoreDuplicates: true });
-  if (activated.error) {
+  const stored = await encodeAttachmentObject(path, bytes);
+  const activated = await service.rpc("activate_forge_attachment_encryption");
+  if (activated.error || activated.data !== true) {
     return NextResponse.json({ error: "Upload unavailable" }, { status: 503 });
   }
-  const stored = await encodeAttachmentObject(path, bytes);
   const { error } = await service.storage
     .from(FORGE_ATTACHMENTS_BUCKET)
     .upload(path, stored, { contentType: "application/octet-stream",

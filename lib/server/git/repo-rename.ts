@@ -1,7 +1,6 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { isForgeRelayClientConfigured } from "@/lib/server/forge-relay/client";
 import { pushRelayLinkEvent } from "@/lib/server/forge-relay/link-push";
@@ -35,70 +34,10 @@ interface StaleLinkRow {
   git_connections?: { source: string | null } | { source: string | null }[] | null;
 }
 
-interface PrRow {
-  id: string;
-  number: number;
-  issue_id: string | null;
-}
-
 function splitFullName(fullName: string): { owner: string | null; name: string } {
   const cut = fullName.lastIndexOf("/");
   if (cut <= 0 || cut === fullName.length - 1) return { owner: null, name: fullName };
   return { owner: fullName.slice(0, cut), name: fullName.slice(cut + 1) };
-}
-
-/**
- * Moves the PR rows of `oldName` onto `newName`.
- *
- * Webhooks keep flowing DURING and after a rename: rows may already exist
- * under the new name (fresh data), while the old-name rows hold history such
- * as the ticket attachment. Rows without a new-name twin simply change name;
- * twins are collapsed into the newer row, carrying over the ticket link the
- * fresh row may lack.
- */
-async function migratePullRequests(
-  supabase: SupabaseClient,
-  provider: RepoProviderId,
-  oldName: string,
-  newName: string,
-): Promise<void> {
-  const { data } = await supabase
-    .from("pull_requests")
-    .select("id, number, issue_id, repo_full_name")
-    .eq("provider", provider)
-    .in("repo_full_name", [oldName, newName]);
-  const rows = ((data ?? []) as unknown as (PrRow & { repo_full_name: string })[]).filter(
-    (row) => row.repo_full_name === oldName || row.repo_full_name === newName,
-  );
-
-  const twins = new Map<number, PrRow>();
-  for (const row of rows) {
-    if (row.repo_full_name === newName) twins.set(row.number, row);
-  }
-
-  for (const row of rows) {
-    if (row.repo_full_name !== oldName) continue;
-    const twin = twins.get(row.number);
-    if (!twin) {
-      const { error } = await supabase
-        .from("pull_requests")
-        .update({ repo_full_name: newName })
-        .eq("id", row.id);
-      if (error) throw new Error(`pull_requests rename failed: ${error.message}`);
-      continue;
-    }
-    // Same PR on both names: the twin wins (it saw the latest webhooks), the
-    // old row dies — but not its ticket attachment.
-    if (!twin.issue_id && row.issue_id) {
-      const { error } = await supabase
-        .from("pull_requests")
-        .update({ issue_id: row.issue_id })
-        .eq("id", twin.id);
-      if (error) throw new Error(`pull_requests twin merge failed: ${error.message}`);
-    }
-    const { error } = await supabase.from("pull_requests").delete().eq("id", row.id);
-    if (error) throw new Error(`pull_requests duplicate cleanup failed: ${error.message}`);
-  }
 }
 
 /**
@@ -115,11 +54,6 @@ export async function reconcileRepoRename(opts: {
 }): Promise<{ renamed: boolean }> {
   if (!opts.externalRepoId || !opts.fullName) return { renamed: false };
   const supabase = getServiceClient();
-  const protectNames = await shouldProtectRepositoryNames(supabase);
-  const storedName = protectNames
-    ? await registerRepositoryName(opts.provider,opts.fullName)
-    : opts.fullName;
-
   const { data: links, error } = await supabase
     .from("project_git_links")
     .select("id, connection_id, repo_full_name, repo_previous_names, git_connections(source)")
@@ -127,6 +61,12 @@ export async function reconcileRepoRename(opts: {
     .eq("external_repo_id", opts.externalRepoId);
   if (error) throw new Error(`project_git_links read failed: ${error.message}`);
 
+  const protectNames = await shouldProtectRepositoryNames(supabase) ||
+    ((links ?? []) as unknown as StaleLinkRow[]).some((link) =>
+      link.repo_full_name?.startsWith("mdyr1:"));
+  const storedName = protectNames
+    ? await registerRepositoryName(opts.provider,opts.fullName)
+    : opts.fullName;
   const stale = ((links ?? []) as unknown as StaleLinkRow[]).filter(
     (link) => link.repo_full_name && link.repo_full_name !== storedName,
   );
@@ -162,42 +102,18 @@ export async function reconcileRepoRename(opts: {
   }
 
   const { owner, name } = splitFullName(opts.fullName);
+  const changes = stale.map((link) => ({ id: link.id, old: link.repo_full_name,
+    aliases: [...new Set([...(link.repo_previous_names ?? []),
+      link.repo_full_name!])].slice(-20) }));
+  const { data: renamed, error: renameError } = await supabase.rpc(
+    "reconcile_forge_repository_plain", {
+      p_provider: opts.provider, p_external_repo_id: opts.externalRepoId,
+      p_new: storedName, p_owner: owner, p_name: name, p_links: changes,
+    });
+  if (renameError || renamed !== true) {
+    throw new Error("Forge repository rename transaction failed");
+  }
   for (const link of stale) {
-    const oldName = link.repo_full_name as string;
-    const rawPreviousNames = [...new Set([...(link.repo_previous_names ?? []), oldName])]
-      .slice(-20);
-    const previousNames = protectNames
-      ? await Promise.all(rawPreviousNames.map((alias) =>
-          alias.startsWith("mdyr1:") ? alias
-            : registerRepositoryName(opts.provider,alias)))
-      : rawPreviousNames;
-    await migratePullRequests(supabase, opts.provider, oldName, storedName);
-    const { error:editError } = await supabase.from("pr_comment_edits")
-      .update({ repo_full_name:storedName })
-      .eq("provider",opts.provider).eq("repo_full_name",oldName);
-    if (editError) throw new Error("PR comment history rename failed");
-
-    // The stamp dies rather than moving: right after a rename a fresh sweep
-    // is exactly what we want (states may have moved while minting was down).
-    const { error: stampError } = await supabase
-      .from("pull_request_syncs")
-      .delete()
-      .eq("provider", opts.provider)
-      .eq("repo_full_name", oldName);
-    if (stampError) throw new Error(`pull_request_syncs cleanup failed: ${stampError.message}`);
-
-    const { error: linkError } = await supabase
-      .from("project_git_links")
-      .update({
-        repo_full_name: storedName,
-        repo_previous_names: previousNames,
-        repo_owner: protectNames ? null : owner,
-        repo_name: protectNames ? null : name,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", link.id);
-    if (linkError) throw new Error(`project_git_links rename failed: ${linkError.message}`);
-
     // A RELAYED link must announce its new name to the control-plane mirror:
     // the mirror authorizes token mints and refuses a repo it never saw.
     const embedded = link.git_connections;

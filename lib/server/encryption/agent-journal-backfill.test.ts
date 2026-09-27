@@ -115,6 +115,11 @@ describe("agent journal migration", () => {
     await expect(decodeJournal("project-1",
       state.row as unknown as Parameters<typeof decodeJournal>[1]))
       .resolves.toMatchObject({ events: [{ seq: 1, output: "private" }] });
+    const alternateDigest = state.row.payload_sha256;
+    state.version = 2;
+    state.collision = false;
+    expect(await backfillAgentJournalBatch(1)).toMatchObject({ migrated: 1, failed: 0 });
+    expect(state.row.payload_sha256).toBe(alternateDigest);
     vi.unstubAllEnvs();
   });
 });

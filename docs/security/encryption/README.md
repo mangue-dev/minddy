@@ -4,6 +4,69 @@ MIN-591 is one application-wide delivery. The existing invitation implementation
 is a small converted surface, not the production rollout boundary. Do not enable
 production migration on the strength of crypto unit tests or this inventory.
 
+## Review of `0ee91f97a` on draft PR #289
+
+The reviewed SHA passed CI but did not establish code closure. This follow-up
+repairs seven reproduced defects: historical Numo events tied to a previous
+worker; forge attachments lacking a persistent writer fence; webhook and billing
+values returning to clear storage after a paused flag and a NULL transition;
+attachments lost during a twin-PR repository rename; Agent journal duplicate
+digests lost on a second key rotation; Feedback queues starved by failing first
+pages; and page-search ordering changed by presence-only ranking. The adjacent
+Feedback merge queue and stale-snapshot writer fences were repaired too.
+
+The final-schema local PostgreSQL rehearsal passes all 69 independent
+parent/child restore scenarios with historical content-key versions, cold
+caches, foreign-key validation and wrong-root rejection. Its attachment and
+icon fixtures remove already-created bucket metadata through the isolated
+Storage maintenance setting before replaying their data-only dumps. The
+history and push SQL fixtures were updated for current guards; the separate
+push integration uses actual owner-bound ciphertext for both transfer
+directions. The Realtime regression creates an effective partition, reproduces
+the old durable sentinel before applying the corrective migration in one
+isolated transaction, then verifies purge and old-writer refusal. The forge
+object codec and root-key rewrap are exercised locally; a real Storage-service
+backup and restore remains unverified.
+
+`ManagedDataKeys.current` reads the current-key registry on every encrypted
+write to observe another instance's rotation. The in-process TTL limits
+unwraps per scope/version, not registry reads. A retained per-process version
+high-water mark refuses a registry regression; the database rotation RPCs
+enforce durable monotonicity in normal operation. Budget database lookups per
+write and unwraps per scope/version/TTL separately in the
+[preactivation protocol](preactivation-performance.md).
+Its probe now requires an explicit expected status, ordered IDs and exact
+excerpts; nonmembers legitimately return 404 with an error-only response.
+The local PostgreSQL oracle compares 9,200 deterministic match/rank/order
+cases and exercises the real `search_pages` function under RLS and `limit=1`,
+including exact excerpts. The in-memory `simple` lexer covers the measured
+punctuation, email, IP and CJK classes; it is not a formal port of every
+PostgreSQL token class. The staging oracle must include the actual authorized
+query and content mix, especially other unusual tokens, before activation.
+Cold observations require a
+fresh application process for each single request, while warm measurements
+follow two discarded warm-up passes.
+
+Historical Numo rows created before run-parent columns may lack a stored
+run ID. They are quarantined until an operator independently checks the
+event, run, turn, conversation and project in the source records and registers
+that exact association through the service-only reviewed-binding RPC. Its
+reference is an audit pointer, not proof by itself. Opaque event/checkpoint
+revisions invalidate a review when the source changes; maintenance uses
+exact-value CAS. New events still require the currently active worker.
+
+These are code and local-recovery proofs. They do not show that any production
+row, Storage object or retained backup has been converted. Production flags
+remain disabled. Before a separately authorized migration, inventory every
+source and copy, retain every required historical key and root, verify Storage
+service restoration, and rehearse concurrent maintenance. Before activation,
+prove zero remaining clear targets and copies, the writer fences and completion
+checks, authorized search parity, and the staging latency/load gates. Supabase
+Auth login email remains the sole identity-provider exception; invitation
+email and application copies are not exempt. MIN-591 stays in progress and the
+PR stays in draft. No production migration, deployment, flag change or merge
+was performed.
+
 ## Review correction after `2645bc129`
 
 The 27 September code-closure claim was premature. An isolated review found
@@ -44,7 +107,7 @@ registrations; orphan cleanup then removes the object.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 194 application tables and 1,659 columns, their primary
+- `schema.json` records 196 application tables and 1,682 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 173 encryption targets include the original content,
@@ -58,7 +121,7 @@ in [the closure matrix](closure-matrix.md).
 - `consumers.json` records 1,706 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 502 functions, ten views and 251 application triggers. Function
+- `sql-consumers.json` records 514 functions, ten views and 254 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations

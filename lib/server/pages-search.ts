@@ -177,37 +177,167 @@ export async function runPageSearch(
   return { ok: true, hits };
 }
 
-type SearchTerm = { words: string[]; excluded: boolean };
+type SearchTerm = { words: string[]; excluded: boolean; headline: boolean };
 type SearchClause = SearchTerm[];
+
+function pageLexemes(text: string): string[] {
+  // The simple PostgreSQL parser keeps email addresses and file paths as one
+  // lexeme, expands a URL into URL/host/path lexemes, and expands a hyphenated
+  // word into whole/parts. A hyphen after a dotted host separates the words.
+  const tokens = text.toLocaleLowerCase()
+    .replace(/\b[\p{L}][\p{L}\p{N}+.-]*:\/\//gu, "").match(
+    /[\p{L}\p{N}_]+(?:-[\p{L}\p{N}_]+)*@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+|[\p{L}\p{N}]+(?:\.[\p{L}\p{N}]+)+(?:\/[\p{L}\p{N}-]+)+|[\p{L}\p{N}]+(?:\/[\p{L}\p{N}-]+)+|\/[\p{L}\p{N}-]+(?:\/[\p{L}\p{N}-]+)*|[\p{L}\p{N}]+(?:\.[\p{L}\p{N}]+)+|[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)+|[\p{L}\p{N}]+/gu
+  ) ?? [];
+  return tokens.flatMap((token) => {
+    if (token.includes("@")) return [token];
+    if (token.includes(".") && token.includes("/")) {
+      const slash = token.indexOf("/");
+      return [token, token.slice(0, slash), token.slice(slash)];
+    }
+    if (token.includes("/")) return [token];
+    return token.includes("-") ? [token, ...token.split("-")] : [token];
+  });
+}
 
 /** Match the websearch_to_tsquery operators against content decrypted in memory. */
 export function parsePageSearchQuery(query: string): SearchClause[] {
   const clauses: SearchClause[] = [[]];
-  let pendingExclusion = false;
+  let pendingNegations = 0;
   for (const token of query.slice(0, MAX_SEARCH_QUERY_LENGTH)
-    .match(/-?"[^"]*"|\S+/g) ?? []) {
-    if (token.toUpperCase() === "OR") {
-      if (clauses.at(-1)?.length) clauses.push([]);
+    .match(/-*"[^"]*"|\S+/g) ?? []) {
+    if (token.toUpperCase() === "OR" && clauses.at(-1)?.length) {
+      clauses.push([]);
       continue;
     }
-    if (token === "-") { pendingExclusion = true; continue; }
-    const prefixed = token.startsWith("-");
-    const excluded = pendingExclusion || prefixed;
-    pendingExclusion = false;
-    const words = (prefixed ? token.slice(1) : token).toLocaleLowerCase()
-      .match(/[\p{L}\p{N}_]+/gu) ?? [];
-    if (words.length) clauses.at(-1)?.push({ words, excluded });
+    if (/^-+$/.test(token)) { pendingNegations += token.length; continue; }
+    const prefixed = token.match(/^-+/)?.[0].length ?? 0;
+    const negations = pendingNegations + prefixed;
+    const excluded = negations % 2 === 1;
+    pendingNegations = 0;
+    const raw = token.slice(prefixed);
+    // websearch_to_tsquery reads a pasted URL as a scheme lexeme AND a single
+    // slash-prefixed path lexeme; the document parser discards the protocol.
+    const protocol = raw.match(/^([\p{L}][\p{L}\p{N}+.-]*):\/\/(.+)$/u);
+    if (protocol) {
+      for (const word of [protocol[1].toLocaleLowerCase(),
+        `/${protocol[2].toLocaleLowerCase()}`]) {
+        clauses.at(-1)?.push({ words: [word], excluded, headline: negations === 0 });
+      }
+      continue;
+    }
+    const words = pageLexemes(raw);
+    if (!words.length) continue;
+    if (raw.startsWith('"') || (words.length > 1 && !raw.includes(":"))) {
+      clauses.at(-1)?.push({ words, excluded, headline: negations === 0 });
+    } else {
+      for (const word of words) clauses.at(-1)?.push({ words: [word], excluded,
+        headline: negations === 0 });
+    }
   }
   return clauses.filter((clause) => clause.length);
 }
 
 function matchesPageSearch(text: string, clauses: SearchClause[]): boolean {
-  const words = text.toLocaleLowerCase().match(/[\p{L}\p{N}_]+/gu) ?? [];
+  const words = pageLexemes(text);
   return clauses.some((clause) => clause.every(({ words: term, excluded }) => {
     const found = words.some((_, index) =>
       term.every((word, offset) => words[index + offset] === word));
     return excluded ? !found : found;
   }));
+}
+
+type PositionedWord = { word: string; position: number; weight: number };
+
+function positionedWords(title: string, body: string): PositionedWord[] {
+  const titleWords = pageLexemes(title);
+  const bodyWords = pageLexemes(body);
+  return [
+    ...titleWords.map((word, index) => ({ word, position: index + 1, weight: 1 })),
+    ...bodyWords.map((word, index) => ({ word, position: titleWords.length + index + 1, weight: 0.4 })),
+  ];
+}
+
+function coversClause(words: PositionedWord[], clause: SearchClause): boolean {
+  return clause.every((term) => {
+    const found = words.some((word) => term.words.every((value, offset) =>
+      words.some((candidate) => candidate.position === word.position + offset &&
+        candidate.word === value)));
+    return term.excluded ? !found : found;
+  });
+}
+
+/** Cover density mirrors the old SQL rank's weighted, overlapping minimal covers. */
+export function rankPageSearch(title: string, body: string, clauses: SearchClause[]): number | null {
+  if (!matchesPageSearch(`${title} ${body}`, clauses)) return null;
+  const positioned = positionedWords(title, body);
+  // ts_rank_cd evaluates the entire tsquery at each prospective cover. Excluded
+  // lexemes in the hit stream can block a later cover even when another clause
+  // made the page match as a whole.
+  const wanted = new Set(clauses.flatMap((clause) => clause.flatMap((term) => term.words)));
+  const hits = positioned.filter((word) => wanted.has(word.word));
+  if (!hits.length) return 0;
+  const qualifies = (start: number, end: number) => clauses.some((clause) =>
+    coversClause(hits.slice(start, end + 1), clause));
+  let rank = 0;
+  let start = 0;
+  while (start < hits.length) {
+    let end = start;
+    while (end < hits.length && !qualifies(start, end)) end += 1;
+    if (end === hits.length) break;
+    let begin = end;
+    while (begin > start && !qualifies(begin, end)) begin -= 1;
+    const cover = hits.slice(begin, end + 1);
+    const harmonicWeight = cover.length /
+      cover.reduce((sum, word) => sum + 1 / word.weight, 0);
+    const noise = Math.max(0, hits[end].position - hits[begin].position - (cover.length - 1));
+    rank += harmonicWeight / (1 + noise);
+    start = begin + 1;
+  }
+  return Math.fround(rank);
+}
+
+export function protectedPageExcerpt(body: string, clauses: SearchClause[]): string {
+  const headlineClauses = clauses.map((clause) => clause.filter((term) => term.headline))
+    .filter((clause) => clause.length);
+  const terms = headlineClauses.flatMap((clause) => clause
+    .flatMap((term) => term.words));
+  const words = [...body.matchAll(/\S+/gu)];
+  // ts_headline does not highlight a doubly negated conjunct. It returns the
+  // initial MinWords fragment even though the positive match/rank is valid.
+  if (clauses.length === 1 && clauses[0].some((term) => !term.headline && !term.excluded)) {
+    const last = words[Math.min(words.length, 8) - 1];
+    return cleanExcerpt(last ? body.slice(0, (last.index ?? 0) + last[0].length) : "");
+  }
+  const matching = words.map((match) => pageLexemes(match[0])
+    .filter((word) => terms.includes(word)));
+  const candidates = matching.flatMap((hits, index) => hits.length ? [index] : []);
+  if (!candidates.length) {
+    const last = words[Math.min(words.length, 8) - 1];
+    return cleanExcerpt(last ? body.slice(0, (last.index ?? 0) + last[0].length) : "");
+  }
+  const renderMatched = (fragment: string) => cleanExcerpt(
+    (fragment.trim().match(/^[\p{L}][\p{L}\p{N}+.-]*:\/\/\S+$/u)
+      ? fragment.replace(/^[\p{L}][\p{L}\p{N}+.-]*:\/\//u, "")
+      : fragment).replace(/[^\p{L}\p{N}_]+$/u, "")
+  );
+  if (words.length <= 22) return renderMatched(body);
+  let start = 0;
+  let foundCompleteClause = false;
+  for (const candidate of candidates) {
+    const windowStart = Math.min(Math.max(0, candidate - 10), words.length - 22);
+    const windowText = words.slice(windowStart, windowStart + 22)
+      .map((word) => word[0]).join(" ");
+    const complete = headlineClauses.some((clause) =>
+      matchesPageSearch(windowText, [clause]));
+    if (complete && !foundCompleteClause) {
+      start = windowStart;
+      foundCompleteClause = true;
+    }
+  }
+  const from = words[start].index ?? 0;
+  const last = words[start + 21];
+  const to = (last.index ?? 0) + last[0].length;
+  return renderMatched(body.slice(from, to));
 }
 
 /** Read every RLS-visible batch before ranking, so page limits never bias search. */
@@ -217,9 +347,10 @@ async function searchProtectedPages(client: SupabaseClient, {
   Promise<{ ok: true; hits: PageSearchHit[] } | { ok: false }> {
   const clauses = parsePageSearchQuery(query);
   if (!clauses.length) return { ok: true, hits: [] };
-  const terms = clauses.flatMap((clause) => clause.filter((term) => !term.excluded)
-    .flatMap((term) => term.words));
-  const hits: PageSearchHit[] = [];
+  const cap = Math.min(Math.max(1, Math.trunc(limit) || 1), MAX_SEARCH_LIMIT);
+  const ranked: Array<PageSearchHit & { body: string }> = [];
+  const compare = (a: PageSearchHit, b: PageSearchHit) => b.rank - a.rank ||
+    b.updated_at.localeCompare(a.updated_at) || a.id.localeCompare(b.id);
   const batch = 200;
   for (let offset = 0; ; offset += batch) {
     let request = client.from("pages")
@@ -236,27 +367,18 @@ async function searchProtectedPages(client: SupabaseClient, {
       const row = await decodePageProjection(stored);
       const title = String(row.title ?? "");
       const body = await pageSearchText(row.content);
-      const titleLower = title.toLocaleLowerCase();
-      const bodyLower = body.toLocaleLowerCase();
-      if (!matchesPageSearch(`${title} ${body}`, clauses)) continue;
-      const titleWords: string[] = titleLower.match(/[\p{L}\p{N}_]+/gu) ?? [];
-      const bodyWords: string[] = bodyLower.match(/[\p{L}\p{N}_]+/gu) ?? [];
-      const titleScore = terms.reduce((n, term) => n +
-        (titleWords.includes(term) ? 4 : 0), 0);
-      const bodyScore = terms.reduce((n, term) => n +
-        (bodyWords.includes(term) ? 1 : 0), 0);
-      const first = Math.max(0, bodyLower.indexOf(terms.find((term) =>
-        bodyLower.includes(term)) ?? terms[0] ?? "") - 35);
-      hits.push({ id: row.id, project_id: row.project_id,
+      const rank = rankPageSearch(title, body, clauses);
+      if (rank === null) continue;
+      ranked.push({ id: row.id, project_id: row.project_id,
         parent_id: row.parent_id, title, icon: row.icon,
         updated_at: row.updated_at,
-        excerpt: cleanExcerpt(body.slice(first, first + 180)),
-        rank: titleScore + bodyScore });
+        excerpt: "", rank, body });
+      ranked.sort(compare);
+      if (ranked.length > cap) ranked.pop();
     }
     if (!data || data.length < batch) break;
   }
-  hits.sort((a, b) => b.rank - a.rank ||
-    b.updated_at.localeCompare(a.updated_at) || a.id.localeCompare(b.id));
-  return { ok: true, hits: hits.slice(0,
-    Math.min(Math.max(1, Math.trunc(limit) || 1), MAX_SEARCH_LIMIT)) };
+  return { ok: true, hits: ranked.map(({ body, ...hit }) => ({
+    ...hit, excerpt: protectedPageExcerpt(body, clauses),
+  })) };
 }

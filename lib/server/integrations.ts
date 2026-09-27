@@ -197,14 +197,12 @@ export async function updateIntegrationWebhook({
   const service = getServiceClient();
 
   // A webhook only carries ISSUE events: on a feedback key, it
-  // would have nothing to deliver. We refuse to light it rather than put away a
-  // configuration that will never go away — turning it off, however, remains
-  // always possible (a feedback key set before this rule must be able to
-  // se nettoyer).
+  // would have nothing to deliver. Enabling it is refused, while disabling
+  // a previously configured feedback webhook remains possible.
   {
     const { data: existing, error: readError } = await service
       .from("integrations")
-      .select("id, project_id, kind, webhook_url")
+      .select("id, project_id, kind, webhook_url, webhook_url_protected")
       .eq("id", integrationId)
       .eq("project_id", projectId)
       .maybeSingle();
@@ -226,7 +224,8 @@ export async function updateIntegrationWebhook({
     if (url && actor === "agent" && previousUrl !== url) {
       return { ok: false, status: 403, errorKey: "webhookHumanOnly" };
     }
-    const storedUrl=url && await shouldProtectIntegrations()
+    const storedUrl=url && (existing.webhook_url_protected ||
+      await shouldProtectIntegrations())
       ? await encodeIntegrationField(existing,"webhook_url",url)
       : url;
     let update=service.from("integrations").update({

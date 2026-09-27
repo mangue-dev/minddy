@@ -5,6 +5,7 @@ DECLARE owner uuid:=gen_random_uuid(); other_owner uuid:=gen_random_uuid();
   digest text:=repeat('a',64); second_digest text:=repeat('b',64);
   native_digest text:=repeat('c',64);
   cipher text:='mdye3:{"format":3,"keyVersion":1,"iv":"YWJj","tag":"YWJj","data":"YWJj"}';
+  transfer_cipher text:='mdye3:{"format":3,"keyVersion":1,"iv":"ZGVm","tag":"ZGVm","data":"ZGVm"}';
   registered public.push_subscriptions%ROWTYPE;
   first_id uuid;
 BEGIN
@@ -67,7 +68,7 @@ BEGIN
   EXCEPTION WHEN check_violation THEN NULL;
   END;
   registered:=public.register_protected_push(other_owner,
-    'https://old.example/push',digest,NULL,NULL,NULL,NULL,cipher,'web','fr',false);
+    'https://old.example/push',digest,NULL,NULL,NULL,NULL,transfer_cipher,'web','fr',false);
   IF registered.user_id<>other_owner OR registered.endpoint IS NOT NULL OR
       (SELECT count(*) FROM public.push_subscriptions WHERE endpoint_digest=digest)<>1
     THEN RAISE EXCEPTION 'Global endpoint transfer failed'; END IF;

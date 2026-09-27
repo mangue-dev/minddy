@@ -2367,44 +2367,44 @@
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
-    "operation": "from",
-    "resource": "forge_attachment_encryption_scope",
-    "line": 1740,
+    "operation": "rpc",
+    "resource": "activate_forge_attachment_encryption",
+    "line": 1741,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": null,
-    "line": 1746,
+    "line": 1745,
     "storage": true
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": null,
-    "line": 1756,
+    "line": 1755,
     "storage": true
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": "forge_attachment_objects",
-    "line": 1763,
+    "line": 1762,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": null,
-    "line": 1770,
+    "line": 1769,
     "storage": true
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 2617,
+    "line": 2616,
     "storage": false
   },
   {
@@ -4152,51 +4152,58 @@
   },
   {
     "file": "lib/server/billing-accounts.ts",
+    "operation": "from",
+    "resource": "billing_accounts",
+    "line": 175,
+    "storage": false
+  },
+  {
+    "file": "lib/server/billing-accounts.ts",
     "operation": "rpc",
     "resource": "upsert_billing_account_patch",
-    "line": 174,
+    "line": 189,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "rpc",
     "resource": "apply_stripe_billing_event",
-    "line": 207,
+    "line": 222,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 231,
+    "line": 246,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 302,
+    "line": 317,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 311,
+    "line": 326,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 389,
+    "line": 404,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 421,
+    "line": 436,
     "storage": false
   },
   {
@@ -4917,14 +4924,14 @@
     "file": "lib/server/encryption/agent-journal-backfill.ts",
     "operation": "from",
     "resource": "agent_run_journal",
-    "line": 64,
+    "line": 72,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-journal-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_journal_ciphertext",
-    "line": 78,
+    "line": 86,
     "storage": false
   },
   {
@@ -4950,72 +4957,79 @@
   },
   {
     "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
+    "operation": "rpc",
+    "resource": "mark_numo_worker_payload_attempt",
+    "line": 41,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
+    "operation": "rpc",
+    "resource": "lookup_numo_worker_legacy_binding",
+    "line": 53,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 40,
+    "line": 63,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 44,
+    "line": 67,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
     "operation": "from",
     "resource": "numo_turn_events",
-    "line": 83,
+    "line": 113,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 93,
+    "line": 123,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_numo_worker_event",
-    "line": 111,
+    "line": 142,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_numo_worker_event",
-    "line": 118,
+    "line": 156,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 134,
+    "line": 179,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_numo_worker_checkpoint",
-    "line": 149,
+    "line": 210,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_numo_worker_checkpoint",
-    "line": 166,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_numo_worker_checkpoint",
-    "line": 176,
+    "line": 227,
     "storage": false
   },
   {
@@ -5566,43 +5580,50 @@
   },
   {
     "file": "lib/server/encryption/feedback-identity-backfill.ts",
+    "operation": "rpc",
+    "resource": "mark_feedback_identity_attempt",
+    "line": 17,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/feedback-identity-backfill.ts",
     "operation": "from",
     "resource": null,
-    "line": 32,
+    "line": 45,
     "storage": false
   },
   {
     "file": "lib/server/encryption/feedback-identity-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_feedback_otp_email",
-    "line": 61,
+    "line": 74,
     "storage": false
   },
   {
     "file": "lib/server/encryption/feedback-identity-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_feedback_user_identity",
-    "line": 98,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/feedback-merge-backfill.ts",
-    "operation": "from",
-    "resource": "feedback_merge_events",
-    "line": 17,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/feedback-merge-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_feedback_merge_payload",
-    "line": 29,
+    "line": 114,
     "storage": false
   },
   {
     "file": "lib/server/encryption/feedback-merge-backfill.ts",
     "operation": "rpc",
     "resource": "mark_feedback_merge_payload_attempt",
+    "line": 7,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/feedback-merge-backfill.ts",
+    "operation": "from",
+    "resource": "feedback_merge_events",
+    "line": 26,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/feedback-merge-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_feedback_merge_payload",
     "line": 38,
     "storage": false
   },
@@ -5629,52 +5650,45 @@
   },
   {
     "file": "lib/server/encryption/feedback-sso-backfill.ts",
+    "operation": "rpc",
+    "resource": "mark_feedback_sso_attempt",
+    "line": 10,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/feedback-sso-backfill.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 20,
+    "line": 29,
     "storage": false
   },
   {
     "file": "lib/server/encryption/feedback-sso-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_feedback_sso_secret",
-    "line": 49,
+    "line": 58,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-attachment-backfill.ts",
     "operation": "rpc",
     "resource": "list_forge_attachment_migration_candidates",
-    "line": 15,
+    "line": 17,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-attachment-backfill.ts",
-    "operation": "from",
-    "resource": null,
-    "line": 27,
-    "storage": true
-  },
-  {
-    "file": "lib/server/encryption/forge-attachment-backfill.ts",
-    "operation": "from",
-    "resource": "forge_attachment_legacy_owners",
-    "line": 30,
+    "operation": "rpc",
+    "resource": "activate_forge_attachment_encryption",
+    "line": 29,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-attachment-backfill.ts",
-    "operation": "from",
-    "resource": null,
-    "line": 35,
-    "storage": true
-  },
-  {
-    "file": "lib/server/encryption/forge-attachment-backfill.ts",
-    "operation": "from",
-    "resource": null,
-    "line": 40,
-    "storage": true
+    "operation": "rpc",
+    "resource": "list_forge_attachment_migration_candidates",
+    "line": 33,
+    "storage": false
   },
   {
     "file": "lib/server/encryption/forge-attachment-backfill.ts",
@@ -5686,36 +5700,64 @@
   {
     "file": "lib/server/encryption/forge-attachment-backfill.ts",
     "operation": "from",
-    "resource": "forge_attachment_objects",
-    "line": 52,
+    "resource": "forge_attachment_legacy_owners",
+    "line": 48,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-attachment-backfill.ts",
     "operation": "from",
     "resource": null,
-    "line": 61,
+    "line": 53,
     "storage": true
   },
   {
     "file": "lib/server/encryption/forge-attachment-backfill.ts",
     "operation": "from",
     "resource": null,
-    "line": 64,
+    "line": 58,
+    "storage": true
+  },
+  {
+    "file": "lib/server/encryption/forge-attachment-backfill.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 63,
+    "storage": true
+  },
+  {
+    "file": "lib/server/encryption/forge-attachment-backfill.ts",
+    "operation": "from",
+    "resource": "forge_attachment_objects",
+    "line": 70,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-attachment-backfill.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 79,
+    "storage": true
+  },
+  {
+    "file": "lib/server/encryption/forge-attachment-backfill.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 82,
     "storage": true
   },
   {
     "file": "lib/server/encryption/forge-attachment-backfill.ts",
     "operation": "from",
     "resource": "forge_attachment_legacy_owners",
-    "line": 67,
+    "line": 85,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-attachment-backfill.ts",
     "operation": "from",
     "resource": "forge_attachment_migration_attempts",
-    "line": 73,
+    "line": 91,
     "storage": false
   },
   {
@@ -8283,64 +8325,22 @@
   {
     "file": "lib/server/git/repo-rename.ts",
     "operation": "from",
-    "resource": "pull_requests",
-    "line": 65,
-    "storage": false
-  },
-  {
-    "file": "lib/server/git/repo-rename.ts",
-    "operation": "from",
-    "resource": "pull_requests",
-    "line": 83,
-    "storage": false
-  },
-  {
-    "file": "lib/server/git/repo-rename.ts",
-    "operation": "from",
-    "resource": "pull_requests",
-    "line": 93,
-    "storage": false
-  },
-  {
-    "file": "lib/server/git/repo-rename.ts",
-    "operation": "from",
-    "resource": "pull_requests",
-    "line": 99,
-    "storage": false
-  },
-  {
-    "file": "lib/server/git/repo-rename.ts",
-    "operation": "from",
     "resource": "project_git_links",
-    "line": 123,
+    "line": 57,
     "storage": false
   },
   {
     "file": "lib/server/git/repo-rename.ts",
     "operation": "rpc",
     "resource": "reconcile_forge_repository_name",
-    "line": 143,
+    "line": 83,
     "storage": false
   },
   {
     "file": "lib/server/git/repo-rename.ts",
-    "operation": "from",
-    "resource": "pr_comment_edits",
-    "line": 175,
-    "storage": false
-  },
-  {
-    "file": "lib/server/git/repo-rename.ts",
-    "operation": "from",
-    "resource": "pull_request_syncs",
-    "line": 182,
-    "storage": false
-  },
-  {
-    "file": "lib/server/git/repo-rename.ts",
-    "operation": "from",
-    "resource": "project_git_links",
-    "line": 189,
+    "operation": "rpc",
+    "resource": "reconcile_forge_repository_plain",
+    "line": 108,
     "storage": false
   },
   {
@@ -8641,21 +8641,21 @@
     "file": "lib/server/integrations.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 205,
+    "line": 203,
     "storage": false
   },
   {
     "file": "lib/server/integrations.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 232,
+    "line": 231,
     "storage": false
   },
   {
     "file": "lib/server/integrations.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 270,
+    "line": 269,
     "storage": false
   },
   {
@@ -10363,7 +10363,7 @@
     "file": "lib/server/pages-search.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 225,
+    "line": 314,
     "storage": false
   },
   {

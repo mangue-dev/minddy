@@ -17,22 +17,29 @@ account; test both member and nonmember sessions. Seed via application
 repositories or restore an anonymized fixture, never by inserting plaintext
 directly into a protected column.
 
-Record expected ordered page IDs for these searches in a local JSON file:
+Record expected ordered page IDs and exact displayed excerpts for these searches in a local JSON file:
 single title word, body word, `alpha OR beta`, `alpha -beta`, quoted phrase,
 multiword AND, no match, broad common word, and a term on a legacy page.
 Include same-titled pages in two projects, a private page outside the actor's
 membership and enough matches to exercise the route's 20-result limit. The
-expected IDs come from the authorized baseline and must be reviewed before the
-encrypted run. Example configuration (replace UUIDs and expected IDs):
+expected values come from the authorized PostgreSQL `search_pages` baseline and
+must be reviewed before the encrypted run. The probe rejects missing oracle
+fields and a 404 oracle with nonempty results. Include actual punctuation and
+token classes observed in the staging corpus, especially unusual tokens beyond
+the tested email, IP and CJK cases: the in-memory lexer is not a formal port of
+every PostgreSQL `simple` parser class. A separate nonmember
+configuration uses `expectedStatus: 404`, empty IDs and empty excerpts; the
+project route hides membership with 404. Example
+configuration (replace UUIDs and oracle values):
 
 ```json
 {
   "baseUrl": "http://127.0.0.1:3000",
   "projectId": "00000000-0000-4000-8000-000000000001",
   "queries": [
-    { "text": "alpha OR beta", "expectedIds": ["00000000-0000-4000-8000-000000000002"] },
-    { "text": "alpha -beta", "expectedIds": [] },
-    { "text": "\"alpha beta\"", "expectedIds": [] }
+    { "text": "alpha OR beta", "expectedStatus": 200, "expectedIds": ["00000000-0000-4000-8000-000000000002"], "expectedExcerpts": ["Reviewed baseline excerpt"] },
+    { "text": "alpha -beta", "expectedStatus": 200, "expectedIds": [], "expectedExcerpts": [] },
+    { "text": "\"alpha beta\"", "expectedStatus": 200, "expectedIds": [], "expectedExcerpts": [] }
   ]
 }
 ```
@@ -47,20 +54,29 @@ the rate-limit window. Store output outside the repository.
 
 ```sh
 export MINDDY_BENCHMARK_COOKIE='session cookie for the fixture account'
-node scripts/encryption-preactivation-probe.mjs /tmp/min591-benchmark.json search 1 100 > /tmp/min591-search-cold.json
-node scripts/encryption-preactivation-probe.mjs /tmp/min591-benchmark.json search 8 800 > /tmp/min591-search-warm-8.json
-node scripts/encryption-preactivation-probe.mjs /tmp/min591-benchmark.json search 32 1600 > /tmp/min591-search-warm-32.json
-node scripts/encryption-preactivation-probe.mjs /tmp/min591-benchmark.json write 4 20 > /tmp/min591-write.json
+node scripts/encryption-preactivation-probe.mjs /tmp/min591-benchmark.json search 1 1 cold 0 > /tmp/min591-search-cold-0.json
+node scripts/encryption-preactivation-probe.mjs /tmp/min591-benchmark.json search 8 800 warm > /dev/null
+node scripts/encryption-preactivation-probe.mjs /tmp/min591-benchmark.json search 8 800 warm > /dev/null
+node scripts/encryption-preactivation-probe.mjs /tmp/min591-benchmark.json search 8 800 warm > /tmp/min591-search-warm-8.json
+node scripts/encryption-preactivation-probe.mjs /tmp/min591-benchmark.json search 32 1600 warm > /tmp/min591-search-warm-32.json
+node scripts/encryption-preactivation-probe.mjs /tmp/min591-benchmark.json write 4 20 warm > /tmp/min591-write-warm.json
 ```
 
-Restart the application processes and clear only their in-memory key caches
-before the cold pass; do not flush the database buffer cache. Run two warm-up
-passes before recording warm results. Repeat the sequence three times and
+Restart every application instance before **each** cold request, then invoke
+`search 1 1 cold QUERY_INDEX` exactly once. Repeat for every query and sample;
+these are distinct cold observations. Do not flush the database buffer cache.
+Keep instances running for the two discarded warm-up passes and measured warm
+passes. Run the command block with `set -e`; capture the discarded warm-up
+responses outside the repository and verify exit status zero and an empty
+`failures` array before measuring. The `cold` label does not restart an
+instance; record the restart and process ID beside each cold sample. Repeat
+the sequence three times and
 retain each run, commit SHA, schema version, fixture counts, application
 instance count, database size and machine specifications. Use the same
 concurrency and query order for baseline and proposed copies.
 
-Collect HTTP p50/p95/p99, mismatch and error counts from the probe. Collect
+Collect HTTP p50/p95/p99, mismatch and error counts from the probe, aggregating
+cold one-request outputs separately from warm outputs. Collect
 database CPU, connection pool occupancy, I/O and `pg_stat_statements` calls and
 total time for the search and `envelope_data_keys` queries. In the isolated
 staging database, enable `pg_stat_statements` before the run if needed; then
@@ -74,9 +90,24 @@ WHERE query ILIKE '%search_pages%'
 ORDER BY total_exec_time DESC;
 ```
 
-Compare cold and warm key-registry calls per distinct project/user scope.
-Within one cache TTL, warm passes should not reload the same current key for
-every row. Also record application RSS, event-loop delay, 429/5xx responses,
+Compare cold and warm key-registry calls and unwraps separately per distinct
+project/user scope and key version. `ManagedDataKeys.current` checks the registry
+on each write to observe rotations by other instances immediately; the cache
+bounds **unwraps** per scope/version and TTL, not `loadCurrent` lookups. Instrument
+the staging process at `DataKeyRegistry.loadCurrent` and `KeyWrapper.unwrap` with
+aggregate counters and durations; emit no scope IDs, keys or content. Correlate
+their per-process deltas with `pg_stat_statements` and the number of encrypted
+write attempts. A warm interval should have one current-key lookup per write
+attempt, plus documented initialization/rotation calls; report the database
+time and p95 for those lookups. Unwraps should be at most one per accessed
+scope/version in each cache TTL window, plus documented evictions and rotations.
+Treat absent counters or unexplained excess as a failed gate, rather than
+assuming the cache is free. An in-flight write may use the previously current
+version during a concurrent rotation; subsequent writes must observe the new
+version. The per-process rollback refusal covers scopes still retained in its
+bounded high-water cache; the database's monotonic version RPCs are the durable
+normal-operation guard.
+Also record application RSS, event-loop delay, 429/5xx responses,
 object upload/download throughput and maintenance batch duration. Use the
 fixture nonmember account to confirm zero private hits at all concurrency
 levels. Never include plaintext, keys, cookies or raw query terms in logs.
@@ -92,12 +123,114 @@ levels. Never include plaintext, keys, cookies or raw query terms in logs.
 - Page write p95 is at most 1.5 s and at most twice baseline, excluding the
   documented rate-limit response. Database CPU stays below 70% sustained and
   pool occupancy below 80% at concurrency 32.
-- Warm key-registry lookup calls are bounded by the distinct active scopes per
-  cache TTL, rather than by page or object count. Cold caches recover without
-  failed decryptions. Rotation batches continue to advance under concurrent
+- Warm key unwraps are bounded by distinct active scope/version pairs per cache
+  TTL, allowing recorded evictions and rotations; registry lookups are counted
+  and timed separately per encrypted write. Cold caches recover without failed
+  decryptions, and current-key version regressions are refused while retained
+  by the process. Rotation batches continue to advance under concurrent
   reads and writes, without starving older rows or objects.
 
 If a threshold fails, profile the failing query or repository path, fix it,
 and rerun the same fixture and commands. This gate precedes a separately
 authorized production migration and activation. It does not require production
 measurements to validate the code PR.
+
+## Object, Agent and concurrent maintenance gate
+
+Use only an isolated staging deployment and its isolated PostgreSQL database.
+Enable the relevant encryption flags there, including the Agent journal and
+delegation-result flags, before invoking the authenticated maintenance route.
+Record the commit, flag values, schema version and batch response for each pass.
+Run enough bounded passes for the counters to stabilize, including a pass with
+no new forge upload. The final pass must report no failed object, Agent journal,
+Numo event or Numo checkpoint candidate and the SQL gate below must be true.
+The response field names are `forge_attachments`,
+`forge_attachment_rotation`, `agent_journal`, `numo_worker_events` and
+`numo_worker_checkpoints`.
+
+For a historical worker row without a run ID or parent association, do not
+infer the owner from `active_run_id`: that field can already point to worker B.
+In the isolated staging database, inspect the event/turn, candidate run,
+conversation and project associations and independent run history. Quarantine
+any row whose run cannot be established. After documenting the evidence in a
+review record, a service operator may call
+`register_numo_worker_legacy_binding('event', event_id, run_id,
+'review-record-id')` or its `'checkpoint'` form. The reference is only an audit
+pointer; registration does not prove the human inference. The RPC snapshots
+opaque source revisions and refuses inconsistent project/turn associations.
+Any subsequent event edit is refused and a checkpoint edit requires a fresh
+review. Require zero unresolved ambiguous rows before activation.
+
+```sh
+printf 'header = "Authorization: Bearer %s"\n' "$CRON_SECRET" |
+  curl --fail-with-body --silent --show-error --config - \
+    "$STAGING_BASE_URL/api/cron/encryption-maintenance" > /tmp/min591-maintenance.json
+```
+
+While maintenance runs, use two independent authorized clients to create and
+read a published forge image and a historical image link, advance worker A then
+worker B on the same Numo turn, and rotate an Agent journal key with duplicate
+batches. Repeat with a paused flag and an old writer in the isolated database.
+The published and historical links must return the original bytes through the
+authorized reader, their stored replacement objects must have opaque paths and
+verified encrypted metadata, and cleanup must leave no orphan registrations.
+Worker A's historical event and its checkpoint must migrate after B starts;
+the later valid Numo and journal rows must advance even if an earlier candidate
+fails. Concurrent writes must either commit under the protected guard or lose
+the documented CAS; no clear row, metadata object or old writer may be accepted.
+
+In the isolated database, collect the gate and candidate counts after the
+concurrent pass. A successful verification timestamp is never inferred from an
+attempt timestamp. Investigate every remaining unverified, failed or ambiguous
+candidate before activation.
+
+```sql
+SELECT public.forge_attachment_migration_complete() AS forge_complete;
+SELECT count(*) AS legacy_forge_objects FROM storage.objects
+ WHERE bucket_id = 'forge-attachments'
+   AND name !~ '^projects/[0-9a-f-]{36}/forge/[0-9a-f-]{36}/[0-9a-f-]{36}$';
+SELECT count(*) AS unverified_numo_events FROM public.numo_turn_events
+ WHERE type IN ('worker_completed','worker_failed','worker_input')
+   AND (payload_encryption_checked_at IS NULL OR
+     NOT public.numo_worker_payload_verified(payload,'event',id));
+SELECT count(*) AS unverified_numo_checkpoints FROM public.numo_assistant_turns
+ WHERE checkpoint ? 'worker_event'
+   AND (worker_checkpoint_encryption_checked_at IS NULL OR
+     NOT public.numo_worker_payload_verified(
+       checkpoint #> '{worker_event,payload}','checkpoint',id));
+SELECT count(*) AS unverified_agent_journal FROM public.agent_run_journal
+ WHERE encryption_checked_at IS NULL;
+```
+
+Run the SQL old-writer, race and rename regressions against a fresh local clone
+of the final schema, with `ON_ERROR_STOP=1`; each script rolls back its fixture.
+The PostgreSQL oracle and final-schema restore suite are separate requirements:
+
+```sh
+psql "$LOCAL_MIN591_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f scripts/encryption-forge-attachment-regression.sql
+psql "$LOCAL_MIN591_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f scripts/encryption-forge-attachment-isolation-regression.sql
+psql "$LOCAL_MIN591_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f scripts/encryption-forge-rename-attachment-regression.sql
+psql "$LOCAL_MIN591_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f scripts/encryption-min591-worker-feedback-regression.sql
+MIN591_REQUIRE_PG_ORACLE=1 MIN591_PG_ORACLE_CONTAINER=supabase_db_minddy-encryption-test npx vitest run lib/server/pages-search-oracle.integration.test.ts
+MINDDY_ENCRYPTION_DB_TEST=true MINDDY_ENCRYPTION_FINAL_TEMPLATE=minddy_min591_final_review npx vitest run lib/server/encryption/database-recovery.integration.test.ts
+```
+
+For Realtime, use an isolated **pre-correction** schema clone. Compose the
+regression with the corrective migration inside its one transaction, then run
+it against that clone. The regression asserts an effective partition, a
+durable clear sentinel before migration, its purge, and old-writer refusal:
+
+```sh
+node -e 'const fs=require("fs");const marker="-- APPLY_AGENT_REALTIME_MIGRATION_HERE";const source=fs.readFileSync("scripts/encryption-agent-realtime-regression.sql","utf8");const migration=fs.readFileSync("supabase/migrations/20270108010000_agent_realtime_content_refusal.sql","utf8").replace(/^BEGIN;\s*/,"").replace(/\s*COMMIT;\s*$/,"");if(!source.includes(marker))throw Error("Realtime regression marker missing");fs.writeFileSync("/tmp/min591-realtime-regression.sql",source.replace(marker,()=>migration));'
+psql "$LOCAL_MIN591_PRE_REALTIME_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f /tmp/min591-realtime-regression.sql
+```
+
+The container and template names in the last two commands are local example
+fixtures; create an equivalent isolated final-schema clone when using another
+host. The recorded PostgreSQL rank/order corpus runs in the ordinary test
+suite. `MIN591_REQUIRE_PG_ORACLE=1` makes the explicit container-backed command
+fail if the database is unavailable; it checks the broader rank/excerpt corpus
+and the actual `search_pages` function under RLS and `limit=1`. Retain the real
+Storage-service backup and restore as a distinct gate:
+the in-memory object fixture and PostgreSQL metadata restore do not establish
+that Storage bytes survive service restoration.

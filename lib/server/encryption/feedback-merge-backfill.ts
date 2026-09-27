@@ -3,6 +3,15 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isContentEncryptionEnabled } from "./content-config";
 
+async function markAttempt(id: string, old: Record<string, unknown>) {
+  const marked = await getServiceClient().rpc("mark_feedback_merge_payload_attempt", {
+    p_event: id, p_old: old, p_allow_stale: true,
+  });
+  if (marked.error || !marked.data) {
+    throw new Error("Unable to mark feedback merge attempt");
+  }
+}
+
 /** Move historical merge undo UUIDs out of arbitrary JSON in bounded CAS batches. */
 export async function backfillFeedbackMergeBatch(limit = 50,
   signal?: AbortSignal) {
@@ -17,7 +26,7 @@ export async function backfillFeedbackMergeBatch(limit = 50,
   const { data, error } = await service.from("feedback_merge_events")
     .select("id,payload")
     .neq("payload", "{}")
-    .order("payload_checked_at", { ascending: true, nullsFirst: true })
+    .order("payload_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan feedback merge events");
   const result = { scanned: 0, migrated: 0, unchanged: 0,
@@ -30,15 +39,14 @@ export async function backfillFeedbackMergeBatch(limit = 50,
         p_event: row.id, p_old: row.payload,
       });
       if (migrated.error) throw new Error("Unable to migrate feedback merge event");
-      if (!migrated.data) result.conflicted++;
+      if (!migrated.data) {
+        result.conflicted++;
+        await markAttempt(row.id, row.payload);
+      }
       else result.migrated++;
     } catch {
       result.failed++;
-      try {
-        await service.rpc("mark_feedback_merge_payload_attempt", {
-          p_event: row.id, p_old: row.payload,
-        });
-      } catch { /* A later pass can retry the attempt record. */ }
+      await markAttempt(row.id, row.payload);
     }
   }
   return result;

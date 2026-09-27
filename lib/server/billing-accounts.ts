@@ -164,10 +164,25 @@ export async function upsertBillingAccount(
 ): Promise<BillingAccount> {
   const service = getServiceClient();
   const patch = { ...updates };
-  if (await shouldProtectBillingIdentity(service)) {
-    if (Object.hasOwn(patch, "email"))
+  const hasEmail = Object.hasOwn(patch, "email") && patch.email !== null;
+  const hasNote = Object.hasOwn(patch, "admin_override_note") &&
+    patch.admin_override_note !== null;
+  const protectedByScope = (hasEmail || hasNote) &&
+    await shouldProtectBillingIdentity(service);
+  let protectedRow: { email_protected: boolean;
+    admin_override_note_protected: boolean } | null = null;
+  if (!protectedByScope && (hasEmail || hasNote)) {
+    const { data, error } = await service.from("billing_accounts")
+      .select("email_protected, admin_override_note_protected")
+      .eq("user_id", userId).maybeSingle();
+    if (error) throw new Error(error.message);
+    protectedRow = data;
+  }
+  if (protectedByScope || protectedRow) {
+    if (hasEmail && (protectedByScope || protectedRow?.email_protected))
       patch.email = await encodeBillingField(userId, "email", patch.email ?? null);
-    if (Object.hasOwn(patch, "admin_override_note"))
+    if (hasNote && (protectedByScope ||
+      protectedRow?.admin_override_note_protected))
       patch.admin_override_note = await encodeBillingField(userId,
         "admin_override_note", patch.admin_override_note ?? null);
   }

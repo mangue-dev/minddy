@@ -113,6 +113,36 @@ describe("mixed encrypted page search", () => {
     expect(result.hits[0].rank).toBeGreaterThan(result.hits[1].rank);
   });
 
+  it("keeps repeated old body hits ahead of one newer hit at limit one", async () => {
+    h.rows = [
+      { ...h.rows[0], id: "old-many", title: "", content: "alpha alpha alpha",
+        updated_at: "2025-01-01T00:00:00Z" },
+      { ...h.rows[1], id: "new-one", title: "", content: "alpha",
+        updated_at: "2026-01-01T00:00:00Z" },
+      { ...h.rows[2], id: "hidden", title: "", content: "alpha alpha alpha alpha",
+        updated_at: "2027-01-01T00:00:00Z" },
+    ];
+    const result = await runPageSearch(client(new Set(["allowed"])) as never,
+      { query: "alpha", limit: 1 });
+    if (!result.ok) throw new Error("Page search failed");
+    expect(result.hits.map((hit) => hit.id)).toEqual(["old-many"]);
+    expect(result.hits[0].rank).toBeCloseTo(1.2);
+  });
+
+  it("selects the SQL-compatible later excerpt for a dense AND passage", async () => {
+    h.rows = [{ ...h.rows[0], title: "", content: ["alpha",
+      ...Array.from({ length: 27 }, (_, index) => `early${index + 1}`),
+      "alpha", "beta", ...Array.from({ length: 12 }, (_, index) =>
+        `late${index + 1}`)].join(" ") }];
+    const result = await runPageSearch(client(new Set(["allowed"])) as never,
+      { query: "alpha beta", limit: 1 });
+    if (!result.ok) throw new Error("Page search failed");
+    expect(result.hits[0].excerpt).toBe([
+      ...Array.from({ length: 10 }, (_, index) => `early${index + 18}`),
+      "alpha", "beta", ...Array.from({ length: 10 }, (_, index) =>
+        `late${index + 1}`)].join(" "));
+  });
+
   it("fails closed when a visible protected row has no root key", async () => {
     delete process.env.MINDDY_DATA_ROOT_KEY;
     const result = await runPageSearch(client(new Set(["allowed"])) as never,

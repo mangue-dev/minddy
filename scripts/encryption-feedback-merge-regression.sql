@@ -98,9 +98,11 @@ BEGIN
       '{"moved_vote_user_ids":"invalid"}'::jsonb) THEN
     RAISE EXCEPTION 'failed-row queue attempt was not recorded';
   END IF;
-  IF (SELECT payload_checked_at FROM public.feedback_merge_events
-      WHERE id=invalid_id) IS NULL THEN
-    RAISE EXCEPTION 'failed-row queue attempt was not recorded';
+  IF (SELECT payload_attempted_at FROM public.feedback_merge_events
+      WHERE id=invalid_id) IS NULL OR
+      (SELECT payload_checked_at FROM public.feedback_merge_events
+        WHERE id=invalid_id) IS NOT NULL THEN
+    RAISE EXCEPTION 'failed merge attempt was marked as verified';
   END IF;
   IF has_function_privilege('authenticated',
       'public.migrate_feedback_merge_payload(uuid,jsonb)','EXECUTE') THEN
