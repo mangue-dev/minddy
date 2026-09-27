@@ -129,6 +129,24 @@ describe("deleteAccount storage cleanup", () => {
     expect(removedPaths()).not.toContain(`${PR}/abcd/diagram.png`);
   });
 
+  it("removes only the deleted project's opaque forge objects when a repository is shared", async () => {
+    const survivingProject = "44444444-4444-4444-8444-444444444444";
+    const protectedPath = `projects/${PROJECT}/forge/opaque-token/generation`;
+    const orphanPath = `projects/${PROJECT}/forge/abandoned/generation`;
+    const survivingPath = `projects/${survivingProject}/forge/other-token/generation`;
+    service.tables.project_git_links = [
+      { project_id: PROJECT, provider: "github", repo_full_name: "acme/app" },
+      { project_id: survivingProject, provider: "github", repo_full_name: "acme/app" },
+    ];
+    service.objects["forge-attachments"].push(protectedPath, orphanPath, survivingPath);
+
+    await deleteAccount(USER);
+
+    expect(removedPaths()).toEqual(expect.arrayContaining([protectedPath, orphanPath]));
+    expect(removedPaths()).not.toContain(survivingPath);
+    expect(removedPaths()).not.toContain(`${PR}/abcd/diagram.png`);
+  });
+
   it("removes resources, chat files, project icons, and the user avatar", async () => {
     const result = await deleteAccount(USER);
     expect(removedPaths()).toEqual(

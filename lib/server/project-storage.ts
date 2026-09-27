@@ -8,12 +8,9 @@ import { FORGE_ATTACHMENTS_BUCKET } from "@/lib/forge-image-assets";
  * Objects in a project that do NOT live in the bucket `attachments`
  * (MIN-296).
  *
- * Three buckets carry project data. `project-icons` becomes private after
- * migration; `forge-attachments` is public for PR comment images. Neither cascaded,
- * and neither was swept — neither when purging a project, nor when deleting an
- * account. A deleted project therefore left its icon and the images of its PR
- * served by their URL, with nothing left in the base to designate them: exactly the
- * "promised file deleted, still in storage" that the audit tracks.
+ * Project icons and forge attachments live outside the normal attachment
+ * bucket. Forge objects are private and project-scoped after conversion;
+ * historical PR paths still need repository ownership checks during deletion.
  *
  * The paths are recovered BEFORE the delete — afterward, the cascade has taken over the
  * lines that say where they are.
@@ -23,8 +20,8 @@ import { FORGE_ATTACHMENTS_BUCKET } from "@/lib/forge-image-assets";
 const LIST_PAGE = 1000;
 
 /**
- * Recursively lists objects of a prefix (Storage API does not descend), en
- * PAGINING: `list()` stops at a thousand entries without saying there are any left.
+ * Recursively lists objects under a prefix. Storage does not descend, and
+ * `list()` stops at a thousand entries without reporting remaining entries.
  */
 export async function listStoragePrefix(
   service: SupabaseClient,
@@ -83,22 +80,21 @@ export async function projectIconPaths(
 }
 
 /**
- * The `forge-attachments` objects of the given projects.
- *
- * The path for a PR comment attachment is `{pr_id}/{uuid}/{nom}`
- * (MIN-162): it doesn't say the project. We therefore go back down the chain which links it to
- * — projects → linked repositories (`project_git_links`) → PR of these repositories.
- *
- * A PR belongs to a DEPOSIT, not to a project, and two projects can link the
- * same: we do not delete only if no surviving project still binds it. Without this
- * filter, purging a project would take away the images of comments from a team
- * which remains.
+ * Include all opaque objects under each deleted project, including unregistered
+ * orphans. Legacy PR paths lack a project prefix, so remove them only when no
+ * surviving project still links the repository.
  */
 export async function forgeAttachmentPathsForProjects(
   service: SupabaseClient,
   projectIds: string[]
 ): Promise<string[]> {
   if (projectIds.length === 0) return [];
+
+  const paths: string[] = [];
+  for (const id of projectIds) {
+    paths.push(...(await listStoragePrefix(service, FORGE_ATTACHMENTS_BUCKET,
+      `projects/${id}`)));
+  }
 
   const { data: links } = await service
     .from("project_git_links")
@@ -109,7 +105,7 @@ export async function forgeAttachmentPathsForProjects(
     provider: string;
     repo_full_name: string;
   }>;
-  if (rows.length === 0) return [];
+  if (rows.length === 0) return paths;
 
   const key = (l: { provider: string; repo_full_name: string }) =>
     `${l.provider} ${l.repo_full_name}`;
@@ -120,7 +116,6 @@ export async function forgeAttachmentPathsForProjects(
     (l) => projectIds.includes(l.project_id) && !survivors.has(key(l))
   );
 
-  const paths: string[] = [];
   for (const link of doomed) {
     const { data: prs } = await service
       .from("pull_requests")
@@ -131,12 +126,6 @@ export async function forgeAttachmentPathsForProjects(
       paths.push(
         ...(await listStoragePrefix(service, FORGE_ATTACHMENTS_BUCKET, pr.id))
       );
-      const { data: protectedObjects, error } = await service
-        .from("forge_attachment_objects").select("storage_path").eq("pr_id", pr.id);
-      if (error && !["42P01", "PGRST205"].includes(error.code)) {
-        throw new Error("Unable to list protected forge attachments");
-      }
-      paths.push(...(protectedObjects ?? []).map((row) => row.storage_path));
     }
   }
   return paths;
@@ -169,7 +158,7 @@ export async function removeBucketObjects(
 }
 
 /**
- * Cleaning the two public buckets for a batch of disappearing projects:
+ * Clean the project icon and private forge buckets for disappearing projects:
  * notes the paths, deletes, returns the warnings. Called AFTER the delete
  * lines when the paths were cleared before (purging the trash), or
  * end-to-end when the cascade has not yet occurred (deleting

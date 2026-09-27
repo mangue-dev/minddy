@@ -205,10 +205,8 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
       warnings
     );
 
-    // Attachments from PR comments (MIN-296). PUBLIC bucket paths
-    // `{pr_id}/…` (MIN-162): without this passage, files deposited from a
-    // deleted account remained readable by URL, indefinitely and with nothing left
-    // in base to designate them.
+    // Remove private, project-scoped forge objects and historical PR paths
+    // whose repository has no surviving project link.
     removedStorageObjects += await removeObjects(
       service,
       FORGE_ATTACHMENTS_BUCKET,
