@@ -50,7 +50,7 @@ describe("private attachment object envelopes", () => {
       format_version: 4, content_key_version: 1,
     });
     expect(encoded.includes(Buffer.from("Private issue file"))).toBe(false);
-    expect(await decodeAttachmentObject(path, encoded)).toEqual(bytes);
+    expect((await decodeAttachmentObject(path, encoded)).equals(bytes)).toBe(true);
     await expect(decodeAttachmentObject("projects/project-2/object-1", encoded))
       .rejects.toThrow();
     await expect(decodeAttachmentObject("projects/project-1/object-2", encoded))
