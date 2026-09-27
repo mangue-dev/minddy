@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { GITHUB_API_BASE, githubHeaders } from "./github-rest";
@@ -84,9 +84,13 @@ function cacheKey(userId: string, provider: RepoProviderId, repoFullName: string
  */
 const deadTokens = new Set<string>();
 const DEAD_TOKENS_MAX = 500;
+const deadTokenFingerprintKey = randomBytes(32);
 
 function tokenFingerprint(token: string): string {
-  return createHash("sha256").update(token).digest("base64url").slice(0, 22);
+  return createHmac("sha256", deadTokenFingerprintKey)
+    .update(token)
+    .digest("base64url")
+    .slice(0, 22);
 }
 
 function rememberDeadToken(token: string): void {
