@@ -4,12 +4,47 @@ MIN-591 is one application-wide delivery. The existing invitation implementation
 is a small converted surface, not the production rollout boundary. Do not enable
 production migration on the strength of crypto unit tests or this inventory.
 
+## Review correction after `2645bc129`
+
+The 27 September code-closure claim was premature. An isolated review found
+durable clear Agent Realtime messages, clear forge PR objects, an attachment
+truncation downgrade, unguarded invitation and push legacy writers, stalled Numo
+checkpoint conversion, incomplete historical rotation and mixed-state page
+search regressions. The [closure matrix](closure-matrix.md) records these source
+and copy paths, and the [preactivation protocol](preactivation-performance.md)
+defines executable staging measurements. A passing schema inventory or the
+earlier 69 PostgreSQL restores did not detect these faults.
+
+The branch contains code and migrations for review; it is not evidence that
+production data is encrypted. Production flags are disabled, no production
+migration or Storage rewrite has run, and old database backups still contain
+their original plaintext. Supabase Auth login email remains the narrow identity
+provider exception; it does not cover invitation email or any application copy.
+The production activation gate remains separate from code verification.
+
+The forge PR bucket migration makes the existing bucket private. Published
+historical proxy URLs keep reading the old object during the bounded rewrite;
+the rewrite verifies a new encrypted immutable copy, registers an opaque
+capability, then removes the clear object. The service-only
+`forge_attachment_migration_complete()` check must return true before
+activation. A legacy readable URL is a transition reader, not an exception to
+the encryption target. The local Storage fixtures exercise the rewrite and
+rotation logic, but no Storage service backup and restore was available. Keep
+the matching historical content keys and root-key material for old backups.
+If a historical PR repository belongs to more than one project, the worker
+does not guess an encryption owner. Record the reviewed PR/project binding in
+the service-only `forge_attachment_legacy_owners` table using the SHA-256 of
+the old path, then migrate that object under the chosen project key. The
+completion check remains false while it is unresolved. The worker deletes the
+binding after removing the old object. Deleting a project cascades its forge
+registrations; orphan cleanup then removes the object.
+
 ## Inventory and reproducibility
 
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 186 application tables and 1,623 columns, their primary
+- `schema.json` records 194 application tables and 1,659 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 173 encryption targets include the original content,
@@ -20,10 +55,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,655 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,707 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 481 functions, ten views and 246 application triggers. Function
+- `sql-consumers.json` records 502 functions, ten views and 251 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -96,7 +131,7 @@ must be checked separately.
 | SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
 | Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
 | Forge data | Forge mention throttle identities and private repository names use stable system blind indexes. Names have a recoverable encrypted registry and guarded equality keys across linked copies. Default branches use project-bound envelopes. Relay instance configuration, singleton self-hosted provisioning, brokered user deliveries, persistent OAuth grants, repository hook secrets and personal MCP connections are sealed; the unused relay mirror secret copy is removed. Review remaining forge sidecars. The generic row codec deliberately refuses sensitive primary keys. |
-| Files and images | Attachment, page-file and project-icon server paths now use opaque names, ciphertext bytes and authorized download routes. The icon bucket switches to private only after the object queue is empty; other object copies still need review. Public avatars have an explicit public-use exception. |
+| Files and images | Attachment, page-file and project-icon server paths use opaque names, ciphertext bytes and authorized download routes. The forge PR bucket is made private by the new migration; its historical objects need a separate verified Storage rewrite. The icon bucket switches to private only after its object queue is empty. Public avatars have an explicit public-use exception. A real Storage-service backup and restore remains a preactivation gate; the local object tests use a memory fixture. |
 | Feedback and sharing | Feedback posts, private visitor identities, board SSO secrets and recoverable share tokens have repository and migration checkpoints below. Remaining feedback copies still need conversion; owner dialogs must retain access to share URLs. |
 | Credentials and configuration | `app_config.value`, BYOK credentials, endpoints and private model choices, and billing email/admin notes have bounded CAS envelopes and activated old-writer guards. Migrate remaining legacy environment-key envelopes and secret/configuration stores; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
 | Migration and recovery | Add restartable batches for every target and object, compare-and-swap against concurrent edits, verification counters, rejection of obsolete writers, a restoration rehearsal and retention of historical wrapped keys. Test mixed plaintext/encrypted tenants and old versions. |
@@ -123,9 +158,10 @@ versioned envelope format.
 
 Formats 1 and 2 remain readable. Format 2 introduced authenticated key versions;
 format 1 lacks that binding and must eventually be rewritten. Converted row
-backfills upgrade old formats as well as old DEK versions. Invitation backfill
-still only selects legacy rows, so its encrypted historical values need an
-additional rotation pass. Rollback binaries must understand format 3 after any
+backfills upgrade old formats as well as old DEK versions. Invitation maintenance
+now selects legacy and historical-key rows in a fair bounded queue, verifies
+the old ciphertext and status before a CAS rewrite, and purges terminal rows.
+Rollback binaries must understand format 3 after any
 format-3 writes. JSON strings cannot be reliably erased from JavaScript memory;
 the store wipes the mutable plaintext/key buffers that it owns.
 

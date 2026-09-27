@@ -26,7 +26,8 @@ function fakeService(): SupabaseClient & { asked: unknown[] } {
   const client = {
     asked,
     from: (table: string) => {
-      if (table !== "attachment_object_encryption_scope") {
+      if (table !== "attachment_object_encryption_scope" &&
+          table !== "attachment_object_encrypted") {
         throw new Error(`Unexpected table: ${table}`);
       }
       return { select: () => ({ eq: () => ({ maybeSingle: async () =>

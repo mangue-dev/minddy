@@ -139,7 +139,26 @@ export async function runPageSearch(
     limit = 20,
   }: { query: string; projectId?: string | null; limit?: number }
 ): Promise<{ ok: true; hits: PageSearchHit[] } | { ok: false }> {
-  if (await shouldProtectPages()) {
+  // A paused writer flag does not restore the SQL search projection of rows
+  // already converted during a mixed migration.
+  const protectionActive = await shouldProtectPages();
+  let protectedRows = false;
+  if (!protectionActive) {
+    let probe = client.from("pages").select("id").gt("encryption_version", 0)
+      .is("deleted_at", null).limit(1);
+    if (projectId) probe = probe.eq("project_id", projectId);
+    const { data, error } = await probe;
+    if (error && !["42703", "PGRST204"].includes(error.code)) {
+      console.error("[pages] protected search probe failed:", error.message);
+      return { ok: false };
+    }
+    protectedRows = !!data?.length;
+  }
+  if (protectedRows && !process.env.MINDDY_DATA_ROOT_KEY) {
+    console.error("[pages] protected search key unavailable");
+    return { ok: false };
+  }
+  if (protectedRows || protectionActive) {
     return searchProtectedPages(client, { query, projectId, limit });
   }
   const { data, error } = await client.rpc("search_pages", {
@@ -158,14 +177,48 @@ export async function runPageSearch(
   return { ok: true, hits };
 }
 
+type SearchTerm = { words: string[]; excluded: boolean };
+type SearchClause = SearchTerm[];
+
+/** Match the websearch_to_tsquery operators against content decrypted in memory. */
+export function parsePageSearchQuery(query: string): SearchClause[] {
+  const clauses: SearchClause[] = [[]];
+  let pendingExclusion = false;
+  for (const token of query.slice(0, MAX_SEARCH_QUERY_LENGTH)
+    .match(/-?"[^"]*"|\S+/g) ?? []) {
+    if (token.toUpperCase() === "OR") {
+      if (clauses.at(-1)?.length) clauses.push([]);
+      continue;
+    }
+    if (token === "-") { pendingExclusion = true; continue; }
+    const prefixed = token.startsWith("-");
+    const excluded = pendingExclusion || prefixed;
+    pendingExclusion = false;
+    const words = (prefixed ? token.slice(1) : token).toLocaleLowerCase()
+      .match(/[\p{L}\p{N}_]+/gu) ?? [];
+    if (words.length) clauses.at(-1)?.push({ words, excluded });
+  }
+  return clauses.filter((clause) => clause.length);
+}
+
+function matchesPageSearch(text: string, clauses: SearchClause[]): boolean {
+  const words = text.toLocaleLowerCase().match(/[\p{L}\p{N}_]+/gu) ?? [];
+  return clauses.some((clause) => clause.every(({ words: term, excluded }) => {
+    const found = words.some((_, index) =>
+      term.every((word, offset) => words[index + offset] === word));
+    return excluded ? !found : found;
+  }));
+}
+
 /** Read every RLS-visible batch before ranking, so page limits never bias search. */
 async function searchProtectedPages(client: SupabaseClient, {
   query, projectId, limit,
 }: { query: string; projectId: string | null; limit: number }):
   Promise<{ ok: true; hits: PageSearchHit[] } | { ok: false }> {
-  const terms = query.slice(0, MAX_SEARCH_QUERY_LENGTH).toLocaleLowerCase()
-    .match(/[\p{L}\p{N}_]+/gu) ?? [];
-  if (!terms.length) return { ok: true, hits: [] };
+  const clauses = parsePageSearchQuery(query);
+  if (!clauses.length) return { ok: true, hits: [] };
+  const terms = clauses.flatMap((clause) => clause.filter((term) => !term.excluded)
+    .flatMap((term) => term.words));
   const hits: PageSearchHit[] = [];
   const batch = 200;
   for (let offset = 0; ; offset += batch) {
@@ -185,7 +238,7 @@ async function searchProtectedPages(client: SupabaseClient, {
       const body = await pageSearchText(row.content);
       const titleLower = title.toLocaleLowerCase();
       const bodyLower = body.toLocaleLowerCase();
-      if (!terms.every((term) => titleLower.includes(term) || bodyLower.includes(term))) continue;
+      if (!matchesPageSearch(`${title} ${body}`, clauses)) continue;
       const titleScore = terms.reduce((n, term) => n +
         (titleLower.includes(term) ? 4 : 0), 0);
       const bodyScore = terms.reduce((n, term) => n +

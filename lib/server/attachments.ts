@@ -16,7 +16,7 @@ import type {
 import { isLinkResource, isPageResource } from "@/lib/types";
 import { isContentEncryptionEnabled } from "@/lib/server/encryption/content-config";
 import { decodeAttachmentObject, encodeAttachmentObject,
-  isEncryptedAttachmentObject } from "@/lib/server/encryption/attachment-object-content";
+  isEncryptedAttachmentObject, attachmentObjectMetadata } from "@/lib/server/encryption/attachment-object-content";
 import { signAttachmentRead } from "@/lib/server/encryption/attachment-url-token";
 import { attachmentObjectScope } from
   "@/lib/server/encryption/attachment-object-content";
@@ -227,8 +227,9 @@ export async function uploadPrivateAttachmentObject(service: SupabaseClient,
       ...(protect ? { metadata: { minddy_logical_size: bytes.byteLength } } : {}) });
   if (error) throw new Error(`attachment upload failed: ${error.message}`);
   if (protect) {
+    const metadata = attachmentObjectMetadata(stored);
     const marked = await service.from("attachment_object_encrypted")
-      .upsert({ path }, { onConflict: "path", ignoreDuplicates: true });
+      .upsert({ path, ...metadata }, { onConflict: "path", ignoreDuplicates: true });
     if (marked.error) throw new Error("Unable to register encrypted attachment object");
   }
 }
@@ -704,8 +705,14 @@ export async function downloadAttachment(
     .download(resolved);
   if (error || !data) return null;
   const bytes = Buffer.from(await data.arrayBuffer());
-  return isEncryptedAttachmentObject(bytes)
-    ? decodeAttachmentObject(resolved, bytes) : bytes;
+  if (isEncryptedAttachmentObject(bytes)) return decodeAttachmentObject(resolved, bytes);
+  const marked = await service.from("attachment_object_encrypted")
+    .select("path").eq("path", resolved).maybeSingle();
+  if (marked.error && !["42P01", "PGRST205"].includes(marked.error.code)) {
+    throw new Error("Unable to verify attachment object protection state");
+  }
+  if (marked.data) throw new Error("Protected attachment object is not encrypted");
+  return bytes;
 }
 
 /**

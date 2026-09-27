@@ -150,6 +150,16 @@ vi.mock("./live", async (importOriginal) => ({
   ),
 }));
 
+vi.mock("./live-snapshot", () => ({
+  saveAgentLiveSnapshot: vi.fn(async (input: {
+    runId: string; kind: string; payload: Record<string, unknown>;
+  }) => {
+    h.streams.push({ topic: `agent-run:${input.runId}`,
+      event: input.kind, text: input.payload.text });
+    h.streamPayloads.push(input.payload);
+  }),
+}));
+
 // `afterOrNow` does NOTHING here: the tests trigger it themselves. This is what
 // which makes visible the difference between “entrusted to the background channel” and “detached”
 // — a `void fetch(…)` placed before the response would never appear in this

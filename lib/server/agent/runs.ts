@@ -2383,10 +2383,7 @@ export async function appendEvent(
         return;
       }
       if (row) {
-        broadcastRunEvent(
-          runId,
-          { ...row, payload: clearPayload },
-        );
+        broadcastRunEvent(runId, row);
       }
       return;
     }

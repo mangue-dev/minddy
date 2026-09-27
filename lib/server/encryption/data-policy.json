@@ -1108,8 +1108,13 @@
     },
     "encrypted": [],
     "clear": {
+      "encryption_metadata": [
+        "content_key_version",
+        "format_version"
+      ],
       "routing_identity": [
-        "path"
+        "path",
+        "replaced_by"
       ],
       "timestamp": [
         "checked_at"
@@ -4506,5 +4511,58 @@
         "activated_at"
       ]
     }
+  },
+  "agent_run_live_snapshots": {
+    "scope": { "ancestor": "agent_runs:run_id" },
+    "encrypted": [],
+    "clear": {
+      "encryption_metadata": ["diff_content", "diff_version", "stream_content", "stream_version"],
+      "routing_identity": ["run_id"],
+      "timestamp": ["diff_at", "stream_at"]
+    }
+  },
+  "forge_attachment_encryption_scope": {
+    "scope": { "kind": "system", "id": "forge-attachments" },
+    "encrypted": [],
+    "clear": { "routing_identity": ["id"], "timestamp": ["activated_at"] }
+  },
+  "forge_attachment_legacy_owners": {
+    "scope": { "kind": "project", "column": "project_id" },
+    "encrypted": [],
+    "clear": {
+      "encryption_metadata": ["old_path_digest"],
+      "routing_identity": ["pr_id", "project_id"],
+      "timestamp": ["created_at"]
+    }
+  },
+  "forge_attachment_migration_attempts": {
+    "scope": { "kind": "system", "id": "forge-attachments" },
+    "encrypted": [],
+    "clear": { "encryption_metadata": ["old_path_digest"], "timestamp": ["attempted_at"] }
+  },
+  "forge_attachment_objects": {
+    "scope": { "kind": "project", "column": "project_id" },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": ["pending_publication_claims"],
+      "encryption_metadata": ["content_key_version", "format_version", "legacy_path_digest"],
+      "routing_identity": ["id", "pr_id", "project_id", "storage_path"],
+      "timestamp": ["created_at", "published_at", "rotation_checked_at"]
+    }
+  },
+  "invitation_email_rotation_attempts": {
+    "scope": { "ancestor": "project_invitations:invitation_id" },
+    "encrypted": [],
+    "clear": { "routing_identity": ["invitation_id"], "timestamp": ["checked_at"] }
+  },
+  "invitation_email_scope": {
+    "scope": { "kind": "system", "id": "invitation-email" },
+    "encrypted": [],
+    "clear": { "routing_identity": ["id"], "timestamp": ["activated_at", "started_at"] }
+  },
+  "push_content_write_scope": {
+    "scope": { "kind": "system", "id": "push-content" },
+    "encrypted": [],
+    "clear": { "routing_identity": ["id"], "timestamp": ["started_at"] }
   }
 }

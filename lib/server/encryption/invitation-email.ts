@@ -10,6 +10,7 @@ import {
 import { getBlindIndexKeys, getEncryptedStore } from "./registry";
 import { auditDecryption, type DecryptAudit } from "./audit";
 import { hasDataRootKey } from "./local-key-wrapper";
+import { getServiceClient } from "@/lib/supabase-service";
 
 const INDEX_SCOPE: EncryptionScope = {
   kind: "system",
@@ -46,6 +47,17 @@ export function legacyInvitationEmailColumns<T extends { invited_email: string |
 
 export function isInvitationEncryptionEnabled(): boolean {
   return process.env.MINDDY_INVITATION_ENCRYPTION_ENABLED === "true";
+}
+
+/** Once protected writes begin, a paused flag cannot authorize clear invitations. */
+export async function shouldProtectInvitations(): Promise<boolean> {
+  if (isInvitationEncryptionEnabled()) return true;
+  const { data, error } = await getServiceClient()
+    .from("invitation_email_scope").select("id").eq("id", true).maybeSingle();
+  if (error && !missingInvitationEncryptionSchema(error) &&
+      !["42P01", "PGRST205"].includes(error.code ?? ""))
+    throw new Error("Unable to resolve invitation protection state");
+  return !!data;
 }
 
 export function isInvitationEncryptionConfigured(): boolean {

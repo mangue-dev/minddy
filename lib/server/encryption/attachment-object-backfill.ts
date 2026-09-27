@@ -2,13 +2,15 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { isContentEncryptionEnabled } from "./content-config";
-import { decodeAttachmentObject, isEncryptedAttachmentObject } from
+import { attachmentObjectMetadata, attachmentObjectScope,
+  decodeAttachmentObject, isEncryptedAttachmentObject } from
   "./attachment-object-content";
+import { getContentKeys } from "./registry";
 import { attachmentPathDigest, opaqueAttachmentPath,
   resolveAttachmentObjectPath, uploadPrivateAttachmentObject } from
   "@/lib/server/attachments";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function opaque(path: string): boolean {
   return /^(projects|chat)\/[0-9a-f-]{36}\/[0-9a-f-]{36}$/i.test(path) ||
@@ -52,40 +54,65 @@ export async function backfillAttachmentObjectsBatch(limit = 10,
     const migrateOne = async (): Promise<"migrated" | "marked" | "conflicted"> => {
       const resolved = await resolveAttachmentObjectPath(service, oldPath);
       if (resolved !== oldPath) {
+        const replacement = await service.storage.from("attachments").download(resolved);
+        if (replacement.error || !replacement.data) return "conflicted";
+        await decodeAttachmentObject(resolved,
+          Buffer.from(await replacement.data.arrayBuffer()));
         const removed = await service.storage.from("attachments").remove([oldPath]);
         if (removed.error) throw new Error("Unable to remove named attachment object");
+        const forgotten = await service.from("attachment_object_encrypted")
+          .delete().eq("path", oldPath);
+        if (forgotten.error) throw new Error("Unable to unregister retired attachment object");
         return "migrated";
       }
       const source = await service.storage.from("attachments").download(oldPath);
       if (source.error || !source.data) return "conflicted";
       const stored = Buffer.from(await source.data.arrayBuffer());
-      if (opaque(oldPath)) {
-        if (isEncryptedAttachmentObject(stored)) {
-          await decodeAttachmentObject(oldPath, stored);
+      const bytes = isEncryptedAttachmentObject(stored)
+        ? await decodeAttachmentObject(oldPath, stored) : stored;
+      if (opaque(oldPath) && isEncryptedAttachmentObject(stored)) {
+        const metadata = attachmentObjectMetadata(stored);
+        const key = await getContentKeys().current(attachmentObjectScope(oldPath));
+        const currentVersion = key.version;
+        key.bytes.fill(0);
+        if (metadata.format_version === 4 &&
+            metadata.content_key_version === currentVersion) {
           const marked = await service.from("attachment_object_encrypted")
-            .upsert({ path: oldPath }, { onConflict: "path", ignoreDuplicates: true });
+            .upsert({ path: oldPath, ...metadata },
+              { onConflict: "path" });
           if (marked.error) throw new Error("Unable to mark encrypted object");
           return "marked";
         }
-        await uploadPrivateAttachmentObject(service, oldPath, stored,
-          source.data.type || "application/octet-stream", true);
-        return "migrated";
       }
-      const bytes = isEncryptedAttachmentObject(stored)
-        ? await decodeAttachmentObject(oldPath, stored) : stored;
       const target = newPath(oldPath);
       await uploadPrivateAttachmentObject(service, target, bytes,
         source.data.type || "application/octet-stream");
+      const copy = await service.storage.from("attachments").download(target);
+      if (copy.error || !copy.data ||
+          !Buffer.from(await decodeAttachmentObject(target,
+            Buffer.from(await copy.data.arrayBuffer()))).equals(bytes)) {
+        await service.storage.from("attachments").remove([target]);
+        throw new Error("Attachment replacement verification failed");
+      }
       const digest = await attachmentPathDigest(oldPath);
-      const swapped = await service.rpc("migrate_attachment_object_references", {
-        p_old_path: oldPath, p_new_path: target, p_old_digest: digest,
-      });
+      const swapped = await service.rpc(row.format_version != null
+        ? "rotate_attachment_object_references"
+        : "migrate_attachment_object_references", row.format_version != null
+        ? { p_old_path: oldPath, p_new_path: target, p_old_digest: digest,
+          p_expected_format: row.format_version,
+          p_expected_key_version: row.content_key_version }
+        : { p_old_path: oldPath, p_new_path: target, p_old_digest: digest });
       if (swapped.error || !swapped.data) {
         await service.storage.from("attachments").remove([target]);
         return "conflicted";
       }
       const removed = await service.storage.from("attachments").remove([oldPath]);
       if (removed.error) throw new Error("Unable to remove named attachment object");
+      if (row.format_version != null) {
+        const forgotten = await service.from("attachment_object_encrypted")
+          .delete().eq("path", oldPath);
+        if (forgotten.error) throw new Error("Unable to unregister retired attachment object");
+      }
       return "migrated";
     };
     try {

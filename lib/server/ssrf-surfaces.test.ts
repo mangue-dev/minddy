@@ -84,6 +84,7 @@ vi.mock("@/lib/supabase-service", () => ({
       table === "integrations" ? integrationsTable()
         : table === "integration_content_scope" ? anyChain(null)
         : table === "push_content_scope" ? anyChain(null)
+        : table === "push_content_write_scope" ? anyChain(null)
         : table === "push_subscriptions" ? anyChain([])
         : table === "app_config" ? anyChain([])
         : (anyChain({}) as never),

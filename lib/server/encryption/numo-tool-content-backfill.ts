@@ -56,6 +56,11 @@ function normalizeSafeCheckpoint(value: Record<string, unknown>) {
     Object.hasOwn(value,field)).map((field) => [field,value[field]]));
 }
 
+function comparableCheckpoint(value: Record<string, unknown>) {
+  return value.phase === "model" || value.phase === "tools"
+    ? value : normalizeSafeCheckpoint(value);
+}
+
 async function convertMessage(message: Message, version: number) {
   const userId = owner(message.conversation);
   const clear = await decodeNumoToolMessage(userId, message);
@@ -89,11 +94,22 @@ async function convertCheckpoint(turn: Turn, version: number) {
       ? await encodeNumoCheckpoint(turn.user_id, turn.id, clear)
       : normalizeSafeCheckpoint(clear);
   const checked = await decodeNumoCheckpoint(turn.user_id, turn.id, stored);
-  if (JSON.stringify(normalizeSafeCheckpoint(checked)) !==
-      JSON.stringify(normalizeSafeCheckpoint(clear))) {
+  if (JSON.stringify(comparableCheckpoint(checked)) !==
+      JSON.stringify(comparableCheckpoint(clear))) {
     throw new Error("Numo checkpoint conversion mismatch");
   }
   return { stored, fresh };
+}
+
+async function markAttempt(kind: "message" | "checkpoint" | "operation",
+  id: string, callId: string | null = null) {
+  try {
+    await getServiceClient().rpc("mark_numo_tool_content_attempt", {
+      p_kind:kind,p_id:id,p_call_id:callId,
+    });
+  } catch {
+    // A failed attempt marker must not hide the original row failure.
+  }
 }
 
 function uuid(value: unknown): string | null {
@@ -155,11 +171,20 @@ export async function backfillNumoToolContentBatch(limit = 30,
         p_old_checkpoint:oldCheckpoint,p_new_checkpoint:newCheckpoint,
       });
       if (write.error) throw new Error("Unable to migrate Numo tool message");
-      if (!write.data) result.conflicted++;
+      if (!write.data) {
+        result.conflicted++;
+        await markAttempt("message",message.id);
+        if (oldCheckpoint && message.turn_id) {
+          await markAttempt("checkpoint",message.turn_id);
+        }
+      }
       else if (converted.fresh && (!oldCheckpoint ||
           checkpointFresh(oldCheckpoint,version))) result.unchanged++;
       else result.migrated++;
-    } catch { result.failed++; }
+    } catch {
+      result.failed++;
+      await markAttempt("message",row.id);
+    }
   }
   const turns = await service.from("numo_assistant_turns")
     .select("id,user_id,checkpoint")
@@ -171,15 +196,47 @@ export async function backfillNumoToolContentBatch(limit = 30,
     result.scanned++;
     try {
       const turn = row as Turn;
-      const converted = await convertCheckpoint(turn,
-        await currentVersion(turn.user_id));
-      const write = await service.rpc("migrate_numo_tool_checkpoint",{
-        p_id:turn.id,p_old:turn.checkpoint,p_new:converted.stored });
+      const version = await currentVersion(turn.user_id);
+      const converted = await convertCheckpoint(turn,version);
+      const clear = await decodeNumoCheckpoint(turn.user_id,turn.id,turn.checkpoint);
+      const linkedId = clear.phase === "tools" ? uuid(clear.assistantMessageId) : null;
+      let linkedFresh = true;
+      let write;
+      if (linkedId) {
+        const read = await service.from("assistant_messages")
+          .select("id,turn_id,role,content,tool_calls,context,metadata,tool_payload_version,conversation:conversations!inner(user_id)")
+          .eq("id",linkedId).single();
+        if (read.error || !read.data || read.data.turn_id !== turn.id ||
+            owner(read.data.conversation) !== turn.user_id ||
+            read.data.role !== "assistant") {
+          throw new Error("Numo tool checkpoint message mismatch");
+        }
+        const message = read.data as Message;
+        const linked = await convertMessage(message,version);
+        linkedFresh = linked.fresh;
+        write = await service.rpc("migrate_numo_tool_message",{
+          p_id:message.id,p_old_content:message.content,
+          p_old_tool_calls:message.tool_calls,p_old_context:message.context,
+          p_old_metadata:message.metadata,p_old_version:message.tool_payload_version,
+          p_new_content:linked.stored.content,
+          p_new_version:linked.stored.tool_payload_version,
+          p_old_checkpoint:turn.checkpoint,p_new_checkpoint:converted.stored,
+        });
+      } else {
+        write = await service.rpc("migrate_numo_tool_checkpoint",{
+          p_id:turn.id,p_old:turn.checkpoint,p_new:converted.stored });
+      }
       if (write.error) throw new Error("Unable to migrate Numo tool checkpoint");
-      if (!write.data) result.conflicted++;
-      else if (converted.fresh) result.unchanged++;
+      if (!write.data) {
+        result.conflicted++;
+        await markAttempt("checkpoint",turn.id);
+      }
+      else if (converted.fresh && linkedFresh) result.unchanged++;
       else result.migrated++;
-    } catch { result.failed++; }
+    } catch {
+      result.failed++;
+      await markAttempt("checkpoint",row.id);
+    }
   }
   const operations = await service.from("numo_tool_operations")
     .select("turn_id,tool_call_id,tool_name,arguments,result,model_result,arguments_version,result_version,model_result_version,arguments_digest,status,success,result_run_id,turn:numo_assistant_turns!inner(user_id)")
@@ -242,12 +299,18 @@ export async function backfillNumoToolContentBatch(limit = 30,
         p_new_digest:digest,p_result_run_id:runId,
       });
       if (write.error) throw new Error("Unable to migrate Numo tool operation");
-      if (!write.data) result.conflicted++;
+      if (!write.data) {
+        result.conflicted++;
+        await markAttempt("operation",operation.turn_id,operation.tool_call_id);
+      }
       else if (operation.arguments_version===version &&
           (operation.status!=="completed" || operation.result_version===version &&
             operation.model_result_version===version)) result.unchanged++;
       else result.migrated++;
-    } catch { result.failed++; }
+    } catch {
+      result.failed++;
+      await markAttempt("operation",row.turn_id,row.tool_call_id);
+    }
   }
   return result;
 }

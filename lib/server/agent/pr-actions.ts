@@ -73,6 +73,8 @@ import {
   SIGNED_ASSET_HOST,
 } from "@/lib/forge-image-assets";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
+import { attachmentObjectMetadata, decodeAttachmentObject,
+  encodeAttachmentObject } from "@/lib/server/encryption/attachment-object-content";
 import type { ChecksSummary } from "./checks-core";
 import {
   numoIntentErrorResponse,
@@ -926,10 +928,11 @@ export async function createPrCommentResponse(
   const actor = await requireActor(scope, "read");
   if (!actor.ok) return actor.response;
   try {
-    const comment = await scope.forge.createPullRequestComment({
+    const comment = await withForgeAttachmentPublication(scope.pr.id, body,
+      () => scope.forge.createPullRequestComment({
       ...actorCall(actor.actor, scope),
       body: body.slice(0, MAX_COMMENT_BODY_LENGTH),
-    });
+    }));
     // Direct: the thread, among everyone who watches this PR. The webhook echo
     // would say the same thing a few seconds later — too late for a
     // conversation, and never at all if the webhook is not deployed (dev).
@@ -966,6 +969,35 @@ export async function createPrCommentResponse(
   } catch (err) {
     return forgeErrorResponse(err);
   }
+}
+
+async function withForgeAttachmentPublication<T>(prId: string, body: string,
+  publish: () => Promise<T>): Promise<T> {
+  const ids = [...new Set([...body.matchAll(/\/api\/pr-attachments\/([0-9a-f-]{36})(?![\w/-])/gi)]
+    .map((match) => match[1]))];
+  if (!ids.length) return publish();
+  const service = getServiceClient();
+  const reserved = await service.rpc("reserve_forge_attachment_publications",
+    { p_pr_id: prId, p_ids: ids });
+  if (reserved.error || reserved.data !== ids.length) {
+    throw new Error("Unable to reserve forge attachment publication");
+  }
+  let published: T;
+  try {
+    published = await publish();
+  } catch (error) {
+    await service.rpc("finish_forge_attachment_publications",
+      { p_pr_id: prId, p_ids: ids, p_published: false });
+    throw error;
+  }
+  const finished = await service.rpc("finish_forge_attachment_publications",
+    { p_pr_id: prId, p_ids: ids, p_published: true });
+  if (finished.error || finished.data !== ids.length) {
+    // A claim remains after an ambiguous finalization, so cleanup cannot remove
+    // bytes that the forge may already reference.
+    console.error("[pr-actions] forge attachment publication claim pending");
+  }
+  return published;
 }
 
 /**
@@ -1005,11 +1037,12 @@ export async function updatePrCommentResponse(
         editedBy: actor.actor.login,
       });
     }
-    const comment = await scope.forge.updatePullRequestComment({
+    const comment = await withForgeAttachmentPublication(scope.pr.id, payload.body,
+      () => scope.forge.updatePullRequestComment({
       ...actorCall(actor.actor, scope),
       commentId: payload.commentId,
       body: payload.body.slice(0, MAX_COMMENT_BODY_LENGTH),
-    });
+    }));
     // Direct (MIN-161): the thread, among everyone who watches this PR — the
     // webhook echo (`issue_comment`/note update) would only repeat it later,
     // and GitLab does not deliver a note-edit echo at all.
@@ -1438,17 +1471,20 @@ export async function createPrReviewCommentResponse(
   };
   try {
     if (payload.inReplyTo != null) {
-      const comment = await scope.forge.replyToPullRequestReviewComment({
+      const commentId = payload.inReplyTo;
+      const comment = await withForgeAttachmentPublication(scope.pr.id, payload.body,
+        () => scope.forge.replyToPullRequestReviewComment({
         ...call,
-        commentId: payload.inReplyTo,
+        commentId,
         body: payload.body,
-      });
+      }));
       await trace();
       return NextResponse.json({ comment });
     }
     // The comment anchor is resolved BY the provider (PR head reread at
     // hot on GitHub, diff_refs on GitLab) — the caller doesn't have to pre-read anything.
-    const comment = await scope.forge.createPullRequestReviewComment({
+    const comment = await withForgeAttachmentPublication(scope.pr.id, payload.body,
+      () => scope.forge.createPullRequestReviewComment({
       ...call,
       body: payload.body,
       path: payload.path as string,
@@ -1456,7 +1492,7 @@ export async function createPrReviewCommentResponse(
       side: payload.side as "LEFT" | "RIGHT",
       startLine: payload.startLine,
       startSide: payload.startSide,
-    });
+    }));
     await trace();
     return NextResponse.json({ comment });
   } catch (err) {
@@ -1652,42 +1688,12 @@ export async function prFileBytesResponse(
 /** Same limit as ticket attachments (and bucket). */
 const MAX_FORGE_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 
-/** Storage keys reject unusual characters while display names retain them.
-    Mirrors the sanitizer in `lib/use-attachment-uploads`. */
-function sanitizeKeyPart(name: string): string {
-  const sanitized = name.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "");
-  return (sanitized || "fichier").slice(-140);
-}
-
-/**
- * The type used to serve the file from the public bucket. Anything outside the
- * allowlist ([lib/inline-safe.ts](../../inline-safe.ts)) is stored as
- * `application/octet-stream`.
- *
- * The client supplies the declared type, and the resulting URL is public and
- * stable. The file is served through the canonical Minddy origin, so comments
- * never expose the underlying storage provider. `text/html` would open as a
- * page, while a directly loaded `image/svg+xml` can execute scripts. Any
- * account with PR access could otherwise host phishing content under our name.
- * The PR gate decides who can write, not what can be served.
- */
+/** Restrict the type served by the capability proxy to the inline allowlist. */
 const servedAttachmentType = servedMimeType;
 
 /**
- * Hosts a file intended for a pull request comment (MIN-162) and renders its
- * stable Minddy proxy URL—the URL placed in the comment body.
- *
- * The URL is public rather than signed because the comment goes to the forge.
- * Its reader may be a GitHub email notification or someone without a minddy
- * account. A short-lived signed URL would leave a persistent comment with a dead
- * image a few hours later.
- *
- * Writes go through this server path, never directly through the browser. The
- * bucket has no insert policy, PR access is checked first, and files use
- * unguessable UUIDs. Without access to a PR, nothing can be written.
- *
- * This requires `read`, not `write`, because attaching a file is part of the
- * comment action and uses the same permission.
+ * Store encrypted bytes under an opaque key and return a durable capability URL
+ * for readers of the published forge comment. Upload requires PR read access.
  */
 /**
  * The file of a multipart body, or `null`.
@@ -1722,18 +1728,51 @@ export async function prAttachmentResponse(
   // The bytes first, the announcement then: a `.png` which contains HTML is
   // unmasked before going through the allowlist (MIN-340).
   const contentType = servedAttachmentType(resolveUploadedMimeType(file.type, bytes));
-  const path = `${scope.pr.id}/${crypto.randomUUID()}/${sanitizeKeyPart(name)}`;
+  const id = crypto.randomUUID();
   const service = getServiceClient();
+  const link = await service.from("project_git_links")
+    .select("project_id").eq("id", scope.target.linkId).single();
+  if (link.error || !link.data?.project_id) {
+    return NextResponse.json({ error: "Upload unavailable" }, { status: 503 });
+  }
+  const projectId = link.data.project_id;
+  const path = `projects/${projectId}/forge/${id}/${crypto.randomUUID()}`;
+  const activated = await service.from("forge_attachment_encryption_scope")
+    .upsert({ id: true }, { onConflict: "id", ignoreDuplicates: true });
+  if (activated.error) {
+    return NextResponse.json({ error: "Upload unavailable" }, { status: 503 });
+  }
+  const stored = await encodeAttachmentObject(path, bytes);
   const { error } = await service.storage
     .from(FORGE_ATTACHMENTS_BUCKET)
-    .upload(path, bytes, { contentType });
+    .upload(path, stored, { contentType: "application/octet-stream",
+      metadata: { minddy_encrypted: "true" } });
   if (error) {
     console.error("[pr-actions] forge attachment upload failed:", error.message);
     return NextResponse.json({ error: "Upload failed" }, { status: 502 });
   }
 
+  try {
+    const downloaded = await service.storage.from(FORGE_ATTACHMENTS_BUCKET)
+      .download(path);
+    if (downloaded.error || !downloaded.data ||
+        !Buffer.from(await decodeAttachmentObject(path,
+          Buffer.from(await downloaded.data.arrayBuffer()))).equals(Buffer.from(bytes))) {
+      throw new Error("Forge attachment verification failed");
+    }
+    const registered = await service.from("forge_attachment_objects").insert({
+      id, pr_id: scope.pr.id, project_id: projectId,
+      storage_path: path,
+      ...attachmentObjectMetadata(stored),
+    });
+    if (registered.error) throw new Error("Forge attachment registration failed");
+  } catch {
+    await service.storage.from(FORGE_ATTACHMENTS_BUCKET).remove([path]);
+    return NextResponse.json({ error: "Upload failed" }, { status: 502 });
+  }
+
   return NextResponse.json({
-    url: forgeAttachmentProxyUrl(canonicalAppOrigin(), path),
+    url: forgeAttachmentProxyUrl(canonicalAppOrigin(), id),
     name,
     // Composing it deduces the markdown form: `![](…)` for an image, a link
     // named for the rest. It's the SERVED guy who decides, not the one who was

@@ -9900,12 +9900,33 @@
         "type": "timestamp with time zone",
         "nullable": false,
         "generated": false
+      },
+      "replaced_by": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "format_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "content_key_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
       }
     },
     "primaryKey": [
       "path"
     ],
-    "foreignKeys": []
+    "foreignKeys": [
+      {
+        "table": "attachment_object_encrypted",
+        "column": "replaced_by",
+        "targetColumn": "path"
+      }
+    ]
   },
   "forge_relay_refresh_lineage": {
     "columns": {
@@ -11208,5 +11229,268 @@
       "id"
     ],
     "foreignKeys": []
+  },
+  "invitation_email_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "started_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "agent_run_live_snapshots": {
+    "columns": {
+      "run_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "diff_at": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "stream_at": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "diff_content": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "diff_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "stream_content": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "stream_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "run_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "agent_runs",
+        "column": "run_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "forge_attachment_objects": {
+    "columns": {
+      "id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "pr_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "published_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "storage_path": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "format_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "legacy_path_digest": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "content_key_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "rotation_checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "pending_publication_claims": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "pull_requests",
+        "column": "pr_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "push_content_write_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "started_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "forge_attachment_encryption_scope": {
+    "columns": {
+      "id": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "invitation_email_rotation_attempts": {
+    "columns": {
+      "checked_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "invitation_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "invitation_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "project_invitations",
+        "column": "invitation_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "forge_attachment_migration_attempts": {
+    "columns": {
+      "attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "old_path_digest": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "old_path_digest"
+    ],
+    "foreignKeys": []
+  },
+  "forge_attachment_legacy_owners": {
+    "columns": {
+      "pr_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "old_path_digest": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "old_path_digest"
+    ],
+    "foreignKeys": [
+      {
+        "table": "pull_requests",
+        "column": "pr_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
   }
 }

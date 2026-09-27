@@ -41,7 +41,7 @@ import {
   executeScratchpadTool,
   type ScratchpadToolContext,
 } from "./scratchpad-tools";
-import { agentRunTopic, broadcastToTopic } from "./live";
+import { saveAgentLiveSnapshot } from "./live-snapshot";
 import { decodeAgentLaunch } from "./run-launch-content";
 import { decodeAgentBaseBranch } from "./run-base-branch-content";
 import { decodeAgentWorkBranch } from "./run-work-branch-content";
@@ -575,19 +575,21 @@ export async function handleControlPlaneRequest(opts: {
   /**
    * Live output is privileged control-plane output too. It stays behind the
    * same current membership, repository, sandbox, status, and local generation
-   * checks as persisted surfaces, so revoking a lease also revokes broadcast.
+   * checks as persisted surfaces, so revoking a lease also stops snapshot writes.
    */
   if (method === "POST" && surface === "/stream") {
     const fileStats = liveFileStats(body.fileStats);
+    const at = Date.now();
     afterOrNow(() =>
-      broadcastToTopic(agentRunTopic(runId), "stream", {
+      saveAgentLiveSnapshot({ projectId: run.project_id, runId, kind: "stream",
+        at, payload: {
         text: typeof body.text === "string" ? body.text : "",
         tools: num(body.tools) ?? 0,
         reasoningActive: body.reasoningActive === true,
         reasoningMs: num(body.reasoningMs) ?? 0,
         ...liveFiles(body.files, body.filesTruncated),
         ...(fileStats ? { fileStats } : {}),
-        at: Date.now(),
+        },
       }),
     );
     return ok();
@@ -610,11 +612,11 @@ export async function handleControlPlaneRequest(opts: {
     if (!opts.local)
       return forbidden("local diff requires a local execution token");
     const diff = localDiffPayload(body);
-    afterOrNow(() =>
-      broadcastToTopic(agentRunTopic(runId), "diff", {
-        ...diff,
-        at: Date.now(),
-      }),
+    const at = Date.now();
+    afterOrNow(() => saveAgentLiveSnapshot({
+      projectId: run.project_id, runId, kind: "diff", at,
+      payload: { ...diff },
+    }),
     );
     return ok();
   }

@@ -109,6 +109,10 @@ vi.mock("@/lib/supabase-service", () => {
       filters.push((row) => row[column] === value);
       return query;
     };
+    query.gt = (column: string, value: number) => {
+      filters.push((row) => Number(row[column] ?? 0) > value);
+      return query;
+    };
     query.is = (column: string, value: unknown) => {
       filters.push((row) => (row[column] ?? null) === value);
       return query;

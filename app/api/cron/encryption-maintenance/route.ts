@@ -45,6 +45,10 @@ import { scrubForgeRelayAuditBatch } from
   "@/lib/server/encryption/forge-relay-audit-backfill";
 import { backfillAttachmentObjectsBatch } from
   "@/lib/server/encryption/attachment-object-backfill";
+import { backfillForgeAttachmentsBatch } from
+  "@/lib/server/encryption/forge-attachment-backfill";
+import { rotateForgeAttachmentsBatch } from
+  "@/lib/server/encryption/forge-attachment-rotation";
 import { backfillAttachmentMetadataBatch } from
   "@/lib/server/encryption/attachment-metadata-backfill";
 import { backfillFeedbackIdentityBatch } from
@@ -465,7 +469,15 @@ export async function GET(request: NextRequest) {
     const apiKeys = outcomes[88];
     const integrations = outcomes[89];
     const push = outcomes[90];
+    const forgeAttachments = contentEnabled
+      ? await backfillForgeAttachmentsBatch(10).catch(() =>
+        ({ scanned: 0, migrated: 0, failed: 1 })) : null;
+    const forgeAttachmentRotation = contentEnabled
+      ? await rotateForgeAttachmentsBatch(10).catch(() =>
+        ({ scanned: 0, rotated: 0, failed: 1 })) : null;
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
+      (forgeAttachments?.failed ?? 0) > 0 ||
+      (forgeAttachmentRotation?.failed ?? 0) > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
@@ -476,6 +488,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       ...(invitation.status === "fulfilled" ? invitation.value : { invitation_failed: true }),
       rotation,
+      ...(forgeAttachments ? { forge_attachments: forgeAttachments } : {}),
+      ...(forgeAttachmentRotation ? { forge_attachment_rotation: forgeAttachmentRotation } : {}),
       ...(contentEnabled ? {
         comments: comments.status === "fulfilled" ? comments.value : { failed: true },
         page_comments: pageComments.status === "fulfilled" ? pageComments.value : { failed: true },

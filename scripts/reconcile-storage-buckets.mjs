@@ -9,7 +9,7 @@ const ROOT_DIR = resolve(SCRIPT_DIR, "..");
 const EXPECTED_BUCKETS = {
   attachments: { public: false, file_size_limit: 20 * 1024 * 1024 },
   "project-icons": { public: true, file_size_limit: 25 * 1024 * 1024 },
-  "forge-attachments": { public: true, file_size_limit: 20 * 1024 * 1024 },
+  "forge-attachments": { public: false, file_size_limit: 32 * 1024 * 1024 },
 };
 
 function fail(message) {

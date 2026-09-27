@@ -13,6 +13,13 @@ production data migration or deployment has occurred. Representative search,
 latency and key/cache load measurements are required before production
 activation, separate from review of the code PR.
 
+The review of `2645bc129` found remaining clear Agent Realtime and forge
+attachment copies plus migration and search regressions. Treat its closure
+claims as superseded by the current [closure matrix](encryption/closure-matrix.md)
+and [preactivation protocol](encryption/preactivation-performance.md). Code
+ready for a later migration does not mean production rows or Storage objects
+have already been encrypted.
+
 Minddy needs unattended server-side AI access, so the application server must be
 able to decrypt. The intended boundary is a dedicated server root key outside Postgres,
 versioned data keys per project or user, and authenticated application encryption

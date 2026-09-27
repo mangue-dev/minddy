@@ -27,6 +27,7 @@ import {
   invitationEmailIndex,
   isInvitationEncryptionConfigured,
   isInvitationEncryptionEnabled,
+  shouldProtectInvitations,
   legacyInvitationEmailColumns,
   missingInvitationEncryptionSchema,
   type InvitationEmailColumns,
@@ -127,7 +128,7 @@ export async function inviteMember({
   // The RPC locks the project before re-checking ownership, deleting an expired
   // invitation for this address, counting occupied slots, and inserting. Two
   // concurrent requests therefore cannot consume the same final slot.
-  const encrypted = isInvitationEncryptionEnabled();
+  const encrypted = await shouldProtectInvitations();
   if (encrypted && !isInvitationEncryptionConfigured()) {
     console.error("[members] invitation encryption is enabled without a valid data root key");
     return { ok: false, status: 503, errorKey: "databaseError" };

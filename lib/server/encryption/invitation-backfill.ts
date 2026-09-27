@@ -3,6 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 
 import {
+  decryptInvitationEmail,
   encryptInvitationEmail,
   isInvitationEncryptionConfigured,
   isInvitationEncryptionEnabled,
@@ -12,10 +13,13 @@ import { digestInvitationToken } from "./invitation-token-digest";
 export type InvitationBackfillResult = {
   scanned: number;
   encrypted: number;
+  rotated: number;
   purged: number;
+  conflicted: number;
+  failed: number;
 };
 
-/** One bounded, restartable pass over legacy invitation emails. */
+/** One bounded, fair pass over legacy and historical invitation emails. */
 export async function backfillInvitationEmailsBatch(
   limit = 100,
 ): Promise<InvitationBackfillResult> {
@@ -27,65 +31,75 @@ export async function backfillInvitationEmailsBatch(
   }
 
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("project_invitations")
-    .select("id,project_id,invited_email,status,expires_at,token")
-    .eq("encryption_version", 0)
-    .not("invited_email", "is", null)
-    .order("created_at", { ascending: true })
-    .limit(limit);
+  const { data, error } = await service.rpc("list_invitation_email_rotation_candidates",
+    { p_limit: limit });
   if (error) throw new Error(`Unable to load invitation backfill: ${error.code}`);
 
   const result: InvitationBackfillResult = {
     scanned: data?.length ?? 0,
     encrypted: 0,
+    rotated: 0,
     purged: 0,
+    conflicted: 0,
+    failed: 0,
   };
   for (const row of data ?? []) {
-    if (typeof row.invited_email !== "string") {
-      // Terminal rows may already have had their email purged.
-      continue;
+    try {
+      const legacy = row.encryption_version === 0;
+      if (row.status !== "pending" || Date.parse(row.expires_at as string) <= Date.now()) {
+        const table = service.from("project_invitations");
+        // Expired pending rows must not become cancelled rows that retention never deletes.
+        const purge = row.status === "pending"
+          ? table.delete()
+          : table.update({
+            invited_email: null,
+            invited_email_ciphertext: null,
+            invited_email_blind_index: null,
+            token: legacy ? digestInvitationToken(row.token as string) : row.token,
+          });
+        let query = purge
+          .eq("id", row.id)
+          .eq("status", row.status)
+          .eq("encryption_version", row.encryption_version)
+          .eq("token", row.token);
+        if (legacy) query = query.eq("invited_email", row.invited_email);
+        else query = query.eq("invited_email_ciphertext", row.invited_email_ciphertext)
+          .eq("invited_email_blind_index", row.invited_email_blind_index);
+        const { data: purged, error: purgeError } = await query.select("id");
+        if (purgeError) throw new Error(`Unable to purge invitation email: ${purgeError.code}`);
+        result.purged += purged?.length ?? 0;
+        if (!purged?.length) result.conflicted++;
+      } else {
+        const email = legacy ? row.invited_email : await decryptInvitationEmail(row,
+          { actorId: null, reason: "key_rotation" });
+        if (typeof email !== "string") throw new Error("Invalid invitation email candidate");
+        const encrypted = await encryptInvitationEmail(email,
+          row.project_id as string, row.id as string);
+        let query = service.from("project_invitations")
+          .update({ invited_email: null,
+            token: legacy ? digestInvitationToken(row.token as string) : row.token,
+            ...encrypted })
+          .eq("id", row.id)
+          .eq("encryption_version", row.encryption_version)
+          .eq("token", row.token)
+          .eq("status", "pending")
+          .gt("expires_at", new Date().toISOString());
+        if (legacy) query = query.eq("invited_email", row.invited_email);
+        else query = query.eq("invited_email_ciphertext", row.invited_email_ciphertext)
+          .eq("invited_email_blind_index", row.invited_email_blind_index);
+        const { data: migrated, error: updateError } = await query.select("id");
+        if (updateError) throw new Error(`Unable to encrypt invitation email: ${updateError.code}`);
+        if (migrated?.length) result[legacy ? "encrypted" : "rotated"] += migrated.length;
+        else result.conflicted++;
+      }
+    } catch {
+      result.failed++;
     }
-    if (row.status !== "pending" || Date.parse(row.expires_at as string) <= Date.now()) {
-      const table = service.from("project_invitations");
-      // Expired pending rows must not become cancelled rows that retention never deletes.
-      const purge = row.status === "pending"
-        ? table.delete()
-        : table.update({
-          invited_email: null,
-          invited_email_ciphertext: null,
-          invited_email_blind_index: null,
-          token: digestInvitationToken(row.token as string),
-        });
-      const { data: purged, error: purgeError } = await purge
-        .eq("id", row.id)
-        .eq("status", row.status)
-        .eq("encryption_version", 0)
-        .eq("invited_email", row.invited_email)
-        .eq("token", row.token)
-        .select("id");
-      if (purgeError) throw new Error(`Unable to purge invitation email: ${purgeError.code}`);
-      result.purged += purged?.length ?? 0;
-      continue;
-    }
-
-    const encrypted = await encryptInvitationEmail(
-      row.invited_email,
-      row.project_id as string,
-      row.id as string,
-    );
-    const { data: migrated, error: updateError } = await service
-      .from("project_invitations")
-      .update({ invited_email: null, token: digestInvitationToken(row.token as string), ...encrypted })
-      .eq("id", row.id)
-      .eq("encryption_version", 0)
-      .eq("invited_email", row.invited_email)
-      .eq("token", row.token)
-      .eq("status", "pending")
-      .gt("expires_at", new Date().toISOString())
-      .select("id");
-    if (updateError) throw new Error(`Unable to encrypt invitation email: ${updateError.code}`);
-    result.encrypted += migrated?.length ?? 0;
+    const recorded = await service.rpc("record_invitation_email_rotation_attempt",
+      { p_id: row.id });
+    if (recorded.error) throw new Error("Unable to advance invitation rotation queue");
   }
+  const activation = await service.rpc("activate_invitation_email");
+  if (activation.error) throw new Error("Unable to verify invitation encryption activation");
   return result;
 }

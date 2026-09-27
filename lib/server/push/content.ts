@@ -30,11 +30,14 @@ export type StoredPush = {
 export async function shouldProtectPush(): Promise<boolean> {
   if (isContentEncryptionEnabled() &&
       process.env.MINDDY_PUSH_CONTENT_ENCRYPTION_ENABLED === "true") return true;
-  const { data, error } = await getServiceClient().from("push_content_scope")
-    .select("id").eq("id", true).maybeSingle();
-  if (error && !["42P01", "PGRST205"].includes(error.code))
-    throw new Error("Unable to resolve push protection state");
-  return !!data;
+  for (const table of ["push_content_scope", "push_content_write_scope"] as const) {
+    const { data, error } = await getServiceClient().from(table)
+      .select("id").eq("id", true).maybeSingle();
+    if (error && !["42P01", "PGRST205"].includes(error.code))
+      throw new Error("Unable to resolve push protection state");
+    if (data) return true;
+  }
+  return false;
 }
 
 export async function pushIndex(value: string, field: "endpoint" |

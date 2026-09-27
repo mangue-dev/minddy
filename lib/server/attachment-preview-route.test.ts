@@ -8,9 +8,10 @@ const info = vi.fn();
 const download = vi.fn();
 const from = vi.fn(() => ({ info, download }));
 const service = { storage: { from },
-  from: () => ({ select: () => ({ eq: () => ({ limit: () => ({
+  from: () => ({ select: () => ({ eq: () => ({
     maybeSingle: async () => ({ data: null, error: null }),
-  }) }) }) }),
+    limit: () => ({ maybeSingle: async () => ({ data: null, error: null }) }),
+  }) }) }),
 };
 
 vi.mock("@/lib/server/api-auth", () => ({

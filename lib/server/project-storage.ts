@@ -131,6 +131,12 @@ export async function forgeAttachmentPathsForProjects(
       paths.push(
         ...(await listStoragePrefix(service, FORGE_ATTACHMENTS_BUCKET, pr.id))
       );
+      const { data: protectedObjects, error } = await service
+        .from("forge_attachment_objects").select("storage_path").eq("pr_id", pr.id);
+      if (error && !["42P01", "PGRST205"].includes(error.code)) {
+        throw new Error("Unable to list protected forge attachments");
+      }
+      paths.push(...(protectedObjects ?? []).map((row) => row.storage_path));
     }
   }
   return paths;
