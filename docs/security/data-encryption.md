@@ -2,18 +2,16 @@
 
 ## Status and security boundary
 
-The owner requires one complete delivery across all sensitive data. The current
-global inventory, concrete blockers, root-key setup and migration requirements are in
-[the global delivery inventory](encryption/README.md). The invitation-only
-foundation described below is not a production rollout boundary. Notes,
-statistics snapshots, activity, page versions, comments, objectives and category
-names now have repository integration and isolated migration/recovery tests; the
-linked global inventory is the current status.
-
-This is the initial implementation inventory and rollout contract. Most content
-columns listed below still have unconverted plaintext access paths. No protection against a database
-dump should be claimed until their plaintext columns, search projections,
-history, and alternate write paths have been migrated and removed.
+This document preserves the initial audit and rollout contract. For current
+source/copy closure, SQL and application consumers, and local proof, use the
+[global delivery inventory](encryption/README.md),
+[closure matrix](encryption/closure-matrix.md), and machine-readable
+`lib/server/encryption/data-policy.json`. Later conversions supersede the
+historical open-path notes below. The code boundary has local migration,
+regression and recovery evidence; production flags remain off, and no
+production data migration or deployment has occurred. Representative search,
+latency and key/cache load measurements are required before production
+activation, separate from review of the code PR.
 
 Minddy needs unattended server-side AI access, so the application server must be
 able to decrypt. The intended boundary is a dedicated server root key outside Postgres,
