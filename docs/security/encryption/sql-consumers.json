@@ -1619,6 +1619,21 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_integration_content()": {
+      "sha256": "d734aa7467066383800ef2d7394a96026ba6d274efc52b9d1a285832c2eebb16",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "integration_content_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": [
+        "integration_content_version"
+      ]
+    },
     "guard_numo_tool_operation()": {
       "sha256": "b3ad371022856b15ac1333a01cf70aff967c8d890c68ec030c3444e9b74f5eeb",
       "securityDefiner": true,
@@ -2317,6 +2332,24 @@
       ],
       "functionReferences": [
         "agent_branch_prefix_version"
+      ]
+    },
+    "activate_integration_content()": {
+      "sha256": "affb75e8b0d14d3357b40a38bcbce52bd9ed8e37009b2248606727c006aef603",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "integrations",
+        "integration_content_scope"
+      ],
+      "protectedRelations": [
+        "integrations"
+      ],
+      "functionReferences": [
+        "integration_content_version"
       ]
     },
     "activate_user_ai_key_content()": {
@@ -3513,6 +3546,17 @@
         "conversations",
         "numo_assistant_turns"
       ],
+      "functionReferences": []
+    },
+    "integration_content_version(text)": {
+      "sha256": "c747d733bc46248878f678eaceef70da466d8b3f571673421fa51cbc0e395136",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "is_auth_session_active(uuid,uuid)": {
@@ -7804,6 +7848,10 @@
     "categories.categories_encryption_guard": {
       "function": "guard_category_encryption()",
       "definition": "CREATE TRIGGER categories_encryption_guard BEFORE INSERT OR UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION guard_category_encryption()"
+    },
+    "integrations.integration_content_guard": {
+      "function": "guard_integration_content()",
+      "definition": "CREATE TRIGGER integration_content_guard BEFORE INSERT OR UPDATE ON integrations FOR EACH ROW EXECUTE FUNCTION guard_integration_content()"
     },
     "objectives.objectives_encryption_guard": {
       "function": "guard_objective_encryption()",

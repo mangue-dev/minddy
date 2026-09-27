@@ -104,6 +104,7 @@ import {
   revokeIntegration,
   updateIntegrationWebhook,
 } from "@/lib/server/integrations";
+import { decodeIntegrationField } from "@/lib/server/integration-content";
 import { normalizeWebhookStatus } from "@/lib/server/webhooks";
 import {
   integrationUsage,
@@ -783,11 +784,11 @@ async function listGlobalFilterOptions(
   // Integrations aren't readable under the user's RLS — service client, scoped
   // to the projects the user can access (mirrors GET /api/me/board).
   const { data: intRows } = projectIds.length
-    ? await ctx.service
+      ? await ctx.service
         .from("integrations")
-        .select("id, name")
+        .select("id, project_id, name")
         .in("project_id", projectIds)
-    : { data: [] as { id: string; name: string }[] };
+    : { data: [] as { id: string; project_id: string; name: string }[] };
 
   const group = (rows: { id: string; name: string }[]) => {
     const byName = new Map<string, string[]>();
@@ -803,7 +804,9 @@ async function listGlobalFilterOptions(
     result: {
       categories: group((catsRes.data ?? []) as { id: string; name: string }[]),
       objectives: group((objsRes.data ?? []) as { id: string; name: string }[]),
-      integrations: group((intRows ?? []) as { id: string; name: string }[]),
+      integrations: group(await Promise.all((intRows ?? []).map(async (row) => ({
+        id:row.id,name:(await decodeIntegrationField(row,"name",row.name))!,
+      })))),
     },
     success: true,
   };
@@ -1364,23 +1367,23 @@ export async function executeTool(
           // A single literal string: `select` types its columns as READ
           // this text, and a concatenation makes the result opaque.
           .select(
-            "id, name, kind, revoked_at, webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at",
+            "id, project_id, name, kind, revoked_at, webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at",
           )
           .eq("project_id", projectId)
-          .order("name", { ascending: true });
+          .order("id", { ascending: true });
         if (error) return toolError(error.message);
         return {
           result: {
-            integrations: (data ?? []).map((row) => ({
+            integrations: await Promise.all((data ?? []).map(async (row) => ({
               id: row.id,
-              name: row.name,
+              name: await decodeIntegrationField(row,"name",row.name),
               kind: row.kind,
               revoked_at: row.revoked_at,
               // Without URL there is no webhook: `null` rather than an object to
               // half filled, which would make it look like a webhook is turned off but set.
               webhook: row.webhook_url
                 ? {
-                    url: row.webhook_url,
+                    url: await decodeIntegrationField(row,"webhook_url",row.webhook_url),
                     events: row.webhook_events,
                     scope: row.webhook_scope,
                     last_status: normalizeWebhookStatus(
@@ -1389,7 +1392,7 @@ export async function executeTool(
                     last_at: row.webhook_last_at,
                   }
                 : null,
-            })),
+            }))),
           },
           success: true,
         };

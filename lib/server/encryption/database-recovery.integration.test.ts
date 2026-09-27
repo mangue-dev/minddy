@@ -3759,6 +3759,90 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
     }
   }, 60_000);
 
+  it("restores integration destinations before parents with two cold key versions", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_integration_${suffix}`;
+    const restored = `minddy_min591_integration_restored_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const owner = randomUUID(), project = randomUUID();
+    const ids = [randomUUID(), randomUUID()];
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(oauthClientTemplate,
+        "SELECT count(*) FROM public.integrations;")).toBe("0");
+      for (const database of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${database} TEMPLATE ${oauthClientTemplate};`);
+        created.push(database);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(owner)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+        VALUES(${quote(project)},${quote(owner)},'Integration restore','IR');`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      for (const [index, id] of ids.entries()) {
+        if (index) await keys.rotate(scope, 1);
+        const value = async (field: "name" | "webhook_url", clear: string) =>
+          `mdye3:${await store.encrypt(clear, { scope, table: "integrations",
+            column: field, rowId: id })}`;
+        const name = await value("name", `Private integration ${index}`);
+        const url = await value("webhook_url",
+          `https://private-${index}.example/hook`);
+        sql(source, `INSERT INTO public.integrations(id,project_id,name,
+          webhook_url,kind,key_hash,key_prefix) VALUES(${quote(id)},
+          ${quote(project)},${quote(name)},${quote(url)},'issues',
+          ${quote(String(index).repeat(64))},'mdy');`);
+      }
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["auth.users", "public.projects",
+          "public.integrations", "public.envelope_data_keys"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("Private integration");
+      expect(dump).not.toContain("private-0.example");
+      expect(dump).not.toContain("private-1.example");
+      const match = dump.match(/(COPY public\.integrations[^\n]*\n)([\s\S]*?)(\\\.\n)/);
+      expect(match).not.toBeNull();
+      for (const line of match![2].trimEnd().split("\n").reverse()) {
+        sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${match![1]}${line}\n${match![3]}COMMIT;`);
+      }
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${dump.replace(match![0], "")}\nCOMMIT;`);
+      sql(restored, `ALTER TABLE public.integrations
+        DROP CONSTRAINT integrations_project_id_fkey;
+        ALTER TABLE public.integrations ADD CONSTRAINT
+        integrations_project_id_fkey FOREIGN KEY(project_id)
+        REFERENCES public.projects(id) NOT VALID;
+        ALTER TABLE public.integrations VALIDATE CONSTRAINT
+        integrations_project_id_fkey;`);
+      const cold = new EncryptedStore(new ManagedDataKeys(
+        registry(restored), wrapper(root)));
+      for (const [index, id] of ids.entries()) {
+        const row = JSON.parse(sql(restored, `SELECT row_to_json(i) FROM
+          public.integrations i WHERE id=${quote(id)};`));
+        for (const [field, expected] of [["name", `Private integration ${index}`],
+          ["webhook_url", `https://private-${index}.example/hook`]] as const) {
+          const cipher = cold.fromDatabase(row[field].slice(6));
+          expect(cold.versionOf(cipher)).toBe(index + 1);
+          expect(await cold.decrypt(cipher, { scope, table: "integrations",
+            column: field, rowId: id })).toBe(expected);
+        }
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(
+        registry(restored), wrapper(randomBytes(32))));
+      const ciphertext = sql(restored, `SELECT name FROM public.integrations
+        WHERE id=${quote(ids[0])};`).slice(6);
+      await expect(wrong.decrypt(wrong.fromDatabase(ciphertext), {
+        scope, table: "integrations", column: "name", rowId: ids[0],
+      })).rejects.toThrow();
+    } finally {
+      root.fill(0); vi.unstubAllEnvs(); log.mockRestore();
+      for (const database of created.reverse())
+        sql("postgres", `DROP DATABASE ${database} WITH (FORCE);`);
+    }
+  }, 60_000);
+
   it("restores Numo admission snapshots before owners with mixed cold keys", async () => {
     const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
     const source = `minddy_min591_intent_${suffix}`;

@@ -9,7 +9,7 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 181 application tables and 1,588 columns, their primary
+- `schema.json` records 185 application tables and 1,615 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 173 encryption targets include the original content,
@@ -20,10 +20,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,633 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,650 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 468 functions, ten views and 241 application triggers. Function
+- `sql-consumers.json` records 477 functions, ten views and 245 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -2088,5 +2088,19 @@ decode after their existing authorization checks. A third 25-row CAS worker
 rotates historical labels, and checked activation rejects old clear actor
 writers and owner moves. The SQL regression, codec and actor tests pass; the
 child-first code/grant restore also verifies two historical actor-key versions.
-Integration metadata and push subscriptions remain open, so MIN-591 and draft
-PR #289 are not ready to close.
+Integration metadata and push subscriptions were separate remaining families.
+
+## Project integration checkpoint — 27 September 2026
+
+`integrations.name` and `webhook_url` now use project-key field envelopes bound
+to the integration ID. Integration creation and webhook updates seal values
+before their database writes; webhook updates compare the previous stored URL
+to prevent a stale actor decision. Board filters, event attribution, MCP and
+assistant projections, integration authentication and outbound webhook delivery
+decode within their existing access boundaries. A 25-row CAS worker rotates
+both fields together. Verified service-only activation and a SQL trigger reject
+old clear writers and scope moves. The isolated SQL regression, codec test and
+targeted integration, event and SSRF tests pass. A child-first PostgreSQL
+dump/restore in separate batches reads two historical project-key versions
+with cold caches and rejects the wrong root. Production flags remain off.
+Push subscriptions and final repository-wide verification remain open.

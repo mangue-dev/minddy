@@ -668,21 +668,21 @@
     "file": "app/api/me/board/route.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 71,
+    "line": 72,
     "storage": false
   },
   {
     "file": "app/api/me/board/route.ts",
     "operation": "from",
     "resource": "issue_relations",
-    "line": 77,
+    "line": 78,
     "storage": false
   },
   {
     "file": "app/api/me/board/route.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 122,
+    "line": 123,
     "storage": false
   },
   {
@@ -3335,105 +3335,105 @@
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 429,
+    "line": 430,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 677,
+    "line": 678,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 700,
+    "line": 701,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 730,
+    "line": 731,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 735,
+    "line": 736,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 748,
+    "line": 749,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 786,
+    "line": 787,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_automation_operations",
-    "line": 930,
+    "line": 933,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "agent_chains",
-    "line": 938,
+    "line": 941,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_automation_operations",
-    "line": 950,
+    "line": 953,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_automation_operations",
-    "line": 963,
+    "line": 966,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1313,
+    "line": 1316,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 1362,
+    "line": 1365,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 1916,
+    "line": 1919,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_routine_occurrences",
-    "line": 2354,
+    "line": 2357,
     "storage": false
   },
   {
@@ -5758,6 +5758,27 @@
     "operation": "from",
     "resource": null,
     "line": 39,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/integration-backfill.ts",
+    "operation": "from",
+    "resource": "integrations",
+    "line": 24,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/integration-backfill.ts",
+    "operation": "from",
+    "resource": "integrations",
+    "line": 54,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/integration-backfill.ts",
+    "operation": "from",
+    "resource": "integrations",
+    "line": 69,
     "storage": false
   },
   {
@@ -8200,56 +8221,63 @@
     "file": "lib/server/integration-auth.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 68,
+    "line": 69,
     "storage": false
   },
   {
     "file": "lib/server/integration-auth.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 77,
+    "line": 78,
     "storage": false
   },
   {
     "file": "lib/server/integration-auth.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 89,
+    "line": 90,
+    "storage": false
+  },
+  {
+    "file": "lib/server/integration-content.ts",
+    "operation": "from",
+    "resource": "integration_content_scope",
+    "line": 23,
     "storage": false
   },
   {
     "file": "lib/server/integrations.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 63,
+    "line": 68,
     "storage": false
   },
   {
     "file": "lib/server/integrations.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 100,
+    "line": 110,
     "storage": false
   },
   {
     "file": "lib/server/integrations.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 194,
+    "line": 205,
     "storage": false
   },
   {
     "file": "lib/server/integrations.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 218,
+    "line": 232,
     "storage": false
   },
   {
     "file": "lib/server/integrations.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 254,
+    "line": 270,
     "storage": false
   },
   {
@@ -8270,42 +8298,42 @@
     "file": "lib/server/issue-event-store.ts",
     "operation": "from",
     "resource": null,
-    "line": 27,
+    "line": 28,
     "storage": false
   },
   {
     "file": "lib/server/issue-event-store.ts",
     "operation": "from",
     "resource": "issue_events",
-    "line": 39,
+    "line": 40,
     "storage": false
   },
   {
     "file": "lib/server/issue-event-store.ts",
     "operation": "from",
     "resource": "issue_events",
-    "line": 50,
+    "line": 52,
     "storage": false
   },
   {
     "file": "lib/server/issue-event-store.ts",
     "operation": "from",
     "resource": "issue_events",
-    "line": 72,
+    "line": 85,
     "storage": false
   },
   {
     "file": "lib/server/issue-event-store.ts",
     "operation": "from",
     "resource": "issue_events",
-    "line": 90,
+    "line": 103,
     "storage": false
   },
   {
     "file": "lib/server/issue-event-store.ts",
     "operation": "from",
     "resource": "issue_events",
-    "line": 97,
+    "line": 110,
     "storage": false
   },
   {
@@ -8599,70 +8627,70 @@
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 530,
+    "line": 531,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 910,
+    "line": 911,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 917,
+    "line": 918,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 1173,
+    "line": 1174,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1487,
+    "line": 1488,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1643,
+    "line": 1644,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2637,
+    "line": 2638,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 2796,
+    "line": 2797,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 4542,
+    "line": 4543,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 4556,
+    "line": 4557,
     "storage": false
   },
   {
@@ -11469,21 +11497,21 @@
     "file": "lib/server/webhooks.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 142,
+    "line": 143,
     "storage": false
   },
   {
     "file": "lib/server/webhooks.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 187,
+    "line": 188,
     "storage": false
   },
   {
     "file": "lib/server/webhooks.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 196,
+    "line": 199,
     "storage": false
   },
   {

@@ -90,6 +90,7 @@ import {
   revokeIntegration,
   updateIntegrationWebhook,
 } from "@/lib/server/integrations";
+import { decodeIntegrationField } from "@/lib/server/integration-content";
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { SITE_URL } from "@/lib/site";
 import {
@@ -529,7 +530,7 @@ async function recentActivity(
     resolveApiKeyActors(events.map((e) => e.api_key_id as string | null)),
     service
       .from("integrations")
-      .select("id, name")
+      .select("id, project_id, name")
       .in("id", [
         ...new Set(
           events
@@ -538,9 +539,9 @@ async function recentActivity(
         ),
       ]),
   ]);
-  const integrationNames = new Map(
-    (integrations ?? []).map((i) => [i.id, i.name]),
-  );
+  const integrationNames = new Map(await Promise.all(
+    (integrations ?? []).map(async (row) => [row.id,
+      await decodeIntegrationField(row,"name",row.name)] as const)));
 
   return events.map((e) => {
     // PR/MR action from a webhook provider: no minddy actor — the login

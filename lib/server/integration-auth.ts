@@ -8,6 +8,7 @@ import {
 } from "@/lib/server/integration-key";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { decodeProjectName } from "@/lib/server/project-content";
+import { decodeIntegrationField } from "@/lib/server/integration-content";
 
 /**
  * Integration key authentication for public API (/api/v1/…,
@@ -93,7 +94,8 @@ export async function authenticateIntegrationKey(
     if (error) console.error("[integration-auth] last_used_at:", error.message);
   });
 
-  return { ok: true, integration: integration as AuthedIntegration,
+  return { ok: true, integration: { ...integration,
+      name: (await decodeIntegrationField(integration,"name",integration.name))! } as AuthedIntegration,
     project: { ...project, name: await decodeProjectName(project) } };
 }
 

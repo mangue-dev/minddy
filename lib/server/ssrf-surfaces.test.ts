@@ -42,6 +42,8 @@ beforeEach(() => {
 /** The integration as it is in base, which the tests rewrite. */
 let integrationRow: Record<string, unknown> = {
   id: "int-1",
+  project_id: "p1",
+  name: "Integration",
   kind: "issues",
   webhook_url: null,
 };
@@ -80,6 +82,7 @@ vi.mock("@/lib/supabase-service", () => ({
         : anyChain({}),
     from: (table: string) =>
       table === "integrations" ? integrationsTable()
+        : table === "integration_content_scope" ? anyChain(null)
         : table === "app_config" ? anyChain([])
         : (anyChain({}) as never),
   }),
@@ -96,13 +99,12 @@ function integrationsTable() {
     update: (patch: Record<string, unknown>) => {
       updatePatch(patch);
       const row = { ...integrationRow, ...patch };
-      return {
-        eq: () => ({
-          eq: () => ({
-            is: () => ({ select: async () => ({ data: [row], error: null }) }),
-          }),
-        }),
+      const chain = {
+        eq: () => chain,
+        is: () => chain,
+        select: async () => ({ data: [row], error: null }),
       };
+      return chain;
     },
   };
 }
@@ -117,7 +119,7 @@ const webhookInput = (url: string | null) => ({
 
 describe("webhook d'intégration — la destination", () => {
   beforeEach(() => {
-    integrationRow = { id: "int-1", kind: "issues", webhook_url: null };
+    integrationRow = { id: "int-1", project_id: "p1", name: "Integration", kind: "issues", webhook_url: null };
     updatePatch.mockReset();
   });
 
@@ -172,7 +174,7 @@ describe("webhook d'intégration — l'agent ne choisit pas la destination", () 
   it("refuse à l'agent de POSER une destination", async () => {
     // The ticket scenario: prompt injection in a description
     // would otherwise be enough to open a permanent exfiltration channel.
-    integrationRow = { id: "int-1", kind: "issues", webhook_url: null };
+    integrationRow = { id: "int-1", project_id: "p1", name: "Integration", kind: "issues", webhook_url: null };
     const result = await updateIntegrationWebhook({
       projectId: "p1",
       integrationId: "int-1",
@@ -184,7 +186,7 @@ describe("webhook d'intégration — l'agent ne choisit pas la destination", () 
   });
 
   it("refuse à l'agent de DÉPLACER une destination existante", async () => {
-    integrationRow = { id: "int-1", kind: "issues", webhook_url: "https://hook.exemple.com/x" };
+    integrationRow = { id: "int-1", project_id: "p1", name: "Integration", kind: "issues", webhook_url: "https://hook.exemple.com/x" };
     const result = await updateIntegrationWebhook({
       projectId: "p1",
       integrationId: "int-1",
@@ -196,7 +198,7 @@ describe("webhook d'intégration — l'agent ne choisit pas la destination", () 
   });
 
   it("laisse l'agent régler les événements de la destination en place", async () => {
-    integrationRow = { id: "int-1", kind: "issues", webhook_url: "https://hook.exemple.com/x" };
+    integrationRow = { id: "int-1", project_id: "p1", name: "Integration", kind: "issues", webhook_url: "https://hook.exemple.com/x" };
     const result = await updateIntegrationWebhook({
       projectId: "p1",
       integrationId: "int-1",
@@ -211,7 +213,7 @@ describe("webhook d'intégration — l'agent ne choisit pas la destination", () 
   });
 
   it("laisse l'agent ÉTEINDRE le webhook", async () => {
-    integrationRow = { id: "int-1", kind: "issues", webhook_url: "https://hook.exemple.com/x" };
+    integrationRow = { id: "int-1", project_id: "p1", name: "Integration", kind: "issues", webhook_url: "https://hook.exemple.com/x" };
     const result = await updateIntegrationWebhook({
       projectId: "p1",
       integrationId: "int-1",
@@ -235,6 +237,8 @@ describe("webhook d'intégration — l'état de livraison ne porte pas le code H
   ])("rend %s comme %s", async (stored, expected) => {
     integrationRow = {
       id: "int-1",
+      project_id: "p1",
+      name: "Integration",
       kind: "issues",
       webhook_url: "https://hook.exemple.com/x",
       webhook_last_status: stored,
@@ -246,6 +250,8 @@ describe("webhook d'intégration — l'état de livraison ne porte pas le code H
   it("garde null quand rien n'a encore été livré", async () => {
     integrationRow = {
       id: "int-1",
+      project_id: "p1",
+      name: "Integration",
       kind: "issues",
       webhook_url: "https://hook.exemple.com/x",
       webhook_last_status: null,

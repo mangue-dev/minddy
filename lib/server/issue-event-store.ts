@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EventRow } from "./issue-events";
 import { canWriteLegacyHistory, decodeHistoryRow, encodeHistoryRow } from "./encryption/history-content";
+import { decodeIntegrationField } from "./integration-content";
 
 export type EventParent = { issue_id: string } | { objective_id: string } |
   { feedback_post_id: string } | { page_id: string };
@@ -46,7 +47,8 @@ export async function readIssueEvents(service: SupabaseClient, parent: EventPare
 } = {}): Promise<{ data: ReadEvent[] | null; error: { message: string } | null }> {
   try {
     const [column, id] = Object.entries(parent)[0];
-    const columns: string = options.integrations ? "*, integration:integrations(name)" : "*";
+    const columns: string = options.integrations
+      ? "*, integration:integrations(id,project_id,name)" : "*";
     let query = service.from("issue_events").select(columns)
       .eq(column, id).order("created_at", { ascending: !options.descending });
     if (options.limit !== undefined) query = query.limit(options.limit);
@@ -54,7 +56,18 @@ export async function readIssueEvents(service: SupabaseClient, parent: EventPare
     if (error) throw new Error("Activity read failed");
     const decoded: ReadEvent[] = [];
     for (const row of data ?? []) {
-      decoded.push(await decodeHistoryRow("issue_events", row as unknown as Record<string, unknown>, options.actorId ?? null, options.projectId) as unknown as ReadEvent);
+      const event=await decodeHistoryRow("issue_events",
+        row as unknown as Record<string, unknown>,
+        options.actorId ?? null, options.projectId) as unknown as ReadEvent;
+      const integration=(event as ReadEvent & {integration?:
+        {id:string;project_id:string;name:string}|null}).integration;
+      if(integration){
+        if(options.projectId && integration.project_id!==options.projectId)
+          throw new Error("Integration project mismatch");
+        event.integration={name:(await decodeIntegrationField(integration,
+          "name",integration.name))!};
+      }
+      decoded.push(event);
     }
     return { data: decoded, error: null };
   } catch {

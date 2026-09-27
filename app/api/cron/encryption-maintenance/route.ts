@@ -130,6 +130,8 @@ import { backfillOAuthCodesBatch } from
   "@/lib/server/encryption/oauth-code-backfill";
 import { backfillApiKeysBatch } from
   "@/lib/server/encryption/api-key-backfill";
+import { backfillIntegrationsBatch } from
+  "@/lib/server/encryption/integration-backfill";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -266,6 +268,8 @@ export async function GET(request: NextRequest) {
     process.env.MINDDY_OAUTH_CODE_ENCRYPTION_ENABLED === "true";
   const apiKeysEnabled = contentEnabled &&
     process.env.MINDDY_API_KEY_CONTENT_ENCRYPTION_ENABLED === "true";
+  const integrationsEnabled = contentEnabled &&
+    process.env.MINDDY_INTEGRATION_CONTENT_ENCRYPTION_ENABLED === "true";
   if (!invitationsEnabled && !contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
@@ -364,6 +368,7 @@ export async function GET(request: NextRequest) {
       oauthClientsEnabled ? backfillOAuthClientsBatch(25, request.signal) : Promise.resolve(null),
       oauthCodesEnabled ? backfillOAuthCodesBatch(25, request.signal) : Promise.resolve(null),
       apiKeysEnabled ? backfillApiKeysBatch(25, request.signal) : Promise.resolve(null),
+      integrationsEnabled ? backfillIntegrationsBatch(25, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -454,12 +459,13 @@ export async function GET(request: NextRequest) {
     const oauthClients = outcomes[86];
     const oauthCodes = outcomes[87];
     const apiKeys = outcomes[88];
+    const integrations = outcomes[89];
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (scratchpad.status === "fulfilled" && scratchpad.value !== null &&
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, agentChainCodes, numoTurnIntents, numoAutomation, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, savedViewBookmarks, agentRoutines, projectContent, pageContent, userAiKeys, relayInstances, projectWebhookSecrets, relayProvisioning, relayUserDeliveries, forgeOAuthConnections, forgeOAuthIdentities, mcpConnections, mcpAttempts, agentBranchPrefixes, appTabs, aiDecisionEvaluations, stripeWebhookPayloads, customDomainVerification, billingIdentity, oauthClients, oauthCodes, apiKeys].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, agentChainCodes, numoTurnIntents, numoAutomation, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, savedViewBookmarks, agentRoutines, projectContent, pageContent, userAiKeys, relayInstances, projectWebhookSecrets, relayProvisioning, relayUserDeliveries, forgeOAuthConnections, forgeOAuthIdentities, mcpConnections, mcpAttempts, agentBranchPrefixes, appTabs, aiDecisionEvaluations, stripeWebhookPayloads, customDomainVerification, billingIdentity, oauthClients, oauthCodes, apiKeys, integrations].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     if (failed) console.error("[encryption-maintenance] incomplete batch");
     return NextResponse.json({
@@ -667,6 +673,10 @@ export async function GET(request: NextRequest) {
         ...(apiKeysEnabled ? {
           api_keys: apiKeys.status === "fulfilled"
             ? apiKeys.value : { failed: true },
+        } : {}),
+        ...(integrationsEnabled ? {
+          integrations: integrations.status === "fulfilled"
+            ? integrations.value : { failed: true },
         } : {}),
       } : {}),
       ...(contentEnabled ? { scratchpads: scratchpad.status === "fulfilled" ? scratchpad.value : { failed: true } } : {}),

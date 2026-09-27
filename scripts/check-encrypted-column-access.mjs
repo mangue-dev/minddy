@@ -13,6 +13,18 @@ const allowedInvitationAccess = new Set([
 
 const rules = [
   {
+    access: /\.\s*from\s*\(\s*["'`]integrations["'`]\s*\)/,
+    allowed: new Set(["lib/server/integrations.ts",
+      "lib/server/integration-auth.ts", "lib/server/webhooks.ts",
+      "lib/server/assistant/execute-tool.ts", "lib/server/mcp/tools.ts",
+      "lib/server/smart-fill.ts", "app/api/me/board/route.ts",
+      "lib/server/encryption/integration-backfill.ts"]),
+  },
+  {
+    access: /\bintegration:integrations\([^\r\n)]*\)/,
+    allowed: new Set(["lib/server/issue-event-store.ts"]),
+  },
+  {
     access: /\bapi_keys(?:![\w]+)?\([^\r\n)]*\b(?:name|agent)\b/,
     allowed: new Set(["lib/server/oauth/grants.ts"]),
   },

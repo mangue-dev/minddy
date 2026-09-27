@@ -1,5 +1,6 @@
 import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
+import { decodeIntegration } from "./integration-content";
 
 import { after } from "next/server";
 import { createHmac, randomUUID } from "node:crypto";
@@ -192,6 +193,8 @@ export function dispatchWebhooksForEvents(
         .not("webhook_url", "is", null)
         .is("revoked_at", null);
       if (!hooks?.length) return;
+      const decodedHooks=await Promise.all(hooks.map((hook)=>
+        decodeIntegration(hook)));
 
       const { data: projects } = await service
         .from("projects")
@@ -204,7 +207,7 @@ export function dispatchWebhooksForEvents(
       // issue.updated carrying all the modifications of the same save.
       const now = new Date().toISOString();
       const deliveries: Promise<void>[] = [];
-      for (const hook of hooks) {
+      for (const hook of decodedHooks) {
         const events = (hook.webhook_events ?? []) as string[];
         for (const issueId of issueIds) {
           const issue = issueById.get(issueId);
