@@ -6,6 +6,7 @@ DECLARE owner uuid:=gen_random_uuid(); other_owner uuid:=gen_random_uuid();
   native_digest text:=repeat('c',64);
   cipher text:='mdye3:{"format":3,"keyVersion":1,"iv":"YWJj","tag":"YWJj","data":"YWJj"}';
   registered public.push_subscriptions%ROWTYPE;
+  first_id uuid;
 BEGIN
   IF has_table_privilege('authenticated','public.push_subscriptions','SELECT')
       OR has_table_privilege('authenticated','public.push_subscriptions','INSERT')
@@ -31,6 +32,18 @@ BEGIN
       registered.encryption_checked_at IS NULL THEN
     RAISE EXCEPTION 'Push registration retained clear content';
   END IF;
+  first_id:=registered.id;
+  UPDATE public.push_subscriptions SET enabled=false WHERE id=first_id;
+  registered:=public.register_protected_push(owner,'https://old.example/push',
+    digest,NULL,NULL,NULL,NULL,cipher,'web','',true);
+  IF registered.id<>first_id OR registered.enabled OR registered.locale<>'en' OR
+      (SELECT count(*) FROM public.push_subscriptions
+        WHERE endpoint_digest=digest)<>1 THEN
+    RAISE EXCEPTION 'Idempotent refresh changed device preference';
+  END IF;
+  UPDATE public.push_subscriptions SET encrypted_content=cipher
+    WHERE id=first_id AND content_revision=0;
+  IF FOUND THEN RAISE EXCEPTION 'Stale revision CAS accepted'; END IF;
   registered:=public.register_protected_push(owner,
     'apns:0123456789abcdef0123456789abcdef',repeat('d',64),
     NULL,NULL,'installation-1',native_digest,cipher,'apns','en',false);
