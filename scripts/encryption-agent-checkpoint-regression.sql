@@ -50,6 +50,24 @@ BEGIN
   IF NOT rejected THEN RAISE EXCEPTION 'obsolete checkpoint edit accepted'; END IF;
   UPDATE public.agent_runs SET last_activity_at=now() WHERE id=legacy_run;
   IF NOT public.migrate_agent_checkpoint_ciphertext(
+      legacy_run,project,legacy_run,clear_state,NULL,0) THEN
+    RAISE EXCEPTION 'run checkpoint attempt failed';
+  END IF;
+  IF (SELECT checkpoint_encryption_attempted_at IS NULL OR
+       checkpoint_encryption_checked_at IS NOT NULL
+       FROM public.agent_runs WHERE id=legacy_run) THEN
+    RAISE EXCEPTION 'run checkpoint attempt was incorrectly verified';
+  END IF;
+  IF NOT public.migrate_orphan_agent_runtime_checkpoint(
+      orphan_conversation,project,clear_state,NULL,0,NULL,NULL) THEN
+    RAISE EXCEPTION 'orphan checkpoint attempt failed';
+  END IF;
+  IF (SELECT checkpoint_encryption_attempted_at IS NULL OR
+       checkpoint_encryption_checked_at IS NOT NULL FROM public.agent_runtime_sessions
+       WHERE conversation_id=orphan_conversation) THEN
+    RAISE EXCEPTION 'orphan checkpoint attempt was incorrectly verified';
+  END IF;
+  IF NOT public.migrate_agent_checkpoint_ciphertext(
       legacy_run,project,legacy_run,clear_state,NULL,0)
      OR NOT public.migrate_agent_checkpoint_ciphertext(
       legacy_run,project,legacy_run,clear_state,NULL,0,cipher,1)
@@ -81,10 +99,10 @@ BEGIN
   IF NOT rejected THEN RAISE EXCEPTION 'direct runtime copy edit accepted'; END IF;
   IF has_table_privilege('authenticated','public.agent_runtime_sessions','UPDATE') OR
      has_function_privilege('authenticated',
-       'public.migrate_agent_checkpoint_ciphertext(uuid,uuid,uuid,jsonb,text,integer,text,integer)',
+       'public.migrate_agent_checkpoint_ciphertext(uuid,uuid,uuid,jsonb,text,integer,text,integer,boolean)',
        'EXECUTE') OR
      has_function_privilege('authenticated',
-       'public.migrate_orphan_agent_runtime_checkpoint(uuid,uuid,jsonb,text,integer,text,integer)',
+       'public.migrate_orphan_agent_runtime_checkpoint(uuid,uuid,jsonb,text,integer,text,integer,boolean)',
        'EXECUTE') THEN
     RAISE EXCEPTION 'client retained checkpoint mutation privilege';
   END IF;

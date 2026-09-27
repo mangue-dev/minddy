@@ -28,6 +28,7 @@ let requests: { table: string; url: URL; method: string; body: unknown }[];
 let failWrites: boolean;
 let staleMigration: boolean;
 let version: number;
+let attemptTick: number;
 
 beforeEach(() => {
   vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");
@@ -37,6 +38,7 @@ beforeEach(() => {
   failWrites = false;
   staleMigration = false;
   version = 1;
+  attemptTick = 0;
   const material = randomBytes(32);
   state.store = new EncryptedStore({
     current: async () => ({ version, bytes: Buffer.from(material) }),
@@ -60,9 +62,22 @@ beforeEach(() => {
         status, headers: { "content-type": "application/json" },
       });
       if (failWrites && request.method !== "GET") return result({ message: "private database value" }, 400);
+      if (table === "record_encryption_backfill_progress") {
+        const progress = body as Row;
+        const expected = progress.p_expected as Row;
+        const row = rows[progress.p_table as string]?.find((candidate) =>
+          candidate.id === expected.id);
+        if (!row) return result(false);
+        const matches = Object.entries(expected).every(([field, value]) =>
+          JSON.stringify(row[field]) === JSON.stringify(value));
+        row.encryption_attempted_at = `attempt-${++attemptTick}`;
+        if (progress.p_verified && matches) row.encryption_checked_at = `verified-${attemptTick}`;
+        return result(matches);
+      }
       if (request.method === "POST") {
         for (const row of Array.isArray(body) ? body : [body]) rows[table].push({
-          encryption_version: 0, encrypted_content: null, encryption_revision: 0, encryption_checked_at: null,
+          encryption_version: 0, encrypted_content: null, encryption_revision: 0,
+          encryption_checked_at: null, encryption_attempted_at: null,
           from_value: null, to_value: null, ...row,
         });
         return new Response(null, { status: 201 });
@@ -211,6 +226,8 @@ describe("encrypted activity and page history repositories", () => {
     staleMigration = true;
     expect(await backfillHistoryBatch(table)).toMatchObject({ conflicted: 1, migrated: 0 });
     expect(rows[table][0].encryption_version).toBe(0);
+    expect(rows[table][0].encryption_checked_at).toBeFalsy();
+    expect(rows[table][0].encryption_attempted_at).toBeTruthy();
     staleMigration = false;
     expect(await backfillHistoryBatch(table)).toMatchObject({ migrated: 1, failed: 0 });
     expect(rows[table][0].encryption_revision).toBe(1);
@@ -219,5 +236,6 @@ describe("encrypted activity and page history repositories", () => {
     expect(rows[table][0].encryption_version).toBe(2);
     expect(await decodeHistoryRow(table, rows[table][0], "actor")).toMatchObject(logical);
     expect(await backfillHistoryBatch(table)).toMatchObject({ unchanged: 1, failed: 0 });
+    expect(rows[table][0].encryption_checked_at).toBeTruthy();
   });
 });

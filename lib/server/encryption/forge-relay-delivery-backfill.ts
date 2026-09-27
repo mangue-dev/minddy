@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { recordBackfillAttempt } from "./backfill-attempt";
 import { decodeRelayDelivery, encodeRelayDelivery,
   isEncryptedRelayDelivery, relayDeliveryState } from
   "@/lib/server/forge-relay/delivery-content";
@@ -25,13 +26,18 @@ export async function backfillForgeRelayDeliveriesBatch(limit = 20,
   const service = getServiceClient();
   const { data, error } = await service.from("forge_relay_deliveries")
     .select("id,instance_id,provider,delivery_guid,payload,last_error")
-    .order("content_encryption_checked_at", { ascending: true,
+    .order("content_encryption_attempted_at", { ascending: true,
       nullsFirst: true }).order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan forge relay deliveries");
   for (const row of data ?? []) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await recordBackfillAttempt(service, "forge_relay_deliveries",
+        "content_encryption_attempted_at", { id: row.id, payload: row.payload, last_error: row.last_error })) {
+        result.conflicted++;
+        continue;
+      }
       const key = await getContentKeys().current(SCOPE);
       const version = key.version;
       key.bytes.fill(0);
@@ -41,13 +47,13 @@ export async function backfillForgeRelayDeliveriesBatch(limit = 20,
       for (const column of ["payload", "last_error"] as const) {
         const value = row[column];
         if (value === null) continue;
+        const plain = await decodeRelayDelivery(row.instance_id, row.provider,
+          row.delivery_guid, column, value);
+        if (plain === null) throw new Error("Missing relay delivery content");
         if (isEncryptedRelayDelivery(value)) {
           const state = relayDeliveryState(value);
           if (state.version === version && state.format === 3) continue;
         }
-        const plain = await decodeRelayDelivery(row.instance_id, row.provider,
-          row.delivery_guid, column, value);
-        if (plain === null) throw new Error("Missing relay delivery content");
         const cipher = await encodeRelayDelivery(row.instance_id, row.provider,
           row.delivery_guid, column, plain);
         if (await decodeRelayDelivery(row.instance_id, row.provider,

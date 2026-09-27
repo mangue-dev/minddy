@@ -3349,7 +3349,7 @@
     "file": "lib/server/app-tab-metadata.ts",
     "operation": "from",
     "resource": null,
-    "line": 22,
+    "line": 26,
     "storage": false
   },
   {
@@ -4690,80 +4690,80 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/agent-backfill-attempt.ts",
+    "operation": "rpc",
+    "resource": "mark_agent_backfill_attempt",
+    "line": 16,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/agent-base-branch-backfill.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 38,
+    "line": 40,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-base-branch-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_run_base_branch",
-    "line": 58,
+    "line": 65,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-base-branch-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_run_base_branch",
-    "line": 69,
+    "line": 76,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-base-branch-backfill.ts",
     "operation": "from",
     "resource": "agent_runtime_sessions",
-    "line": 89,
+    "line": 96,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-base-branch-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_orphan_agent_runtime_base_branch",
-    "line": 113,
+    "line": 125,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-base-branch-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_orphan_agent_runtime_base_branch",
-    "line": 126,
+    "line": 138,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-branch-prefix-backfill.ts",
     "operation": "from",
     "resource": "user_agent_preferences",
-    "line": 20,
+    "line": 21,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-branch-prefix-backfill.ts",
     "operation": "from",
     "resource": "user_agent_preferences",
-    "line": 42,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-branch-prefix-backfill.ts",
-    "operation": "from",
-    "resource": "user_agent_preferences",
-    "line": 55,
+    "line": 49,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-chain-code-backfill.ts",
     "operation": "from",
     "resource": "agent_chains",
-    "line": 17,
+    "line": 18,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-chain-code-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_chain_codes",
-    "line": 28,
+    "line": 35,
     "storage": false
   },
   {
@@ -4784,126 +4784,147 @@
     "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_checkpoint_ciphertext",
-    "line": 64,
+    "line": 48,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_agent_checkpoint_ciphertext",
+    "line": 60,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_agent_checkpoint_ciphertext",
+    "line": 75,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
     "operation": "from",
     "resource": "agent_runtime_sessions",
-    "line": 74,
+    "line": 85,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_orphan_agent_runtime_checkpoint",
-    "line": 97,
+    "line": 110,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_orphan_agent_runtime_checkpoint",
-    "line": 123,
+    "line": 136,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_orphan_agent_runtime_checkpoint",
+    "line": 154,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-context-backfill.ts",
     "operation": "from",
     "resource": "agent_conversation_contexts",
-    "line": 28,
+    "line": 30,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-context-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_context_snapshot",
-    "line": 44,
+    "line": 57,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-context-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_context_snapshot",
-    "line": 62,
+    "line": 68,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-delegation-backfill.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 26,
+    "line": 28,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-delegation-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_delegation_input",
+    "line": 70,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/agent-delegation-result-backfill.ts",
+    "operation": "from",
+    "resource": "agent_runs",
+    "line": 30,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/agent-delegation-result-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_agent_delegation_result",
     "line": 63,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-delegation-result-backfill.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 28,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-delegation-result-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_delegation_result",
-    "line": 56,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-delegation-result-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_delegation_result",
-    "line": 69,
+    "line": 76,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-deployment-backfill.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 23,
+    "line": 25,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-deployment-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_run_deployment_url",
-    "line": 46,
+    "line": 53,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-deployment-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_run_deployment_url",
-    "line": 60,
+    "line": 67,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-event-backfill.ts",
     "operation": "from",
     "resource": "agent_run_events",
-    "line": 24,
+    "line": 26,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-event-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_event_ciphertext",
-    "line": 40,
+    "line": 53,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-event-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_event_ciphertext",
-    "line": 62,
+    "line": 68,
     "storage": false
   },
   {
@@ -4917,42 +4938,49 @@
     "file": "lib/server/encryption/agent-journal-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_journal_ciphertext",
-    "line": 46,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-journal-backfill.ts",
-    "operation": "from",
-    "resource": "agent_run_journal",
-    "line": 72,
+    "line": 54,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-journal-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_journal_ciphertext",
-    "line": 86,
+    "line": 65,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/agent-journal-backfill.ts",
+    "operation": "from",
+    "resource": "agent_run_journal",
+    "line": 84,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/agent-journal-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_agent_journal_ciphertext",
+    "line": 98,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-launch-backfill.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 21,
+    "line": 23,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-launch-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_launch_ciphertext",
-    "line": 38,
+    "line": 51,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-launch-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_launch_ciphertext",
-    "line": 61,
+    "line": 67,
     "storage": false
   },
   {
@@ -5036,266 +5064,266 @@
     "file": "lib/server/encryption/agent-pr-url-backfill.ts",
     "operation": "from",
     "resource": "agent_artifacts",
-    "line": 41,
+    "line": 43,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-pr-url-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_artifact_url",
-    "line": 61,
+    "line": 70,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-pr-url-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_artifact_url",
-    "line": 76,
+    "line": 85,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-pr-url-backfill.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 92,
+    "line": 101,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-pr-url-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_run_pr_url",
-    "line": 107,
+    "line": 122,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-pr-url-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_run_pr_url",
-    "line": 120,
+    "line": 135,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-queue-backfill.ts",
     "operation": "from",
     "resource": "agent_run_messages",
-    "line": 34,
+    "line": 36,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-queue-backfill.ts",
     "operation": "from",
     "resource": "agent_run_input_requests",
-    "line": 50,
+    "line": 57,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-queue-backfill.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 53,
+    "line": 60,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-queue-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_queue_bundle",
-    "line": 75,
+    "line": 97,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-queue-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_queue_bundle",
-    "line": 125,
+    "line": 131,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-routine-content-backfill.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 23,
+    "line": 25,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-routine-content-backfill.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 55,
+    "line": 62,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-run-summary-backfill.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 48,
+    "line": 50,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-run-summary-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_run_summary",
-    "line": 62,
+    "line": 70,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-run-summary-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_run_summary",
-    "line": 78,
+    "line": 86,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-run-summary-backfill.ts",
     "operation": "from",
     "resource": "agent_turns",
-    "line": 95,
+    "line": 103,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-run-summary-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_turn_summary",
-    "line": 113,
+    "line": 131,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-run-summary-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_turn_summary",
-    "line": 134,
+    "line": 152,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-standalone-message-backfill.ts",
     "operation": "from",
     "resource": "agent_messages",
-    "line": 24,
+    "line": 26,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-standalone-message-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_standalone_message",
-    "line": 44,
+    "line": 57,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-standalone-message-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_standalone_message",
-    "line": 64,
+    "line": 70,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-title-backfill.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 36,
+    "line": 38,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-title-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_title_ciphertext",
-    "line": 71,
+    "line": 78,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-title-backfill.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 91,
+    "line": 98,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-title-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_conversation_title_ciphertext",
-    "line": 109,
+    "line": 121,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-verdict-backfill.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 26,
+    "line": 28,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-verdict-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_run_verdict",
-    "line": 48,
+    "line": 55,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-verdict-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_run_verdict",
-    "line": 59,
+    "line": 66,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-work-branch-backfill.ts",
     "operation": "from",
     "resource": "agent_artifacts",
-    "line": 43,
+    "line": 45,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-work-branch-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_artifact_branch",
-    "line": 67,
+    "line": 74,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-work-branch-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_artifact_branch",
-    "line": 79,
+    "line": 86,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-work-branch-backfill.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 94,
+    "line": 101,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-work-branch-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_run_work_branch",
-    "line": 113,
+    "line": 125,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-work-branch-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_agent_run_work_branch",
-    "line": 124,
+    "line": 136,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-work-branch-backfill.ts",
     "operation": "from",
     "resource": "agent_runtime_sessions",
-    "line": 143,
+    "line": 155,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-work-branch-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_orphan_agent_runtime_work_branch",
-    "line": 166,
+    "line": 183,
     "storage": false
   },
   {
     "file": "lib/server/encryption/agent-work-branch-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_orphan_agent_runtime_work_branch",
-    "line": 179,
+    "line": 196,
     "storage": false
   },
   {
@@ -5350,15 +5378,15 @@
   {
     "file": "lib/server/encryption/app-config-backfill.ts",
     "operation": "rpc",
-    "resource": "migrate_app_config_value",
-    "line": 43,
+    "resource": "mark_app_config_attempt",
+    "line": 31,
     "storage": false
   },
   {
     "file": "lib/server/encryption/app-config-backfill.ts",
     "operation": "rpc",
-    "resource": "mark_app_config_attempt",
-    "line": 58,
+    "resource": "migrate_app_config_value",
+    "line": 50,
     "storage": false
   },
   {
@@ -5386,21 +5414,21 @@
     "file": "lib/server/encryption/attachment-metadata-backfill.ts",
     "operation": "from",
     "resource": null,
-    "line": 37,
+    "line": 38,
     "storage": false
   },
   {
     "file": "lib/server/encryption/attachment-metadata-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_attachment_metadata",
-    "line": 72,
+    "line": 78,
     "storage": false
   },
   {
     "file": "lib/server/encryption/attachment-metadata-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_page_file_metadata",
-    "line": 79,
+    "line": 85,
     "storage": false
   },
   {
@@ -5495,6 +5523,13 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/backfill-attempt.ts",
+    "operation": "rpc",
+    "resource": "record_encryption_backfill_progress",
+    "line": 36,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/billing-identity-backfill.ts",
     "operation": "from",
     "resource": "billing_accounts",
@@ -5519,42 +5554,63 @@
     "file": "lib/server/encryption/category-backfill.ts",
     "operation": "from",
     "resource": "categories",
-    "line": 15,
+    "line": 17,
     "storage": false
   },
   {
     "file": "lib/server/encryption/category-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_category_ciphertext",
-    "line": 26,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/category-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_category_ciphertext",
-    "line": 39,
+    "line": 35,
     "storage": false
   },
   {
     "file": "lib/server/encryption/comment-backfill.ts",
     "operation": "from",
     "resource": null,
-    "line": 17,
+    "line": 19,
     "storage": false
   },
   {
     "file": "lib/server/encryption/comment-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_comment_ciphertext",
-    "line": 27,
+    "line": 36,
     "storage": false
   },
   {
-    "file": "lib/server/encryption/comment-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_comment_ciphertext",
-    "line": 40,
+    "file": "lib/server/encryption/critical-backfill-readiness.ts",
+    "operation": "from",
+    "resource": "pull_requests",
+    "line": 72,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/critical-backfill-readiness.ts",
+    "operation": "from",
+    "resource": "agent_runs",
+    "line": 99,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/critical-backfill-readiness.ts",
+    "operation": "from",
+    "resource": "agent_runtime_sessions",
+    "line": 116,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/critical-backfill-readiness.ts",
+    "operation": "from",
+    "resource": "agent_runs",
+    "line": 127,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/critical-backfill-readiness.ts",
+    "operation": "from",
+    "resource": "agent_run_journal",
+    "line": 156,
     "storage": false
   },
   {
@@ -5631,21 +5687,14 @@
     "file": "lib/server/encryption/feedback-post-backfill.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 15,
+    "line": 17,
     "storage": false
   },
   {
     "file": "lib/server/encryption/feedback-post-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_feedback_post_ciphertext",
-    "line": 26,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/feedback-post-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_feedback_post_ciphertext",
-    "line": 39,
+    "line": 35,
     "storage": false
   },
   {
@@ -5869,14 +5918,14 @@
     "file": "lib/server/encryption/forge-default-branch-backfill.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 23,
+    "line": 24,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-default-branch-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_forge_default_branch",
-    "line": 51,
+    "line": 57,
     "storage": false
   },
   {
@@ -5946,28 +5995,28 @@
     "file": "lib/server/encryption/forge-relay-audit-backfill.ts",
     "operation": "from",
     "resource": "forge_relay_audit",
-    "line": 14,
+    "line": 15,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-relay-audit-backfill.ts",
     "operation": "rpc",
     "resource": "scrub_forge_relay_audit_detail",
-    "line": 23,
+    "line": 29,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-relay-delivery-backfill.ts",
     "operation": "from",
     "resource": "forge_relay_deliveries",
-    "line": 26,
+    "line": 27,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-relay-delivery-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_forge_relay_delivery_content",
-    "line": 61,
+    "line": 67,
     "storage": false
   },
   {
@@ -6037,84 +6086,77 @@
     "file": "lib/server/encryption/forge-repository-name-backfill.ts",
     "operation": "from",
     "resource": null,
-    "line": 39,
+    "line": 40,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-repository-name-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_forge_repository_name",
-    "line": 72,
+    "line": 89,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-repository-name-backfill.ts",
     "operation": "from",
     "resource": "forge_repository_names",
-    "line": 86,
+    "line": 103,
     "storage": false
   },
   {
     "file": "lib/server/encryption/github-comment-url-backfill.ts",
     "operation": "from",
     "resource": "github_issue_comment_syncs",
-    "line": 28,
+    "line": 29,
     "storage": false
   },
   {
     "file": "lib/server/encryption/github-comment-url-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_github_comment_url",
-    "line": 46,
+    "line": 58,
     "storage": false
   },
   {
     "file": "lib/server/encryption/github-comment-url-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_github_comment_url",
-    "line": 65,
+    "line": 70,
     "storage": false
   },
   {
     "file": "lib/server/encryption/github-issue-metadata-backfill.ts",
     "operation": "from",
     "resource": "github_issue_sync_metadata",
-    "line": 29,
+    "line": 30,
     "storage": false
   },
   {
     "file": "lib/server/encryption/github-issue-metadata-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_github_issue_metadata",
-    "line": 46,
+    "line": 58,
     "storage": false
   },
   {
     "file": "lib/server/encryption/github-issue-metadata-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_github_issue_metadata",
-    "line": 65,
+    "line": 70,
     "storage": false
   },
   {
     "file": "lib/server/encryption/history-backfill.ts",
     "operation": "from",
     "resource": null,
-    "line": 17,
+    "line": 19,
     "storage": false
   },
   {
     "file": "lib/server/encryption/history-backfill.ts",
     "operation": "from",
     "resource": null,
-    "line": 27,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/history-backfill.ts",
-    "operation": "from",
-    "resource": null,
-    "line": 39,
+    "line": 37,
     "storage": false
   },
   {
@@ -6184,21 +6226,14 @@
     "file": "lib/server/encryption/issue-backfill.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 17,
+    "line": 19,
     "storage": false
   },
   {
     "file": "lib/server/encryption/issue-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_issue_ciphertext",
-    "line": 28,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/issue-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_issue_ciphertext",
-    "line": 41,
+    "line": 37,
     "storage": false
   },
   {
@@ -6471,35 +6506,28 @@
     "file": "lib/server/encryption/objective-backfill.ts",
     "operation": "from",
     "resource": "objectives",
-    "line": 15,
+    "line": 17,
     "storage": false
   },
   {
     "file": "lib/server/encryption/objective-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_objective_ciphertext",
-    "line": 26,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/objective-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_objective_ciphertext",
-    "line": 39,
+    "line": 35,
     "storage": false
   },
   {
     "file": "lib/server/encryption/page-content-backfill.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 23,
+    "line": 24,
     "storage": false
   },
   {
     "file": "lib/server/encryption/page-content-backfill.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 59,
+    "line": 65,
     "storage": false
   },
   {
@@ -6527,112 +6555,105 @@
     "file": "lib/server/encryption/pr-comment-edit-backfill.ts",
     "operation": "from",
     "resource": "pr_comment_edits",
-    "line": 26,
+    "line": 27,
     "storage": false
   },
   {
     "file": "lib/server/encryption/pr-comment-edit-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_pr_comment_edit_body",
-    "line": 42,
+    "line": 49,
     "storage": false
   },
   {
     "file": "lib/server/encryption/pr-comment-edit-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_pr_comment_edit_body",
-    "line": 54,
+    "line": 60,
     "storage": false
   },
   {
     "file": "lib/server/encryption/project-content-backfill.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 23,
+    "line": 24,
     "storage": false
   },
   {
     "file": "lib/server/encryption/project-content-backfill.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 55,
+    "line": 61,
     "storage": false
   },
   {
     "file": "lib/server/encryption/project-draft-backfill.ts",
     "operation": "from",
     "resource": "project_drafts",
-    "line": 15,
+    "line": 17,
     "storage": false
   },
   {
     "file": "lib/server/encryption/project-draft-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_project_draft_ciphertext",
-    "line": 26,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/project-draft-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_project_draft_ciphertext",
-    "line": 39,
+    "line": 35,
     "storage": false
   },
   {
     "file": "lib/server/encryption/project-icon-backfill.ts",
     "operation": "from",
     "resource": null,
-    "line": 21,
+    "line": 22,
     "storage": true
   },
   {
     "file": "lib/server/encryption/project-icon-backfill.ts",
     "operation": "from",
     "resource": null,
-    "line": 59,
+    "line": 60,
     "storage": true
   },
   {
     "file": "lib/server/encryption/project-icon-backfill.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 80,
+    "line": 81,
     "storage": false
   },
   {
     "file": "lib/server/encryption/project-icon-backfill.ts",
     "operation": "rpc",
     "resource": "verify_project_icon",
-    "line": 105,
+    "line": 111,
     "storage": false
   },
   {
     "file": "lib/server/encryption/project-icon-backfill.ts",
     "operation": "rpc",
     "resource": "replace_project_icon",
-    "line": 118,
+    "line": 124,
     "storage": false
   },
   {
     "file": "lib/server/encryption/project-icon-backfill.ts",
     "operation": "from",
     "resource": null,
-    "line": 131,
+    "line": 137,
     "storage": true
   },
   {
     "file": "lib/server/encryption/project-icon-backfill.ts",
     "operation": "rpc",
     "resource": "list_orphan_project_icon_objects",
-    "line": 138,
+    "line": 144,
     "storage": false
   },
   {
     "file": "lib/server/encryption/project-icon-backfill.ts",
     "operation": "from",
     "resource": null,
-    "line": 143,
+    "line": 149,
     "storage": true
   },
   {
@@ -6688,7 +6709,14 @@
     "file": "lib/server/encryption/pull-request-content-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_pull_request_content",
-    "line": 60,
+    "line": 61,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/pull-request-content-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_pull_request_content",
+    "line": 74,
     "storage": false
   },
   {
@@ -6702,14 +6730,21 @@
     "file": "lib/server/encryption/pull-request-url-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_pull_request_url",
-    "line": 42,
+    "line": 43,
     "storage": false
   },
   {
     "file": "lib/server/encryption/pull-request-url-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_pull_request_url",
-    "line": 55,
+    "line": 58,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/pull-request-url-backfill.ts",
+    "operation": "rpc",
+    "resource": "migrate_pull_request_url",
+    "line": 65,
     "storage": false
   },
   {
@@ -6776,52 +6811,52 @@
     "storage": false
   },
   {
-    "file": "lib/server/encryption/saved-view-bookmark-backfill.ts",
-    "operation": "from",
-    "resource": "saved_views",
-    "line": 23,
+    "file": "lib/server/encryption/row-migration-progress.ts",
+    "operation": "rpc",
+    "resource": "record_encryption_backfill_progress",
+    "line": 25,
     "storage": false
   },
   {
     "file": "lib/server/encryption/saved-view-bookmark-backfill.ts",
     "operation": "from",
     "resource": "saved_views",
-    "line": 52,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/scratchpad-backfill.ts",
-    "operation": "from",
-    "resource": "user_scratchpad",
-    "line": 15,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/scratchpad-backfill.ts",
-    "operation": "from",
-    "resource": "user_scratchpad",
     "line": 24,
     "storage": false
   },
   {
+    "file": "lib/server/encryption/saved-view-bookmark-backfill.ts",
+    "operation": "from",
+    "resource": "saved_views",
+    "line": 58,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/scratchpad-backfill.ts",
     "operation": "from",
     "resource": "user_scratchpad",
-    "line": 36,
+    "line": 17,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/scratchpad-backfill.ts",
+    "operation": "from",
+    "resource": "user_scratchpad",
+    "line": 35,
     "storage": false
   },
   {
     "file": "lib/server/encryption/share-token-backfill.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 23,
+    "line": 24,
     "storage": false
   },
   {
     "file": "lib/server/encryption/share-token-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_view_share_token",
-    "line": 47,
+    "line": 53,
     "storage": false
   },
   {
@@ -6835,21 +6870,14 @@
     "file": "lib/server/encryption/stat-events-backfill.ts",
     "operation": "from",
     "resource": "stat_events",
-    "line": 15,
+    "line": 17,
     "storage": false
   },
   {
     "file": "lib/server/encryption/stat-events-backfill.ts",
     "operation": "from",
     "resource": "stat_events",
-    "line": 25,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/stat-events-backfill.ts",
-    "operation": "from",
-    "resource": "stat_events",
-    "line": 36,
+    "line": 34,
     "storage": false
   },
   {
@@ -6898,14 +6926,14 @@
     "file": "lib/server/encryption/view-content-backfill.ts",
     "operation": "from",
     "resource": "views",
-    "line": 23,
+    "line": 24,
     "storage": false
   },
   {
     "file": "lib/server/encryption/view-content-backfill.ts",
     "operation": "from",
     "resource": "views",
-    "line": 56,
+    "line": 62,
     "storage": false
   },
   {
@@ -7129,42 +7157,21 @@
     "file": "lib/server/feedback/erasure.ts",
     "operation": "from",
     "resource": "feedback_users",
-    "line": 51,
+    "line": 40,
     "storage": false
   },
   {
     "file": "lib/server/feedback/erasure.ts",
-    "operation": "from",
-    "resource": "feedback_sessions",
-    "line": 81,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/erasure.ts",
-    "operation": "from",
-    "resource": "feedback_otp_codes",
-    "line": 95,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/erasure.ts",
-    "operation": "from",
-    "resource": "feedback_otp_codes",
-    "line": 99,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/erasure.ts",
-    "operation": "from",
-    "resource": "feedback_users",
-    "line": 105,
+    "operation": "rpc",
+    "resource": "erase_feedback_identity",
+    "line": 73,
     "storage": false
   },
   {
     "file": "lib/server/feedback/erasure.ts",
     "operation": "from",
     "resource": null,
-    "line": 143,
+    "line": 105,
     "storage": false
   },
   {
@@ -7192,56 +7199,56 @@
     "file": "lib/server/feedback/identity.ts",
     "operation": "from",
     "resource": "feedback_users",
-    "line": 55,
+    "line": 56,
     "storage": false
   },
   {
     "file": "lib/server/feedback/identity.ts",
     "operation": "from",
     "resource": "feedback_users",
-    "line": 122,
+    "line": 123,
     "storage": false
   },
   {
     "file": "lib/server/feedback/identity.ts",
     "operation": "from",
     "resource": "feedback_users",
-    "line": 135,
+    "line": 137,
     "storage": false
   },
   {
     "file": "lib/server/feedback/identity.ts",
     "operation": "from",
     "resource": "feedback_users",
-    "line": 173,
+    "line": 174,
     "storage": false
   },
   {
     "file": "lib/server/feedback/identity.ts",
     "operation": "from",
     "resource": "feedback_sessions",
-    "line": 216,
+    "line": 218,
     "storage": false
   },
   {
     "file": "lib/server/feedback/identity.ts",
     "operation": "from",
     "resource": "feedback_sessions",
-    "line": 237,
+    "line": 238,
     "storage": false
   },
   {
     "file": "lib/server/feedback/identity.ts",
     "operation": "from",
     "resource": "feedback_sessions",
-    "line": 258,
+    "line": 259,
     "storage": false
   },
   {
     "file": "lib/server/feedback/identity.ts",
     "operation": "from",
     "resource": "feedback_sessions",
-    "line": 272,
+    "line": 273,
     "storage": false
   },
   {
@@ -10104,21 +10111,21 @@
     "file": "lib/server/page-backlinks.ts",
     "operation": "from",
     "resource": "page_links",
-    "line": 71,
+    "line": 53,
     "storage": false
   },
   {
     "file": "lib/server/page-backlinks.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 72,
+    "line": 54,
     "storage": false
   },
   {
     "file": "lib/server/page-backlinks.ts",
     "operation": "from",
     "resource": null,
-    "line": 199,
+    "line": 180,
     "storage": false
   },
   {
@@ -11567,91 +11574,91 @@
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 186,
+    "line": 189,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "rpc",
     "resource": "soft_delete_objective_guarded",
-    "line": 248,
+    "line": 251,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": null,
-    "line": 268,
+    "line": 271,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": null,
-    "line": 294,
+    "line": 297,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 326,
+    "line": 329,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": null,
-    "line": 363,
+    "line": 368,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 393,
+    "line": 399,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 406,
+    "line": 415,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": null,
-    "line": 581,
+    "line": 597,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 644,
+    "line": 660,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 651,
+    "line": 667,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": null,
-    "line": 668,
+    "line": 684,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 741,
+    "line": 757,
     "storage": false
   },
   {

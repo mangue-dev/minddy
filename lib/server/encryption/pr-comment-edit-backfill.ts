@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { recordBackfillAttempt } from "./backfill-attempt";
 import { decodePrCommentEdit, encodePrCommentEdit,
   isEncryptedPrCommentEdit, prCommentEditState } from
   "@/lib/server/agent/pr-comment-edit-content";
@@ -25,17 +26,23 @@ export async function backfillPrCommentEditsBatch(limit = 20,
   const service = getServiceClient();
   const { data, error } = await service.from("pr_comment_edits")
     .select("id,body")
-    .order("body_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("body_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan PR comment edits");
   for (const row of data ?? []) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await recordBackfillAttempt(service, "pr_comment_edits",
+        "body_encryption_attempted_at", { id: row.id, body: row.body })) {
+        result.conflicted++;
+        continue;
+      }
       const key = await getContentKeys().current(SCOPE);
       const version = key.version;
       key.bytes.fill(0);
       const identity = { p_id: row.id, p_old_body: row.body };
+      const plain = await decodePrCommentEdit(row.id, row.body);
       if (isEncryptedPrCommentEdit(row.body)) {
         const state = prCommentEditState(row.body);
         if (state.version === version && state.format === 3) {
@@ -45,7 +52,6 @@ export async function backfillPrCommentEditsBatch(limit = 20,
           continue;
         }
       }
-      const plain = await decodePrCommentEdit(row.id, row.body);
       const replacement = await encodePrCommentEdit(row.id, plain);
       if (await decodePrCommentEdit(row.id, replacement) !== plain) {
         throw new Error("PR comment edit verification failed");

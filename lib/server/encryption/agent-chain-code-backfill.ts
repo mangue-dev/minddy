@@ -1,5 +1,6 @@
 import "server-only";
 
+import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isContentEncryptionEnabled } from "./content-config";
 
@@ -17,6 +18,7 @@ export async function backfillAgentChainCodesBatch(limit = 50,
   const { data, error } = await service.from("agent_chains")
     .select("id,pending_event,stop_reason")
     .is("codes_checked_at", null)
+    .order("codes_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent chains");
   const result = { scanned: 0, migrated: 0, conflicted: 0,
@@ -25,6 +27,11 @@ export async function backfillAgentChainCodesBatch(limit = 50,
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_chains", "codes_checked_at",
+        row as Record<string, unknown>)) {
+        result.conflicted++;
+        continue;
+      }
       const migrated = await service.rpc("migrate_agent_chain_codes", {
         p_id: row.id, p_old_pending: row.pending_event,
         p_old_reason: row.stop_reason,

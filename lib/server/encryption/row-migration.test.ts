@@ -23,6 +23,8 @@ class RevisionRepository implements RowMigrationRepository {
   writes = 0;
   beforeWrite?: (candidate: MigrationCandidate) => void;
   afterWrite?: () => void;
+  recordAttempt?: RowMigrationRepository["recordAttempt"];
+  recordVerified?: RowMigrationRepository["recordVerified"];
 
   constructor(rows: StoredRow[], rowContext = context) {
     for (const row of rows) this.rows.set(String(row.id), { row, revision: "1", context: rowContext });
@@ -156,6 +158,43 @@ describe("protected row migration and rotation", () => {
     vi.mocked(provider.current).mockResolvedValue({ version: 2, bytes: randomBytes(32) });
     // A provider mismatch is caught during verification before any persistent write.
     expect(await migrateProtectedRows(repository, store)).toMatchObject({ migrated: 0, failed: 2 });
+  });
+
+  it("records an attempt without claiming corrupt ciphertext was verified", async () => {
+    const { store } = fixture();
+    const codec = new EncryptedRowCodec(store);
+    const broken = await codec.encode(legacy("broken"), context);
+    const envelope = JSON.parse(broken.encrypted_content!);
+    broken.encrypted_content = store.fromDatabase(JSON.stringify({
+      ...envelope, tag: randomBytes(16).toString("base64url"),
+    }));
+    const repository = new RevisionRepository([broken, legacy("healthy")]);
+    const attempted: string[] = [];
+    const verified: string[] = [];
+    repository.recordAttempt = async (candidate) => {
+      attempted.push(String(candidate.row.id));
+      return true;
+    };
+    repository.recordVerified = async (candidate) => {
+      verified.push(String(candidate.row.id));
+      return true;
+    };
+    expect(await migrateProtectedRows(repository, store)).toMatchObject({
+      scanned: 2, migrated: 1, failed: 1,
+    });
+    expect(attempted).toEqual(["broken", "healthy"]);
+    expect(verified).toEqual(["healthy"]);
+  });
+
+  it("does not count an unchanged row as verified after a marker CAS conflict", async () => {
+    const { store } = fixture();
+    const source = await new EncryptedRowCodec(store).encode(legacy("issue-1"), context);
+    const repository = new RevisionRepository([source]);
+    repository.recordAttempt = async () => true;
+    repository.recordVerified = async () => false;
+    expect(await migrateProtectedRows(repository, store)).toMatchObject({
+      unchanged: 0, conflicted: 1, failed: 0,
+    });
   });
 
   it("never downgrades a historical row even if a restored registry reports an older current key", async () => {

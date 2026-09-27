@@ -13,6 +13,7 @@ DECLARE
   conversation uuid := gen_random_uuid(); other_conversation uuid := gen_random_uuid();
   run uuid := gen_random_uuid();
   legacy bigint; fresh bigint;
+  old_row public.agent_run_journal;
   cipher text := '{"format":3,"keyVersion":1,"data":"test-only-placeholder"}';
   digest text := repeat('a',64);
 BEGIN
@@ -27,6 +28,7 @@ BEGIN
     VALUES(run,project,conversation,actor);
   INSERT INTO public.agent_run_journal(run_id,session_id,events)
     VALUES(run,'session', '[{"output":"private"}]') RETURNING id INTO legacy;
+  SELECT * INTO old_row FROM public.agent_run_journal WHERE id=legacy;
   UPDATE public.agent_runs SET project_id=other_project,
     conversation_id=other_conversation WHERE id=run;
   UPDATE public.agent_runs SET project_id=project,
@@ -34,20 +36,50 @@ BEGIN
   IF NOT public.agent_journal_legacy_batch_exists(run,'session','[{"output":"private"}]') THEN
     RAISE EXCEPTION 'legacy journal duplicate lookup failed';
   END IF;
-  IF NOT public.migrate_agent_journal_ciphertext(legacy,run,0) THEN
+  IF NOT public.migrate_agent_journal_ciphertext(legacy,run,0,
+      p_previous_events=>old_row.events,
+      p_previous_event_count=>old_row.event_count,
+      p_previous_payload_bytes=>old_row.payload_bytes,
+      p_previous_stored_bytes=>old_row.stored_bytes) THEN
     RAISE EXCEPTION 'journal attempt did not mark';
   END IF;
+  IF (SELECT encryption_attempted_at IS NULL OR encryption_checked_at IS NOT NULL
+      FROM public.agent_run_journal WHERE id=legacy) THEN
+    RAISE EXCEPTION 'journal attempt was incorrectly verified';
+  END IF;
   IF NOT public.migrate_agent_journal_ciphertext(
-    legacy,run,0,cipher,digest,1,1,25,20) THEN
+    legacy,run,0,cipher,digest,1,1,25,20,
+    p_previous_events=>old_row.events,
+    p_previous_event_count=>old_row.event_count,
+    p_previous_payload_bytes=>old_row.payload_bytes,
+    p_previous_stored_bytes=>old_row.stored_bytes) THEN
     RAISE EXCEPTION 'journal conversion did not commit';
   END IF;
   IF public.migrate_agent_journal_ciphertext(
-    legacy,run,0,cipher,digest,1,1,25,20) THEN
+    legacy,run,0,cipher,digest,1,1,25,20,
+    p_previous_events=>old_row.events,
+    p_previous_event_count=>old_row.event_count,
+    p_previous_payload_bytes=>old_row.payload_bytes,
+    p_previous_stored_bytes=>old_row.stored_bytes) THEN
     RAISE EXCEPTION 'stale journal migration won';
   END IF;
   IF EXISTS(SELECT 1 FROM public.agent_run_journal WHERE id=legacy AND
     (events IS NOT NULL OR payload_sha256<>digest OR encryption_version<>1)) THEN
     RAISE EXCEPTION 'journal retained plaintext';
+  END IF;
+  SELECT * INTO old_row FROM public.agent_run_journal WHERE id=legacy;
+  IF public.migrate_agent_journal_ciphertext(legacy,run,1,
+      p_verified=>true,p_previous_payload=>old_row.payload,
+      p_previous_digest=>repeat('c',64),
+      p_previous_encoding=>old_row.payload_encoding,
+      p_previous_event_count=>old_row.event_count,
+      p_previous_payload_bytes=>old_row.payload_bytes,
+      p_previous_stored_bytes=>old_row.stored_bytes) THEN
+    RAISE EXCEPTION 'journal accepted a stale digest with the same key version';
+  END IF;
+  IF (SELECT payload_sha256 FROM public.agent_run_journal WHERE id=legacy)
+      IS DISTINCT FROM digest THEN
+    RAISE EXCEPTION 'journal stale CAS changed content';
   END IF;
   IF NOT EXISTS(SELECT 1 FROM public.agent_journal_encryption_scopes WHERE project_id=project) THEN
     RAISE EXCEPTION 'journal writer fence was not activated';
@@ -76,7 +108,7 @@ BEGIN
      has_table_privilege('authenticated','public.agent_run_journal','UPDATE') OR
      has_table_privilege('authenticated','public.agent_journal_encryption_scopes','SELECT') OR
      has_function_privilege('authenticated',
-       'public.migrate_agent_journal_ciphertext(bigint,uuid,integer,text,text,integer,integer,integer,integer)',
+       'public.migrate_agent_journal_ciphertext(bigint,uuid,integer,text,text,integer,integer,integer,integer,boolean,jsonb,text,text,text,integer,integer,integer)',
        'EXECUTE') OR
      has_function_privilege('authenticated',
        'public.agent_journal_legacy_batch_exists(uuid,text,jsonb)',

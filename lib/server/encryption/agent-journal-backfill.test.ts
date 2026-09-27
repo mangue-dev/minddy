@@ -4,18 +4,22 @@ import { encodeRunJournal } from "@/lib/server/agent/run-journal-codec";
 
 const state = vi.hoisted(() => ({
   version: 1,
+  root: 7,
+  missingOld: false,
   row: {} as Record<string, unknown>,
   commits: 0,
   collision: false,
 }));
-const content = Buffer.alloc(32, 7);
 const index = Buffer.alloc(32, 9);
 const store = new EncryptedStore({
-  current: async () => ({ version: state.version, bytes: Buffer.from(content) }),
-  byVersion: async (_scope, version) => ({ version, bytes: Buffer.from(content) }),
+  current: async () => ({ version: state.version, bytes: Buffer.alloc(32, state.root) }),
+  byVersion: async (_scope, version) => {
+    if (state.missingOld && version < state.version) throw new Error("Historical key unavailable");
+    return { version, bytes: Buffer.alloc(32, state.root) };
+  },
 });
 const keys = {
-  current: async () => ({ version: state.version, bytes: Buffer.from(content) }),
+  current: async () => ({ version: state.version, bytes: Buffer.alloc(32, state.root) }),
 };
 vi.mock("./registry", () => ({
   getEncryptedStore: () => store,
@@ -37,7 +41,10 @@ const query = {
 const service = {
   from: () => query,
   rpc: async (_name: string, args: Record<string, unknown>) => {
-    if (args.p_previous_version !== state.row.encryption_version) {
+    if (args.p_previous_version !== state.row.encryption_version ||
+        args.p_previous_payload !== state.row.payload ||
+        JSON.stringify(args.p_previous_events) !== JSON.stringify(state.row.events) ||
+        args.p_previous_digest !== state.row.payload_sha256) {
       return { data: false, error: null };
     }
     if (args.p_payload) {
@@ -52,8 +59,12 @@ const service = {
         event_count: args.p_event_count,
         payload_bytes: args.p_payload_bytes,
         stored_bytes: args.p_stored_bytes,
+        encryption_checked_at: "checked",
       };
+    } else if (args.p_verified) {
+      state.row.encryption_checked_at = "checked";
     }
+    state.row.encryption_attempted_at = "attempted";
     return { data: true, error: null };
   },
 };
@@ -66,6 +77,8 @@ beforeEach(() => {
   vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");
   vi.stubEnv("MINDDY_AGENT_JOURNAL_ENCRYPTION_ENABLED", "true");
   state.version = 1;
+  state.root = 7;
+  state.missingOld = false;
   state.commits = 0;
   state.collision = false;
   const legacy = encodeRunJournal([{ seq: 1, output: "private tool output" }]);
@@ -75,6 +88,8 @@ beforeEach(() => {
     payload_sha256: legacy.sha256, event_count: legacy.eventCount,
     payload_bytes: legacy.payloadBytes, stored_bytes: legacy.storedBytes,
     encryption_version: 0,
+    encryption_checked_at: null,
+    encryption_attempted_at: null,
   };
 });
 
@@ -121,5 +136,29 @@ describe("agent journal migration", () => {
     expect(await backfillAgentJournalBatch(1)).toMatchObject({ migrated: 1, failed: 0 });
     expect(state.row.payload_sha256).toBe(alternateDigest);
     vi.unstubAllEnvs();
+  });
+
+  it("does not verify an unreadable current journal and can retry after restoring the root", async () => {
+    expect(await backfillAgentJournalBatch(1)).toMatchObject({ migrated: 1 });
+    state.row.encryption_checked_at = null;
+    state.root = 8;
+    expect(await backfillAgentJournalBatch(1)).toMatchObject({ failed: 1, unchanged: 0 });
+    expect(state.row.encryption_checked_at).toBeNull();
+    expect(state.row.encryption_attempted_at).toBe("attempted");
+    state.root = 7;
+    expect(await backfillAgentJournalBatch(1)).toMatchObject({ unchanged: 1, failed: 0 });
+    expect(state.row.encryption_checked_at).toBe("checked");
+  });
+
+  it("keeps a historical journal unverified until its key is restored", async () => {
+    expect(await backfillAgentJournalBatch(1)).toMatchObject({ migrated: 1 });
+    state.row.encryption_checked_at = null;
+    state.version = 2;
+    state.missingOld = true;
+    expect(await backfillAgentJournalBatch(1)).toMatchObject({ failed: 1, migrated: 0 });
+    expect(state.row.encryption_checked_at).toBeNull();
+    state.missingOld = false;
+    expect(await backfillAgentJournalBatch(1)).toMatchObject({ migrated: 1 });
+    expect(state.row.encryption_version).toBe(2);
   });
 });

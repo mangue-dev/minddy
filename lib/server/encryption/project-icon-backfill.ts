@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { recordBackfillAttempt } from "./backfill-attempt";
 import { ICON_MIME_EXT } from "@/lib/server/favicon";
 import { projectIconPaths } from "@/lib/server/project-storage";
 import { downloadProtectedProjectIcon, projectIconRoute,
@@ -79,13 +80,18 @@ export async function backfillProjectIconsBatch(limit = 10,
     orphaned: 0, failed: 0, interrupted: false };
   const { data, error } = await service.from("projects")
     .select("id,icon_url,icon_storage_path").not("icon_url", "is", null)
-    .order("icon_checked_at", { ascending: true, nullsFirst: true })
+    .order("icon_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan project icons");
   for (const row of data ?? []) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await recordBackfillAttempt(service, "projects",
+        "icon_attempted_at", { id: row.id, icon_url: row.icon_url, icon_storage_path: row.icon_storage_path })) {
+        result.conflicted++;
+        continue;
+      }
       if (!row.icon_url) throw new Error("Missing project icon URL");
       const protectedSource = row.icon_storage_path
         ? await downloadProtectedProjectIcon(service, row.id,

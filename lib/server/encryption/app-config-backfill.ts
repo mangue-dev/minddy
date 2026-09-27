@@ -14,7 +14,7 @@ export async function backfillAppConfigBatch(limit = 30, signal?: AbortSignal) {
   const service = getServiceClient();
   const { data, error } = await service.from("app_config")
     .select("key,value,encryption_version,encrypted_content,encryption_checked_at")
-    .order("encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("key", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan app configuration");
   const result = { scanned: 0, migrated: 0, unchanged: 0,
@@ -28,6 +28,13 @@ export async function backfillAppConfigBatch(limit = 30, signal?: AbortSignal) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      const attempt = await service.rpc("mark_app_config_attempt", {
+        p_key: row.key, p_old_value: row.value,
+        p_old_cipher: row.encrypted_content ?? null,
+        p_old_version: row.encryption_version ?? 0,
+      });
+      if (attempt.error) throw new Error("Unable to record app configuration attempt");
+      if (!attempt.data) { result.conflicted++; continue; }
       const clear = await decodeAppConfig(row);
       const fresh = row.encryption_version === currentVersion &&
         row.encrypted_content != null &&
@@ -51,17 +58,7 @@ export async function backfillAppConfigBatch(limit = 30, signal?: AbortSignal) {
       if (!write.data) result.conflicted++;
       else if (fresh) result.unchanged++;
       else result.migrated++;
-    } catch {
-      result.failed++;
-      // A corrupt value must not hold the head of the ordered queue forever.
-      try {
-        await service.rpc("mark_app_config_attempt", {
-          p_key: row.key, p_old_value: row.value,
-          p_old_cipher: row.encrypted_content ?? null,
-          p_old_version: row.encryption_version ?? 0,
-        });
-      } catch { /* The next pass can retry the failed attempt record. */ }
-    }
+    } catch { result.failed++; }
   }
   return result;
 }

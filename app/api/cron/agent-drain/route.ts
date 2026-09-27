@@ -62,7 +62,7 @@ async function dueScopedRuns(service: SupabaseClient): Promise<QueuedRunRow[]> {
     .order("not_before", { ascending: true })
     .limit(50);
   if (error) {
-    console.error("[agent-drain] preview dispatch read failed:", error.message);
+    console.error("[agent-drain] preview dispatch read failed");
     return [];
   }
   const decoded = await Promise.allSettled((data ?? []).map(async (row) => {
@@ -86,14 +86,14 @@ async function kickDeployment(url: string, secret: string): Promise<void> {
       headers: { Authorization: `Bearer ${secret}` },
       signal: AbortSignal.timeout(10_000),
     });
-    console.log("[agent-drain] preview kick sent:", url);
+    console.log("[agent-drain] preview kick sent");
   } catch (error) {
     if (error instanceof Error && error.name === "TimeoutError") {
       // As in `chainAgentDrain`: the request is delivered, the child drains.
-      console.log("[agent-drain] preview kick sent (timeout):", url);
+      console.log("[agent-drain] preview kick timed out");
       return;
     }
-    console.error("[agent-drain] preview kick failed:", url, error);
+    console.error("[agent-drain] preview kick failed");
   }
 }
 
@@ -110,7 +110,7 @@ async function failStalledRuns(service: SupabaseClient, ids: string[]): Promise<
     .in("id", ids)
     .eq("status", "queued");
   if (lookupError) {
-    console.error("[agent-drain] stalled preview lookup failed:", lookupError.message);
+    console.error("[agent-drain] stalled preview lookup failed");
     return;
   }
   for (const candidate of candidates ?? []) {
@@ -125,7 +125,7 @@ async function failStalledRuns(service: SupabaseClient, ids: string[]): Promise<
       .eq("status", "queued")
       .select("id, created_by, project_id, issue_id, conversation_id").maybeSingle();
     if (error) {
-      console.error("[agent-drain] stalled preview fail failed:", error.message);
+      console.error("[agent-drain] stalled preview fail failed", candidate.id);
       continue;
     }
     if (data) await notifyAgentRun(data, "agent_failed");
@@ -138,24 +138,39 @@ async function handle(request: NextRequest) {
   }
 
   const service = getServiceClient();
-  const summary = await drainAgentRuns(service, { budgetMs: CRON_DRAIN_BUDGET_MS });
+  let summary: Awaited<ReturnType<typeof drainAgentRuns>>;
+  try {
+    summary = await drainAgentRuns(service, { budgetMs: CRON_DRAIN_BUDGET_MS });
+  } catch {
+    console.error("[agent-drain] drain failed");
+    return NextResponse.json({ error: "drain_failed" }, { status: 500 });
+  }
 
   // Distribution (MIN-165): only the PROD wakes up the other deployments. A
   // kicked preview arrives here with VERCEL_ENV=preview and only does its drain —
   // otherwise two deployments would pass the buck indefinitely.
   const secret = process.env.CRON_SECRET?.trim();
-  const dispatch =
-    process.env.VERCEL_ENV === "production" && secret
+  let dispatch: { urls: string[]; stalledRunIds: string[] };
+  try {
+    dispatch = process.env.VERCEL_ENV === "production" && secret
       ? previewKickTargets(await dueScopedRuns(service), {
           now: Date.now(),
           staleAfterMs: PREVIEW_STALE_AFTER_MS,
         })
       : { urls: [], stalledRunIds: [] };
+  } catch {
+    console.error("[agent-drain] preview dispatch failed");
+    return NextResponse.json({ error: "dispatch_failed" }, { status: 500 });
+  }
 
   if (dispatch.urls.length > 0 || dispatch.stalledRunIds.length > 0) {
     after(async () => {
-      if (secret) await Promise.all(dispatch.urls.map((url) => kickDeployment(url, secret)));
-      await failStalledRuns(service, dispatch.stalledRunIds);
+      try {
+        if (secret) await Promise.all(dispatch.urls.map((url) => kickDeployment(url, secret)));
+        await failStalledRuns(service, dispatch.stalledRunIds);
+      } catch {
+        console.error("[agent-drain] preview dispatch failed");
+      }
     });
   }
 

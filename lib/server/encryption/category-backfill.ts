@@ -5,15 +5,17 @@ import { getEncryptedStore } from "./registry";
 import { isContentEncryptionEnabled } from "./content-config";
 import { migrateProtectedRows, type MigrationCandidate, type RowMigrationRepository } from "./row-migration";
 import type { StoredRow } from "./row-codec";
+import { rowMigrationProgress } from "./row-migration-progress";
 
 /** Fair, revision-guarded conversion of legacy categories and old key versions. */
 export async function backfillCategoriesBatch(limit = 50, signal?: AbortSignal) {
   if (!isContentEncryptionEnabled()) throw new Error("Content encryption is not enabled");
   const service = getServiceClient();
   const repository: RowMigrationRepository = {
+    ...rowMigrationProgress(service, "categories"),
     async scan(batchLimit) {
       const { data, error } = await service.from("categories").select("*")
-        .order("encryption_checked_at", { ascending: true, nullsFirst: true })
+        .order("encryption_attempted_at", { ascending: true, nullsFirst: true })
         .order("id", { ascending: true }).limit(batchLimit);
       if (error) throw new Error("Unable to scan category migration");
       const candidates: MigrationCandidate[] = [];
@@ -23,12 +25,6 @@ export async function backfillCategoriesBatch(limit = 50, signal?: AbortSignal) 
             row.encryption_revision >= Number.MAX_SAFE_INTEGER) {
           throw new Error("Invalid category migration metadata");
         }
-        const { data: marked, error: attemptError } = await service.rpc("migrate_category_ciphertext", {
-          p_id: row.id, p_project_id: row.project_id, p_revision: row.encryption_revision,
-          p_previous_version: row.encryption_version,
-        });
-        if (attemptError) throw new Error("Unable to record category migration attempt");
-        if (!marked) continue;
         candidates.push({ row: row as StoredRow,
           context: { table: "categories", scope: { kind: "project", id: row.project_id } },
           revision: String(row.encryption_revision) });

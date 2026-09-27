@@ -27,6 +27,7 @@ const query = {
 const service = {
   from: () => query,
   rpc: async (_name: string, args: Record<string, unknown>) => {
+    if (_name === "mark_agent_backfill_attempt") return { data: true, error: null };
     if (args.p_previous_version !== state.row.launch_encryption_version ||
         args.p_project_id !== state.row.project_id ||
         args.p_conversation_id !== state.row.conversation_id) {

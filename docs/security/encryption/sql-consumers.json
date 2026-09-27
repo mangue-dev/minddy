@@ -115,9 +115,11 @@
       ]
     },
     "set_updated_at()": {
-      "sha256": "52f055ec3aefb6fea51c908c7030def120ef6395041e622e13b31704590fea39",
+      "sha256": "72cbdf2c294d9e704ae2776bf96459edefcbdae7c99e6add1cb1436ce99bca18",
       "securityDefiner": false,
-      "configuration": null,
+      "configuration": [
+        "search_path=\"\""
+      ],
       "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
@@ -207,7 +209,7 @@
       ]
     },
     "broadcast_page_row()": {
-      "sha256": "93798555cd9822a089475573ea755fd9bc9d119a3513b3b6be26e52c7f1da03a",
+      "sha256": "cfedfaa3f7cf7205f734e6e081f462f629aad8b28916d6b3de290aad43f8da3f",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -263,7 +265,7 @@
       "functionReferences": []
     },
     "broadcast_views_row()": {
-      "sha256": "6a06b86daad63cabe9f94ee7c76eebe1d1e1daff420f73c2d0d56207337b6b93",
+      "sha256": "25b667054b19d1210f83de904e7666f24e334222e28950f624a046ca8436dbbd",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -658,7 +660,7 @@
       ]
     },
     "broadcast_event_scoped()": {
-      "sha256": "ca90d88c1d96bbb523dec3e6c6de2e476193bfb202686369869e4af458705270",
+      "sha256": "727bd9c40c302a523a829f811c3aec06924239cfdb7114401ace304132141f60",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -688,7 +690,7 @@
       "functionReferences": []
     },
     "broadcast_projects_row()": {
-      "sha256": "584d5b16fa07c1a033bb7129d9040589592048253261af4f0c1497a841e47a15",
+      "sha256": "8aa365cb93b9573693263d7679895f0600b3bfd8803b981429aa2a7dc1f05fe8",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -802,7 +804,7 @@
       ]
     },
     "guard_issue_encryption()": {
-      "sha256": "65c522aaf521904d5ec49998b218b5c86aea812b933f24f293fb6eeaef42be39",
+      "sha256": "8d6d095986d003e69025eba45e5ac456f66fd1ed00650cff69acd73485af4fa5",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -922,7 +924,7 @@
       "functionReferences": []
     },
     "broadcast_feedback_post()": {
-      "sha256": "7efb860646dfa442ecefea6f7c47358ba0d9f3b8a2467d0734fa38627a96e6cd",
+      "sha256": "dfd2b7bb48a319f021cbd3ff989444c8251199d471963fb8d9a423c7091409e4",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -933,7 +935,7 @@
       "functionReferences": []
     },
     "broadcast_issue_content()": {
-      "sha256": "cb7c3ba7800adf043befcd23a777b16954766baf5f4817f562f70f995ee1ee50",
+      "sha256": "cd134d7218db563becbcf525688111ca28cd38c1d370a9af643dedc9f283d299",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1152,7 +1154,7 @@
       "functionReferences": []
     },
     "broadcast_project_scoped()": {
-      "sha256": "81b05b45bf0e32ad0d6cb8f545f277df81ce12e43627fb078db2de2d202570a6",
+      "sha256": "6a2a9bf13ebbc517282378734e26acd4911d328a2562511f6324ff28f1c4e49f",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1163,7 +1165,7 @@
       "functionReferences": []
     },
     "broadcast_scratchpad_row()": {
-      "sha256": "d4590f7ffcfa63470f9018908a33ea2646b073f8183d5d4658aed4493492749c",
+      "sha256": "b38e634f036031897a16db649b411f6821998127d99a50b77543e98db60b9641",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1265,7 +1267,7 @@
       "functionReferences": []
     },
     "guard_comment_encryption()": {
-      "sha256": "45e9ceea3bd75c4904b3883085e507e9055acb4f7d39eb1a370ee8cb2c11af84",
+      "sha256": "107de10a651a4259ec72195dd2187cb4b4d16deae41790d698e8c417f5204364",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1305,7 +1307,7 @@
       "functionReferences": []
     },
     "guard_history_encryption()": {
-      "sha256": "a2d4a38eda2559e327b171abba295e08231f563fcc038ae1dbb1d83bf26c03ef",
+      "sha256": "1bbf66ddcabcf20d6bfcc5166daec1dab96db53d66c64b5aad9f99ef536e1102",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1669,7 +1671,7 @@
       "functionReferences": []
     },
     "guard_category_encryption()": {
-      "sha256": "be70c4403b3475a3450af31cc0b468277cba8cc00bb23c13d8a5a1f8eff5ec99",
+      "sha256": "14762197428c5119ed27b5e357223701f4edcba5486c6f845eedb1b79699507c",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1782,7 +1784,7 @@
       "functionReferences": []
     },
     "broadcast_pull_request_row()": {
-      "sha256": "400ff326206d4f0a583452c482741f20f40afb482c038715cde0f2b16d5d95bf",
+      "sha256": "a9f0d41b4434e10902378330d55584b36524f9bbe8f701d59308d92792f940cf",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1913,7 +1915,7 @@
       "functionReferences": []
     },
     "guard_objective_encryption()": {
-      "sha256": "4bf302f5f2ff470a884656e6d39cc7d7bb61145fdc16d586dabba059bdc546db",
+      "sha256": "18121e91220038b978c75a1a6e2d2dcf364690e1298e429b90cd480ba207a9bd",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2094,7 +2096,7 @@
       "functionReferences": []
     },
     "broadcast_agent_routine_row()": {
-      "sha256": "b5f9b79a2641372b1d029137ec354c4ee77ff9bf7ae6af627a861181ccc63c56",
+      "sha256": "893214162a134f2622455d32794bc05e49ad3ee3c07ee95a9a0a843fa848c3e5",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2211,7 +2213,7 @@
       "functionReferences": []
     },
     "guard_agent_routine_content()": {
-      "sha256": "22fd621634f6a47bbc08aaf6f13abe223d2d6ac3144737db9b587b8ffa2c9450",
+      "sha256": "0dc2243babde6480d7bc8a8aee9e10cdb82ab1933e5b3c8513a46b9ea342620a",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3244,8 +3246,19 @@
         "require_encryption_read_committed"
       ]
     },
+    "guard_erased_feedback_identity()": {
+      "sha256": "05092c1b939225e1eda6cbdd30e0f812a7e731bf431deebc3606a46283d8416d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_feedback_post_encryption()": {
-      "sha256": "c3d25f3dddc47f3f98d9797558600ecadcbdd964d29d14d302f98ee11b1c2526",
+      "sha256": "79cd8669b706139a5fc9166dc87e324f013de28506f3fe046c6db34456dcd84d",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3282,7 +3295,7 @@
       "functionReferences": []
     },
     "guard_project_draft_encryption()": {
-      "sha256": "d7d56584e24c2973560bbf53ee6e2ea7788ed038e70163933c2c75cbaf42792b",
+      "sha256": "e04aa60b2938e2679b8f9a492b24b6159f51953fff6a3e275d54dec861b5fa5d",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3661,6 +3674,23 @@
       ],
       "functionReferences": []
     },
+    "guard_feedback_session_identity()": {
+      "sha256": "e6300a8f621cad63a7c93b5d17924308e13d7e75b5f8986b7d3e0bc06f77347d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "feedback_users",
+        "feedback_boards"
+      ],
+      "protectedRelations": [
+        "feedback_users",
+        "feedback_boards"
+      ],
+      "functionReferences": []
+    },
     "guard_forge_oauth_token_content()": {
       "sha256": "28acfb124917a387c83c9f82634a4151c2afe09f9b1bbcd2bdd816cbc053f96a",
       "securityDefiner": true,
@@ -3777,6 +3807,17 @@
         "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "reclassify_unverified_row_check()": {
+      "sha256": "0730ac229e1746c42f9338aa3b124cc25df12c23f4f1ab6c6d599f16fc600333",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -4224,6 +4265,17 @@
       "protectedRelations": [
         "pages"
       ],
+      "functionReferences": []
+    },
+    "rotate_encryption_backfill_attempt()": {
+      "sha256": "01fdcf1d63c8a98de8bc5f22eba65166e5cc88206fd37f7263b02581ab357b33",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
       "functionReferences": []
     },
     "upsert_pull_request_monotonic(jsonb)": {
@@ -4693,6 +4745,26 @@
         "guard_project_actor"
       ]
     },
+    "erase_feedback_identity(uuid,uuid,text)": {
+      "sha256": "5b11dc4a65b58af45a4db086f916596b2b6ab5f22c8f8b27837fe6114b233197",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "feedback_users",
+        "feedback_boards",
+        "feedback_sessions",
+        "feedback_otp_codes"
+      ],
+      "protectedRelations": [
+        "feedback_users",
+        "feedback_boards",
+        "feedback_otp_codes"
+      ],
+      "functionReferences": []
+    },
     "get_numo_operation_platform_spend(uuid)": {
       "sha256": "4283bca4554f13dd1604d7d0b4352b0177df5f54a1e5c60952e2ddfcda66e231",
       "securityDefiner": true,
@@ -4836,21 +4908,6 @@
       "protectedRelations": [
         "pull_requests",
         "project_git_links"
-      ],
-      "functionReferences": []
-    },
-    "migrate_pull_request_url(uuid,text,text)": {
-      "sha256": "5b858e06d1341c703a0074b4bbd6b63aea4e6b6e59cfe45e0a0f06883f9be7e3",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
-      "relations": [
-        "pull_requests"
-      ],
-      "protectedRelations": [
-        "pull_requests"
       ],
       "functionReferences": []
     },
@@ -5325,6 +5382,17 @@
         "current_realtime_topic"
       ]
     },
+    "invalidate_pull_request_encryption_checks()": {
+      "sha256": "960e74ef198777b5f13d1fc3b23e53d9406a350cea2a710dc7012eb8a311b366",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "migrate_feedback_sso_secret(uuid,text,text)": {
       "sha256": "6113fb8880f2a3d04b5fc85fba8057c118e595cc4d8605fe383d822ce8351c31",
       "securityDefiner": true,
@@ -5786,7 +5854,7 @@
       "functionReferences": []
     },
     "mark_app_config_attempt(text,text,text,integer)": {
-      "sha256": "9f2cace07cdf12e120153c3f37c8b4c5b4931b4d4c3ac7d307fe6f5e99366b36",
+      "sha256": "6e3428982f62f21456b7ee5d496d4882f037f546943e7ca103e18f2eedbe1425",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -5950,6 +6018,21 @@
       "functionReferences": [
         "numo_worker_payload_verified"
       ]
+    },
+    "migrate_pull_request_url(uuid,text,text,boolean)": {
+      "sha256": "c76487a69530c0f118266604c03954a45c5c900306617b0882fdaaf92c5548dd",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pull_requests"
+      ],
+      "protectedRelations": [
+        "pull_requests"
+      ],
+      "functionReferences": []
     },
     "record_attachment_object_migration_attempt(uuid)": {
       "sha256": "00de4778d06c28c25f515626d31d6fc7cd986bd1b95a88efb91bd0c17303ef7d",
@@ -6466,6 +6549,42 @@
       ],
       "functionReferences": []
     },
+    "mark_agent_backfill_attempt(text,text,uuid,text,jsonb)": {
+      "sha256": "178539689446c678ffacd6a26218463d2d83b82b380b76c81a914a90d767ccf9",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "agent_turns",
+        "agent_chains",
+        "agent_messages",
+        "agent_routines",
+        "agent_artifacts",
+        "agent_run_events",
+        "agent_run_messages",
+        "agent_conversations",
+        "agent_runtime_sessions",
+        "user_agent_preferences",
+        "agent_conversation_contexts"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "agent_turns",
+        "agent_messages",
+        "agent_routines",
+        "agent_artifacts",
+        "agent_run_events",
+        "agent_run_messages",
+        "agent_conversations",
+        "agent_runtime_sessions",
+        "user_agent_preferences",
+        "agent_conversation_contexts"
+      ],
+      "functionReferences": []
+    },
     "migrate_agent_queue_bundle(uuid,uuid,uuid,jsonb,jsonb)": {
       "sha256": "5ac035a58e559a9e63c8d5d75e534cad616126587da21f54252d9d78eb1e8bc9",
       "securityDefiner": true,
@@ -6785,6 +6904,75 @@
       ],
       "functionReferences": []
     },
+    "record_encryption_backfill_progress(text,text,jsonb,boolean)": {
+      "sha256": "d7ee420937e4303f6004dc63214cb332be60919ca983e58a35fa69b238ddb52c",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pages",
+        "views",
+        "issues",
+        "comments",
+        "projects",
+        "app_config",
+        "categories",
+        "objectives",
+        "page_files",
+        "attachments",
+        "saved_views",
+        "stat_events",
+        "view_shares",
+        "issue_events",
+        "page_comments",
+        "page_versions",
+        "pull_requests",
+        "feedback_posts",
+        "project_drafts",
+        "user_scratchpad",
+        "pr_comment_edits",
+        "forge_relay_audit",
+        "project_git_links",
+        "forge_relay_claims",
+        "pull_request_syncs",
+        "forge_relay_deliveries",
+        "forge_repository_names",
+        "forge_relay_link_mirror",
+        "github_issue_comment_syncs",
+        "github_issue_sync_metadata"
+      ],
+      "protectedRelations": [
+        "pages",
+        "views",
+        "issues",
+        "comments",
+        "projects",
+        "app_config",
+        "categories",
+        "objectives",
+        "page_files",
+        "attachments",
+        "saved_views",
+        "stat_events",
+        "view_shares",
+        "issue_events",
+        "page_comments",
+        "page_versions",
+        "pull_requests",
+        "feedback_posts",
+        "project_drafts",
+        "user_scratchpad",
+        "pr_comment_edits",
+        "project_git_links",
+        "forge_relay_deliveries",
+        "forge_repository_names",
+        "github_issue_comment_syncs",
+        "github_issue_sync_metadata"
+      ],
+      "functionReferences": []
+    },
     "complete_forge_relay_claim(uuid,uuid,bigint,text,bigint,text)": {
       "sha256": "b2c36916dec078bf4422e10566da6cb9bb3f3ec9f5f8a33e54288fbe76ee194a",
       "securityDefiner": true,
@@ -7003,21 +7191,6 @@
       ],
       "protectedRelations": [
         "agent_runs"
-      ],
-      "functionReferences": []
-    },
-    "migrate_pull_request_content(uuid,text,text,text,text,text,text)": {
-      "sha256": "f2cb01ac8327026993590a85c95b8ac8b2289fce23c409147525524d8a56880f",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
-      "relations": [
-        "pull_requests"
-      ],
-      "protectedRelations": [
-        "pull_requests"
       ],
       "functionReferences": []
     },
@@ -7448,6 +7621,21 @@
       ],
       "functionReferences": []
     },
+    "migrate_pull_request_content(uuid,text,text,text,text,text,text,boolean)": {
+      "sha256": "bb83ea96f5155060e5dfdea510d22c896b0c19c570a060d3ef33bbb7c3b95af4",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pull_requests"
+      ],
+      "protectedRelations": [
+        "pull_requests"
+      ],
+      "functionReferences": []
+    },
     "sync_agent_run_pr_url(uuid,timestamp with time zone,text,uuid,text,text)": {
       "sha256": "8c3f59126370fa53e354dc0dd72e4298f1c6704466f91086e3af64842061b643",
       "securityDefiner": true,
@@ -7810,23 +7998,6 @@
       ],
       "functionReferences": []
     },
-    "migrate_orphan_agent_runtime_checkpoint(uuid,uuid,jsonb,text,integer,text,integer)": {
-      "sha256": "e37c895076e4af746833cf86ab9b7e8ec140f56acaa07e6e6e43dc79b53015fb",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
-      "relations": [
-        "agent_conversations",
-        "agent_runtime_sessions"
-      ],
-      "protectedRelations": [
-        "agent_conversations",
-        "agent_runtime_sessions"
-      ],
-      "functionReferences": []
-    },
     "register_protected_push(uuid,text,text,text,text,text,text,text,text,text,boolean)": {
       "sha256": "d5e05c15727a47f7bafe5e05dd9817dad38174e7b040e5a56c65a55afe2d707a",
       "securityDefiner": true,
@@ -7843,23 +8014,6 @@
       "functionReferences": [
         "push_content_version"
       ]
-    },
-    "migrate_agent_checkpoint_ciphertext(uuid,uuid,uuid,jsonb,text,integer,text,integer)": {
-      "sha256": "84db235966196d7ce0e69822e866fee1e5cdeb8bc2640af6f09807a5d8fde9c8",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
-      "relations": [
-        "agent_runs",
-        "agent_runtime_sessions"
-      ],
-      "protectedRelations": [
-        "agent_runs",
-        "agent_runtime_sessions"
-      ],
-      "functionReferences": []
     },
     "migrate_agent_delegation_input(uuid,uuid,uuid,jsonb,jsonb,text,integer,text,integer)": {
       "sha256": "89138dad8e0da3e766759e0830e5403eb96825938e751f3dae699f571e335a16",
@@ -8013,6 +8167,40 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "migrate_orphan_agent_runtime_checkpoint(uuid,uuid,jsonb,text,integer,text,integer,boolean)": {
+      "sha256": "4589f6ddd2fa76d2c05da5505d1218dd20843e54ee295c210167464363a23d5c",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_conversations",
+        "agent_runtime_sessions"
+      ],
+      "protectedRelations": [
+        "agent_conversations",
+        "agent_runtime_sessions"
+      ],
+      "functionReferences": []
+    },
+    "migrate_agent_checkpoint_ciphertext(uuid,uuid,uuid,jsonb,text,integer,text,integer,boolean)": {
+      "sha256": "48d60b5299774de27ce8b73d43aee42350ace32482a06a3917887e2cd4ac1659",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_runs",
+        "agent_runtime_sessions"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "agent_runtime_sessions"
+      ],
+      "functionReferences": []
+    },
     "upsert_gitlab_connection_atomic(uuid,text,text,text,text,text,timestamp with time zone,text)": {
       "sha256": "0cb227c3f3e04778c804c302e20b3a82093382695361a4887ef9aeeacb2176fc",
       "securityDefiner": true,
@@ -8058,21 +8246,6 @@
       ],
       "protectedRelations": [
         "user_ai_keys"
-      ],
-      "functionReferences": []
-    },
-    "migrate_agent_journal_ciphertext(bigint,uuid,integer,text,text,integer,integer,integer,integer)": {
-      "sha256": "ad57dd895b83974863476421553fca8db673e86d4926227cf9b30cc727197228",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
-      "relations": [
-        "agent_run_journal"
-      ],
-      "protectedRelations": [
-        "agent_run_journal"
       ],
       "functionReferences": []
     },
@@ -8297,6 +8470,21 @@
       "protectedRelations": [
         "numo_assistant_turns",
         "numo_tool_operations"
+      ],
+      "functionReferences": []
+    },
+    "migrate_agent_journal_ciphertext(bigint,uuid,integer,text,text,integer,integer,integer,integer,boolean,jsonb,text,text,text,integer,integer,integer)": {
+      "sha256": "4269177de16ce4773c7ca456707af45c9240e7993dd502d965cc4e6346aeb7fe",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_run_journal"
+      ],
+      "protectedRelations": [
+        "agent_run_journal"
       ],
       "functionReferences": []
     },
@@ -8563,6 +8751,10 @@
       "function": "register_numo_conversation()",
       "definition": "CREATE TRIGGER register_numo_identity AFTER INSERT ON conversations FOR EACH ROW EXECUTE FUNCTION register_numo_conversation()"
     },
+    "issues.a_reclassify_unverified_check": {
+      "function": "reclassify_unverified_row_check()",
+      "definition": "CREATE TRIGGER a_reclassify_unverified_check BEFORE UPDATE ON issues FOR EACH ROW EXECUTE FUNCTION reclassify_unverified_row_check('encryption_revision')"
+    },
     "objectives.objectives_set_updated_at": {
       "function": "set_objective_updated_at()",
       "definition": "CREATE TRIGGER objectives_set_updated_at BEFORE UPDATE ON objectives FOR EACH ROW EXECUTE FUNCTION set_objective_updated_at()"
@@ -8654,6 +8846,10 @@
     "categories.categories_encryption_guard": {
       "function": "guard_category_encryption()",
       "definition": "CREATE TRIGGER categories_encryption_guard BEFORE INSERT OR UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION guard_category_encryption()"
+    },
+    "comments.a_reclassify_unverified_check": {
+      "function": "reclassify_unverified_row_check()",
+      "definition": "CREATE TRIGGER a_reclassify_unverified_check BEFORE UPDATE ON comments FOR EACH ROW EXECUTE FUNCTION reclassify_unverified_row_check('encryption_revision')"
     },
     "integrations.integration_content_guard": {
       "function": "guard_integration_content()",
@@ -8763,6 +8959,10 @@
       "function": "guard_encryption_snapshot_write()",
       "definition": "CREATE TRIGGER a_min591_fence_8a10021d29884b93 BEFORE INSERT OR UPDATE ON app_tabs FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('app_tab_content_scope', 'global')"
     },
+    "categories.a_reclassify_unverified_check": {
+      "function": "reclassify_unverified_row_check()",
+      "definition": "CREATE TRIGGER a_reclassify_unverified_check BEFORE UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION reclassify_unverified_row_check('encryption_revision')"
+    },
     "comments.a_min591_fence_7f20344b87b75b31": {
       "function": "guard_encryption_snapshot_write()",
       "definition": "CREATE TRIGGER a_min591_fence_7f20344b87b75b31 BEFORE INSERT OR UPDATE ON comments FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('envelope-key', 'project')"
@@ -8774,6 +8974,10 @@
     "oauth_clients.oauth_client_content_guard": {
       "function": "guard_oauth_client_content()",
       "definition": "CREATE TRIGGER oauth_client_content_guard BEFORE INSERT OR UPDATE ON oauth_clients FOR EACH ROW EXECUTE FUNCTION guard_oauth_client_content()"
+    },
+    "objectives.a_reclassify_unverified_check": {
+      "function": "reclassify_unverified_row_check()",
+      "definition": "CREATE TRIGGER a_reclassify_unverified_check BEFORE UPDATE ON objectives FOR EACH ROW EXECUTE FUNCTION reclassify_unverified_row_check('encryption_revision')"
     },
     "projects.a_min591_fence_564c6c8cbaa514ee": {
       "function": "guard_encryption_snapshot_write()",
@@ -8807,13 +9011,25 @@
       "function": "broadcast_project_scoped()",
       "definition": "CREATE TRIGGER issue_relations_broadcast AFTER INSERT OR DELETE OR UPDATE ON issue_relations FOR EACH ROW EXECUTE FUNCTION broadcast_project_scoped()"
     },
+    "pages.pages_encryption_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER pages_encryption_checked_at_attempt BEFORE UPDATE ON pages FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('encryption_checked_at', 'encryption_attempted_at')"
+    },
     "project_members.project_members_broadcast": {
       "function": "broadcast_members_row()",
       "definition": "CREATE TRIGGER project_members_broadcast AFTER INSERT OR DELETE OR UPDATE ON project_members FOR EACH ROW EXECUTE FUNCTION broadcast_members_row()"
     },
+    "projects.projects_icon_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER projects_icon_checked_at_attempt BEFORE UPDATE ON projects FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('icon_checked_at', 'icon_attempted_at')"
+    },
     "push_content_scope.a_min591_marker_change": {
       "function": "guard_encryption_marker_change()",
       "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON push_content_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "stat_events.a_reclassify_unverified_check": {
+      "function": "reclassify_unverified_row_check()",
+      "definition": "CREATE TRIGGER a_reclassify_unverified_check BEFORE UPDATE ON stat_events FOR EACH ROW EXECUTE FUNCTION reclassify_unverified_row_check('encryption_revision')"
     },
     "user_ai_keys.user_ai_keys_a_content_guard": {
       "function": "guard_user_ai_key_content()",
@@ -8822,6 +9038,10 @@
     "user_scratchpad.user_scratchpad_broadcast": {
       "function": "broadcast_scratchpad_row()",
       "definition": "CREATE TRIGGER user_scratchpad_broadcast AFTER INSERT OR DELETE OR UPDATE ON user_scratchpad FOR EACH ROW EXECUTE FUNCTION broadcast_scratchpad_row()"
+    },
+    "views.views_encryption_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER views_encryption_checked_at_attempt BEFORE UPDATE ON views FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('encryption_checked_at', 'encryption_attempted_at')"
     },
     "agent_chains.agent_chains_broadcast_insert": {
       "function": "broadcast_agent_chain_row()",
@@ -8915,6 +9135,14 @@
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER conversations_set_updated_at BEFORE UPDATE ON conversations FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
+    "feedback_users.feedback_users_erased_guard": {
+      "function": "guard_erased_feedback_identity()",
+      "definition": "CREATE TRIGGER feedback_users_erased_guard BEFORE UPDATE ON feedback_users FOR EACH ROW EXECUTE FUNCTION guard_erased_feedback_identity()"
+    },
+    "issue_events.a_reclassify_unverified_check": {
+      "function": "reclassify_unverified_row_check()",
+      "definition": "CREATE TRIGGER a_reclassify_unverified_check BEFORE UPDATE ON issue_events FOR EACH ROW EXECUTE FUNCTION reclassify_unverified_row_check('encryption_revision')"
+    },
     "issue_events.issue_events_encryption_guard": {
       "function": "guard_history_encryption()",
       "definition": "CREATE TRIGGER issue_events_encryption_guard BEFORE INSERT OR UPDATE ON issue_events FOR EACH ROW EXECUTE FUNCTION guard_history_encryption()"
@@ -8991,6 +9219,10 @@
       "function": "guard_numo_turn_intent()",
       "definition": "CREATE TRIGGER numo_turn_intent_guard BEFORE INSERT OR UPDATE ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION guard_numo_turn_intent()"
     },
+    "page_comments.a_reclassify_unverified_check": {
+      "function": "reclassify_unverified_row_check()",
+      "definition": "CREATE TRIGGER a_reclassify_unverified_check BEFORE UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION reclassify_unverified_row_check('encryption_revision')"
+    },
     "page_comments.page_comments_guard_live_page": {
       "function": "guard_live_page_comment_mutation()",
       "definition": "CREATE TRIGGER page_comments_guard_live_page BEFORE INSERT OR DELETE OR UPDATE ON page_comments FOR EACH ROW EXECUTE FUNCTION guard_live_page_comment_mutation()"
@@ -8998,6 +9230,10 @@
     "page_files.page_files_enforce_storage_quota": {
       "function": "enforce_storage_insert_quota()",
       "definition": "CREATE TRIGGER page_files_enforce_storage_quota BEFORE INSERT OR UPDATE OF page_id, project_id, storage_path, size_bytes ON page_files FOR EACH ROW EXECUTE FUNCTION enforce_storage_insert_quota()"
+    },
+    "page_versions.a_reclassify_unverified_check": {
+      "function": "reclassify_unverified_row_check()",
+      "definition": "CREATE TRIGGER a_reclassify_unverified_check BEFORE UPDATE ON page_versions FOR EACH ROW EXECUTE FUNCTION reclassify_unverified_row_check('encryption_revision')"
     },
     "pr_comment_edits.pr_comment_edit_body_guard": {
       "function": "guard_pr_comment_edit_body()",
@@ -9043,6 +9279,10 @@
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER custom_domains_set_updated_at BEFORE UPDATE ON custom_domains FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
+    "feedback_posts.a_reclassify_unverified_check": {
+      "function": "reclassify_unverified_row_check()",
+      "definition": "CREATE TRIGGER a_reclassify_unverified_check BEFORE UPDATE ON feedback_posts FOR EACH ROW EXECUTE FUNCTION reclassify_unverified_row_check('encryption_revision')"
+    },
     "feedback_posts.feedback_posts_set_updated_at": {
       "function": "set_feedback_post_updated_at()",
       "definition": "CREATE TRIGGER feedback_posts_set_updated_at BEFORE UPDATE ON feedback_posts FOR EACH ROW EXECUTE FUNCTION set_feedback_post_updated_at()"
@@ -9086,6 +9326,10 @@
     "page_versions.page_versions_encryption_guard": {
       "function": "guard_history_encryption()",
       "definition": "CREATE TRIGGER page_versions_encryption_guard BEFORE INSERT OR UPDATE ON page_versions FOR EACH ROW EXECUTE FUNCTION guard_history_encryption()"
+    },
+    "project_drafts.a_reclassify_unverified_check": {
+      "function": "reclassify_unverified_row_check()",
+      "definition": "CREATE TRIGGER a_reclassify_unverified_check BEFORE UPDATE ON project_drafts FOR EACH ROW EXECUTE FUNCTION reclassify_unverified_row_check('encryption_revision')"
     },
     "project_drafts.project_drafts_set_updated_at": {
       "function": "set_project_draft_updated_at()",
@@ -9178,6 +9422,10 @@
     "pull_requests.a_min591_fence_ec7ac6e7f9718633": {
       "function": "guard_encryption_snapshot_write()",
       "definition": "CREATE TRIGGER a_min591_fence_ec7ac6e7f9718633 BEFORE INSERT OR UPDATE ON pull_requests FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('pull_request_content_encryption_scope', 'global')"
+    },
+    "user_scratchpad.a_reclassify_unverified_check": {
+      "function": "reclassify_unverified_row_check()",
+      "definition": "CREATE TRIGGER a_reclassify_unverified_check BEFORE UPDATE ON user_scratchpad FOR EACH ROW EXECUTE FUNCTION reclassify_unverified_row_check('rev')"
     },
     "agent_messages.a_min591_fence_38bde2ccb2cb2514": {
       "function": "guard_encryption_snapshot_write()",
@@ -9339,6 +9587,10 @@
       "function": "rekey_project_realtime_membership()",
       "definition": "CREATE TRIGGER project_members_authority_rekey AFTER INSERT OR DELETE OR UPDATE ON project_members FOR EACH ROW EXECUTE FUNCTION rekey_project_realtime_membership()"
     },
+    "projects.projects_encryption_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER projects_encryption_checked_at_attempt BEFORE UPDATE ON projects FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('encryption_checked_at', 'encryption_attempted_at')"
+    },
     "push_content_write_scope.a_min591_marker_change": {
       "function": "guard_encryption_marker_change()",
       "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON push_content_write_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
@@ -9426,6 +9678,10 @@
     "agent_run_journal.a_min591_fence_3d9238e357219ab5": {
       "function": "guard_encryption_snapshot_write()",
       "definition": "CREATE TRIGGER a_min591_fence_3d9238e357219ab5 BEFORE INSERT OR UPDATE ON agent_run_journal FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('agent_journal_encryption_scopes', 'global')"
+    },
+    "feedback_sessions.feedback_session_identity_guard": {
+      "function": "guard_feedback_session_identity()",
+      "definition": "CREATE TRIGGER feedback_session_identity_guard BEFORE INSERT OR UPDATE OF user_id, board_id ON feedback_sessions FOR EACH ROW EXECUTE FUNCTION guard_feedback_session_identity()"
     },
     "forge_default_branch_scope.a_min591_marker_change": {
       "function": "guard_encryption_marker_change()",
@@ -9570,6 +9826,10 @@
     "ai_decision_evaluation_scope.a_min591_marker_change": {
       "function": "guard_encryption_marker_change()",
       "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON ai_decision_evaluation_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "app_config.app_config_encryption_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER app_config_encryption_checked_at_attempt BEFORE UPDATE ON app_config FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('encryption_checked_at', 'encryption_attempted_at')"
     },
     "envelope_data_keys.a_min591_envelope_key_activation": {
       "function": "guard_envelope_key_activation()",
@@ -9722,6 +9982,10 @@
     "pull_requests.pull_requests_repository_identity_guard": {
       "function": "guard_forge_repository_identity()",
       "definition": "CREATE TRIGGER pull_requests_repository_identity_guard BEFORE INSERT OR UPDATE ON pull_requests FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_identity()"
+    },
+    "saved_views.saved_views_encryption_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER saved_views_encryption_checked_at_attempt BEFORE UPDATE ON saved_views FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('encryption_checked_at', 'encryption_attempted_at')"
     },
     "agent_context_encryption_scopes.a_min591_marker_change": {
       "function": "guard_encryption_marker_change()",
@@ -9887,6 +10151,10 @@
       "function": "guard_encryption_marker_change()",
       "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON pull_request_url_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
     },
+    "pull_requests.pull_requests_repo_name_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER pull_requests_repo_name_checked_at_attempt BEFORE UPDATE ON pull_requests FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('repo_name_checked_at', 'repo_name_attempted_at')"
+    },
     "view_share_token_encryption_scope.a_min591_marker_change": {
       "function": "guard_encryption_marker_change()",
       "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON view_share_token_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
@@ -9938,6 +10206,10 @@
     "project_invitations.project_invitations_freeze_project_id": {
       "function": "freeze_project_id()",
       "definition": "CREATE TRIGGER project_invitations_freeze_project_id BEFORE UPDATE OF project_id ON project_invitations FOR EACH ROW EXECUTE FUNCTION freeze_project_id()"
+    },
+    "pull_requests.a_invalidate_pull_request_encryption_checks": {
+      "function": "invalidate_pull_request_encryption_checks()",
+      "definition": "CREATE TRIGGER a_invalidate_pull_request_encryption_checks BEFORE UPDATE ON pull_requests FOR EACH ROW EXECUTE FUNCTION invalidate_pull_request_encryption_checks()"
     },
     "agent_base_branch_encryption_scopes.a_min591_marker_change": {
       "function": "guard_encryption_marker_change()",
@@ -9999,6 +10271,10 @@
       "function": "stamp_numo_success_attempt()",
       "definition": "CREATE TRIGGER numo_tool_operation_attempt_on_success BEFORE UPDATE OF encryption_checked_at ON numo_tool_operations FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('encryption_checked_at', 'encryption_attempted_at')"
     },
+    "page_files.page_files_content_encryption_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER page_files_content_encryption_checked_at_attempt BEFORE UPDATE ON page_files FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('content_encryption_checked_at', 'content_encryption_attempted_at')"
+    },
     "pr_comment_edits.pr_comment_edits_repository_identity_guard": {
       "function": "guard_forge_repository_identity()",
       "definition": "CREATE TRIGGER pr_comment_edits_repository_identity_guard BEFORE INSERT OR UPDATE ON pr_comment_edits FOR EACH ROW EXECUTE FUNCTION guard_forge_repository_identity()"
@@ -10039,6 +10315,14 @@
       "function": "guard_encryption_marker_change()",
       "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON agent_routine_content_encryption_scope FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
     },
+    "attachments.attachments_content_encryption_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER attachments_content_encryption_checked_at_attempt BEFORE UPDATE ON attachments FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('content_encryption_checked_at', 'content_encryption_attempted_at')"
+    },
+    "forge_relay_audit.forge_relay_audit_detail_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER forge_relay_audit_detail_checked_at_attempt BEFORE UPDATE ON forge_relay_audit FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('detail_checked_at', 'detail_attempted_at')"
+    },
     "numo_automation_operations.numo_automation_attempt_on_success": {
       "function": "stamp_numo_success_attempt()",
       "definition": "CREATE TRIGGER numo_automation_attempt_on_success BEFORE UPDATE OF content_encryption_checked_at ON numo_automation_operations FOR EACH ROW EXECUTE FUNCTION stamp_numo_success_attempt('content_encryption_checked_at', 'content_encryption_attempted_at')"
@@ -10051,9 +10335,17 @@
       "function": "guard_mcp_content()",
       "definition": "CREATE TRIGGER user_mcp_oauth_attempts_content_guard BEFORE INSERT OR UPDATE ON user_mcp_oauth_attempts FOR EACH ROW EXECUTE FUNCTION guard_mcp_content()"
     },
+    "view_shares.view_shares_content_encryption_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER view_shares_content_encryption_checked_at_attempt BEFORE UPDATE ON view_shares FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('content_encryption_checked_at', 'content_encryption_attempted_at')"
+    },
     "github_issue_metadata_encryption_scopes.a_min591_marker_change": {
       "function": "guard_encryption_marker_change()",
       "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON github_issue_metadata_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "pr_comment_edits.pr_comment_edits_repo_name_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER pr_comment_edits_repo_name_checked_at_attempt BEFORE UPDATE ON pr_comment_edits FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('repo_name_checked_at', 'repo_name_attempted_at')"
     },
     "forge_relay_claims.forge_relay_claims_repository_identity_guard": {
       "function": "guard_forge_repository_identity()",
@@ -10087,6 +10379,10 @@
       "function": "guard_numo_worker_legacy_binding()",
       "definition": "CREATE TRIGGER numo_worker_legacy_binding_immutable BEFORE UPDATE ON numo_worker_legacy_bindings FOR EACH ROW EXECUTE FUNCTION guard_numo_worker_legacy_binding()"
     },
+    "project_git_links.project_git_links_repo_name_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER project_git_links_repo_name_checked_at_attempt BEFORE UPDATE ON project_git_links FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('repo_name_checked_at', 'repo_name_attempted_at')"
+    },
     "github_issue_comment_url_encryption_scopes.a_min591_marker_change": {
       "function": "guard_encryption_marker_change()",
       "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON github_issue_comment_url_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
@@ -10111,6 +10407,14 @@
       "function": "guard_forge_attachment_legacy_owner()",
       "definition": "CREATE TRIGGER forge_attachment_legacy_owner_guard BEFORE INSERT ON forge_attachment_legacy_owners FOR EACH ROW EXECUTE FUNCTION guard_forge_attachment_legacy_owner()"
     },
+    "forge_relay_claims.forge_relay_claims_repo_name_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER forge_relay_claims_repo_name_checked_at_attempt BEFORE UPDATE ON forge_relay_claims FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('repo_name_checked_at', 'repo_name_attempted_at')"
+    },
+    "pull_request_syncs.pull_request_syncs_repo_name_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER pull_request_syncs_repo_name_checked_at_attempt BEFORE UPDATE ON pull_request_syncs FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('repo_name_checked_at', 'repo_name_attempted_at')"
+    },
     "forge_relay_user_deliveries.forge_relay_user_delivery_content_guard": {
       "function": "guard_forge_relay_user_delivery_content()",
       "definition": "CREATE TRIGGER forge_relay_user_delivery_content_guard BEFORE INSERT OR UPDATE ON forge_relay_user_deliveries FOR EACH ROW EXECUTE FUNCTION guard_forge_relay_user_delivery_content()"
@@ -10122,6 +10426,14 @@
     "numo_automation_operations.numo_automation_operations_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER numo_automation_operations_set_updated_at BEFORE UPDATE ON numo_automation_operations FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    "pr_comment_edits.pr_comment_edits_body_encryption_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER pr_comment_edits_body_encryption_checked_at_attempt BEFORE UPDATE ON pr_comment_edits FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('body_encryption_checked_at', 'body_encryption_attempted_at')"
+    },
+    "project_git_links.project_git_links_default_branch_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER project_git_links_default_branch_checked_at_attempt BEFORE UPDATE ON project_git_links FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('default_branch_checked_at', 'default_branch_attempted_at')"
     },
     "attachment_object_encryption_scope.a_min591_attachment_scope_activation": {
       "function": "guard_attachment_object_snapshot_write()",
@@ -10135,9 +10447,29 @@
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER assistant_active_conversation_set_updated_at BEFORE UPDATE ON assistant_active_conversation FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     },
+    "forge_repository_names.forge_repository_names_encryption_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER forge_repository_names_encryption_checked_at_attempt BEFORE UPDATE ON forge_repository_names FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('encryption_checked_at', 'encryption_attempted_at')"
+    },
+    "forge_relay_link_mirror.forge_relay_link_mirror_repo_name_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER forge_relay_link_mirror_repo_name_checked_at_attempt BEFORE UPDATE ON forge_relay_link_mirror FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('repo_name_checked_at', 'repo_name_attempted_at')"
+    },
     "user_ai_capability_assignments.user_ai_capability_assignments_set_updated_at": {
       "function": "set_updated_at()",
       "definition": "CREATE TRIGGER user_ai_capability_assignments_set_updated_at BEFORE UPDATE ON user_ai_capability_assignments FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    },
+    "forge_relay_deliveries.forge_relay_deliveries_content_encryption_checked_at_attempt": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER forge_relay_deliveries_content_encryption_checked_at_attempt BEFORE UPDATE ON forge_relay_deliveries FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('content_encryption_checked_at', 'content_encryption_attempted_at')"
+    },
+    "github_issue_comment_syncs.github_issue_comment_syncs_html_url_encryption_checked_at_attem": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER github_issue_comment_syncs_html_url_encryption_checked_at_attem BEFORE UPDATE ON github_issue_comment_syncs FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('html_url_encryption_checked_at', 'html_url_encryption_attempted_at')"
+    },
+    "github_issue_sync_metadata.github_issue_sync_metadata_content_encryption_checked_at_attemp": {
+      "function": "rotate_encryption_backfill_attempt()",
+      "definition": "CREATE TRIGGER github_issue_sync_metadata_content_encryption_checked_at_attemp BEFORE UPDATE ON github_issue_sync_metadata FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('content_encryption_checked_at', 'content_encryption_attempted_at')"
     }
   }
 }

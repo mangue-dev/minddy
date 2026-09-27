@@ -18,6 +18,11 @@ export interface RowMigrationRepository {
    * Failed rows must remain eligible; a persisted cursor must eventually revisit them.
    */
   scan(limit: number): Promise<MigrationCandidate[]>;
+  /** Persist an attempt under the original row identity and revision. */
+  recordAttempt?(candidate: MigrationCandidate): Promise<boolean>;
+  /** Record verification only while the exact authenticated row is still present. */
+  recordVerified?(candidate: MigrationCandidate, persisted: StoredRow,
+    revision: string): Promise<boolean>;
   /**
    * Atomically compare the revision AND ownership, then persist the complete encoded
    * row. Return false for deleted/edited/moved rows. Never retry with an unguarded write.
@@ -64,6 +69,10 @@ export async function migrateProtectedRows(
     result.scanned += 1;
     try {
       if (!candidate.revision) throw new Error("Migration requires a revision");
+      if (repository.recordAttempt && !await repository.recordAttempt(candidate)) {
+        result.conflicted += 1;
+        continue;
+      }
       const plain = await codec.decode(candidate.row, candidate.context, audit);
       const replacement = await codec.encode({
         ...plain, encryption_version: 0, encrypted_content: null,
@@ -87,15 +96,20 @@ export async function migrateProtectedRows(
       if (candidate.row.encryption_version === replacement.encryption_version &&
           candidate.row.encrypted_content !== null && replacement.encrypted_content !== null &&
           store.formatOf(candidate.row.encrypted_content) === store.formatOf(replacement.encrypted_content)) {
-        result.unchanged += 1;
+        if (repository.recordVerified && !await repository.recordVerified(candidate,
+          candidate.row, candidate.revision)) result.conflicted += 1;
+        else result.unchanged += 1;
         continue;
       }
       if (signal?.aborted) {
         result.interrupted = true;
         break;
       }
-      if (await repository.compareAndSwap(candidate, replacement)) result.migrated += 1;
-      else result.conflicted += 1;
+      if (await repository.compareAndSwap(candidate, replacement)) {
+        if (repository.recordVerified && !await repository.recordVerified(candidate,
+          replacement, String(Number(candidate.revision) + 1))) result.conflicted += 1;
+        else result.migrated += 1;
+      } else result.conflicted += 1;
     } catch {
       // Corrupt ciphertext, unavailable historical keys or provider outages must not
       // become destructive writes. Report counts only; DB errors can contain content.

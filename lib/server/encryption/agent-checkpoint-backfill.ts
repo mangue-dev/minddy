@@ -24,7 +24,7 @@ export async function backfillAgentCheckpointBatch(limit = 5, signal?: AbortSign
   const service = getServiceClient();
   const { data, error } = await service.from("agent_runs")
     .select("id,project_id,conversation_id,checkpoint,checkpoint_ciphertext,checkpoint_encryption_version")
-    .order("checkpoint_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("checkpoint_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent checkpoints");
   for (const row of (data ?? []) as StoredCheckpoint[]) {
@@ -44,13 +44,24 @@ export async function backfillAgentCheckpointBatch(limit = 5, signal?: AbortSign
       if (attempt.error) throw new Error("Unable to mark agent checkpoint attempt");
       if (!attempt.data) { result.conflicted++; continue; }
       const decoded = await decodeAgentCheckpoint(row);
-      if (!decoded.checkpoint) { result.unchanged++; continue; }
+      if (!decoded.checkpoint) {
+        const checked = await service.rpc("migrate_agent_checkpoint_ciphertext", {
+          ...identity, p_verified: true,
+        });
+        if (checked.error) throw new Error("Unable to verify empty agent checkpoint");
+        if (checked.data) result.unchanged++; else result.conflicted++;
+        continue;
+      }
       const key = await getContentKeys().current({ kind: "project", id: row.project_id });
       const version = key.version;
       key.bytes.fill(0);
       if (row.checkpoint_encryption_version === version && row.checkpoint_ciphertext &&
           getEncryptedStore().formatOf(getEncryptedStore().fromDatabase(row.checkpoint_ciphertext)) === 3) {
-        result.unchanged++;
+        const checked = await service.rpc("migrate_agent_checkpoint_ciphertext", {
+          ...identity, p_verified: true,
+        });
+        if (checked.error) throw new Error("Unable to verify agent checkpoint");
+        if (checked.data) result.unchanged++; else result.conflicted++;
         continue;
       }
       const replacement = await encodeAgentCheckpoint(row.project_id, row.id, decoded.checkpoint);
@@ -74,7 +85,7 @@ export async function backfillAgentCheckpointBatch(limit = 5, signal?: AbortSign
   const orphans = await service.from("agent_runtime_sessions")
     .select("conversation_id,checkpoint,checkpoint_ciphertext,checkpoint_encryption_version,conversation:agent_conversations!inner(project_id)")
     .is("current_run_id", null)
-    .order("checkpoint_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("checkpoint_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("conversation_id", { ascending: true }).limit(limit);
   if (orphans.error) throw new Error("Unable to scan orphan agent runtime checkpoints");
   for (const raw of orphans.data ?? []) {
@@ -84,8 +95,10 @@ export async function backfillAgentCheckpointBatch(limit = 5, signal?: AbortSign
       const row = raw as unknown as { conversation_id: string;
         checkpoint: AgentCheckpoint | null; checkpoint_ciphertext: string | null;
         checkpoint_encryption_version: number;
-        conversation: { project_id: string } | null };
-      const projectId = row.conversation?.project_id;
+        conversation: { project_id: string } | Array<{ project_id: string }> | null };
+      const conversation = Array.isArray(row.conversation)
+        ? row.conversation[0] : row.conversation;
+      const projectId = conversation?.project_id;
       if (!projectId || !row.conversation_id) throw new Error("Invalid runtime checkpoint scope");
       const context = { scope: { kind: "project" as const, id: projectId },
         table: "agent_runtime_sessions", column: "checkpoint", rowId: row.conversation_id };
@@ -98,7 +111,7 @@ export async function backfillAgentCheckpointBatch(limit = 5, signal?: AbortSign
           p_conversation_id: row.conversation_id, p_project_id: projectId,
           p_old_checkpoint: row.checkpoint, p_old_cipher: row.checkpoint_ciphertext,
           p_old_version: row.checkpoint_encryption_version,
-          p_cipher: null, p_version: null,
+          p_cipher: null, p_version: null, p_verified: true,
         });
         if (marked.error) throw new Error("Unable to mark orphan runtime checkpoint");
         if (marked.data) result.unchanged++; else result.conflicted++;
@@ -132,6 +145,22 @@ export async function backfillAgentCheckpointBatch(limit = 5, signal?: AbortSign
       else result.migrated++;
     } catch {
       result.failed++;
+      const row = raw as unknown as { conversation_id: string; checkpoint: AgentCheckpoint | null;
+        checkpoint_ciphertext: string | null; checkpoint_encryption_version: number;
+        conversation: { project_id: string } | Array<{ project_id: string }> | null };
+      const conversation = Array.isArray(row.conversation)
+        ? row.conversation[0] : row.conversation;
+      if (conversation?.project_id && row.conversation_id) {
+        const attempt = await service.rpc("migrate_orphan_agent_runtime_checkpoint", {
+          p_conversation_id: row.conversation_id,
+          p_project_id: conversation.project_id,
+          p_old_checkpoint: row.checkpoint,
+          p_old_cipher: row.checkpoint_ciphertext,
+          p_old_version: row.checkpoint_encryption_version,
+          p_cipher: null, p_version: null,
+        });
+        if (attempt.error) throw new Error("Unable to mark orphan checkpoint attempt");
+      }
     }
   }
   return result;

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { agentPrUrlState, decodeAgentPrUrl, decodeAgentPrUrlValue,
   encodeAgentPrUrl, encodeOrphanArtifactUrl, isEncryptedAgentPrUrl } from
@@ -41,13 +43,18 @@ export async function backfillAgentArtifactUrlsBatch(limit = 20,
   const { data, error } = await service.from("agent_artifacts")
     .select("id,run_id,url,url_bound_run_id,conversation:agent_conversations!inner(project_id)")
     .not("url", "is", null)
-    .order("url_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("url_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent artifact URLs");
   for (const artifact of (data ?? []) as unknown as Artifact[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_artifacts", "url_encryption_checked_at",
+        artifact as Record<string, unknown>)) {
+        result.conflicted++;
+        continue;
+      }
       const conversation = Array.isArray(artifact.conversation)
         ? artifact.conversation[0] : artifact.conversation;
       const projectId = conversation?.project_id;
@@ -58,6 +65,8 @@ export async function backfillAgentArtifactUrlsBatch(limit = 20,
       if (isEncryptedAgentPrUrl(artifact.url)) {
         const state = agentPrUrlState(artifact.url);
         if (state.version === keyVersion && state.format === 3) {
+          await decodeAgentPrUrlValue(projectId,
+            artifact.url_bound_run_id, artifact.id, artifact.url);
           const checked = await service.rpc("migrate_agent_artifact_url", identity);
           if (checked.error) throw new Error("Unable to mark artifact URL attempt");
           if (checked.data) result.unchanged++; else result.conflicted++;
@@ -91,19 +100,25 @@ export async function backfillAgentRunPrUrlsBatch(limit = 20,
   const service = getServiceClient();
   const { data, error } = await service.from("agent_runs")
     .select("id,project_id,pr_url").not("pr_url", "is", null)
-    .order("pr_url_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("pr_url_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent run PR URLs");
   for (const row of data ?? []) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_runs", "pr_url_encryption_checked_at",
+        row as Record<string, unknown>)) {
+        result.conflicted++;
+        continue;
+      }
       const identity = { p_id: row.id, p_project_id: row.project_id,
         p_old_url: row.pr_url };
       const keyVersion = await version(row.project_id);
       if (isEncryptedAgentPrUrl(row.pr_url)) {
         const state = agentPrUrlState(row.pr_url);
         if (state.version === keyVersion && state.format === 3) {
+          await decodeAgentPrUrl(row);
           const checked = await service.rpc("migrate_agent_run_pr_url", identity);
           if (checked.error) throw new Error("Unable to mark run PR URL attempt");
           if (checked.data) result.unchanged++; else result.conflicted++;

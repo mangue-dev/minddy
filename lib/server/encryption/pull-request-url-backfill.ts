@@ -25,7 +25,7 @@ export async function backfillPullRequestUrlsBatch(limit = 20,
   const service = getServiceClient();
   const { data, error } = await service.from("pull_requests")
     .select("id,url").not("url", "is", null)
-    .order("url_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("url_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan pull request URLs");
   for (const row of data ?? []) {
@@ -39,7 +39,10 @@ export async function backfillPullRequestUrlsBatch(limit = 20,
       if (isEncryptedPullRequestUrl(row.url)) {
         const state = pullRequestUrlState(row.url);
         if (state.version === version && state.format === 3) {
-          const checked = await service.rpc("migrate_pull_request_url", identity);
+          await decodePullRequestUrl(row.id, row.url);
+          const checked = await service.rpc("migrate_pull_request_url", {
+            ...identity, p_verified: true,
+          });
           if (checked.error) throw new Error("Unable to mark pull request URL attempt");
           if (checked.data) result.unchanged++; else result.conflicted++;
           continue;
@@ -57,7 +60,13 @@ export async function backfillPullRequestUrlsBatch(limit = 20,
       });
       if (committed.error) throw new Error("Unable to convert pull request URL");
       if (committed.data) result.migrated++; else result.conflicted++;
-    } catch { result.failed++; }
+    } catch {
+      result.failed++;
+      const attempt = await service.rpc("migrate_pull_request_url", {
+        p_id: row.id, p_old_url: row.url,
+      });
+      if (attempt.error) throw new Error("Unable to mark pull request URL attempt");
+    }
   }
   return result;
 }

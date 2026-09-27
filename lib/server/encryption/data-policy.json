@@ -24,8 +24,10 @@
       ],
       "timestamp": [
         "created_at",
+        "ref_encryption_attempted_at",
         "ref_encryption_checked_at",
         "updated_at",
+        "url_encryption_attempted_at",
         "url_encryption_checked_at"
       ]
     }
@@ -72,6 +74,7 @@
         "project_id"
       ],
       "timestamp": [
+        "codes_attempted_at",
         "codes_checked_at",
         "created_at",
         "not_before",
@@ -128,6 +131,7 @@
       ],
       "timestamp": [
         "created_at",
+        "snapshot_encryption_attempted_at",
         "snapshot_encryption_checked_at"
       ],
       "encryption_metadata": [
@@ -188,6 +192,7 @@
       "timestamp": [
         "archived_at",
         "created_at",
+        "title_encryption_attempted_at",
         "title_encryption_checked_at",
         "updated_at"
       ],
@@ -298,6 +303,7 @@
       ],
       "timestamp": [
         "created_at",
+        "standalone_encryption_attempted_at",
         "standalone_encryption_checked_at"
       ]
     }
@@ -400,6 +406,7 @@
       "timestamp": [
         "created_at",
         "deleted_at",
+        "encryption_attempted_at",
         "encryption_checked_at",
         "last_run_at",
         "next_run_at",
@@ -439,6 +446,7 @@
       ],
       "timestamp": [
         "created_at",
+        "encryption_attempted_at",
         "encryption_checked_at"
       ]
     }
@@ -502,7 +510,8 @@
         "session_id"
       ],
       "timestamp": [
-        "created_at"
+        "created_at",
+        "encryption_attempted_at"
       ],
       "encryption_metadata": [
         "encryption_checked_at",
@@ -526,7 +535,8 @@
       ],
       "timestamp": [
         "consumed_at",
-        "created_at"
+        "created_at",
+        "encryption_attempted_at"
       ],
       "encryption_metadata": [
         "content_encryption_version",
@@ -627,26 +637,37 @@
         "sandbox_reap_claim"
       ],
       "timestamp": [
+        "base_branch_encryption_attempted_at",
         "base_branch_encryption_checked_at",
+        "checkpoint_encryption_attempted_at",
         "checkpoint_encryption_checked_at",
         "completed_at",
         "created_at",
+        "delegation_encryption_attempted_at",
         "delegation_encryption_checked_at",
+        "delegation_result_encryption_attempted_at",
         "delegation_result_encryption_checked_at",
+        "deployment_encryption_attempted_at",
         "deployment_encryption_checked_at",
         "last_activity_at",
+        "launch_encryption_attempted_at",
         "launch_encryption_checked_at",
         "not_before",
+        "pr_url_encryption_attempted_at",
         "pr_url_encryption_checked_at",
         "rest_claimed_at",
         "sandbox_reap_claimed_at",
         "sandbox_stopped_at",
         "started_at",
+        "summary_encryption_attempted_at",
         "summary_encryption_checked_at",
+        "title_encryption_attempted_at",
         "title_encryption_checked_at",
         "updated_at",
+        "verdict_encryption_attempted_at",
         "verdict_encryption_checked_at",
         "window_started_at",
+        "work_branch_encryption_attempted_at",
         "work_branch_encryption_checked_at"
       ]
     }
@@ -679,13 +700,16 @@
         "work_branch_bound_run_id"
       ],
       "timestamp": [
+        "base_branch_encryption_attempted_at",
         "base_branch_encryption_checked_at",
+        "checkpoint_encryption_attempted_at",
         "checkpoint_encryption_checked_at",
         "created_at",
         "last_activity_at",
         "sandbox_stopped_at",
-        "work_branch_encryption_checked_at",
-        "updated_at"
+        "updated_at",
+        "work_branch_encryption_attempted_at",
+        "work_branch_encryption_checked_at"
       ],
       "encryption_metadata": [
         "checkpoint_ciphertext",
@@ -766,6 +790,7 @@
         "completed_at",
         "created_at",
         "started_at",
+        "summary_encryption_attempted_at",
         "summary_encryption_checked_at",
         "updated_at"
       ]
@@ -846,8 +871,12 @@
     },
     "encrypted": [],
     "clear": {
-      "routing_identity": ["id"],
-      "timestamp": ["activated_at"]
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
     }
   },
   "ai_usage": {
@@ -957,6 +986,7 @@
         "key"
       ],
       "timestamp": [
+        "encryption_attempted_at",
         "encryption_checked_at",
         "updated_at"
       ]
@@ -1012,8 +1042,12 @@
     },
     "encrypted": [],
     "clear": {
-      "routing_identity": ["id"],
-      "timestamp": ["activated_at"]
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
     }
   },
   "assistant_active_conversation": {
@@ -1184,6 +1218,7 @@
         "storage_path"
       ],
       "timestamp": [
+        "content_encryption_attempted_at",
         "content_encryption_checked_at",
         "created_at"
       ]
@@ -1256,8 +1291,12 @@
     },
     "encrypted": [],
     "clear": {
-      "routing_identity": ["id"],
-      "timestamp": ["activated_at"]
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
     }
   },
   "categories": {
@@ -1277,7 +1316,8 @@
         "project_id"
       ],
       "timestamp": [
-        "created_at"
+        "created_at",
+        "encryption_attempted_at"
       ],
       "encryption_metadata": [
         "encrypted_content",
@@ -1318,6 +1358,7 @@
       ],
       "timestamp": [
         "created_at",
+        "encryption_attempted_at",
         "updated_at"
       ],
       "encryption_metadata": [
@@ -1399,8 +1440,12 @@
     },
     "encrypted": [],
     "clear": {
-      "routing_identity": ["id"],
-      "timestamp": ["activated_at"]
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
     }
   },
   "cycles": {
@@ -1664,6 +1709,7 @@
         "classified_at",
         "created_at",
         "deleted_at",
+        "encryption_attempted_at",
         "updated_at"
       ]
     }
@@ -1862,6 +1908,7 @@
       ],
       "timestamp": [
         "created_at",
+        "detail_attempted_at",
         "detail_checked_at"
       ]
     }
@@ -1892,6 +1939,7 @@
         "claimed_at",
         "consumed_at",
         "created_at",
+        "repo_name_attempted_at",
         "repo_name_checked_at"
       ],
       "encryption_metadata": [
@@ -1923,10 +1971,11 @@
         "instance_id"
       ],
       "timestamp": [
+        "content_encryption_attempted_at",
+        "content_encryption_checked_at",
         "created_at",
         "delivered_at",
-        "next_attempt_at",
-        "content_encryption_checked_at"
+        "next_attempt_at"
       ]
     }
   },
@@ -2031,8 +2080,9 @@
         "provider"
       ],
       "timestamp": [
-        "updated_at",
-        "repo_name_checked_at"
+        "repo_name_attempted_at",
+        "repo_name_checked_at",
+        "updated_at"
       ],
       "encryption_metadata": [
         "repo_full_name"
@@ -2182,6 +2232,7 @@
       ],
       "timestamp": [
         "created_at",
+        "encryption_attempted_at",
         "encryption_checked_at"
       ]
     }
@@ -2326,9 +2377,10 @@
       "timestamp": [
         "created_at_remote",
         "deleted_at_remote",
+        "html_url_encryption_attempted_at",
+        "html_url_encryption_checked_at",
         "synced_at",
-        "updated_at_remote",
-        "html_url_encryption_checked_at"
+        "updated_at_remote"
       ],
       "encryption_metadata": [
         "html_url_encryption_version"
@@ -2392,10 +2444,11 @@
       ],
       "timestamp": [
         "closed_at_remote",
+        "content_encryption_attempted_at",
+        "content_encryption_checked_at",
         "created_at_remote",
         "synced_at",
-        "updated_at_remote",
-        "content_encryption_checked_at"
+        "updated_at_remote"
       ],
       "encryption_metadata": [
         "content_ciphertext",
@@ -2524,7 +2577,8 @@
         "project_id"
       ],
       "timestamp": [
-        "created_at"
+        "created_at",
+        "encryption_attempted_at"
       ],
       "encryption_metadata": [
         "encrypted_content",
@@ -2618,6 +2672,7 @@
         "created_at",
         "deleted_at",
         "due_date",
+        "encryption_attempted_at",
         "updated_at"
       ],
       "encryption_metadata": [
@@ -3275,6 +3330,7 @@
       "timestamp": [
         "created_at",
         "deleted_at",
+        "encryption_attempted_at",
         "target_date",
         "updated_at"
       ],
@@ -3315,6 +3371,7 @@
       ],
       "timestamp": [
         "created_at",
+        "encryption_attempted_at",
         "updated_at"
       ],
       "encryption_metadata": [
@@ -3369,6 +3426,7 @@
         "storage_path"
       ],
       "timestamp": [
+        "content_encryption_attempted_at",
         "content_encryption_checked_at",
         "created_at"
       ]
@@ -3417,7 +3475,8 @@
         "project_id"
       ],
       "timestamp": [
-        "created_at"
+        "created_at",
+        "encryption_attempted_at"
       ],
       "encryption_metadata": [
         "encrypted_content",
@@ -3488,6 +3547,7 @@
       "timestamp": [
         "created_at",
         "deleted_at",
+        "encryption_attempted_at",
         "encryption_checked_at",
         "updated_at"
       ],
@@ -3566,8 +3626,10 @@
         "id"
       ],
       "timestamp": [
+        "body_encryption_attempted_at",
         "body_encryption_checked_at",
         "created_at",
+        "repo_name_attempted_at",
         "repo_name_checked_at"
       ],
       "encryption_metadata": [
@@ -3615,6 +3677,7 @@
       ],
       "timestamp": [
         "created_at",
+        "encryption_attempted_at",
         "updated_at"
       ]
     }
@@ -3663,13 +3726,15 @@
       ],
       "timestamp": [
         "created_at",
+        "default_branch_attempted_at",
+        "default_branch_checked_at",
         "issue_sync_backfilled_at",
         "issue_sync_enabled_at",
-        "updated_at",
+        "repo_name_attempted_at",
         "repo_name_checked_at",
-        "default_branch_checked_at",
-        "webhook_secret_checked_at",
-        "webhook_secret_attempted_at"
+        "updated_at",
+        "webhook_secret_attempted_at",
+        "webhook_secret_checked_at"
       ],
       "encryption_metadata": [
         "repo_full_name",
@@ -3833,7 +3898,9 @@
       "timestamp": [
         "created_at",
         "deleted_at",
+        "encryption_attempted_at",
         "encryption_checked_at",
+        "icon_attempted_at",
         "icon_checked_at",
         "updated_at"
       ],
@@ -3914,8 +3981,9 @@
         "provider"
       ],
       "timestamp": [
-        "synced_at",
-        "repo_name_checked_at"
+        "repo_name_attempted_at",
+        "repo_name_checked_at",
+        "synced_at"
       ],
       "encryption_metadata": [
         "repo_full_name"
@@ -3969,14 +4037,17 @@
         "state"
       ],
       "timestamp": [
+        "content_encryption_attempted_at",
         "content_encryption_checked_at",
         "created_at",
         "merged_at",
         "opened_at",
+        "repo_name_attempted_at",
+        "repo_name_checked_at",
         "synced_at",
         "updated_at",
-        "url_encryption_checked_at",
-        "repo_name_checked_at"
+        "url_encryption_attempted_at",
+        "url_encryption_checked_at"
       ],
       "encryption_metadata": [
         "repo_full_name"
@@ -4031,8 +4102,12 @@
     },
     "encrypted": [],
     "clear": {
-      "routing_identity": ["id"],
-      "timestamp": ["activated_at"]
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
     }
   },
   "saved_view_bookmark_encryption_scope": {
@@ -4066,6 +4141,7 @@
       ],
       "timestamp": [
         "created_at",
+        "encryption_attempted_at",
         "encryption_checked_at",
         "updated_at"
       ],
@@ -4123,6 +4199,7 @@
       ],
       "timestamp": [
         "created_at",
+        "encryption_attempted_at",
         "encryption_checked_at",
         "occurred_at"
       ],
@@ -4166,8 +4243,12 @@
     },
     "encrypted": [],
     "clear": {
-      "routing_identity": ["id"],
-      "timestamp": ["activated_at"]
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
     }
   },
   "user_agent_preferences": {
@@ -4382,6 +4463,7 @@
         "user_id"
       ],
       "timestamp": [
+        "encryption_attempted_at",
         "encryption_checked_at",
         "updated_at"
       ],
@@ -4445,9 +4527,10 @@
         "view_id"
       ],
       "timestamp": [
+        "content_encryption_attempted_at",
+        "content_encryption_checked_at",
         "created_at",
-        "updated_at",
-        "content_encryption_checked_at"
+        "updated_at"
       ],
       "token_digest": [
         "token_lookup"
@@ -4488,6 +4571,7 @@
       ],
       "timestamp": [
         "created_at",
+        "encryption_attempted_at",
         "encryption_checked_at",
         "updated_at"
       ],
@@ -4573,18 +4657,40 @@
     }
   },
   "agent_run_live_snapshots": {
-    "scope": { "ancestor": "agent_runs:run_id" },
+    "scope": {
+      "ancestor": "agent_runs:run_id"
+    },
     "encrypted": [],
     "clear": {
-      "encryption_metadata": ["diff_content", "diff_version", "stream_content", "stream_version"],
-      "routing_identity": ["run_id"],
-      "timestamp": ["diff_at", "stream_at"]
+      "encryption_metadata": [
+        "diff_content",
+        "diff_version",
+        "stream_content",
+        "stream_version"
+      ],
+      "routing_identity": [
+        "run_id"
+      ],
+      "timestamp": [
+        "diff_at",
+        "stream_at"
+      ]
     }
   },
   "forge_attachment_encryption_scope": {
-    "scope": { "kind": "system", "id": "forge-attachments" },
+    "scope": {
+      "kind": "system",
+      "id": "forge-attachments"
+    },
     "encrypted": [],
-    "clear": { "routing_identity": ["id"], "timestamp": ["activated_at"] }
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
+      ]
+    }
   },
   "forge_attachment_legacy_pr_aliases": {
     "scope": {
@@ -4599,42 +4705,110 @@
     }
   },
   "forge_attachment_legacy_owners": {
-    "scope": { "kind": "project", "column": "project_id" },
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
     "encrypted": [],
     "clear": {
-      "encryption_metadata": ["old_path_digest"],
-      "routing_identity": ["pr_id", "project_id"],
-      "timestamp": ["created_at"]
+      "encryption_metadata": [
+        "old_path_digest"
+      ],
+      "routing_identity": [
+        "pr_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
     }
   },
   "forge_attachment_migration_attempts": {
-    "scope": { "kind": "system", "id": "forge-attachments" },
-    "encrypted": [],
-    "clear": { "encryption_metadata": ["old_path_digest"], "timestamp": ["attempted_at"] }
-  },
-  "forge_attachment_objects": {
-    "scope": { "kind": "project", "column": "project_id" },
+    "scope": {
+      "kind": "system",
+      "id": "forge-attachments"
+    },
     "encrypted": [],
     "clear": {
-      "bounded_metadata": ["pending_publication_claims"],
-      "encryption_metadata": ["content_key_version", "format_version", "legacy_path_digest"],
-      "routing_identity": ["id", "pr_id", "project_id", "storage_path"],
-      "timestamp": ["created_at", "published_at", "rotation_checked_at"]
+      "encryption_metadata": [
+        "old_path_digest"
+      ],
+      "timestamp": [
+        "attempted_at"
+      ]
+    }
+  },
+  "forge_attachment_objects": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "pending_publication_claims"
+      ],
+      "encryption_metadata": [
+        "content_key_version",
+        "format_version",
+        "legacy_path_digest"
+      ],
+      "routing_identity": [
+        "id",
+        "pr_id",
+        "project_id",
+        "storage_path"
+      ],
+      "timestamp": [
+        "created_at",
+        "published_at",
+        "rotation_checked_at"
+      ]
     }
   },
   "invitation_email_rotation_attempts": {
-    "scope": { "ancestor": "project_invitations:invitation_id" },
+    "scope": {
+      "ancestor": "project_invitations:invitation_id"
+    },
     "encrypted": [],
-    "clear": { "routing_identity": ["invitation_id"], "timestamp": ["checked_at"] }
+    "clear": {
+      "routing_identity": [
+        "invitation_id"
+      ],
+      "timestamp": [
+        "checked_at"
+      ]
+    }
   },
   "invitation_email_scope": {
-    "scope": { "kind": "system", "id": "invitation-email" },
+    "scope": {
+      "kind": "system",
+      "id": "invitation-email"
+    },
     "encrypted": [],
-    "clear": { "routing_identity": ["id"], "timestamp": ["activated_at", "started_at"] }
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at",
+        "started_at"
+      ]
+    }
   },
   "push_content_write_scope": {
-    "scope": { "kind": "system", "id": "push-content" },
+    "scope": {
+      "kind": "system",
+      "id": "push-content"
+    },
     "encrypted": [],
-    "clear": { "routing_identity": ["id"], "timestamp": ["started_at"] }
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "started_at"
+      ]
+    }
   }
 }

@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { EncryptedStore, type EncryptionScope } from "./store";
 
@@ -57,7 +58,7 @@ const service = {
         jsonb_build_object('project_id',r.project_id) AS run
         FROM public.${table} j JOIN public.agent_runs r ON r.id=j.run_id
         ${filters.length ? `WHERE ${filters.join(" AND ")}` : ""}
-        ORDER BY j.encryption_checked_at NULLS FIRST,j.id LIMIT ${limit}`),
+        ORDER BY j.encryption_attempted_at NULLS FIRST,j.id LIMIT ${limit}`),
       error: null }),
       maybeSingle: async () => ({ data: rows(`SELECT j.id FROM public.${table} j
         WHERE ${filters.join(" AND ")} LIMIT 1`)[0] ?? null, error: null }),
@@ -66,7 +67,8 @@ const service = {
   },
   rpc: async (_name: string, args: Record<string, unknown>) => {
     const literal = (value: unknown) => value === undefined || value === null
-      ? "NULL" : typeof value === "number" ? String(value) : quote(String(value));
+      ? "NULL" : typeof value === "number" ? String(value)
+      : quote(typeof value === "object" ? JSON.stringify(value) : String(value));
     try {
       const result = sql(state.database, `SET ROLE service_role;
         SELECT public.migrate_agent_journal_ciphertext(
@@ -74,7 +76,13 @@ const service = {
           ${literal(args.p_previous_version)},${literal(args.p_payload)},
           ${literal(args.p_digest)},${literal(args.p_version)},
           ${literal(args.p_event_count)},${literal(args.p_payload_bytes)},
-          ${literal(args.p_stored_bytes)});`);
+          ${literal(args.p_stored_bytes)},${literal(args.p_verified)},
+          ${literal(args.p_previous_events)}::jsonb,
+          ${literal(args.p_previous_payload)},${literal(args.p_previous_digest)},
+          ${literal(args.p_previous_encoding)},
+          ${literal(args.p_previous_event_count)},
+          ${literal(args.p_previous_payload_bytes)},
+          ${literal(args.p_previous_stored_bytes)});`);
       return { data: result.split("\n").at(-1) === "t", error: null };
     } catch (error) {
       return { data: null, error: { message: String(error) } };
@@ -89,7 +97,8 @@ const { decodeJournal } = await import("@/lib/server/agent/encrypted-journal");
 describe.skipIf(!enabled)("agent journal duplicate rotation in isolated PostgreSQL", () => {
   beforeAll(() => {
     state.database = `minddy_min591_journal_rotation_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
-    sql("postgres", `CREATE DATABASE ${state.database} TEMPLATE minddy_min591_final_audit;`);
+    sql("postgres", `CREATE DATABASE ${state.database} TEMPLATE minddy_min591_followup_final_v3_20260927;`);
+    sql(state.database, readFileSync("supabase/migrations/20270108140000_verified_encryption_backfill_attempts.sql", "utf8"));
     const actor = randomUUID(), project = randomUUID(), conversation = randomUUID();
     const run = randomUUID();
     sql(state.database, `INSERT INTO auth.users(id) VALUES(${quote(actor)});

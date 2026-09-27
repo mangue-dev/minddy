@@ -2,6 +2,7 @@ import "server-only";
 
 import { isDeepStrictEqual } from "node:util";
 import { getServiceClient } from "@/lib/supabase-service";
+import { recordBackfillAttempt } from "./backfill-attempt";
 import { decodePage, encodePage, pageContentValues } from
   "@/lib/server/page-content";
 import { getContentKeys, getEncryptedStore } from "./registry";
@@ -21,7 +22,7 @@ export async function backfillPageContentBatch(limit = 30,
   const result = { scanned: 0, migrated: 0, unchanged: 0, conflicted: 0,
     failed: 0, interrupted: false };
   const { data, error } = await service.from("pages").select("*")
-    .order("encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("page_is_database", { ascending: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan page content");
@@ -29,6 +30,11 @@ export async function backfillPageContentBatch(limit = 30,
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await recordBackfillAttempt(service, "pages",
+        "encryption_attempted_at", { id: row.id, content_revision: row.content_revision, encrypted_content: row.encrypted_content, encryption_version: row.encryption_version })) {
+        result.conflicted++;
+        continue;
+      }
       const revision = Number(row.content_revision);
       if (!Number.isSafeInteger(revision) || revision < 0) {
         throw new Error("Invalid page revision");

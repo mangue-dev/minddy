@@ -20,7 +20,7 @@ describe("application tab metadata", () => {
     const selected: [string, string, string[]][] = [];
     const returned = {
       pages: [{ id: page, project_id: project, title: "Page", icon: null }],
-      objectives: [{ id: objective, project_id: project, name: "Goal", color: null }],
+      objectives: [{ id: objective, project_id: project, name: "Goal", description: null, color: null }],
       pull_requests: [{ id: pr, number: 42, title: "Stored pull request" }],
       agent_routines: [{ id: routine, title: "Routine" }],
     };
@@ -38,8 +38,8 @@ describe("application tab metadata", () => {
       `/routines?routine=${routine}`,
     ]);
     expect(selected).toEqual([
-      ["pages", "id,project_id,title,icon", [page]],
-      ["objectives", "id,project_id,name,color", [objective]],
+      ["pages", "id,project_id,title,icon,encrypted_content,encryption_version", [page]],
+      ["objectives", "id,project_id,name,description,color,encrypted_content,encryption_version", [objective]],
       ["pull_requests", "id,number,title", [pr]],
       ["agent_routines", "id,project_id,title,encrypted_content,encryption_version", [routine]],
     ]);

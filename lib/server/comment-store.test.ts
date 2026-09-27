@@ -16,6 +16,7 @@ type Row = Record<string, unknown>;
 let rows: Record<string, Row[]>;
 let requests: { table: string; method: string; url: URL; body: Row }[];
 let version: number;
+let attemptTick: number;
 let loseRace: boolean;
 let forgeConflict: boolean;
 const fixture = { id: "comment", issue_id: "issue", author_id: "actor", body: "Private body", visibility: "internal" };
@@ -27,6 +28,7 @@ beforeEach(() => {
   vi.spyOn(console, "info").mockImplementation(() => {});
   state.unavailable = state.hasKey = loseRace = forgeConflict = false;
   version = 1;
+  attemptTick = 0;
   const key = randomBytes(32);
   state.store = new EncryptedStore({ current: async () => ({ version, bytes: Buffer.from(key) }),
     byVersion: async (_scope, asked) => ({ version: asked, bytes: Buffer.from(key) }) });
@@ -42,6 +44,16 @@ beforeEach(() => {
       const body = req.method === "GET" ? {} : await req.json();
       requests.push({ table, method: req.method, url, body });
       const response = (data: unknown) => new Response(JSON.stringify(data), { headers: { "content-type": "application/json" } });
+      if (table === "record_encryption_backfill_progress") {
+        const expected = body.p_expected as Row;
+        const row = rows[body.p_table]?.find((candidate) => candidate.id === expected.id);
+        if (!row) return response(false);
+        const matches = !loseRace && Object.entries(expected).every(([field, value]) =>
+          JSON.stringify(row[field]) === JSON.stringify(value));
+        row.encryption_attempted_at = `attempt-${++attemptTick}`;
+        if (body.p_verified && matches) row.encryption_checked_at = `verified-${attemptTick}`;
+        return response(matches);
+      }
       if (table === "migrate_comment_ciphertext") {
         const row = rows[body.p_table].find((row) => row.id === body.p_id && row.project_id === body.p_project_id &&
           row.encryption_revision === body.p_revision && row.encryption_version === body.p_previous_version);
@@ -65,7 +77,8 @@ beforeEach(() => {
       const single = req.headers.get("accept")?.includes("vnd.pgrst.object");
       const result = (data: Row[]) => response(single ? data[0] ?? null : data);
       if (req.method === "POST") {
-        const row = { encryption_version: 0, encrypted_content: null, encryption_revision: 0, encryption_checked_at: null, ...body };
+        const row = { encryption_version: 0, encrypted_content: null, encryption_revision: 0,
+          encryption_checked_at: null, encryption_attempted_at: null, ...body };
         rows[table].push(row);
         return url.searchParams.has("select") ? result([row]) : new Response(null, { status: 201 });
       }
@@ -208,6 +221,10 @@ describe("encrypted comment repository", () => {
     version = 2;
     expect(await backfillCommentsBatch("comments")).toMatchObject({ migrated: 1, failed: 0 });
     expect(rows.comments[0].encryption_version).toBe(2);
+    expect(rows.comments[0].encryption_checked_at).toBeTruthy();
+    expect(rows.comments[0].encryption_attempted_at).toBeTruthy();
+    expect(requests.filter((r) => r.table === "record_encryption_backfill_progress" &&
+      r.body.p_verified === true)).toHaveLength(3);
     expect((await store("page_comments").select("body,quote").single()).data).toEqual({ body: pageFixture.body, quote: pageFixture.quote });
     expect(requests.filter((r) => r.method === "PATCH")).toEqual([]);
   });

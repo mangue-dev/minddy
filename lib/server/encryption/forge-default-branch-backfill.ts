@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { recordBackfillAttempt } from "./backfill-attempt";
 import { decodeDefaultBranch,defaultBranchState,
   encodeDefaultBranch,isEncryptedDefaultBranch } from
   "@/lib/server/git/default-branch-content";
@@ -23,13 +24,18 @@ export async function backfillForgeDefaultBranchesBatch(limit=30,
   const { data,error } = await service.from("project_git_links")
     .select("project_id,default_branch")
     .not("default_branch","is",null)
-    .order("default_branch_checked_at",{ ascending:true,nullsFirst:true })
+    .order("default_branch_attempted_at",{ ascending:true,nullsFirst:true })
     .order("project_id",{ ascending:true }).limit(limit);
   if (error) throw new Error("Unable to scan forge default branches");
   for (const row of data ?? []) {
     if (signal?.aborted) { result.interrupted=true;break; }
     result.scanned++;
     try {
+      if (!await recordBackfillAttempt(service, "project_git_links",
+        "default_branch_attempted_at", { project_id: row.project_id, default_branch: row.default_branch })) {
+        result.conflicted++;
+        continue;
+      }
       if (!row.project_id || !row.default_branch) {
         throw new Error("Missing forge default branch scope");
       }

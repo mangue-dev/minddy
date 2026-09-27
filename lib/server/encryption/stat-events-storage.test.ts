@@ -6,7 +6,8 @@ import type { StatEventRow } from "../stat-events";
 
 type Row = Record<string, unknown>;
 const state = vi.hoisted(() => ({ rows: {} as Record<string, Row[]>, crypto: null as EncryptedStore | null,
-  version: 1, beforeWrite: null as ((table: string, patch: Row) => void) | null }));
+  version: 1, attemptTick: 0,
+  beforeWrite: null as ((table: string, patch: Row) => void) | null }));
 
 function query(table: string) {
   const filters: Array<(row: Row) => boolean> = [];
@@ -30,7 +31,8 @@ function query(table: string) {
     if (mode === "update") selected.forEach((row) => Object.assign(row, patch));
     if (mode === "insert") {
       selected = inserts.map((row) => ({ encryption_version: 0, encrypted_content: null,
-        encryption_revision: 0, encryption_checked_at: null, ...row }));
+        encryption_revision: 0, encryption_checked_at: null,
+        encryption_attempted_at: null, ...row }));
       state.rows[table] = [...all, ...selected];
     }
     return { data: structuredClone(selected), error: null };
@@ -47,7 +49,22 @@ function query(table: string) {
   };
   return builder;
 }
-const client = { from: query } as unknown as SupabaseClient;
+const client = { from: query,
+  rpc: async (name: string, args: Row) => {
+    if (name !== "record_encryption_backfill_progress") {
+      return { data: null, error: { message: "Unsupported fixture RPC" } };
+    }
+    const expected = args.p_expected as Row;
+    const row = (state.rows[String(args.p_table)] ?? []).find((candidate) =>
+      candidate.id === expected.id);
+    if (!row) return { data: false, error: null };
+    const matches = Object.entries(expected).every(([field, value]) =>
+      JSON.stringify(row[field]) === JSON.stringify(value));
+    row.encryption_attempted_at = `attempt-${++state.attemptTick}`;
+    if (args.p_verified && matches) row.encryption_checked_at = `verified-${state.attemptTick}`;
+    return { data: matches, error: null };
+  },
+} as unknown as SupabaseClient;
 vi.mock("./registry", () => ({ getEncryptedStore: () => {
   if (!state.crypto) throw new Error("Root key unavailable");
   return state.crypto;
@@ -68,6 +85,7 @@ beforeEach(() => {
   vi.spyOn(console, "info").mockImplementation(() => {});
   state.rows = {};
   state.version = 1;
+  state.attemptTick = 0;
   state.beforeWrite = null;
   const keys = new Map([[1, randomBytes(32)], [2, randomBytes(32)]]);
   state.crypto = new EncryptedStore({
@@ -126,6 +144,7 @@ describe("protected statistics snapshots", () => {
     await appendStatEvents(client, [event()]);
     vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");
     expect(await backfillStatEventsBatch()).toMatchObject({ migrated: 1, failed: 0 });
+    expect(state.rows.stat_events[0].encryption_checked_at).toBeTruthy();
     expect(await backfillStatEventsBatch()).toMatchObject({ migrated: 0, unchanged: 1 });
     state.version = 2;
     expect(await backfillStatEventsBatch()).toMatchObject({ migrated: 1, failed: 0 });
@@ -142,6 +161,8 @@ describe("protected statistics snapshots", () => {
     state.rows.stat_events[0].encrypted_content = "corrupt";
     vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");
     expect(await backfillStatEventsBatch(1)).toMatchObject({ failed: 1 });
+    expect(state.rows.stat_events[0].encryption_checked_at).toBeNull();
+    expect(state.rows.stat_events[0].encryption_attempted_at).toBeTruthy();
     state.beforeWrite = (_table, patch) => {
       if (patch.encrypted_content) {
         state.rows.stat_events[1].task_text = "Concurrent change";

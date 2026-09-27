@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeAgentDeploymentUrl, encodeAgentDeploymentUrl,
   encryptedDeploymentState, isEncryptedDeploymentUrl,
@@ -23,13 +25,18 @@ export async function backfillAgentDeploymentUrlsBatch(limit = 20,
   const { data, error } = await service.from("agent_runs")
     .select("id,project_id,deployment_url")
     .not("deployment_url", "is", null)
-    .order("deployment_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("deployment_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent deployment URLs");
   for (const row of (data ?? []) as StoredAgentDeployment[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_runs", "deployment_encryption_checked_at",
+        row as Record<string, unknown>)) {
+        result.conflicted++;
+        continue;
+      }
       if (!row.id || !row.project_id || !row.deployment_url) {
         throw new Error("Invalid agent deployment migration scope");
       }

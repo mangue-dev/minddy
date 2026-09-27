@@ -4,6 +4,52 @@ MIN-591 is one application-wide delivery. The existing invitation implementation
 is a small converted surface, not the production rollout boundary. Do not enable
 production migration on the strength of crypto unit tests or this inventory.
 
+## Security review of `4e9268554` on draft PR #289
+
+The reviewed SHA preceded this corrective tranche. The local code now decrypts
+trashed page, issue and objective labels before visibility decisions; protected
+app-tab and backlink labels use authorized decoders. The dynamic-reader CI
+guard and encrypted fixtures cover these paths. Forced AI tool calls and the
+Agent drain log controlled error codes and opaque IDs rather than provider
+bodies, JSON parse fragments, decrypted deployment URLs or raw exceptions.
+
+PR URL/content, Agent checkpoint/journal and analogous row workers now keep
+attempt timestamps separate from successful verification. Current-format
+ciphertext is authenticated before `checked_at` can be set. Failed rows and
+CAS conflicts move behind healthy work without losing their blocker state.
+Historical false checks are invalidated, old generic row-worker marker calls
+cannot recreate proof, and a read-only readiness scan decrypts the four
+critical PR/checkpoint/journal families. That scan is not transactional:
+repeat it with stable counts while staging writers are quiescent.
+
+Feedback erasure now revokes sessions and pending codes atomically with the
+identity scrub. A retry revokes any surviving session, erased identities cannot
+authorize sessions, and concurrent creation serializes on the identity row.
+The application fails closed when a historical identity cannot be decrypted.
+
+The final isolated PostgreSQL schema is
+`minddy_min591_security_final_20260927`, cloned from the verified empty v3
+template and advanced through migrations `20270108120000`, `08140000`,
+`08150000` and `08160000`. The older `minddy_min591_final_review` is a
+pre-correction replay source, not the final schema. On the final clone, 95
+post-migration SQL regressions, 70 independent restore scenarios and the
+PostgreSQL search oracle pass. The full suite passes 8,728 tests, with 103
+skipped; typecheck, lint, build and the encryption/English CI checks pass.
+Separate pre/post migration replays and
+two-session write-fence and Feedback-erasure races pass on isolated clones.
+The SQL fixtures exercise database metadata and guards; Storage byte tests
+use simulated objects. A backup and restore of the actual Storage service
+remains unverified.
+
+These proofs establish code behavior on isolated fixtures. They do not show
+that any production row, object, log sink or retained backup is encrypted.
+Keep MIN-591 in progress and PR #289 in draft. Preserve all historical roots
+and data keys until old backups and long-running live snapshots expire or are
+retired. Representative search, latency and key/cache load measurements are
+staging gates before activation, not conditions for accepting the code fixes.
+Supabase Auth login email remains the narrow provider-identity exception;
+application identity copies and invitation email remain encryption targets.
+
 ## Review of `0ee91f97a` on draft PR #289
 
 The reviewed SHA passed CI but did not establish code closure. This follow-up
@@ -107,7 +153,7 @@ registrations; orphan cleanup then removes the object.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 196 application tables and 1,682 columns, their primary
+- `schema.json` records 196 application tables and 1,756 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 173 encryption targets include the original content,
@@ -118,10 +164,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,706 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,712 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 514 functions, ten views and 254 application triggers. Function
+- `sql-consumers.json` records 530 functions, ten views and 483 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -185,25 +231,31 @@ copies do not inherit that exception. Public display names remain public. Object
 bytes, object paths, external exports and observability are not SQL columns and
 must be checked separately.
 
-## Remaining implementation before one production rollout
+## Rollout boundary and implementation inventory
+
+This table describes the current code paths and the remaining rollout gates.
+The dated implementation checkpoints below record work at their respective
+commits; their older “remaining work” sentences are historical. Use the
+[closure matrix](closure-matrix.md) and the latest review checkpoint for the
+current source and copy status.
 
 | Surface | Required work and proof of completion |
 | --- | --- |
 | Projects, issues, pages and views | Project names, automation rules, smart-assignment rules, pages and their database cells now have converted repositories, authorized projections and activated old-writer guards. Review any remaining sensitive derived copies before global activation. Objectives and category names have converted repositories and bounded migrations; representative production-scale validation remains a pre-activation check. |
-| Histories and derived copies | Page versions, issue events, statistics, durable agent replay journals and run event payloads now have converted repositories and migration. The event-triggered assistant summary and pending question copies are protected with their event. Numo surface destinations and the non-worker durable activity payloads now have protected readers, writers and migrations; initial prompts, other surface projections, checkpoints and conversation content remain to be converted with their source rows. |
-| SQL functions and views | Review the recorded candidates; keep metadata-only transactions in SQL, move content transformations/search into authorized repositories and preserve atomic claims, counters, revisions and idempotency. The Numo view replay failure is fixed and its RLS regression passes; content transformations remain to be converted. |
-| Search and equality | Implement application search with correct filtering, ordering, pagination and permissions. Add purpose-separated equality indexes for private identifiers and uniqueness; do not silently rotate a blind-index key independently of its indexed rows. |
+| Histories and derived copies | Page versions, issue events, statistics, Agent journals/events/checkpoints, Numo conversation/tool content and their listed derived copies have protected repositories and bounded migration paths. Every current-format candidate still needs authenticated verification; the latest review records the corrected queues and the remaining staging gate. |
+| SQL functions and views | The recorded SQL consumers remain review candidates. Content transformation and search use authorized repositories where the source is protected; SQL retains atomic claims, counters, revisions and guards. The Numo view replay and RLS regression pass on isolated PostgreSQL. A schema inventory alone cannot certify every consumer. |
+| Search and equality | Authorized application search and purpose-separated equality indexes are implemented for the classified targets. The PostgreSQL oracle tests ranking, excerpts and permissions; representative query/content parity and latency remain staging gates. Blind-index rotation requires a coordinated index rewrite. |
 | Forge data | Forge mention throttle identities and private repository names use stable system blind indexes. Names have a recoverable encrypted registry and guarded equality keys across linked copies. Default branches use project-bound envelopes. Relay instance configuration, singleton self-hosted provisioning, brokered user deliveries, persistent OAuth grants, repository hook secrets and personal MCP connections are sealed; the unused relay mirror secret copy is removed. Review remaining forge sidecars. The generic row codec deliberately refuses sensitive primary keys. |
 | Files and images | Attachment, page-file and project-icon server paths use opaque names, ciphertext bytes and authorized download routes. The forge PR bucket is made private by the new migration; its historical objects need a separate verified Storage rewrite. The icon bucket switches to private only after its object queue is empty. Public avatars have an explicit public-use exception. A real Storage-service backup and restore remains a preactivation gate; the local object tests use a memory fixture. |
-| Feedback and sharing | Feedback posts, private visitor identities, board SSO secrets and recoverable share tokens have repository and migration checkpoints below. Remaining feedback copies still need conversion; owner dialogs must retain access to share URLs. |
+| Feedback and sharing | Feedback posts, private visitor identities, board SSO secrets and recoverable share tokens have protected repository and migration checkpoints below. Erasure must revoke sessions and pending codes atomically, including retries and concurrent session creation. Owner dialogs retain authorized share URLs. Production copies still require inventory and conversion. |
 | Credentials and configuration | `app_config.value`, BYOK credentials, endpoints and private model choices, and billing email/admin notes have bounded CAS envelopes and activated old-writer guards. Migrate remaining legacy environment-key envelopes and secret/configuration stores; verify Vault privileges and deployment-level statement logging. Never treat arbitrary configuration JSON as automatically public. |
-| Migration and recovery | Add restartable batches for every target and object, compare-and-swap against concurrent edits, verification counters, rejection of obsolete writers, a restoration rehearsal and retention of historical wrapped keys. Test mixed plaintext/encrypted tenants and old versions. |
+| Migration and recovery | Restartable batches, compare-and-swap writers, old-writer fences and local restore fixtures cover the recorded targets. Failed attempts must never become successful `checked_at` evidence; completion requires an authenticated scan of ciphertext, not a timestamp alone. Retain historical wrapped keys for long-running rows and older backups. |
 | Root key and operations | Provision a dedicated root key outside the database and rehearse key backup and restore. The offline root-key rewrap procedure is implemented and tested on isolated PostgreSQL; production rehearsal and application-scale latency remain. Production deployment and migration require a later explicit deployment request. |
 
 The common row codec is connected to personal notes, statistics, activity, page
 versions, comments (including page quotes), objectives, categories, project
 creation drafts, feedback post content, and the issue source paths described below.
-The remaining repositories in the table above are unconverted. It authenticates the real primary key, table and owner, requires complete rows,
+It authenticates the real primary key, table and owner, requires complete rows,
 distinguishes legacy and encrypted states, clears protected columns and rejects
 remaining plaintext search projections. Parent-owned records still require a
 trusted repository to resolve and authorize their scope before calling it.

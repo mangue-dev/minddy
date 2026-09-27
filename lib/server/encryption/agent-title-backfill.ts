@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeAgentTitle, encodeAgentTitle } from "@/lib/server/agent/run-title-content";
 import { isContentEncryptionEnabled } from "./content-config";
@@ -35,7 +37,7 @@ export async function backfillAgentTitleBatch(limit = 20, signal?: AbortSignal) 
   const service = getServiceClient();
   const { data, error } = await service.from("agent_runs")
     .select("id,project_id,conversation_id,title,title_ciphertext,title_encryption_version,conversation:agent_conversations(id,project_id,title,title_ciphertext,title_encryption_version)")
-    .order("title_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("title_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent run titles");
   for (const raw of data ?? []) {
@@ -44,6 +46,11 @@ export async function backfillAgentTitleBatch(limit = 20, signal?: AbortSignal) 
     try {
       const run = raw as unknown as TitleRow & { conversation_id: string;
         conversation: TitleRow | null };
+      if (!await markAgentBackfillAttempt(service, "agent_runs", "title_encryption_checked_at",
+        run as Record<string, unknown>)) {
+        result.conflicted++;
+        continue;
+      }
       const conversation = run.conversation;
       if (!run.id || !run.project_id || !run.conversation_id ||
           !conversation || conversation.id !== run.conversation_id ||
@@ -90,13 +97,18 @@ export async function backfillAgentTitleBatch(limit = 20, signal?: AbortSignal) 
   }
   const conversations = await service.from("agent_conversations")
     .select("id,project_id,title,title_ciphertext,title_encryption_version")
-    .order("title_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("title_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (conversations.error) throw new Error("Unable to scan agent conversation titles");
   for (const row of (conversations.data ?? []) as TitleRow[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_conversations", "title_encryption_checked_at",
+        row as Record<string, unknown>)) {
+        result.conflicted++;
+        continue;
+      }
       const plain = await decodeAgentTitle(row);
       const version = await currentVersion(row.project_id);
       const cipher = replacementNeeded(row, version)

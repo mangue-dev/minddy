@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeAgentLaunch, encodeAgentLaunch,
   type StoredLaunch } from "@/lib/server/agent/run-launch-content";
@@ -20,13 +22,18 @@ export async function backfillAgentLaunchBatch(limit = 20, signal?: AbortSignal)
   const service = getServiceClient();
   const { data, error } = await service.from("agent_runs")
     .select("id,project_id,conversation_id,prompt,prompt_mentions,encrypted_launch_content,launch_encryption_version")
-    .order("launch_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("launch_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent launch migration");
   for (const row of (data ?? []) as StoredLaunch[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_runs", "launch_encryption_checked_at",
+        row as Record<string, unknown>)) {
+        result.conflicted++;
+        continue;
+      }
       if (!row.id || !row.project_id || !row.conversation_id ||
           !Number.isSafeInteger(row.launch_encryption_version) ||
           (row.launch_encryption_version ?? -1) < 0) {
@@ -35,16 +42,15 @@ export async function backfillAgentLaunchBatch(limit = 20, signal?: AbortSignal)
       const identity = { p_id: row.id, p_project_id: row.project_id,
         p_conversation_id: row.conversation_id,
         p_previous_version: row.launch_encryption_version };
-      const attempt = await service.rpc("migrate_agent_launch_ciphertext", identity);
-      if (attempt.error) throw new Error("Unable to mark agent launch attempt");
-      if (!attempt.data) { result.conflicted++; continue; }
       const decoded = await decodeAgentLaunch(row);
       const current = await getContentKeys().current({ kind: "project", id: row.project_id });
       const version = current.version;
       current.bytes.fill(0);
       if (row.launch_encryption_version === version && row.encrypted_launch_content &&
           getEncryptedStore().formatOf(getEncryptedStore().fromDatabase(row.encrypted_launch_content)) === 3) {
-        result.unchanged++;
+        const checked = await service.rpc("migrate_agent_launch_ciphertext", identity);
+        if (checked.error) throw new Error("Unable to verify agent launch");
+        if (checked.data) result.unchanged++; else result.conflicted++;
         continue;
       }
       const replacement = await encodeAgentLaunch(row.project_id, row.id, {

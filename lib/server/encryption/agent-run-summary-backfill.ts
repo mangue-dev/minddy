@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeRunSummary, decodeTurnSummaryValue,
   encodeRunSummary, encodeTurnSummary, encryptedRunSummaryState,
@@ -48,17 +50,23 @@ export async function backfillAgentRunSummariesBatch(limit = 20,
   const { data, error } = await service.from("agent_runs")
     .select("id,project_id,outcome,error_message")
     .or("outcome.not.is.null,error_message.not.is.null")
-    .order("summary_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("summary_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent run summaries");
   for (const row of (data ?? []) as RunRow[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_runs", "summary_encryption_checked_at",
+        row as Record<string, unknown>)) {
+        result.conflicted++;
+        continue;
+      }
       const identity = { p_id: row.id, p_project_id: row.project_id,
         p_old_outcome: row.outcome, p_old_error: row.error_message };
       const keyVersion = await version(row.project_id);
       if (current(row.outcome, keyVersion) && current(row.error_message, keyVersion)) {
+        await decodeRunSummary(row);
         const checked = await service.rpc("migrate_agent_run_summary", identity);
         if (checked.error) throw new Error("Unable to mark run summary attempt");
         if (checked.data) result.unchanged++; else result.conflicted++;
@@ -95,13 +103,18 @@ export async function backfillAgentTurnSummariesBatch(limit = 20,
   const { data, error } = await service.from("agent_turns")
     .select("id,run_id,outcome,error_message,conversation:agent_conversations!inner(project_id)")
     .or("outcome.not.is.null,error_message.not.is.null")
-    .order("summary_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("summary_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent turn summaries");
   for (const row of (data ?? []) as unknown as TurnRow[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_turns", "summary_encryption_checked_at",
+        row as Record<string, unknown>)) {
+        result.conflicted++;
+        continue;
+      }
       const conversation = Array.isArray(row.conversation)
         ? row.conversation[0] : row.conversation;
       const projectId = conversation?.project_id;
@@ -110,6 +123,11 @@ export async function backfillAgentTurnSummariesBatch(limit = 20,
         p_old_outcome: row.outcome, p_old_error: row.error_message };
       const keyVersion = await version(projectId);
       if (current(row.outcome, keyVersion) && current(row.error_message, keyVersion)) {
+        await Promise.all([
+          decodeTurnSummaryValue(projectId, row.id, row.run_id, "outcome", row.outcome),
+          decodeTurnSummaryValue(projectId, row.id, row.run_id,
+            "error_message", row.error_message),
+        ]);
         const checked = await service.rpc("migrate_agent_turn_summary", identity);
         if (checked.error) throw new Error("Unable to mark turn summary attempt");
         if (checked.data) result.unchanged++; else result.conflicted++;

@@ -130,7 +130,7 @@ describe("pageBacklinks", () => {
         { id: "i1", number: 1, title: "Un", deleted_at: null },
         { id: "i2", number: 2, title: "Deux", deleted_at: null },
       ],
-      objectives: [{ id: "o1", name: "L'objectif", color: "amber", deleted_at: null }],
+      objectives: [{ id: "o1", name: "L'objectif", description: null, color: "amber", deleted_at: null }],
       pages: [{ id: "pg", title: "L'autre page", icon: "📘", deleted_at: null }],
     });
 

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { recordBackfillAttempt } from "./backfill-attempt";
 import { isContentEncryptionEnabled } from "./content-config";
 import { getContentKeys } from "./registry";
 import { decodeShareToken, encodeShareToken, isEncryptedShareToken,
@@ -22,7 +23,7 @@ export async function backfillShareTokensBatch(limit = 30,
   const service = getServiceClient();
   const { data, error } = await service.from("view_shares")
     .select("id,token,token_lookup")
-    .order("content_encryption_checked_at", { ascending: true,
+    .order("content_encryption_attempted_at", { ascending: true,
       nullsFirst: true }).order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan share tokens");
   const result = { scanned: 0, migrated: 0, unchanged: 0,
@@ -34,6 +35,11 @@ export async function backfillShareTokensBatch(limit = 30,
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await recordBackfillAttempt(service, "view_shares",
+        "content_encryption_attempted_at", { id: row.id, token: row.token, token_lookup: row.token_lookup })) {
+        result.conflicted++;
+        continue;
+      }
       const clear = await decodeShareToken(row.id, row.token);
       const lookup = await shareTokenLookup(clear);
       const fresh = isEncryptedShareToken(row.token) &&

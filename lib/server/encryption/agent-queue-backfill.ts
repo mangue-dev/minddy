@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeQueueMessage, encodeQueueMessage,
   type StoredQueueMessage } from "@/lib/server/agent/run-queue-content";
@@ -33,13 +35,18 @@ export async function backfillAgentQueueBatch(limit = 20, signal?: AbortSignal) 
   const service = getServiceClient();
   const { data, error } = await service.from("agent_run_messages")
     .select("id,run_id,content,mentions,content_encryption_version,run:agent_runs!inner(project_id)")
-    .order("encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent queue messages");
   for (const row of (data ?? []) as unknown as QueueRow[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_run_messages", "encryption_checked_at",
+        row as Record<string, unknown>)) {
+        result.conflicted++;
+        continue;
+      }
       const projectId = row.run?.project_id;
       if (!projectId || !row.id || !row.run_id ||
           !Number.isSafeInteger(row.content_encryption_version) ||
@@ -72,9 +79,6 @@ export async function backfillAgentQueueBatch(limit = 20, signal?: AbortSignal) 
       };
       const identity = { p_id: row.id, p_run_id: row.run_id,
         p_project_id: projectId, p_expected: expected };
-      const attempt = await service.rpc("migrate_agent_queue_bundle", identity);
-      if (attempt.error) throw new Error("Unable to mark agent queue attempt");
-      if (!attempt.data) { result.conflicted++; continue; }
       const decoded = await decodeQueueMessage(projectId, row);
       const decodedAnswer = answer && await decodeAgentInputAnswer(projectId, answer);
       const decodedParent = parent && await decodeWorkerParentMessage(projectId, parent);
@@ -90,7 +94,9 @@ export async function backfillAgentQueueBatch(limit = 20, signal?: AbortSignal) 
             currentFormat(parent.content) && parent.context === null &&
             Object.keys(parent.metadata).every((key) =>
               key === "worker_input" || key === "worker_steering"))) {
-        result.unchanged++;
+        const checked = await service.rpc("migrate_agent_queue_bundle", identity);
+        if (checked.error) throw new Error("Unable to verify agent queue bundle");
+        if (checked.data) result.unchanged++; else result.conflicted++;
         continue;
       }
       const replacement = await encodeQueueMessage(projectId, row.id, {

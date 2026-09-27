@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { recordBackfillAttempt } from "./backfill-attempt";
 import { decodeGithubIssueMetadata, encodeGithubIssueMetadata,
   type StoredGithubIssueMetadata } from "@/lib/server/git/issue-sync-content";
 import { isContentEncryptionEnabled } from "./content-config";
@@ -28,13 +29,18 @@ export async function backfillGithubIssueMetadataBatch(limit = 20,
   const service = getServiceClient();
   const { data, error } = await service.from("github_issue_sync_metadata")
     .select("issue_id,metadata,milestone,content_ciphertext,content_encryption_version,synced_at,issue:issues!inner(project_id)")
-    .order("content_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("content_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("issue_id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan GitHub issue metadata");
   for (const row of (data ?? []) as unknown as MetadataRow[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await recordBackfillAttempt(service, "github_issue_sync_metadata",
+        "content_encryption_attempted_at", { issue_id: row.issue_id, metadata: row.metadata, milestone: row.milestone, content_ciphertext: row.content_ciphertext, content_encryption_version: row.content_encryption_version, synced_at: row.synced_at })) {
+        result.conflicted++;
+        continue;
+      }
       const projectId = row.issue?.project_id;
       if (!projectId || !row.issue_id || !Number.isSafeInteger(row.content_encryption_version) ||
           row.content_encryption_version < 0) throw new Error("Invalid issue metadata scope");
@@ -43,16 +49,15 @@ export async function backfillGithubIssueMetadataBatch(limit = 20,
         p_old_cipher: row.content_ciphertext,
         p_old_version: row.content_encryption_version,
         p_old_synced_at: row.synced_at };
-      const attempt = await service.rpc("migrate_github_issue_metadata", identity);
-      if (attempt.error) throw new Error("Unable to mark issue metadata attempt");
-      if (!attempt.data) { result.conflicted++; continue; }
       const decoded = await decodeGithubIssueMetadata(projectId, row);
       const key = await getContentKeys().current({ kind: "project", id: projectId });
       const version = key.version;
       key.bytes.fill(0);
       if (row.content_encryption_version === version && row.content_ciphertext &&
           getEncryptedStore().formatOf(getEncryptedStore().fromDatabase(row.content_ciphertext)) === 3) {
-        result.unchanged++;
+        const checked = await service.rpc("migrate_github_issue_metadata", identity);
+        if (checked.error) throw new Error("Unable to verify issue metadata");
+        if (checked.data) result.unchanged++; else result.conflicted++;
         continue;
       }
       const replacement = await encodeGithubIssueMetadata(projectId, row.issue_id, decoded);

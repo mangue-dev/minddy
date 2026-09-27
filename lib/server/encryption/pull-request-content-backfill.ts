@@ -26,7 +26,7 @@ export async function backfillPullRequestContentBatch(limit = 20,
   const { data, error } = await service.from("pull_requests")
     .select("id,title,head_branch,base_branch")
     .or("title.not.is.null,head_branch.not.is.null,base_branch.not.is.null")
-    .order("content_encryption_checked_at", { ascending: true,
+    .order("content_encryption_attempted_at", { ascending: true,
       nullsFirst: true }).order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan pull request content");
   for (const row of data ?? []) {
@@ -43,6 +43,7 @@ export async function backfillPullRequestContentBatch(limit = 20,
         if (isEncryptedPullRequestContent(stored)) {
           const state = pullRequestContentState(stored);
           if (state.version === version && state.format === 3) {
+            await decodePullRequestContent(row.id, field, stored);
             replacements[field] = null;
             continue;
           }
@@ -62,13 +63,20 @@ export async function backfillPullRequestContentBatch(limit = 20,
         p_old_base: row.base_branch,
         ...(changed ? { p_new_title: replacements.title,
           p_new_head: replacements.head_branch,
-          p_new_base: replacements.base_branch } : {}),
+          p_new_base: replacements.base_branch } : { p_verified: true }),
       });
       if (committed.error) throw new Error("Unable to convert pull request content");
       if (!committed.data) result.conflicted++;
       else if (changed) result.migrated++;
       else result.unchanged++;
-    } catch { result.failed++; }
+    } catch {
+      result.failed++;
+      const attempt = await service.rpc("migrate_pull_request_content", {
+        p_id: row.id, p_old_title: row.title, p_old_head: row.head_branch,
+        p_old_base: row.base_branch,
+      });
+      if (attempt.error) throw new Error("Unable to mark pull request content attempt");
+    }
   }
   return result;
 }

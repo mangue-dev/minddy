@@ -17,6 +17,13 @@ DECLARE legacy uuid := gen_random_uuid(); fresh uuid := gen_random_uuid();
 BEGIN
   INSERT INTO public.pull_requests(id,provider,repo_full_name,number,url)
     VALUES(legacy,'github','private/repo',11,legacy_url);
+  IF NOT public.migrate_pull_request_url(legacy,legacy_url) THEN
+    RAISE EXCEPTION 'PR URL attempt failed';
+  END IF;
+  IF (SELECT url_encryption_attempted_at IS NULL OR
+       url_encryption_checked_at IS NOT NULL FROM public.pull_requests WHERE id=legacy) THEN
+    RAISE EXCEPTION 'PR URL attempt was incorrectly verified';
+  END IF;
   IF NOT public.migrate_pull_request_url(legacy,legacy_url,encoded) OR
       public.migrate_pull_request_url(legacy,legacy_url,encoded) THEN
     RAISE EXCEPTION 'Pull request URL CAS failed';
@@ -113,8 +120,14 @@ BEGIN
   EXCEPTION WHEN check_violation THEN rejected := true; END;
   IF NOT rejected THEN RAISE EXCEPTION 'Obsolete run URL writer accepted'; END IF;
   IF has_function_privilege('authenticated',
-      'public.migrate_pull_request_url(uuid,text,text)','EXECUTE') THEN
+      'public.migrate_pull_request_url(uuid,text,text,boolean)','EXECUTE') THEN
     RAISE EXCEPTION 'Migration has client execute privilege';
+  END IF;
+  UPDATE public.pull_requests SET url=encoded || 'A' WHERE id=legacy;
+  IF (SELECT url_encryption_checked_at IS NOT NULL FROM public.pull_requests
+      WHERE id=legacy) OR
+     public.migrate_pull_request_url(legacy,encoded,p_verified=>true) THEN
+    RAISE EXCEPTION 'Changed PR URL retained stale verification';
   END IF;
   IF has_function_privilege('authenticated',
       'public.sync_agent_run_pr_url(uuid,timestamptz,text,uuid,text,text)',

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { recordBackfillAttempt } from "./backfill-attempt";
 
 /** Scrub historical relay details without losing the action or quota timestamp. */
 export async function scrubForgeRelayAuditBatch(limit = 100,
@@ -13,13 +14,18 @@ export async function scrubForgeRelayAuditBatch(limit = 100,
   const service = getServiceClient();
   const { data, error } = await service.from("forge_relay_audit")
     .select("id,detail")
-    .order("detail_checked_at", { ascending: true, nullsFirst: true })
+    .order("detail_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan forge relay audit");
   for (const row of data ?? []) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await recordBackfillAttempt(service, "forge_relay_audit",
+        "detail_attempted_at", { id: row.id, detail: row.detail })) {
+        result.conflicted++;
+        continue;
+      }
       const committed = await service.rpc("scrub_forge_relay_audit_detail", {
         p_id: row.id, p_old_detail: row.detail,
       });

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeAgentContextSnapshot, encodeAgentContextSnapshot,
   type StoredAgentContext } from "@/lib/server/agent/context-snapshot-content";
@@ -27,13 +29,18 @@ export async function backfillAgentContextsBatch(limit = 20, signal?: AbortSigna
   const service = getServiceClient();
   const { data, error } = await service.from("agent_conversation_contexts")
     .select("id,conversation_id,kind,resource_id,snapshot,snapshot_ciphertext,snapshot_encryption_version,conversation:agent_conversations!inner(project_id)")
-    .order("snapshot_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("snapshot_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent context snapshots");
   for (const row of (data ?? []) as unknown as ContextRow[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_conversation_contexts", "snapshot_encryption_checked_at",
+        row as Record<string, unknown>)) {
+        result.conflicted++;
+        continue;
+      }
       const projectId = row.conversation?.project_id;
       if (!projectId || !row.id || !Number.isSafeInteger(row.snapshot_encryption_version) ||
           row.snapshot_encryption_version < 0) throw new Error("Invalid agent context scope");
@@ -41,16 +48,15 @@ export async function backfillAgentContextsBatch(limit = 20, signal?: AbortSigna
         p_project_id: projectId, p_old_snapshot: row.snapshot,
         p_old_cipher: row.snapshot_ciphertext,
         p_old_version: row.snapshot_encryption_version };
-      const attempt = await service.rpc("migrate_agent_context_snapshot", identity);
-      if (attempt.error) throw new Error("Unable to mark agent context attempt");
-      if (!attempt.data) { result.conflicted++; continue; }
       const decoded = await decodeAgentContextSnapshot(projectId, row);
       const key = await getContentKeys().current({ kind: "project", id: projectId });
       const version = key.version;
       key.bytes.fill(0);
       if (row.snapshot_encryption_version === version && row.snapshot_ciphertext &&
           getEncryptedStore().formatOf(getEncryptedStore().fromDatabase(row.snapshot_ciphertext)) === 3) {
-        result.unchanged++;
+        const checked = await service.rpc("migrate_agent_context_snapshot", identity);
+        if (checked.error) throw new Error("Unable to verify agent context");
+        if (checked.data) result.unchanged++; else result.conflicted++;
         continue;
       }
       const replacement = await encodeAgentContextSnapshot(projectId, decoded);

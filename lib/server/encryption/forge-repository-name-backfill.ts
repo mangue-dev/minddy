@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { recordBackfillAttempt } from "./backfill-attempt";
 import { isContentEncryptionEnabled } from "./content-config";
 import { decodeRepositoryName, isProtectedRepositoryName,
   registerRepositoryName, rotateRepositoryName } from
@@ -37,13 +38,31 @@ export async function backfillForgeRepositoryNamesBatch(limit=30,
     failed:0,interrupted:false };
   for (const table of Object.keys(COLUMNS) as Table[]) {
     const { data,error } = await service.from(table).select(COLUMNS[table])
-      .order("repo_name_checked_at",{ ascending:true,nullsFirst:true })
+      .order("repo_name_attempted_at",{ ascending:true,nullsFirst:true })
       .limit(limit);
     if (error) throw new Error(`Unable to scan ${table} repository identities`);
     for (const row of (data ?? []) as Row[]) {
       if (signal?.aborted) { result.interrupted=true; return result; }
       result.scanned++;
       try {
+        const expected = table === "pull_request_syncs"
+          ? { provider: row.provider, repo_full_name: row.repo_full_name }
+          : table === "forge_relay_link_mirror"
+          ? { instance_id: row.instance_id, provider: row.provider,
+            external_repo_id: row.external_repo_id,
+            repo_full_name: row.repo_full_name }
+          : table === "forge_relay_claims"
+          ? { id: row.id, repository_full_name: row.repository_full_name }
+          : { id: row.id, provider: row.provider,
+            repo_full_name: row.repo_full_name,
+            ...(table === "project_git_links" ? {
+              repo_owner: row.repo_owner, repo_name: row.repo_name,
+              repo_previous_names: row.repo_previous_names } : {}) };
+        if (!await recordBackfillAttempt(service, table,
+          "repo_name_attempted_at", expected)) {
+          result.conflicted++;
+          continue;
+        }
         const provider = table==="forge_relay_claims" ? "github" : row.provider;
         if (provider!=="github" && provider!=="gitlab") {
           throw new Error("Invalid forge repository provider");
@@ -85,13 +104,18 @@ export async function backfillForgeRepositoryNamesBatch(limit=30,
   }
   const registry = await service.from("forge_repository_names")
     .select("provider,token")
-    .order("encryption_checked_at",{ ascending:true,nullsFirst:true })
+    .order("encryption_attempted_at",{ ascending:true,nullsFirst:true })
     .order("token",{ ascending:true }).limit(limit);
   if (registry.error) throw new Error("Unable to scan forge repository registry");
   for (const row of registry.data ?? []) {
     if (signal?.aborted) { result.interrupted=true; return result; }
     result.scanned++;
     try {
+      if (!await recordBackfillAttempt(service, "forge_repository_names",
+        "encryption_attempted_at", { provider: row.provider, token: row.token })) {
+        result.conflicted++;
+        continue;
+      }
       if (!isProtectedRepositoryName(row.token)) {
         throw new Error("Invalid forge repository token");
       }

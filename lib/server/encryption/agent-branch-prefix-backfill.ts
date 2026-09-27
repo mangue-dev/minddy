@@ -1,5 +1,6 @@
 import "server-only";
 
+import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
 import { getServiceClient } from "@/lib/supabase-service";
 import { agentBranchPrefixVersion, decodeAgentBranchPrefix,
   encodeAgentBranchPrefix } from "@/lib/server/agent/branch-prefix-content";
@@ -27,6 +28,12 @@ export async function backfillAgentBranchPrefixesBatch(
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "user_agent_preferences",
+        "branch_prefix_encryption_checked_at", row as Record<string, unknown>,
+        "user_id")) {
+        result.conflicted++;
+        continue;
+      }
       const scope = {kind:"user" as const,id:row.user_id};
       const key = await getContentKeys().current(scope);
       const currentVersion = key.version;
@@ -50,12 +57,7 @@ export async function backfillAgentBranchPrefixesBatch(
       if (!saved) result.conflicted++;
       else if (fresh) result.unchanged++;
       else result.migrated++;
-    } catch {
-      result.failed++;
-      await service.from("user_agent_preferences")
-        .update({branch_prefix_encryption_attempted_at:new Date().toISOString()})
-        .eq("user_id",row.user_id).eq("branch_prefix",row.branch_prefix);
-    }
+    } catch { result.failed++; }
   }
   return result;
 }

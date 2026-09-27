@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
+
 import { isDeepStrictEqual } from "node:util";
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeRoutine, encodeRoutine, routineContentValues } from
@@ -21,13 +23,18 @@ export async function backfillAgentRoutineContentBatch(limit = 30,
   const result = { scanned: 0, migrated: 0, unchanged: 0, conflicted: 0,
     failed: 0, interrupted: false };
   const { data, error } = await service.from("agent_routines").select("*")
-    .order("encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan routine content");
   for (const row of data ?? []) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_routines", "encryption_checked_at",
+        row as Record<string, unknown>)) {
+        result.conflicted++;
+        continue;
+      }
       const revision = Number(row.content_revision);
       if (!Number.isSafeInteger(revision) || revision < 0) {
         throw new Error("Invalid routine revision");

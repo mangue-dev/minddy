@@ -198,5 +198,9 @@
   "20270108080000_forge_attachment_fence_and_rename.sql": "d665d9d561475f8dd9a8fe66343726e8e217e88566c95d0a9a8ce78f55d725bd",
   "20270108090000_encryption_snapshot_write_fences.sql": "4cf84f37d16b85fda40de6c68f3aa694e657e1bdd65f64b16dac39668aa5346d",
   "20270108091000_forge_attachment_legacy_orphans.sql": "5da122cd5bccf03a5411d33f342df296b74f86429f0134bfba43026bdbf8871c",
-  "20270108100000_min591_numo_attempts_and_comment_realtime.sql": "591ad429d0c81695ad2e7a7d1a148666c15834fa5c90e899a53269ddd2d6340b"
+  "20270108100000_min591_numo_attempts_and_comment_realtime.sql": "591ad429d0c81695ad2e7a7d1a148666c15834fa5c90e899a53269ddd2d6340b",
+  "20270108120000_feedback_erasure_atomic.sql": "1ab8f7cbf77d04228ead73889ff35cd5282fba4bfcd6691b89012325fdf9092f",
+  "20270108140000_verified_encryption_backfill_attempts.sql": "b2bbada496122f92f90fc4d89ea34bdc3ad81d122a061172c248c2832cb4b4d2",
+  "20270108150000_agent_backfill_verified_attempts.sql": "822fb80a6b7f2b4196912cc334c738ea38c98903402706f5671f2ffe82d4e0db",
+  "20270108160000_verified_row_migration_progress.sql": "28737a5e4850ea46417fd65d95640ff25f31d272fcfab8d1a4c6b52fd00d4bde"
 }

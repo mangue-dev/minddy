@@ -38,6 +38,8 @@ describe("encrypted access CI guard", () => {
     ["lib/server/export.ts", 'service.rpc("delete_category_guarded", params)'],
     ["app/unsafe.ts", 'service.from("stat_events").insert(rows)'],
     ["captures/world/seed/005-carnet.mjs", 'client.from("user_scratchpad").select("user_id,content")'],
+    ["lib/server/unreviewed-reader.ts", 'client.from(table).select("title")'],
+    ["lib/server/trash.ts", 'service.from(table).select("title")'],
   ])("rejects unreviewed access in %s", (file, source) => {
     const result = check(file, source);
     expect(result.status, result.stdout + result.stderr).toBe(1);

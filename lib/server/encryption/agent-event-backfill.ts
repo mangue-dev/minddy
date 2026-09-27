@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeRunEvent, encodeRunEvent } from "@/lib/server/agent/run-event-store";
 import { getContentKeys, getEncryptedStore } from "./registry";
@@ -23,13 +25,18 @@ export async function backfillAgentEventsBatch(limit = 20, signal?: AbortSignal)
   const service = getServiceClient();
   const { data, error } = await service.from("agent_run_events")
     .select("id,run_id,seq,type,payload,encrypted_content,encryption_version,created_at,run:agent_runs!inner(project_id)")
-    .order("encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent event migration");
   for (const row of (data ?? []) as unknown as EventRow[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_run_events", "encryption_checked_at",
+        row as Record<string, unknown>)) {
+        result.conflicted++;
+        continue;
+      }
       const projectId = row.run?.project_id;
       if (!projectId || !row.id || !row.run_id ||
           !Number.isSafeInteger(row.encryption_version) || row.encryption_version < 0) {
@@ -37,16 +44,15 @@ export async function backfillAgentEventsBatch(limit = 20, signal?: AbortSignal)
       }
       const identity = { p_id: row.id, p_run_id: row.run_id,
         p_previous_version: row.encryption_version };
-      const attempt = await service.rpc("migrate_agent_event_ciphertext", identity);
-      if (attempt.error) throw new Error("Unable to mark agent event attempt");
-      if (!attempt.data) { result.conflicted++; continue; }
       const decoded = await decodeRunEvent(projectId, row);
       const current = await getContentKeys().current({ kind: "project", id: projectId });
       const version = current.version;
       current.bytes.fill(0);
       if (row.encryption_version === version && row.encrypted_content &&
           getEncryptedStore().formatOf(getEncryptedStore().fromDatabase(row.encrypted_content)) === 3) {
-        result.unchanged++;
+        const checked = await service.rpc("migrate_agent_event_ciphertext", identity);
+        if (checked.error) throw new Error("Unable to verify agent event");
+        if (checked.data) result.unchanged++; else result.conflicted++;
         continue;
       }
       const replacement = await encodeRunEvent(projectId, row.run_id, row.seq,

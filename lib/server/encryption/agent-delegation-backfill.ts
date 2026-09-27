@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeAgentDelegationInput, encodeAgentDelegationInput } from "@/lib/server/agent/run-delegation-content";
 import type { AgentDelegationBrief } from "@/lib/server/agent/agent-contract";
@@ -26,13 +28,18 @@ export async function backfillAgentDelegationBatch(limit = 20, signal?: AbortSig
   const { data, error } = await service.from("agent_runs")
     .select("id,project_id,parent_numo_turn_id,delegation_brief,delegation_attachments,encrypted_delegation_input,delegation_encryption_version")
     .not("parent_numo_turn_id", "is", null)
-    .order("delegation_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("delegation_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent delegation input");
   for (const row of (data ?? []) as DelegationRow[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_runs", "delegation_encryption_checked_at",
+        row as Record<string, unknown>)) {
+        result.conflicted++;
+        continue;
+      }
       if (!row.id || !row.project_id || !row.parent_numo_turn_id ||
           !Number.isSafeInteger(row.delegation_encryption_version) ||
           row.delegation_encryption_version < 0) {

@@ -134,6 +134,7 @@ const rules = [
     access: /\.\s*from\s*\(\s*["'`]agent_run_journal["'`]\s*\)/,
     allowed: new Set(["lib/server/agent/runs.ts",
       "lib/server/encryption/agent-journal-backfill.ts",
+      "lib/server/encryption/critical-backfill-readiness.ts",
       "lib/server/retention.ts"]),
   },
   {
@@ -280,6 +281,20 @@ const files = [...new Set(execFileSync("git", ["ls-files", "-co", "--exclude-sta
   .toString().split("\0"))].filter((file) => /\.[cm]?[jt]sx?$/.test(file) &&
     !/\.(test|spec)\.[cm]?[jt]sx?$/.test(file));
 
+const dynamicConsumers = await readFile("docs/security/encryption/consumers.json", "utf8")
+  .then((value) => JSON.parse(value))
+  .catch(() => []);
+const reviewedDynamicReaders = new Set(dynamicConsumers
+  .filter((call) => call.operation === "from" && call.resource === null && !call.storage)
+  .map((call) => call.file));
+const protectedReaderContracts = new Map([
+  ["lib/server/trash.ts", ["decodeIssue", "decodeObjective", "decodePageProjection"]],
+  ["lib/server/app-tab-metadata.ts", ["decodeIssue", "decodeObjective",
+    "decodePageProjection", "decodePullRequestContentRow"]],
+  ["lib/server/page-backlinks.ts", ["decodeIssue", "decodeObjective",
+    "decodePageProjection"]],
+]);
+
 const violations = [];
 for (const file of files) {
   const normalized = file.split(path.sep).join("/");
@@ -288,6 +303,17 @@ for (const file of files) {
     throw error;
   });
   if (rules.some(({ access, allowed }) => !allowed.has(normalized) && access.test(source))) {
+    violations.push(normalized);
+  }
+  if (normalized.startsWith("lib/server/") &&
+      /\b(?:client|service|supabase|userSupabase)\s*\.\s*from\s*\(\s*[A-Za-z_$][\w$]*(?:\[[^\]]+\])?\s*\)/.test(source) &&
+      !reviewedDynamicReaders.has(normalized)) {
+    violations.push(normalized);
+  }
+  const requiredDecoders = protectedReaderContracts.get(normalized);
+  if (requiredDecoders && (requiredDecoders.some((name) =>
+      !new RegExp(`\\b${name}\\s*\\(`).test(source)) ||
+      !/encrypted_content\s*,\s*encryption_version/.test(source))) {
     violations.push(normalized);
   }
   if (normalized === "app/api/project-drafts/[id]/route.ts" &&

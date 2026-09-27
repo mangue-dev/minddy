@@ -25,6 +25,13 @@ BEGIN
       'pr-content-fixture','private/repo');
   INSERT INTO public.pull_requests(id,provider,repo_full_name,number,title,
     head_branch,base_branch) VALUES(pr,'github','private/repo',1,old_title,head,base);
+  IF NOT public.migrate_pull_request_content(pr,old_title,head,base) THEN
+    RAISE EXCEPTION 'PR content attempt failed';
+  END IF;
+  IF (SELECT content_encryption_attempted_at IS NULL OR
+       content_encryption_checked_at IS NOT NULL FROM public.pull_requests WHERE id=pr) THEN
+    RAISE EXCEPTION 'PR content attempt was incorrectly verified';
+  END IF;
   INSERT INTO public.agent_conversations(id,project_id,owner_id)
     VALUES(conversation,project,actor);
   INSERT INTO public.agent_runs(id,project_id,conversation_id,created_by,
@@ -59,7 +66,8 @@ BEGIN
       'updated_at',(now() + interval '1 hour')::text));
   EXCEPTION WHEN check_violation THEN rejected := true; END;
   IF NOT rejected THEN RAISE EXCEPTION 'Obsolete RPC title writer accepted'; END IF;
-  IF NOT public.migrate_pull_request_content(pr,cipher,cipher,cipher) THEN
+  IF NOT public.migrate_pull_request_content(pr,cipher,cipher,cipher,
+      p_verified=>true) THEN
     RAISE EXCEPTION 'Current PR content verification failed';
   END IF;
   IF public.migrate_pull_request_content(pr,old_title,head,base,
@@ -73,9 +81,16 @@ BEGIN
   EXCEPTION WHEN check_violation THEN rejected := true; END;
   IF NOT rejected THEN RAISE EXCEPTION 'Obsolete PR insert accepted'; END IF;
   IF has_function_privilege('authenticated',
-      'public.migrate_pull_request_content(uuid,text,text,text,text,text,text)',
+      'public.migrate_pull_request_content(uuid,text,text,text,text,text,text,boolean)',
       'EXECUTE') THEN
     RAISE EXCEPTION 'PR content migration has client execute privilege';
+  END IF;
+  UPDATE public.pull_requests SET title=cipher || 'A' WHERE id=pr;
+  IF (SELECT content_encryption_checked_at IS NOT NULL FROM public.pull_requests
+      WHERE id=pr) OR
+     public.migrate_pull_request_content(pr,cipher,cipher,cipher,
+       p_verified=>true) THEN
+    RAISE EXCEPTION 'Changed PR content retained stale verification';
   END IF;
 END;
 $test$;

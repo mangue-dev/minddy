@@ -278,6 +278,68 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
     }
   }, 60_000);
 
+  it("restores a long-running live snapshot across key versions and expires it on completion", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_live_source_${suffix}`;
+    const restored = `minddy_min591_live_restore_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const actor = randomUUID(), project = randomUUID(), conversation = randomUUID(), run = randomUUID();
+    const scope: EncryptionScope = { kind: "project", id: project };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(template, "SELECT count(*) FROM auth.users;")).toBe("0");
+      for (const name of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${name} TEMPLATE ${template};`);
+        created.push(name);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
+        INSERT INTO public.projects(id,owner_id,name,key)
+          VALUES(${quote(project)},${quote(actor)},'Live fixture','LIVE');
+        INSERT INTO public.agent_conversations(id,project_id,owner_id)
+          VALUES(${quote(conversation)},${quote(project)},${quote(actor)});
+        INSERT INTO public.agent_runs(id,project_id,conversation_id,created_by,status,created_at)
+          VALUES(${quote(run)},${quote(project)},${quote(conversation)},${quote(actor)},'running',now()-interval '45 days');`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      const context = (column: "stream" | "diff") => ({ scope, table: "agent_run_live_snapshots", column, rowId: run });
+      const stream = await store.encrypt({ text: "Private old stream" }, context("stream"));
+      expect(sql(source, `SELECT public.set_agent_run_live_snapshot(${quote(run)},'stream',${quote(stream)},1,10);`)).toBe("t");
+      await keys.rotate(scope, 1);
+      const diff = await store.encrypt({ patch: "Private newer diff" }, context("diff"));
+      expect(sql(source, `SELECT public.set_agent_run_live_snapshot(${quote(run)},'diff',${quote(diff)},2,11);`)).toBe("t");
+      expect(sql(source, `SELECT count(*) FROM public.agent_run_live_snapshots WHERE run_id=${quote(run)};`)).toBe("1");
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "supabase_admin", "-d", source,
+        "--data-only", "--no-owner", "--no-privileges", ...["auth.users", "public.envelope_data_keys",
+          "public.projects", "public.agent_conversations", "public.agent_runs",
+          "public.agent_run_live_snapshots"].map((table) => `--table=${table}`)], {
+        encoding: "utf8", maxBuffer: 4 * 1024 * 1024,
+      });
+      expect(dump).not.toContain("Private old stream");
+      expect(dump).not.toContain("Private newer diff");
+      expect(dump).not.toContain(root.toString("base64"));
+      sql(restored, dump);
+      const row = JSON.parse(sql(restored, `SELECT row_to_json(s) FROM public.agent_run_live_snapshots s WHERE run_id=${quote(run)};`));
+      expect([row.stream_version, row.diff_version]).toEqual([1, 2]);
+      const cold = new EncryptedStore(new ManagedDataKeys(registry(restored), wrapper(root)));
+      expect(await cold.decrypt(cold.fromDatabase(row.stream_content), context("stream")))
+        .toEqual({ text: "Private old stream" });
+      expect(await cold.decrypt(cold.fromDatabase(row.diff_content), context("diff")))
+        .toEqual({ patch: "Private newer diff" });
+      const wrong = new EncryptedStore(new ManagedDataKeys(registry(restored), wrapper(randomBytes(32))));
+      await expect(wrong.decrypt(wrong.fromDatabase(row.stream_content), context("stream"))).rejects.toThrow();
+      expect(sql(restored, `SELECT public.set_agent_run_live_snapshot(${quote(run)},'stream',${quote(stream)},1,9);`)).toBe("f");
+      sql(restored, `UPDATE public.agent_runs SET status='completed' WHERE id=${quote(run)};`);
+      expect(sql(restored, `SELECT count(*) FROM public.agent_run_live_snapshots WHERE run_id=${quote(run)};`)).toBe("0");
+      expect(sql(restored, `SELECT public.set_agent_run_live_snapshot(${quote(run)},'stream',${quote(stream)},1,12);`)).toBe("f");
+    } finally {
+      root.fill(0);
+      vi.unstubAllEnvs();
+      log.mockRestore();
+      for (const name of created.reverse()) sql("postgres", `DROP DATABASE ${name} WITH (FORCE);`);
+    }
+  }, 60_000);
+
   it("restores encrypted objective sources across project key versions", async () => {
     const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
     const source = `minddy_min591_objective_source_${suffix}`;

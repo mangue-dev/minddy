@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { recordBackfillAttempt } from "./backfill-attempt";
 import { attachmentValueState, decodeAttachmentValue,
   encodeAttachmentValue, isEncryptedAttachmentValue,
   type AttachmentColumn, type AttachmentTable } from
@@ -36,13 +37,18 @@ export async function backfillAttachmentMetadataBatch(
   const service = getServiceClient();
   const { data, error } = await service.from(table)
     .select(["id", "project_id", ...COLUMNS[table]].join(","))
-    .order("content_encryption_checked_at", { ascending: true,
+    .order("content_encryption_attempted_at", { ascending: true,
       nullsFirst: true }).order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan attachment metadata");
   for (const row of (data ?? []) as unknown as MetadataRow[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await recordBackfillAttempt(service, table,
+        "content_encryption_attempted_at", { id: row.id, file_name: row.file_name, ...(table === "attachments" ? { url: row.url, icon_data_url: row.icon_data_url } : {}) })) {
+        result.conflicted++;
+        continue;
+      }
       const scope = { kind: "project" as const, id: row.project_id };
       const key = await getContentKeys().current(scope);
       const version = key.version;
@@ -51,13 +57,13 @@ export async function backfillAttachmentMetadataBatch(
       for (const column of COLUMNS[table]) {
         const value = row[column] ?? null;
         if (value === null) continue;
+        const clear = await decodeAttachmentValue(table, row.project_id,
+          row.id, column, value);
+        if (clear === null) throw new Error("Missing attachment metadata");
         if (isEncryptedAttachmentValue(value)) {
           const state = attachmentValueState(value);
           if (state.version === version && state.format === 3) continue;
         }
-        const clear = await decodeAttachmentValue(table, row.project_id,
-          row.id, column, value);
-        if (clear === null) throw new Error("Missing attachment metadata");
         const cipher = await encodeAttachmentValue(table, row.project_id,
           row.id, column, clear);
         if (await decodeAttachmentValue(table, row.project_id,

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeDelegationResult, encodeDelegationResult,
   type StoredDelegationResult } from "@/lib/server/agent/run-delegation-result-content";
@@ -28,13 +30,18 @@ export async function backfillAgentDelegationResultsBatch(limit = 20,
   const { data, error } = await service.from("agent_runs")
     .select("id,project_id,delegation_result,delegation_result_ciphertext,delegation_result_encryption_version")
     .or("delegation_result.not.is.null,delegation_result_ciphertext.not.is.null")
-    .order("delegation_result_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("delegation_result_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent delegation results");
   for (const row of (data ?? []) as ResultRow[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_runs", "delegation_result_encryption_checked_at",
+        row as Record<string, unknown>)) {
+        result.conflicted++;
+        continue;
+      }
       if (!row.id || !row.project_id ||
           !Number.isSafeInteger(row.delegation_result_encryption_version) ||
           row.delegation_result_encryption_version < 0) {

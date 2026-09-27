@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { recordBackfillAttempt } from "./backfill-attempt";
 import { decodeGithubCommentUrl, encodeGithubCommentUrl,
   type StoredGithubCommentUrl } from "@/lib/server/git/comment-sync-url-content";
 import { isContentEncryptionEnabled } from "./content-config";
@@ -27,7 +28,7 @@ export async function backfillGithubCommentUrlsBatch(limit = 20,
   const service = getServiceClient();
   const { data, error } = await service.from("github_issue_comment_syncs")
     .select("issue_id,remote_comment_id,html_url,html_url_encryption_version,synced_at,issue:issues!inner(project_id)")
-    .order("html_url_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("html_url_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("issue_id", { ascending: true })
     .order("remote_comment_id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan GitHub comment URLs");
@@ -35,6 +36,11 @@ export async function backfillGithubCommentUrlsBatch(limit = 20,
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await recordBackfillAttempt(service, "github_issue_comment_syncs",
+        "html_url_encryption_attempted_at", { issue_id: row.issue_id, remote_comment_id: row.remote_comment_id, html_url: row.html_url, html_url_encryption_version: row.html_url_encryption_version, synced_at: row.synced_at })) {
+        result.conflicted++;
+        continue;
+      }
       const projectId = row.issue?.project_id;
       if (!projectId || !row.issue_id || !row.remote_comment_id ||
           !Number.isSafeInteger(row.html_url_encryption_version) ||
@@ -43,16 +49,15 @@ export async function backfillGithubCommentUrlsBatch(limit = 20,
         p_remote_comment_id: row.remote_comment_id, p_project_id: projectId,
         p_old_url: row.html_url, p_old_version: row.html_url_encryption_version,
         p_old_synced_at: row.synced_at };
-      const attempt = await service.rpc("migrate_github_comment_url", identity);
-      if (attempt.error) throw new Error("Unable to mark comment URL attempt");
-      if (!attempt.data) { result.conflicted++; continue; }
       const decoded = await decodeGithubCommentUrl(projectId, row);
       const key = await getContentKeys().current({ kind: "project", id: projectId });
       const version = key.version;
       key.bytes.fill(0);
       if (row.html_url_encryption_version === version && row.html_url &&
           getEncryptedStore().formatOf(getEncryptedStore().fromDatabase(row.html_url)) === 3) {
-        result.unchanged++;
+        const checked = await service.rpc("migrate_github_comment_url", identity);
+        if (checked.error) throw new Error("Unable to verify comment URL");
+        if (checked.data) result.unchanged++; else result.conflicted++;
         continue;
       }
       const replacement = await encodeGithubCommentUrl(projectId, row.issue_id,

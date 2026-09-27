@@ -4,6 +4,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeRoutineTitle } from "@/lib/server/routine-content";
+import { decodeIssue } from "@/lib/server/issue-store";
+import { decodeObjective } from "@/lib/server/objective-store";
+import { decodePageProjection } from "@/lib/server/page-content";
 import { decodeProjectName } from "@/lib/server/project-content";
 import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import { getProjectAccess } from "@/lib/server/project-access";
@@ -323,10 +326,11 @@ export async function listTrash(
 ): Promise<TrashItem[]> {
   const service = getServiceClient();
 
-  const { data: liveProjects } = await userSupabase
+  const { data: liveProjects, error: liveProjectsError } = await userSupabase
     .from("projects")
     .select("id, name, key, color, icon_url, orb_seed, owner_id, encrypted_content, encryption_version")
     .is("deleted_at", null);
+  if (liveProjectsError) throw new Error("Unable to list accessible trash projects");
 
   const projectIds = (liveProjects ?? []).map((p) => p.id as string);
   const ownedProjectIds = (liveProjects ?? [])
@@ -355,9 +359,10 @@ export async function listTrash(
   ): Promise<TrashRow[]> => {
     if (ids.length === 0) return [];
     if (table === "feedback_posts") {
-      const { data } = await feedbackPostStore(service, userId)
+      const { data, error } = await feedbackPostStore(service, userId)
         .select(columns).in("project_id", ids).not("deleted_at", "is", null)
         .order("deleted_at", { ascending: false }).limit(LIST_LIMIT);
+      if (error) throw new Error("Unable to list trashed feedback");
       return (data ?? []) as TrashRow[];
     }
     const query = service
@@ -366,16 +371,17 @@ export async function listTrash(
       .in("project_id", ids)
       .not("deleted_at", "is", null);
     if (nullColumn) query.is(nullColumn, null);
-    const { data } = await query
+    const { data, error } = await query
       .order("deleted_at", { ascending: false })
       .limit(LIST_LIMIT);
+    if (error) throw new Error("Unable to list trashed items");
     return (data ?? []) as unknown as TrashRow[];
   };
 
   const [issueRows, objectiveRows, feedbackRows, routineRows, pageRows, projectRows] =
     await Promise.all([
-      inProjects("issues", "id, project_id, deleted_at, deleted_by, number, title"),
-      inProjects("objectives", "id, project_id, deleted_at, deleted_by, name"),
+      inProjects("issues", "id, project_id, deleted_at, deleted_by, number, title, description, plan, remote_url, automation_override, encrypted_content, encryption_version"),
+      inProjects("objectives", "id, project_id, deleted_at, deleted_by, name, description, encrypted_content, encryption_version"),
       inProjects("feedback_posts", "id, project_id, deleted_at, deleted_by, title"),
       inProjects(
         "agent_routines",
@@ -386,7 +392,7 @@ export async function listTrash(
       // page and its twenty subpages make ONE line to restore, not twenty.
       inProjects(
         "pages",
-        "id, project_id, deleted_at, deleted_by, title, icon, content, database_schema, property_values, deleted_root_id",
+        "id, project_id, deleted_at, deleted_by, title, icon, content, database_schema, property_values, deleted_root_id, encrypted_content, encryption_version",
         projectIds,
         "deleted_root_id"
       ),
@@ -397,12 +403,15 @@ export async function listTrash(
         .not("deleted_at", "is", null)
         .order("deleted_at", { ascending: false })
         .limit(LIST_LIMIT)
-        .then(({ data }) => (data ?? []) as unknown as TrashRow[]),
+        .then(({ data, error }) => {
+          if (error) throw new Error("Unable to list trashed projects");
+          return (data ?? []) as unknown as TrashRow[];
+        }),
     ]);
 
-  const { data: pageDescendants } =
+  const { data: pageDescendants, error: pageDescendantsError } =
     pageRows.length === 0
-      ? { data: [] }
+      ? { data: [], error: null }
       : await service
           .from("pages")
           .select("deleted_root_id")
@@ -412,12 +421,15 @@ export async function listTrash(
           )
           .not("deleted_at", "is", null)
           .limit(LIST_LIMIT);
+  if (pageDescendantsError) throw new Error("Unable to list trashed page descendants");
   const pageRootsWithDescendants = new Set(
     (pageDescendants ?? []).flatMap((row) =>
       typeof row.deleted_root_id === "string" ? [row.deleted_root_id] : [],
     ),
   );
-  const visiblePageRows = pageRows.filter(
+  const readablePageRows = await Promise.all(pageRows.map(async (row) =>
+    await decodePageProjection(row as unknown as Record<string, unknown>, userId) as unknown as TrashRow));
+  const visiblePageRows = readablePageRows.filter(
     (row) => !isBlankTrashPage(row, pageRootsWithDescendants.has(row.id)),
   );
 
@@ -432,6 +444,10 @@ export async function listTrash(
   const readableRoutineRows = await Promise.all(routineRows.map(async (row) =>
     ({ ...row, title: await decodeRoutineTitle(
       row as unknown as Record<string, unknown>, userId) })));
+  const readableIssueRows = await Promise.all(issueRows.map(async (row) =>
+    await decodeIssue(row as unknown as Record<string, unknown>, userId) as unknown as TrashRow));
+  const readableObjectiveRows = await Promise.all(objectiveRows.map(async (row) =>
+    await decodeObjective(row as unknown as Record<string, unknown>, userId) as unknown as TrashRow));
   const readableProjectRows = await Promise.all(projectRows.map(async (row) =>
     ({ ...row, name: await decodeProjectName(row as unknown as Record<string, unknown>, userId) })));
 
@@ -454,7 +470,7 @@ export async function listTrash(
   });
 
   const items: TrashItem[] = [
-    ...issueRows.map((row) => ({
+    ...readableIssueRows.map((row) => ({
       ...base(row),
       type: "issue" as const,
       title: row.title ?? "",
@@ -463,7 +479,7 @@ export async function listTrash(
         ? `${projectById.get(row.project_id)?.key ?? ""}-${row.number}`
         : null,
     })),
-    ...objectiveRows.map((row) => ({
+    ...readableObjectiveRows.map((row) => ({
       ...base(row),
       type: "objective" as const,
       title: row.name ?? "",

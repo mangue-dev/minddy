@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeAgentWorkBranch, decodeRuntimeWorkBranch,
   decodeWorkBranchValue, encodeAgentWorkBranch, encodeOrphanArtifactBranch,
@@ -43,13 +45,18 @@ export async function backfillAgentArtifactBranchesBatch(limit = 20,
   const { data, error } = await service.from("agent_artifacts")
     .select("id,conversation_id,run_id,ref,ref_ciphertext,ref_bound_run_id,conversation:agent_conversations!inner(project_id)")
     .eq("kind", "branch")
-    .order("ref_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("ref_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent branch artifacts");
   for (const row of (data ?? []) as unknown as ArtifactRow[]) {
     if (signal?.aborted) { outcome.interrupted = true; break; }
     outcome.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_artifacts", "ref_encryption_checked_at",
+        row as Record<string, unknown>)) {
+        outcome.conflicted++;
+        continue;
+      }
       const conversation = Array.isArray(row.conversation)
         ? row.conversation[0] : row.conversation;
       const projectId = conversation?.project_id;
@@ -94,13 +101,18 @@ export async function backfillAgentRunWorkBranchesBatch(limit = 20,
   const { data, error } = await service.from("agent_runs")
     .select("id,project_id,branch_name")
     .not("branch_name", "is", null)
-    .order("work_branch_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("work_branch_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent work branches");
   for (const row of (data ?? []) as StoredAgentWorkBranch[]) {
     if (signal?.aborted) { outcome.interrupted = true; break; }
     outcome.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_runs", "work_branch_encryption_checked_at",
+        row as Record<string, unknown>)) {
+        outcome.conflicted++;
+        continue;
+      }
       if (!row.id || !row.project_id || row.branch_name === null) {
         throw new Error("Invalid agent work branch migration scope");
       }
@@ -143,13 +155,18 @@ export async function backfillOrphanRuntimeWorkBranchesBatch(limit = 20,
   const { data, error } = await service.from("agent_runtime_sessions")
     .select("conversation_id,current_run_id,work_branch,work_branch_bound_run_id,conversation:agent_conversations!inner(project_id)")
     .is("current_run_id", null).not("work_branch", "is", null)
-    .order("work_branch_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("work_branch_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("conversation_id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan orphan runtime work branches");
   for (const row of (data ?? []) as unknown as RuntimeRow[]) {
     if (signal?.aborted) { outcome.interrupted = true; break; }
     outcome.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_runtime_sessions", "work_branch_encryption_checked_at",
+        row as Record<string, unknown>, "conversation_id")) {
+        outcome.conflicted++;
+        continue;
+      }
       const conversation = Array.isArray(row.conversation)
         ? row.conversation[0] : row.conversation;
       const projectId = conversation?.project_id;

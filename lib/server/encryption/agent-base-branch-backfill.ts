@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeAgentBaseBranch, decodeRuntimeBaseBranch,
   encodeAgentBaseBranch, encodeOrphanRuntimeBaseBranch,
@@ -38,13 +40,18 @@ export async function backfillAgentRunBaseBranchesBatch(limit = 20,
   const { data, error } = await service.from("agent_runs")
     .select("id,project_id,base_branch")
     .not("base_branch", "is", null)
-    .order("base_branch_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("base_branch_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent base branches");
   for (const row of (data ?? []) as StoredAgentBaseBranch[]) {
     if (signal?.aborted) { outcome.interrupted = true; break; }
     outcome.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_runs", "base_branch_encryption_checked_at",
+        row as Record<string, unknown>)) {
+        outcome.conflicted++;
+        continue;
+      }
       if (!row.id || !row.project_id || !row.base_branch) {
         throw new Error("Invalid agent base branch migration scope");
       }
@@ -89,13 +96,18 @@ export async function backfillOrphanRuntimeBaseBranchesBatch(limit = 20,
   const { data, error } = await service.from("agent_runtime_sessions")
     .select("conversation_id,current_run_id,base_branch,base_branch_bound_run_id,conversation:agent_conversations!inner(project_id)")
     .is("current_run_id", null).not("base_branch", "is", null)
-    .order("base_branch_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("base_branch_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("conversation_id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan orphan runtime base branches");
   for (const row of (data ?? []) as unknown as OrphanRow[]) {
     if (signal?.aborted) { outcome.interrupted = true; break; }
     outcome.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_runtime_sessions", "base_branch_encryption_checked_at",
+        row as Record<string, unknown>, "conversation_id")) {
+        outcome.conflicted++;
+        continue;
+      }
       const conversation = Array.isArray(row.conversation)
         ? row.conversation[0] : row.conversation;
       const projectId = conversation?.project_id;

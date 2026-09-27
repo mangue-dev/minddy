@@ -212,7 +212,7 @@ psql "$LOCAL_MIN591_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f scripts/encryption-fo
 psql "$LOCAL_MIN591_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f scripts/encryption-forge-rename-attachment-regression.sql
 psql "$LOCAL_MIN591_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f scripts/encryption-min591-worker-feedback-regression.sql
 MIN591_REQUIRE_PG_ORACLE=1 MIN591_PG_ORACLE_CONTAINER=supabase_db_minddy-encryption-test npx vitest run lib/server/pages-search-oracle.integration.test.ts
-MINDDY_ENCRYPTION_DB_TEST=true MINDDY_ENCRYPTION_FINAL_TEMPLATE=minddy_min591_final_review npx vitest run lib/server/encryption/database-recovery.integration.test.ts
+MINDDY_ENCRYPTION_DB_TEST=true MINDDY_ENCRYPTION_FINAL_TEMPLATE=minddy_min591_security_final_20260927 npx vitest run lib/server/encryption/database-recovery.integration.test.ts
 ```
 
 For Realtime, use an isolated **pre-correction** schema clone. Compose the
@@ -256,6 +256,27 @@ SELECT count(*) AS unverified_tool_messages FROM public.assistant_messages
    AND tool_payload_checked_at IS NULL;
 ```
 
+For pull-request URLs/content and Agent run/runtime checkpoints and journals,
+`*_checked_at` is only a worker assertion. It cannot authenticate AES-GCM in
+SQL. After the bounded workers finish, quiesce staging writers and invoke the
+cron-secret-protected read-only verifier twice, with a stable source-row count
+between passes:
+
+```sh
+printf 'header = "Authorization: Bearer %s"\n' "$CRON_SECRET" |
+  curl --fail-with-body --silent --show-error --config - \
+    "$STAGING_BASE_URL/api/cron/encryption-readiness" \
+    > /tmp/min591-encryption-readiness.json
+```
+
+Require HTTP 200, `ready: true`, and zero blocked rows in every family on both
+passes. HTTP 409 means a legacy, failed, tampered or wrong-key candidate still
+blocks activation; HTTP 503 means the verifier itself could not complete.
+The verifier walks every current row by keyset, checks the current key version,
+and decrypts protected values. It returns counts only. It is not an atomic
+snapshot across requests, so do not use it as a concurrent-writer completion
+proof. Retain failed candidates for repair and keep their `checked_at` null.
+
 Inventory effective Realtime comment partitions plus older backups, replica
 logs, analytics exports and external sinks under their retention policy. The
 active partition purge and old-writer guard do not erase prior backups or
@@ -264,6 +285,20 @@ copies already delivered to another service. For Agent live, install the
 configure the same valid root key on every live writer before routing stream
 or diff traffic. Verify the endpoint returns 503 if any prerequisite is
 missing, then retest after it is restored.
+
+Live snapshots are current-state records, not an append-only transcript. Each
+stream or diff update replaces only that kind when its millisecond timestamp
+increases and its content-key version does not regress. A long-running run
+retains its latest snapshot across process restarts and key rotations; readers
+need the historical content-key versions until that snapshot is replaced.
+The row expires when the run leaves `running`, and run deletion cascades it.
+There is no age-based expiry while a run remains `running`, so operational
+cleanup must mark abandoned runs terminal. The isolated PostgreSQL
+dump/restore test covers a 45-day running row with two historical key versions,
+cold-cache reads, wrong-root refusal, stale-write refusal and terminal cleanup.
+Before activation, restore a live running snapshot and its key registry in
+staging, then finish the run and confirm no snapshot remains. Inventory any
+older database backups and Realtime sinks under their separate retention plan.
 
 For forge attachments, test backup and restore of the actual Storage service,
 including old PR-ID paths and current opaque objects. The simulated object

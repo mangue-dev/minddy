@@ -8,7 +8,7 @@ import { getContentKeys, getEncryptedStore } from "./registry";
 import { isContentEncryptionEnabled } from "./content-config";
 
 type Row = Parameters<typeof decodeJournal>[1] & {
-  run: { project_id: string };
+  run: { project_id: string } | Array<{ project_id: string }>;
   payload_bytes?: number | null;
   event_count?: number | null;
   stored_bytes?: number | null;
@@ -28,21 +28,29 @@ export async function backfillAgentJournalBatch(limit = 5, signal?: AbortSignal)
   const service = getServiceClient();
   const { data, error } = await service.from("agent_run_journal")
     .select("*,run:agent_runs!inner(project_id)")
-    .order("encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent journal migration");
   for (const row of (data ?? []) as Row[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
-      const projectId = row.run?.project_id;
+      const run = Array.isArray(row.run) ? row.run[0] : row.run;
+      const projectId = run?.project_id;
       if (!projectId || !Number.isSafeInteger(Number(row.id)) ||
           !Number.isSafeInteger(row.encryption_version) ||
           (row.encryption_version ?? 0) < 0) {
         throw new Error("Invalid agent journal migration metadata");
       }
       const identity = { p_id: row.id, p_run_id: row.run_id,
-        p_previous_version: row.encryption_version };
+        p_previous_version: row.encryption_version,
+        p_previous_events: row.events,
+        p_previous_payload: row.payload,
+        p_previous_digest: row.payload_sha256,
+        p_previous_encoding: row.payload_encoding,
+        p_previous_event_count: row.event_count,
+        p_previous_payload_bytes: row.payload_bytes,
+        p_previous_stored_bytes: row.stored_bytes };
       const attempt = await service.rpc("migrate_agent_journal_ciphertext", identity);
       if (attempt.error) throw new Error("Unable to mark agent journal attempt");
       if (!attempt.data) { result.conflicted++; continue; }
@@ -54,7 +62,11 @@ export async function backfillAgentJournalBatch(limit = 5, signal?: AbortSignal)
       if (row.encryption_version === version &&
           typeof row.payload === "string" &&
           getEncryptedStore().formatOf(getEncryptedStore().fromDatabase(row.payload)) === 3) {
-        result.unchanged++;
+        const checked = await service.rpc("migrate_agent_journal_ciphertext", {
+          ...identity, p_verified: true,
+        });
+        if (checked.error) throw new Error("Unable to verify agent journal");
+        if (checked.data) result.unchanged++; else result.conflicted++;
         continue;
       }
       const encoded = journalEncodedRow(row.run_id, row.session_id, decoded.events);

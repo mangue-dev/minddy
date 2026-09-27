@@ -103,3 +103,41 @@ pre/post migration replays, the two-session fence test, all 69 independent
 parent/child restore scenarios, 106 targeted tests and 8,669 full-suite tests
 pass. The PostgreSQL search oracle, build, typecheck, lint and repository
 encryption/English checks also pass.
+
+## Corrective review of `4e9268554`
+
+This checkpoint supersedes the older test counts and remaining-code statements
+above. Every item below was reproduced against the reviewed code before its
+repair. The final isolated schema is `minddy_min591_security_final_20260927`,
+which includes the four migrations after the verified v3 template. The older
+`minddy_min591_final_review` remains useful only for pre-correction replays.
+
+| Defect | Before-fix evidence | Corrective code and final-schema proof |
+| --- | --- | --- |
+| Trashed protected content | Raw page columns made protected roots appear blank; issue and objective labels were empty. | Decrypt before page visibility and label construction. Real encrypted fixtures cover ordinary pages, databases, blank drafts, trees, list, restore, purge and retention. `encryption-page-trash-regression.sql` checks SQL metadata restoration and retention. |
+| AI provider and JSON error logs | Sentinels from malformed JSON and provider bodies reached the forced-tool-call log. | Controlled provider/status, response-JSON, tool-argument and request-failure codes replace raw errors. Sentinel tests cover every branch and the callers use fixed prefixes. |
+| Agent drain logs | A decrypted deployment URL and thrown provider error reached logs. | Only opaque run IDs and controlled outcomes are logged. Success, timeout and error fixtures reject secret sentinels. |
+| Protected tab and backlink labels | RLS-visible protected rows returned null titles or ciphertext. | Page, issue, objective and PR decoders restore authorized labels; cross-project paths remain filtered. The CI guard pins protected dynamic-reader contracts and the consumer inventory records dynamic access. |
+| Failed migration queues | A corrupt first batch and repeated CAS conflicts could monopolize checked-at ordering. | PR, Agent, generic row and specialized analogue workers rotate attempted-at independently, with exact-row CAS. PostgreSQL and worker fixtures prove a later healthy row advances while failed rows remain unverified. The forge mirror cursor uses its full composite key. Nine Numo workers were audited and already use fair attempt cursors. |
+| False verification | Current-format tags could be accepted without authentication; checkpoint, journal and generic row marker calls could set checked-at before decode. | Current-format rows decrypt before unchanged. Suspect historical checks are reset; old generic row-worker marker calls are reclassified as attempts. Corrupt tags, wrong roots, missing historical keys and retries remain blockers. The read-only critical-family verifier decrypts every current PR URL/content, Agent run/runtime checkpoint and journal row before reporting readiness. |
+| Feedback erasure | A failed session delete still produced success; erased identities could authorize sessions, and retries skipped revocation. | One locked SQL transaction revokes sessions and OTP rows and scrubs identity; unit tests and a two-session PostgreSQL race cover both commit orders and retries. |
+
+The final clone passes 95 post-migration SQL regressions, 70 independent
+parent/child restores with multiple key versions, cold caches and wrong-root
+rejection, plus the PostgreSQL search oracle. Separate pre/post Realtime and
+Numo replays and the two-session write-fence regression pass on earlier
+isolated schemas. The full suite passes 8,728 tests with 103 skipped;
+typecheck, lint, build and the encryption/English checks pass. Database
+restore tests prove metadata and ciphertext rows;
+simulated Storage fixtures prove byte handling; restoring the actual Storage
+service is still a separate operational gate. Live snapshots rotate by kind
+and timestamp, survive long runs and restarts with historical keys, and are
+removed when a run becomes terminal. Abandoned running rows need operational
+cleanup because they have no age-only expiry.
+
+No production data or retained copy is assumed encrypted. Keep the ticket in
+progress, the PR in draft, and all production flags off. Inventory and migrate
+every target and copy before completion. Run representative search parity,
+latency, key-cache and load checks in staging before activation. Supabase Auth
+login email is the only provider-identity exception and does not cover an
+application copy.

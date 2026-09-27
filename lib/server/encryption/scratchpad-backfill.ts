@@ -5,15 +5,17 @@ import { getEncryptedStore } from "./registry";
 import { isContentEncryptionEnabled } from "./content-config";
 import { migrateProtectedRows, type MigrationCandidate, type RowMigrationRepository } from "./row-migration";
 import type { StoredRow } from "./row-codec";
+import { rowMigrationProgress } from "./row-migration-progress";
 
 /** Includes old formats and DEK versions; attempt ordering prevents failed rows starving others. */
 export async function backfillScratchpadsBatch(limit = 50, signal?: AbortSignal) {
   if (!isContentEncryptionEnabled()) throw new Error("Content encryption is not enabled");
   const service = getServiceClient();
   const repository: RowMigrationRepository = {
+    ...rowMigrationProgress(service, "user_scratchpad"),
     async scan(batchLimit) {
       const { data, error } = await service.from("user_scratchpad").select("*")
-        .order("encryption_checked_at", { ascending: true, nullsFirst: true })
+        .order("encryption_attempted_at", { ascending: true, nullsFirst: true })
         .order("user_id", { ascending: true }).limit(batchLimit);
       if (error) throw new Error("Unable to scan scratchpad migration");
       const candidates: MigrationCandidate[] = [];
@@ -21,9 +23,6 @@ export async function backfillScratchpadsBatch(limit = 50, signal?: AbortSignal)
         if (typeof row.user_id !== "string" || !Number.isSafeInteger(row.rev) || row.rev < 0 || row.rev >= Number.MAX_SAFE_INTEGER) {
           throw new Error("Invalid scratchpad migration metadata");
         }
-        const { error: attemptError } = await service.from("user_scratchpad")
-          .update({ encryption_checked_at: new Date().toISOString() }).eq("user_id", row.user_id).eq("rev", row.rev);
-        if (attemptError) throw new Error("Unable to record scratchpad migration attempt");
         candidates.push({
           row: row as StoredRow,
           context: { table: "user_scratchpad", scope: { kind: "user", id: row.user_id } },

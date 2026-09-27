@@ -1,5 +1,7 @@
 import "server-only";
 
+import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeAgentVerdict, encodeAgentVerdict,
   type StoredAgentVerdict } from "@/lib/server/agent/run-verdict-content";
@@ -26,13 +28,18 @@ export async function backfillAgentVerdictsBatch(limit = 20, signal?: AbortSigna
   const { data, error } = await service.from("agent_runs")
     .select("id,project_id,verdict,verdict_ciphertext,verdict_encryption_version")
     .or("verdict.not.is.null,verdict_ciphertext.not.is.null")
-    .order("verdict_encryption_checked_at", { ascending: true, nullsFirst: true })
+    .order("verdict_encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan agent verdicts");
   for (const row of (data ?? []) as VerdictRow[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
     try {
+      if (!await markAgentBackfillAttempt(service, "agent_runs", "verdict_encryption_checked_at",
+        row as Record<string, unknown>)) {
+        result.conflicted++;
+        continue;
+      }
       if (!row.id || !row.project_id || !Number.isSafeInteger(row.verdict_encryption_version) ||
           row.verdict_encryption_version < 0) throw new Error("Invalid agent verdict scope");
       const identity = { p_id: row.id, p_project_id: row.project_id,

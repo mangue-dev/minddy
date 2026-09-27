@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
   insertError: null as { code: string; message: string } | null,
   stats: vi.fn(),
   version: 1,
+  attemptTick: 0,
 }));
 
 function query() {
@@ -22,7 +23,7 @@ function query() {
     if (mode === "insert" && state.insertError) return { data: null, error: state.insertError };
     if (mode !== "select") state.beforeWrite?.();
     let rows = [...state.rows.values()].filter((row) => Object.entries(filters).every(([key, value]) => row[key] === value));
-    rows.sort((a, b) => String(a.encryption_checked_at ?? "").localeCompare(String(b.encryption_checked_at ?? "")) || String(a.user_id).localeCompare(String(b.user_id)));
+    rows.sort((a, b) => String(a.encryption_attempted_at ?? "").localeCompare(String(b.encryption_attempted_at ?? "")) || String(a.user_id).localeCompare(String(b.user_id)));
     rows = rows.slice(0, limit);
     if (mode === "insert") {
       if (state.rows.has(String(patch.user_id))) return { data: null, error: { code: "23505" } };
@@ -48,7 +49,21 @@ function query() {
   return builder;
 }
 
-const client = { from: () => query() } as unknown as SupabaseClient;
+const client = { from: () => query(),
+  rpc: async (name: string, args: Record<string, unknown>) => {
+    if (name !== "record_encryption_backfill_progress") {
+      return { data: null, error: { message: "Unsupported fixture RPC" } };
+    }
+    const expected = args.p_expected as Record<string, unknown>;
+    const row = state.rows.get(String(expected.user_id));
+    if (!row) return { data: false, error: null };
+    const matches = Object.entries(expected).every(([field, value]) =>
+      JSON.stringify(row[field]) === JSON.stringify(value));
+    row.encryption_attempted_at = `attempt-${++state.attemptTick}`;
+    if (args.p_verified && matches) row.encryption_checked_at = `verified-${state.attemptTick}`;
+    return { data: matches, error: null };
+  },
+} as unknown as SupabaseClient;
 vi.mock("./registry", () => ({ getEncryptedStore: () => {
   if (!state.crypto) throw new Error("Root key unavailable");
   return state.crypto;
@@ -60,7 +75,9 @@ const { getScratchpad, getScratchpadRow, setScratchpad, applyScratchpadTaskChang
 const { backfillScratchpadsBatch } = await import("./scratchpad-backfill");
 
 function legacy(userId = "user-1", content = "- [ ] Private task") {
-  const row = { user_id: userId, content, rev: 4, updated_at: "2026-09-22T12:00:00Z", encryption_version: 0, encrypted_content: null, encryption_checked_at: null };
+  const row = { user_id: userId, content, rev: 4, updated_at: "2026-09-22T12:00:00Z",
+    encryption_version: 0, encrypted_content: null, encryption_checked_at: null,
+    encryption_attempted_at: null };
   state.rows.set(userId, row);
   return row;
 }
@@ -74,6 +91,7 @@ beforeEach(() => {
   state.beforeWrite = null;
   state.insertError = null;
   state.version = 1;
+  state.attemptTick = 0;
   const material = randomBytes(32);
   const provider: DataKeyProvider = {
     current: async () => ({ version: state.version, bytes: Buffer.from(material) }),
@@ -162,6 +180,7 @@ describe("personal content repository encryption", () => {
     vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");
     expect(await backfillScratchpadsBatch()).toMatchObject({ migrated: 1, failed: 0 });
     expect(state.rows.get("user-1")).toMatchObject({ rev: 5, content: null, encryption_version: 1 });
+    expect(state.rows.get("user-1")!.encryption_checked_at).toBeTruthy();
     expect((await getScratchpad(client, "user-1")).content).toBe(original.content);
     expect(await backfillScratchpadsBatch()).toMatchObject({ unchanged: 1, migrated: 0 });
     expect(state.rows.get("user-1")!.rev).toBe(5);
@@ -177,13 +196,15 @@ describe("personal content repository encryption", () => {
     vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");
     state.rows.set("user-1", { ...state.rows.get("user-1"), content: null, encryption_version: 1, encrypted_content: "corrupt" });
     expect(await backfillScratchpadsBatch(1)).toMatchObject({ failed: 1, migrated: 0 });
+    expect(state.rows.get("user-1")!.encryption_checked_at).toBeNull();
+    expect(state.rows.get("user-1")!.encryption_attempted_at).toBeTruthy();
     expect(await backfillScratchpadsBatch(1)).toMatchObject({ migrated: 1, failed: 0 });
     state.rows.delete("user-1");
     legacy("user-3");
     let attempts = 0;
     state.beforeWrite = () => {
       attempts += 1;
-      if (attempts === 2) state.rows.set("user-3", { ...state.rows.get("user-3"), content: "Concurrent note", rev: 5 });
+      if (attempts === 1) state.rows.set("user-3", { ...state.rows.get("user-3"), content: "Concurrent note", rev: 5 });
     };
     expect(await backfillScratchpadsBatch(1)).toMatchObject({ conflicted: 1, migrated: 0 });
     expect(state.rows.get("user-3")!.content).toBe("Concurrent note");
