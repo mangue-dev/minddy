@@ -8,6 +8,7 @@ import { sendApnsNotification } from "./apns";
 import { sendWnsNotification } from "./wns";
 import type { PushPayload } from "./payload";
 import { sendPinnedWebPushNotification } from "./web";
+import { openPush } from "./content";
 
 /**
  * Web Push delivery and the related subscription maintenance (MIN-183).
@@ -196,14 +197,14 @@ export async function activeSubscriptionsOf(
 ): Promise<PushSubscriptionRow[]> {
   const { data, error } = await service
     .from("push_subscriptions")
-    .select("id, endpoint, transport, p256dh, auth")
+    .select("id, user_id, endpoint, endpoint_digest, transport, p256dh, auth, native_installation_id, device_label, user_agent, encrypted_content")
     .eq("user_id", userId)
     .eq("enabled", true);
   if (error) {
     console.error("[push] failed to read subscriptions:", error.message);
     return [];
   }
-  return (data ?? []) as PushSubscriptionRow[];
+  return Promise.all((data ?? []).map(async (row) => openPush(row))) as Promise<PushSubscriptionRow[]>;
 }
 
 /**

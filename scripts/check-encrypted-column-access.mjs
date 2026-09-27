@@ -13,6 +13,16 @@ const allowedInvitationAccess = new Set([
 
 const rules = [
   {
+    access: /\.\s*from\s*\(\s*["'`]push_subscriptions["'`]\s*\)/,
+    allowed: new Set([
+      "app/api/account/push-subscriptions/route.ts",
+      "app/api/account/push-subscriptions/[id]/route.ts",
+      "app/api/account/push-subscriptions/test/route.ts",
+      "lib/server/push/send.ts", "lib/server/account-export.ts",
+      "lib/server/encryption/push-backfill.ts",
+    ]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]integrations["'`]\s*\)/,
     allowed: new Set(["lib/server/integrations.ts",
       "lib/server/integration-auth.ts", "lib/server/webhooks.ts",

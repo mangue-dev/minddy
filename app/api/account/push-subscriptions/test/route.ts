@@ -40,10 +40,11 @@ export async function POST(request: NextRequest) {
 
   // Use the authenticated client for ownership verification. RLS makes a row
   // belonging to another account invisible.
-  const { data: device, error } = await auth.supabase
+  const { data: device, error } = await getServiceClient()
     .from("push_subscriptions")
-    .select("id, endpoint, transport, enabled")
+    .select("id, transport, enabled")
     .eq("id", deviceId)
+    .eq("user_id", auth.user.id)
     .maybeSingle();
 
   if (error) {

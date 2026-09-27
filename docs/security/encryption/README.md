@@ -9,7 +9,7 @@ production migration on the strength of crypto unit tests or this inventory.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 185 application tables and 1,615 columns, their primary
+- `schema.json` records 186 application tables and 1,623 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 173 encryption targets include the original content,
@@ -20,10 +20,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,650 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,655 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 477 functions, ten views and 245 application triggers. Function
+- `sql-consumers.json` records 481 functions, ten views and 246 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -2103,4 +2103,21 @@ old clear writers and scope moves. The isolated SQL regression, codec test and
 targeted integration, event and SSRF tests pass. A child-first PostgreSQL
 dump/restore in separate batches reads two historical project-key versions
 with cold caches and rejects the wrong root. Production flags remain off.
-Push subscriptions and final repository-wide verification remain open.
+Push subscriptions and final repository-wide verification remained open at
+this checkpoint.
+
+## Push subscription checkpoint — 27 September 2026
+
+Push endpoint, Web Push keys, native installation identity, device label and
+user agent now move into a user-key envelope. Stable purpose-separated blind
+indexes preserve global endpoint equality and owner-scoped native installation
+lookup. An authenticated route uses the service client with an explicit owner
+filter; the migration revokes direct authenticated table access. A service-only
+transactional registration RPC handles refresh, account transfer and endpoint
+rotation. Delivery decrypts only for the selected owner, while settings and
+account export project only the fields they need. A 25-row exact-revision CAS
+worker rotates historical rows. Verified activation and SQL guards reject old
+clear writers. The isolated SQL regression covers web/native registration,
+account transfer, rotation, access and old-writer refusal. Codec and route
+tests and child-first mixed-key PostgreSQL restore pass, including cold caches
+and wrong-root rejection. Flags remain off; no production data was migrated.

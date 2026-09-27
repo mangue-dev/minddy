@@ -233,6 +233,21 @@
       ],
       "functionReferences": []
     },
+    "guard_push_content()": {
+      "sha256": "68b162dd59481248370959227a5f82f792e00c314fc2753c28a1cc0e05cfb66c",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "push_content_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": [
+        "push_content_version"
+      ]
+    },
     "guard_view_content()": {
       "sha256": "a26fcb938fa7f0166ef5e1c407e3c8771f9416753b9d403efa2b2a2656acecb3",
       "securityDefiner": true,
@@ -435,6 +450,24 @@
         "pages"
       ],
       "functionReferences": []
+    },
+    "activate_push_content()": {
+      "sha256": "7a2693e07f2d9744d4bd05d65ea594708c1bfb55d197e90a1cb1a901cc0cdd5f",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "push_content_scope",
+        "push_subscriptions"
+      ],
+      "protectedRelations": [
+        "push_subscriptions"
+      ],
+      "functionReferences": [
+        "push_content_version"
+      ]
     },
     "activate_view_content()": {
       "sha256": "6c60522593a13aadc51709f28d54ac0d721c173aca9b6fc0b6ef40df6ccbea5c",
@@ -1326,6 +1359,17 @@
       "relations": [
         "oauth_code_content_scope"
       ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "push_content_version(text)": {
+      "sha256": "c9537ee30bb53e9ac5541851473c5a8878d935ad2a83dff68ca6edbc55a48c46",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [],
       "protectedRelations": [],
       "functionReferences": []
     },
@@ -7050,6 +7094,23 @@
       ],
       "functionReferences": []
     },
+    "register_protected_push(uuid,text,text,text,text,text,text,text,text,text,boolean)": {
+      "sha256": "82b1e5cb492e771d854c65037b8e5e79fed6d97e1d688eb6fd8815411debe571",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "push_subscriptions"
+      ],
+      "protectedRelations": [
+        "push_subscriptions"
+      ],
+      "functionReferences": [
+        "push_content_version"
+      ]
+    },
     "migrate_agent_checkpoint_ciphertext(uuid,uuid,uuid,jsonb,text,integer,text,integer)": {
       "sha256": "84db235966196d7ce0e69822e866fee1e5cdeb8bc2640af6f09807a5d8fde9c8",
       "securityDefiner": true,
@@ -7812,6 +7873,10 @@
     "projects.project_icon_reference_guard": {
       "function": "guard_project_icon_reference()",
       "definition": "CREATE TRIGGER project_icon_reference_guard BEFORE INSERT OR UPDATE ON projects FOR EACH ROW EXECUTE FUNCTION guard_project_icon_reference()"
+    },
+    "push_subscriptions.push_content_guard": {
+      "function": "guard_push_content()",
+      "definition": "CREATE TRIGGER push_content_guard BEFORE INSERT OR UPDATE ON push_subscriptions FOR EACH ROW EXECUTE FUNCTION guard_push_content()"
     },
     "saved_views.saved_view_bookmark_guard": {
       "function": "guard_saved_view_bookmark()",

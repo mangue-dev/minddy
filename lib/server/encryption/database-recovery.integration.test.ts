@@ -3843,6 +3843,92 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
     }
   }, 60_000);
 
+  it("restores push subscriptions before owners with rotated cold keys", async () => {
+    const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
+    const source = `minddy_min591_push_${suffix}`;
+    const restored = `minddy_min591_push_restored_${suffix}`;
+    const created: string[] = [];
+    const root = randomBytes(32);
+    const owner = randomUUID(), ids = [randomUUID(), randomUUID()];
+    const digests = ["a".repeat(64), "b".repeat(64)];
+    const scope: EncryptionScope = { kind: "user", id: owner };
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      expect(sql(oauthClientTemplate,
+        "SELECT count(*) FROM public.push_subscriptions;")).toBe("0");
+      for (const database of [source, restored]) {
+        sql("postgres", `CREATE DATABASE ${database} TEMPLATE ${oauthClientTemplate};`);
+        created.push(database);
+      }
+      sql(source, `INSERT INTO auth.users(id) VALUES(${quote(owner)});`);
+      const keys = new ManagedDataKeys(registry(source), wrapper(root));
+      const store = new EncryptedStore(keys);
+      for (const [index, id] of ids.entries()) {
+        if (index) await keys.rotate(scope, 1);
+        const content = { endpoint: `https://private-${index}.example/push`,
+          p256dh: `private-key-${index}`, auth: `private-auth-${index}`,
+          native_installation_id: null, device_label: `Private device ${index}`,
+          user_agent: `Private browser ${index}` };
+        const cipher = await store.encrypt(content, { scope,
+          table: "push_subscriptions", column: "content",
+          rowId: digests[index] });
+        sql(source, `INSERT INTO public.push_subscriptions(id,user_id,
+          endpoint_digest,encrypted_content,transport) VALUES(${quote(id)},
+          ${quote(owner)},${quote(digests[index])},
+          ${quote(`mdye3:${cipher}`)},'web');`);
+      }
+      expect(sql(source, "SELECT public.activate_push_content();")).toBe("t");
+      const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
+        "supabase_admin", "-d", source, "--data-only", "--no-owner",
+        "--no-privileges", ...["auth.users", "public.push_subscriptions",
+          "public.push_content_scope", "public.envelope_data_keys"]
+          .map((table) => `--table=${table}`)],
+      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });
+      expect(dump).not.toContain("private-0.example");
+      expect(dump).not.toContain("private-1.example");
+      expect(dump).not.toContain("private-auth");
+      const match = dump.match(/(COPY public\.push_subscriptions[^\n]*\n)([\s\S]*?)(\\\.\n)/);
+      expect(match).not.toBeNull();
+      for (const line of match![2].trimEnd().split("\n").reverse())
+        sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${match![1]}${line}\n${match![3]}COMMIT;`);
+      sql(restored, `BEGIN; SET LOCAL session_replication_role=replica;\n${dump.replace(match![0], "")}\nCOMMIT;`);
+      sql(restored, `ALTER TABLE public.push_subscriptions
+        DROP CONSTRAINT push_subscriptions_user_id_fkey;
+        ALTER TABLE public.push_subscriptions ADD CONSTRAINT
+        push_subscriptions_user_id_fkey FOREIGN KEY(user_id)
+        REFERENCES auth.users(id) NOT VALID;
+        ALTER TABLE public.push_subscriptions VALIDATE CONSTRAINT
+        push_subscriptions_user_id_fkey;`);
+      const cold = new EncryptedStore(new ManagedDataKeys(
+        registry(restored), wrapper(root)));
+      for (const [index, id] of ids.entries()) {
+        const row = JSON.parse(sql(restored, `SELECT row_to_json(p) FROM
+          public.push_subscriptions p WHERE id=${quote(id)};`));
+        expect(row.endpoint).toBeNull();
+        expect(row.p256dh).toBeNull();
+        const cipher = cold.fromDatabase(row.encrypted_content.slice(6));
+        expect(cold.versionOf(cipher)).toBe(index + 1);
+        expect(await cold.decrypt(cipher, { scope,
+          table: "push_subscriptions", column: "content",
+          rowId: digests[index] })).toMatchObject({
+          endpoint: `https://private-${index}.example/push`,
+          auth: `private-auth-${index}` });
+      }
+      const wrong = new EncryptedStore(new ManagedDataKeys(
+        registry(restored), wrapper(randomBytes(32))));
+      const value = sql(restored, `SELECT encrypted_content FROM
+        public.push_subscriptions WHERE id=${quote(ids[0])};`).slice(6);
+      await expect(wrong.decrypt(wrong.fromDatabase(value), {
+        scope, table: "push_subscriptions", column: "content",
+        rowId: digests[0],
+      })).rejects.toThrow();
+    } finally {
+      root.fill(0); vi.unstubAllEnvs(); log.mockRestore();
+      for (const database of created.reverse())
+        sql("postgres", `DROP DATABASE ${database} WITH (FORCE);`);
+    }
+  }, 60_000);
+
   it("restores Numo admission snapshots before owners with mixed cold keys", async () => {
     const suffix = randomUUID().replaceAll("-", "").slice(0, 20);
     const source = `minddy_min591_intent_${suffix}`;

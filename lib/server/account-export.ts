@@ -8,6 +8,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { decodeApiKeyContent, type StoredApiKey } from
   "@/lib/server/api-key-content";
 import { decodeBillingAccount } from "@/lib/server/billing-content";
+import { openPush, type StoredPush } from "@/lib/server/push/content";
 import { CONTACT_EMAIL } from "@/lib/site";
 import {
   ACCOUNT_TRANSFER_FORMAT,
@@ -345,7 +346,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     // the label already says what device it is.
     service
       .from("push_subscriptions")
-      .select("transport, native_installation_id, device_label, enabled, created_at, last_push_at")
+      .select("*")
       .eq("user_id", userId)
       .order("created_at"),
     readStatEvents(service, userId),
@@ -635,7 +636,13 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     }))),
     code_agent_conversations: exportedCodeConversations,
     notifications: list("notifications", notifications),
-    push_devices: list("push_subscriptions", pushDevices),
+    push_devices: await Promise.all(list("push_subscriptions", pushDevices)
+      .map(async (row) => {
+        const device = await openPush(row as StoredPush & Record<string, unknown>);
+        return { transport: device.transport, device_label: device.device_label,
+          enabled: device.enabled, created_at: device.created_at,
+          last_push_at: device.last_push_at };
+      })),
     statistics,
     billing: exportedBilling,
     ai_usage: list("ai_usage", aiUsage),

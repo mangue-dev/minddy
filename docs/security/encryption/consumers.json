@@ -129,49 +129,56 @@
     "file": "app/api/account/push-subscriptions/[id]/route.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 45,
+    "line": 46,
     "storage": false
   },
   {
     "file": "app/api/account/push-subscriptions/[id]/route.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 68,
+    "line": 70,
     "storage": false
   },
   {
     "file": "app/api/account/push-subscriptions/route.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 29,
+    "line": 32,
+    "storage": false
+  },
+  {
+    "file": "app/api/account/push-subscriptions/route.ts",
+    "operation": "rpc",
+    "resource": "register_protected_push",
+    "line": 148,
     "storage": false
   },
   {
     "file": "app/api/account/push-subscriptions/route.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 130,
+    "line": 173,
     "storage": false
   },
   {
     "file": "app/api/account/push-subscriptions/route.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 150,
+    "line": 194,
     "storage": false
   },
   {
     "file": "app/api/account/push-subscriptions/route.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 182,
+    "line": 226,
     "storage": false
   },
   {
     "file": "app/api/account/push-subscriptions/route.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 196,
+    "line": 241,
     "storage": false
   },
   {
@@ -1718,196 +1725,196 @@
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 216,
+    "line": 217,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 234,
+    "line": 235,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_agent_preferences",
-    "line": 268,
+    "line": 269,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 284,
+    "line": 285,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "page_files",
-    "line": 295,
+    "line": 296,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 307,
+    "line": 308,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "views",
-    "line": 322,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "saved_views",
     "line": 323,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
+    "resource": "saved_views",
+    "line": 324,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-export.ts",
+    "operation": "from",
     "resource": "agent_routines",
-    "line": 325,
+    "line": 326,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "cycles",
-    "line": 327,
+    "line": 328,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 329,
+    "line": 330,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 334,
+    "line": 335,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 346,
+    "line": 347,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 352,
+    "line": 353,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "ai_usage",
-    "line": 364,
+    "line": 365,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 372,
+    "line": 373,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 377,
+    "line": 378,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 382,
+    "line": 383,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 389,
+    "line": 390,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 394,
+    "line": 395,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 408,
+    "line": 409,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 433,
+    "line": 434,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 437,
+    "line": 438,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_messages",
-    "line": 451,
+    "line": 452,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_turns",
-    "line": 456,
+    "line": 457,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversation_contexts",
-    "line": 464,
+    "line": 465,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversation_contexts",
-    "line": 468,
+    "line": 469,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "issue_categories",
-    "line": 534,
+    "line": 535,
     "storage": false
   },
   {
@@ -6300,6 +6307,27 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/push-backfill.ts",
+    "operation": "from",
+    "resource": "push_subscriptions",
+    "line": 22,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/push-backfill.ts",
+    "operation": "from",
+    "resource": "push_subscriptions",
+    "line": 49,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/push-backfill.ts",
+    "operation": "from",
+    "resource": "push_subscriptions",
+    "line": 68,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/registry.ts",
     "operation": "from",
     "resource": "envelope_data_keys",
@@ -10381,6 +10409,13 @@
     "storage": false
   },
   {
+    "file": "lib/server/push/content.ts",
+    "operation": "from",
+    "resource": "push_content_scope",
+    "line": 33,
+    "storage": false
+  },
+  {
     "file": "lib/server/push/payload.ts",
     "operation": "from",
     "resource": "agent_conversations",
@@ -10426,63 +10461,63 @@
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 79,
+    "line": 80,
     "storage": false
   },
   {
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 90,
+    "line": 91,
     "storage": false
   },
   {
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 103,
+    "line": 104,
     "storage": false
   },
   {
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 110,
+    "line": 111,
     "storage": false
   },
   {
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 130,
+    "line": 131,
     "storage": false
   },
   {
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 141,
+    "line": 142,
     "storage": false
   },
   {
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 165,
+    "line": 166,
     "storage": false
   },
   {
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 171,
+    "line": 172,
     "storage": false
   },
   {
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 197,
+    "line": 198,
     "storage": false
   },
   {

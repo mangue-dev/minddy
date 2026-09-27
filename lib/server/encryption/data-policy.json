@@ -3932,7 +3932,13 @@
       "user_agent"
     ],
     "clear": {
+      "encryption_metadata": [
+        "encrypted_content",
+        "endpoint_digest",
+        "installation_digest"
+      ],
       "bounded_metadata": [
+        "content_revision",
         "enabled",
         "failure_count"
       ],
@@ -3946,9 +3952,22 @@
       ],
       "timestamp": [
         "created_at",
+        "encryption_attempted_at",
+        "encryption_checked_at",
         "last_push_at",
         "last_seen_at"
       ]
+    }
+  },
+  "push_content_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "push-content"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": ["id"],
+      "timestamp": ["activated_at"]
     }
   },
   "saved_view_bookmark_encryption_scope": {
