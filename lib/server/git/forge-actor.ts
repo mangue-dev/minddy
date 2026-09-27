@@ -1,6 +1,7 @@
 import "server-only";
 
-import { createHmac, randomBytes } from "node:crypto";
+import { randomBytes, scrypt } from "node:crypto";
+import { promisify } from "node:util";
 
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { GITHUB_API_BASE, githubHeaders } from "./github-rest";
@@ -83,22 +84,31 @@ function cacheKey(userId: string, provider: RepoProviderId, repoFullName: string
  * fingerprint is not a secret; the token is not written anywhere here.
  */
 const deadTokens = new Set<string>();
+const deadTokenAccounts = new Set<string>();
 const DEAD_TOKENS_MAX = 500;
-const deadTokenFingerprintKey = randomBytes(32);
+const deadTokenFingerprintSalt = randomBytes(32);
+const deriveTokenFingerprint = promisify(scrypt);
 
-function tokenFingerprint(token: string): string {
-  return createHmac("sha256", deadTokenFingerprintKey)
-    .update(token)
-    .digest("base64url")
-    .slice(0, 22);
+async function tokenFingerprint(token: string): Promise<string> {
+  const value = await deriveTokenFingerprint(token, deadTokenFingerprintSalt, 32);
+  return (value as Buffer).toString("base64url");
 }
 
-function rememberDeadToken(token: string): void {
+function deadAccountKey(userId: string, provider: RepoProviderId): string {
+  return `${userId}:${provider}`;
+}
+
+async function rememberDeadToken(userId: string, provider: RepoProviderId,
+  token: string): Promise<void> {
   // Memory terminal: a long-lived process must not accumulate endlessly.
   // We start from scratch rather than finely evicting — the cost of forgetting is a
   // OAuth exchange again, not an error.
-  if (deadTokens.size >= DEAD_TOKENS_MAX) deadTokens.clear();
-  deadTokens.add(tokenFingerprint(token));
+  if (deadTokens.size >= DEAD_TOKENS_MAX) {
+    deadTokens.clear();
+    deadTokenAccounts.clear();
+  }
+  deadTokenAccounts.add(deadAccountKey(userId, provider));
+  deadTokens.add(await tokenFingerprint(token));
 }
 
 /** The login/avatar of the account, to say them in the UI without a second round trip. */
@@ -205,7 +215,8 @@ export async function resolveForgeActor(opts: {
   // Token already found dead: neither probe nor rotation. BEFORE the cache
   // capability — a right stored three minutes ago does not return a token
   // usable, and returning it here would restart a gesture doomed to 401.
-  if (deadTokens.has(tokenFingerprint(account.token))) {
+  if (deadTokenAccounts.has(deadAccountKey(opts.userId, opts.provider)) &&
+      deadTokens.has(await tokenFingerprint(account.token))) {
     return { kind: "none", reason: "expired", login: account.login };
   }
 
@@ -241,14 +252,14 @@ export async function resolveForgeActor(opts: {
   if (probed.outcome === "expired") {
     const rotated = await resolveAccount(opts.userId, opts.provider, true);
     if (!rotated || rotated.token === account.token) {
-      rememberDeadToken(account.token);
+      await rememberDeadToken(opts.userId, opts.provider, account.token);
       return { kind: "none", reason: "expired", login: account.login };
     }
     account = rotated;
     probed = await probe(account.token);
     if (!probed) return { kind: "actor", ...account, capability: "read" };
     if (probed.outcome === "expired") {
-      rememberDeadToken(account.token);
+      await rememberDeadToken(opts.userId, opts.provider, account.token);
       return { kind: "none", reason: "expired", login: account.login };
     }
   }
