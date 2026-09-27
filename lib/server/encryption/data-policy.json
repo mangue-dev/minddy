@@ -900,6 +900,13 @@
       "name"
     ],
     "clear": {
+      "bounded_metadata": [
+        "content_revision"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ],
       "one_way_authentication": [
         "key_hash",
         "key_prefix"
@@ -911,8 +918,25 @@
       ],
       "timestamp": [
         "created_at",
+        "encryption_attempted_at",
+        "encryption_checked_at",
         "last_used_at",
         "revoked_at"
+      ]
+    }
+  },
+  "api_key_content_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   },

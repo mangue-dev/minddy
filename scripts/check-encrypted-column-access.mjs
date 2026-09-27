@@ -13,6 +13,18 @@ const allowedInvitationAccess = new Set([
 
 const rules = [
   {
+    access: /\bapi_keys(?:![\w]+)?\([^\r\n)]*\b(?:name|agent)\b/,
+    allowed: new Set(["lib/server/oauth/grants.ts"]),
+  },
+  {
+    access: /\.\s*from\s*\(\s*["'`]api_keys["'`]\s*\)/,
+    allowed: new Set(["lib/server/oauth/grants.ts",
+      "lib/server/api-key-actors.ts", "lib/server/account-export.ts",
+      "lib/server/inbox.ts", "lib/server/notifications.ts",
+      "lib/server/smart-fill.ts", "lib/server/encryption/api-key-backfill.ts",
+      "app/api/oauth/token/route.ts"]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]oauth_authorization_codes["'`]\s*\)/,
     allowed: new Set(["lib/server/oauth/codes.ts",
       "lib/server/encryption/oauth-code-backfill.ts",

@@ -2081,5 +2081,12 @@ before grant, client and user parents in independent batches, validates the
 restored foreign keys, reads two user-key versions from cold caches and rejects
 the wrong root. Client recovery also reads two system-key versions. Production
 flags remain disabled, and no production migration or deployment occurred.
-The API-key actor label copied from the OAuth client remains clear and must be
-converted with the API-key family before MIN-591 or PR #289 can close.
+The API-key actor label copied from the OAuth client now uses a user-key
+envelope bound to its stable actor ID. Grant creation seals the name and agent
+before insert; event attribution, connected-app lists and account export
+decode after their existing authorization checks. A third 25-row CAS worker
+rotates historical labels, and checked activation rejects old clear actor
+writers and owner moves. The SQL regression, codec and actor tests pass; the
+child-first code/grant restore also verifies two historical actor-key versions.
+Integration metadata and push subscriptions remain open, so MIN-591 and draft
+PR #289 are not ready to close.

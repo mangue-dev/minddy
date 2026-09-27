@@ -1718,196 +1718,196 @@
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 214,
+    "line": 216,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 232,
+    "line": 234,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_agent_preferences",
-    "line": 266,
+    "line": 268,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 282,
+    "line": 284,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "page_files",
-    "line": 293,
+    "line": 295,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 305,
+    "line": 307,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "views",
-    "line": 320,
+    "line": 322,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "saved_views",
-    "line": 321,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "agent_routines",
     "line": 323,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
-    "resource": "cycles",
+    "resource": "agent_routines",
     "line": 325,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
-    "resource": "conversations",
+    "resource": "cycles",
     "line": 327,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
+    "resource": "conversations",
+    "line": 329,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-export.ts",
+    "operation": "from",
     "resource": "notifications",
-    "line": 332,
+    "line": 334,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 344,
+    "line": 346,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 350,
+    "line": 352,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "ai_usage",
-    "line": 362,
+    "line": 364,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 370,
+    "line": 372,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 375,
+    "line": 377,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 380,
+    "line": 382,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 387,
+    "line": 389,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 392,
+    "line": 394,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 406,
+    "line": 408,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 431,
+    "line": 433,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversations",
-    "line": 435,
+    "line": 437,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_messages",
-    "line": 449,
+    "line": 451,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_turns",
-    "line": 454,
+    "line": 456,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversation_contexts",
-    "line": 462,
+    "line": 464,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_conversation_contexts",
-    "line": 466,
+    "line": 468,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "issue_categories",
-    "line": 532,
+    "line": 534,
     "storage": false
   },
   {
@@ -3202,7 +3202,14 @@
     "file": "lib/server/api-key-actors.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 23,
+    "line": 25,
+    "storage": false
+  },
+  {
+    "file": "lib/server/api-key-content.ts",
+    "operation": "from",
+    "resource": "api_key_content_scope",
+    "line": 26,
     "storage": false
   },
   {
@@ -5198,6 +5205,27 @@
     "operation": "from",
     "resource": "ai_decision_evaluations",
     "line": 67,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/api-key-backfill.ts",
+    "operation": "from",
+    "resource": "api_keys",
+    "line": 22,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/api-key-backfill.ts",
+    "operation": "from",
+    "resource": "api_keys",
+    "line": 45,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/api-key-backfill.ts",
+    "operation": "from",
+    "resource": "api_keys",
+    "line": 59,
     "storage": false
   },
   {
@@ -9509,112 +9537,112 @@
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 83,
+    "line": 85,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 95,
+    "line": 101,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 112,
+    "line": 121,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_clients",
-    "line": 128,
+    "line": 137,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 145,
+    "line": 154,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 201,
+    "line": 210,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 220,
+    "line": 229,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 258,
+    "line": 267,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 293,
+    "line": 302,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 340,
+    "line": 349,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 355,
+    "line": 364,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 356,
+    "line": 365,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 368,
+    "line": 377,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 396,
+    "line": 407,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 401,
+    "line": 412,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 420,
+    "line": 431,
     "storage": false
   },
   {

@@ -502,6 +502,19 @@
       ],
       "functionReferences": []
     },
+    "guard_api_key_content()": {
+      "sha256": "8069a88a54b468a3bcd0e42bab15ddb0e0f3ace2060344694456cf9161155740",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "api_key_content_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_app_tab_content()": {
       "sha256": "e228c5fc4990f11b8ebc6f9f1b68efba13348aea60427cad2d75185f8a6cfc93",
       "securityDefiner": true,
@@ -1026,6 +1039,22 @@
       "functionReferences": [
         "rotate_user_realtime_generation"
       ]
+    },
+    "activate_api_key_content()": {
+      "sha256": "838f078405b381883ce26ad56450e2e7dce78e0b51fcfa1410fc1ecad108a2d6",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "api_keys",
+        "api_key_content_scope"
+      ],
+      "protectedRelations": [
+        "api_keys"
+      ],
+      "functionReferences": []
     },
     "activate_app_tab_content()": {
       "sha256": "8d62a4bd4051f7c4ea69ae5c0b7f59f4b33cde5372b1af182f44268b05a91459",
@@ -7571,6 +7600,10 @@
     "views.views_freeze_project_id": {
       "function": "freeze_project_id()",
       "definition": "CREATE TRIGGER views_freeze_project_id BEFORE UPDATE OF project_id ON views FOR EACH ROW EXECUTE FUNCTION freeze_project_id()"
+    },
+    "api_keys.api_key_content_guard": {
+      "function": "guard_api_key_content()",
+      "definition": "CREATE TRIGGER api_key_content_guard BEFORE INSERT OR UPDATE ON api_keys FOR EACH ROW EXECUTE FUNCTION guard_api_key_content()"
     },
     "issues.issues_encryption_guard": {
       "function": "guard_issue_encryption()",

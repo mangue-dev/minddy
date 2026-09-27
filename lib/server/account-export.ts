@@ -5,6 +5,8 @@ import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeApiKeyContent, type StoredApiKey } from
+  "@/lib/server/api-key-content";
 import { decodeBillingAccount } from "@/lib/server/billing-content";
 import { CONTACT_EMAIL } from "@/lib/site";
 import {
@@ -369,7 +371,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     // NEVER comes out — that's the secret, even in the form of a print.
     service
       .from("api_keys")
-      .select("name, key_prefix, created_at, last_used_at, revoked_at")
+      .select("*")
       .eq("user_id", userId)
       .order("created_at"),
     service
@@ -637,7 +639,12 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     statistics,
     billing: exportedBilling,
     ai_usage: list("ai_usage", aiUsage),
-    api_keys: list("api_keys", apiKeys),
+    api_keys: await Promise.all(list("api_keys", apiKeys).map(async (row) => {
+      const content = await decodeApiKeyContent(row as StoredApiKey);
+      return { name: content.name, key_prefix: row.key_prefix,
+        created_at: row.created_at, last_used_at: row.last_used_at,
+        revoked_at: row.revoked_at };
+    })),
     connected_apps: list("oauth_grants", grants),
     git_connections: list("git_connections", gitConnections),
     git_user_identities: list("git_user_identities", gitIdentities),

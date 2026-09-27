@@ -1,13 +1,15 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeApiKeyContent, type StoredApiKey } from "./api-key-content";
 
 /**
  * Resolves the "actors" API keys of a batch of MCP events/comments to
  * { name, agent } for display ("Claude Code (mcp)" + agent logo).
  * Mandatory customer service: the RLS policy of api_keys is owner-only, or
- * everyone in the project must see WHO (which agent) acted. Name + agent are
- * not secrets. Revoked keys remain resolved (row survives).
+ * everyone in the project must see who acted on an event they can read.
+ * The labels are decrypted only for those event-linked IDs. Revoked keys
+ * remain resolvable because their attribution rows survive.
  */
 export interface ApiKeyActor {
   name: string;
@@ -22,16 +24,14 @@ export async function resolveApiKeyActors(
 
   const { data, error } = await getServiceClient()
     .from("api_keys")
-    .select("id, name, agent")
+    .select("*")
     .in("id", unique);
   if (error) {
     console.error("[api-key-actors] resolve failed:", error.message);
     return new Map();
   }
-  return new Map(
-    (data ?? []).map((k) => [
-      k.id as string,
-      { name: k.name as string, agent: (k.agent as string | null) ?? null },
-    ])
-  );
+  return new Map(await Promise.all((data ?? []).map(async (key) => [
+    key.id as string,
+    await decodeApiKeyContent(key as StoredApiKey),
+  ] as const)));
 }

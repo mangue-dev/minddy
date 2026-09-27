@@ -6863,6 +6863,7 @@ describe.skipIf(!enabled)("OAuth code PostgreSQL recovery", () => {
     const created:string[]=[];
     const root=randomBytes(32);
     const ids=[randomUUID(),randomUUID()];
+    const actorKeys:string[]=[];
     const clientId="oauth-private-client";
     const system:EncryptionScope={kind:"system",
       id:"00000000-0000-0000-0000-000000000000"};
@@ -6884,6 +6885,7 @@ describe.skipIf(!enabled)("OAuth code PostgreSQL recovery", () => {
       for(const [index,id] of ids.entries()){
         const scope:EncryptionScope={kind:"user",id};
         const actorKey=randomUUID();
+        actorKeys.push(actorKey);
         const grant=randomUUID();
         const hash=(index===0 ? "a" : "b").repeat(64);
         if(index===1){await keys.current(scope);await keys.rotate(scope,1);}
@@ -6891,10 +6893,15 @@ describe.skipIf(!enabled)("OAuth code PostgreSQL recovery", () => {
           redirect_uri:`cursor://private-${index}.example/callback`,
           resource:`https://private-${index}.example/resource`},{
           scope,table:"oauth_authorization_codes",column:"content",rowId:hash});
+        const actorCipher=await store.encrypt({name:`Private actor ${index}`,
+          agent:`private-agent-${index}`},{scope,table:"api_keys",
+          column:"content",rowId:actorKey});
         sql(source,`INSERT INTO auth.users(id) VALUES(${quote(id)});
-          INSERT INTO public.api_keys(id,user_id,name,key_hash,key_prefix)
-            VALUES(${quote(actorKey)},${quote(id)},'OAuth actor',
-              ${quote((index===0 ? "c" : "d").repeat(64))},'oauth');
+          INSERT INTO public.api_keys(id,user_id,name,agent,key_hash,key_prefix,
+            encrypted_content,encryption_version)
+            VALUES(${quote(actorKey)},${quote(id)},NULL,NULL,
+              ${quote((index===0 ? "c" : "d").repeat(64))},'oauth',
+              ${quote(actorCipher)},${index+1});
           INSERT INTO public.oauth_grants(id,user_id,client_id,api_key_id)
             VALUES(${quote(grant)},${quote(id)},${quote(clientId)},
               ${quote(actorKey)});
@@ -6910,16 +6917,20 @@ describe.skipIf(!enabled)("OAuth code PostgreSQL recovery", () => {
         .toBe("t");
       expect(sql(source,"SELECT public.activate_oauth_code_content();"))
         .toBe("t");
+      expect(sql(source,"SELECT public.activate_api_key_content();"))
+        .toBe("t");
       const dump=execFileSync("docker",["exec",container,"pg_dump","-U",
         "supabase_admin","-d",source,"--data-only","--no-owner",
         "--no-privileges",...[
           "public.oauth_authorization_codes","public.oauth_grants",
           "public.oauth_clients","public.api_keys","auth.users",
           "public.oauth_client_content_scope","public.oauth_code_content_scope",
+          "public.api_key_content_scope",
           "public.envelope_data_keys"].map((table)=>`--table=${table}`)],
       {encoding:"utf8",maxBuffer:4*1024*1024});
       for(const marker of ["private-0.example","private-1.example",
-        "Private OAuth client"]) expect(dump).not.toContain(marker);
+        "Private OAuth client","Private actor","private-agent-"])
+        expect(dump).not.toContain(marker);
       const start=dump.indexOf("COPY public.oauth_authorization_codes ");
       expect(start).toBeGreaterThanOrEqual(0);
       const bodyStart=dump.indexOf("\n",start)+1;
@@ -6957,6 +6968,15 @@ describe.skipIf(!enabled)("OAuth code PostgreSQL recovery", () => {
         expect(await cold.decrypt(cipher,{scope:{kind:"user",id},
           table:"oauth_authorization_codes",column:"content",rowId:hash}))
           .toMatchObject({redirect_uri:`cursor://private-${index}.example/callback`});
+        const actor=JSON.parse(sql(restored,`SELECT row_to_json(k) FROM
+          public.api_keys k WHERE id=${quote(actorKeys[index])};`));
+        expect(actor.name).toBeNull();
+        expect(actor.agent).toBeNull();
+        const actorCipher=cold.fromDatabase(actor.encrypted_content);
+        expect(cold.versionOf(actorCipher)).toBe(index+1);
+        expect(await cold.decrypt(actorCipher,{scope:{kind:"user",id},
+          table:"api_keys",column:"content",rowId:actorKeys[index]}))
+          .toMatchObject({name:`Private actor ${index}`});
       }
       const wrong=new EncryptedStore(new ManagedDataKeys(
         registry(restored),wrapper(randomBytes(32))));
