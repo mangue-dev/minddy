@@ -3,6 +3,8 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { CODE_PREFIX, generateSecret, sha256Hex } from "@/lib/server/oauth/crypto";
 import { afterOrNow } from "@/lib/server/after-safe";
+import { decodeOAuthCodeContent, encodeOAuthCodeContent,
+  shouldProtectOAuthCodes, type StoredOAuthCode } from "./code-content";
 
 /**
  * Single-use authorization codes (10 min). The claim is atomic
@@ -41,15 +43,20 @@ export async function createAuthorizationCode({
   resource: string | null;
 }): Promise<string | null> {
   const { value, hash } = generateSecret(CODE_PREFIX);
+  const protectedWrite = await shouldProtectOAuthCodes();
+  const content = protectedWrite
+    ? await encodeOAuthCodeContent({ code_hash: hash, user_id: userId },
+        { redirect_uri: redirectUri, resource }) : null;
   const { error } = await getServiceClient().from("oauth_authorization_codes").insert({
     code_hash: hash,
     client_id: clientId,
     user_id: userId,
     grant_id: grantId,
-    redirect_uri: redirectUri,
+    redirect_uri: protectedWrite ? null : redirectUri,
     code_challenge: codeChallenge,
     scope,
-    resource,
+    resource: protectedWrite ? null : resource,
+    ...content,
     expires_at: new Date(Date.now() + CODE_TTL_MS).toISOString(),
   });
   if (error) {
@@ -74,22 +81,39 @@ export async function claimAuthorizationCode(
   exchange: AuthorizationCodeExchange
 ): Promise<AuthorizationCode | null> {
   const now = new Date().toISOString();
-  const { data, error } = await getServiceClient()
+  const service = getServiceClient();
+  const hash = sha256Hex(code);
+  const { data: candidate, error: readError } = await service
     .from("oauth_authorization_codes")
-    .update({ used_at: now })
-    .eq("code_hash", sha256Hex(code))
+    .select("*")
+    .eq("code_hash", hash)
     .is("used_at", null)
     .gt("expires_at", now)
     .eq("client_id", exchange.clientId)
-    .eq("redirect_uri", exchange.redirectUri)
     .eq("code_challenge", exchange.codeChallenge)
-    .select("code_hash, client_id, user_id, grant_id, redirect_uri, code_challenge, scope, resource")
     .maybeSingle();
+  if (readError || !candidate) return null;
+  const content = await decodeOAuthCodeContent(candidate as StoredOAuthCode);
+  if (content.redirect_uri !== exchange.redirectUri) return null;
+  let claim = service.from("oauth_authorization_codes")
+    .update({ used_at: now })
+    .eq("code_hash", hash).is("used_at", null)
+    .gt("expires_at", now)
+    .eq("client_id", exchange.clientId)
+    .eq("code_challenge", exchange.codeChallenge);
+  claim = candidate.encrypted_content
+    ? claim.eq("encrypted_content", candidate.encrypted_content)
+    : claim.eq("redirect_uri", exchange.redirectUri);
+  const { data, error } = await claim.select("*").maybeSingle();
   if (error) {
     console.error("[oauth/codes] claim failed:", error.message);
     return null;
   }
-  return (data as unknown as AuthorizationCode) ?? null;
+  return data ? { code_hash: data.code_hash as string,
+    client_id: data.client_id as string, user_id: data.user_id as string,
+    grant_id: data.grant_id as string, redirect_uri: content.redirect_uri,
+    code_challenge: data.code_challenge as string, scope: data.scope as string,
+    resource: content.resource } : null;
 }
 
 /**
@@ -102,14 +126,16 @@ export async function findReplayedCode(
 ): Promise<string | null> {
   const { data } = await getServiceClient()
     .from("oauth_authorization_codes")
-    .select("grant_id")
+    .select("*")
     .eq("code_hash", sha256Hex(code))
     .not("used_at", "is", null)
     .eq("client_id", exchange.clientId)
-    .eq("redirect_uri", exchange.redirectUri)
     .eq("code_challenge", exchange.codeChallenge)
     .maybeSingle();
-  return (data?.grant_id as string) ?? null;
+  if (!data) return null;
+  const content = await decodeOAuthCodeContent(data as StoredOAuthCode);
+  return content.redirect_uri === exchange.redirectUri
+    ? data.grant_id as string : null;
 }
 
 /** Opportunistic purge of codes expired for more than a day. Outside the critical path

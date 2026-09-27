@@ -13,6 +13,22 @@ const allowedInvitationAccess = new Set([
 
 const rules = [
   {
+    access: /\.\s*from\s*\(\s*["'`]oauth_authorization_codes["'`]\s*\)/,
+    allowed: new Set(["lib/server/oauth/codes.ts",
+      "lib/server/encryption/oauth-code-backfill.ts",
+      "lib/server/retention.ts"]),
+  },
+  {
+    access: /\.\s*from\s*\(\s*["'`]oauth_clients["'`]\s*\)/,
+    allowed: new Set(["lib/server/oauth/clients.ts",
+      "lib/server/oauth/grants.ts",
+      "lib/server/encryption/oauth-client-backfill.ts"]),
+  },
+  {
+    access: /\boauth_clients\([^\r\n)]*\)/,
+    allowed: new Set(["lib/server/oauth/grants.ts"]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]agent_run_events["'`]\s*\)/,
     allowed: new Set(["lib/server/agent/runs.ts",
       "lib/server/agent/run-event-store.ts",

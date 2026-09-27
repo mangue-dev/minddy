@@ -1287,6 +1287,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_oauth_code_content()": {
+      "sha256": "53e80a249dddd3a1fbdf18ce42e3119969ccf47f4b9c315e84c061d32f38a62b",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "oauth_code_content_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "recover_stale_numo_turns()": {
       "sha256": "9ea7393dcc270db098e004d02036e41f5846052c780345caa4f7f803800388a7",
       "securityDefiner": true,
@@ -1767,6 +1780,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_oauth_client_content()": {
+      "sha256": "a097c82faa6c7140639329ca50d636b6014ac48f9dab372ee11f0a4d4684cdf1",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "oauth_client_content_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_objective_encryption()": {
       "sha256": "4bf302f5f2ff470a884656e6d39cc7d7bb61145fdc16d586dabba059bdc546db",
       "securityDefiner": true,
@@ -1888,6 +1914,22 @@
       "functionReferences": [
         "forge_oauth_token_envelope_version"
       ]
+    },
+    "activate_oauth_code_content()": {
+      "sha256": "2bb54d3d6391b1c84f4358d79c051ec51b36a488d19a84d34d0ac27b69f4bbfc",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "oauth_code_content_scope",
+        "oauth_authorization_codes"
+      ],
+      "protectedRelations": [
+        "oauth_authorization_codes"
+      ],
+      "functionReferences": []
     },
     "app_tab_content_version(text)": {
       "sha256": "9a1e1006e02e8f632d54f0b67a98668f63aea15538f816995d88e34283133d40",
@@ -2596,6 +2638,22 @@
       ],
       "protectedRelations": [
         "feedback_posts"
+      ],
+      "functionReferences": []
+    },
+    "activate_oauth_client_content()": {
+      "sha256": "40f79c70cf9f37875e89bbabac80ebe80062c5233b49f92d8ea7adc7116ad03c",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "oauth_clients",
+        "oauth_client_content_scope"
+      ],
+      "protectedRelations": [
+        "oauth_clients"
       ],
       "functionReferences": []
     },
@@ -7798,6 +7856,10 @@
       "function": "guard_agent_delegation_input()",
       "definition": "CREATE TRIGGER zz_agent_run_delegation_guard BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_delegation_input()"
     },
+    "oauth_clients.oauth_client_content_guard": {
+      "function": "guard_oauth_client_content()",
+      "definition": "CREATE TRIGGER oauth_client_content_guard BEFORE INSERT OR UPDATE ON oauth_clients FOR EACH ROW EXECUTE FUNCTION guard_oauth_client_content()"
+    },
     "pull_requests.pull_request_content_guard": {
       "function": "guard_pull_request_content()",
       "definition": "CREATE TRIGGER pull_request_content_guard BEFORE INSERT OR UPDATE ON pull_requests FOR EACH ROW EXECUTE FUNCTION guard_pull_request_content()"
@@ -8189,6 +8251,10 @@
     "numo_surface_events.numo_surface_destination_guard": {
       "function": "guard_numo_surface_destination()",
       "definition": "CREATE TRIGGER numo_surface_destination_guard BEFORE INSERT OR UPDATE ON numo_surface_events FOR EACH ROW EXECUTE FUNCTION guard_numo_surface_destination()"
+    },
+    "oauth_authorization_codes.oauth_code_content_guard": {
+      "function": "guard_oauth_code_content()",
+      "definition": "CREATE TRIGGER oauth_code_content_guard BEFORE INSERT OR UPDATE ON oauth_authorization_codes FOR EACH ROW EXECUTE FUNCTION guard_oauth_code_content()"
     },
     "project_git_links.project_git_links_authority_lock": {
       "function": "lock_project_authority_mutation()",

@@ -63,6 +63,7 @@ const aiEvaluationTemplate = "minddy_min591_ai_eval_audit";
 const stripePayloadTemplate = "minddy_min591_stripe_audit";
 const customDomainTemplate = "minddy_min591_custom_domain_audit";
 const billingIdentityTemplate = "minddy_min591_billing_audit";
+const oauthClientTemplate = "minddy_min591_oauth_client_work";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -6761,6 +6762,210 @@ describe.skipIf(!enabled)("billing identity PostgreSQL recovery", () => {
         column:"email",rowId:ids[0]})).rejects.toThrow();
       expect(()=>sql(restored,`UPDATE public.billing_accounts SET
         email='old@example.test' WHERE user_id=${quote(ids[0])};`)).toThrow();
+    }finally{
+      root.fill(0);vi.unstubAllEnvs();log.mockRestore();
+      for(const database of created.reverse())
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+    }
+  },60_000);
+});
+
+describe.skipIf(!enabled)("OAuth client PostgreSQL recovery", () => {
+  it("restores sealed registrations across system key versions and rejects a wrong root", async () => {
+    const suffix=randomUUID().replaceAll("-","").slice(0,12);
+    const source=`minddy_min591_oauth_source_${suffix}`;
+    const restored=`minddy_min591_oauth_restore_${suffix}`;
+    const created:string[]=[];
+    const root=randomBytes(32);
+    const scope:EncryptionScope={kind:"system",
+      id:"00000000-0000-0000-0000-000000000000"};
+    const log=vi.spyOn(console,"info").mockImplementation(()=>{});
+    try {
+      for(const database of [source,restored]){
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${oauthClientTemplate};`);
+        created.push(database);
+      }
+      const keys=new ManagedDataKeys(registry(source),wrapper(root));
+      const store=new EncryptedStore(keys);
+      const clients=["oauth-private-one","oauth-private-two"];
+      for(const [index,id] of clients.entries()){
+        if(index===1) await keys.rotate(scope,1);
+        const content={client_name:`Private client ${index}`,
+          redirect_uris:[`cursor://private-${index}.example/callback`],
+          logo_uri:null,client_uri:null};
+        const cipher=await store.encrypt(content,{scope,table:"oauth_clients",
+          column:"content",rowId:id});
+        sql(source,`INSERT INTO public.oauth_clients(client_id,client_name,
+          redirect_uris,encrypted_content,encryption_version) VALUES(
+          ${quote(id)},NULL,NULL,${quote(cipher)},${index+1});`);
+        keys.invalidate(scope);
+      }
+      expect(sql(source,"SELECT public.activate_oauth_client_content();"))
+        .toBe("t");
+      const dump=execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges","--table=public.oauth_clients",
+        "--table=public.oauth_client_content_scope",
+        "--table=public.envelope_data_keys"],
+      {encoding:"utf8",maxBuffer:4*1024*1024});
+      for(const marker of ["Private client","private-0.example",
+        "private-1.example"]) expect(dump).not.toContain(marker);
+      const start=dump.indexOf("COPY public.oauth_clients ");
+      expect(start).toBeGreaterThanOrEqual(0);
+      const bodyStart=dump.indexOf("\n",start)+1;
+      const bodyEnd=dump.indexOf("\\.\n",bodyStart);
+      const header=dump.slice(start,bodyStart);
+      const lines=dump.slice(bodyStart,bodyEnd).trimEnd().split("\n");
+      const remainder=dump.slice(0,start)+dump.slice(bodyEnd+3);
+      for(const line of lines.reverse())
+        sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+          ${header}${line}\n\\.\nCOMMIT;`);
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+        ${remainder}\nCOMMIT;`);
+      const cold=new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(root)));
+      for(const [index,id] of clients.entries()){
+        const row=JSON.parse(sql(restored,`SELECT row_to_json(c) FROM
+          public.oauth_clients c WHERE client_id=${quote(id)};`));
+        expect(row.client_name).toBeNull();
+        expect(row.redirect_uris).toBeNull();
+        const cipher=cold.fromDatabase(row.encrypted_content);
+        expect(cold.versionOf(cipher)).toBe(index+1);
+        expect(await cold.decrypt(cipher,{scope,table:"oauth_clients",
+          column:"content",rowId:id})).toMatchObject({
+          client_name:`Private client ${index}`,
+          redirect_uris:[`cursor://private-${index}.example/callback`],
+        });
+      }
+      const wrong=new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(randomBytes(32))));
+      const value=sql(restored,`SELECT encrypted_content FROM
+        public.oauth_clients WHERE client_id=${quote(clients[0])};`);
+      await expect(wrong.decrypt(wrong.fromDatabase(value),{
+        scope,table:"oauth_clients",column:"content",rowId:clients[0]}))
+        .rejects.toThrow();
+      expect(()=>sql(restored,`INSERT INTO public.oauth_clients(
+        client_id,client_name,redirect_uris) VALUES('oauth-old-writer',
+        'Private old writer',ARRAY['https://private.example']);`)).toThrow();
+    }finally{
+      root.fill(0);vi.unstubAllEnvs();log.mockRestore();
+      for(const database of created.reverse())
+        sql("postgres",`DROP DATABASE ${database} WITH (FORCE);`);
+    }
+  },60_000);
+});
+
+describe.skipIf(!enabled)("OAuth code PostgreSQL recovery", () => {
+  it("restores code children before grants and owners with mixed keys", async () => {
+    const suffix=randomUUID().replaceAll("-","").slice(0,12);
+    const source=`minddy_min591_codes_source_${suffix}`;
+    const restored=`minddy_min591_codes_restore_${suffix}`;
+    const created:string[]=[];
+    const root=randomBytes(32);
+    const ids=[randomUUID(),randomUUID()];
+    const clientId="oauth-private-client";
+    const system:EncryptionScope={kind:"system",
+      id:"00000000-0000-0000-0000-000000000000"};
+    const log=vi.spyOn(console,"info").mockImplementation(()=>{});
+    try {
+      for(const database of [source,restored]){
+        sql("postgres",`CREATE DATABASE ${database} TEMPLATE ${oauthClientTemplate};`);
+        created.push(database);
+      }
+      const keys=new ManagedDataKeys(registry(source),wrapper(root));
+      const store=new EncryptedStore(keys);
+      const clientCipher=await store.encrypt({client_name:"Private OAuth client",
+        redirect_uris:["cursor://private.example/callback"],
+        logo_uri:null,client_uri:null},{scope:system,table:"oauth_clients",
+        column:"content",rowId:clientId});
+      sql(source,`INSERT INTO public.oauth_clients(client_id,client_name,
+        redirect_uris,encrypted_content,encryption_version) VALUES(
+        ${quote(clientId)},NULL,NULL,${quote(clientCipher)},1);`);
+      for(const [index,id] of ids.entries()){
+        const scope:EncryptionScope={kind:"user",id};
+        const actorKey=randomUUID();
+        const grant=randomUUID();
+        const hash=(index===0 ? "a" : "b").repeat(64);
+        if(index===1){await keys.current(scope);await keys.rotate(scope,1);}
+        const cipher=await store.encrypt({
+          redirect_uri:`cursor://private-${index}.example/callback`,
+          resource:`https://private-${index}.example/resource`},{
+          scope,table:"oauth_authorization_codes",column:"content",rowId:hash});
+        sql(source,`INSERT INTO auth.users(id) VALUES(${quote(id)});
+          INSERT INTO public.api_keys(id,user_id,name,key_hash,key_prefix)
+            VALUES(${quote(actorKey)},${quote(id)},'OAuth actor',
+              ${quote((index===0 ? "c" : "d").repeat(64))},'oauth');
+          INSERT INTO public.oauth_grants(id,user_id,client_id,api_key_id)
+            VALUES(${quote(grant)},${quote(id)},${quote(clientId)},
+              ${quote(actorKey)});
+          INSERT INTO public.oauth_authorization_codes(code_hash,client_id,
+            user_id,grant_id,redirect_uri,resource,code_challenge,
+            expires_at,encrypted_content,encryption_version) VALUES(
+            ${quote(hash)},${quote(clientId)},${quote(id)},${quote(grant)},
+            NULL,NULL,${quote("e".repeat(43))},now()+interval '10 minutes',
+            ${quote(cipher)},${index+1});`);
+        keys.invalidate(scope);
+      }
+      expect(sql(source,"SELECT public.activate_oauth_client_content();"))
+        .toBe("t");
+      expect(sql(source,"SELECT public.activate_oauth_code_content();"))
+        .toBe("t");
+      const dump=execFileSync("docker",["exec",container,"pg_dump","-U",
+        "supabase_admin","-d",source,"--data-only","--no-owner",
+        "--no-privileges",...[
+          "public.oauth_authorization_codes","public.oauth_grants",
+          "public.oauth_clients","public.api_keys","auth.users",
+          "public.oauth_client_content_scope","public.oauth_code_content_scope",
+          "public.envelope_data_keys"].map((table)=>`--table=${table}`)],
+      {encoding:"utf8",maxBuffer:4*1024*1024});
+      for(const marker of ["private-0.example","private-1.example",
+        "Private OAuth client"]) expect(dump).not.toContain(marker);
+      const start=dump.indexOf("COPY public.oauth_authorization_codes ");
+      expect(start).toBeGreaterThanOrEqual(0);
+      const bodyStart=dump.indexOf("\n",start)+1;
+      const bodyEnd=dump.indexOf("\\.\n",bodyStart);
+      const codeCopy=dump.slice(start,bodyEnd+3);
+      const remainder=dump.slice(0,start)+dump.slice(bodyEnd+3);
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+        ${codeCopy}\nCOMMIT;`);
+      sql(restored,`BEGIN; SET LOCAL session_replication_role=replica;
+        ${remainder}\nCOMMIT;`);
+      for(const [column,parent,target] of [
+        ["client_id","oauth_clients","client_id"],
+        ["grant_id","oauth_grants","id"],
+        ["user_id","auth.users","id"],
+      ]){
+        const name=`oauth_authorization_codes_${column}_fkey`;
+        const relation=parent.includes(".")?parent:`public.${parent}`;
+        sql(restored,`ALTER TABLE public.oauth_authorization_codes
+          DROP CONSTRAINT ${name};
+          ALTER TABLE public.oauth_authorization_codes ADD CONSTRAINT ${name}
+          FOREIGN KEY(${column}) REFERENCES ${relation}(${target}) NOT VALID;
+          ALTER TABLE public.oauth_authorization_codes
+          VALIDATE CONSTRAINT ${name};`);
+      }
+      const cold=new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(root)));
+      for(const [index,id] of ids.entries()){
+        const hash=(index===0 ? "a" : "b").repeat(64);
+        const row=JSON.parse(sql(restored,`SELECT row_to_json(c) FROM
+          public.oauth_authorization_codes c WHERE code_hash=${quote(hash)};`));
+        expect(row.redirect_uri).toBeNull();
+        expect(row.resource).toBeNull();
+        const cipher=cold.fromDatabase(row.encrypted_content);
+        expect(cold.versionOf(cipher)).toBe(index+1);
+        expect(await cold.decrypt(cipher,{scope:{kind:"user",id},
+          table:"oauth_authorization_codes",column:"content",rowId:hash}))
+          .toMatchObject({redirect_uri:`cursor://private-${index}.example/callback`});
+      }
+      const wrong=new EncryptedStore(new ManagedDataKeys(
+        registry(restored),wrapper(randomBytes(32))));
+      const hash="a".repeat(64);
+      const value=sql(restored,`SELECT encrypted_content FROM
+        public.oauth_authorization_codes WHERE code_hash=${quote(hash)};`);
+      await expect(wrong.decrypt(wrong.fromDatabase(value),{
+        scope:{kind:"user",id:ids[0]},table:"oauth_authorization_codes",
+        column:"content",rowId:hash})).rejects.toThrow();
     }finally{
       root.fill(0);vi.unstubAllEnvs();log.mockRestore();
       for(const database of created.reverse())

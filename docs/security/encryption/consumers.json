@@ -5964,6 +5964,48 @@
     "storage": false
   },
   {
+    "file": "lib/server/encryption/oauth-client-backfill.ts",
+    "operation": "from",
+    "resource": "oauth_clients",
+    "line": 22,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/oauth-client-backfill.ts",
+    "operation": "from",
+    "resource": "oauth_clients",
+    "line": 48,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/oauth-client-backfill.ts",
+    "operation": "from",
+    "resource": "oauth_clients",
+    "line": 63,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/oauth-code-backfill.ts",
+    "operation": "from",
+    "resource": "oauth_authorization_codes",
+    "line": 22,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/oauth-code-backfill.ts",
+    "operation": "from",
+    "resource": "oauth_authorization_codes",
+    "line": 48,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/oauth-code-backfill.ts",
+    "operation": "from",
+    "resource": "oauth_authorization_codes",
+    "line": 64,
+    "storage": false
+  },
+  {
     "file": "lib/server/encryption/objective-backfill.ts",
     "operation": "from",
     "resource": "objectives",
@@ -9380,178 +9422,199 @@
     "storage": false
   },
   {
-    "file": "lib/server/oauth/clients.ts",
+    "file": "lib/server/oauth/client-content.ts",
     "operation": "from",
-    "resource": "oauth_clients",
-    "line": 73,
+    "resource": "oauth_client_content_scope",
+    "line": 36,
     "storage": false
   },
   {
     "file": "lib/server/oauth/clients.ts",
     "operation": "from",
     "resource": "oauth_clients",
-    "line": 93,
+    "line": 84,
     "storage": false
   },
   {
     "file": "lib/server/oauth/clients.ts",
     "operation": "from",
     "resource": "oauth_clients",
+    "line": 99,
+    "storage": false
+  },
+  {
+    "file": "lib/server/oauth/clients.ts",
+    "operation": "from",
+    "resource": "oauth_clients",
+    "line": 156,
+    "storage": false
+  },
+  {
+    "file": "lib/server/oauth/clients.ts",
+    "operation": "from",
+    "resource": "oauth_grants",
+    "line": 168,
+    "storage": false
+  },
+  {
+    "file": "lib/server/oauth/clients.ts",
+    "operation": "from",
+    "resource": "oauth_clients",
+    "line": 181,
+    "storage": false
+  },
+  {
+    "file": "lib/server/oauth/code-content.ts",
+    "operation": "from",
+    "resource": "oauth_code_content_scope",
+    "line": 25,
+    "storage": false
+  },
+  {
+    "file": "lib/server/oauth/codes.ts",
+    "operation": "from",
+    "resource": "oauth_authorization_codes",
+    "line": 50,
+    "storage": false
+  },
+  {
+    "file": "lib/server/oauth/codes.ts",
+    "operation": "from",
+    "resource": "oauth_authorization_codes",
+    "line": 86,
+    "storage": false
+  },
+  {
+    "file": "lib/server/oauth/codes.ts",
+    "operation": "from",
+    "resource": "oauth_authorization_codes",
+    "line": 98,
+    "storage": false
+  },
+  {
+    "file": "lib/server/oauth/codes.ts",
+    "operation": "from",
+    "resource": "oauth_authorization_codes",
+    "line": 127,
+    "storage": false
+  },
+  {
+    "file": "lib/server/oauth/codes.ts",
+    "operation": "from",
+    "resource": "oauth_authorization_codes",
     "line": 147,
     "storage": false
   },
   {
-    "file": "lib/server/oauth/clients.ts",
-    "operation": "from",
-    "resource": "oauth_grants",
-    "line": 159,
-    "storage": false
-  },
-  {
-    "file": "lib/server/oauth/clients.ts",
-    "operation": "from",
-    "resource": "oauth_clients",
-    "line": 172,
-    "storage": false
-  },
-  {
-    "file": "lib/server/oauth/codes.ts",
-    "operation": "from",
-    "resource": "oauth_authorization_codes",
-    "line": 44,
-    "storage": false
-  },
-  {
-    "file": "lib/server/oauth/codes.ts",
-    "operation": "from",
-    "resource": "oauth_authorization_codes",
-    "line": 77,
-    "storage": false
-  },
-  {
-    "file": "lib/server/oauth/codes.ts",
-    "operation": "from",
-    "resource": "oauth_authorization_codes",
-    "line": 103,
-    "storage": false
-  },
-  {
-    "file": "lib/server/oauth/codes.ts",
-    "operation": "from",
-    "resource": "oauth_authorization_codes",
-    "line": 121,
-    "storage": false
-  },
-  {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 81,
+    "line": 83,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 93,
+    "line": 95,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 110,
+    "line": 112,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_clients",
-    "line": 126,
+    "line": 128,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 143,
+    "line": 145,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 199,
+    "line": 201,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 218,
+    "line": 220,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 256,
+    "line": 258,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 291,
+    "line": 293,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 338,
+    "line": 340,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 353,
+    "line": 355,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 354,
+    "line": 356,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 366,
+    "line": 368,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 394,
+    "line": 396,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 399,
+    "line": 401,
     "storage": false
   },
   {
     "file": "lib/server/oauth/grants.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 418,
+    "line": 420,
     "storage": false
   },
   {

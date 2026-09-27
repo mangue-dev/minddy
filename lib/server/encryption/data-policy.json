@@ -3023,6 +3023,13 @@
       "resource"
     ],
     "clear": {
+      "bounded_metadata": [
+        "content_revision"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ],
       "one_way_authentication": [
         "code_challenge",
         "code_hash"
@@ -3038,8 +3045,25 @@
       ],
       "timestamp": [
         "created_at",
+        "encryption_attempted_at",
+        "encryption_checked_at",
         "expires_at",
         "used_at"
+      ]
+    }
+  },
+  "oauth_code_content_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   },
@@ -3055,12 +3079,36 @@
       "redirect_uris"
     ],
     "clear": {
+      "bounded_metadata": [
+        "content_revision"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ],
       "routing_identity": [
         "client_id"
       ],
       "timestamp": [
         "created_at",
+        "encryption_attempted_at",
+        "encryption_checked_at",
         "last_used_at"
+      ]
+    }
+  },
+  "oauth_client_content_scope": {
+    "scope": {
+      "kind": "system",
+      "id": "00000000-0000-0000-0000-000000000000"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id"
+      ],
+      "timestamp": [
+        "activated_at"
       ]
     }
   },

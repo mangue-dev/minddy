@@ -2062,3 +2062,24 @@ caches and rejects a wrong root. The dedicated and global flags remain off in
 production. Representative search, latency and key-cache load measurements
 remain checks before production activation, not blockers for the code PR.
 Other MIN-591 targets remain open.
+
+## Dynamic OAuth client and code checkpoint — 27 September 2026
+
+`oauth_clients` now seals the registered name, redirect list and optional URLs
+in a format-3 system-key envelope bound to the client ID. Registration stores
+no clear duplicate; consent and the connected-app grant list decrypt through
+the client repository. `oauth_authorization_codes` seals the redirect and
+resource under a user key bound to the code hash. Exchange and proven-replay
+checks decrypt before comparing the redirect, then preserve single-use
+atomicity through an exact-ciphertext conditional claim.
+
+Separate 25-row CAS workers migrate and rotate both tables. Service-only
+activation requires checked sealed rows. SQL rejects legacy clear writers,
+identity moves and key rollback after activation. Isolated SQL regressions,
+codec and exchange tests pass. A PostgreSQL dump/restore loads code children
+before grant, client and user parents in independent batches, validates the
+restored foreign keys, reads two user-key versions from cold caches and rejects
+the wrong root. Client recovery also reads two system-key versions. Production
+flags remain disabled, and no production migration or deployment occurred.
+The API-key actor label copied from the OAuth client remains clear and must be
+converted with the API-key family before MIN-591 or PR #289 can close.

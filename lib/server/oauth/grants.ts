@@ -10,6 +10,8 @@ import {
   sha256Hex,
 } from "@/lib/server/oauth/crypto";
 import type { OAuthClient } from "@/lib/server/oauth/clients";
+import { decodeOAuthClientContent, type StoredOAuthClient } from
+  "@/lib/server/oauth/client-content";
 import { mapClientNameToAgent } from "@/lib/mcp-agents";
 import { afterOrNow } from "@/lib/server/after-safe";
 
@@ -366,7 +368,7 @@ export async function listGrantsForUser(
   const { data, error } = await getServiceClient()
     .from("oauth_grants")
     .select(
-      "id, client_id, scope, created_at, last_used_at, oauth_clients(client_name), api_keys(agent)"
+      "id, client_id, scope, created_at, last_used_at, oauth_clients(*), api_keys(agent)"
     )
     .eq("user_id", userId)
     .is("revoked_at", null)
@@ -375,17 +377,17 @@ export async function listGrantsForUser(
     console.error("[oauth/grants] list failed:", error.message);
     return null;
   }
-  return (data ?? []).map((g) => ({
+  return Promise.all((data ?? []).map(async (g) => ({
     id: g.id as string,
     client_id: g.client_id as string,
-    client_name:
-      ((g.oauth_clients as unknown as { client_name: string } | null)?.client_name ??
-        "MCP client"),
+    client_name: g.oauth_clients
+      ? (await decodeOAuthClientContent(g.oauth_clients as unknown as StoredOAuthClient))
+        .client_name : "MCP client",
     agent: ((g.api_keys as unknown as { agent: string | null } | null)?.agent ?? null),
     scope: g.scope as string,
     created_at: g.created_at as string,
     last_used_at: (g.last_used_at as string | null) ?? null,
-  }));
+  })));
 }
 
 async function revokeGrantById(grantId: string, apiKeyId: string): Promise<void> {
