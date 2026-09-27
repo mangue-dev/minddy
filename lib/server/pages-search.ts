@@ -239,10 +239,12 @@ async function searchProtectedPages(client: SupabaseClient, {
       const titleLower = title.toLocaleLowerCase();
       const bodyLower = body.toLocaleLowerCase();
       if (!matchesPageSearch(`${title} ${body}`, clauses)) continue;
+      const titleWords: string[] = titleLower.match(/[\p{L}\p{N}_]+/gu) ?? [];
+      const bodyWords: string[] = bodyLower.match(/[\p{L}\p{N}_]+/gu) ?? [];
       const titleScore = terms.reduce((n, term) => n +
-        (titleLower.includes(term) ? 4 : 0), 0);
+        (titleWords.includes(term) ? 4 : 0), 0);
       const bodyScore = terms.reduce((n, term) => n +
-        (bodyLower.includes(term) ? 1 : 0), 0);
+        (bodyWords.includes(term) ? 1 : 0), 0);
       const first = Math.max(0, bodyLower.indexOf(terms.find((term) =>
         bodyLower.includes(term)) ?? terms[0] ?? "") - 35);
       hits.push({ id: row.id, project_id: row.project_id,

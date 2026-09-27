@@ -99,6 +99,20 @@ describe("mixed encrypted page search", () => {
     }
   });
 
+  it("ranks exact title lexemes ahead of body matches and ignores substrings", async () => {
+    h.rows = [
+      { ...h.rows[0], id: "body", title: "alphabet", content: "alpha",
+        updated_at: "2026-01-04T00:00:00Z" },
+      { ...h.rows[1], id: "title", title: "alpha", content: "ordinary text",
+        updated_at: "2026-01-02T00:00:00Z" },
+    ];
+    const result = await runPageSearch(client(new Set(["allowed"])) as never,
+      { query: "alpha", limit: 20 });
+    if (!result.ok) throw new Error("Page search failed");
+    expect(result.hits.map((hit) => hit.id)).toEqual(["title", "body"]);
+    expect(result.hits[0].rank).toBeGreaterThan(result.hits[1].rank);
+  });
+
   it("fails closed when a visible protected row has no root key", async () => {
     delete process.env.MINDDY_DATA_ROOT_KEY;
     const result = await runPageSearch(client(new Set(["allowed"])) as never,
