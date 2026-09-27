@@ -1,0 +1,14 @@
+/** Keep every writable Agent path in memory, including the checkout and OpenCode files. */
+export function agentSandboxStorage() {
+  const configured = Number(process.env.AGENT_RUNNER_SANDBOX_TMPFS_BYTES);
+  const bytes = Number.isSafeInteger(configured) && configured >= 1_073_741_824
+    ? configured
+    : 3_221_225_472;
+  return {
+    LogConfig: { Type: "none" },
+    Tmpfs: {
+      "/vercel": `rw,nosuid,nodev,size=${bytes},uid=10001,gid=10001,mode=0700`,
+      "/tmp": "rw,nosuid,nodev,size=1073741824",
+    },
+  };
+}

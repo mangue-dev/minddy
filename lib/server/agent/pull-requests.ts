@@ -198,7 +198,7 @@ export async function upsertPullRequestWithOutcome(
       continue;
     }
     if (error) {
-      console.error("[pull-requests] upsert failed:", error.message);
+      console.error("[pull-requests] upsert_failed", error.code);
       return null;
     }
     const result = data as { row?: PullRequestRow; applied?: boolean } | null;
@@ -399,7 +399,7 @@ export async function setPullRequestIssue(
     },
   );
   if (error) {
-    console.error("[pull-requests] issue link failed:", error.message);
+    console.error("[pull-requests] issue_link_failed", error.code);
     return "pr_not_found";
   }
   return data as
@@ -587,11 +587,8 @@ async function reconcileDriftedPr(
         });
       }
     }
-  } catch (err) {
-    console.error(
-      "[pull-requests] state reconcile failed:",
-      (err as Error).message,
-    );
+  } catch {
+    console.error("[pull-requests] state_reconcile_failed");
   }
 }
 
@@ -671,7 +668,7 @@ export async function stampRepoSync(
       },
       { onConflict: "provider,repo_full_name" },
     );
-  if (error) console.error("[pull-requests] sync stamp failed:", error.message);
+  if (error) console.error("[pull-requests] sync_stamp_failed", error.code);
 }
 
 /**
@@ -841,7 +838,7 @@ export async function syncRepoPullRequests(opts: {
     { onConflict: "provider,repo_full_name" },
   );
   if (stampError)
-    console.error("[pull-requests] sweep stamp failed:", stampError.message);
+    console.error("[pull-requests] sweep_stamp_failed", stampError.code);
 
   // AFTER writing the lines: reconciliation rereads the PR by its key
   // natural, and must find the up-to-date state there, not the one we just

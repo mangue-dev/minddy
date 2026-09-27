@@ -1,14 +1,11 @@
 import "server-only";
-
 import { getServiceClient } from "@/lib/supabase-service";
 import { billingFieldVersion, decodeBillingField,
   encodeBillingField } from "@/lib/server/billing-content";
 import { isContentEncryptionEnabled } from "./content-config";
 import { getContentKeys } from "./registry";
-
 type Row = { user_id: string; content_revision: number;
   email: string | null; admin_override_note: string | null };
-
 /** Rewrite both private billing fields under one revision comparison. */
 export async function backfillBillingIdentityBatch(
   limit = 25, signal?: AbortSignal,
@@ -27,6 +24,12 @@ export async function backfillBillingIdentityBatch(
     .order("encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("user_id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan billing identity copies");
+  const recordAttempt = async (row: Row) => {
+    const { error: attemptError } = await service.from("billing_accounts")
+      .update({ encryption_attempted_at: new Date().toISOString() })
+      .eq("user_id", row.user_id);
+    if (attemptError) throw new Error("Unable to record backfill attempt");
+  };
   for (const row of (data ?? []) as Row[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
@@ -57,22 +60,29 @@ export async function backfillBillingIdentityBatch(
       const { data: saved, error: writeError } = await service
         .from("billing_accounts")
         .update({ email: nextEmail, admin_override_note: nextNote,
-          email_encryption_checked_at: nextEmail ? now : null,
-          admin_override_note_encryption_checked_at: nextNote ? now : null,
           encryption_attempted_at: now })
         .eq("user_id",row.user_id)
         .eq("content_revision",row.content_revision)
-        .select("user_id").maybeSingle();
+        .select("content_revision").maybeSingle();
       if (writeError) throw new Error("Unable to migrate billing identity");
-      if (!saved) result.conflicted++;
-      else if (fresh) result.unchanged++;
-      else result.migrated++;
+      if (!saved) {
+        result.conflicted++;
+        await recordAttempt(row);
+      } else {
+        const { data: verified, error: verifyError } = await service.rpc(
+          "confirm_encrypted_content", { p_family: "billing_identity",
+            p_id: row.user_id, p_revision: saved.content_revision,
+            p_first: nextEmail, p_second: nextNote });
+        if (verifyError) throw new Error("Unable to confirm encrypted content");
+        if (!verified) {
+          result.conflicted++;
+          await recordAttempt(row);
+        } else if (fresh) result.unchanged++;
+        else result.migrated++;
+      }
     } catch {
       result.failed++;
-      await service.from("billing_accounts")
-        .update({ encryption_attempted_at: new Date().toISOString() })
-        .eq("user_id",row.user_id)
-        .eq("content_revision",row.content_revision);
+      await recordAttempt(row);
     }
   }
   return result;

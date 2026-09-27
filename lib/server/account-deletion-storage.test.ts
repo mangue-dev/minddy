@@ -30,6 +30,14 @@ const service = vi.hoisted(() => {
         Promise.resolve({ data: filtered.slice(first, last + 1), error: null }).then(resolve),
       select: () => builder,
       order: () => builder,
+      limit: (count: number) => {
+        last = first + count - 1;
+        return builder;
+      },
+      gt: (column: string, value: unknown) => {
+        filtered = filtered.filter((row) => !(column in row) || String(row[column]) > String(value));
+        return builder;
+      },
       range: (start: number, end: number) => {
         first = start;
         last = Math.min(end, start + 999);
@@ -49,9 +57,11 @@ const service = vi.hoisted(() => {
   };
 
   const deleteUser = vi.fn(async () => ({ error: null }));
+  const rpc = vi.fn(async () => ({ data: true, error: null }));
 
   const client = {
     from: (table: string) => query(tables[table] ?? []),
+    rpc,
     storage: {
       from: (bucket: string) => ({
         // `list` does not go down: we return the entries of the requested level, the
@@ -87,7 +97,7 @@ const service = vi.hoisted(() => {
     auth: { admin: { deleteUser } },
   };
 
-  return { client, removed, objects, tables, deleteUser };
+  return { client, removed, objects, tables, deleteUser, rpc };
 });
 
 vi.mock("@/lib/supabase-service", () => ({
@@ -118,6 +128,7 @@ beforeEach(() => {
   for (const key of Object.keys(service.objects)) delete service.objects[key];
   for (const key of Object.keys(service.tables)) delete service.tables[key];
   service.deleteUser.mockClear();
+  service.rpc.mockClear();
 
   service.tables.projects = [{ id: PROJECT }];
   service.tables.attachments = [{ storage_path: `projects/${PROJECT}/a/note.pdf` }];

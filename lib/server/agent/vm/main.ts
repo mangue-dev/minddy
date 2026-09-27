@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, unlink } from "node:fs/promises";
 
 import { cloudLayout } from "../harness-layout";
 import { createControlPlaneClient } from "./control-plane-client";
@@ -139,7 +139,10 @@ async function main(): Promise<void> {
   let job: VmJob | null = null;
   let report: VmTurnReport;
   try {
-    source = await readFile(jobPathFromArgv(), "utf8");
+    const jobPath = jobPathFromArgv();
+    source = await readFile(jobPath, "utf8");
+    // The launch file is a one-shot delivery channel, not session state.
+    await unlink(jobPath);
     raw = {
       appOrigin: hinted("appOrigin") || raw.appOrigin,
       controlToken: hinted("controlToken") || raw.controlToken,
@@ -161,7 +164,7 @@ async function main(): Promise<void> {
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("[agent-vm] turn crashed:", message);
+    console.error("[agent-vm] turn failed", { code: "agent_vm_turn_failed", runId: job?.runId ?? null });
     await cp.emit("error", { message }).catch(() => {});
     /**
      * THE EMERGENCY REPORT, and it carries NO checkpoint. The supervisor has
@@ -195,15 +198,12 @@ async function main(): Promise<void> {
 
 main().then(
   () => process.exit(0),
-  (err) => {
+  () => {
     // We only arrive here if the REPORT itself has not been passed — plan of
     // control unreachable, or job unreadable. Nothing to save from the VM: the
     // watchdog will note the death and put the session to rest on its
     // last checkpoint. The non-zero exit code is what it will read.
-    console.error(
-      "[agent-vm] fatal:",
-      err instanceof Error ? err.message : String(err),
-    );
+    console.error("[agent-vm] terminal report failed", { code: "agent_vm_report_failed" });
     process.exit(1);
   },
 );

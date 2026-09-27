@@ -102,13 +102,13 @@ export async function requestFeedbackOtp(params: {
     p_ip_limit: OTP_MAX_PER_IP,
   });
   if (error) {
-    console.error("[feedback-otp] atomic issuance failed:", error.message);
+    console.error("[feedback-otp] issuance_failed");
     return { ok: false, error: "sendFailed" };
   }
   if (issued === "rate_limited") return { ok: false, error: "rateLimited" };
   // A cooldown deliberately has the same response as a send so this endpoint
   // cannot reveal whether a recipient requested a code recently.
-  if (issued === "cooldown") return { ok: true };
+  if (issued === "cooldown" || issued === "suppressed") return { ok: true };
   if (issued !== "issued") return { ok: false, error: "sendFailed" };
 
   const sent = await sendOtpEmail({ to: email, code, locale: params.locale });
@@ -138,7 +138,7 @@ export async function verifyFeedbackOtp(params: {
     p_max_attempts: OTP_MAX_ATTEMPTS,
   });
   if (error) {
-    console.error("[feedback-otp] atomic attempt claim failed:", error.message);
+    console.error("[feedback-otp] attempt_claim_failed");
     return { ok: false, error: "invalidCode" };
   }
   const row = (
@@ -163,7 +163,7 @@ export async function verifyFeedbackOtp(params: {
     { p_id: row.id, p_now: new Date().toISOString() }
   );
   if (consumeError) {
-    console.error("[feedback-otp] atomic consumption failed:", consumeError.message);
+    console.error("[feedback-otp] consumption_failed");
   }
   // Competing correct submissions may both claim an attempt, but only one can
   // transition the code from unconsumed to consumed.

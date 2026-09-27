@@ -72,7 +72,7 @@ export async function buildForgeAssigneeIndex(params: {
     .eq("provider", params.provider)
     .in("user_id", userIds);
   if (error) {
-    console.error("[forge-members] identity lookup failed:", error.message);
+    console.error("[forge-members] identity_lookup_failed");
     return index;
   }
 

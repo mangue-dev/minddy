@@ -3953,6 +3953,14 @@ describe.skipIf(!enabled)("isolated PostgreSQL dump/restore with the local root 
           endpoint_digest,encrypted_content,transport) VALUES(${quote(id)},
           ${quote(owner)},${quote(digests[index])},
           ${quote(`mdye3:${cipher}`)},'web');`);
+        expect(await store.decrypt(cipher, { scope,
+          table: "push_subscriptions", column: "content",
+          rowId: digests[index] })).toMatchObject(content);
+        const revision = sql(source, `SELECT content_revision FROM
+          public.push_subscriptions WHERE id=${quote(id)};`);
+        expect(sql(source, `SELECT public.confirm_encrypted_content(
+          'push',${quote(id)},${revision},${quote(`mdye3:${cipher}`)},NULL);`))
+          .toBe("t");
       }
       expect(sql(source, "SELECT public.activate_push_content();")).toBe("t");
       const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U",
@@ -6957,6 +6965,16 @@ describe.skipIf(!enabled)("billing identity PostgreSQL recovery", () => {
           INSERT INTO public.billing_accounts(user_id,email,
             admin_override_note) VALUES(${quote(id)},
             ${quote(`mdye3:${email}`)},${quote(`mdye3:${note}`)});`);
+        expect(await store.decrypt(email,{scope,table:"billing_accounts",
+          column:"email",rowId:id})).toBe(`private-${index}@example.test`);
+        expect(await store.decrypt(note,{scope,table:"billing_accounts",
+          column:"admin_override_note",rowId:id}))
+          .toBe(`Private billing note ${index}`);
+        const revision=sql(source,`SELECT content_revision FROM
+          public.billing_accounts WHERE user_id=${quote(id)};`);
+        expect(sql(source,`SELECT public.confirm_encrypted_content(
+          'billing_identity',${quote(id)},${revision},
+          ${quote(`mdye3:${email}`)},${quote(`mdye3:${note}`)});`)).toBe("t");
         keys.invalidate(scope);
       }
       expect(sql(source,"SELECT public.activate_billing_identity();"))
@@ -7046,6 +7064,13 @@ describe.skipIf(!enabled)("OAuth client PostgreSQL recovery", () => {
         sql(source,`INSERT INTO public.oauth_clients(client_id,client_name,
           redirect_uris,encrypted_content,encryption_version) VALUES(
           ${quote(id)},NULL,NULL,${quote(cipher)},${index+1});`);
+        expect(await store.decrypt(cipher,{scope,table:"oauth_clients",
+          column:"content",rowId:id})).toMatchObject(content);
+        const revision=sql(source,`SELECT content_revision FROM
+          public.oauth_clients WHERE client_id=${quote(id)};`);
+        expect(sql(source,`SELECT public.confirm_encrypted_content(
+          'oauth_client',${quote(id)},${revision},${quote(cipher)},NULL);`))
+          .toBe("t");
         keys.invalidate(scope);
       }
       expect(sql(source,"SELECT public.activate_oauth_client_content();"))
@@ -7130,6 +7155,14 @@ describe.skipIf(!enabled)("OAuth code PostgreSQL recovery", () => {
       sql(source,`INSERT INTO public.oauth_clients(client_id,client_name,
         redirect_uris,encrypted_content,encryption_version) VALUES(
         ${quote(clientId)},NULL,NULL,${quote(clientCipher)},1);`);
+      expect(await store.decrypt(clientCipher,{scope:system,table:"oauth_clients",
+        column:"content",rowId:clientId})).toMatchObject({
+        client_name:"Private OAuth client" });
+      const clientRevision=sql(source,`SELECT content_revision FROM
+        public.oauth_clients WHERE client_id=${quote(clientId)};`);
+      expect(sql(source,`SELECT public.confirm_encrypted_content(
+        'oauth_client',${quote(clientId)},${clientRevision},
+        ${quote(clientCipher)},NULL);`)).toBe("t");
       for(const [index,id] of ids.entries()){
         const scope:EncryptionScope={kind:"user",id};
         const actorKey=randomUUID();
@@ -7159,6 +7192,22 @@ describe.skipIf(!enabled)("OAuth code PostgreSQL recovery", () => {
             ${quote(hash)},${quote(clientId)},${quote(id)},${quote(grant)},
             NULL,NULL,${quote("e".repeat(43))},now()+interval '10 minutes',
             ${quote(cipher)},${index+1});`);
+        expect(await store.decrypt(actorCipher,{scope,table:"api_keys",
+          column:"content",rowId:actorKey}))
+          .toMatchObject({name:`Private actor ${index}`});
+        expect(await store.decrypt(cipher,{scope,table:"oauth_authorization_codes",
+          column:"content",rowId:hash}))
+          .toMatchObject({redirect_uri:`cursor://private-${index}.example/callback`});
+        const actorRevision=sql(source,`SELECT content_revision FROM
+          public.api_keys WHERE id=${quote(actorKey)};`);
+        expect(sql(source,`SELECT public.confirm_encrypted_content(
+          'api_key',${quote(actorKey)},${actorRevision},
+          ${quote(actorCipher)},NULL);`)).toBe("t");
+        const codeRevision=sql(source,`SELECT content_revision FROM
+          public.oauth_authorization_codes WHERE code_hash=${quote(hash)};`);
+        expect(sql(source,`SELECT public.confirm_encrypted_content(
+          'oauth_code',${quote(hash)},${codeRevision},
+          ${quote(cipher)},NULL);`)).toBe("t");
         keys.invalidate(scope);
       }
       expect(sql(source,"SELECT public.activate_oauth_client_content();"))

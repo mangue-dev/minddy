@@ -181,8 +181,8 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
   // is already on the repository at this point, and a run that remains `running` because the
   // forge responds 502 would be a much worse evil.
   const prState = { number: run.pr_number, url: run.pr_url, state: run.pr_state };
-  await landOnPullRequest(run, report, prState, emit, locale).catch((err) => {
-    console.error("[agent-vm-rest] pull request landing failed:", (err as Error).message);
+  await landOnPullRequest(run, report, prState, emit, locale).catch(() => {
+    console.error("[agent-vm-rest] pull_request_landing_failed");
   });
 
   // The diff of the round, calculated by git IN the VM (the function no longer has the repository).
@@ -423,8 +423,8 @@ async function landOnPullRequest(
   // The branch only exists for the app from the first REAL push: it's him
   // which creates it on the repository (MIN-123).
   if (!run.branch_name && report.workBranch) {
-    await stampRun(run.id, { branch_name: report.workBranch }).catch((err) => {
-      console.error("[agent-vm-rest] branch stamp failed:", (err as Error).message);
+    await stampRun(run.id, { branch_name: report.workBranch }).catch(() => {
+      console.error("[agent-vm-rest] branch_stamp_failed");
     });
   }
 

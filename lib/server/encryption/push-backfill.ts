@@ -1,14 +1,11 @@
 import "server-only";
-
 import { getServiceClient } from "@/lib/supabase-service";
 import { openPush, pushIndex, pushVersion, sealPush, type StoredPush } from
   "@/lib/server/push/content";
 import { isContentEncryptionEnabled } from "./content-config";
 import { getContentKeys } from "./registry";
-
 type Row = StoredPush & { content_revision: number;
   encryption_checked_at: string | null };
-
 /** Rotate one bounded batch without changing endpoint or installation identity. */
 export async function backfillPushBatch(limit = 25, signal?: AbortSignal) {
   if (!isContentEncryptionEnabled() ||
@@ -23,6 +20,12 @@ export async function backfillPushBatch(limit = 25, signal?: AbortSignal) {
     .select("*").order("encryption_attempted_at", { ascending: true,
       nullsFirst: true }).order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan push subscriptions");
+  const recordAttempt = async (row: Row) => {
+    const { error: attemptError } = await service.from("push_subscriptions")
+      .update({ encryption_attempted_at: new Date().toISOString() })
+      .eq("id", row.id);
+    if (attemptError) throw new Error("Unable to record backfill attempt");
+  };
   for (const row of (data ?? []) as Row[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
@@ -50,24 +53,34 @@ export async function backfillPushBatch(limit = 25, signal?: AbortSignal) {
         endpoint: null, p256dh: null, auth: null, native_installation_id: null,
         device_label: null, user_agent: null, endpoint_digest: endpointDigest,
         installation_digest: installationDigest, encrypted_content: content,
-        encryption_checked_at: now, encryption_attempted_at: now,
+        encryption_attempted_at: now,
       }).eq("id", row.id).eq("user_id", row.user_id)
         .eq("content_revision", row.content_revision);
       query = row.endpoint === null ? query.is("endpoint", null)
         : query.eq("endpoint", row.endpoint);
       query = row.encrypted_content ? query.eq("encrypted_content",
         row.encrypted_content) : query.is("encrypted_content", null);
-      const { data: saved, error: writeError } = await query.select("id")
+      const { data: saved, error: writeError } = await query.select("content_revision")
         .maybeSingle();
       if (writeError) throw new Error("Unable to migrate push subscription");
-      if (!saved) result.conflicted++;
-      else if (fresh) result.unchanged++;
-      else result.migrated++;
+      if (!saved) {
+        result.conflicted++;
+        await recordAttempt(row);
+      } else {
+        const { data: verified, error: verifyError } = await service.rpc(
+          "confirm_encrypted_content", { p_family: "push",
+            p_id: row.id, p_revision: saved.content_revision,
+            p_first: content, p_second: null });
+        if (verifyError) throw new Error("Unable to confirm encrypted content");
+        if (!verified) {
+          result.conflicted++;
+          await recordAttempt(row);
+        } else if (fresh) result.unchanged++;
+        else result.migrated++;
+      }
     } catch {
       result.failed++;
-      await service.from("push_subscriptions")
-        .update({ encryption_attempted_at: new Date().toISOString() })
-        .eq("id", row.id).eq("content_revision", row.content_revision);
+      await recordAttempt(row);
     }
   }
   return result;

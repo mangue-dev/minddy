@@ -167,8 +167,8 @@ export async function resolvePrScope(
         userId,
         provider: target.provider,
         repoFullName: target.repoFullName,
-      }).catch((err) => {
-        console.error("[pr-actions] actor unresolved:", (err as Error).message);
+      }).catch(() => {
+        console.error("[pr-actions] actor_unresolved");
         return { kind: "none", reason: "noAccount" } as ForgeActor;
       })),
   };
@@ -548,11 +548,8 @@ export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
         } else if (outcome.status === "in_progress") {
           deploymentStartedAt = outcome.startedAt;
         }
-      } catch (error) {
-        console.error(
-          "[pr-actions] deployment unreadable:",
-          (error as Error).message,
-        );
+      } catch {
+        console.error("[pr-actions] deployment_unreadable");
       }
     }
 
@@ -614,8 +611,8 @@ export async function prReadinessBatchResponse(
         const forgePr = await scope.forge.getPullRequest(scope.call);
         const result = await readPullRequestReadiness(scope, forgePr);
         readiness[prId] = result.readiness;
-      } catch (error) {
-        console.error(`[pr-actions] readiness unavailable for ${prId}:`, (error as Error).message);
+      } catch {
+        console.error("[pr-actions] readiness_unavailable", prId);
         unavailablePrIds.push(prId);
       }
     }
@@ -653,8 +650,8 @@ export async function prCommitsResponse(scope: PrScope): Promise<NextResponse> {
     // openable, and it bears its own numbers.
     const extras = await scope.forge
       .listPullRequestCommitExtras(scope.call)
-      .catch((err) => {
-        console.error("[pr-actions] commit extras unreadable:", (err as Error).message);
+      .catch(() => {
+        console.error("[pr-actions] commit_extras_unreadable");
         return new Map<string, CommitExtras>();
       });
     return NextResponse.json({
@@ -865,8 +862,8 @@ export async function prCommentsResponse(scope: PrScope): Promise<NextResponse> 
   try {
     const [comments, timeline, actor] = await Promise.all([
       scope.forge.listPullRequestComments(scope.call),
-      scope.forge.listTimeline(scope.call).catch((err) => {
-        console.error("[pr-actions] timeline unreadable:", (err as Error).message);
+      scope.forge.listTimeline(scope.call).catch(() => {
+        console.error("[pr-actions] timeline_unreadable");
         return [];
       }),
       scope.actor(),
@@ -880,8 +877,8 @@ export async function prCommentsResponse(scope: PrScope): Promise<NextResponse> 
         commentIds: [PR_BODY_COMMENT_ID, ...comments.map((c) => c.id)],
         viewerIsActor,
       })
-      .catch((err) => {
-        console.error("[pr-actions] conversation reactions unreadable:", (err as Error).message);
+      .catch(() => {
+        console.error("[pr-actions] conversation_reactions_unreadable");
         return [];
       });
     return NextResponse.json({ comments, timeline, reactions });
@@ -1024,8 +1021,8 @@ export async function updatePrCommentResponse(
     try {
       const comments = await scope.forge.listPullRequestComments(scope.call);
       previous = comments.find((c) => c.id === payload.commentId)?.body ?? null;
-    } catch (err) {
-      console.error("[pr-actions] edit snapshot read failed:", (err as Error).message);
+    } catch {
+      console.error("[pr-actions] edit_snapshot_read_failed");
     }
     if (previous != null) {
       await recordPrCommentEditQuiet({
@@ -1179,15 +1176,15 @@ export async function startNumoPrReview(input: {
     after(async () => {
       try {
         await executeNumoTurn({ turnId: started.turnId, readClient: supabase });
-      } catch (error) {
-        console.error("[pr-actions] @numo background turn failed:", error);
+      } catch {
+        console.error("[pr-actions] numo_background_turn_failed");
       }
     });
     return started;
-  } catch (err) {
+  } catch {
     // Including plan and budget refusals: they make sense on a CLICK,
     // who can display them. Here there is no screen to tell them to.
-    console.error("[pr-actions] @numo mention ignored:", (err as Error).message);
+    console.error("[pr-actions] numo_mention_ignored");
     if (eventId) await failNumoSurfaceEvent(service, eventId);
     return null;
   }
@@ -1216,8 +1213,8 @@ export async function prReviewCommentsResponse(scope: PrScope): Promise<NextResp
   try {
     const [comments, threads, actor] = await Promise.all([
       scope.forge.listPullRequestReviewComments(scope.call),
-      scope.forge.listReviewThreads(scope.call).catch((err) => {
-        console.error("[pr-actions] review threads unreadable:", (err as Error).message);
+      scope.forge.listReviewThreads(scope.call).catch(() => {
+        console.error("[pr-actions] review_threads_unreadable");
         return [];
       }),
       scope.actor(),
@@ -1238,8 +1235,8 @@ export async function prReviewCommentsResponse(scope: PrScope): Promise<NextResp
             commentIds: comments.map((c) => c.id),
             viewerIsActor,
           })
-          .catch((err) => {
-            console.error("[pr-actions] review reactions unreadable:", (err as Error).message);
+          .catch(() => {
+            console.error("[pr-actions] review_reactions_unreadable");
             return [];
           })
       : [];
@@ -1747,7 +1744,7 @@ export async function prAttachmentResponse(
     .upload(path, stored, { contentType: "application/octet-stream",
       metadata: { minddy_encrypted: "true" } });
   if (error) {
-    console.error("[pr-actions] forge attachment upload failed:", error.message);
+    console.error("[pr-actions] forge_attachment_upload_failed");
     return NextResponse.json({ error: "Upload failed" }, { status: 502 });
   }
 
@@ -1796,8 +1793,8 @@ export async function prAttachmentResponse(
  * that the user explicitly typed.
  */
 export async function prMembersResponse(scope: PrScope): Promise<NextResponse> {
-  const members = await scope.forge.listRepoMembers(scope.call).catch((err) => {
-    console.error("[pr-actions] repo members unreadable:", (err as Error).message);
+  const members = await scope.forge.listRepoMembers(scope.call).catch(() => {
+    console.error("[pr-actions] repo_members_unreadable");
     return [];
   });
   return NextResponse.json(
@@ -2470,8 +2467,8 @@ async function runAiMergeJob(
         scope.target.provider,
       );
     }
-  } catch (error) {
-    console.error("[pr-ai-merge] failed:", (error as Error).message);
+  } catch {
+    console.error("[pr-ai-merge] merge_failed");
   } finally {
     // One push either way: the open panel unwinds its pending marker on it.
     broadcastPrChanged(scope.pr.id, ["pr"]);
@@ -2591,8 +2588,8 @@ export async function prMaintenanceActionResponse(
             editedBy: actor.actor.login,
           });
         }
-      } catch (err) {
-        console.error("[pr-actions] body edit snapshot read failed:", (err as Error).message);
+      } catch {
+        console.error("[pr-actions] body_edit_snapshot_read_failed");
       }
       await withPrOperation(`${scope.pr.id}:update-body`, () =>
         scope.forge.updatePullRequestBody({ ...call, body: nextBody }),
@@ -2731,7 +2728,7 @@ export async function prReviewResponse(
     // The Numo conversation already carries the request, so a later forge
     // failure must not make the user believe that the fix request was lost.
     if (!relaunch) return forgeErrorResponse(err);
-    console.error("[pr-actions] review post failed:", (err as Error).message);
+    console.error("[pr-actions] review_post_failed");
     published = "comment";
   }
 

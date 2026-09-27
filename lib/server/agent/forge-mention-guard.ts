@@ -79,12 +79,12 @@ async function claim(key: string): Promise<number | null> {
           p_window_seconds: MENTION_WINDOW_SECONDS,
         });
     if (error) {
-      console.error("[forge-mention-guard] throttle unavailable:", error.message);
+      console.error("[forge-mention-guard] throttle_unavailable", error.code);
       return null;
     }
     return typeof data === "number" ? data : null;
-  } catch (err) {
-    console.error("[forge-mention-guard] throttle failed:", (err as Error).message);
+  } catch {
+    console.error("[forge-mention-guard] throttle_failed");
     return null;
   }
 }

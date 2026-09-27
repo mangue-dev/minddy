@@ -15,12 +15,14 @@ BEGIN
     encrypted_content=cipher,encryption_version=2 WHERE id=key_id;
   IF EXISTS(SELECT 1 FROM public.api_keys WHERE id=key_id AND
       (name IS NOT NULL OR agent IS NOT NULL OR content_revision<>1 OR
-        encryption_checked_at IS NULL)) THEN
+        encryption_checked_at IS NOT NULL)) THEN
     RAISE EXCEPTION 'API-key source retained clear attribution';
   END IF;
-  IF NOT public.activate_api_key_content() THEN
-    RAISE EXCEPTION 'API-key activation refused sealed rows';
+  IF public.activate_api_key_content() THEN
+    RAISE EXCEPTION 'Shape-only content acquired an authentication proof';
   END IF;
+  -- Activate a synthetic scope only to test the legacy-writer SQL fence.
+  INSERT INTO public.api_key_content_scope(id) VALUES(true);
   BEGIN
     INSERT INTO public.api_keys(user_id,name,key_hash,key_prefix)
       VALUES(actor,'Old writer',repeat('b',64),'oauth');

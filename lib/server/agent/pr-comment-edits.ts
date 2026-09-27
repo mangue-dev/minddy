@@ -82,7 +82,7 @@ export async function recordPrCommentEditQuiet(input: {
       edited_by: input.editedBy,
     });
   if (error) {
-    console.error("[pr-comment-edits] insert failed:", error.message);
+    console.error("[pr-comment-edits] insert_failed", error.code);
   }
 }
 

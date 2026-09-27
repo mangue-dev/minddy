@@ -54,13 +54,15 @@ BEGIN
   UPDATE public.integrations SET webhook_url=cipher WHERE id=integration;
   IF EXISTS(SELECT 1 FROM public.integrations WHERE id=integration AND
       (name LIKE '%Private%' OR webhook_url LIKE '%private.example%' OR
-        content_revision<>3 OR name_encryption_checked_at IS NULL OR
-        webhook_encryption_checked_at IS NULL)) THEN
+        content_revision<>3 OR name_encryption_checked_at IS NOT NULL OR
+        webhook_encryption_checked_at IS NOT NULL)) THEN
     RAISE EXCEPTION 'Integration source retained clear content';
   END IF;
-  IF NOT public.activate_integration_content() THEN
-    RAISE EXCEPTION 'Integration activation refused sealed rows';
+  IF public.activate_integration_content() THEN
+    RAISE EXCEPTION 'Shape-only content acquired an authentication proof';
   END IF;
+  -- Activate a synthetic scope only to test the legacy-writer SQL fence.
+  INSERT INTO public.integration_content_scope(id) VALUES(true);
   BEGIN
     INSERT INTO public.integrations(project_id,name,key_hash,key_prefix)
       VALUES(project,'Old writer',repeat('b',64),'mdy');

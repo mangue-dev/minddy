@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import { decodeFeedbackIdentityRow } from "./identity-content";
+import { decodeFeedbackIdentityRow, feedbackOtpEmailLookup } from "./identity-content";
 
 /**
  * Erase a board participant's private identity (GDPR Article 17).
@@ -60,12 +60,14 @@ export async function eraseFeedbackUser(params: {
   }
 
   let email: string | null = null;
+  let otpEmailLookup: string | null = null;
   if (!user.erased_at) {
     try {
       // Legacy OTP rows can lack a blind lookup during rollout, so the clear
       // email is required to remove them. If decryption fails, keep the
       // identity intact and report failure instead of a partial erasure.
       email = (await decodeFeedbackIdentityRow(user, params.projectId)).email;
+      if (email) otpEmailLookup = await feedbackOtpEmailLookup(email);
     } catch {
       return { ok: false, error: "failed" };
     }
@@ -74,6 +76,7 @@ export async function eraseFeedbackUser(params: {
     p_project_id: params.projectId,
     p_user_id: params.userId,
     p_email_plain: email,
+    p_otp_email_lookup: otpEmailLookup,
   });
   const result = (data as { already_erased: boolean;
     sessions_revoked: number }[] | null)?.[0];

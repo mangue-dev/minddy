@@ -202,5 +202,8 @@
   "20270108120000_feedback_erasure_atomic.sql": "1ab8f7cbf77d04228ead73889ff35cd5282fba4bfcd6691b89012325fdf9092f",
   "20270108140000_verified_encryption_backfill_attempts.sql": "b2bbada496122f92f90fc4d89ea34bdc3ad81d122a061172c248c2832cb4b4d2",
   "20270108150000_agent_backfill_verified_attempts.sql": "822fb80a6b7f2b4196912cc334c738ea38c98903402706f5671f2ffe82d4e0db",
-  "20270108160000_verified_row_migration_progress.sql": "28737a5e4850ea46417fd65d95640ff25f31d272fcfab8d1a4c6b52fd00d4bde"
+  "20270108160000_verified_row_migration_progress.sql": "28737a5e4850ea46417fd65d95640ff25f31d272fcfab8d1a4c6b52fd00d4bde",
+  "20270108171000_feedback_erasure_otp_lookup.sql": "fd241f0a5bfd788ef9eacc938333d95fc9f6d77b5a0db51d4923fe6d135568d7",
+  "20270108180000_authenticated_content_backfill_proofs.sql": "09cc1d37e215087363cf7cdb8bdc99c066678a93e4e84a0814419f94c05e30a2",
+  "20270108190000_agent_account_erasure_fence.sql": "08215bf67c71c83f3d079830f3ab5e8b0b58660b3c140e857dca68a2e4294c5c"
 }

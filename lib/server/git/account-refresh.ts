@@ -106,10 +106,8 @@ async function runRefresh(userId: string): Promise<void> {
   ];
   await Promise.all(
     branches.map(([label, task]) =>
-      task.catch((err: unknown) => {
-        console.warn(
-          `[account-refresh] ${label} refresh failed: ${(err as Error).message}`,
-        );
+      task.catch(() => {
+        console.warn("[account-refresh] refresh_failed", label);
       }),
     ),
   );

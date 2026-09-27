@@ -212,7 +212,7 @@ export async function failNumoSurfaceEvent(
       updated_at: new Date().toISOString(),
     })
     .eq("id", eventId);
-  if (error) console.error("[numo-surface] failed to mark event:", error.message);
+  if (error) console.error("[numo-surface] event_status_write_failed", eventId);
 }
 
 export interface PendingSurfaceWorkerInput {

@@ -355,8 +355,8 @@ async function mintGithubUserToken(
       expectedRefreshTokenEncrypted: row.encryption_version
         ? row.encrypted_content ?? null : row.refresh_token_encrypted,
     });
-  } catch (err) {
-    console.warn(`[user-identities] GitHub token refresh claim failed: ${(err as Error).message}`);
+  } catch {
+    console.warn("[user-identities] github_token_refresh_claim_failed");
     return null;
   }
   if (!claimId) {
@@ -395,11 +395,9 @@ async function mintGithubUserToken(
       row.source === "relay"
         ? await refreshGithubUserTokensViaRelay(refreshToken)
         : await refreshGithubUserToken(refreshToken);
-  } catch (err) {
+  } catch {
     await releaseForgeOAuthRefreshClaim("identity", row.id, claimId);
-    console.warn(
-      `[user-identities] GitHub token refresh failed: ${(err as Error).message}`,
-    );
+    console.warn("[user-identities] github_token_refresh_failed");
     return null;
   }
 
@@ -427,9 +425,7 @@ async function mintGithubUserToken(
     .eq("oauth_refresh_claim", claimId);
   const { data: written, error: persistError } = await persist.select("id");
   if (persistError || !written?.length) {
-    console.warn(
-      `[user-identities] GitHub refresh persistence failed: ${persistError?.message ?? "claim lost"}`,
-    );
+    console.warn("[user-identities] github_refresh_persistence_failed");
     return null;
   }
   return { token: refreshed.accessToken, ...account };

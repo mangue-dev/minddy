@@ -396,11 +396,8 @@ export async function reapDeadVmRuns(
         routineId: row.routine_id,
         durationMs: Date.now() - startedMs,
         usdPerMinute: row.sandbox_billing?.usdPerMinute,
-      }).catch((err) =>
-        console.error(
-          "[agent-drain] vm compute metering failed:",
-          (err as Error).message,
-        ),
+      }).catch(() =>
+        console.error("[agent-drain] vm_compute_metering_failed"),
       );
     }
 
@@ -492,12 +489,12 @@ export async function drainAgentRuns(
   // write an event. This does not assume anything, it ASKS the platform if the
   // process lives. Best effort — a failed death certificate is made up for in passing
   // next, an exception here would kill the entire drain.
-  await reapDeadVmRuns(service).catch((err) =>
-    console.error("[agent-drain] vm watchdog failed:", (err as Error).message),
+  await reapDeadVmRuns(service).catch(() =>
+    console.error("[agent-drain] vm_watchdog_failed"),
   );
   // Release microVMs from inactive idle sessions (keep snapshot).
-  await reapIdleSandboxes(service).catch((err) =>
-    console.error("[agent-drain] reap failed:", (err as Error).message),
+  await reapIdleSandboxes(service).catch(() =>
+    console.error("[agent-drain] reap_failed"),
   );
 
   while (deadline - Date.now() >= MIN_LAUNCH_BUDGET_MS) {

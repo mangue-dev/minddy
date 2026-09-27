@@ -30,7 +30,7 @@ BEGIN
   IF registered.endpoint IS NOT NULL OR registered.p256dh IS NOT NULL OR
       registered.auth IS NOT NULL OR registered.endpoint_digest<>digest OR
       registered.content_revision<>1 OR
-      registered.encryption_checked_at IS NULL THEN
+      registered.encryption_checked_at IS NOT NULL THEN
     RAISE EXCEPTION 'Push registration retained clear content';
   END IF;
   first_id:=registered.id;
@@ -52,9 +52,11 @@ BEGIN
       registered.installation_digest<>native_digest THEN
     RAISE EXCEPTION 'Legacy native installation retained clear content';
   END IF;
-  IF NOT public.activate_push_content() THEN
-    RAISE EXCEPTION 'Push activation refused sealed rows';
+  IF public.activate_push_content() THEN
+    RAISE EXCEPTION 'Shape-only content acquired an authentication proof';
   END IF;
+  -- Activate a synthetic scope only to test the legacy-writer SQL fence.
+  INSERT INTO public.push_content_scope(id) VALUES(true);
   BEGIN
     INSERT INTO public.push_subscriptions(user_id,endpoint,p256dh,auth,transport)
       VALUES(owner,'https://obsolete.example/push','key','auth','web');

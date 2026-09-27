@@ -86,8 +86,8 @@ export async function notifyPullRequestOpened(
     if (rows.length === 0) return;
 
     await insertNotifications(service, rows, { deduplicatePullRequestOpened: true });
-  } catch (e) {
-    console.error("[pr-opened-notify] notify failed:", (e as Error).message);
+  } catch {
+    console.error("[pr-opened-notify] notify_failed");
   }
 }
 

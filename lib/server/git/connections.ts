@@ -70,7 +70,7 @@ export async function listUserConnections(
       rows.map((r) => r.id),
     );
   if (linksError) {
-    console.error("[git-connections] linked-project lookup failed:", linksError.message);
+    console.error("[git-connections] linked_project_lookup_failed");
     return null;
   }
   const byConnection = new Map<string, GitConnection["projects"]>();

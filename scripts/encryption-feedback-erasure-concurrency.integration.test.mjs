@@ -6,7 +6,7 @@ import { test } from "node:test";
 
 const container = "supabase_db_minddy-encryption-test";
 const template = process.env.MINDDY_ERASURE_TEMPLATE ??
-  "minddy_min591_followup_final_v3_20260927";
+  "minddy_min591_security_final_20260927";
 const quote = (value) => `'${value.replaceAll("'", "''")}'`;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -63,19 +63,25 @@ async function expectBlocked(promise) {
   ]), "blocked");
 }
 
-test("feedback erasure serializes with session creation in both orders", async () => {
+test("feedback erasure serializes with session and OTP creation in both orders", async () => {
   const database = `minddy_min591_erase_${randomUUID().slice(0, 12).replaceAll("-", "")}`;
   execFileSync("docker", ["exec", container, "createdb", "-U", "supabase_admin",
     "-T", template, database]);
   const sessions = [];
   try {
     sql(database, readFileSync(
-      "supabase/migrations/20270108120000_feedback_erasure_atomic.sql", "utf8"));
+      "supabase/migrations/20270108171000_feedback_erasure_otp_lookup.sql", "utf8"));
     const actor = randomUUID();
     const project = randomUUID();
     const board = randomUUID();
     const firstUser = randomUUID();
     const secondUser = randomUUID();
+    const thirdUser = randomUUID();
+    const fourthUser = randomUUID();
+    const thirdCipher = `mdyf3:1:${Buffer.from('{"format":3,"keyVersion":3}')
+      .toString("base64url")}`;
+    const fourthCipher = `mdyf3:1:${Buffer.from('{"format":3,"keyVersion":4}')
+      .toString("base64url")}`;
     sql(database, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
       INSERT INTO public.projects(id,owner_id,name,key)
         VALUES(${quote(project)},${quote(actor)},'Erasure race fixture','ERACE');
@@ -88,7 +94,13 @@ test("feedback erasure serializes with session creation in both orders", async (
           'First','email'),
         (${quote(secondUser)},${quote(project)},
           'mdyf3:1:eyJmb3JtYXQiOjMsImtleVZlcnNpb24iOjJ9',repeat('b',64),
-          'Second','email');`);
+          'Second','email'),
+        (${quote(thirdUser)},${quote(project)},
+          ${quote(thirdCipher)},repeat('e',64),
+          'Third','email'),
+        (${quote(fourthUser)},${quote(project)},
+          ${quote(fourthCipher)},repeat('f',64),
+          'Fourth','email');`);
 
     // Erasure commits first: an in-flight insert must wait and then fail.
     const eraser = new Session(database);
@@ -96,7 +108,7 @@ test("feedback erasure serializes with session creation in both orders", async (
     sessions.push(eraser, inserter);
     await eraser.run("BEGIN;");
     await eraser.run(`SELECT * FROM public.erase_feedback_identity(
-      ${quote(project)},${quote(firstUser)},'first@example.test');`);
+      ${quote(project)},${quote(firstUser)},'first@example.test',repeat('c',64));`);
     const lateInsert = inserter.run(`INSERT INTO public.feedback_sessions(
       token_hash,board_id,user_id,expires_at) VALUES('late-token',
       ${quote(board)},${quote(firstUser)},now()+interval '1 day');`);
@@ -114,12 +126,51 @@ test("feedback erasure serializes with session creation in both orders", async (
       ${quote(board)},${quote(secondUser)},now()+interval '1 day');`);
     const pendingErasure = laterEraser.run(`SELECT * FROM
       public.erase_feedback_identity(${quote(project)},${quote(secondUser)},
-      'second@example.test');`);
+      'second@example.test',repeat('d',64));`);
     await expectBlocked(pendingErasure);
     await creator.run("COMMIT;");
     assert.match(await pendingErasure, /f\|1/);
     assert.equal(sql(database, `SELECT count(*) FROM public.feedback_sessions
       WHERE user_id IN (${quote(firstUser)},${quote(secondUser)});`), "0");
+
+    // OTP commits first: erasure waits for the digest lock, then removes it.
+    const earlyCode = randomUUID();
+    const codeIssuer = new Session(database);
+    const codeEraser = new Session(database);
+    sessions.push(codeIssuer, codeEraser);
+    await codeIssuer.run("BEGIN;");
+    assert.match(await codeIssuer.run(`SELECT public.issue_feedback_otp_code_protected(
+      ${quote(earlyCode)},${quote(board)},'third@example.test',
+      ${quote(thirdCipher)},repeat('1',64),
+      'third-ip','third-code',now()+interval '10 minutes',now(),3600,0,5,15);`),
+    /issued/);
+    const pendingCodeErasure = codeEraser.run(`SELECT * FROM
+      public.erase_feedback_identity(${quote(project)},${quote(thirdUser)},
+      'third@example.test',repeat('1',64));`);
+    await expectBlocked(pendingCodeErasure);
+    await codeIssuer.run("COMMIT;");
+    assert.match(await pendingCodeErasure, /f\|0/);
+    assert.equal(sql(database, `SELECT count(*) FROM public.feedback_otp_codes
+      WHERE id=${quote(earlyCode)};`), "0");
+
+    // Erasure commits first: an in-flight OTP issuer waits and is suppressed.
+    const lateCode = randomUUID();
+    const codeEraserFirst = new Session(database);
+    const codeIssuerSecond = new Session(database);
+    sessions.push(codeEraserFirst, codeIssuerSecond);
+    await codeEraserFirst.run("BEGIN;");
+    await codeEraserFirst.run(`SELECT * FROM public.erase_feedback_identity(
+      ${quote(project)},${quote(fourthUser)},'fourth@example.test',repeat('2',64));`);
+    const pendingCode = codeIssuerSecond.run(`SELECT
+      public.issue_feedback_otp_code_protected(${quote(lateCode)},${quote(board)},
+      'fourth@example.test',${quote(fourthCipher)},
+      repeat('2',64),'fourth-ip','fourth-code',now()+interval '10 minutes',
+      now(),3600,0,5,15);`);
+    await expectBlocked(pendingCode);
+    await codeEraserFirst.run("COMMIT;");
+    assert.match(await pendingCode, /suppressed/);
+    assert.equal(sql(database, `SELECT count(*) FROM public.feedback_otp_codes
+      WHERE id=${quote(lateCode)};`), "0");
   } finally {
     for (const session of sessions) session.close();
     execFileSync("docker", ["exec", container, "dropdb", "-U", "supabase_admin",

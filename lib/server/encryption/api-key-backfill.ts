@@ -1,14 +1,11 @@
 import "server-only";
-
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeApiKeyContent, encodeApiKeyContent,
   type StoredApiKey } from "@/lib/server/api-key-content";
 import { isContentEncryptionEnabled } from "./content-config";
 import { getContentKeys } from "./registry";
-
 type Row = StoredApiKey & { content_revision:number;
   encryption_checked_at:string|null };
-
 /** Verify and rotate actor attribution in bounded user-key batches. */
 export async function backfillApiKeysBatch(limit=25,signal?:AbortSignal){
   if(!isContentEncryptionEnabled() ||
@@ -24,6 +21,12 @@ export async function backfillApiKeysBatch(limit=25,signal?:AbortSignal){
     .order("encryption_attempted_at",{ascending:true,nullsFirst:true})
     .order("id",{ascending:true}).limit(limit);
   if(error) throw new Error("Unable to scan API keys");
+  const recordAttempt = async (row: Row) => {
+    const { error: attemptError } = await service.from("api_keys")
+      .update({ encryption_attempted_at: new Date().toISOString() })
+      .eq("id", row.id);
+    if (attemptError) throw new Error("Unable to record backfill attempt");
+  };
   for(const row of (data??[]) as Row[]){
     if(signal?.aborted){result.interrupted=true;break;}
     result.scanned++;
@@ -43,22 +46,32 @@ export async function backfillApiKeysBatch(limit=25,signal?:AbortSignal){
       if(signal?.aborted){result.interrupted=true;break;}
       const now=new Date().toISOString();
       let query=service.from("api_keys").update({...encoded,name:null,
-        agent:null,encryption_checked_at:now,encryption_attempted_at:now})
+        agent:null,encryption_attempted_at:now})
         .eq("id",row.id).eq("user_id",row.user_id)
         .eq("content_revision",row.content_revision);
       query=row.encrypted_content===null || row.encrypted_content===undefined
         ? query.is("encrypted_content",null)
         : query.eq("encrypted_content",row.encrypted_content);
-      const {data:saved,error:writeError}=await query.select("id").maybeSingle();
+      const {data:saved,error:writeError}=await query.select("content_revision").maybeSingle();
       if(writeError) throw new Error("Unable to migrate API key");
-      if(!saved) result.conflicted++;
-      else if(fresh) result.unchanged++;
-      else result.migrated++;
+      if (!saved) {
+        result.conflicted++;
+        await recordAttempt(row);
+      } else {
+        const { data: verified, error: verifyError } = await service.rpc(
+          "confirm_encrypted_content", { p_family: "api_key",
+            p_id: row.id, p_revision: saved.content_revision,
+            p_first: encoded.encrypted_content, p_second: null });
+        if (verifyError) throw new Error("Unable to confirm encrypted content");
+        if (!verified) {
+          result.conflicted++;
+          await recordAttempt(row);
+        } else if (fresh) result.unchanged++;
+        else result.migrated++;
+      }
     }catch{
       result.failed++;
-      await service.from("api_keys")
-        .update({encryption_attempted_at:new Date().toISOString()})
-        .eq("id",row.id).eq("content_revision",row.content_revision);
+      await recordAttempt(row);
     }
   }
   return result;

@@ -1,14 +1,11 @@
 import "server-only";
-
 import { getServiceClient } from "@/lib/supabase-service";
 import { isContentEncryptionEnabled } from "./content-config";
 import { getContentKeys } from "./registry";
 import { decodeOAuthClientContent, encodeOAuthClientContent,
   type StoredOAuthClient } from "@/lib/server/oauth/client-content";
-
 type Row = StoredOAuthClient & { content_revision: number;
   encryption_checked_at: string | null };
-
 /** Verify and rotate a bounded OAuth client batch under exact revision CAS. */
 export async function backfillOAuthClientsBatch(limit = 25, signal?: AbortSignal) {
   if (!isContentEncryptionEnabled() ||
@@ -24,6 +21,12 @@ export async function backfillOAuthClientsBatch(limit = 25, signal?: AbortSignal
     .order("encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("client_id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan OAuth clients");
+  const recordAttempt = async (row: Row) => {
+    const { error: attemptError } = await service.from("oauth_clients")
+      .update({ encryption_attempted_at: new Date().toISOString() })
+      .eq("client_id", row.client_id);
+    if (attemptError) throw new Error("Unable to record backfill attempt");
+  };
   for (const row of (data ?? []) as Row[]) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;
@@ -47,22 +50,32 @@ export async function backfillOAuthClientsBatch(limit = 25, signal?: AbortSignal
       const now = new Date().toISOString();
       let query = service.from("oauth_clients").update({ ...encoded,
         client_name: null, redirect_uris: null, logo_uri: null, client_uri: null,
-        encryption_checked_at: now, encryption_attempted_at: now })
+        encryption_attempted_at: now })
         .eq("client_id", row.client_id).eq("content_revision", row.content_revision);
       query = row.encrypted_content === null || row.encrypted_content === undefined
         ? query.is("encrypted_content", null)
         : query.eq("encrypted_content", row.encrypted_content);
       const { data: saved, error: writeError } = await query
-        .select("client_id").maybeSingle();
+        .select("content_revision").maybeSingle();
       if (writeError) throw new Error("Unable to migrate OAuth client");
-      if (!saved) result.conflicted++;
-      else if (fresh) result.unchanged++;
-      else result.migrated++;
+      if (!saved) {
+        result.conflicted++;
+        await recordAttempt(row);
+      } else {
+        const { data: verified, error: verifyError } = await service.rpc(
+          "confirm_encrypted_content", { p_family: "oauth_client",
+            p_id: row.client_id, p_revision: saved.content_revision,
+            p_first: encoded.encrypted_content, p_second: null });
+        if (verifyError) throw new Error("Unable to confirm encrypted content");
+        if (!verified) {
+          result.conflicted++;
+          await recordAttempt(row);
+        } else if (fresh) result.unchanged++;
+        else result.migrated++;
+      }
     } catch {
       result.failed++;
-      await service.from("oauth_clients")
-        .update({ encryption_attempted_at: new Date().toISOString() })
-        .eq("client_id", row.client_id).eq("content_revision", row.content_revision);
+      await recordAttempt(row);
     }
   }
   return result;

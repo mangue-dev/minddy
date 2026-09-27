@@ -161,8 +161,8 @@ export async function loadPrIssueContext(
       plan: (data.plan as string | null) ?? null,
       comments: await issueNotes(service, commentRows ?? []),
     };
-  } catch (err) {
-    console.error("[pr-run] issue context failed:", (err as Error).message);
+  } catch {
+    console.error("[pr-run] issue_context_failed");
     return null;
   }
 }
@@ -192,8 +192,8 @@ async function issueNotes(
 
 /** Journalized fallback from a context reading: what is missing is missing, the session takes place. */
 function unreadable<T>(what: string, fallback: T): (err: unknown) => T {
-  return (err) => {
-    console.error(`[pr-run] ${what} unreadable:`, (err as Error).message);
+  return () => {
+    console.error(`[pr-run] ${what} unreadable`);
     return fallback;
   };
 }

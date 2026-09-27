@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const h = vi.hoisted(() => ({ service: vi.fn(), decode: vi.fn() }));
+const h = vi.hoisted(() => ({ service: vi.fn(), decode: vi.fn(), otpLookup: vi.fn() }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: h.service }));
 vi.mock("@/lib/server/feedback/boards", () => ({
   getBoardForProject: vi.fn(async () => null),
 }));
 vi.mock("./identity-content", () => ({
   decodeFeedbackIdentityRow: h.decode,
-  feedbackOtpEmailLookup: vi.fn(),
+  feedbackOtpEmailLookup: h.otpLookup,
   shouldProtectFeedbackIdentity: vi.fn(),
 }));
 
@@ -46,10 +46,22 @@ function fakeService(erasedAt: string | null, sessionError: string | null) {
 beforeEach(() => {
   h.service.mockReset();
   h.decode.mockReset().mockImplementation(async (row) => row);
+  h.otpLookup.mockReset().mockResolvedValue("b".repeat(64));
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 describe("feedback erasure session revocation", () => {
+  it("passes the OTP codec digest separately from the identity digest", async () => {
+    const service = fakeService(null, null);
+    h.service.mockReturnValue(service);
+    expect((await eraseFeedbackUser({ projectId, userId })).ok).toBe(true);
+    expect(h.otpLookup).toHaveBeenCalledWith("private@example.test");
+    expect(service.rpc).toHaveBeenCalledWith("erase_feedback_identity", {
+      p_project_id: projectId, p_user_id: userId,
+      p_email_plain: "private@example.test",
+      p_otp_email_lookup: "b".repeat(64),
+    });
+  });
   it("fails rather than reporting erasure when session deletion fails", async () => {
     h.service.mockReturnValue(fakeService(null, "MIN591_PRIVATE_SESSION_ERROR"));
     expect(await eraseFeedbackUser({ projectId, userId }))
@@ -62,6 +74,7 @@ describe("feedback erasure session revocation", () => {
     expect((await eraseFeedbackUser({ projectId, userId })).ok).toBe(true);
     expect(service.rpc).toHaveBeenCalledWith("erase_feedback_identity", {
       p_project_id: projectId, p_user_id: userId, p_email_plain: null,
+      p_otp_email_lookup: null,
     });
   });
 

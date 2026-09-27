@@ -2305,3 +2305,41 @@ Storage-service restore, retention inventory, deployment sequencing and
 representative staging search, latency, key-cache and load measurements remain
 checks before activation. No production migration, flag change or deployment
 is part of this follow-up.
+
+## MIN-591 six-defect correction — 27 September 2026
+
+Server Agent sandboxes now discard their filesystem when stopped. Vercel uses a
+new run-name namespace without persistent snapshots or configured warm snapshots;
+each resumed session rebuilds from the pushed branch and encrypted journal.
+Self-hosted Docker keeps the checkout, OpenCode SQLite/WAL, logs and tool output
+on tmpfs, disables Docker logs, and removes stopped containers and legacy
+volumes. The one-shot job file is unlinked after reading. Account erasure uses a
+service-only SQL fence before paged run enumeration and deletes both sandbox
+name generations. Project trash and purge remove sandboxes before completion.
+The [Agent storage runbook](agent-ephemeral-storage.md) records the historical
+snapshot, volume, endpoint and provider telemetry cleanup still required.
+
+Forge, Numo and adjacent Agent error logs now use controlled outcomes, SQL
+codes and opaque identifiers instead of provider bodies or arbitrary exception
+messages. Sentinel tests exercise provider failures, malformed JSON and echoed
+submitted content. Feedback erasure passes the OTP codec's distinct system-key
+lookup to an atomic, project-board-scoped SQL deletion. A short-lived digest
+fences concurrent OTP issuance; retries revoke sessions. A one-time board purge
+recovers older erased identities whose OTP digest cannot be reconstructed,
+temporarily canceling other pending codes on that project's boards.
+
+The six API-key, push, integration, billing, OAuth-client and OAuth-code workers
+now advance a durable attempt cursor on CAS conflicts and failed verification.
+They record a checked marker only after successful decryption and an exact
+revision/content confirmation. An additive migration clears old shape-only
+markers and refuses direct marker writes. PostgreSQL cannot authenticate AES;
+the service backfill is the proof writer. The read-only readiness scan separately
+decrypts those six families plus PR content and Agent checkpoints/journals,
+using existing registry keys without creating them. A missing key is a blocker.
+
+These changes were tested on schema-only PostgreSQL clones. They do not assert
+that any production row or retained provider copy is encrypted. Keep production
+flags off, MIN-591 in progress and PR #289 in draft. Apply the corrective
+migrations in a controlled staging rollout, repair all unverified rows, retire
+historical Agent copies, and complete the staging controls below before any
+activation decision.

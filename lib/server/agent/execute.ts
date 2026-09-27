@@ -800,11 +800,8 @@ export async function executeAgentRun(
             base: baseBranch,
             head: prRun.headSha ?? prRun.headBranch ?? "",
           })
-          .catch((err: unknown) => {
-            console.error(
-              `[agent] merge base unreadable for PR #${prRun.number}:`,
-              err,
-            );
+          .catch(() => {
+            console.error("[agent] merge_base_unreadable", prRun.number);
             return null;
           })
       : Promise.resolve(null);

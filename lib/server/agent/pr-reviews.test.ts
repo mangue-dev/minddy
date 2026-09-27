@@ -7,6 +7,15 @@ afterEach(() => {
 });
 
 describe("listPullRequestReviews", () => {
+  it("returns a controlled error when GitHub sends malformed JSON", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(
+      '{"private":"MIN591_PRIVATE_JSON_FRAGMENT', { status: 502 },
+    )));
+    await expect(listPullRequestReviews({ token: "token",
+      repoFullName: "acme/app", number: 42 }))
+      .rejects.toThrow("GitHub response was not valid JSON");
+  });
+
   it("uses every review page when calculating the latest verdict per reviewer", async () => {
     const firstPage = Array.from({ length: 100 }, (_, index) => ({
       state: index === 0 ? "CHANGES_REQUESTED" : "COMMENTED",

@@ -1,16 +1,13 @@
 import "server-only";
-
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeIntegrationField, encodeIntegrationField,
   integrationFieldVersion, type StoredIntegration } from
   "@/lib/server/integration-content";
 import { isContentEncryptionEnabled } from "./content-config";
 import { getContentKeys } from "./registry";
-
 type Row=StoredIntegration & {content_revision:number;
   name_encryption_checked_at:string|null;
   webhook_encryption_checked_at:string|null};
-
 /** Rotate the source and webhook copy under one exact revision CAS. */
 export async function backfillIntegrationsBatch(limit=25,signal?:AbortSignal){
   if(!isContentEncryptionEnabled() ||
@@ -26,6 +23,12 @@ export async function backfillIntegrationsBatch(limit=25,signal?:AbortSignal){
     .order("encryption_attempted_at",{ascending:true,nullsFirst:true})
     .order("id",{ascending:true}).limit(limit);
   if(error) throw new Error("Unable to scan integrations");
+  const recordAttempt = async (row: Row) => {
+    const { error: attemptError } = await service.from("integrations")
+      .update({ encryption_attempted_at: new Date().toISOString() })
+      .eq("id", row.id);
+    if (attemptError) throw new Error("Unable to record backfill attempt");
+  };
   for(const row of (data??[]) as Row[]){
     if(signal?.aborted){result.interrupted=true;break;}
     result.scanned++;
@@ -52,23 +55,31 @@ export async function backfillIntegrationsBatch(limit=25,signal?:AbortSignal){
       if(signal?.aborted){result.interrupted=true;break;}
       const now=new Date().toISOString();
       let query=service.from("integrations").update({name:nextName,
-        webhook_url:nextWebhook,name_encryption_checked_at:now,
-        webhook_encryption_checked_at:nextWebhook?now:null,
-        encryption_attempted_at:now})
+        webhook_url:nextWebhook,encryption_attempted_at:now})
         .eq("id",row.id).eq("project_id",row.project_id)
         .eq("content_revision",row.content_revision).eq("name",row.name);
       query=row.webhook_url===null ? query.is("webhook_url",null)
         : query.eq("webhook_url",row.webhook_url);
-      const {data:saved,error:writeError}=await query.select("id").maybeSingle();
+      const {data:saved,error:writeError}=await query.select("content_revision").maybeSingle();
       if(writeError) throw new Error("Unable to migrate integration");
-      if(!saved) result.conflicted++;
-      else if(nameFresh && webhookFresh) result.unchanged++;
-      else result.migrated++;
+      if (!saved) {
+        result.conflicted++;
+        await recordAttempt(row);
+      } else {
+        const { data: verified, error: verifyError } = await service.rpc(
+          "confirm_encrypted_content", { p_family: "integration",
+            p_id: row.id, p_revision: saved.content_revision,
+            p_first: nextName, p_second: nextWebhook });
+        if (verifyError) throw new Error("Unable to confirm encrypted content");
+        if (!verified) {
+          result.conflicted++;
+          await recordAttempt(row);
+        } else if (nameFresh && webhookFresh) result.unchanged++;
+        else result.migrated++;
+      }
     }catch{
       result.failed++;
-      await service.from("integrations")
-        .update({encryption_attempted_at:new Date().toISOString()})
-        .eq("id",row.id).eq("content_revision",row.content_revision);
+      await recordAttempt(row);
     }
   }
   return result;

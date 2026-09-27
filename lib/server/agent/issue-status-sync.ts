@@ -59,11 +59,11 @@ async function applyIssueStatus(
     if (!result.ok) {
       console.error(
         "[agent] issue status sync skipped:",
-        result.errorKey ?? result.rawMessage ?? result.status,
+        result.errorKey ?? result.status,
       );
     }
-  } catch (err) {
-    console.error("[agent] issue status sync failed:", (err as Error).message);
+  } catch {
+    console.error("[agent] issue_status_sync_failed");
   }
 }
 

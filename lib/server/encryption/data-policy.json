@@ -1,4 +1,19 @@
 {
+  "agent_account_erasure_fences": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
   "agent_artifacts": {
     "scope": {
       "ancestor": "agent_conversations:conversation_id"
@@ -1793,11 +1808,16 @@
         "created_at",
         "erased_at",
         "updated_at",
-        "content_encryption_attempted_at"
+        "content_encryption_attempted_at",
+        "otp_erasure_checked_at",
+        "otp_erasure_until"
       ],
       "encryption_metadata": [
         "email_lookup",
         "external_id_lookup"
+      ],
+      "one_way_authentication": [
+        "otp_erasure_lookup"
       ]
     }
   },

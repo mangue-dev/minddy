@@ -255,7 +255,7 @@ function workerDelegationResult(workerEvent: {
 }) {
   try {
     return parseAgentDelegationResult(workerEvent.payload.result);
-  } catch (error) {
+  } catch {
     if (Object.hasOwn(workerEvent.payload, "result")) {
       return parseAgentDelegationResult({
         version: 1,
@@ -264,7 +264,7 @@ function workerDelegationResult(workerEvent: {
         changedFiles: [],
         verificationPerformed: [],
         artifacts: [],
-        unresolvedDecisions: [(error as Error).message],
+        unresolvedDecisions: ["The code worker returned an invalid structured result."],
       });
     }
 
@@ -392,10 +392,10 @@ export function createDurableNumoEmitter(
   let chain = Promise.resolve();
   let closed = false;
   const enqueue = (operation: () => Promise<void>) => {
-    chain = chain.then(operation).catch((error) => {
+    chain = chain.then(operation).catch(() => {
       // Activity is a replay projection. The durable turn checkpoint remains the
       // authority, so a journal outage must not strand an otherwise valid turn.
-      console.error("[numo-turn] activity append failed:", error);
+      console.error("[numo-turn] activity_append_failed");
     });
   };
 
@@ -842,7 +842,7 @@ async function interruptActiveWorker(service: SupabaseClient, runId: string | nu
     .eq("id", runId)
     .in("status", ["queued", "running"]);
   if (error) {
-    console.error(`[numo-turn] worker ${runId} interrupt failed:`, error.message);
+    console.error("[numo-turn] worker_interrupt_failed", runId);
   }
 }
 
@@ -1311,7 +1311,7 @@ async function executeNumoTurnCore(input: {
       return { status: current.status, turn: current };
     }
 
-    const message = error instanceof Error ? error.message : "Numo turn failed";
+    const message = "Numo turn failed";
     const status: "retryable" | "failed" = claimed.attempts < 3 ? "retryable" : "failed";
     const { data: currentClaim, error: currentClaimError } = await service
       .from("numo_assistant_turns")

@@ -11,7 +11,9 @@ import {
   listStoragePrefix,
   projectIconPaths,
 } from "@/lib/server/project-storage";
-import { stopSandboxByName } from "@/lib/server/agent/sandbox";
+import { deleteSandboxByName } from "@/lib/server/agent/sandbox";
+import { agentSandboxName, legacyAgentSandboxName } from "@/lib/server/agent/network-policy";
+import { listScopedAgentRuns, type ErasableAgentRun } from "@/lib/server/agent/sandbox-erasure";
 import { revokeRunKey } from "@/lib/server/agent/run-key";
 import { decodeProjectName } from "@/lib/server/project-content";
 
@@ -37,6 +39,27 @@ import { decodeProjectName } from "@/lib/server/project-content";
  */
 
 type Service = ReturnType<typeof getServiceClient>;
+
+async function listAccountScopedIds(
+  service: Service,
+  table: "projects" | "agent_conversations",
+  userId: string,
+  privateOnly = false,
+): Promise<string[]> {
+  const ids: string[] = [];
+  let lastId: string | null = null;
+  for (;;) {
+    let query = service.from(table).select("id").eq("owner_id", userId)
+      .order("id", { ascending: true }).limit(500);
+    if (privateOnly) query = query.eq("visibility", "private");
+    if (lastId) query = query.gt("id", lastId);
+    const { data, error } = await query;
+    if (error) throw new Error(`Unable to enumerate ${table} for account erasure`);
+    ids.push(...(data ?? []).map((row) => row.id as string));
+    if (!data || data.length < 500) return ids;
+    lastId = data[data.length - 1].id as string;
+  }
+}
 
 export interface DeletionPreview {
   /** Projects that will be destroyed — those that the person owns. */
@@ -141,6 +164,13 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
   const service = getServiceClient();
   const warnings: string[] = [];
 
+  // A committed SQL fence serializes with run creation and queued-to-running
+  // claims. A retry retains the fence until Auth deletes the user.
+  const { data: fenced, error: fenceError } = await service.rpc("begin_agent_account_erasure", {
+    p_user_id: userId,
+  });
+  if (fenceError || fenced !== true) throw new Error("Unable to fence Agent runs for account erasure");
+
   // ── 1. Abonnement Stripe ────────────────────────────────────────────────
   let subscriptionCanceled = false;
   const { data: billing } = await service
@@ -165,11 +195,7 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
   // ── 2. Objets de stockage ───────────────────────────────────────────────
   // The `attachments` lines cascade with the project, the FILES do not: without
   // this passage they would remain in the bucket with nothing left to designate them.
-  const { data: projects } = await service
-    .from("projects")
-    .select("id")
-    .eq("owner_id", userId);
-  const ownedIds = (projects ?? []).map((p) => p.id as string);
+  const ownedIds = await listAccountScopedIds(service, "projects", userId);
 
   let removedStorageObjects = 0;
 
@@ -241,33 +267,35 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
   // owners. `owner_id on delete set null` would anonymize them instead of
   // delete them; we first cut their compute and their key, then the cascade of
   // the conversation carries runs, turns, messages, events and readings.
-  const { data: personalConversations } = await service
-    .from("agent_conversations")
-    .select("id")
-    .eq("owner_id", userId)
-    .eq("visibility", "private");
-  const personalConversationIds = (personalConversations ?? []).map((row) => row.id as string);
-  if (personalConversationIds.length) {
-    const { data: personalRuns } = await service
-      .from("agent_runs")
-      .select("sandbox_id, provider_key_id")
-      .in("conversation_id", personalConversationIds);
-    for (const run of personalRuns ?? []) {
-      if (run.sandbox_id) {
-        await stopSandboxByName(run.sandbox_id as string).catch((e) =>
-          warnings.push(`agent sandbox: ${(e as Error).message}`),
-        );
-      }
-      if (run.provider_key_id) {
-        await revokeRunKey(run.provider_key_id as string).catch((e) =>
-          warnings.push(`agent key: ${(e as Error).message}`),
-        );
-      }
+  const personalConversationIds = await listAccountScopedIds(
+    service, "agent_conversations", userId, true,
+  );
+  const runs = new Map<string, ErasableAgentRun>();
+  for (const id of ownedIds) {
+    for (const run of await listScopedAgentRuns("project_id", id)) runs.set(run.id, run);
+  }
+  for (const id of personalConversationIds) {
+    for (const run of await listScopedAgentRuns("conversation_id", id)) runs.set(run.id, run);
+  }
+  for (const run of runs.values()) {
+    // The legacy name can still own a persistent snapshot after the run row
+    // was switched to the nonpersistent namespace. Delete both generations.
+    for (const name of new Set([run.sandbox_id, agentSandboxName(run.id), legacyAgentSandboxName(run.id)])) {
+      if (name) await deleteSandboxByName(name).catch(() => {
+        throw new Error("Unable to erase Agent sandbox");
+      });
     }
+    if (run.provider_key_id) {
+      await revokeRunKey(run.provider_key_id).catch((e) =>
+        warnings.push(`agent key: ${(e as Error).message}`),
+      );
+    }
+  }
+  for (let offset = 0; offset < personalConversationIds.length; offset += 100) {
     const { error: conversationsError } = await service
       .from("agent_conversations")
       .delete()
-      .in("id", personalConversationIds);
+      .in("id", personalConversationIds.slice(offset, offset + 100));
     if (conversationsError) warnings.push(`agent conversations: ${conversationsError.message}`);
   }
 

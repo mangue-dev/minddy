@@ -23,9 +23,11 @@ BEGIN
   INSERT INTO public.oauth_clients(client_id,client_name,redirect_uris,
     encrypted_content,encryption_version)
     VALUES(sealed_id,NULL,NULL,cipher,2);
-  IF NOT public.activate_oauth_client_content() THEN
-    RAISE EXCEPTION 'OAuth client activation refused sealed rows';
+  IF public.activate_oauth_client_content() THEN
+    RAISE EXCEPTION 'Shape-only content acquired an authentication proof';
   END IF;
+  -- Activate a synthetic scope only to test the legacy-writer SQL fence.
+  INSERT INTO public.oauth_client_content_scope(id) VALUES(true);
   BEGIN
     INSERT INTO public.oauth_clients(client_id,client_name,redirect_uris)
       VALUES('oauth-old-writer','old writer',ARRAY['https://private.example']);

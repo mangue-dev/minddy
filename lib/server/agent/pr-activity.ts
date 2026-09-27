@@ -351,8 +351,8 @@ export async function notifyForgePrAction(opts: {
   if (rows.length === 0) return;
   try {
     await insertNotifications(getServiceClient(), rows);
-  } catch (e) {
-    console.error("[pr-activity] notify failed:", (e as Error).message);
+  } catch {
+    console.error("[pr-activity] notify_failed");
   }
 }
 

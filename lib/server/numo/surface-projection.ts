@@ -78,7 +78,7 @@ async function projectableOutcome(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("numo_surface_outcome_lookup_failed");
   const { decodeNumoToolMessage } = await import("./tool-content");
   const visible = data ? await decodeNumoToolMessage(turn.user_id, data,
     turn.user_id) : null;
@@ -99,7 +99,7 @@ async function projectionForTurn(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("numo_surface_projection_lookup_failed");
   return data as StoredSurfaceProjectionRow | null;
 }
 
@@ -189,7 +189,7 @@ async function claimProjection(
     .eq("projection_status", "pending")
     .select("id")
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("numo_surface_access_lookup_failed");
   return !!data;
 }
 
@@ -209,7 +209,7 @@ async function stampProjection(
       updated_at: now,
     })
     .eq("id", eventId);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("numo_surface_projection_write_failed");
 }
 
 async function notifyCommentProjection(
@@ -286,7 +286,7 @@ async function projectPullRequest(
     .select("*")
     .eq("id", destination.pullRequestId)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("numo_surface_pull_request_lookup_failed");
   if (!pr) return;
   const { resolvePrScope } = await import("@/lib/server/agent/pr-actions");
   const scope = await resolvePrScope(projection.actor_id, pr as PullRequestRow);
@@ -326,8 +326,8 @@ export async function projectNumoSurfaceTurn(
       await projectPullRequest(service, projection, turn);
     }
     await stampProjection(service, projection.id, turn.status, "projected");
-  } catch (error) {
-    console.error("[numo-surface] projection failed:", error);
+  } catch {
+    console.error("[numo-surface] projection_failed", stored.id);
     await stampProjection(service, stored.id, turn.status, "failed");
   }
 }

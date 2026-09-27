@@ -44,6 +44,18 @@ afterEach(() => {
 });
 
 describe("le client du plan de contrôle, sur une machine", () => {
+  it("logs a controlled code when a provider response echoes private submitted content", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const cp = createControlPlaneClient(ORIGIN, () => "token");
+    reply = { status: 403, body: {
+      error: "MIN591_PRIVATE_SUBMITTED_CONTENT",
+    } };
+    await cp.emit("status", { text: "MIN591_PRIVATE_SUBMITTED_CONTENT" });
+    expect(JSON.stringify(logged.mock.calls)).not.toContain("MIN591_PRIVATE");
+    expect(logged).toHaveBeenCalledWith("[agent-vm] control_plane_write_failed");
+    logged.mockRestore();
+  });
+
   it("sends a bodyless heartbeat and stops only on a closed run", async () => {
     const cp = createControlPlaneClient(ORIGIN, () => "token");
     await expect(cp.heartbeat()).resolves.toBe(true);

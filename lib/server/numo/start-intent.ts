@@ -261,11 +261,8 @@ export async function startNumoIntent(
           readClient: input.supabase,
           aiRuntime: configuration.runtime,
         });
-      } catch (error) {
-        console.error(
-          "[numo-intent] background turn failed:",
-          (error as Error).message,
-        );
+      } catch {
+        console.error("[numo-intent] background_turn_failed", turn.id);
       }
     });
   }

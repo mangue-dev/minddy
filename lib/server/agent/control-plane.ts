@@ -249,13 +249,10 @@ async function usagePricingFor(
   try {
     const { getOpenRouterModelInfo } = await import("./openrouter-index");
     return await getOpenRouterModelInfo(model);
-  } catch (err) {
+  } catch {
     // An unreachable index must not cause the line to be lost: without a tariff, only
     // hard bounds apply — that's exactly what `null` renders.
-    console.error(
-      "[agent-control-plane] pricing read failed:",
-      (err as Error).message,
-    );
+    console.error("[agent-control-plane] pricing_read_failed");
     return null;
   }
 }
@@ -363,11 +360,8 @@ async function turnBudgetRemainingUsd(run: AgentRun): Promise<number | null> {
         : Math.max(0, Number(run.budget_usd) - runSpent);
     const both = [account, fromRun].filter((v): v is number => v !== null);
     return both.length ? Math.min(...both) : null;
-  } catch (err) {
-    console.error(
-      "[agent-control-plane] budget read failed:",
-      (err as Error).message,
-    );
+  } catch {
+    console.error("[agent-control-plane] budget_read_failed");
     return null;
   }
 }

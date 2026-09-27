@@ -37,13 +37,14 @@ const { listUserConnections } = await import("./connections");
 
 describe("listUserConnections", () => {
   it("fails visibly when linked-project loading fails", async () => {
-    linkedProjectError = { message: "injected linked-project failure" };
+    linkedProjectError = { message: "MIN591_PRIVATE_LINKED_PROJECT" };
     vi.spyOn(console, "error").mockImplementation(() => {});
 
     await expect(listUserConnections("user-1")).resolves.toBeNull();
     expect(console.error).toHaveBeenCalledWith(
-      "[git-connections] linked-project lookup failed:",
-      "injected linked-project failure",
+      "[git-connections] linked_project_lookup_failed",
     );
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls))
+      .not.toContain("MIN591_PRIVATE");
   });
 });

@@ -155,7 +155,7 @@ export async function listIssueSyncTargets(params: {
     .eq("external_repo_id", params.repoId)
     .eq("issue_sync_enabled", true);
   if (error) {
-    console.error("[issue-sync] targets lookup failed:", error.message);
+    console.error("[issue-sync] targets_lookup_failed");
     return [];
   }
   return Promise.all(((data ?? []) as TargetRow[]).map(toTarget));
@@ -191,7 +191,7 @@ export async function setIssueSyncEnabled(params: {
     .from("project_git_links")
     .update(patch)
     .eq("id", params.linkId);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("issue_sync_toggle_failed");
 }
 
 /**
@@ -229,7 +229,7 @@ export async function applyRemoteIssue(
     .eq("remote_number", remote.number)
     .maybeSingle();
   if (error) {
-    console.error("[issue-sync] lookup failed:", error.message);
+    console.error("[issue-sync] issue_lookup_failed");
     return;
   }
 
@@ -281,12 +281,7 @@ export async function applyRemoteIssue(
     if (!result.ok) {
       // 409 = reissue of the webhook, the normal path: silence.
       if (result.errorKey !== "remoteIssueAlreadyImported") {
-        console.error(
-          "[issue-sync] create failed for %s#%s:",
-          remote.repoFullName,
-          remote.number,
-          result.errorKey ?? result.rawMessage,
-        );
+        console.error("[issue-sync] issue_create_failed", target.linkId);
       }
       return;
     }
@@ -351,12 +346,7 @@ export async function applyRemoteIssue(
       forgeSync: remote.provider,
     });
     if (!updated.ok) {
-      console.error(
-        "[issue-sync] update failed for %s#%s:",
-        remote.repoFullName,
-        remote.number,
-        updated.errorKey ?? updated.rawMessage,
-      );
+      console.error("[issue-sync] issue_update_failed", target.linkId);
     }
   }
 
@@ -392,7 +382,7 @@ async function readGithubIssueSyncState(
     .eq("issue_id", issueId)
     .maybeSingle();
   if (error) {
-    console.error(`[issue-sync] GitHub sync state lookup failed for issue ${issueId}:`, error.message);
+    console.error("[issue-sync] github_state_lookup_failed", issueId);
     return null;
   }
   return data as GithubSyncState | null;
@@ -439,7 +429,7 @@ async function syncGithubMetadata(issueId: string, remote: RemoteIssue): Promise
     .eq("issue_id", issueId)
     .maybeSingle();
   if (error) {
-    console.error(`[issue-sync] GitHub metadata lookup failed for issue ${issueId}:`, error.message);
+    console.error("[issue-sync] github_metadata_lookup_failed", issueId);
     return;
   }
   if (isOlderThanLocal(remote.updatedAt, data?.updated_at_remote)) return;
@@ -477,7 +467,7 @@ async function syncGithubMetadata(issueId: string, remote: RemoteIssue): Promise
     : await service.from("github_issue_sync_metadata")
         .upsert(values as Record<string, unknown>, { onConflict: "issue_id" });
   if (writeError) {
-    console.error(`[issue-sync] GitHub metadata write failed for issue ${issueId}:`, writeError.message);
+    console.error("[issue-sync] github_metadata_write_failed", issueId);
   }
 }
 
@@ -537,10 +527,7 @@ async function applyRemoteLabels(
     forgeSync: target.provider,
   });
   if (!result.ok) {
-    console.error(
-      `[issue-sync] categories failed for issue ${issueId}:`,
-      result.errorKey ?? result.rawMessage,
-    );
+    console.error("[issue-sync] category_update_failed", issueId);
   }
 }
 
@@ -553,11 +540,8 @@ export async function syncRemoteIssueEvent(remote: RemoteIssue): Promise<void> {
   for (const target of targets) {
     try {
       await applyRemoteIssue(target, remote);
-    } catch (err) {
-      console.error(
-        `[issue-sync] target ${target.linkId} failed:`,
-        (err as Error).message,
-      );
+    } catch {
+      console.error("[issue-sync] target_apply_failed", target.linkId);
     }
   }
   await refreshRepoFullName(targets, remote.repoFullName);
@@ -574,13 +558,8 @@ export async function syncGithubIssueComment(comment: GithubIssueComment): Promi
     if (!target.createdBy) continue;
     try {
       await applyGithubIssueComment(target, comment);
-    } catch (error) {
-      console.error(
-        "[issue-sync] GitHub comment %s for target %s failed:",
-        comment.remoteCommentId,
-        target.linkId,
-        (error as Error).message,
-      );
+    } catch {
+      console.error("[issue-sync] github_comment_apply_failed", target.linkId);
     }
   }
 }
@@ -629,7 +608,7 @@ export async function syncGithubIssueDependency(
           targetId,
           type: "blocks",
         });
-        if (!result.ok) throw new Error(result.errorKey ?? result.rawMessage);
+        if (!result.ok) throw new Error("issue_dependency_add_failed");
       } else {
         const relation = await findIssueRelation(
           target.projectId,
@@ -642,16 +621,10 @@ export async function syncGithubIssueDependency(
           relationId: relation.id,
           actorId: target.createdBy,
         });
-        if (!result.ok) throw new Error(result.errorKey ?? result.rawMessage);
+        if (!result.ok) throw new Error("issue_dependency_remove_failed");
       }
-    } catch (error) {
-      console.error(
-        "[issue-sync] GitHub dependency %s→%s failed for target %s:",
-        dependency.blockingNumber,
-        dependency.blockedNumber,
-        target.linkId,
-        (error as Error).message,
-      );
+    } catch {
+      console.error("[issue-sync] github_dependency_apply_failed", target.linkId);
     }
   }
 }
@@ -677,7 +650,7 @@ async function applyGithubIssueComment(
     .eq("remote_comment_id", remote.remoteCommentId)
     .eq("issue_id", issueId)
     .maybeSingle();
-  if (syncedError) throw new Error(syncedError.message);
+  if (syncedError) throw new Error("issue_comment_sync_lookup_failed");
 
   let commentUpdatedAt: string | null = null;
   if (synced?.comment_id) {
@@ -686,7 +659,7 @@ async function applyGithubIssueComment(
       .eq("id", synced.comment_id as string)
       .eq("issue_id", issueId)
       .maybeSingle();
-    if (commentError) throw new Error(commentError.message);
+    if (commentError) throw new Error("issue_comment_lookup_failed");
     commentUpdatedAt = (localComment?.updated_at as string | null | undefined) ?? null;
   }
   if (
@@ -765,11 +738,8 @@ async function backfillGithubIssueComments(
           toGithubIssueComment(target.externalRepoId, issue.number, comment),
         );
       }
-    } catch (error) {
-      console.error(
-        `[issue-sync] GitHub comment backfill failed for ${target.repoFullName}#${issue.number}:`,
-        (error as Error).message,
-      );
+    } catch {
+      console.error("[issue-sync] github_comment_backfill_failed", target.linkId);
     }
   }
 }
@@ -789,7 +759,7 @@ async function backfillGithubMetadata(
     .eq("remote_repo_id", target.externalRepoId)
     .in("remote_number", numbers);
   if (error) {
-    console.error("[issue-sync] GitHub metadata backfill lookup failed:", error.message);
+    console.error("[issue-sync] github_metadata_backfill_lookup_failed");
     return;
   }
   const idByNumber = new Map(
@@ -845,7 +815,7 @@ async function refreshRepoFullName(
       "id",
       stale.map((t) => t.linkId),
     );
-  if (error) console.error("[issue-sync] repo rename failed:", error.message);
+  if (error) console.error("[issue-sync] repository_rename_failed");
 }
 
 // --- Backfill on activation ------------------------------------------------
@@ -861,7 +831,7 @@ async function loadImportedNumbers(
     .eq("remote_provider", target.provider)
     .eq("remote_repo_id", target.externalRepoId);
   if (error) {
-    console.error("[issue-sync] backfill lookup failed:", error.message);
+    console.error("[issue-sync] backfill_lookup_failed");
     return new Set();
   }
   return new Set(
@@ -1054,7 +1024,7 @@ async function runRemoteIssueBackfill(target: IssueSyncTarget): Promise<number> 
       source: target.provider,
     });
     if (!result.ok) {
-      console.error("[issue-sync] backfill import failed:", result.errorKey);
+      console.error("[issue-sync] backfill_import_failed", target.linkId);
       return 0;
     }
     created = result.result.created;

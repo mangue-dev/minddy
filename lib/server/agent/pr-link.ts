@@ -154,8 +154,8 @@ export async function resolveProjectPullRequest(opts: {
     if (target) {
       await syncRepoPullRequests({ ...repo, token: target.token });
     }
-  } catch (err) {
-    console.error("[pr-link] sweep failed:", (err as Error).message);
+  } catch {
+    console.error("[pr-link] sweep_failed");
   }
 
   const swept = await findPullRequestByNumber({ ...repo, number });

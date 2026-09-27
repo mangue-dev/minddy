@@ -24,12 +24,14 @@ BEGIN
     encrypted_content=cipher,encryption_version=2 WHERE code_hash=code;
   IF EXISTS(SELECT 1 FROM public.oauth_authorization_codes WHERE code_hash=code
       AND (redirect_uri IS NOT NULL OR resource IS NOT NULL OR
-        content_revision<>1 OR encryption_checked_at IS NULL)) THEN
+        content_revision<>1 OR encryption_checked_at IS NOT NULL)) THEN
     RAISE EXCEPTION 'OAuth code source retained clear content';
   END IF;
-  IF NOT public.activate_oauth_code_content() THEN
-    RAISE EXCEPTION 'OAuth code activation refused sealed rows';
+  IF public.activate_oauth_code_content() THEN
+    RAISE EXCEPTION 'Shape-only content acquired an authentication proof';
   END IF;
+  -- Activate a synthetic scope only to test the legacy-writer SQL fence.
+  INSERT INTO public.oauth_code_content_scope(id) VALUES(true);
   BEGIN
     INSERT INTO public.oauth_authorization_codes(code_hash,client_id,user_id,
       grant_id,redirect_uri,code_challenge,expires_at)

@@ -142,10 +142,10 @@ const DENIAL_BODIES = {
 async function replyOnPr(scope: PrScope, body: string): Promise<void> {
   try {
     await scope.forge.createPullRequestComment({ ...scope.call, body });
-  } catch (err) {
+  } catch {
     // The refusal itself does not have to cause the webhook to fail: the mention is already
     // rejected, this comment is just politeness explaining it.
-    console.warn("[pr-mention] could not post denial comment:", (err as Error).message);
+    console.warn("[pr-mention] denial_comment_post_failed");
   }
 }
 
@@ -242,7 +242,7 @@ export async function handleForgeNumoMention(opts: {
       sourceEventId: opts.sourceEventId,
       question: { author: opts.authorLogin, body },
     });
-  } catch (err) {
-    console.error("[pr-mention] forge @numo request failed:", (err as Error).message);
+  } catch {
+    console.error("[pr-mention] forge_numo_request_failed");
   }
 }

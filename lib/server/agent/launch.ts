@@ -793,13 +793,10 @@ export async function launchAgentRun(
             : update.is("title_ciphertext", null);
           const { error } = await update;
           if (error)
-            console.error("[agent-launch] title update failed:", error.message);
+            console.error("[agent-launch] title_update_failed", error.code);
         })
-        .catch((err) =>
-          console.error(
-            "[agent-launch] title generation failed:",
-            (err as Error).message,
-          ),
+        .catch(() =>
+          console.error("[agent-launch] title_generation_failed"),
         );
     });
   }
@@ -909,11 +906,8 @@ export function kickAgentDrain(service: SupabaseClient): void {
   after(async () => {
     try {
       await drainAgentRuns(service);
-    } catch (err) {
-      console.error(
-        "[agent-launch] kick drain failed:",
-        (err as Error).message,
-      );
+    } catch {
+      console.error("[agent-launch] kick_drain_failed");
     }
   });
 }

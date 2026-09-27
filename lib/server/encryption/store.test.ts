@@ -64,6 +64,23 @@ class MemoryWrapper implements KeyWrapper {
 }
 
 describe("EncryptedStore", () => {
+  it("loads only an existing current key for read-only verification", async () => {
+    const registry = new MemoryRegistry();
+    const wrapper = new MemoryWrapper();
+    const keys = new ManagedDataKeys(registry, wrapper);
+    expect(await keys.existingCurrent(scope)).toBeNull();
+    expect(registry.records).toHaveLength(0);
+    expect(wrapper.generateCalls).toBe(0);
+    const created = await keys.current(scope);
+    const existing = await keys.existingCurrent(scope);
+    expect(existing).toEqual(created);
+    existing?.bytes.fill(0);
+    expect((await keys.existingCurrent(scope))?.bytes).toEqual(created.bytes);
+    created.bytes.fill(0);
+    expect(registry.records).toHaveLength(1);
+    expect(wrapper.generateCalls).toBe(1);
+  });
+
   it("encrypts different ciphertexts and authenticates the row and column", async () => {
     const keys = new ManagedDataKeys(new MemoryRegistry(), new MemoryWrapper());
     const store = new EncryptedStore(keys);

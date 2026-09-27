@@ -186,6 +186,21 @@ export class ManagedDataKeys implements DataKeyProvider {
     return this.byVersion(scope, await initial);
   }
 
+  /** Load an existing current key for inspections that must not write to the registry. */
+  async existingCurrent(scope: EncryptionScope): Promise<DataKey | null> {
+    const prefix = scopeId(scope);
+    const record = await this.registry.loadCurrent(scope);
+    if (!record) return null;
+    this.observeCurrentVersion(prefix, record.version);
+    const id = `${prefix}:${record.version}`;
+    const cached = this.cached(id);
+    if (cached) return { version: cached.version, bytes: Buffer.from(cached.bytes) };
+    return this.singleFlight(id, async () => ({
+      version: record.version,
+      bytes: await this.wrapper.unwrap(record),
+    }));
+  }
+
   async byVersion(scope: EncryptionScope, version: number): Promise<DataKey> {
     if (!Number.isSafeInteger(version) || version < 1) {
       throw new Error("Invalid data key version");

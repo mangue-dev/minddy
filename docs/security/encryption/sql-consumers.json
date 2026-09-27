@@ -236,7 +236,7 @@
       "functionReferences": []
     },
     "guard_push_content()": {
-      "sha256": "1fc1d2c40a221396fb4c2966763672281135a036873e019911196da946553cb7",
+      "sha256": "9e6aabdafaf0b6418973250dafb88df03391e4d9df5b9367e54044fa1235fc1c",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -545,7 +545,7 @@
       "functionReferences": []
     },
     "guard_api_key_content()": {
-      "sha256": "8069a88a54b468a3bcd0e42bab15ddb0e0f3ace2060344694456cf9161155740",
+      "sha256": "cffabb9e4a1788eab8d6766c8a96e2a68da57de6370bd087d0e2ba860477734b",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -789,7 +789,7 @@
       "functionReferences": []
     },
     "guard_billing_identity()": {
-      "sha256": "a4efb94f7dd0f6f38681f121e789a2b7f7a31f42a4f9a6d30f42aeaebd1e0404",
+      "sha256": "8fc1e7b1ed63c797dcf648bba70a787f645a10779204d288ae10ab81636a78ff",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1364,7 +1364,7 @@
       "functionReferences": []
     },
     "guard_oauth_code_content()": {
-      "sha256": "53e80a249dddd3a1fbdf18ce42e3119969ccf47f4b9c315e84c061d32f38a62b",
+      "sha256": "43306340c88177763481684765de4cf1ad2bf0904736c8286655ced3cb9668a3",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1697,7 +1697,7 @@
       "functionReferences": []
     },
     "guard_integration_content()": {
-      "sha256": "9bbc1fae3ab300774050d2a6dfc418b726844e0f6c08f13b8ffdc8dba2438730",
+      "sha256": "50b01add58709093a8d85c62c37a54141d2a00e20458a03b04970f9bef8a41dd",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1875,6 +1875,23 @@
       ],
       "functionReferences": []
     },
+    "guard_feedback_otp_erasure()": {
+      "sha256": "dd44ab515daf6e393def8e712cfd407fc880fc1a636f1f9b64d70b8071f223ae",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "feedback_users",
+        "feedback_boards"
+      ],
+      "protectedRelations": [
+        "feedback_users",
+        "feedback_boards"
+      ],
+      "functionReferences": []
+    },
     "guard_forge_default_branch()": {
       "sha256": "9d613dee864b1f7a717c44fa219a2bf75a9c7890c32c19e9a011e2cf1acbd05f",
       "securityDefiner": true,
@@ -1902,7 +1919,7 @@
       "functionReferences": []
     },
     "guard_oauth_client_content()": {
-      "sha256": "a097c82faa6c7140639329ca50d636b6014ac48f9dab372ee11f0a4d4684cdf1",
+      "sha256": "fe026209d75397391b093d43dc01d4551e49f085f2e4a62f266e012a01c81ad1",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2180,6 +2197,24 @@
       ],
       "protectedRelations": [
         "issues"
+      ],
+      "functionReferences": []
+    },
+    "guard_agent_account_erasure()": {
+      "sha256": "76d8177966a93426ee77cfa052db3a1fd6b17dd26142c34c2ea84ef74c1491e8",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "projects",
+        "agent_conversations",
+        "agent_account_erasure_fences"
+      ],
+      "protectedRelations": [
+        "projects",
+        "agent_conversations"
       ],
       "functionReferences": []
     },
@@ -3247,7 +3282,7 @@
       ]
     },
     "guard_erased_feedback_identity()": {
-      "sha256": "05092c1b939225e1eda6cbdd30e0f812a7e731bf431deebc3606a46283d8416d",
+      "sha256": "b273e3bb915b5d40f36d28974ddc92140dbbe2706c545ee6dc730d37dba396ed",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3475,6 +3510,19 @@
       ],
       "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
       "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "begin_agent_account_erasure(uuid)": {
+      "sha256": "8d2214aa30f2ecde6a2e2ab764024e7593fa0606b2507cc1d81d08961d5ba0f0",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "agent_account_erasure_fences"
+      ],
       "protectedRelations": [],
       "functionReferences": []
     },
@@ -4745,26 +4793,6 @@
         "guard_project_actor"
       ]
     },
-    "erase_feedback_identity(uuid,uuid,text)": {
-      "sha256": "5b11dc4a65b58af45a4db086f916596b2b6ab5f22c8f8b27837fe6114b233197",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
-      "relations": [
-        "feedback_users",
-        "feedback_boards",
-        "feedback_sessions",
-        "feedback_otp_codes"
-      ],
-      "protectedRelations": [
-        "feedback_users",
-        "feedback_boards",
-        "feedback_otp_codes"
-      ],
-      "functionReferences": []
-    },
     "get_numo_operation_platform_spend(uuid)": {
       "sha256": "4283bca4554f13dd1604d7d0b4352b0177df5f54a1e5c60952e2ddfcda66e231",
       "securityDefiner": true,
@@ -5468,6 +5496,26 @@
         "forge_attachment_objects"
       ],
       "protectedRelations": [],
+      "functionReferences": []
+    },
+    "erase_feedback_identity(uuid,uuid,text,text)": {
+      "sha256": "549740cc17334e53cc88c09f42e6241dd7869b7dfc86155ccb09c9f249fd8b4e",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "feedback_users",
+        "feedback_boards",
+        "feedback_sessions",
+        "feedback_otp_codes"
+      ],
+      "protectedRelations": [
+        "feedback_users",
+        "feedback_boards",
+        "feedback_otp_codes"
+      ],
       "functionReferences": []
     },
     "get_ai_usage_stats(timestamp with time zone)": {
@@ -6445,6 +6493,35 @@
         "project_git_links"
       ],
       "functionReferences": []
+    },
+    "confirm_encrypted_content(text,text,bigint,text,text)": {
+      "sha256": "52091b0eed38920de3a6791db2bfa700bbfcf15e0689a478e1a016da3c6e5cbd",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "api_keys",
+        "integrations",
+        "oauth_clients",
+        "billing_accounts",
+        "push_subscriptions",
+        "oauth_authorization_codes"
+      ],
+      "protectedRelations": [
+        "api_keys",
+        "integrations",
+        "oauth_clients",
+        "billing_accounts",
+        "push_subscriptions",
+        "oauth_authorization_codes"
+      ],
+      "functionReferences": [
+        "push_content_version",
+        "billing_identity_version",
+        "integration_content_version"
+      ]
     },
     "migrate_agent_run_deployment_url(uuid,uuid,text,text)": {
       "sha256": "30b1303675d18e454d1a83d21fea64c853cfe2c6204417e7c1eeb8741462b819",
@@ -8489,16 +8566,20 @@
       "functionReferences": []
     },
     "issue_feedback_otp_code_protected(uuid,uuid,text,text,text,text,text,timestamp with time zone,timestamp with time zone,integer,integer,integer,integer)": {
-      "sha256": "92a90650e71f57035bee22382b0f3eb04b732c9908e8ef7dad843d933df99f38",
+      "sha256": "19f0a85b85e50113d7c971cd01235905ae175e737e62139dc23f662f294afc29",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
       "relations": [
+        "feedback_users",
+        "feedback_boards",
         "feedback_otp_codes"
       ],
       "protectedRelations": [
+        "feedback_users",
+        "feedback_boards",
         "feedback_otp_codes"
       ],
       "functionReferences": []
@@ -9179,6 +9260,10 @@
       "function": "guard_agent_pr_artifact_ref()",
       "definition": "CREATE TRIGGER agent_pr_artifact_ref_guard BEFORE INSERT OR UPDATE ON agent_artifacts FOR EACH ROW EXECUTE FUNCTION guard_agent_pr_artifact_ref()"
     },
+    "agent_runs.agent_runs_account_erasure_fence": {
+      "function": "guard_agent_account_erasure()",
+      "definition": "CREATE TRIGGER agent_runs_account_erasure_fence BEFORE INSERT OR UPDATE OF status ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_agent_account_erasure()"
+    },
     "agent_runs.agent_runs_lock_anchor_on_insert": {
       "function": "lock_agent_run_anchor_on_insert()",
       "definition": "CREATE TRIGGER agent_runs_lock_anchor_on_insert BEFORE INSERT ON agent_runs FOR EACH ROW EXECUTE FUNCTION lock_agent_run_anchor_on_insert()"
@@ -9386,6 +9471,10 @@
     "conversations.conversations_freeze_project_id": {
       "function": "freeze_project_id()",
       "definition": "CREATE TRIGGER conversations_freeze_project_id BEFORE UPDATE OF project_id ON conversations FOR EACH ROW EXECUTE FUNCTION freeze_project_id()"
+    },
+    "feedback_otp_codes.feedback_otp_erasure_guard": {
+      "function": "guard_feedback_otp_erasure()",
+      "definition": "CREATE TRIGGER feedback_otp_erasure_guard BEFORE INSERT OR UPDATE OF board_id, email, email_lookup ON feedback_otp_codes FOR EACH ROW EXECUTE FUNCTION guard_feedback_otp_erasure()"
     },
     "invitation_email_scope.a_min591_marker_change": {
       "function": "guard_encryption_marker_change()",

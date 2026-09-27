@@ -756,7 +756,7 @@ export async function claimRun(runId: string): Promise<AgentRun | null> {
     p_run_id: runId,
   });
   if (error) {
-    console.error("[agent-runs] claim failed:", error.message);
+    console.error("[agent-runs] claim_failed");
     return null;
   }
   const rows = (data ?? []) as AgentRun[];
@@ -785,7 +785,7 @@ export async function claimRunRest(runId: string): Promise<AgentRun | null> {
     p_run_id: runId,
   });
   if (error) {
-    console.error("[agent-runs] rest claim failed:", error.message);
+    console.error("[agent-runs] rest_claim_failed");
     return null;
   }
   return hydrateRun(((data ?? []) as AgentRun[])[0] ?? null);
@@ -811,7 +811,7 @@ export async function claimLocalRun(input: {
     },
   );
   if (error) {
-    console.error("[agent-runs] local claim failed:", error.message);
+    console.error("[agent-runs] local_claim_failed");
     return null;
   }
   return hydrateRun(((data ?? []) as AgentRun[])[0] ?? null);
@@ -846,7 +846,7 @@ export async function runIsLatestOnAnchor(run: AgentRun): Promise<boolean> {
   else query = query.eq("conversation_id", run.conversation_id);
   const { data, error } = await query;
   if (error) {
-    console.error("[agent-runs] latest-anchor check failed:", error.message);
+    console.error("[agent-runs] latest_anchor_check_failed");
     return false;
   }
   return ((data ?? [])[0] as { id?: string } | undefined)?.id === run.id;
@@ -962,10 +962,7 @@ export async function reserveRunInlineComment(
     },
   );
   if (error) {
-    console.error(
-      "[agent-runs] inline comment reservation failed:",
-      error.message,
-    );
+    console.error("[agent-runs] inline_comment_reservation_failed");
     return null;
   }
   const value = Array.isArray(data) ? data[0] : data;
@@ -982,7 +979,7 @@ export async function releaseRunInlineComment(
     },
   );
   if (error) {
-    console.error("[agent-runs] inline comment release failed:", error.message);
+    console.error("[agent-runs] inline_comment_release_failed");
     return null;
   }
   const value = Array.isArray(data) ? data[0] : data;
@@ -1118,10 +1115,7 @@ export async function declineQueuedLocalRun(
     .select("*")
     .maybeSingle();
   if (error) {
-    console.error(
-      `[agent-runs] local fallback failed on ${runId}:`,
-      error.message,
-    );
+    console.error("[agent-runs] local_fallback_failed", runId);
     return null;
   }
   return hydrateRun((data as AgentRun | null) ?? null);
@@ -1798,10 +1792,7 @@ export async function stampRunResult(
   }
   const { data, error } = await query.select("*").maybeSingle();
   if (error) {
-    console.error(
-      `[agent-runs] stampRun ${runId} → ${fields.status ?? "(fields)"} failed:`,
-      error.message,
-    );
+    console.error("[agent-runs] stamp_run_failed", runId);
   }
 
   // End of run (MIN-78). Tracked here and not in the execution loop: this is
@@ -1857,8 +1848,8 @@ export async function stampRunResult(
     // chains and routines. The event ID is stable, so a repeated delivery is
     // harmless; the turn RPC also ignores late events from superseded runs.
     if (run.parent_numo_turn_id || run.triggered_by === "chat") afterOrNow(async () => {
-      await deliverAgentDelegationResult(run).catch((error) => {
-        console.error("[agent-runs] delegation delivery failed:", error);
+      await deliverAgentDelegationResult(run).catch(() => {
+        console.error("[agent-runs] delegation_delivery_failed", run.id);
       });
     });
   }
@@ -1901,8 +1892,8 @@ export async function notifyAgentRun(
       ],
       { replaceUnread: true },
     );
-  } catch (e) {
-    console.error("[agent-runs] notify failed:", (e as Error).message);
+  } catch {
+    console.error("[agent-runs] notify_failed");
   }
 }
 
@@ -1943,8 +1934,8 @@ export async function notifyDelegatedAgentRun(
       }],
       { replaceUnread: true },
     );
-  } catch (error) {
-    console.error("[agent-runs] delegated notification failed:", (error as Error).message);
+  } catch {
+    console.error("[agent-runs] delegated_notification_failed");
   }
 }
 
@@ -2049,7 +2040,7 @@ export async function syncPrState(opts: {
     p_number: opts.prNumber,
   });
   if (error) {
-    console.error("[agent-runs] PR state sync failed:", error.message);
+    console.error("[agent-runs] pr_state_sync_failed");
     return [];
   }
   const { data: runs } = await service
@@ -2209,11 +2200,8 @@ export async function bumpRunActivity(runId: string): Promise<void> {
       .update({ last_activity_at: new Date().toISOString() })
       .eq("id", runId)
       .neq("status", "running");
-  } catch (err) {
-    console.error(
-      "[agent-runs] bumpRunActivity failed:",
-      (err as Error).message,
-    );
+  } catch {
+    console.error("[agent-runs] run_activity_bump_failed");
   }
 }
 
@@ -2246,7 +2234,7 @@ export async function runSteeredByOther(
     .neq("created_by", ownerId)
     .limit(1);
   if (error) {
-    console.error("[agent-runs] runSteeredByOther failed:", error.message);
+    console.error("[agent-runs] steering_lookup_failed");
     return true;
   }
   return (data ?? []).length > 0;
@@ -2376,10 +2364,7 @@ export async function appendEvent(
         ) {
           continue;
         }
-        console.error(
-          `[agent-runs] appendEvent(${type}) rejected:`,
-          error.message,
-        );
+        console.error("[agent-runs] event_append_rejected");
         return;
       }
       if (row) {
@@ -2387,8 +2372,8 @@ export async function appendEvent(
       }
       return;
     }
-  } catch (err) {
-    console.error("[agent-runs] appendEvent failed:", (err as Error).message);
+  } catch {
+    console.error("[agent-runs] event_append_failed");
   }
 }
 
@@ -2485,7 +2470,7 @@ export async function loadRunJournal(
       .limit(1)
       .maybeSingle();
     if (error) {
-      console.error("[agent-runs] loadRunJournal failed:", error.message);
+      console.error("[agent-runs] journal_lookup_failed", runId);
       return null;
     }
     if (!data) return events.length > 0 ? events : null;
@@ -2512,11 +2497,8 @@ export async function loadRunJournal(
       }
       events.push(...decoded.events);
       afterId = nextId;
-    } catch (error) {
-      console.error(
-        "[agent-runs] journal row is unreadable:",
-        (error as Error).message,
-      );
+    } catch {
+      console.error("[agent-runs] journal_row_unreadable", runId);
       return null;
     }
   }

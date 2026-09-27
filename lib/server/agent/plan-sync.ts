@@ -58,8 +58,8 @@ export async function syncIssuePlanStates(
       // Compare the complete source revision; ciphertext cannot be a plan CAS.
       if (await saveIssuePlanSnapshot(service, issueId, projectId, plan, next)) return;
     }
-  } catch (err) {
+  } catch {
     // Non-blocking: a sync failure should never cause the run to fail.
-    console.error("[agent-plan-sync] failed:", (err as Error).message);
+    console.error("[agent-plan-sync] sync_failed");
   }
 }

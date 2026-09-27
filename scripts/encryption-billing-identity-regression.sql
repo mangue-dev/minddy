@@ -62,13 +62,15 @@ BEGIN
   IF EXISTS(SELECT 1 FROM public.billing_accounts WHERE user_id=owner
       AND (email LIKE '%private@example.test%' OR
         admin_override_note LIKE '%Private admin%' OR
-        email_encryption_checked_at IS NULL OR
-        admin_override_note_encryption_checked_at IS NULL)) THEN
+        email_encryption_checked_at IS NOT NULL OR
+        admin_override_note_encryption_checked_at IS NOT NULL)) THEN
     RAISE EXCEPTION 'Billing source retained clear identity';
   END IF;
-  IF NOT public.activate_billing_identity() THEN
-    RAISE EXCEPTION 'Protected billing identity refused activation';
+  IF public.activate_billing_identity() THEN
+    RAISE EXCEPTION 'Shape-only content acquired an authentication proof';
   END IF;
+  -- Activate a synthetic scope only to test the legacy-writer SQL fence.
+  INSERT INTO public.billing_identity_scope(id) VALUES(true);
   rejected:=false;
   BEGIN
     INSERT INTO public.billing_accounts(user_id,email)

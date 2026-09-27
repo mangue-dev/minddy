@@ -20,6 +20,7 @@ const rules = [
       "app/api/account/push-subscriptions/test/route.ts",
       "lib/server/push/send.ts", "lib/server/account-export.ts",
       "lib/server/encryption/push-backfill.ts",
+      "lib/server/encryption/critical-backfill-readiness.ts",
     ]),
   },
   {
@@ -28,7 +29,8 @@ const rules = [
       "lib/server/integration-auth.ts", "lib/server/webhooks.ts",
       "lib/server/assistant/execute-tool.ts", "lib/server/mcp/tools.ts",
       "lib/server/smart-fill.ts", "app/api/me/board/route.ts",
-      "lib/server/encryption/integration-backfill.ts"]),
+      "lib/server/encryption/integration-backfill.ts",
+      "lib/server/encryption/critical-backfill-readiness.ts"]),
   },
   {
     access: /\bintegration:integrations\([^\r\n)]*\)/,
@@ -44,19 +46,22 @@ const rules = [
       "lib/server/api-key-actors.ts", "lib/server/account-export.ts",
       "lib/server/inbox.ts", "lib/server/notifications.ts",
       "lib/server/smart-fill.ts", "lib/server/encryption/api-key-backfill.ts",
-      "app/api/oauth/token/route.ts"]),
+      "app/api/oauth/token/route.ts",
+      "lib/server/encryption/critical-backfill-readiness.ts"]),
   },
   {
     access: /\.\s*from\s*\(\s*["'`]oauth_authorization_codes["'`]\s*\)/,
     allowed: new Set(["lib/server/oauth/codes.ts",
       "lib/server/encryption/oauth-code-backfill.ts",
-      "lib/server/retention.ts"]),
+      "lib/server/retention.ts",
+      "lib/server/encryption/critical-backfill-readiness.ts"]),
   },
   {
     access: /\.\s*from\s*\(\s*["'`]oauth_clients["'`]\s*\)/,
     allowed: new Set(["lib/server/oauth/clients.ts",
       "lib/server/oauth/grants.ts",
-      "lib/server/encryption/oauth-client-backfill.ts"]),
+      "lib/server/encryption/oauth-client-backfill.ts",
+      "lib/server/encryption/critical-backfill-readiness.ts"]),
   },
   {
     access: /\boauth_clients\([^\r\n)]*\)/,

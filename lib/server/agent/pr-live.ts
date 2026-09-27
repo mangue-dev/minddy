@@ -58,7 +58,7 @@ export async function broadcastPrChangedByNumber(opts: {
     });
     if (!pr) return;
     broadcastPrChanged(pr.id, opts.parts);
-  } catch (err) {
-    console.error("[pr-live] broadcast failed:", (err as Error).message);
+  } catch {
+    console.error("[pr-live] broadcast_failed");
   }
 }

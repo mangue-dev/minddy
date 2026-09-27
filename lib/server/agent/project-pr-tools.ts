@@ -162,8 +162,8 @@ async function refreshIfStale(target: ProjectRepoTarget): Promise<void> {
       repoFullName: target.repoFullName,
       token: target.token,
     });
-  } catch (err) {
-    console.error("[project-pr-tools] sweep failed:", (err as Error).message);
+  } catch {
+    console.error("[project-pr-tools] sweep_failed");
   }
 }
 

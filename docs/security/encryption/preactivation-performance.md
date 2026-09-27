@@ -44,6 +44,26 @@ configuration (replace UUIDs and oracle values):
 }
 ```
 
+Issue search needs a separate oracle because `searchIssues` scans authorized
+issues in 200-row pages, decrypts title and description, and returns matches
+ordered by `updated_at DESC, id ASC`. Populate both isolated deployments with
+the same 100,000 issue contents and permissions. In the proposed deployment,
+use 20% legacy, 40% previous-key and 40% current-key rows. Record exact
+ordered IDs for an issue identifier, a bare
+number, title-only and description-only terms, a no-match term, a match near
+the final page, and terms yielding more than the 20-result default and
+100-result maximum. Include another project's private issue and a nonmember
+actor. Exercise the real authorized MCP/AI `search_issues` path with the same
+project and actor on both deployments; do not replace it with a direct SQL
+query or a synthetic endpoint. Record response status, exact IDs, pagination
+work, and p50/p95/p99 for cold and warm application processes at concurrency
+1, 8 and 32. A nonmember must receive no private issue. Keep the query set,
+ordered baseline oracle and response captures outside the repository. Compare
+database scans, key-registry reads, unwraps, CPU and pool occupancy with the
+page-search measurements below. A full-scan no-match or late-match query must
+meet the agreed staging latency budget before activation; if it does not,
+profile and repair issue search before lifting the flag.
+
 ## Commands and measurements
 
 Use a dedicated test account cookie in the shell; the probe never prints it.
@@ -256,7 +276,9 @@ SELECT count(*) AS unverified_tool_messages FROM public.assistant_messages
    AND tool_payload_checked_at IS NULL;
 ```
 
-For pull-request URLs/content and Agent run/runtime checkpoints and journals,
+For pull-request URLs/content, Agent run/runtime checkpoints and journals,
+OAuth clients/codes, API keys, integrations, push subscriptions and billing
+identities,
 `*_checked_at` is only a worker assertion. It cannot authenticate AES-GCM in
 SQL. After the bounded workers finish, quiesce staging writers and invoke the
 cron-secret-protected read-only verifier twice, with a stable source-row count
@@ -276,6 +298,16 @@ The verifier walks every current row by keyset, checks the current key version,
 and decrypts protected values. It returns counts only. It is not an atomic
 snapshot across requests, so do not use it as a concurrent-writer completion
 proof. Retain failed candidates for repair and keep their `checked_at` null.
+
+Before this verifier, apply the additive OTP, authenticated-content and Agent
+erasure-fence migrations. Run the six bounded content workers until both
+`*_encryption_attempted_at` and `*_encryption_checked_at` inventories are
+understood; a conflict advances only the attempt cursor. Confirm that the
+system, project and user registry keys already exist. The verifier must not
+create keys, even if the scanned tables are empty. Exercise the complete Agent
+resume path after a stop and account/project deletion on a staging clone, then
+inventory historical Vercel snapshots, Docker volumes, desktop files and
+provider command telemetry using the Agent storage runbook.
 
 Inventory effective Realtime comment partitions plus older backups, replica
 logs, analytics exports and external sinks under their retention policy. The

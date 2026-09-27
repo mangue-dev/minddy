@@ -136,10 +136,8 @@ async function resolveAccount(
   try {
     const token = await getGitlabAccessToken(connection.id, { force });
     return { token, login: connection.account_login, avatarUrl: null };
-  } catch (err) {
-    console.warn(
-      `[forge-actor] GitLab token unavailable: ${(err as Error).message}`,
-    );
+  } catch {
+    console.warn("[forge-actor] gitlab_token_unavailable");
     return null;
   }
 }
@@ -231,11 +229,11 @@ export async function resolveForgeActor(opts: {
   const probe = async (token: string): Promise<CapabilityProbe | null> => {
     try {
       return await fetchCapability(opts.provider, opts.repoFullName, token);
-    } catch (err) {
+    } catch {
       // Dead network: we neither claim that it has the right nor that it does not have it.
       // Without cache, the next attempt will retry — and the writing will
       // will fail with the forge message.
-      console.warn(`[forge-actor] capability probe failed: ${(err as Error).message}`);
+      console.warn("[forge-actor] capability_probe_failed");
       return null;
     }
   };

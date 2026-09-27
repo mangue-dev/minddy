@@ -301,8 +301,8 @@ export async function postPrComment(
       body,
       via_assistant: true,
     });
-  } catch (err) {
-    console.error("[agent-execute] PR comment failed:", (err as Error).message);
+  } catch {
+    console.error("[agent-execute] pr_comment_failed");
   }
 }
 /**
@@ -471,11 +471,8 @@ export async function reopenIfRejectedWorkPushed(
       repoFullName: ctx.target.repoFullName,
       number: ctx.prState.number,
     })
-    .catch((err) => {
-      console.error(
-        "[pr-landing] PR reopen on push failed:",
-        (err as Error).message,
-      );
+    .catch(() => {
+      console.error("[pr-landing] pr_reopen_on_push_failed");
       return null;
     });
   if (reopened && !reopened.merged) await registerPr(ctx, reopened, "reopened");
@@ -571,9 +568,8 @@ export async function openPullRequestAfterPush(
           repoFullName: fresh.repoFullName,
           number: prState.number,
         })
-        .catch((err) => {
-          console.error("[agent-execute] PR reopen failed:", (err as Error).message,
-          );
+        .catch(() => {
+          console.error("[agent-execute] pr_reopen_failed");
           return null;
         });
       if (reopened) {

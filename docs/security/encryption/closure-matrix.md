@@ -141,3 +141,24 @@ every target and copy before completion. Run representative search parity,
 latency, key-cache and load checks in staging before activation. Supabase Auth
 login email is the only provider-identity exception and does not cover an
 application copy.
+
+## Six-defect correction on draft PR #289
+
+The review at `96f46e8bf2cc20464032b4af4a32a8dbca7209e5` reproduced all
+six gaps before correction. The following proofs use schema-only isolated
+PostgreSQL clones and disposable private sentinels. They do not claim a
+production inventory or service backup restore.
+
+| Confirmed defect | Correction | After-fix proof and limit |
+| --- | --- | --- |
+| Agent job, OpenCode SQLite/WAL, tool files, Docker volumes and Vercel snapshots could remain after a run or account deletion. | Nonpersistent, versioned Vercel sessions rebuild from the pushed branch and encrypted journal; Docker uses tmpfs with no log driver and removes stopped containers/volumes. The one-shot job file is unlinked. An account erasure fence and project deletion guard prevent new runs from racing sandbox enumeration and deletion. | Agent storage and lifecycle fixtures pass; PostgreSQL role and two-session tests prove account and project fences. Historical snapshots, volumes, endpoint files, provider command telemetry and backups require the separate retirement inventory in `agent-ephemeral-storage.md`. |
+| Forge and Numo logs could contain repository names, provider bodies or echoed submitted content. | Controlled error codes, SQL codes and opaque IDs replace arbitrary error values across the identified and adjacent Agent/VM paths. | Sentinel tests cover provider failures, malformed JSON and echoed submitted content. External provider telemetry is separately inventoried. |
+| Feedback erasure compared the project identity digest with the distinct system OTP digest. | The real OTP codec digest is passed to a project-board-scoped atomic delete; a 15-minute digest fence serializes concurrent issuance, and retries always revoke sessions. Old erased identities receive a one-time project-board OTP purge. | Real-codec fixture, SQL regression and two-session commit-order tests pass. The one-time legacy recovery can invalidate another participant's pending code for at most its 10-minute lifetime. |
+| Six content workers could repeatedly select the same conflicted first row. | An attempted-at write survives stale revision CAS and failed verification while checked-at remains unset. | Multi-passage worker tests and two-session PostgreSQL contention show the next healthy row advances for API keys, push, integrations, billing and both OAuth tables. |
+| Shape-only OAuth content could receive a checked marker and activate. | Old markers are reset. Write CAS and authenticated proof CAS are separate; direct marker writes are refused. The same pattern covers the analogous five families. | Truncated envelopes, bad tags, wrong roots, unavailable historical keys and stale revisions remain unverified in real-codec and SQL tests. The proof RPC trusts service-role backfill; the independent readiness scan decrypts every current row. |
+| Readiness created a data key while claiming to be read-only. | Registry keys are loaded only if already present; a missing key blocks readiness. The scan authenticates ten critical families, including OAuth, API keys, integration, push and billing content. | Empty-registry and legacy-row fixtures assert zero mutating calls and `ready: false`; corrupt envelopes fail despite stale checked markers. A staging quiescent double scan is still needed before activation. |
+
+Production flags remain off. Keep MIN-591 in progress and PR #289 in draft
+until every target and retained copy has an inventory, migration and evidence.
+Representative Issues search parity, latency and key/cache load measurements
+remain staging activation controls.
