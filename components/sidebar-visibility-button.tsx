@@ -14,7 +14,7 @@ export function SidebarVisibilityButton({ collapsed }: { collapsed: boolean }) {
   const t = useTranslations("Nav");
   const { disabled, hidden, toggle } = useSidebarVisibility();
   const label = t(hidden ? "showSidebar" : "hideSidebar");
-  const Icon = hidden ? PanelLeftOpenIcon : PanelLeftCloseIcon;
+  const Icon = hidden ? PanelLeftCloseIcon : PanelLeftOpenIcon;
   const button = (
     <button
       type="button"
