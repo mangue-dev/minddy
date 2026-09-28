@@ -15,13 +15,12 @@ import type { ComponentType, CSSProperties, Ref, SVGProps } from "react";
 export type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 export type AppIcon = IconSvgElement | IconComponent;
 
-export interface AppIconProps {
+export interface AppIconProps
+  extends Omit<SVGProps<SVGSVGElement>, "width" | "height"> {
   icon: AppIcon;
-  className?: string;
-  style?: CSSProperties;
+  /** Rendered box size (px or CSS length) — passed as width/height. */
   size?: number | string;
-  strokeWidth?: number;
-  ref?: Ref<SVGSVGElement>;
+  strokeWidth?: number | string;
 }
 
 /** Render any `AppIcon` with one call site, whichever shape it is. */
@@ -32,6 +31,7 @@ export function AppIcon({
   size,
   strokeWidth,
   ref,
+  ...rest
 }: AppIconProps) {
   if (!icon) return null;
   // Icon DATA is a tuple array; a component is either a function or a
@@ -46,6 +46,7 @@ export function AppIcon({
         width={size}
         height={size}
         strokeWidth={strokeWidth}
+        {...rest}
       />
     );
   }
@@ -56,7 +57,8 @@ export function AppIcon({
       className={className}
       style={style}
       size={size}
-      strokeWidth={strokeWidth}
+      strokeWidth={strokeWidth == null ? undefined : Number(strokeWidth)}
+      {...rest}
     />
   );
 }
@@ -69,13 +71,22 @@ export function dataIcon(icon: IconSvgElement): IconComponent {
   const DataIcon = ({
     className,
     style,
+    strokeWidth,
     ref,
+    ...rest
   }: {
     className?: string;
     style?: CSSProperties;
     ref?: Ref<SVGSVGElement>;
-  }) => (
-    <HugeiconsIcon ref={ref} icon={icon} className={className} style={style} />
+  } & SVGProps<SVGSVGElement>) => (
+    <HugeiconsIcon
+      ref={ref}
+      icon={icon}
+      className={className}
+      style={style}
+      strokeWidth={strokeWidth == null ? undefined : Number(strokeWidth)}
+      {...rest}
+    />
   );
   DataIcon.displayName = "DataIcon";
   return DataIcon;

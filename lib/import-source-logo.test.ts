@@ -16,6 +16,6 @@ describe("import source logo", () => {
 
   it("keeps the project-owned minddy asset and an unknown-source fallback", () => {
     expect(source).toContain('source === "minddy"');
-    expect(source).toContain("<FileUp");
+    expect(source).toContain("<HugeiconsIcon icon={FileUploadIcon}");
   });
 });
