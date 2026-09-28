@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { FileAttachmentIcon } from "@hugeicons/core-free-icons";
+import { File02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -123,7 +123,7 @@ export function PagePrintView({
                   {page.icon}
                 </span>
               ) : (
-                <HugeiconsIcon icon={FileAttachmentIcon} aria-hidden className="mt-1.5 size-6 shrink-0 text-muted-foreground" />
+                <HugeiconsIcon icon={File02Icon} aria-hidden className="mt-1.5 size-6 shrink-0 text-muted-foreground" />
               )}
               <span className="min-w-0">{page.title || t("untitled")}</span>
             </h1>

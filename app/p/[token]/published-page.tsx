@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { FileAttachmentIcon } from "@hugeicons/core-free-icons";
+import { File02Icon } from "@hugeicons/core-free-icons";
 import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -156,7 +156,7 @@ export async function PublishedPage({
               {bundle.page.icon}
             </span>
           ) : (
-            <HugeiconsIcon icon={FileAttachmentIcon} aria-hidden className="mt-2 size-7 shrink-0 text-muted-foreground" />
+            <HugeiconsIcon icon={File02Icon} aria-hidden className="mt-2 size-7 shrink-0 text-muted-foreground" />
           )}
           <span className="min-w-0">{title}</span>
         </h1>

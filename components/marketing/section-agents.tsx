@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BotIcon, Calendar01Icon, FileAttachmentIcon, GitPullRequestIcon, Layers01Icon, Notebook01Icon, TaskDone01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { BotIcon, Calendar01Icon, File02Icon, GitPullRequestIcon, Layers01Icon, StickyNote02Icon, TaskDone01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { getTranslations } from "next-intl/server";
 import { MCP_PRESETS } from "@/lib/mcp-catalog";
 import { McpServiceLogo } from "@/components/mcp-service-logo";
@@ -20,10 +20,10 @@ const NUMO_CAPABILITIES = ["find", "act", "context"] as const;
     visitor weighs, so they stay visible on the card face, not behind the plus. */
 const NUMO_TOOLS = [
   { key: "tasks", icon: TaskDone01Icon },
-  { key: "pages", icon: FileAttachmentIcon },
+  { key: "pages", icon: File02Icon },
   { key: "pullRequests", icon: GitPullRequestIcon },
   { key: "routines", icon: Calendar01Icon },
-  { key: "notes", icon: Notebook01Icon },
+  { key: "notes", icon: StickyNote02Icon },
 ] as const;
 
 /** Read left to right: Numo opens the section, works the repository, you review,

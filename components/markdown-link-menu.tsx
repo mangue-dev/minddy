@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { LinkSquare01Icon, PencilIcon } from "@hugeicons/core-free-icons";
+import { LinkSquare01Icon, Edit04Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useId, useState } from "react";
 import type { Editor } from "@tiptap/core";
 import { BubbleMenu } from "@tiptap/react/menus";
@@ -184,7 +184,7 @@ export function MarkdownLinkMenu({ editor }: { editor: Editor | null }) {
           className="min-w-40 rounded-lg border border-border bg-popover p-1 shadow-md"
         >
           <MenuItem onClick={() => setEditOpen(true)}>
-            <HugeiconsIcon icon={PencilIcon} className="size-4 text-muted-foreground" aria-hidden />
+            <HugeiconsIcon icon={Edit04Icon} className="size-4 text-muted-foreground" aria-hidden />
             {t("selectionEditLink")}
           </MenuItem>
           <MenuItem onClick={openLink}>

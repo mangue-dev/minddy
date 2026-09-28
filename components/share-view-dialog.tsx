@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Share02Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, Share01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { MIN_SHARE_PASSWORD_LENGTH } from "@/lib/share-password";
@@ -135,7 +135,7 @@ export function ShareViewDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <HugeiconsIcon icon={Share02Icon} className="size-4 text-brand" />
+            <HugeiconsIcon icon={Share01Icon} className="size-4 text-brand" />
             {t("title")}
           </DialogTitle>
           <DialogDescription>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ArrowReloadHorizontalIcon as IterationCw, BotIcon as Bot, FlowIcon as Workflow, GitBranchIcon as GitBranch, InboxIcon as Inbox, LockIcon, PlugIcon as Plug, ShieldCheckIcon as ShieldCheck, SlidersHorizontalIcon as SlidersHorizontal, UserIcon as User } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, BotIcon as Bot, FlowIcon as Workflow, GitBranchIcon as GitBranch, InboxIcon as Inbox, LockIcon, PlugIcon as Plug, ShieldCheckIcon as ShieldCheck, SlidersHorizontalIcon as SlidersHorizontal, UserIcon as User } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/lib/auth-context";
 import { useMfaStatusQuery } from "@/lib/use-mfa-status";
 import { SettingsShell, type SettingsTab } from "@/components/settings-shell";
@@ -70,7 +70,7 @@ export default function AccountSettingsPage() {
     {
       value: "cycles",
       label: t("cyclesTab"),
-      icon: IterationCw,
+      icon: CycleIcon,
       content: <AccountCyclesSection />,
     },
     // Automations just after the cycles: both say how the

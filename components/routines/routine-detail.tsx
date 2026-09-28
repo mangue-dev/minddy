@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, GitPullRequestIcon, MoreHorizontalIcon, PauseCircleIcon, PencilIcon, PlayIcon } from "@hugeicons/core-free-icons";
+import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, GitPullRequestIcon, MoreHorizontalIcon, PauseCircleIcon, Edit04Icon, PlayIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useFormatter, useLocale, useNow, useTranslations } from "next-intl";
@@ -479,7 +479,7 @@ export function RoutineDetail({
                   {t("runNow")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setDraft(draftFrom(routine))}>
-                  <HugeiconsIcon icon={PencilIcon} className="size-4" />
+                  <HugeiconsIcon icon={Edit04Icon} className="size-4" />
                   {tCommon("edit")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

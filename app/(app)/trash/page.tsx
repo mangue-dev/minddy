@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { ArrowLeft01Icon, Calendar01Icon, CircleIcon, DatabaseIcon, Delete02Icon, FileAttachmentIcon, MessageMultiple01Icon, MoreHorizontalIcon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, Calendar01Icon, CircleIcon, DatabaseIcon, Delete02Icon, File02Icon, MessageMultiple01Icon, MoreHorizontalIcon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState, type SVGProps } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -43,7 +43,7 @@ type TrashFilter = "all" | TrashType;
 const TYPE_ICON: Record<TrashType, IconSvgElement> = {
   issue: CircleIcon,
   objective: Target01Icon,
-  page: FileAttachmentIcon,
+  page: File02Icon,
   feedback: MessageMultiple01Icon,
   routine: Calendar01Icon,
   project: Delete02Icon,

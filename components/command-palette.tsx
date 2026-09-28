@@ -27,7 +27,7 @@
 // share it); this component is controlled via `open` / `onOpenChange`.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowReloadHorizontalIcon as IterationCw, Bookmark01Icon, BookmarkAdd01Icon, CircleIcon, ComputerIcon, Copy01Icon, Delete02Icon, Link02Icon, MoonIcon, PencilIcon, SignalFull01Icon, Sun01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, Bookmark01Icon, BookmarkAdd01Icon, CircleIcon, ComputerIcon, Copy01Icon, Delete02Icon, Link02Icon, MoonIcon, Edit04Icon, SignalFull01Icon, Sun01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import {
   useCallback,
   useEffect,
@@ -962,7 +962,7 @@ export function CommandPalette({
           {
             id: "saved-view.rename",
             label: tNav("renameSavedView"),
-            icon: PencilIcon,
+            icon: Edit04Icon,
             category: "secondary",
             priority: 10,
             requiresForm: {
@@ -1127,7 +1127,7 @@ export function CommandPalette({
       list.push({
         id: "bulk-cycle-add",
         title: tCycles("addToCycle"),
-        icon: <AppIcon icon={IterationCw} className="size-4" />,
+        icon: <AppIcon icon={CycleIcon} className="size-4" />,
         keywords: ["cycle", "semaine", "week", "sprint", "ajouter"],
         filterCategory: "bulk",
         favoritable: false,
@@ -1141,7 +1141,7 @@ export function CommandPalette({
       list.push({
         id: "bulk-cycle-remove",
         title: tCycles("removeFromCycle"),
-        icon: <AppIcon icon={IterationCw} className="size-4" />,
+        icon: <AppIcon icon={CycleIcon} className="size-4" />,
         keywords: ["cycle", "semaine", "week", "sprint", "retirer"],
         filterCategory: "bulk",
         favoritable: false,

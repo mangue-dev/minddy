@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Cancel01Icon, Delete02Icon, PencilIcon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Cancel01Icon, Delete02Icon, Edit04Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, ConfirmDeleteDialog, Input, Spinner, cn, toast } from "mangue-ui";
@@ -119,7 +119,7 @@ function CategoryRow({
             aria-label={tc("edit")}
             onClick={() => setEditing(true)}
           >
-            <HugeiconsIcon icon={PencilIcon} />
+            <HugeiconsIcon icon={Edit04Icon} />
           </Button>
           <Button variant="ghost" size="icon-sm" aria-label={tc("delete")} onClick={onDelete}>
             <HugeiconsIcon icon={Delete02Icon} />

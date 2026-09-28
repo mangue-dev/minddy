@@ -7,7 +7,7 @@
 // (local wall-clock time preserved); `null` means unset.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Calendar01Icon, RepeatIcon } from "@hugeicons/core-free-icons";
+import { DateTimeIcon, RepeatIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import * as React from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
@@ -330,7 +330,7 @@ export function DateTimePicker({
   // A recurring ticket has the repeat icon wherever its due date
   // is displayed: this is what distinguishes “August 12” from “every month,
   // August 12” without extending the chip. The cadence can be read on hover.
-  const TriggerIcon = isRecurring ? RepeatIcon : Calendar01Icon;
+  const TriggerIcon = isRecurring ? RepeatIcon : DateTimeIcon;
 
   let trigger: React.ReactNode;
   if (variant === "value") {

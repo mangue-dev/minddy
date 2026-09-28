@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrowDown01Icon, ArrowUp01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, FileAttachmentIcon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowDown01Icon, ArrowUp01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -1042,7 +1042,7 @@ export function PageDatabaseView({
                         <DropdownMenuContent align="start" className="[&_[role=menuitem]]:rounded-sm">
                           {targets.length === 1 && (
                             <DropdownMenuItem onSelect={() => onOpen(entry.id)}>
-                              <HugeiconsIcon icon={FileAttachmentIcon} className="size-4" />
+                              <HugeiconsIcon icon={File02Icon} className="size-4" />
                               {t("openEntry")}
                             </DropdownMenuItem>
                           )}
@@ -1137,7 +1137,7 @@ export function PageDatabaseView({
                       onFocus={() => prefetchPage(entry.id)}
                     >
                       {entry.icon ?? (
-                        <HugeiconsIcon icon={FileAttachmentIcon} className="size-4 shrink-0 text-muted-foreground" />
+                        <HugeiconsIcon icon={File02Icon} className="size-4 shrink-0 text-muted-foreground" />
                       )}
                       <span className="min-w-0 overflow-hidden whitespace-nowrap text-clip">
                         {entry.title.slice(0, 160) || tPages("untitled")}

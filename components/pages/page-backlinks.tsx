@@ -6,7 +6,7 @@
 // deliberately absent, and both citation sources use the same presentation.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { FileAttachmentIcon, HashtagIcon } from "@hugeicons/core-free-icons";
+import { File02Icon, HashtagIcon } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -113,7 +113,7 @@ function BacklinkPill({
             {item.kind === "page" && item.icon ? (
               <span className="text-[11px] leading-none">{item.icon}</span>
             ) : item.kind === "page" ? (
-              <HugeiconsIcon icon={FileAttachmentIcon} className="h-3 w-3" />
+              <HugeiconsIcon icon={File02Icon} className="h-3 w-3" />
             ) : (
               <HugeiconsIcon icon={HashtagIcon} className="h-3 w-3" />
             )}

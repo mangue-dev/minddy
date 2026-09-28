@@ -17,7 +17,7 @@
 // recalculate next.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, ArrowRight01Icon, DatabaseIcon, FileAttachmentIcon, MoreHorizontalIcon, StarIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowRight01Icon, DatabaseIcon, File02Icon, MoreHorizontalIcon, StarIcon } from "@hugeicons/core-free-icons";
 import {
   useCallback,
   useEffect,
@@ -460,7 +460,7 @@ function PageRow({
       >
         <span className="flex size-4 shrink-0 items-center justify-center text-sm leading-none">
           {page.icon ?? (
-            page.database_schema != null ? <HugeiconsIcon icon={DatabaseIcon} className="size-3.5 text-muted-foreground" /> : <HugeiconsIcon icon={FileAttachmentIcon} className="size-3.5 text-muted-foreground" />
+            page.database_schema != null ? <HugeiconsIcon icon={DatabaseIcon} className="size-3.5 text-muted-foreground" /> : <HugeiconsIcon icon={File02Icon} className="size-3.5 text-muted-foreground" />
           )}
         </span>
         <span

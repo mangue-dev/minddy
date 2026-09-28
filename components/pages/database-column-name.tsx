@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { PencilIcon, Settings02Icon } from "@hugeicons/core-free-icons";
+import { Edit04Icon, Settings02Icon } from "@hugeicons/core-free-icons";
 import { useRef, useState, type DragEvent } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -165,7 +165,7 @@ export function DatabaseColumnName({
         }}
       >
         <DropdownMenuItem onSelect={start}>
-          <HugeiconsIcon icon={PencilIcon} className="size-4" />
+          <HugeiconsIcon icon={Edit04Icon} className="size-4" />
           {t("rename")}
         </DropdownMenuItem>
         {property && onEdit && (

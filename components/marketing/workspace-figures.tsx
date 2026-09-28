@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrowReloadHorizontalIcon as IterationCw, ArrowRight01Icon, ArrowUpDownIcon, Calendar01Icon, DatabaseIcon, FileAttachmentIcon, FilterIcon, GitPullRequestIcon, Search01Icon, Settings02Icon, Target01Icon, TaskDone01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowReloadHorizontalIcon as IterationCw, ArrowRight01Icon, ArrowUpDownIcon, Calendar01Icon, DatabaseIcon, File02Icon, FilterIcon, GitPullRequestIcon, Search01Icon, Settings02Icon, Target01Icon, TaskDone01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { getFormatter, getTranslations } from "next-intl/server";
 import type { CSSProperties, ReactNode } from "react";
 import { PriorityIndicator, StatusIndicator, EffortIndicator, ObjectiveStatusIndicator } from "@/components/issue-indicators";
@@ -272,7 +272,7 @@ function FigureTreeLine({ label, database, depth, chevron, active }: {
   return (
     <li className="flex items-center gap-1 py-1 pr-2" style={{ paddingLeft: 10 + depth * 12 }}>
       <HugeiconsIcon icon={ArrowRight01Icon} aria-hidden className={`size-2.5 shrink-0 text-muted-foreground transition-transform ${chevron === "open" ? "rotate-90" : ""} ${chevron === "none" ? "invisible" : ""}`} />
-      {database ? <HugeiconsIcon icon={DatabaseIcon} className="size-3 shrink-0 text-muted-foreground" /> : <HugeiconsIcon icon={FileAttachmentIcon} className="size-3 shrink-0 text-muted-foreground" />}
+      {database ? <HugeiconsIcon icon={DatabaseIcon} className="size-3 shrink-0 text-muted-foreground" /> : <HugeiconsIcon icon={File02Icon} className="size-3 shrink-0 text-muted-foreground" />}
       <span className={`min-w-0 truncate text-[11px] leading-4 ${active ? "font-medium" : ""}`}>{label}</span>
     </li>
   );
@@ -340,7 +340,7 @@ export async function PagesFigure() {
             return (
               <div key={entry.key} className="flex h-10 items-center border-b border-border/40">
                 <span className="flex min-w-0 flex-1 items-center gap-1.5 px-2">
-                  <HugeiconsIcon icon={FileAttachmentIcon} className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+                  <HugeiconsIcon icon={File02Icon} className="size-3 shrink-0 text-muted-foreground" aria-hidden />
                   <span className="min-w-0 truncate text-[11px]">{t(`pagesFigure_${entry.key}`)}</span>
                 </span>
                 <span className="flex w-20 shrink-0 items-center px-1 sm:w-[6.5rem]">

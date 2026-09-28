@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowDown01Icon, CodeSimpleIcon as Code2, Copy01Icon, PencilIcon, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, CodeSimpleIcon as Code2, Copy01Icon, Edit04Icon, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -208,7 +208,7 @@ export function IssuePlan({
           className="rounded-full text-muted-foreground hover:text-foreground"
           onClick={startEditing}
         >
-          <HugeiconsIcon icon={PencilIcon} />
+          <HugeiconsIcon icon={Edit04Icon} />
         </Button>
       </div>
 

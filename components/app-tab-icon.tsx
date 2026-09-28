@@ -1,6 +1,6 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BarChartIcon, Calendar01Icon, CreditCardIcon, Delete02Icon, FileAttachmentIcon, Folder01Icon, GitPullRequestIcon, Home01Icon, InboxIcon, LayoutGridIcon, MessageMultiple01Icon, Settings01Icon, Shield01Icon, Target01Icon } from "@hugeicons/core-free-icons";
+import { BarChartIcon, Calendar01Icon, CreditCardIcon, Delete02Icon, File02Icon, Folder01Icon, GitPullRequestIcon, Home01Icon, InboxIcon, LayoutGridIcon, MessageMultiple01Icon, Settings01Icon, Shield01Icon, Target01Icon } from "@hugeicons/core-free-icons";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { objectiveColor } from "./objective-icon";
@@ -8,7 +8,7 @@ import type { Project } from "@/lib/types";
 
 const icons = { home: Home01Icon, all: LayoutGridIcon, tickets: LayoutGridIcon, inbox: InboxIcon, routines: Calendar01Icon,
   "pull-requests": GitPullRequestIcon, statistics: BarChartIcon, trash: Delete02Icon, settings: Settings01Icon, billing: CreditCardIcon,
-  admin: Shield01Icon, pages: FileAttachmentIcon, objectives: Target01Icon, feedback: MessageMultiple01Icon, triage: InboxIcon };
+  admin: Shield01Icon, pages: File02Icon, objectives: Target01Icon, feedback: MessageMultiple01Icon, triage: InboxIcon };
 
 export function AppTabIcon({ section, project, projectId, objectiveColor: color }: {
   section: string;
