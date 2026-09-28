@@ -6,8 +6,9 @@
 // integrated search input that filters the options, Linear-style). Single- and
 // multi-select variants both render it in trigger-anchored mode.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
-import { Plus } from "lucide-react";
 import { CommandGroup, CommandItem, CommandSeparator, Spinner, toast } from "mangue-ui";
 import { SearchMenu } from "@/components/search-menu";
 
@@ -116,7 +117,7 @@ export function PickerCreateRow({
           {busy ? (
             <Spinner className="size-4 shrink-0" />
           ) : (
-            <Plus className="size-4 shrink-0 text-muted-foreground" />
+            <HugeiconsIcon icon={Add01Icon} className="size-4 shrink-0 text-muted-foreground" />
           )}
           <span className="truncate">{create.labelFor(name)}</span>
         </CommandItem>

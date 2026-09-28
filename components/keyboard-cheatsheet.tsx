@@ -3,9 +3,10 @@
 // Keyboard-shortcuts cheat sheet. Opened by `?` (global) or from the command
 // palette ("Keyboard shortcuts"). Renders the shared registry in lib/keyboard.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Search01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { Search } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +40,7 @@ export function KeyboardCheatsheet() {
         </DialogHeader>
 
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <HugeiconsIcon icon={Search01Icon} className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}

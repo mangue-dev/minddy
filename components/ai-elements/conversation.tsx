@@ -1,7 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { Button, cn } from "mangue-ui";
-import { ArrowDownIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { useScrollFade } from "@/lib/use-scroll-fade";
@@ -190,7 +191,7 @@ export const ConversationScrollButton = ({
           variant="outline"
           {...props}
         >
-          <ArrowDownIcon className="size-4" />
+          <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
         </Button>
       </AppTooltip>
     )

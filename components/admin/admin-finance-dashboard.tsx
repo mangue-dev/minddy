@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, Refresh01Icon, WorkHistoryIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { ChevronDown, History, RefreshCw } from "lucide-react";
 import {
   Badge,
   Button,
@@ -520,7 +521,7 @@ function FreshnessBar({
         onClick={onRefresh}
         disabled={refreshing}
       >
-        <RefreshCw className={cn("size-3", refreshing && "animate-spin")} />
+        <HugeiconsIcon icon={Refresh01Icon} className={cn("size-3", refreshing && "animate-spin")} />
         {t("finance.refresh")}
       </Button>
     </div>
@@ -868,18 +869,16 @@ function RecentRunsAccordion({
     >
       <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
         <div className="flex min-w-0 items-center gap-2.5">
-          <History className="size-4 shrink-0 text-foreground/70" strokeWidth={2} />
+          <HugeiconsIcon icon={WorkHistoryIcon} className="size-4 shrink-0 text-foreground/70" strokeWidth={2} />
           <span className="text-sm font-semibold">{t("finance.recentRuns")}</span>
           <span className="truncate text-xs text-muted-foreground">
             {t("finance.recentRunsHint")}
           </span>
         </div>
-        <ChevronDown
-          className={cn(
-            "size-4 shrink-0 text-muted-foreground transition-transform",
-            open && "rotate-180",
-          )}
-        />
+        <HugeiconsIcon icon={ArrowDown01Icon} className={cn(
+                          "size-4 shrink-0 text-muted-foreground transition-transform",
+                          open && "rotate-180",
+                        )} />
       </CollapsibleTrigger>
 
       <CollapsibleContent>

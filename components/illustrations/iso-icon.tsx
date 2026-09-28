@@ -2,6 +2,8 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ComponentType, CSSProperties, Ref } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import type { IconSvgElement } from "@hugeicons/react";
 import { cn } from "mangue-ui";
 
 /**
@@ -80,12 +82,14 @@ const ICON_INSET = "15%";
  * is not one. The contract is made up of four props — that's all the placement on
  * the block needs.
  */
-export type SceneIcon = ComponentType<{
-  className?: string;
-  style?: CSSProperties;
-  strokeWidth?: number | string;
-  ref?: Ref<SVGSVGElement>;
-}>;
+export type SceneIcon =
+  | IconSvgElement
+  | ComponentType<{
+      className?: string;
+      style?: CSSProperties;
+      strokeWidth?: number | string;
+      ref?: Ref<SVGSVGElement>;
+    }>;
 
 /**
  * The color of solid. The default brand; red for what DELETES —
@@ -132,6 +136,7 @@ export function IsoIcon({
   className?: string;
   style?: CSSProperties;
 }) {
+  const SceneIconComponent = Icon as Exclude<SceneIcon, IconSvgElement>;
   const ref = useRef<SVGSVGElement>(null);
   /**
    * The drawing of an icon does not occupy its entire viewBox, and not in the same way
@@ -235,12 +240,22 @@ export function IsoIcon({
           padding: ICON_INSET,
         }}
       >
-        <Icon
-          ref={ref}
-          strokeWidth={1.5}
-          className={cn("size-full", paint.icon)}
-          style={{ transform: `scale(${fit.scale}) translate(${fit.dx}%, ${fit.dy}%)` }}
-        />
+        {!Array.isArray(Icon) ? (
+          <SceneIconComponent
+            ref={ref}
+            strokeWidth={1.5}
+            className={cn("size-full", paint.icon)}
+            style={{ transform: `scale(${fit.scale}) translate(${fit.dx}%, ${fit.dy}%)` }}
+          />
+        ) : (
+          <HugeiconsIcon
+            ref={ref}
+            icon={Icon}
+            strokeWidth={1.5}
+            className={cn("size-full", paint.icon)}
+            style={{ transform: `scale(${fit.scale}) translate(${fit.dx}%, ${fit.dy}%)` }}
+          />
+        )}
       </span>
     </span>
   );

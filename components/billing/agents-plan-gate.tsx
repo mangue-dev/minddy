@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { BotIcon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Bot } from "lucide-react";
 import { Button } from "mangue-ui";
 import { EmptyState } from "@/components/empty-state";
 import { usePlanGates } from "@/lib/use-billing-query";
@@ -21,7 +22,7 @@ export function AgentsPlanGate({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-16">
       <EmptyState
-        icon={<Bot className="size-6" />}
+        icon={<HugeiconsIcon icon={BotIcon} className="size-6" />}
         title={t("agentsGateTitle")}
         description={t("agentsGateDescription")}
         action={

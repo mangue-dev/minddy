@@ -1,19 +1,5 @@
-import {
-  CircleDashed,
-  Circle,
-  CircleDot,
-  Copy,
-  Eye,
-  CheckCircle2,
-  Filter,
-  XCircle,
-  Minus,
-  SignalLow,
-  SignalMedium,
-  SignalHigh,
-  AlertTriangle,
-  type LucideIcon,
-} from "lucide-react";
+import type { AppIcon } from "@/components/icon";
+import { AlertTriangle, CheckmarkCircle01Icon as CheckCircle2, Circle, CircleDashedIcon, CircleDot, Copy, Eye, Filter, MinusSignIcon as Minus, SignalHigh, SignalLow, SignalMediumIcon, XCircle } from "@hugeicons/core-free-icons";
 
 // All three axes are fixed and not customizable per project.
 
@@ -40,7 +26,7 @@ export interface StatusMeta {
  * game before this design; they only survive because `StatusMeta` is
  * also the shape of the kanban columns (where only `value` counts).
  */
-  icon: LucideIcon;
+  icon: AppIcon;
   /** LEGACY, like `icon` — color lives in StatusIndicator. */
   color: string;
 }
@@ -48,7 +34,7 @@ export interface StatusMeta {
 // Order = kanban column order. Board columns only — triage and
 // duplicate issues are deliberately absent from the kanban.
 export const STATUSES: StatusMeta[] = [
-  { value: "backlog", icon: CircleDashed, color: "text-muted-foreground" },
+  { value: "backlog", icon: CircleDashedIcon, color: "text-muted-foreground" },
   { value: "todo", icon: Circle, color: "text-muted-foreground" },
   { value: "in_progress", icon: CircleDot, color: "text-amber-500" },
   { value: "in_review", icon: Eye, color: "text-violet-500" },
@@ -85,7 +71,7 @@ export interface PriorityMeta {
   /** LEGACY, like `StatusMeta.icon` — displaying priority goes through
  * `<PriorityIndicator priority={…} />` (signal bars filled from below,
  * red square “!” for urgent). */
-  icon: LucideIcon;
+  icon: AppIcon;
   /** LEGACY, like `icon` — color lives in PriorityIndicator. */
   color: string;
 }
@@ -103,7 +89,7 @@ export interface PriorityMeta {
 export const PRIORITIES: PriorityMeta[] = [
   { value: "none", icon: Minus, color: "text-muted-foreground" },
   { value: "low", icon: SignalLow, color: "text-sky-500" },
-  { value: "medium", icon: SignalMedium, color: "text-yellow-500" },
+  { value: "medium", icon: SignalMediumIcon, color: "text-yellow-500" },
   { value: "high", icon: SignalHigh, color: "text-orange-500" },
   { value: "urgent", icon: AlertTriangle, color: "text-red-500" },
 ];

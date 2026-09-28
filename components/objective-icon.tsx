@@ -13,8 +13,8 @@
 // the nav tab, “new objective” in the palette, the empty state of the
 // page. There is no objective there whose color to follow, and the icon remains
 // neutral: to dye it would be to designate an objective which does not exist.
-
-import { Target } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Target01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "mangue-ui";
 
 /** The color of an objective, including fallback — the same rule as the chips on the
@@ -32,7 +32,7 @@ export function ObjectiveIcon({
   className?: string;
 }) {
   return (
-    <Target className={className} style={{ color: objectiveColor(color) }} />
+    <HugeiconsIcon icon={Target01Icon} className={className} style={{ color: objectiveColor(color) }} />
   );
 }
 
@@ -60,7 +60,7 @@ export function ObjectiveIconBadge({
         color: tone,
       }}
     >
-      <Target className={iconClassName} />
+      <HugeiconsIcon icon={Target01Icon} className={iconClassName} />
     </span>
   );
 }

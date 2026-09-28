@@ -1,16 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Activity01Icon, AnalyticsDownIcon, AnalyticsUpIcon, Calendar01Icon, CancelCircleIcon as CircleSlash2, MinusSignIcon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
-import {
-  Activity,
-  CalendarClock,
-  Check,
-  CircleSlash2,
-  Minus,
-  TrendingDown,
-  TrendingUp,
-} from "lucide-react";
 import { cn } from "mangue-ui";
 import {
   Tooltip,
@@ -26,36 +20,36 @@ import type { MessageKey } from "@/lib/i18n-keys";
 
 const STATE_META: Record<
   ObjectiveMomentumState,
-  { key: MessageKey<"Objectives">; icon: typeof Activity; className: string }
+  { key: MessageKey<"Objectives">; icon: AppIcon; className: string }
 > = {
   accelerating: {
     key: "momentumAccelerating",
-    icon: TrendingUp,
+    icon: AnalyticsUpIcon,
     className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   },
   steady: {
     key: "momentumSteady",
-    icon: Minus,
+    icon: MinusSignIcon,
     className: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
   },
   slowing: {
     key: "momentumSlowing",
-    icon: TrendingDown,
+    icon: AnalyticsDownIcon,
     className: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
   },
   stalled: {
     key: "momentumStalled",
-    icon: Minus,
+    icon: MinusSignIcon,
     className: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
   },
   not_started: {
     key: "momentumNotStarted",
-    icon: Minus,
+    icon: MinusSignIcon,
     className: "bg-muted text-muted-foreground",
   },
   complete: {
     key: "momentumComplete",
-    icon: Check,
+    icon: Tick01Icon,
     className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   },
   canceled: {
@@ -90,7 +84,7 @@ export function ObjectiveMomentum({
   const maxWeek = Math.max(1, ...insight.weeks.map((week) => week.completed));
   const titleId = `objective-momentum-${objective.id}`;
   const canceled = insight.state === "canceled";
-  const SummaryIcon = canceled ? CircleSlash2 : CalendarClock;
+  const SummaryIcon = canceled ? CircleSlash2 : Calendar01Icon;
 
   const forecast = (() => {
     if (canceled) return t("momentumCanceledSummary");
@@ -128,7 +122,7 @@ export function ObjectiveMomentum({
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <Activity className="size-4 shrink-0 text-muted-foreground" />
+          <HugeiconsIcon icon={Activity01Icon} className="size-4 shrink-0 text-muted-foreground" />
           <h2 id={titleId} className="text-sm font-medium">
             {t("momentumTitle")}
           </h2>
@@ -139,7 +133,7 @@ export function ObjectiveMomentum({
             state.className,
           )}
         >
-          <StateIcon className="size-3.5" />
+          <AppIcon icon={StateIcon} className="size-3.5" />
           {t(state.key)}
         </span>
       </div>
@@ -213,7 +207,7 @@ export function ObjectiveMomentum({
       ) : null}
 
       <div className="mt-4 flex items-start gap-2 border-t border-border/60 pt-3 text-sm text-muted-foreground">
-        <SummaryIcon className="mt-0.5 size-4 shrink-0" />
+        <AppIcon icon={SummaryIcon} className="mt-0.5 size-4 shrink-0" />
         <p>{forecast}</p>
       </div>
     </section>

@@ -65,7 +65,7 @@ describe("page interface regressions", () => {
     );
     expect(view).toContain('onOpenHistory={() => openHistory("versions")}');
     expect(view).toContain('onClick={() => openHistory("activity")}');
-    expect(view).toContain("<MessageSquare");
+    expect(view).toContain("icon={Message01Icon}");
     expect(view).toContain("initialTab={historyTab}");
     expect(history).toContain('initialTab = "activity"');
     expect(history).toContain("if (open) setTab(initialTab)");

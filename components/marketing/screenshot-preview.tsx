@@ -1,7 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useId, useRef, useState } from "react";
-import { X } from "lucide-react";
 
 /** Frameless lightbox with native focus containment and Escape behavior. */
 export function ScreenshotPreview({
@@ -45,7 +46,7 @@ export function ScreenshotPreview({
         <h2 id={titleId} className="sr-only">{alt}</h2>
         <button type="button" aria-label={closeLabel} onClick={() => setOpen(false)}
           className="fixed top-4 right-4 z-10 flex size-11 items-center justify-center rounded-full hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
-          <X className="size-5" aria-hidden />
+          <HugeiconsIcon icon={Cancel01Icon} className="size-5" aria-hidden />
         </button>
         {open && <picture>
           <source media="(prefers-color-scheme: dark)" srcSet={dark} />

@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { GitPullRequestIcon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import {
@@ -13,7 +15,6 @@ import {
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, cn, Spinner, toast } from "mangue-ui";
-import { GitPullRequest } from "lucide-react";
 import { AppContentHeader } from "@/components/app-content-header";
 import { cumulativeBranchFiles, changeTotals } from "@/lib/agent-changed-files";
 import { NumoIcon } from "@/components/numo-icon";
@@ -631,7 +632,7 @@ export function AgentConversation({
           disabled={requestingPr}
           onClick={() => void createPr()}
         >
-          <GitPullRequest className="size-3.5" />
+          <HugeiconsIcon icon={GitPullRequestIcon} className="size-3.5" />
           {t("createPullRequest")}
         </Button>
       ) : null}

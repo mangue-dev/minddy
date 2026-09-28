@@ -1,6 +1,7 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { RssIcon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Rss } from "lucide-react";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
 import { CHANGELOG_ENTRIES } from "@/lib/changelog";
@@ -64,7 +65,7 @@ export default async function ChangelogPage() {
               href={changelogFeedPath(locale)}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
             >
-              <Rss className="h-3.5 w-3.5" aria-hidden />
+              <HugeiconsIcon icon={RssIcon} className="h-3.5 w-3.5" aria-hidden />
               {t("subscribe")}
             </a>
           </Reveal>

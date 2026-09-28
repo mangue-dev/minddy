@@ -1,11 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ComputerIcon, Delete02Icon, SentIcon, Settings02Icon, SmartPhone01Icon } from "@hugeicons/core-free-icons";
 import {useCallback, useEffect, useState} from "react";
 import {useFormatter, useLocale, useTranslations} from "next-intl";
 import {useQueryClient} from "@tanstack/react-query";
 import {Button, ConfirmDeleteDialog, IconButton, Spinner, Switch, toast} from "mangue-ui";
-import {Monitor, Send, Settings2, Smartphone, Trash2} from "lucide-react";
-
 import {deletePushDeviceApi, setPushDeviceEnabledApi, testPushDeviceApi} from "@/lib/push-devices-api";
 import {pushDevicesQueryKey, usePushDevicesQuery} from "@/lib/use-push-devices-query";
 import {currentEndpoint, isPushSupported, isIOS, isStandalone, pushPermission, subscribeThisDevice, unsubscribeThisDevice} from "@/lib/push/client";
@@ -312,7 +312,7 @@ export function AccountPushDevicesSection() {
                     size="sm"
                     onClick={() => getDesktopBridge()?.openNotificationSettings?.()}
                   >
-                    <Settings2 className="size-4" />
+                    <HugeiconsIcon icon={Settings02Icon} className="size-4" />
                     {t(
                       nativeDesktopTransport === "wns"
                         ? "windowsSettingsButton"
@@ -375,7 +375,7 @@ export function AccountPushDevicesSection() {
           devices.map((device) => (
             <SettingsListRow
               key={device.id}
-              icon={isMobileDeviceLabel(device.device_label) ? Smartphone : Monitor}
+              icon={isMobileDeviceLabel(device.device_label) ? SmartPhone01Icon : ComputerIcon}
               title={deviceName(device)}
               subtitle={subtitleOf(device)}
               action={
@@ -391,7 +391,7 @@ export function AccountPushDevicesSection() {
                       disabled={testingId === device.id}
                       onClick={() => void sendTest(device)}
                     >
-                      {testingId === device.id ? <Spinner /> : <Send className="size-4" />}
+                      {testingId === device.id ? <Spinner /> : <HugeiconsIcon icon={SentIcon} className="size-4" />}
                       {t("testButton")}
                     </Button>
                   )}
@@ -409,7 +409,7 @@ export function AccountPushDevicesSection() {
                       aria-label={t("remove")}
                       onClick={() => setToRemove(device)}
                     >
-                      <Trash2 className="size-4" />
+                      <HugeiconsIcon icon={Delete02Icon} className="size-4" />
                     </IconButton>
                   </AppTooltip>
                 </>

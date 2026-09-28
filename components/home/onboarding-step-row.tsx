@@ -1,6 +1,6 @@
 "use client";
-
-import { Check } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Tick01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "mangue-ui";
 
 /**
@@ -60,7 +60,7 @@ export function OnboardingStepRow({
         {title}
       </span>
       {isCompleted && (
-        <Check aria-hidden className="size-4 shrink-0 text-success" strokeWidth={2.5} />
+        <HugeiconsIcon icon={Tick01Icon} aria-hidden className="size-4 shrink-0 text-success" strokeWidth={2.5} />
       )}
     </div>
   );

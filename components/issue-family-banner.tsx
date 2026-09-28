@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Button } from "mangue-ui";
-import { ChevronLeft } from "lucide-react";
 import { AppContentHeader } from "@/components/app-content-header";
 import { ProgressRing } from "@/components/progress-ring";
 import { issueIdentifier } from "@/lib/issue-constants";
@@ -34,7 +35,7 @@ export function IssueFamilyBoardHeader({
           the unscoped page (here, the full board with its view restored). */}
       <Button asChild variant="ghost" size="icon-sm">
         <Link href={exitHref} aria-label={t("backToBoard")}>
-          <ChevronLeft />
+          <HugeiconsIcon icon={ArrowLeft01Icon} />
         </Link>
       </Button>
       <div className="min-w-0">

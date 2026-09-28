@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronRight } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, cn } from "mangue-ui";
 import { groupWorkEvents, workEventsRevealKey, type WorkEvent } from "@/lib/work-event-groups";
 import {
@@ -50,7 +51,7 @@ function ActionGroup({
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger className="group flex w-full items-center gap-2 py-0.5 text-left text-xs text-muted-foreground hover:text-foreground">
-        <ChevronRight className="size-3 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
+        <HugeiconsIcon icon={ArrowRight01Icon} className="size-3 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
         <span className={cn(active && "text-shimmer")}>
           {label}
         </span>

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { ShieldCheckIcon as ShieldCheck } from "@hugeicons/core-free-icons";
+import { AppIcon } from "@/components/icon";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { Button, Card, CardContent } from "mangue-ui";
-import { ShieldCheck } from "lucide-react";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { appPageMetadata } from "@/lib/app-metadata";
 import { AUTH_PENDING_COOKIE, decodePendingOtp } from "@/lib/auth-otp-pending";
@@ -52,7 +53,7 @@ export default async function ConfirmSignInPage() {
         <CardContent className="flex flex-col items-center gap-6 px-8 py-10 text-center">
           <MinddyLogo className="h-7 w-auto text-foreground" />
 
-          <ShieldCheck
+          <AppIcon icon={ShieldCheck}
             className="size-10 text-muted-foreground"
             strokeWidth={1.5}
             aria-hidden="true"

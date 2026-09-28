@@ -1,5 +1,5 @@
 import { mergeAttributes, Node, type Editor } from "@tiptap/core";
-import { Lightbulb } from "lucide-react";
+import { LightbulbIcon as Lightbulb } from "@hugeicons/core-free-icons";
 import {
   PAGE_COLORS,
   type PageColor,

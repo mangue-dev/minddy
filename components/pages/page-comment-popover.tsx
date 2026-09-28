@@ -21,12 +21,12 @@
 // It is measured by scrolling: the document scrolls under it, and a panel
 // anchored to a block that is no longer there is worse than a closed panel.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
 import { Button, cn } from "mangue-ui";
-import { X } from "lucide-react";
-
 import {
   CommentBlock,
   CommentComposer,
@@ -194,7 +194,7 @@ export function PageCommentPopover({
           className="-my-1 size-6 rounded-full text-muted-foreground"
           onClick={onClose}
         >
-          <X className="size-3.5" />
+          <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
         </Button>
       </div>
 

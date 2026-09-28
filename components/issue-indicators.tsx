@@ -1,6 +1,8 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { TriangleIcon } from "@hugeicons/core-free-icons";
 import { cn } from "mangue-ui/lib/utils";
 import { useId } from "react";
-import { Triangle } from "lucide-react";
 import {
   EFFORT_MAP,
   type IssueStatus,
@@ -222,7 +224,7 @@ export function RelationIcon({
   className?: string;
 }) {
   const { icon: Icon, color } = RELATION_META[relation];
-  return <Icon className={cn("size-3.5 shrink-0", color, className)} />;
+  return <AppIcon icon={Icon} className={cn("size-3.5 shrink-0", color, className)} />;
 }
 
 /* ── Effort ──────────────────────────────────────────────────────────────
@@ -239,7 +241,7 @@ export function EffortIndicator({
     <span
       className={cn("inline-flex items-center gap-1 text-muted-foreground", className)}
     >
-      <Triangle className="size-[18px] shrink-0" />
+      <HugeiconsIcon icon={TriangleIcon} className="size-[18px] shrink-0" />
       <span className="text-sm font-medium leading-none">
         {EFFORT_MAP[effort].label}
       </span>

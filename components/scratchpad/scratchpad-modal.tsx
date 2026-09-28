@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, Copy01Icon, Delete02Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -11,7 +13,6 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { Check, Copy, ListX, X } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { resolvePromptCopyAutoStart } from "@/lib/prompt-copy-auto-start";
@@ -181,7 +182,7 @@ function ScratchpadBody() {
                 {isSaving ? (
                   <Spinner className="size-3.5" />
                 ) : (
-                  <Check className="size-3.5" />
+                  <HugeiconsIcon icon={Tick01Icon} className="size-3.5" />
                 )}
               </span>
             </TooltipTrigger>
@@ -204,7 +205,7 @@ function ScratchpadBody() {
                   onClick={removeSettled}
                   className="rounded-full text-muted-foreground hover:text-foreground"
                 >
-                  <ListX className="size-4" />
+                  <HugeiconsIcon icon={Delete02Icon} className="size-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t("removeSettled")}</TooltipContent>
@@ -234,7 +235,7 @@ function ScratchpadBody() {
                   onClick={copyAll}
                   className="rounded-full text-muted-foreground hover:text-foreground"
                 >
-                  <Copy className="size-4" />
+                  <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t("copyAll")}</TooltipContent>
@@ -250,7 +251,7 @@ function ScratchpadBody() {
               onClick={() => setOpen(false)}
               className="rounded-full text-muted-foreground hover:text-foreground"
             >
-              <X className="size-4" />
+              <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>{t("close")}</TooltipContent>

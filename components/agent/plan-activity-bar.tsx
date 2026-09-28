@@ -1,9 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { ArrowRight01Icon, CancelCircleIcon as CircleSlash, CheckmarkCircle01Icon as CheckCircle2, CircleIcon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, Spinner, cn } from "mangue-ui";
-import { CheckCircle2, ChevronRight, Circle, CircleSlash, ListChecks } from "lucide-react";
 import type { PlanStep } from "@/lib/agent-plan";
 
 /**
@@ -54,8 +56,8 @@ export function PlanActivityBar({ steps }: { steps: PlanStep[] }) {
         <Collapsible open={open} onOpenChange={setOpen}>
           <div className="flex items-center gap-2 px-3 py-2.5">
             <CollapsibleTrigger className="group flex min-w-0 flex-1 items-center gap-1.5 text-xs font-medium text-muted-foreground outline-hidden transition-colors hover:text-foreground">
-              <ChevronRight className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
-              <ListChecks className="size-3.5 shrink-0" />
+              <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
+              <HugeiconsIcon icon={TaskDone01Icon} className="size-3.5 shrink-0" />
               {/* The current step rather than the word “Plan”: this is what we
  are looking for. The shimmer only runs as long as she moves forward. */}
               <span className={cn("truncate", current && "text-shimmer")}>
@@ -80,13 +82,13 @@ export function PlanActivityBar({ steps }: { steps: PlanStep[] }) {
                   )}
                 >
                   {s.status === "completed" ? (
-                    <CheckCircle2 className="mt-px size-3.5 shrink-0 text-brand" />
+                    <AppIcon icon={CheckCircle2} className="mt-px size-3.5 shrink-0 text-brand" />
                   ) : s.status === "in_progress" ? (
                     <Spinner className="mt-px size-3.5 shrink-0 text-brand" />
                   ) : s.status === "cancelled" ? (
-                    <CircleSlash className="mt-px size-3.5 shrink-0" />
+                    <AppIcon icon={CircleSlash} className="mt-px size-3.5 shrink-0" />
                   ) : (
-                    <Circle className="mt-px size-3.5 shrink-0" />
+                    <HugeiconsIcon icon={CircleIcon} className="mt-px size-3.5 shrink-0" />
                   )}
                   <span className="min-w-0">{s.step}</span>
                 </div>

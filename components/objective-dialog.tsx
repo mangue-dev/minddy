@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Tick01Icon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useEffect, useRef, useState } from "react";
@@ -18,7 +20,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { Check } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the objectives route —
 // see markdown-editor-lazy.tsx. The dialog mounts with the page, which warms
@@ -160,7 +161,7 @@ function ColorCompact({
               )}
               style={{ backgroundColor: c }}
             >
-              {value === c && <Check className="size-3.5 text-white" />}
+              {value === c && <HugeiconsIcon icon={Tick01Icon} className="size-3.5 text-white" />}
             </button>
           ))}
         </div>

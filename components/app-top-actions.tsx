@@ -1,9 +1,10 @@
 "use client";
-import type { ComponentType, ReactNode } from "react";
+import type { ReactNode } from "react";
+import { Search01Icon as Search } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { cn } from "mangue-ui";
-import { Search } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { AppIcon } from "@/components/icon";
 import { KbdSequence } from "@/components/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SIDEBAR_COMPACT_CONTROL_CLASS, SIDEBAR_TOOLTIP_DELAY_MS } from "@/lib/sidebar-control-styles";
@@ -21,7 +22,7 @@ function SidebarTopAction({
   shortcut,
   inboxTrigger,
 }: {
-  icon: ComponentType<{ className?: string }>;
+  icon: AppIcon;
   label: string;
   href?: string;
   onClick?: () => void;
@@ -38,7 +39,7 @@ function SidebarTopAction({
   );
   const content = (
     <span className="relative flex size-4 shrink-0">
-      <Icon className="size-4" />
+      <AppIcon icon={Icon} className="size-4" />
       {badge != null ? (
         <span className="absolute -right-2 -top-1.5 flex items-center justify-center rounded-full bg-sidebar">
           {badge}

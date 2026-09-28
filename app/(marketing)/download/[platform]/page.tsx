@@ -1,8 +1,9 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, ArrowRight01Icon, GlobeIcon, LinkSquare01Icon, SmartPhone01Icon, Tablet01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ArrowLeft, ArrowRight, Check, ExternalLink, Globe, Smartphone, Tablet } from "lucide-react";
 import { Button } from "mangue-ui/components/ui/button";
 import { Github } from "@/components/git/provider-icons";
 import type { Locale } from "@/i18n/config";
@@ -36,13 +37,13 @@ export default async function DownloadPlatformPage({ params }: { params: Promise
       <section className="px-4 pt-24 pb-10 sm:px-6 sm:pt-32 sm:pb-14">
         <div className="mx-auto max-w-6xl">
           <Link href={downloadHub} className="mb-7 inline-flex min-h-11 items-center gap-2 rounded-full text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
-            <ArrowLeft className="size-4" aria-hidden />{t("allDownloads")}
+            <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" aria-hidden />{t("allDownloads")}
           </Link>
           <h1 className="max-w-5xl text-[clamp(2.5rem,5.8vw,5rem)] leading-[1.06] font-medium tracking-[-0.055em] text-balance">{t("heroTitle")}</h1>
           <p className="mt-7 max-w-2xl text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg">{t("heroSubtitle")}</p>
           <nav aria-label={t("installTitle")} className="mt-8 flex flex-wrap gap-3">
-            <Button asChild size="lg" className="rounded-full"><a href="#ios-install"><Tablet data-icon="inline-start" />{td("iosGuideEyebrow")}<ArrowRight data-icon="inline-end" /></a></Button>
-            <Button asChild size="lg" variant="outline" className="rounded-full"><a href="#android-install"><Smartphone data-icon="inline-start" />{td("androidGuideEyebrow")}<ArrowRight data-icon="inline-end" /></a></Button>
+            <Button asChild size="lg" className="rounded-full"><a href="#ios-install"><HugeiconsIcon icon={Tablet01Icon} data-icon="inline-start" />{td("iosGuideEyebrow")}<HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" /></a></Button>
+            <Button asChild size="lg" variant="outline" className="rounded-full"><a href="#android-install"><HugeiconsIcon icon={SmartPhone01Icon} data-icon="inline-start" />{td("androidGuideEyebrow")}<HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" /></a></Button>
           </nav>
         </div>
       </section>
@@ -53,7 +54,7 @@ export default async function DownloadPlatformPage({ params }: { params: Promise
             <h2 className="text-xl font-medium tracking-tight">{t("availabilityTitle")}</h2>
             <p className="mt-3 text-sm leading-relaxed opacity-80">{t("availabilityBody")}</p>
           </div>
-          <Button asChild size="lg" className="w-fit shrink-0 rounded-full"><a href="/signup">{t("secondaryCta")}<ArrowRight data-icon="inline-end" /></a></Button>
+          <Button asChild size="lg" className="w-fit shrink-0 rounded-full"><a href="/signup">{t("secondaryCta")}<HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" /></a></Button>
         </div>
       </section>
 
@@ -65,13 +66,13 @@ export default async function DownloadPlatformPage({ params }: { params: Promise
       <section className="px-4 py-12 sm:px-6 sm:py-16">
         <div className="mx-auto max-w-6xl">
           <div className={`rounded-2xl p-6 sm:p-8 ${CARD_TONES.peach}`}>
-            <Check className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+            <HugeiconsIcon icon={Tick01Icon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
             <h2 className="text-3xl font-medium tracking-[-0.035em] sm:text-4xl">{t("finishTitle")}</h2>
             <p className="mt-4 max-w-2xl text-base leading-relaxed opacity-80">{t("finishBody")}</p>
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <article className={`rounded-2xl p-6 sm:p-8 ${CARD_TONES.sky}`}>
-              <Globe className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+              <HugeiconsIcon icon={GlobeIcon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
               <h2 className="text-2xl font-medium tracking-tight">{t("noteTitle")}</h2>
               <p className="mt-3 text-sm leading-relaxed opacity-80">{t("noteBody")}</p>
             </article>
@@ -80,7 +81,7 @@ export default async function DownloadPlatformPage({ params }: { params: Promise
               <h2 className="text-2xl font-medium tracking-tight">{t("openSourceTitle")}</h2>
               <p className="mt-3 text-sm leading-relaxed opacity-80">{t("openSourceBody")}</p>
               <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">
-                {[[MINDDY_REPOSITORY_URL, "GitHub"], [MINDDY_LICENSE_URL, "GNU AGPL v3.0"]].map(([href, label]) => <a key={href} href={href} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-sm text-sm font-medium underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">{label}<ExternalLink className="size-3.5" aria-hidden /></a>)}
+                {[[MINDDY_REPOSITORY_URL, "GitHub"], [MINDDY_LICENSE_URL, "GNU AGPL v3.0"]].map(([href, label]) => <a key={href} href={href} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-sm text-sm font-medium underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">{label}<HugeiconsIcon icon={LinkSquare01Icon} className="size-3.5" aria-hidden /></a>)}
               </div>
             </article>
           </div>

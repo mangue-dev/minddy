@@ -5,19 +5,19 @@ import {
   useImperativeHandle,
   useLayoutEffect,
   useState,
-  type ComponentType,
 } from "react";
 import { Extension, type Editor, type Range } from "@tiptap/core";
 import { ReactRenderer } from "@tiptap/react";
 import { Suggestion, type SuggestionProps } from "@tiptap/suggestion";
 import { PluginKey } from "@tiptap/pm/state";
 import { cn } from "mangue-ui";
+import { AppIcon } from "@/components/icon";
 
 /** One entry of the `/` menu. `run` receives the editor and the range of the
     `/query` text to replace. */
 export interface SlashItem {
   title: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: AppIcon;
   keywords: string[];
   run: (editor: Editor, range: Range) => void;
 }
@@ -87,7 +87,7 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
               : "text-foreground/90"
           )}
         >
-          <item.icon className="size-4 shrink-0 text-muted-foreground" />
+          <AppIcon icon={item.icon} className="size-4 shrink-0 text-muted-foreground" />
           <span className="truncate">{item.title}</span>
         </button>
       ))}

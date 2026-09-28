@@ -1,3 +1,4 @@
+import type { AppIcon } from "@/components/icon";
 // The DESCRIPTOR of a page block: the object which declares, in a single place,
 // the six things a block actually is.
 //
@@ -22,7 +23,6 @@
 // intact d'un aller-retour.
 
 import type { Editor, Extensions, Range } from "@tiptap/core";
-import type { LucideIcon } from "lucide-react";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
@@ -160,7 +160,7 @@ export interface PageBlock {
  */
   extensions: Extensions;
 
-  icon: LucideIcon;
+  icon: AppIcon;
   labelKey: MessageKey<"Pages">;
 
   /** The “/” menu: where the block appears, and what it is looking for.

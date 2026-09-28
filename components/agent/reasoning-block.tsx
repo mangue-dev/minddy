@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { BrainIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, cn } from "mangue-ui";
-import { Brain } from "lucide-react";
 import { Markdown } from "@/components/markdown";
 
 /**
@@ -55,7 +56,7 @@ export function ReasoningBlock({
 
   const row = (
     <div className="flex items-center gap-2 py-0.5 text-xs text-muted-foreground">
-      <Brain className="size-3 shrink-0" />
+      <HugeiconsIcon icon={BrainIcon} className="size-3 shrink-0" />
       <span className={cn("flex-1 truncate text-left", active && "text-shimmer")}>
         {t("reasoning")}
       </span>

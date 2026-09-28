@@ -1,5 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { ArrowDown01Icon, ArrowUp01Icon, ArrowUpDownIcon, Copy01Icon, TextWrapIcon as WrapText, Tick01Icon } from "@hugeicons/core-free-icons";
 import {
   useEffect,
   useLayoutEffect,
@@ -7,14 +10,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  Check,
-  ChevronDown,
-  ChevronUp,
-  Copy,
-  ChevronsUpDown,
-  WrapText,
-} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button, IconButton, cn } from "mangue-ui";
 import {
@@ -45,7 +40,7 @@ export function CodeBlockLanguageTrigger({
       className="code-block-node-language-trigger"
     >
       <span className="truncate">{label}</span>
-      <ChevronsUpDown className="size-3.5 shrink-0 opacity-50" />
+      <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3.5 shrink-0 opacity-50" />
     </Button>
   );
 }
@@ -134,7 +129,7 @@ export function CodeBlockSurface({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => setWrapped((current) => !current)}
               >
-                <WrapText className="size-4" />
+                <AppIcon icon={WrapText} className="size-4" />
               </IconButton>
             </TooltipTrigger>
             <TooltipContent>{t("codeWrap")}</TooltipContent>
@@ -149,7 +144,7 @@ export function CodeBlockSurface({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => void copy()}
               >
-                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                {copied ? <HugeiconsIcon icon={Tick01Icon} className="size-4" /> : <HugeiconsIcon icon={Copy01Icon} className="size-4" />}
               </IconButton>
             </TooltipTrigger>
             <TooltipContent>{copied ? t("copied") : t("copy")}</TooltipContent>
@@ -168,9 +163,9 @@ export function CodeBlockSurface({
             onClick={() => setExpanded((current) => !current)}
           >
             {expanded ? (
-              <ChevronUp className="size-3.5" />
+              <HugeiconsIcon icon={ArrowUp01Icon} className="size-3.5" />
             ) : (
-              <ChevronDown className="size-3.5" />
+              <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
             )}
             {expanded ? tAssistant("collapse") : tAssistant("expand")}
           </Button>

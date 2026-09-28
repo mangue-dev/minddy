@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, FilterIcon, GitPullRequestIcon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -14,7 +16,6 @@ import {
   Spinner,
   cn,
 } from "mangue-ui";
-import { GitPullRequest, Link2, ListFilter, Plus } from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
 import { GitLogin } from "@/components/git/git-login";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
@@ -191,7 +192,7 @@ function PrFilterMenu({
           aria-label={t("filterTooltip", { state: stateLabel })}
         >
           <span className="relative flex items-center justify-center">
-            <ListFilter className="size-[18px]" />
+            <HugeiconsIcon icon={FilterIcon} className="size-[18px]" />
             {active ? (
               /* The ring in the color of the bar detaches the pellet from the line
                  of the icon, which passes just below. */
@@ -310,11 +311,7 @@ function PrRow({
           <span className="shrink-0 text-foreground">{identifier}</span>
           {linkedIssue ? (
             <>
-              <Link2
-                data-testid="pr-sidebar-issue-link-icon"
-                className="size-3 shrink-0"
-                aria-hidden
-              />
+              <HugeiconsIcon icon={Link02Icon} data-testid="pr-sidebar-issue-link-icon" className="size-3 shrink-0" aria-hidden />
               <span className="truncate">{linkedIssue}</span>
             </>
           ) : null}
@@ -764,9 +761,9 @@ export function PullRequestsPage() {
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
         <div className="mx-auto max-w-5xl">
           {projects.length === 0 ? (
-            <EmptyScene icon={GitPullRequest} title={t("emptyNoProject")}>
+            <EmptyScene icon={GitPullRequestIcon} title={t("emptyNoProject")}>
               <Button onClick={openCreateProject}>
-                <Plus />
+                <HugeiconsIcon icon={Add01Icon} />
                 {tProjects("firstProject")}
               </Button>
             </EmptyScene>
@@ -774,7 +771,7 @@ export function PullRequestsPage() {
             /* Without a linked deposit, there is no button to offer: the deposit is linked
                in the settings OF ONE project, and we don't know which one. */
             <EmptyScene
-              icon={GitPullRequest}
+              icon={GitPullRequestIcon}
               title={repoCount === 0 ? t("emptyNoRepo") : t("emptyNone")}
             />
           )}
@@ -833,7 +830,7 @@ export function PullRequestsPage() {
              pull request ouverte » serait faux s'il en existe, mais d'un autre. */
           <EmptyScene
             size="compact"
-            icon={GitPullRequest}
+            icon={GitPullRequestIcon}
             title={
               query.trim()
                 ? tCommon("noFilterMatch")

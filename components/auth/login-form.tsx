@@ -1,11 +1,12 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button, Input, Spinner, toast } from "mangue-ui";
-import { UserPlus } from "lucide-react";
 import { MfaChallenge } from "@/components/auth/mfa-challenge";
 import {
   AuthColumn,
@@ -223,7 +224,7 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
  his session which takes care of it, at /auth/callback. */}
           {invite && (
             <div className="flex gap-3 rounded-lg border border-border bg-card p-3.5">
-              <UserPlus className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+              <HugeiconsIcon icon={UserAdd01Icon} className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
               <div className="space-y-1">
                 <p className="text-sm font-medium leading-snug">
                   {t("inviteBannerTitle", {

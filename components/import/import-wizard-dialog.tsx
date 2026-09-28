@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Alert01Icon, FileAttachmentIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Button, cn } from "mangue-ui";
-import { FileText, TriangleAlert } from "lucide-react";
 import { WizardDialog, type WizardStep } from "@/components/wizard/wizard-dialog";
 import { ImportGuideBlock } from "@/components/import/import-guide";
 import { CsvDropzone } from "@/components/import/csv-dropzone";
@@ -144,7 +145,7 @@ export function ImportWizardDialog({
  below. */}
             {!hasTitleColumn && (
               <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500">
-                <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+                <HugeiconsIcon icon={Alert01Icon} className="size-3.5 shrink-0" aria-hidden />
                 {t("importErrorInvalid")}
               </p>
             )}
@@ -205,10 +206,7 @@ export function ImportWizardDialog({
                     key={i}
                     className="flex items-start gap-1.5 text-xs text-muted-foreground"
                   >
-                    <TriangleAlert
-                      className="mt-0.5 size-3.5 shrink-0"
-                      aria-hidden
-                    />
+                    <HugeiconsIcon icon={Alert01Icon} className="mt-0.5 size-3.5 shrink-0" aria-hidden />
                     {t(`importWarn_${w.key}`, {
                       value: w.value ?? "",
                       count: w.count,
@@ -294,7 +292,7 @@ function FileLine({
         className
       )}
     >
-      <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+      <HugeiconsIcon icon={FileAttachmentIcon} className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{fileName}</p>
         <p className="truncate text-xs text-muted-foreground">

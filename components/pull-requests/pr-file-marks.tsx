@@ -1,8 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { AppIcon } from "@/components/icon";
+import { FileAddIcon as FilePlus, FileEditIcon as FilePen, FileRemoveIcon as FileMinus, FileSymlinkIcon as FileSymlink } from "@hugeicons/core-free-icons";
 import { cn } from "mangue-ui";
-import { FileMinus, FilePen, FilePlus, FileSymlink } from "lucide-react";
 import { FILE_STATUS_LABELS, type FileStatus } from "@/lib/pr-file-tree";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 
@@ -53,7 +54,7 @@ export function FileStatusIcon({
   return (
     <AppTooltip label={label}>
       <span className={cn("shrink-0", STATUS_COLORS[status], className)}>
-      <Icon className="size-3.5" aria-hidden />
+      <AppIcon icon={Icon} className="size-3.5" aria-hidden />
       <span className="sr-only">{label}</span>
       </span>
     </AppTooltip>

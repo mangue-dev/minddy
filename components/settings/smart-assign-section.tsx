@@ -1,10 +1,11 @@
 "use client";
 
-import {useEffect, useState} from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Alert01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import {useEffect, useState, type SVGProps} from "react";
 import Link from "next/link";
 import {useTranslations} from "next-intl";
 import {Badge, Button, Spinner, Switch, toast} from "mangue-ui";
-import {TriangleAlert, UserRound} from "lucide-react";
 import {useProjects} from "@/lib/projects-context";
 import {useMembersQuery} from "@/lib/use-members-query";
 import {UserAvatar} from "@/components/user-avatar";
@@ -15,6 +16,21 @@ import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import {AutoTextarea} from "@/components/auto-textarea";
 import type { Project } from "@/lib/types";
+
+const UserCircleSceneIcon = ({
+  className,
+  style,
+  strokeWidth,
+  ref,
+}: SVGProps<SVGSVGElement>) => (
+  <HugeiconsIcon
+    icon={UserCircleIcon}
+    ref={ref}
+    className={className}
+    style={style}
+    strokeWidth={strokeWidth as number | undefined}
+  />
+);
 
 /** Project-level Smart Assign preferences (MIN-31): the opt-in switch and, on
  multi-member projects, one free-text assignment rule per member (owner
@@ -135,7 +151,7 @@ export function SmartAssignSection({
         {enabled && !loading && members.length <= 1 && (
           <EmptyScene
             size="compact"
-            icon={UserRound}
+            icon={UserCircleSceneIcon}
             title={t("smartAssignSoloHint")}
           >
             {isOwner && (
@@ -158,7 +174,7 @@ export function SmartAssignSection({
  returns everything to the owner. */}
             {incomplete && (
               <p className="flex items-start gap-2 text-xs leading-relaxed text-amber-600 dark:text-amber-500">
-                <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                <HugeiconsIcon icon={Alert01Icon} className="mt-0.5 size-3.5 shrink-0" aria-hidden />
                 {t("smartAssignIncompleteWarning", {
                   count: missingRuleIds.size,
                   total: members.length,
@@ -181,7 +197,7 @@ export function SmartAssignSection({
                   {m.is_owner && <Badge variant="secondary">{tm("owner")}</Badge>}
                   {missingRuleIds.has(m.user_id) && (
                     <span className="inline-flex shrink-0 items-center gap-1 text-xs font-normal text-amber-600 dark:text-amber-500">
-                      <TriangleAlert className="size-3" aria-hidden />
+                      <HugeiconsIcon icon={Alert01Icon} className="size-3" aria-hidden />
                       {t("smartAssignNoRule")}
                     </span>
                   )}

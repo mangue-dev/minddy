@@ -1,4 +1,6 @@
-import { RefreshCw, ServerOff } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { Refresh01Icon, ServerOffIcon as ServerOff } from "@hugeicons/core-free-icons";
 import { Button } from "mangue-ui";
 
 type ServerUnavailableStateProps = {
@@ -20,7 +22,7 @@ export function ServerUnavailableState({
 }: ServerUnavailableStateProps) {
   const buttonContent = (
     <>
-      <RefreshCw className="size-4" aria-hidden />
+      <HugeiconsIcon icon={Refresh01Icon} className="size-4" aria-hidden />
       {retryLabel}
     </>
   );
@@ -33,7 +35,7 @@ export function ServerUnavailableState({
     >
       <div className="mx-auto w-full max-w-lg text-center">
         <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl border border-border bg-muted text-muted-foreground">
-          <ServerOff className="size-7" aria-hidden />
+          <AppIcon icon={ServerOff} className="size-7" aria-hidden />
         </div>
         <h1 className="text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl">
           {title}

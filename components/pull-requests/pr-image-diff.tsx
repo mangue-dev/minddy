@@ -1,10 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ImageNotFound01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn, Spinner } from "mangue-ui";
-import { ImageOff } from "lucide-react";
-
 import { prFileRawUrl, type PrEndpoint, type PullRequestFile } from "@/lib/agent-api";
 
 /**
@@ -163,7 +163,7 @@ function ImagePane({
           />
         ) : (
           <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <ImageOff className="size-3.5" />
+            <HugeiconsIcon icon={ImageNotFound01Icon} className="size-3.5" />
             {version.status === "failed" ? t("imageFailed") : t("imageAbsent")}
           </span>
         )}

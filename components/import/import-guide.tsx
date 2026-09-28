@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Copy01Icon, LinkSquare01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, cn, toast } from "mangue-ui";
-import { Copy, ExternalLink } from "lucide-react";
 import { IMPORT_GUIDES, type ImportGuide } from "@/lib/import-guides";
 import { useModShortcut } from "@/lib/keyboard/use-mod-shortcut";
 import { ImportSourceLogo } from "@/components/import-source-logo";
@@ -103,7 +104,7 @@ export function ImportGuideBlock({
             {guide.command}
           </code>
           <Button type="button" size="sm" onClick={() => void copyCommand()}>
-            <Copy />
+            <HugeiconsIcon icon={Copy01Icon} />
             {t("importCopyCommand")}
           </Button>
         </div>
@@ -119,7 +120,7 @@ export function ImportGuideBlock({
           className="flex items-center gap-1 self-start text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
         >
           {t("importGuideDoc", { name: guide.label })}
-          <ExternalLink className="size-3" aria-hidden />
+          <HugeiconsIcon icon={LinkSquare01Icon} className="size-3" aria-hidden />
         </a>
       )}
     </div>

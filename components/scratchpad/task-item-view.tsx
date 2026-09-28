@@ -22,6 +22,9 @@
 // page which INJECTS this view during assembly (`pageExtensions({ nodeViews })`),
 // as it already does for the mention pill.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { CancelCircleIcon as CircleSlash, CircleIcon, Copy01Icon, MoreHorizontalIcon, PlayIcon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { AppIcon } from "@/components/icon";
 import { useRef, useState, type MouseEvent } from "react";
 import {
   NodeViewContent,
@@ -41,14 +44,6 @@ import {
   toast,
 } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
-import {
-  Check,
-  Circle,
-  CircleSlash,
-  Copy,
-  Ellipsis,
-  Play,
-} from "lucide-react";
 import { SearchMenu } from "@/components/search-menu";
 import { NumoIcon } from "@/components/numo-icon";
 import { taskSectionHeadings } from "@/lib/task-sections";
@@ -76,19 +71,19 @@ import { selectionKeysActive } from "@/lib/keyboard/selection-keys";
 const STATE_CHOICES = [
   {
     value: "pending",
-    icon: Circle,
+    icon: CircleIcon,
     label: "markPending",
     keywords: ["pending", "todo", "à faire", "a faire"],
   },
   {
     value: "in_progress",
-    icon: Play,
+    icon: PlayIcon,
     label: "markInProgress",
     keywords: ["in progress", "en cours", "wip"],
   },
   {
     value: "completed",
-    icon: Check,
+    icon: Tick01Icon,
     label: "markCompleted",
     keywords: ["completed", "done", "terminé", "termine", "fait"],
   },
@@ -100,7 +95,7 @@ const STATE_CHOICES = [
   },
 ] as const satisfies readonly {
   value: PlanTaskState;
-  icon: typeof Circle;
+  icon: AppIcon;
   label: string;
   keywords: readonly string[];
 }[];
@@ -241,7 +236,7 @@ export function TaskItemView({
     setQuery("");
   };
   const CurrentStateIcon =
-    STATE_CHOICES.find((c) => c.value === state)?.icon ?? Circle;
+    STATE_CHOICES.find((c) => c.value === state)?.icon ?? CircleIcon;
 
   // Shortcuts on hover, like on a ticket card: ⇧A launches the agent,
   // ⇧P copies the line as a prompt. They are placed on the TASK alone — the
@@ -364,7 +359,7 @@ export function TaskItemView({
                 onMouseDown={(e) => e.preventDefault()}
                 className="size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/task:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
               >
-                <Ellipsis className="size-4" />
+                <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
               </Button>
             }
           >
@@ -380,7 +375,7 @@ export function TaskItemView({
                       keywords={[...keywords]}
                       onSelect={() => pick(() => set(value))}
                     >
-                      <Icon />
+                      <AppIcon icon={Icon} />
                       {t(label)}
                     </CommandItem>
                   )
@@ -399,7 +394,7 @@ export function TaskItemView({
                     setQuery("");
                   }}
                 >
-                  <CurrentStateIcon />
+                  <AppIcon icon={CurrentStateIcon} />
                   {t("changeState")}
                 </CommandItem>
                 <CommandSeparator className="my-1" />
@@ -443,7 +438,7 @@ export function TaskItemView({
                   keywords={["copy", "copier", "prompt", "agent"]}
                   onSelect={() => pick(copyLine)}
                 >
-                  <Copy />
+                  <HugeiconsIcon icon={Copy01Icon} />
                   {t("copyLine")}
                   <CommandShortcut>
                     <Kbd size="sm">⇧P</Kbd>

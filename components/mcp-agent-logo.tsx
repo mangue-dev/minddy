@@ -1,6 +1,8 @@
 "use client";
 
-import type { ComponentType, SVGProps } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { BotIcon } from "@hugeicons/core-free-icons";
+import type { ComponentType } from "react";
 import {
   Claude,
   ClaudeCode,
@@ -10,12 +12,11 @@ import {
   OpenCode,
   Windsurf,
 } from "@lobehub/icons";
-import { Bot } from "lucide-react";
 import { cn } from "mangue-ui";
 import type { McpAgentId } from "@/lib/mcp-agents";
 
 type AgentLogoComponent = ComponentType<
-  SVGProps<SVGSVGElement> & {
+  Omit<React.ComponentProps<typeof HugeiconsIcon>, "icon"> & {
     size?: number | string;
   }
 >;
@@ -71,10 +72,6 @@ export function McpAgentLogo({
     );
   }
   return (
-    <Bot
-      aria-hidden
-      className={cn("shrink-0", className)}
-      style={{ width: size, height: size }}
-    />
+    <HugeiconsIcon icon={BotIcon} aria-hidden className={cn("shrink-0", className)} style={{ width: size, height: size }} />
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, Cancel01Icon, CircleDotDashedIcon as CircleDotDashed, Copy01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -16,7 +18,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { Check, ChevronLeft, CircleDotDashed, Copy, X } from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
 import { AppContentHeader } from "@/components/app-content-header";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
@@ -509,7 +510,7 @@ export default function TriagePage() {
                 className="md:hidden"
                 onClick={() => setMobileDetail(false)}
               >
-                <ChevronLeft />
+                <HugeiconsIcon icon={ArrowLeft01Icon} />
               </Button>
               <span className="font-mono text-sm text-muted-foreground">
                 {issueIdentifier(project.key, selected.number)}
@@ -527,7 +528,7 @@ export default function TriagePage() {
                   align="end"
                   trigger={
                     <Button variant="outline" size="sm">
-                      <Copy className="text-muted-foreground" />
+                      <HugeiconsIcon icon={Copy01Icon} className="text-muted-foreground" />
                       {t("markDuplicate")}
                     </Button>
                   }
@@ -537,11 +538,11 @@ export default function TriagePage() {
                   size="sm"
                   onClick={() => openConfirm("decline", selected)}
                 >
-                  <X />
+                  <HugeiconsIcon icon={Cancel01Icon} />
                   {t("decline")}
                 </Button>
                 <Button size="sm" onClick={() => openConfirm("accept", selected)}>
-                  <Check />
+                  <HugeiconsIcon icon={Tick01Icon} />
                   {t("accept")}
                 </Button>
               </div>

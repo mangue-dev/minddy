@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Copy01Icon, GlobeIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { MIN_SHARE_PASSWORD_LENGTH } from "@/lib/share-password";
@@ -17,8 +19,6 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { Copy, Globe } from "lucide-react";
-
 import {
   deletePageShareApi,
   fetchPageShareApi,
@@ -141,7 +141,7 @@ export function PagePublishDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Globe className="size-4 text-brand" />
+            <HugeiconsIcon icon={GlobeIcon} className="size-4 text-brand" />
             {t("title")}
           </DialogTitle>
           <DialogDescription>{t("description", { name: title })}</DialogDescription>
@@ -213,7 +213,7 @@ export function PagePublishDialog({
                     className="shrink-0"
                     onClick={copyLink}
                   >
-                    <Copy />
+                    <HugeiconsIcon icon={Copy01Icon} />
                     {t("copyLink")}
                   </Button>
                 </div>

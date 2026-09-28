@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { MailValidation01Icon } from "@hugeicons/core-free-icons";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -13,7 +15,6 @@ import {
   Input,
   Spinner,
 } from "mangue-ui";
-import { MailCheck } from "lucide-react";
 import { requestOtpAction, verifyOtpAction } from "./actions";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -101,7 +102,7 @@ export function FeedbackAuthDialog({
         >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <MailCheck className="size-4 text-brand" />
+              <HugeiconsIcon icon={MailValidation01Icon} className="size-4 text-brand" />
               {t("authTitle")}
             </DialogTitle>
             <DialogDescription>

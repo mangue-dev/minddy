@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, Alert01Icon, ArrowLeft01Icon, ArrowReloadHorizontalIcon as IterationCw, BrushIcon, Calendar01Icon, CircleDotDashedIcon, Clock01Icon as FileClock, Delete02Icon, Download01Icon, FileAttachmentIcon, GitPullRequestIcon, Home01Icon, InboxIcon, KeyboardIcon, LayoutGridIcon, MessageMultiple01Icon, Notebook01Icon, Settings01Icon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import {
   startTransition,
   useCallback,
@@ -21,30 +23,14 @@ import {
   cn,
   toast,
   useMediaQuery,
+  type CommandMenuGroup,
+  type NavSection,
 } from "mangue-ui";
 import {
-  Home,
-  ChevronLeft,
-  Plus,
-  Inbox,
-  LayoutGrid,
-  Target,
-  CircleDotDashed,
-  MessagesSquare,
-  Settings,
-  ListTodo,
-  Keyboard,
-  CalendarClock,
-  GitPullRequest,
-  NotebookPen,
-  IterationCw,
-  Brush,
-  TriangleAlert,
-  Download,
-  FileClock,
-  FileText,
-  Trash2,
-} from "lucide-react";
+  AppIcon,
+  dataIcon,
+  type IconComponent,
+} from "@/components/icon";
 import { InboxPopover } from "@/components/inbox-popover";
 import { openInbox } from "@/lib/inbox-launcher";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
@@ -208,6 +194,32 @@ function projectChip(project: Project) {
   );
 }
 
+// mangue-ui's MobileNav renders nav/command icons itself as components, so
+// Hugeicons icon DATA must be bridged into components at that boundary only.
+function menuIcon(icon: AppIcon): IconComponent {
+  return Array.isArray(icon) ? dataIcon(icon) : (icon as IconComponent);
+}
+
+function toMenuGroups(groups: PaletteGroup[]): CommandMenuGroup[] {
+  return groups.map((group) => ({
+    ...group,
+    items: group.items.map((item) => ({
+      ...item,
+      icon: item.icon ? menuIcon(item.icon) : undefined,
+    })),
+  }));
+}
+
+function toMenuSections(sections: AppNavSection[]): NavSection[] {
+  return sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) => ({
+      ...item,
+      icon: item.icon ? menuIcon(item.icon) : undefined,
+    })),
+  }));
+}
+
 // The palette icon slot renders `<Icon className="size-4 …" />` with no way to
 // pass a color, so we hand it a per-color component (the objective's dot, like
 // on the objectives page). Cache by color to keep component identity stable
@@ -260,7 +272,7 @@ const NumoNavIcon = ({ className }: { className?: string }) => (
 NumoNavIcon.displayName = "NumoNavIcon";
 
 const TriageNavIcon = ({ className }: { className?: string }) => (
-  <CircleDotDashed className={className} strokeWidth={2.25} />
+  <AppIcon icon={CircleDotDashedIcon} className={className} strokeWidth={2.25} />
 );
 TriageNavIcon.displayName = "TriageNavIcon";
 
@@ -272,7 +284,7 @@ import { countBadge, countBadges } from "@/components/nav-badge";
  * would suggest a project without anything to sort.
  */
 function draftBadge(label: string) {
-  return <FileClock className="size-3.5 text-muted-foreground" aria-label={label} />;
+  return <AppIcon icon={FileClock} className="size-3.5 text-muted-foreground" aria-label={label} />;
 }
 
 /** Muted monospace identifier badge, e.g. "MIND-42". */
@@ -593,10 +605,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { warnings: smartAssignWarnings } = useSmartAssignWarningsQuery();
   const smartAssignBadge =
     smartAssignWarnings.length > 0 ? (
-      <TriangleAlert
-        className="size-3.5 text-amber-500"
-        aria-label={t("smartAssignIncomplete")}
-      />
+      <HugeiconsIcon icon={Alert01Icon} className="size-3.5 text-amber-500" aria-label={t("smartAssignIncomplete")} />
     ) : undefined;
 
   // What's waiting to be sorted in each of my projects — tickets in triage +
@@ -645,7 +654,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       createItems.push({
         key: "create-issue",
         label: t("newIssue"),
-        icon: ListTodo,
+        icon: TaskEdit01Icon,
         keywords: [...createKw, ti("entity"), currentProject.name, currentProject.key],
         meta: projectChip(currentProject),
         metaText: currentProject.name,
@@ -658,7 +667,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       createItems.push({
         key: "create-objective",
         label: t("newObjective"),
-        icon: Target,
+        icon: Target01Icon,
         keywords: [...createKw, currentProject.name, currentProject.key],
         meta: projectChip(currentProject),
         metaText: currentProject.name,
@@ -672,7 +681,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       createItems.push({
         key: "create-page",
         label: tPages("newPage"),
-        icon: FileText,
+        icon: FileAttachmentIcon,
         keywords: [
           ...createKw,
           "page",
@@ -695,7 +704,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       createItems.push({
         key: "create-issue",
         label: t("newIssue"),
-        icon: ListTodo,
+        icon: TaskEdit01Icon,
         keywords: [...createKw, ti("entity")],
         keys: ["C"],
         onSelect: () => openCreateIssue(),
@@ -706,7 +715,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         createItems.push({
           key: "create-objective",
           label: t("newObjective"),
-          icon: Target,
+          icon: Target01Icon,
           keywords: createKw,
           keys: ["O"],
           onSelect: () => openCreateObjective(),
@@ -717,7 +726,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       createItems.push({
         key: "create-project",
         label: t("newProject"),
-        icon: Plus,
+        icon: Add01Icon,
         keywords: createKw,
         onSelect: openCreateProject,
       });
@@ -747,12 +756,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       key: "goto",
       heading: t("goTo"),
       items: [
-        { key: "go-home", label: t("home"), icon: Home, href: "/home", keys: ["G", "H"], entityType: "navigation", onSelect: () => router.push("/home") },
-        { key: "go-inbox", label: t("inbox"), icon: Inbox, keys: ["G", "I"], onSelect: openInbox },
+        { key: "go-home", label: t("home"), icon: Home01Icon, href: "/home", keys: ["G", "H"], entityType: "navigation", onSelect: () => router.push("/home") },
+        { key: "go-inbox", label: t("inbox"), icon: InboxIcon, keys: ["G", "I"], onSelect: openInbox },
         {
           key: "open-notes",
           label: tScratch("open"),
-          icon: NotebookPen,
+          icon: Notebook01Icon,
           keys: ["mod", "⇧", "K"],
           keywords: ["notes", "scratchpad", "todo", "tâches", "problems"],
           onSelect: () => openScratchpad("palette"),
@@ -762,7 +771,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               {
                 key: "go-pull-requests",
                 label: t("pullRequests"),
-                icon: GitPullRequest,
+                icon: GitPullRequestIcon,
                 href: "/pull-requests",
                 keys: ["G", "R"],
                 entityType: "navigation",
@@ -783,7 +792,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 // entry into primary navigation.
                 key: "go-routines",
                 label: tRoutines("title"),
-                icon: CalendarClock,
+                icon: Calendar01Icon,
                 href: "/routines",
                 keys: ["G", "U"],
                 entityType: "navigation",
@@ -804,7 +813,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
          {
           key: "go-all-global",
           label: t("allIssues"),
-          icon: LayoutGrid,
+          icon: LayoutGridIcon,
           href: "/all",
           keys: ["G", "B"],
           entityType: "navigation",
@@ -834,7 +843,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         {
           key: "go-account-settings",
           label: t("accountSettings"),
-          icon: Settings,
+          icon: Settings01Icon,
           href: "/settings",
           entityType: "navigation",
           onSelect: () => router.push("/settings"),
@@ -845,7 +854,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           // project and statutes; this line assumes nothing.
           key: "export-issues",
           label: tExport("title"),
-          icon: Download,
+          icon: Download01Icon,
           keywords: [
             "export",
             "exporter",
@@ -865,7 +874,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         {
           key: "keyboard-shortcuts",
           label: tk("shortcutsTitle"),
-          icon: Keyboard,
+          icon: KeyboardIcon,
           keys: ["?"],
           keywords: ["keyboard", "shortcuts", "raccourcis", "clavier", "cheatsheet", "help", "aide"],
           onSelect: () => setCheatsheetOpen(true),
@@ -905,7 +914,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: `pg-tickets-${p.id}`,
             label: t("tickets"),
-            icon: LayoutGrid,
+            icon: LayoutGridIcon,
             keywords: kw,
             meta: chip,
             metaText,
@@ -917,7 +926,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: `pg-obj-${p.id}`,
             label: t("objectives"),
-            icon: Target,
+            icon: Target01Icon,
             keywords: kw,
             meta: chip,
             metaText,
@@ -931,7 +940,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: `pg-pages-${p.id}`,
             label: t("pages"),
-            icon: FileText,
+            icon: FileAttachmentIcon,
             keywords: [...kw, "wiki", "documentation", "doc"],
             meta: chip,
             metaText,
@@ -943,7 +952,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: `pg-triage-${p.id}`,
             label: t("triage"),
-            icon: CircleDotDashed,
+            icon: CircleDotDashedIcon,
             keywords: kw,
             meta: chip,
             metaText,
@@ -955,7 +964,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: `pg-feedback-${p.id}`,
             label: t("feedback"),
-            icon: MessagesSquare,
+            icon: MessageMultiple01Icon,
             keywords: kw,
             meta: chip,
             metaText,
@@ -967,7 +976,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: `pg-set-${p.id}`,
             label: t("projectSettings"),
-            icon: Settings,
+            icon: Settings01Icon,
             keywords: kw,
             meta: chip,
             metaText,
@@ -989,7 +998,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         pageItems.push({
           key: `pg-clean-branches-${p.id}`,
           label: tSettings("gitCleanBranches"),
-          icon: Brush,
+          icon: BrushIcon,
           keywords: [
             p.name,
             p.key,
@@ -1200,7 +1209,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               {
                 key: `wiki-${page.id}`,
                 label: page.title || tPages("untitled"),
-                icon: page.icon ? emojiIcon(page.icon) : FileText,
+                icon: page.icon ? emojiIcon(page.icon) : FileAttachmentIcon,
                 description: excerpt,
                 keywords: [project.name, project.key],
                 meta: projectChip(project),
@@ -1266,7 +1275,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const inboxItem: AppNavItem = {
     key: "inbox",
     label: t("inbox"),
-    icon: Inbox,
+    icon: InboxIcon,
     onClick: openInbox,
     shortcut: "I",
     ...countBadges(inboxCount, t("inboxBadge", { count: inboxCount })),
@@ -1278,7 +1287,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const pullRequestsItem: AppNavItem = {
     key: "pull-requests",
     label: t("pullRequests"),
-    icon: GitPullRequest,
+    icon: GitPullRequestIcon,
     href: "/pull-requests",
     active: pathname.startsWith("/pull-requests"),
     shortcut: "R",
@@ -1297,7 +1306,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const routinesItem: AppNavItem = {
     key: "routines",
     label: t("routines"),
-    icon: CalendarClock,
+    icon: Calendar01Icon,
     href: "/routines",
     active: isRoutines,
     shortcut: "U",
@@ -1322,7 +1331,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: "all-global",
             label: t("allIssues"),
-            icon: LayoutGrid,
+            icon: LayoutGridIcon,
             href: "/all",
             active: pathname === "/all",
             shortcut: "B",
@@ -1330,7 +1339,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: "home",
             label: t("home"),
-            icon: Home,
+            icon: Home01Icon,
             href: "/home",
             active: pathname.startsWith("/home"),
             shortcut: "H",
@@ -1372,7 +1381,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 {
                   id: "delete-project-draft",
                   label: tProjects("draftDelete"),
-                  icon: <Trash2 className="size-4" />,
+                  icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
                   variant: "destructive",
                   onSelect: () => {
                     void deleteProjectDraft(d.id).catch((err: Error) =>
@@ -1386,7 +1395,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: "new-project",
             label: t("newProject"),
-            icon: Plus,
+            icon: Add01Icon,
             onClick: openCreateProject,
             disabled: projectLimitReached,
           },
@@ -1408,7 +1417,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             {
               key: "home-back",
               label: t("home"),
-              icon: ChevronLeft,
+              icon: ArrowLeft01Icon,
               href: "/home",
               shortcut: "H",
               badge: homeBadge,
@@ -1420,7 +1429,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             {
               key: "tickets",
               label: t("tickets"),
-              icon: LayoutGrid,
+              icon: LayoutGridIcon,
               href: base,
               active: pathname === base && !objectiveBoardId,
               // P (project) — B is the all-project board, from a project too.
@@ -1429,7 +1438,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             {
               key: "objectives",
               label: t("objectives"),
-              icon: Target,
+              icon: Target01Icon,
               href: `${base}/objectives`,
               active:
                 pathname.startsWith(`${base}/objectives`) || !!objectiveBoardId,
@@ -1443,7 +1452,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             {
               key: "pages",
               label: t("pages"),
-              icon: FileText,
+              icon: FileAttachmentIcon,
               href: `${base}/pages`,
               active: pathname.startsWith(`${base}/pages`),
               shortcut: "W",
@@ -1465,7 +1474,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             {
               key: "feedback",
               label: t("feedback"),
-              icon: MessagesSquare,
+              icon: MessageMultiple01Icon,
               href: `${base}/feedback`,
               active: pathname.startsWith(`${base}/feedback`),
               shortcut: "F",
@@ -1478,7 +1487,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             {
               key: "settings",
               label: t("projectSettings"),
-              icon: Settings,
+              icon: Settings01Icon,
               href: `${base}/settings`,
               active: pathname.startsWith(`${base}/settings`),
               shortcut: "S",
@@ -1534,17 +1543,18 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     [commandGroups, settingsGroups, desktopDataGroups, accountCommandGroup]
   );
   const mobilePaletteGroups = useMemo(
-    () => [
-      ...commandGroups,
-      ...settingsGroups,
-      ...mobileDataGroups,
-      accountCommandGroup,
-    ],
+    () =>
+      toMenuGroups([
+        ...commandGroups,
+        ...settingsGroups,
+        ...mobileDataGroups,
+        accountCommandGroup,
+      ]),
     [commandGroups, settingsGroups, mobileDataGroups, accountCommandGroup]
   );
 
   const mobileMenuSections = useMemo(
-    () => [...sections, ...accountSections],
+    () => toMenuSections([...sections, ...accountSections]),
     [sections, accountSections]
   );
 

@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArchiveArrowUpIcon, ArchiveIcon, Clock01Icon, Delete02Icon, Loading02Icon, MoreHorizontalIcon, PinIcon, PinOffIcon } from "@hugeicons/core-free-icons";
+import { useEffect, useState, useCallback, useMemo, useRef, type CSSProperties, type Ref } from "react";
 import { useTranslations } from "next-intl";
 import {
   AlertDialog,
@@ -20,16 +22,6 @@ import {
   DropdownMenuTrigger,
   toast,
 } from "mangue-ui";
-import {
-  Archive,
-  ArchiveRestore,
-  Ellipsis,
-  History,
-  Loader2,
-  Pin,
-  PinOff,
-  Trash2,
-} from "lucide-react";
 import { EmptyScene } from "@/components/empty-scene";
 import { fetchConversations, deleteConversation, updateConversation } from "@/lib/assistant-api";
 import type { NumoConversation } from "@/lib/assistant-types";
@@ -38,6 +30,28 @@ import { matchesFilter } from "@/components/sidebar-filter-field";
 
 type ConversationWithProject = NumoConversation;
 const CONVERSATIONS_PAGE_SIZE = 50;
+
+function WorkHistorySceneIcon({
+  className,
+  style,
+  strokeWidth,
+  ref,
+}: {
+  className?: string;
+  style?: CSSProperties;
+  strokeWidth?: number | string;
+  ref?: Ref<SVGSVGElement>;
+}) {
+  return (
+    <HugeiconsIcon
+      ref={ref}
+      icon={Clock01Icon}
+      className={className}
+      style={style}
+      strokeWidth={typeof strokeWidth === "number" ? strokeWidth : undefined}
+    />
+  );
+}
 
 /** All conversations, ordered by recency independently of attached projects. */
 interface ConversationListProps {
@@ -274,18 +288,15 @@ export function ConversationList({
             onSelect(conversation.id, conversation.project_id);
           }}
         >
-          {isPinned && <Pin aria-hidden className="size-3 shrink-0" />}
+          {isPinned && <HugeiconsIcon icon={PinIcon} aria-hidden className="size-3 shrink-0" />}
           {isArchived && (
-            <Archive
-              aria-hidden
-              className="size-3 shrink-0 text-muted-foreground"
-            />
+            <HugeiconsIcon icon={ArchiveIcon} aria-hidden className="size-3 shrink-0 text-muted-foreground" />
           )}
           <span className="min-w-0 flex-1 truncate">
             {conversation.title || t("newConversation")}
           </span>
           {conversation.status === "generating" && (
-            <Loader2 className="size-3 shrink-0 animate-spin text-primary" />
+            <HugeiconsIcon icon={Loading02Icon} className="size-3 shrink-0 animate-spin text-primary" />
           )}
           {unread && (
             <span
@@ -304,7 +315,7 @@ export function ConversationList({
               className="mr-1 size-7 shrink-0 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
               aria-label={t("conversationActions")}
             >
-              <Ellipsis className="size-4" />
+              <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -313,7 +324,7 @@ export function ConversationList({
                 void patchConversation(conversation.id, { pinned: !isPinned })
               }
             >
-              {isPinned ? <PinOff /> : <Pin />}
+              {isPinned ? <HugeiconsIcon icon={PinOffIcon} /> : <HugeiconsIcon icon={PinIcon} />}
               {t(isPinned ? "unpinConversation" : "pinConversation")}
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -323,7 +334,7 @@ export function ConversationList({
                 })
               }
             >
-              {isArchived ? <ArchiveRestore /> : <Archive />}
+              {isArchived ? <HugeiconsIcon icon={ArchiveArrowUpIcon} /> : <HugeiconsIcon icon={ArchiveIcon} />}
               {t(isArchived ? "unarchiveConversation" : "archiveConversation")}
             </DropdownMenuItem>
             {conversation.source === "assistant" && (
@@ -334,7 +345,7 @@ export function ConversationList({
                   disabled={deletingId === conversation.id}
                   onSelect={() => setPendingDelete(conversation.id)}
                 >
-                  <Trash2 />
+                  <HugeiconsIcon icon={Delete02Icon} />
                   {t("deleteConversation")}
                 </DropdownMenuItem>
               </>
@@ -351,7 +362,7 @@ export function ConversationList({
         {loaded && conversations.length === 0 && (
           <EmptyScene
             size="compact"
-            icon={History}
+            icon={WorkHistorySceneIcon}
             title={t("noConversations")}
             className="px-0 py-4"
           />
@@ -393,7 +404,7 @@ export function ConversationList({
             disabled={fetching}
             onClick={() => setLimit((value) => value + CONVERSATIONS_PAGE_SIZE)}
           >
-            {fetching && <Loader2 className="animate-spin" />}
+            {fetching && <HugeiconsIcon icon={Loading02Icon} className="animate-spin" />}
             {t("loadMore")}
           </Button>
         )}

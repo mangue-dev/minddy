@@ -1,15 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AddSquareIcon, Menu01Icon, MoreHorizontalIcon, Share01Icon, SmartPhone01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import Image from "next/image";
 import { useEffect, useState, type ReactNode } from "react";
-import {
-  Check,
-  Ellipsis,
-  Menu,
-  Share,
-  Smartphone,
-  SquarePlus,
-} from "lucide-react";
 import {
   resolveInstallPlatform,
   type InstallPlatform,
@@ -102,10 +96,10 @@ function SafariShareVisual({ copy }: { copy: MobileInstallGuideCopy }) {
         <div className="flex items-center justify-around text-[#007aff]">
           <span className="size-5 rounded-md border-2 border-current opacity-55" />
           <span className="rounded-lg bg-[#007aff]/10 p-1.5 ring-2 ring-[#007aff]/20">
-            <Share className="size-5" />
+            <HugeiconsIcon icon={Share01Icon} className="size-5" />
           </span>
           <span className="size-5 rounded-full border-2 border-current opacity-55" />
-          <Ellipsis className="size-5 opacity-55" />
+          <HugeiconsIcon icon={MoreHorizontalIcon} className="size-5 opacity-55" />
         </div>
         <p className="mt-2 text-center text-[10px] font-semibold text-[#007aff]">{copy.uiShare}</p>
       </div>
@@ -137,7 +131,7 @@ function IosShareSheetVisual({ copy }: { copy: MobileInstallGuideCopy }) {
             <span className="opacity-60">{copy.uiCopy}</span>
           </div>
           <div className="flex items-center gap-3 bg-[#007aff]/8 px-3 py-3 text-xs font-semibold text-[#007aff] ring-2 ring-inset ring-[#007aff]/20">
-            <SquarePlus className="size-5" />
+            <HugeiconsIcon icon={AddSquareIcon} className="size-5" />
             <span>{copy.uiAddToHome}</span>
           </div>
         </div>
@@ -174,7 +168,7 @@ function IosAddVisual({ copy }: { copy: MobileInstallGuideCopy }) {
         </span>
       </div>
       <div className="mt-4 flex items-center gap-2 text-[10px] leading-relaxed text-[#636366]">
-        <Check className="size-4 shrink-0 text-[#34c759]" />
+        <HugeiconsIcon icon={Tick01Icon} className="size-4 shrink-0 text-[#34c759]" />
         <span>{copy.uiAdd}</span>
       </div>
     </div>
@@ -228,19 +222,19 @@ function AndroidMenuVisual({ copy }: { copy: MobileInstallGuideCopy }) {
       <div className="flex items-center gap-2 rounded-full bg-[#f1f3f4] px-3 py-2 text-[10px] text-[#5f6368]">
         <span className="size-3 rounded-full border border-[#5f6368]" />
         <span className="flex-1">minddy.app</span>
-        <Ellipsis className="size-4" />
+        <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
       </div>
       <div className="absolute top-12 right-3 w-48 overflow-hidden rounded-xl bg-white py-1 shadow-2xl ring-1 ring-black/10">
         <div className="flex items-center gap-3 px-4 py-3 text-xs text-[#3c4043]">
-          <Share className="size-4" />
+          <HugeiconsIcon icon={Share01Icon} className="size-4" />
           <span>{copy.uiShare}</span>
         </div>
         <div className="flex items-center gap-3 bg-[#1a73e8]/8 px-4 py-3 text-xs font-semibold text-[#1a73e8] ring-2 ring-inset ring-[#1a73e8]/15">
-          <Smartphone className="size-4" />
+          <HugeiconsIcon icon={SmartPhone01Icon} className="size-4" />
           <span>{copy.uiInstallApp}</span>
         </div>
         <div className="flex items-center gap-3 px-4 py-3 text-xs text-[#3c4043]">
-          <Menu className="size-4" />
+          <HugeiconsIcon icon={Menu01Icon} className="size-4" />
           <span>{copy.uiSettings}</span>
         </div>
       </div>

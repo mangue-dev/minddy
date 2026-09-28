@@ -15,7 +15,7 @@ describe("MCP agent logo", () => {
 
   it("keeps a generic fallback for unknown clients", () => {
     expect(source).toContain("if (Logo)");
-    expect(source).toContain("<Bot");
+    expect(source).toContain("<HugeiconsIcon icon={BotIcon}");
   });
 
   it("uses the Gemini brand instead of the CLI terminal mark", () => {

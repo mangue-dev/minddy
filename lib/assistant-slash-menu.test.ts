@@ -1,6 +1,6 @@
 import { createElement } from "react";
+import { PencilEdit01Icon as SquarePen } from "@hugeicons/core-free-icons";
 import { renderToStaticMarkup } from "react-dom/server";
-import { SquarePen } from "lucide-react";
 import { describe, expect, it, vi } from "vitest";
 
 import { SkillChip } from "@/components/assistant/skill-chip";

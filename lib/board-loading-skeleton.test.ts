@@ -48,7 +48,7 @@ describe("board loading shell", () => {
       cycleControls.indexOf("<CycleTitleSelector"),
     );
     expect(cycleControls.indexOf("<CycleTitleSelector")).toBeLessThan(
-      cycleControls.indexOf("<Settings"),
+      cycleControls.indexOf("<HugeiconsIcon icon={Settings01Icon}"),
     );
   });
 });

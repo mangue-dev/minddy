@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -7,7 +9,6 @@ import {
   cn,
   useIsMobile,
 } from "mangue-ui";
-import { ChevronDown, ChevronRight } from "lucide-react";
 import { parsePatchFiles } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
 import type { FileDiff as FileDiffInstance, PostRenderPhase } from "@pierre/diffs";
@@ -244,9 +245,9 @@ export function PrHunk({
             className="flex min-w-0 flex-1 items-center gap-1.5 px-2.5 py-1.5 text-left outline-none"
           >
             {collapsed ? (
-              <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+              <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0 text-muted-foreground" />
             ) : (
-              <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+              <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0 text-muted-foreground" />
             )}
             {anchor}
           </button>

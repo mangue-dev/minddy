@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Delete02Icon, ImageUploadIcon, ShuffleIcon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useRef, useState } from "react";
@@ -12,7 +14,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { ImageUp, Shuffle, Trash2 } from "lucide-react";
 import { ProjectOrb } from "@/components/project-orb";
 import { DropOverlay, useFileDrop } from "@/components/resources";
 import {
@@ -241,7 +242,7 @@ export function ProjectIconPicker({
             {uploading ? (
               <Spinner className={centered ? "size-5" : "size-4"} />
             ) : (
-              <ImageUp className={centered ? "size-6" : "size-4"} strokeWidth={1.75} />
+              <HugeiconsIcon icon={ImageUploadIcon} className={centered ? "size-6" : "size-4"} strokeWidth={1.75} />
             )}
           </span>
         </button>
@@ -293,7 +294,7 @@ export function ProjectIconPicker({
           disabled={busy}
           onClick={() => void handleReroll()}
         >
-          {rerolling ? <Spinner /> : <Shuffle />}
+          {rerolling ? <Spinner /> : <HugeiconsIcon icon={ShuffleIcon} />}
         </Button>
       </TooltipTrigger>
       <TooltipContent>{t("orbRerollLabel")}</TooltipContent>
@@ -315,7 +316,7 @@ export function ProjectIconPicker({
           disabled={busy}
           onClick={() => void handleRemove()}
         >
-          {removing ? <Spinner /> : <Trash2 />}
+          {removing ? <Spinner /> : <HugeiconsIcon icon={Delete02Icon} />}
         </Button>
       </TooltipTrigger>
       <TooltipContent>{tCommon("remove")}</TooltipContent>
@@ -329,7 +330,7 @@ export function ProjectIconPicker({
     <DropOverlay
       show={dragging}
       label={t("iconDropLabel")}
-      icon={<ImageUp className="size-4 shrink-0" aria-hidden />}
+      icon={<HugeiconsIcon icon={ImageUploadIcon} className="size-4 shrink-0" aria-hidden />}
       className="bg-background/85"
     />
   );

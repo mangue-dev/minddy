@@ -1,9 +1,9 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { FileAttachmentIcon } from "@hugeicons/core-free-icons";
 import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import { FileText } from "lucide-react";
-
 import type { Locale } from "@/i18n/config";
 import { appPageMetadata } from "@/lib/app-metadata";
 import { publicTokenMetadata } from "@/lib/seo";
@@ -156,7 +156,7 @@ export async function PublishedPage({
               {bundle.page.icon}
             </span>
           ) : (
-            <FileText aria-hidden className="mt-2 size-7 shrink-0 text-muted-foreground" />
+            <HugeiconsIcon icon={FileAttachmentIcon} aria-hidden className="mt-2 size-7 shrink-0 text-muted-foreground" />
           )}
           <span className="min-w-0">{title}</span>
         </h1>

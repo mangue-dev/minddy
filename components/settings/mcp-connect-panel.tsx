@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Copy01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -13,7 +15,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { Copy } from "lucide-react";
 import { MCP_AGENTS, type McpAgent } from "@/lib/mcp-agents";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";
 
@@ -137,7 +138,7 @@ function McpAgentInstall({ agent }: { agent: McpAgent }) {
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="button" onClick={() => void act()}>
-          <Copy />
+          <HugeiconsIcon icon={Copy01Icon} />
           {actionLabel}
         </Button>
         <p className="text-xs text-muted-foreground">{t(agent.hint)}</p>

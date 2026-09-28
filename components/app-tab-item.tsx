@@ -1,6 +1,7 @@
 "use client";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, PencilIcon, PinIcon, PinOffIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Pin, PinOff, Pencil, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -93,12 +94,12 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
     </Tooltip>
     {!tab.pinned && <Tooltip delayDuration={500} disableHoverableContent><TooltipTrigger asChild><button type="button" aria-label={t("closeNamed", { name: label })} disabled={last || busy}
       tabIndex={-1} onPointerDown={(event) => event.stopPropagation()} onClick={onClose} className="absolute right-1 flex size-5 items-center justify-center rounded-full opacity-0 hover:bg-background/60 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-0">
-      <X className="size-3" aria-hidden />
+      <HugeiconsIcon icon={Cancel01Icon} className="size-3" aria-hidden />
     </button></TooltipTrigger><TooltipContent side="bottom">{t("close")}</TooltipContent></Tooltip>}
     <IssueContextMenu position={menu} searchable={false} onClose={() => { setMenu(null); ref.current?.focus(); }} actions={[
-      { id: "pin", label: t(tab.pinned ? "unpin" : "pin"), icon: tab.pinned ? <PinOff /> : <Pin />, onSelect: onPin, disabled: busy },
-      { id: "rename", label: t("rename"), icon: <Pencil />, onSelect: onRename, disabled: busy },
-      { id: "close", label: t("close"), icon: <X />, onSelect: onClose, disabled: last || busy, separatorBefore: true },
+      { id: "pin", label: t(tab.pinned ? "unpin" : "pin"), icon: tab.pinned ? <HugeiconsIcon icon={PinOffIcon} /> : <HugeiconsIcon icon={PinIcon} />, onSelect: onPin, disabled: busy },
+      { id: "rename", label: t("rename"), icon: <HugeiconsIcon icon={PencilIcon} />, onSelect: onRename, disabled: busy },
+      { id: "close", label: t("close"), icon: <HugeiconsIcon icon={Cancel01Icon} />, onSelect: onClose, disabled: last || busy, separatorBefore: true },
     ]} />
   </div>;
 }

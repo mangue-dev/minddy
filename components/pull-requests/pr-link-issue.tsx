@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Link02Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -13,7 +15,6 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { Link2 } from "lucide-react";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { globalBoardQueryFn } from "@/lib/global-board-api";
@@ -130,7 +131,7 @@ export function PrLinkIssue({
             size="sm"
             className="h-6 gap-1 px-1.5 font-sans text-xs font-normal text-muted-foreground"
           >
-            <Link2 className="size-3.5" />
+            <HugeiconsIcon icon={Link02Icon} className="size-3.5" />
             {t("linkIssue")}
           </Button>
         }

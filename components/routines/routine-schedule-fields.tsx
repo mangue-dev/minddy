@@ -1,10 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, Calendar01Icon, Calendar02Icon, Sun01Icon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Combobox, Input, cn } from "mangue-ui";
-import { CalendarDays, CalendarRange, ChevronDown, Sun } from "lucide-react";
-
 import { PICKER_FIELD_TRIGGER, SearchMultiSelect } from "@/components/search-select";
 import { WizardChoiceCard } from "@/components/wizard/wizard-choice-card";
 import {
@@ -37,10 +37,10 @@ import {
  * l'autre.
  */
 
-const FREQUENCY_ICONS: Record<RoutineFrequency, typeof Sun> = {
-  daily: Sun,
-  weekly: CalendarDays,
-  monthly: CalendarRange,
+const FREQUENCY_ICONS: Record<RoutineFrequency, typeof Sun01Icon> = {
+  daily: Sun01Icon,
+  weekly: Calendar01Icon,
+  monthly: Calendar02Icon,
 };
 
 export function RoutineScheduleFields({
@@ -151,7 +151,7 @@ export function RoutineScheduleFields({
                   >
                     {weekdaysLabel}
                   </span>
-                  <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                  <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0 text-muted-foreground" />
                 </button>
               }
             />
@@ -178,7 +178,7 @@ export function RoutineScheduleFields({
                   >
                     {dayLabel}
                   </span>
-                  <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                  <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0 text-muted-foreground" />
                 </button>
               }
             />

@@ -1,6 +1,7 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Image01Icon } from "@hugeicons/core-free-icons";
 import { getImageProps } from "next/image";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ImageIcon } from "lucide-react";
 import { cn } from "mangue-ui/lib/utils";
 import { ScreenshotPicture } from "./screenshot-picture";
 import {
@@ -64,7 +65,7 @@ export async function ScreenshotSlot({
       ) : (
         <div className="absolute inset-0 flex flex-col justify-between gap-4 bg-muted/40 p-5 [background-image:repeating-linear-gradient(135deg,transparent,transparent_10px,var(--color-border)_10px,var(--color-border)_11px)] [background-size:auto] opacity-90">
           <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <ImageIcon className="h-4 w-4" />
+            <HugeiconsIcon icon={Image01Icon} className="h-4 w-4" />
             <span className="rounded-md border border-border bg-card px-2 py-0.5 font-mono">
               {slot.id}
             </span>

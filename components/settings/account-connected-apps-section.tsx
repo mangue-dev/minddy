@@ -1,10 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppWindowIcon as AppWindow, GlobeIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, ConfirmDeleteDialog, toast } from "mangue-ui";
-import { AppWindow, Globe } from "lucide-react";
 import { revokeOAuthGrantApi, type OAuthGrant } from "@/lib/oauth-grants-api";
 import { oauthGrantsQueryKey, useOAuthGrantsQuery } from "@/lib/use-oauth-grants-query";
 import { isMcpAgentId } from "@/lib/mcp-agents";
@@ -73,7 +74,7 @@ export function AccountConnectedAppsSection() {
                   {isMcpAgentId(grant.agent) ? (
                     <McpAgentLogo agent={grant.agent} className="size-4" />
                   ) : (
-                    <Globe className="size-4" />
+                    <HugeiconsIcon icon={GlobeIcon} className="size-4" />
                   )}
                 </span>
               }

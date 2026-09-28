@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, ArrowRight01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
@@ -13,7 +15,6 @@ import {
   Spinner,
   cn,
 } from "mangue-ui";
-import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { WizardStepper } from "@/components/wizard/wizard-stepper";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { useSubmitShortcut } from "@/lib/keyboard/use-submit-shortcut";
@@ -181,7 +182,7 @@ export function WizardDialog<Id extends string>({
             onClick={() => onOpenChange(false)}
             aria-label={tCommon("close")}
           >
-            <X className="h-4 w-4" />
+            <HugeiconsIcon icon={Cancel01Icon} className="h-4 w-4" />
           </Button>
         </div>
 
@@ -270,7 +271,7 @@ export function WizardDialog<Id extends string>({
                     {submitting && <Spinner />}
                     {step.submitLabel ?? tCommon("continue")}
                     {!submitting && !isLast && (
-                      <ArrowRight className="ml-1 h-4 w-4" />
+                      <HugeiconsIcon icon={ArrowRight01Icon} className="ml-1 h-4 w-4" />
                     )}
                   </Button>
                 </SendShortcutTooltip>
@@ -284,7 +285,7 @@ export function WizardDialog<Id extends string>({
                   onClick={() => goToStep(index - 1)}
                   disabled={submitting}
                 >
-                  <ArrowLeft className="size-3.5" />
+                  <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
                   {tCommon("back")}
                 </Button>
               )}

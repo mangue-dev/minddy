@@ -2,6 +2,8 @@
 
 // The persistent page tree and document surfaces for the project.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, Cancel01Icon, ExpandIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -12,8 +14,6 @@ import {
   toast,
   SidePanel, SidePanelContent, SidePanelTitle,
 } from "mangue-ui";
-import { Plus, Maximize2, X } from "lucide-react";
-
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { PageTree } from "@/components/pages/page-tree";
 import { PageCreateMenu } from "@/components/pages/page-create-menu";
@@ -210,7 +210,7 @@ export function PagesShell() {
         actions={
           <PageCreateMenu onCreate={(database) => void create(null, database)} trigger={
             <Button variant="ghost" size="icon" className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
-              aria-label={tDatabase("create")}><Plus className="size-[18px]" /></Button>
+              aria-label={tDatabase("create")}><HugeiconsIcon icon={Add01Icon} className="size-[18px]" /></Button>
           } />
         }
       >
@@ -278,8 +278,8 @@ export function PagesShell() {
       >
         <div className="flex shrink-0 items-center gap-2 px-4 pt-3">
           <SidePanelTitle className="sr-only">{validPreview?.title || tDatabase("newEntry")}</SidePanelTitle><div className="flex-1" />
-          <Button variant="ghost" size="sm" onClick={() => void leavePreview(true)}><Maximize2 className="size-3.5" />{tDatabase("extend")}</Button>
-          <Button variant="ghost" size="icon-sm" aria-label={tCommon("close")} onClick={() => void leavePreview()}><X className="size-4" /></Button>
+          <Button variant="ghost" size="sm" onClick={() => void leavePreview(true)}><HugeiconsIcon icon={ExpandIcon} className="size-3.5" />{tDatabase("extend")}</Button>
+          <Button variant="ghost" size="icon-sm" aria-label={tCommon("close")} onClick={() => void leavePreview()}><HugeiconsIcon icon={Cancel01Icon} className="size-4" /></Button>
         </div>
         {validPreview && <PageView panel key={validPreview.id} projectId={projectId} pageId={validPreview.id} onNavigate={openPage} onNavigationReady={registerPreviewFlush} />}
       </SidePanelContent>

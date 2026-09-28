@@ -17,17 +17,12 @@
 // Everything related to the document is in block-actions.ts: this component does not
 // only calls, so that the behavior remains testable without an interface.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { ColorPickerIcon, Copy01Icon, Delete02Icon, Link02Icon, MessageAdd01Icon, RepeatOne02Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
-import {
-  CopyPlus,
-  Link2,
-  MessageSquarePlus,
-  Palette,
-  Repeat2,
-  Trash2,
-} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -260,7 +255,7 @@ export function BlockMenu({
         {plain && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
-            <Repeat2 />
+            <HugeiconsIcon icon={RepeatOne02Icon} />
             <span className="truncate">{t("turnInto")}</span>
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="w-56">
@@ -274,7 +269,7 @@ export function BlockMenu({
                     close();
                   }}
                 >
-                  <Icon />
+                  <AppIcon icon={Icon} />
                   <span className="truncate">{t(block.labelKey)}</span>
                   {active && <span className="text-xs">✓</span>}
                   {block.shortcut && (
@@ -292,7 +287,7 @@ export function BlockMenu({
         {plain && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
-            <Palette />
+            <HugeiconsIcon icon={ColorPickerIcon} />
             <span className="truncate">{t("color")}</span>
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="max-h-80 w-52 overflow-y-auto">
@@ -321,7 +316,7 @@ export function BlockMenu({
               close();
             }}
           >
-            <CopyPlus />
+            <HugeiconsIcon icon={Copy01Icon} />
             <span className="truncate">{t("duplicateBlock")}</span>
           </DropdownMenuItem>
         )}
@@ -332,7 +327,7 @@ export function BlockMenu({
             close();
           }}
         >
-          <Link2 />
+          <HugeiconsIcon icon={Link02Icon} />
           <span className="truncate">{t("copyBlockLink")}</span>
         </DropdownMenuItem>
 
@@ -344,7 +339,7 @@ export function BlockMenu({
               close();
             }}
           >
-            <MessageSquarePlus />
+            <HugeiconsIcon icon={MessageAdd01Icon} />
             <span className="truncate">{t("commentSelection")}</span>
           </DropdownMenuItem>
         ) : null}
@@ -364,7 +359,7 @@ export function BlockMenu({
             close();
           }}
         >
-          <Trash2 />
+          <HugeiconsIcon icon={Delete02Icon} />
           {/* On a subpage, the gesture does not delete a block: it places a
  PAGE in the trash, with its descendants. The wording is that of
  the sidebar, word for word — it's the same gesture, it should not

@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Logout01Icon, MessageMultiple01Icon } from "@hugeicons/core-free-icons";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -11,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "mangue-ui";
-import { LogOut, MessagesSquare } from "lucide-react";
 import type { PublicIdentity } from "@/lib/feedback/types";
 import { logoutAction } from "./actions";
 import { FeedbackAuthDialog } from "./feedback-auth";
@@ -59,7 +60,7 @@ export function HeaderIdentity({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onSelect={() => router.push(`${basePath}/me`)}>
-          <MessagesSquare className="size-4" />
+          <HugeiconsIcon icon={MessageMultiple01Icon} className="size-4" />
           {t("myFeedback")}
         </DropdownMenuItem>
         {/* Going to see your feedback and closing your session are two gestures of
@@ -80,7 +81,7 @@ export function HeaderIdentity({
             })
           }
         >
-          <LogOut className="size-4" />
+          <HugeiconsIcon icon={Logout01Icon} className="size-4" />
           {t("signOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>

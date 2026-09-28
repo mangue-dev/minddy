@@ -4,8 +4,9 @@
 // suggestions. “/” opens commands and skills; “$” opens skills only.
 
 import { type CSSProperties, useMemo } from "react";
+import { AppIcon } from "@/components/icon";
+import { LayersIcon as Layers, PencilEdit01Icon as SquarePen } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { Layers, SquarePen, type LucideIcon } from "lucide-react";
 import { cn } from "mangue-ui";
 import type { AssistantCommandId } from "@/lib/assistant-types";
 import type { RepositorySkillSummary } from "@/lib/repository-skills";
@@ -19,7 +20,7 @@ export interface SlashCommandOption {
   label: string;
   /** What the command does, in one line, below the label. */
   description: string;
-  icon: LucideIcon;
+  icon: AppIcon;
   /** Search terms in addition to the label (the alias of the other language). */
   keywords?: string[];
 }
@@ -29,7 +30,7 @@ export interface SlashSkillOption {
   id: string;
   label: string;
   description: string;
-  icon: LucideIcon;
+  icon: AppIcon;
   skill: RepositorySkillSummary;
 }
 
@@ -120,7 +121,8 @@ export function SlashMenu({
               (option.kind === "skill" ? "bg-emerald-500/10" : "bg-muted"),
           )}
         >
-          <option.icon
+          <AppIcon
+            icon={option.icon}
             className={cn(
               "size-4 shrink-0",
               option.kind === "skill"

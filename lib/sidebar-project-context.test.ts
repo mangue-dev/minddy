@@ -19,16 +19,16 @@ describe("primary sidebar project context", () => {
   it("replaces the project-mode Home row with a split context control", () => {
     expect(sidebar).toContain('item.key === "home-back" && currentProject');
     expect(sidebar).toContain("<ProjectContextRow");
-    expect(sidebar).toContain("<ChevronLeft");
-    expect(sidebar).toContain("<Home");
+    expect(sidebar).toContain("icon={ArrowLeft01Icon}");
+    expect(sidebar).toContain("icon={Home01Icon}");
     expect(sidebar).toContain("<DropdownMenuTrigger");
   });
 
   it("shows the split context control (home + current project)", () => {
     const contextRow = sidebar.slice(sidebar.indexOf("function ProjectContextRow"));
     expect(contextRow).toContain("<ProjectOrb");
-    expect(contextRow).toContain("<ChevronLeft");
-    expect(contextRow).toContain("<ChevronDown");
+    expect(contextRow).toContain("icon={ArrowLeft01Icon}");
+    expect(contextRow).toContain("icon={ArrowDown01Icon}");
     expect(contextRow).toContain("<DropdownMenuTrigger");
   });
 

@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUpDownIcon, Tick01Icon, WorkflowCircle01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, ChevronsUpDown, Workflow } from "lucide-react";
 import {
   Button,
   Command,
@@ -89,10 +90,10 @@ export function AutomationPresetPicker({
           className="h-9 w-full max-w-sm justify-between gap-2 font-normal"
         >
           <span className="flex min-w-0 items-center gap-2">
-            <Workflow className="size-4 shrink-0 text-muted-foreground" />
+            <HugeiconsIcon icon={WorkflowCircle01Icon} className="size-4 shrink-0 text-muted-foreground" />
             <span className="truncate">{current.label}</span>
           </span>
-          <ChevronsUpDown className="size-3.5 shrink-0 opacity-50" />
+          <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-(--radix-popover-trigger-width) min-w-72 p-0" align="start">
@@ -116,12 +117,10 @@ export function AutomationPresetPicker({
                   <span>{option.label}</span>
                   <span className="text-xs text-muted-foreground">{option.short}</span>
                 </div>
-                <Check
-                  className={cn(
-                    "mt-0.5 size-4 shrink-0",
-                    option.value === value ? "opacity-100" : "opacity-0",
-                  )}
-                />
+                <HugeiconsIcon icon={Tick01Icon} className={cn(
+                                        "mt-0.5 size-4 shrink-0",
+                                        option.value === value ? "opacity-100" : "opacity-0",
+                                      )} />
               </CommandItem>
             ))}
           </CommandList>

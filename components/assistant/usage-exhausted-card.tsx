@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { AppIcon } from "@/components/icon";
+import { GaugeIcon as CircleGauge } from "@hugeicons/core-free-icons";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
-import { CircleGauge } from "lucide-react";
 import { getBillingPlan, type BillingPlanId } from "@/lib/billing-plans";
 
 export interface NumoUsageExhaustedDetails {
@@ -55,7 +56,7 @@ export function NumoUsageExhaustedCard({
   return (
     <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm">
       <div className="flex items-center gap-2 font-medium">
-        <CircleGauge className="size-4 shrink-0 text-muted-foreground" />
+        <AppIcon icon={CircleGauge} className="size-4 shrink-0 text-muted-foreground" />
         {details.cause === "routine_cap"
           ? t("usageRoutineTitle", { percent: details.percent })
           : t("usageAccountTitle", { percent: details.percent })}

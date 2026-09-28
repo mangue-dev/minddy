@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Kbd } from "@/components/ui/kbd";
+import { AppIcon } from "@/components/icon";
 import { usePaletteConfig } from "../config";
 import { SearchIcon } from "../icons";
 import { usePaletteStore } from "../store";
@@ -352,7 +353,9 @@ export function ActionsPopover({
                     role="menuitem"
                     aria-current={isActive ? "true" : undefined}
                   >
-                    {action.icon && <action.icon className={styles.actionIcon} />}
+                    {action.icon && (
+                      <AppIcon icon={action.icon} className={styles.actionIcon} />
+                    )}
                     <span className={styles.actionLabel}>{action.label}</span>
                     {action.shortcut && (
                       <div className={styles.shortcut}>

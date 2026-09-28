@@ -13,12 +13,13 @@
 // the menu chains two overlays instead, which it can afford — there's no Dialog
 // around a card.)
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, Link02Icon, MessageMultiple01Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Button, CommandGroup, CommandItem, cn, toast } from "mangue-ui";
-import { Link2, MessagesSquare, X } from "lucide-react";
 import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import { RELATION_PRIORITY, RELATION_TYPES } from "@/lib/relation-constants";
 import {
@@ -153,7 +154,7 @@ export function RelationsSection({
               aria-label={t("addRelationAria")}
               className={cn(TRIGGER, "text-muted-foreground")}
             >
-              <Link2 className="size-4" />
+              <HugeiconsIcon icon={Link02Icon} className="size-4" />
             </button>
           }
         >
@@ -313,7 +314,7 @@ export function RelationsSection({
                           )
                         }
                       >
-                        <X />
+                        <HugeiconsIcon icon={Cancel01Icon} />
                       </Button>
                     </div>
                   );
@@ -331,7 +332,7 @@ export function RelationsSection({
       {feedback.length > 0 && (
         <div className="flex flex-col pb-2">
           <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <MessagesSquare className="size-3.5" />
+            <HugeiconsIcon icon={MessageMultiple01Icon} className="size-3.5" />
             {t("linkedFeedback")}
           </div>
           <div className="flex flex-col">
@@ -361,7 +362,7 @@ export function RelationsSection({
                 <span className="min-w-0 flex-1 truncate text-sm">{post.title}</span>
                 {post.comment_count > 0 && (
                   <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
-                    <MessagesSquare className="size-3" />
+                    <HugeiconsIcon icon={MessageMultiple01Icon} className="size-3" />
                     {post.comment_count}
                   </span>
                 )}

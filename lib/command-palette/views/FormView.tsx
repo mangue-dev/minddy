@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePaletteConfig } from "../config";
 import { usePaletteStore } from "../store";
 import { InlineActionInput, type InlineFieldConfig } from "../inline/InlineActionInput";
+import { AppIcon } from "@/components/icon";
 import type { ActionExecutionContext, FormSelectOption } from "../registry/types";
 import styles from "../styles/FormView.module.css";
 
@@ -129,8 +130,7 @@ export function FormView({ actionContext, onSuccess }: FormViewProps) {
   const actionTitle = pendingAction?.label ?? "";
   const actionIcon = useMemo(() => {
     if (!pendingAction?.icon) return null;
-    const Icon = pendingAction.icon;
-    return <Icon style={{ width: 16, height: 16 }} />;
+    return <AppIcon icon={pendingAction.icon} style={{ width: 16, height: 16 }} />;
   }, [pendingAction]);
 
   // Field change with dependent-field clearing + re-resolution

@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, BarChartIcon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Button, cn } from "mangue-ui";
-import { BarChart3, Plus } from "lucide-react";
 import { useStatsQuery } from "@/lib/use-stats-query";
 import { useCreate } from "@/lib/create-context";
 import { useProjects } from "@/lib/projects-context";
@@ -197,15 +198,15 @@ export default function StatisticsPage() {
           className="min-h-0 flex-1 overflow-y-auto"
         >
           <div className="mx-auto w-full max-w-5xl px-6 py-10">
-            <EmptyScene icon={BarChart3} title={t("emptyTitle")}>
+            <EmptyScene icon={BarChartIcon} title={t("emptyTitle")}>
               {canCreate ? (
                 <Button onClick={() => openCreateIssue()}>
-                  <Plus />
+                  <HugeiconsIcon icon={Add01Icon} />
                   {t("emptyCta")}
                 </Button>
               ) : (
                 <Button onClick={openCreateProject}>
-                  <Plus />
+                  <HugeiconsIcon icon={Add01Icon} />
                   {tProjects("firstProject")}
                 </Button>
               )}

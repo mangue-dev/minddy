@@ -1,10 +1,12 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Copy01Icon, GlobeIcon, Key02Icon, Mail01Icon, Plug01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import type { IconSvgElement } from "@hugeicons/react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Textarea, toast } from "mangue-ui";
-import { Check, Copy, Globe, KeyRound, Mail, Plug } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import {
@@ -12,6 +14,18 @@ import {
   type WizardStep,
 } from "@/components/wizard/wizard-dialog";
 import { WizardChoiceCard } from "@/components/wizard/wizard-choice-card";
+import { type SceneIcon } from "@/components/illustrations/iso-icon";
+
+function sceneIcon(icon: IconSvgElement): SceneIcon {
+  return function HugeiconsSceneIcon({ className, style }) {
+    return <HugeiconsIcon icon={icon} className={className} style={style} />;
+  };
+}
+
+const GlobeSceneIcon = sceneIcon(GlobeIcon);
+const PlugSceneIcon = sceneIcon(Plug01Icon);
+const KeySceneIcon = sceneIcon(Key02Icon);
+const MailSceneIcon = sceneIcon(Mail01Icon);
 import { CustomDomainSection } from "@/components/custom-domain-section";
 import {
   BoardAccentRow,
@@ -320,14 +334,14 @@ export function FeedbackSetupWizard({
         >
           <WizardChoiceCard
             selected={mode === "board"}
-            icon={Globe}
+            icon={GlobeSceneIcon}
             label={t("feedbackWizardTypeBoard")}
             description={t("feedbackWizardTypeBoardDesc")}
             onSelect={() => setMode("board")}
           />
           <WizardChoiceCard
             selected={mode === "api"}
-            icon={Plug}
+            icon={PlugSceneIcon}
             label={t("feedbackWizardTypeApi")}
             description={t("feedbackWizardTypeApiDesc")}
             onSelect={() => setMode("api")}
@@ -351,14 +365,14 @@ export function FeedbackSetupWizard({
         >
           <WizardChoiceCard
             selected={sso}
-            icon={KeyRound}
+            icon={KeySceneIcon}
             label={t("feedbackWizardSsoYes")}
             description={t("feedbackWizardSsoYesDesc")}
             onSelect={() => setSso(true)}
           />
           <WizardChoiceCard
             selected={!sso}
-            icon={Mail}
+            icon={MailSceneIcon}
             label={t("feedbackWizardSsoNo")}
             // Choosing the email when a secret exists DELETES this secret: the
             // card says it before the click, not a toast after.
@@ -528,9 +542,9 @@ export function FeedbackSetupWizard({
                   }}
                 >
                   {envCopied ? (
-                    <Check className="size-4 text-emerald-500" />
+                    <HugeiconsIcon icon={Tick01Icon} className="size-4 text-emerald-500" />
                   ) : (
-                    <Copy className="size-4" />
+                    <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                   )}
                 </Button>
               </div>
@@ -551,9 +565,9 @@ export function FeedbackSetupWizard({
             onClick={() => prompt && void copyToClipboard(prompt)}
           >
             {copied ? (
-              <Check className="size-4 text-emerald-500" />
+              <HugeiconsIcon icon={Tick01Icon} className="size-4 text-emerald-500" />
             ) : (
-              <Copy className="size-4" />
+              <HugeiconsIcon icon={Copy01Icon} className="size-4" />
             )}
             {t("feedbackWizardCopy")}
           </Button>

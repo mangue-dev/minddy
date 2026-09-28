@@ -1,18 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import {
-  Bot,
-  GitBranch,
-  Inbox,
-  IterationCw,
-  Lock,
-  Plug,
-  ShieldCheck,
-  SlidersHorizontal,
-  User,
-  Workflow,
-} from "lucide-react";
+import { ArrowReloadHorizontalIcon as IterationCw, BotIcon as Bot, FlowIcon as Workflow, GitBranchIcon as GitBranch, InboxIcon as Inbox, LockIcon, PlugIcon as Plug, ShieldCheckIcon as ShieldCheck, SlidersHorizontalIcon as SlidersHorizontal, UserIcon as User } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/lib/auth-context";
 import { useMfaStatusQuery } from "@/lib/use-mfa-status";
 import { SettingsShell, type SettingsTab } from "@/components/settings-shell";
@@ -61,7 +50,7 @@ export default function AccountSettingsPage() {
     {
       value: "security",
       label: t("securityTab"),
-      icon: Lock,
+      icon: LockIcon,
       indicator: mfa && !mfa.enabled ? t("securityTabIndicator") : undefined,
       content: <AccountSecuritySection />,
     },

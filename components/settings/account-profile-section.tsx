@@ -1,10 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Download01Icon } from "@hugeicons/core-free-icons";
 import {useEffect, useState} from "react";
 import {useTranslations} from "next-intl";
 import Link from "next/link";
 import {Button, Input, Spinner, toast} from "mangue-ui";
-import {Download} from "lucide-react";
 import {useAuth} from "@/lib/auth-context";
 import {isDesktop} from "@/lib/desktop/bridge";
 import {emailLocalPart} from "@/lib/display-name";
@@ -175,7 +176,7 @@ export function AccountProfileSection() {
                   track("desktop_install_prompt_clicked", { surface: "settings" })
                 }
               >
-                <Download />
+                <HugeiconsIcon icon={Download01Icon} />
                 {ta("desktopAppCta")}
               </Link>
             </Button>

@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -16,7 +18,6 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { UserPlus, X } from "lucide-react";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { usePlanGates } from "@/lib/use-billing-query";
 import {
@@ -111,7 +112,7 @@ export function ProjectMembers({
               />
             </div>
             <Button type="submit" disabled={inviting || limitReached}>
-              {inviting ? <Spinner /> : <UserPlus />}
+              {inviting ? <Spinner /> : <HugeiconsIcon icon={UserAdd01Icon} />}
               {t("invite")}
             </Button>
           </form>
@@ -207,7 +208,7 @@ export function ProjectMembers({
                       disabled={busyId === inv.id}
                       onClick={() => withBusy(inv.id, () => cancelInvitation(inv.id))}
                     >
-                      <X />
+                      <HugeiconsIcon icon={Cancel01Icon} />
                     </Button>
                   </>
                 }

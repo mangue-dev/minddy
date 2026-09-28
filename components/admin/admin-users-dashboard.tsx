@@ -1,10 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, Search01Icon, Undo02Icon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import type {ReactNode} from "react";
 import {useFormatter, useTranslations} from "next-intl";
 import {Badge, Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, Skeleton, Spinner, Switch, cn, toast} from "mangue-ui";
-import {EyeOff, RotateCcw, Search, X} from "lucide-react";
 import {UserAvatar} from "@/components/user-avatar";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
 import {BILLING_PLANS} from "@/lib/billing-plans";
@@ -172,7 +173,7 @@ function InternalBadge() {
     <Tooltip>
       <TooltipTrigger asChild>
         <Badge variant="outline" className="h-5 shrink-0 gap-1 text-[10px]">
-          <EyeOff className="size-2.5" />
+          <HugeiconsIcon icon={ViewOffIcon} className="size-2.5" />
           {t("users.internalBadge")}
         </Badge>
       </TooltipTrigger>
@@ -553,7 +554,7 @@ function UserSheet({
                   onClick={() => void setQuotaReset()}
                   disabled={busyQuota}
                 >
-                  {busyQuota ? <Spinner /> : <RotateCcw className="size-3.5" />}
+                  {busyQuota ? <Spinner /> : <HugeiconsIcon icon={Undo02Icon} className="size-3.5" />}
                   {t("quotas.reset")}
                 </Button>
               </>
@@ -601,7 +602,7 @@ function UserSheet({
                       key={entry.id}
                       className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-1.5"
                     >
-                      <RotateCcw className="size-3.5 shrink-0 text-muted-foreground" />
+                      <HugeiconsIcon icon={Undo02Icon} className="size-3.5 shrink-0 text-muted-foreground" />
                       <span className="min-w-0 flex-1 truncate text-xs tabular-nums">
                         {dt(entry.at)}
                       </span>
@@ -621,7 +622,7 @@ function UserSheet({
                         onClick={() => void setQuotaReset(entry.id)}
                         disabled={busyQuota}
                       >
-                        <X className="size-3.5" />
+                        <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
                       </Button>
                     </li>
                   ))}
@@ -859,7 +860,7 @@ export function AdminUsersDashboard() {
 
       <div className="flex items-center gap-2">
         <div className="relative max-w-sm flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <HugeiconsIcon icon={Search01Icon} className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -873,7 +874,7 @@ export function AdminUsersDashboard() {
               aria-label={t("users.clearSearch")}
               className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
-              <X className="size-3.5" />
+              <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
             </button>
           ) : null}
         </div>

@@ -1,7 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { Cancel01Icon, Clock01Icon as FileClock } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { FileClock, X } from "lucide-react";
 import { cn } from "mangue-ui";
 import {
   Tooltip,
@@ -44,7 +46,7 @@ export function DraftRecoveryRow({
       )}
     >
       <span className="inline-flex items-center gap-1 pr-0.5">
-        <FileClock className="size-3.5" aria-hidden />
+        <AppIcon icon={FileClock} className="size-3.5" aria-hidden />
         {t("recent")}
       </span>
       {drafts.map((d) => (
@@ -67,7 +69,7 @@ export function DraftRecoveryRow({
                 aria-label={t("delete")}
                 className="ml-0.5 flex size-5 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground"
               >
-                <X className="size-3" />
+                <HugeiconsIcon icon={Cancel01Icon} className="size-3" />
               </button>
             </TooltipTrigger>
             <TooltipContent>{t("delete")}</TooltipContent>

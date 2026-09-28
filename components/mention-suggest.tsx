@@ -10,8 +10,9 @@
 // FIGURE and the LINE: a person, a project, a ticket, an objective, a page
 // from the wiki are recognized by the same sign on both sides.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Book02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef } from "react";
-import { BookText } from "lucide-react";
 import { cn } from "mangue-ui";
 import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { ProjectOrb } from "@/components/project-orb";
@@ -117,7 +118,7 @@ export function MentionFigure({
         {option.icon ? (
           <span className="text-[0.7rem] leading-none">{option.icon}</span>
         ) : (
-          <BookText className="size-3" />
+          <HugeiconsIcon icon={Book02Icon} className="size-3" />
         )}
       </span>
     );
