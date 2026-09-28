@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrowReloadHorizontalIcon as IterationCw, ArrowRight01Icon, ArrowUpDownIcon, Calendar01Icon, DatabaseIcon, File02Icon, FilterIcon, GitPullRequestIcon, Search01Icon, Settings02Icon, Target01Icon, TaskDone01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AiAutoRotateIcon, ArrowRight01Icon, ArrowUpDownIcon, Calendar01Icon, DatabaseIcon, File02Icon, FilterIcon, GitPullRequestIcon, Search01Icon, Settings02Icon, Target01Icon, TaskDone01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { getFormatter, getTranslations } from "next-intl/server";
 import type { CSSProperties, ReactNode } from "react";
 import { PriorityIndicator, StatusIndicator, EffortIndicator, ObjectiveStatusIndicator } from "@/components/issue-indicators";
@@ -140,7 +140,7 @@ export async function BoardFigure() {
                     <span className="flex min-w-0 items-center gap-1 font-mono text-[11px] text-muted-foreground">
                       {ticket.inCycle && (
                         <span className="flex shrink-0 items-center text-blue-500 dark:text-blue-400">
-                          <AppIcon icon={IterationCw} className="size-3" />
+                          <AppIcon icon={AiAutoRotateIcon} className="size-3" />
                         </span>
                       )}
                       <span className="truncate">AUR-{ticket.number}</span>

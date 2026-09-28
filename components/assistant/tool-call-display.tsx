@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Activity01Icon, ArrowReloadHorizontalIcon as IterationCw, ArrowRight01Icon, Book01Icon, Book02Icon, BookOpen01Icon, BotIcon, Calendar01Icon, Cancel01Icon, DashboardSpeedIcon, Delete02Icon, FileAddIcon as FilePlus2, FileEditIcon as FilePen, FileRemoveIcon, FileSearchIcon, FileStackIcon as FileStack, FileSymlinkIcon as FileSymlink, FilterIcon, FolderTreeIcon as FolderTree, GitMergeIcon, GitPullRequestIcon, GlobeIcon, InboxIcon, LayoutGridIcon, Link02Icon, ListIcon, MailRemove01Icon, MailReply01Icon, Message01Icon, MessageCircleQuestionMarkIcon as MessageCircleQuestion, MessageMultiple01Icon, MessageProgrammingIcon, Notebook01Icon, NotebookIcon, Plug01Icon, Search01Icon, Settings02Icon, ShieldCheckIcon as ShieldCheck, SlidersHorizontalIcon, SparklesIcon, Tag01Icon, TagsIcon, Target01Icon, TaskDone01Icon, TerminalIcon as Terminal, TickDouble01Icon, Undo02Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
+import { Activity01Icon, AiAutoRotateIcon, ArrowRight01Icon, Book01Icon, Book02Icon, BookOpen01Icon, BotIcon, Calendar01Icon, Cancel01Icon, DashboardSpeedIcon, Delete02Icon, FileAddIcon as FilePlus2, FileEditIcon as FilePen, FileRemoveIcon, FileSearchIcon, FileStackIcon as FileStack, FileSymlinkIcon as FileSymlink, FilterIcon, FolderTreeIcon as FolderTree, GitMergeIcon, GitPullRequestIcon, GlobeIcon, InboxIcon, LayoutGridIcon, Link02Icon, ListIcon, MailRemove01Icon, MailReply01Icon, Message01Icon, MessageCircleQuestionMarkIcon as MessageCircleQuestion, MessageMultiple01Icon, MessageProgrammingIcon, Notebook01Icon, NotebookIcon, Plug01Icon, Search01Icon, Settings02Icon, ShieldCheckIcon as ShieldCheck, SlidersHorizontalIcon, SparklesIcon, Tag01Icon, TagsIcon, Target01Icon, TaskDone01Icon, TerminalIcon as Terminal, TickDouble01Icon, Undo02Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
@@ -875,14 +875,14 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   get_cycle: {
-    icon: IterationCw,
+    icon: AiAutoRotateIcon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("loadingCycle");
       return success ? t("cycleLoaded") : t("loadCycleFailed");
     },
   },
   fill_cycle: {
-    icon: IterationCw,
+    icon: AiAutoRotateIcon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("fillingCycle");
       if (!success) return t("fillCycleFailed");
@@ -891,7 +891,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   add_issues_to_cycle: {
-    icon: IterationCw,
+    icon: AiAutoRotateIcon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("addingToCycle");
       if (!success) return t("addToCycleFailed");
@@ -900,7 +900,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   move_issues: {
-    icon: IterationCw,
+    icon: AiAutoRotateIcon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("movingBetweenCycles");
       if (!success) return t("moveBetweenCyclesFailed");
@@ -909,7 +909,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   remove_issues_from_cycle: {
-    icon: IterationCw,
+    icon: AiAutoRotateIcon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("removingFromCycle");
       if (!success) return t("removeFromCycleFailed");
