@@ -1,20 +1,10 @@
-import {
-  Copy,
-  ExternalLink,
-  FileText,
-  FolderKanban,
-  Link2,
-  ListTodo,
-  Settings,
-  Target,
-  CircleDashed,
-} from "lucide-react";
 import type {
   Project,
   SearchIndexIssue,
   SearchIndexObjective,
   SearchIndexPage,
 } from "@/lib/types";
+import { CircleDashedIcon, Copy, ExternalLinkIcon, FileTextIcon as FileText, FolderKanbanIcon, Link02Icon as Link2, Settings, Target01Icon as Target, Task01Icon as ListTodo } from "@hugeicons/core-free-icons";
 import type { PaletteItem } from "../../types";
 import type { ActionProvider, ContextualAction } from "../types";
 
@@ -67,7 +57,7 @@ export function createMinddyEntityActionsProvider(
   const go = (
     id: string,
     label: string,
-    icon: typeof FolderKanban,
+    icon: typeof FolderKanbanIcon,
     href: string,
     priority = 0
   ): ContextualAction => ({
@@ -128,7 +118,7 @@ export function createMinddyEntityActionsProvider(
       {
         id: "entity.open-new-tab",
         label: labels.openInNewTab,
-        icon: ExternalLink,
+        icon: ExternalLinkIcon,
         category: "navigation",
         priority: -90,
         basic,
@@ -177,7 +167,7 @@ export function createMinddyEntityActionsProvider(
           copy("project.copy-key", labels.copyProjectKey, project.key, 20),
           go("project.objectives", labels.openObjectives, Target, `${base}/objectives`, 50),
           go("project.pages", labels.openPages, FileText, `${base}/pages`, 40),
-          go("project.triage", labels.openTriage, CircleDashed, `${base}/triage`, 30),
+          go("project.triage", labels.openTriage, CircleDashedIcon, `${base}/triage`, 30),
           go("project.feedback", labels.openFeedback, Link2, `${base}/feedback`, 20),
           go("project.settings", labels.openProjectSettings, Settings, `${base}/settings`, 10)
         );
@@ -200,7 +190,7 @@ export function createMinddyEntityActionsProvider(
           create("objective.new-objective", labels.newObjective, Target, () => dependencies.openCreateObjective(objective.project_id), 20),
           copy("objective.copy-name", labels.copyObjectiveName, item.title, 10),
           go("objective.list", labels.openObjectives, Target, `${base}/objectives`, 50),
-          go("objective.project", labels.openProjectBoard, FolderKanban, base, 40)
+          go("objective.project", labels.openProjectBoard, FolderKanbanIcon, base, 40)
         );
         return actions;
       }
@@ -213,7 +203,7 @@ export function createMinddyEntityActionsProvider(
           create("page.new-issue", labels.newIssueInProject, ListTodo, () => dependencies.openCreateIssue(page.project_id), 40),
           copy("page.copy-title", labels.copyPageTitle, item.title, 20),
           go("page.index", labels.openPages, FileText, `${base}/pages`, 50),
-          go("page.project", labels.openProjectBoard, FolderKanban, base, 40)
+          go("page.project", labels.openProjectBoard, FolderKanbanIcon, base, 40)
         );
         return actions;
       }
@@ -224,7 +214,7 @@ export function createMinddyEntityActionsProvider(
       actions.push(
         create("issue.new-issue", labels.newIssueInProject, ListTodo, () => dependencies.openCreateIssue(issue.project_id), 20),
         copy("issue.copy-title", labels.copyIssueTitle, item.title, 10),
-        go("issue.project", labels.openProjectBoard, FolderKanban, base, 30)
+        go("issue.project", labels.openProjectBoard, FolderKanbanIcon, base, 30)
       );
       if (issue.objective_id) {
         actions.push(

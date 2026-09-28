@@ -1,5 +1,6 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { BotIcon, Calendar01Icon, FileAttachmentIcon, GitPullRequestIcon, Layers01Icon, Notebook01Icon, TaskDone01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { getTranslations } from "next-intl/server";
-import { CalendarClock, Check, FileText, GitPullRequest, Bot, Layers, ListChecks, NotebookPen } from "lucide-react";
 import { MCP_PRESETS } from "@/lib/mcp-catalog";
 import { McpServiceLogo } from "@/components/mcp-service-logo";
 import { MCP_AGENTS } from "@/lib/mcp-agents";
@@ -18,11 +19,11 @@ const NUMO_CAPABILITIES = ["find", "act", "context"] as const;
 /** The surfaces Numo works with, read left to right — its tools are what a
     visitor weighs, so they stay visible on the card face, not behind the plus. */
 const NUMO_TOOLS = [
-  { key: "tasks", icon: ListChecks },
-  { key: "pages", icon: FileText },
-  { key: "pullRequests", icon: GitPullRequest },
-  { key: "routines", icon: CalendarClock },
-  { key: "notes", icon: NotebookPen },
+  { key: "tasks", icon: TaskDone01Icon },
+  { key: "pages", icon: FileAttachmentIcon },
+  { key: "pullRequests", icon: GitPullRequestIcon },
+  { key: "routines", icon: Calendar01Icon },
+  { key: "notes", icon: Notebook01Icon },
 ] as const;
 
 /** Read left to right: Numo opens the section, works the repository, you review,
@@ -44,7 +45,7 @@ export async function SectionAgents() {
               <ul className="mt-5 flex flex-wrap gap-x-4 gap-y-1.5 text-xs font-medium">
                 {NUMO_TOOLS.map(tool => (
                   <li key={tool.key} className="flex items-center gap-1.5 opacity-75">
-                    <tool.icon className="size-3.5 shrink-0" strokeWidth={1.5} aria-hidden />
+                    <HugeiconsIcon icon={tool.icon} className="size-3.5 shrink-0" strokeWidth={1.5} aria-hidden />
                     {t(`numoTool_${tool.key}`)}
                   </li>
                 ))}
@@ -57,7 +58,7 @@ export async function SectionAgents() {
           <FeatureDisclosure id="workflow" title={t("workflow_run_title")} className={`min-h-[460px] ${CARD_TONES.lavender}`}
             details={<div className="space-y-5"><p>{t("workflow_write_body")}</p><p>{t("workflow_run_body")}</p><p>{t("workflowSubtitle")}</p><ScreenshotSlot id="workflowAgent" expandable focused sizes="(min-width: 1024px) 310px, 100vw" /></div>}>
             <div className="flex h-full flex-col px-6 pt-6 pb-20 sm:px-8 sm:pt-8">
-              <Bot className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+              <HugeiconsIcon icon={BotIcon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
               <h3 className="text-2xl font-medium tracking-tight">{t("workflow_run_title")}</h3>
               <p className="mt-3 text-sm leading-relaxed opacity-80">{t("workflow_run_body")}</p>
               <div className="mt-auto pt-6">
@@ -68,7 +69,7 @@ export async function SectionAgents() {
           <FeatureDisclosure title={t("workflow_review_title")} className={`min-h-[460px] lg:col-span-2 ${CARD_TONES.sage}`}
             details={<div className="space-y-5"><p>{t("workflow_review_body")}</p><p>{t("workflowSubtitle")}</p><ScreenshotSlot id="workflowPr" expandable focused sizes="(min-width: 1024px) 700px, 100vw" /></div>}>
             <div className="flex h-full flex-col px-6 pt-6 pb-20 sm:px-8 sm:pt-8">
-              <GitPullRequest className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+              <HugeiconsIcon icon={GitPullRequestIcon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
               <h3 className="text-2xl font-medium tracking-tight">{t("workflow_review_title")}</h3>
               <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{t("workflow_review_body")}</p>
               <div className="mt-auto pt-6">
@@ -77,13 +78,13 @@ export async function SectionAgents() {
             </div>
           </FeatureDisclosure>
           <FeatureDisclosure title={t("navMenu_agents_title")} className={`min-h-[440px] ${CARD_TONES.butter}`}
-            details={<><p className="mb-5">{t("agentsMcpRoles")}</p><p className="mb-5">{t("agentsPlanNote")} {t("agentsByokNote")}</p><ul className="space-y-3">{CAPABILITIES.map(key => <li key={key} className="flex gap-3"><Check className="mt-1 size-4 shrink-0" aria-hidden />{t(`agentsCapability_${key}`)}</li>)}</ul></>}>
+            details={<><p className="mb-5">{t("agentsMcpRoles")}</p><p className="mb-5">{t("agentsPlanNote")} {t("agentsByokNote")}</p><ul className="space-y-3">{CAPABILITIES.map(key => <li key={key} className="flex gap-3"><HugeiconsIcon icon={Tick01Icon} className="mt-1 size-4 shrink-0" aria-hidden />{t(`agentsCapability_${key}`)}</li>)}</ul></>}>
             <div className="flex h-full flex-col p-6 pb-20 sm:p-8 sm:pb-20">
               <h3 className="text-2xl font-medium tracking-tight">{t("agentsCompatible")}</h3>
               <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-5">
                 {MCP_AGENTS.map(agent => <li key={agent.id} className="flex min-w-0 items-center gap-2 text-xs font-medium"><McpAgentLogo agent={agent.id} size={24} />{agent.label}</li>)}
                 {PROVIDERS.map(provider => <li key={provider.id} className="flex min-w-0 items-center gap-2 text-xs font-medium"><McpServiceLogo service={provider.id} className="size-6" />{provider.name}</li>)}
-                <li className="flex items-center gap-2 text-xs opacity-75"><Layers className="size-6 shrink-0" strokeWidth={1.5} aria-hidden />{t("agentsMore")}</li>
+                <li className="flex items-center gap-2 text-xs opacity-75"><HugeiconsIcon icon={Layers01Icon} className="size-6 shrink-0" strokeWidth={1.5} aria-hidden />{t("agentsMore")}</li>
               </ul>
             </div>
           </FeatureDisclosure>
@@ -91,7 +92,7 @@ export async function SectionAgents() {
             details={<div className="space-y-5"><p>{t("routinesCardDetailsBody")}</p><p>{t("workflowSubtitle")}</p><ScreenshotSlot id="routines" expandable sizes="(min-width: 1024px) 960px, 100vw" /></div>}>
             <div className="grid h-full items-center gap-8 px-6 py-8 sm:px-8 lg:grid-cols-2">
               <div className="flex h-full flex-col">
-                <CalendarClock className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+                <HugeiconsIcon icon={Calendar01Icon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
                 <h3 className="text-2xl font-medium tracking-tight">{t("routinesCardTitle")}</h3>
                 <p className="mt-3 max-w-md text-sm leading-relaxed opacity-80">{t("routinesCardBody")}</p>
               </div>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { AppIcon } from "@/components/icon";
+import { AppWindowIcon as AppWindow, BellIcon as Bell, RefreshIcon as RefreshCw } from "@hugeicons/core-free-icons";
 import { getLocale, getTranslations } from "next-intl/server";
-import { AppWindow, Bell, RefreshCw } from "lucide-react";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
 import { publicPathForLocale, routeByKey } from "@/lib/public-routes";
@@ -96,7 +97,7 @@ export default async function DownloadPage() {
               <ul className="flex h-full flex-col justify-between gap-8">
                 {POINTS.map(point => (
                   <li key={point.key}>
-                    <point.icon className="mb-3 size-5" strokeWidth={1.5} aria-hidden />
+                    <AppIcon icon={point.icon} className="mb-3 size-5" strokeWidth={1.5} aria-hidden />
                     <h3 className="text-lg font-medium tracking-tight">{t(`point_${point.key}_title`)}</h3>
                     <p className="mt-2 text-sm leading-relaxed opacity-80">{t(`point_${point.key}_body`)}</p>
                   </li>

@@ -1,10 +1,12 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { ArrowReloadHorizontalIcon as IterationCw, Calendar01Icon, CheckmarkCircle01Icon as CheckCircle2, Loading02Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, toast } from "mangue-ui";
-import { CalendarClock, CheckCircle2, IterationCw, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { CYCLES_ENABLED_META_KEY } from "@/lib/cycle-prefs";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
@@ -26,7 +28,7 @@ function EmptyShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-0 flex-1 px-6 pt-4">
       <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
         <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-          <IterationCw className="size-6" />
+          <AppIcon icon={IterationCw} className="size-6" />
         </div>
         {children}
       </div>
@@ -65,7 +67,7 @@ export function CycleActivationWelcome() {
         <li>{t("welcomeBullet3")}</li>
       </ul>
       <Button size="sm" className="mt-1" onClick={() => void activate()} disabled={activating || !user}>
-        {activating ? <Loader2 className="animate-spin" /> : <IterationCw />}
+        {activating ? <HugeiconsIcon icon={Loading02Icon} className="animate-spin" /> : <AppIcon icon={IterationCw} />}
         {t("activate")}
       </Button>
     </EmptyShell>
@@ -83,7 +85,7 @@ export function CycleFutureNotice({ cycle }: { cycle: CycleInfo }) {
     <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
       <div className="mx-auto max-w-5xl">
         <EmptyScene
-          icon={CalendarClock}
+          icon={Calendar01Icon}
           title={t("futureCycle", { date: start })}
         />
       </div>
@@ -136,12 +138,12 @@ export function CycleCompletedBanner() {
 
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
-      <CheckCircle2 className="size-5 shrink-0 text-emerald-500" aria-hidden />
+      <AppIcon icon={CheckCircle2} className="size-5 shrink-0 text-emerald-500" aria-hidden />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold">{t("completedTitle")}</p>
       </div>
       <Button size="sm" variant="outline" onClick={() => void refill()} disabled={refilling}>
-        {refilling ? <Loader2 className="animate-spin" /> : <IterationCw />}
+        {refilling ? <HugeiconsIcon icon={Loading02Icon} className="animate-spin" /> : <AppIcon icon={IterationCw} />}
         {t("refill")}
       </Button>
     </div>

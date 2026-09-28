@@ -1,23 +1,12 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AlertCircleIcon, BotIcon, CancelCircleIcon as Ban, CheckmarkCircle01Icon as CheckCircle2, GitBranchIcon, GitCommitIcon, GitPullRequestIcon, HelpCircleIcon, LinkSquare01Icon, Loading02Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useNow, useTranslations } from "next-intl";
-import {
-  Ban,
-  Bot,
-  CheckCircle2,
-  CircleAlert,
-  CircleHelp,
-  ExternalLink,
-  GitBranch,
-  GitCommitHorizontal,
-  GitPullRequest,
-  Loader2,
-  Package,
-} from "lucide-react";
 import {
   Button,
   SidePanel,
@@ -30,6 +19,7 @@ import {
   cn,
 } from "mangue-ui";
 import { AgentDiffSheet } from "@/components/agent/agent-diff-sheet";
+import { AppIcon } from "@/components/icon";
 import { ModelLogo } from "@/components/model-logo";
 import { NumoIcon } from "@/components/numo-icon";
 import {
@@ -97,14 +87,14 @@ function titleOf(call: DelegatedWorkCall, fallback: string): string {
 }
 
 const STATE_ICONS = {
-  starting: Loader2,
-  queued: Loader2,
-  running: Loader2,
-  waiting_input: CircleHelp,
+  starting: Loading02Icon,
+  queued: Loading02Icon,
+  running: Loading02Icon,
+  waiting_input: HelpCircleIcon,
   completed: CheckCircle2,
-  failed: CircleAlert,
+  failed: AlertCircleIcon,
   canceled: Ban,
-} satisfies Record<DelegatedWorkState, React.ComponentType<{ className?: string }>>;
+} satisfies Record<DelegatedWorkState, AppIcon>;
 
 const REASONING_LABEL_KEYS = {
   off: "reasoningOff",
@@ -193,7 +183,8 @@ function DelegatedWorkMeta({
         )}
         aria-live="polite"
       >
-        <StateIcon
+        <AppIcon
+          icon={StateIcon}
           className={cn(
             "size-3.5",
             (state === "starting" || state === "queued" || state === "running") &&
@@ -237,7 +228,7 @@ function DelegatedSubagents({ subagents }: { subagents: TurnSubagent[] }) {
         {runningCount > 0 ? (
           <Spinner className="size-3" aria-hidden />
         ) : (
-          <Bot className="size-3.5 shrink-0" aria-hidden />
+          <HugeiconsIcon icon={BotIcon} className="size-3.5 shrink-0" aria-hidden />
         )}
         {runningCount > 0
           ? t("subagentsWorking", { count: runningCount })
@@ -257,7 +248,7 @@ function DelegatedSubagents({ subagents }: { subagents: TurnSubagent[] }) {
               {running ? (
                 <Spinner className="size-3 shrink-0 text-blue-500" aria-hidden />
               ) : (
-                <CheckCircle2 className="size-3.5 shrink-0 text-brand" aria-hidden />
+                <AppIcon icon={CheckCircle2} className="size-3.5 shrink-0 text-brand" aria-hidden />
               )}
               <span className="min-w-0 flex-1 truncate">
                 {t(
@@ -360,7 +351,7 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
           <div className="flex flex-wrap items-center gap-3 border-t pt-2 text-xs text-muted-foreground">
             {run?.branch_name ? (
               <span className="inline-flex min-w-0 items-center gap-1">
-                <GitBranch className="size-3.5 shrink-0" aria-hidden />
+                <HugeiconsIcon icon={GitBranchIcon} className="size-3.5 shrink-0" aria-hidden />
                 <span className="truncate font-mono">{run.branch_name}</span>
               </span>
             ) : null}
@@ -371,9 +362,9 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
                 rel="noreferrer"
                 className="inline-flex items-center gap-1 text-foreground hover:underline"
               >
-                <GitPullRequest className="size-3.5" aria-hidden />
+                <HugeiconsIcon icon={GitPullRequestIcon} className="size-3.5" aria-hidden />
                 {run.pr_number ? `#${run.pr_number}` : t("viewPullRequest")}
-                <ExternalLink className="size-3" aria-hidden />
+                <HugeiconsIcon icon={LinkSquare01Icon} className="size-3" aria-hidden />
               </Link>
             ) : null}
             {artifacts.map((artifact) => {
@@ -382,15 +373,15 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
                 artifact.url === run?.pr_url
               ) return null;
               const ArtifactIcon = artifact.kind === "commit"
-                ? GitCommitHorizontal
+                ? GitCommitIcon
                 : artifact.kind === "pull_request"
-                  ? GitPullRequest
-                  : Package;
+                  ? GitPullRequestIcon
+                  : PackageIcon;
               const content = (
                 <>
-                  <ArtifactIcon className="size-3.5 shrink-0" aria-hidden />
+                  <AppIcon icon={ArtifactIcon} className="size-3.5 shrink-0" aria-hidden />
                   <span className="max-w-64 truncate font-mono">{artifact.ref}</span>
-                  {artifact.url ? <ExternalLink className="size-3 shrink-0" aria-hidden /> : null}
+                  {artifact.url ? <HugeiconsIcon icon={LinkSquare01Icon} className="size-3 shrink-0" aria-hidden /> : null}
                 </>
               );
               return artifact.url ? (

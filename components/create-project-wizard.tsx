@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { FileUploadIcon, InformationCircleIcon, Layers01Icon, Refresh01Icon, SparklesIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -15,14 +17,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import {
-  FileUp,
-  Info,
-  Layers,
-  RefreshCw,
-  Sparkles,
-  UserPlus,
-} from "lucide-react";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -749,10 +743,10 @@ export function CreateProjectWizard({
         >
           {(
             [
-              { id: "new", icon: Sparkles, label: t("wizardOriginNewLabel") },
+              { id: "new", icon: SparklesIcon, label: t("wizardOriginNewLabel") },
               {
                 id: "existing",
-                icon: Layers,
+                icon: Layers01Icon,
                 label: t("wizardOriginExistingLabel"),
               },
             ] as const
@@ -806,7 +800,7 @@ export function CreateProjectWizard({
                       aria-label={t("keyTooltipLabel")}
                       className="flex size-4 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground"
                     >
-                      <Info className="size-3.5" />
+                      <HugeiconsIcon icon={InformationCircleIcon} className="size-3.5" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs text-left">
@@ -847,7 +841,7 @@ export function CreateProjectWizard({
                       aria-label={t("wizardNameSuggestAnother")}
                       className="flex size-6 shrink-0 items-center justify-center rounded-md outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                     >
-                      <RefreshCw className="size-3.5" />
+                      <HugeiconsIcon icon={Refresh01Icon} className="size-3.5" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -864,7 +858,7 @@ export function CreateProjectWizard({
                 onClick={suggestName}
                 className="h-auto self-start bg-transparent px-0 py-1 text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
               >
-                <Sparkles className="size-3.5" />
+                <HugeiconsIcon icon={SparklesIcon} className="size-3.5" />
                 {t("wizardNameSuggest")}
               </Button>
             ) : null)}
@@ -884,7 +878,7 @@ export function CreateProjectWizard({
               onClick={openJoin}
               className="h-auto self-start bg-transparent px-0 py-1 text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
             >
-              <UserPlus className="size-3.5" />
+              <HugeiconsIcon icon={UserAdd01Icon} className="size-3.5" />
               {t("wizardJoinLink")}
             </Button>
           )}
@@ -1032,7 +1026,7 @@ export function CreateProjectWizard({
               <>
                 <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
-                    <FileUp className="size-5" strokeWidth={1.5} />
+                    <HugeiconsIcon icon={FileUploadIcon} className="size-5" strokeWidth={1.5} />
                   </span>
                   <div className="min-w-0 flex-1 text-left">
                     <p className="truncate text-sm font-medium">
@@ -1086,10 +1080,7 @@ export function CreateProjectWizard({
                       : "border-border hover:border-ring/60 focus-visible:border-ring",
                   )}
                 >
-                  <FileUp
-                    className="size-5 text-muted-foreground"
-                    aria-hidden
-                  />
+                  <HugeiconsIcon icon={FileUploadIcon} className="size-5 text-muted-foreground" aria-hidden />
                   <p className="text-sm font-medium">
                     {tSettings("importDropTitle")}
                   </p>

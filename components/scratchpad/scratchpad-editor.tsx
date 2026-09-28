@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
+import { Heading01Icon as Heading1, Heading02Icon as Heading2, Heading03Icon as Heading3, LeftToRightListBulletIcon as List, Mic01Icon as Mic, Task01Icon as ListTodo } from "@hugeicons/core-free-icons";
 import {
   useEditor,
   EditorContent,
@@ -16,7 +17,6 @@ import {
   setCodeBlockLabels,
 } from "@/components/code-block-lowlight";
 import { codeBlockEditorExtension } from "@/components/code-block-node-view";
-import { Heading1, Heading2, Heading3, List, ListTodo, Mic } from "lucide-react";
 import {
   removeSettledTasks,
   scratchpadSectionSubtree,

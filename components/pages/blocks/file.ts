@@ -1,5 +1,5 @@
 import { Node } from "@tiptap/core";
-import { Paperclip } from "lucide-react";
+import { PaperclipIcon as Paperclip } from "@hugeicons/core-free-icons";
 import { normalizePageFileSrc, pageFileIdFromSrc } from "@/lib/page-files";
 import {
   escapeHtmlAttribute,

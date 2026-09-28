@@ -1,10 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowLeft01Icon, Target01Icon } from "@hugeicons/core-free-icons";
 import { startTransition } from "react";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
 import { Button, cn } from "mangue-ui";
-import { ChevronDown, ChevronLeft, Target } from "lucide-react";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
 import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { AppContentHeader } from "@/components/app-content-header";
@@ -63,7 +64,7 @@ function ObjectiveSwitch({
           className="flex max-w-full -translate-x-1.5 items-center gap-1.5 rounded-md px-1.5 py-0.5 font-medium leading-tight outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
         >
           <span className="truncate">{objective.name}</span>
-          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+          <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0 text-muted-foreground" />
         </button>
       }
     />
@@ -109,7 +110,7 @@ export function ObjectiveBoardHeader({
           href={`/projects/${projectId}/objectives?open=${objective.id}`}
           aria-label={t("backToObjective")}
         >
-          <ChevronLeft />
+          <HugeiconsIcon icon={ArrowLeft01Icon} />
         </Link>
       </Button>
 
@@ -193,7 +194,7 @@ export function ObjectiveBoardHeader({
               )}
               aria-hidden
             >
-              <Target className="size-3.5" />
+              <HugeiconsIcon icon={Target01Icon} className="size-3.5" />
             </span>
             <div className="flex flex-col leading-tight">
               <span className="text-[11px] text-muted-foreground">

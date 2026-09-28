@@ -6,6 +6,9 @@
 // and renders one of four triggers via `variant`. Values are ISO strings
 // (local wall-clock time preserved); `null` means unset.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Calendar01Icon, RepeatIcon } from "@hugeicons/core-free-icons";
+import { AppIcon } from "@/components/icon";
 import * as React from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import {
@@ -31,7 +34,6 @@ import {
   cn,
 } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
-import { CalendarDays, Repeat } from "lucide-react";
 import { dueDateFormat, dueDateHasTime, parseDueDate } from "@/lib/due-date";
 import {
   RECURRENCE_CADENCES,
@@ -328,14 +330,14 @@ export function DateTimePicker({
   // A recurring ticket has the repeat icon wherever its due date
   // is displayed: this is what distinguishes “August 12” from “every month,
   // August 12” without extending the chip. The cadence can be read on hover.
-  const TriggerIcon = isRecurring ? Repeat : CalendarDays;
+  const TriggerIcon = isRecurring ? RepeatIcon : Calendar01Icon;
 
   let trigger: React.ReactNode;
   if (variant === "value") {
     trigger = (
       <button type="button" aria-label={ariaLabel} className={cn(VALUE_TRIGGER, className)}>
         {isRecurring && (
-          <Repeat className="size-3.5 shrink-0 text-muted-foreground" />
+          <HugeiconsIcon icon={RepeatIcon} className="size-3.5 shrink-0 text-muted-foreground" />
         )}
         {label ?? (
           <span className="text-muted-foreground">{placeholderText}</span>
@@ -354,7 +356,7 @@ export function DateTimePicker({
           className,
         )}
       >
-        <TriggerIcon className="size-3 shrink-0" />
+        <AppIcon icon={TriggerIcon} className="size-3 shrink-0" />
         <span>{label ?? placeholderText}</span>
       </button>
     );
@@ -368,7 +370,7 @@ export function DateTimePicker({
           className,
         )}
       >
-        <TriggerIcon className="size-4 shrink-0 text-muted-foreground" />
+        <AppIcon icon={TriggerIcon} className="size-4 shrink-0 text-muted-foreground" />
         <span className={cn("truncate", !label && "text-muted-foreground")}>
           {label ?? placeholderText}
         </span>
@@ -384,7 +386,7 @@ export function DateTimePicker({
           className,
         )}
       >
-        <TriggerIcon className="size-[18px] shrink-0 text-muted-foreground" />
+        <AppIcon icon={TriggerIcon} className="size-[18px] shrink-0 text-muted-foreground" />
         <span className={cn("truncate", !label && "text-muted-foreground")}>
           {label ?? placeholderText}
         </span>

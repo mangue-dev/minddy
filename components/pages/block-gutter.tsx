@@ -32,12 +32,13 @@
 // contextual (⇧F10, and the “menu” key on keyboards that have one) there
 // brings. Same menu, same actions, without mouse.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, DragDropVerticalIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
 import type { Node } from "@tiptap/pm/model";
 import { DragHandle } from "@tiptap/extension-drag-handle-react";
-import { GripVertical, Plus } from "lucide-react";
 import { cn } from "mangue-ui";
 import { BlockMenu } from "@/components/pages/block-menu";
 import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
@@ -264,7 +265,7 @@ export function BlockGutter({
                   );
                 }}
               >
-                <Plus className="size-4" />
+                <HugeiconsIcon icon={Add01Icon} className="size-4" />
               </button>
             </TooltipTrigger>
             {/* The gesture AND its variant: `alt` inserts above, which none
@@ -297,7 +298,7 @@ export function BlockGutter({
                   openMenuAt(event.currentTarget.getBoundingClientRect());
                 }}
               >
-                <GripVertical className="size-4" />
+                <HugeiconsIcon icon={DragDropVerticalIcon} className="size-4" />
               </button>
             </TooltipTrigger>
             {/* A handle that does TWO things: clicking opens the menu,

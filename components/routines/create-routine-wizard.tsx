@@ -1,10 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { PlayIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button, cn, toast } from "mangue-ui";
-import { Play } from "lucide-react";
-
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { SettingsRow } from "@/components/settings/settings-ui";
@@ -416,7 +416,7 @@ export function CreateRoutineWizard({
               disabled={launchingNow}
               onClick={() => void launchNow(created.id)}
             >
-              <Play className="size-4" />
+              <HugeiconsIcon icon={PlayIcon} className="size-4" />
               {t("runNow")}
             </Button>
           ) : null}

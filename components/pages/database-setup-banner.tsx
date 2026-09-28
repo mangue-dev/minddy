@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, SparklesIcon, Upload01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, toast } from "mangue-ui";
-import { Sparkles, Upload, X } from "lucide-react";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import {
   dismissDatabaseSetup,
@@ -65,7 +66,7 @@ export function DatabaseSetupBanner({
             aria-label={t("dismissSetup")}
             onClick={dismiss}
           >
-            <X className="size-4" />
+            <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
           </Button>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -75,7 +76,7 @@ export function DatabaseSetupBanner({
             disabled={opening}
             onClick={() => void ask()}
           >
-            <Sparkles className="size-4 shrink-0" />
+            <HugeiconsIcon icon={SparklesIcon} className="size-4 shrink-0" />
             {t("setupAction")}
           </Button>
           <Button
@@ -83,7 +84,7 @@ export function DatabaseSetupBanner({
             className="h-auto min-h-9 whitespace-normal text-left"
             onClick={() => setImporting(true)}
           >
-            <Upload className="size-4 shrink-0" />
+            <HugeiconsIcon icon={Upload01Icon} className="size-4 shrink-0" />
             {t("importAction")}
           </Button>
         </div>

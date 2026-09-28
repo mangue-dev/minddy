@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { ArrowRight, Check } from "lucide-react";
 import { cn } from "mangue-ui/lib/utils";
 import {
   BILLING_PLANS, annualMonthlyEquivalentEur, annualPriceEur,
@@ -76,12 +77,12 @@ export function PricingPlans({
               </div>
               <ul className="mb-9 flex-1 space-y-3.5">
                 {planFeatureLabels(plan, t).map(feature => <li key={feature} className="flex items-start gap-3 text-sm leading-relaxed">
-                  <Check className="mt-1 size-4 shrink-0" strokeWidth={1.5} aria-hidden /><span>{feature}</span>
+                  <HugeiconsIcon icon={Tick01Icon} className="mt-1 size-4 shrink-0" strokeWidth={1.5} aria-hidden /><span>{feature}</span>
                 </li>)}
               </ul>
               <Link href="/signup" onClick={() => track("plan_cta_clicked", { plan_id: plan.id, interval, current_plan_id: "anonymous" })}
                 className="inline-flex min-h-12 items-center justify-between gap-3 rounded-lg border border-current/20 px-4 py-3 text-sm font-medium transition-colors hover:bg-white/40 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current dark:hover:bg-white/10">
-                {tl("pricingCta")}<ArrowRight className="size-4 shrink-0" aria-hidden />
+                {tl("pricingCta")}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" aria-hidden />
               </Link>
             </article>
           );

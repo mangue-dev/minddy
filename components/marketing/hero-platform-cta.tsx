@@ -1,7 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Download01Icon, SmartPhone01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
-import { Download, Smartphone } from "lucide-react";
 import { Button } from "mangue-ui/components/ui/button";
 import {
   resolveInstallPlatform,
@@ -50,7 +51,7 @@ export function HeroPlatformCta({
     if (canPrompt) {
       return (
         <Button size="lg" onClick={() => void promptInstall()}>
-          <Smartphone data-icon="inline-start" />
+          <HugeiconsIcon icon={SmartPhone01Icon} data-icon="inline-start" />
           {androidLabel}
         </Button>
       );
@@ -59,7 +60,7 @@ export function HeroPlatformCta({
     return (
       <Button asChild size="lg">
         <a href={`${downloadHref}#mobile-install-guide`}>
-          <Smartphone data-icon="inline-start" />
+          <HugeiconsIcon icon={SmartPhone01Icon} data-icon="inline-start" />
           {androidLabel}
         </a>
       </Button>
@@ -70,7 +71,7 @@ export function HeroPlatformCta({
     return (
       <Button asChild size="lg">
         <a href={`${downloadHref}#mobile-install-guide`}>
-          <Smartphone data-icon="inline-start" />
+          <HugeiconsIcon icon={SmartPhone01Icon} data-icon="inline-start" />
           {iosLabel}
         </a>
       </Button>
@@ -81,7 +82,7 @@ export function HeroPlatformCta({
     return (
       <Button asChild size="lg">
         <a href={WINDOWS_STORE_DEEP_LINK}>
-          <Download data-icon="inline-start" />
+          <HugeiconsIcon icon={Download01Icon} data-icon="inline-start" />
           {windowsLabel}
         </a>
       </Button>
@@ -92,7 +93,7 @@ export function HeroPlatformCta({
     return (
       <Button asChild size="lg">
         <a href={downloadHref}>
-          <Download data-icon="inline-start" />
+          <HugeiconsIcon icon={Download01Icon} data-icon="inline-start" />
           {platform === "macos" ? macLabel : linuxLabel}
         </a>
       </Button>

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { CheckmarkCircle01Icon as CheckCircle2 } from "@hugeicons/core-free-icons";
+import { AppIcon } from "@/components/icon";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Button, Card, CardContent } from "mangue-ui";
-import { CheckCircle2 } from "lucide-react";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { appPageMetadata } from "@/lib/app-metadata";
 
@@ -40,7 +41,7 @@ export default async function EmailConfirmedPage() {
         <CardContent className="flex flex-col items-center gap-6 px-8 py-10 text-center">
           <MinddyLogo className="h-7 w-auto text-foreground" />
 
-          <CheckCircle2
+          <AppIcon icon={CheckCircle2}
             className="size-10 text-emerald-500"
             strokeWidth={1.5}
             aria-hidden="true"

@@ -1,11 +1,13 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { ArrowLeft01Icon, ArrowUp01Icon, CancelCircleIcon as Ban, Message01Icon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { ArrowLeft, Ban, ChevronUp, EyeOff, MessageSquare } from "lucide-react";
 import { Badge, Button, cn } from "mangue-ui";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { ProjectOrb } from "@/components/project-orb";
@@ -86,7 +88,7 @@ export function FeedbackStatusBadge({
       variant="secondary"
       icon={
         status === "spam" ? (
-          <Ban />
+          <AppIcon icon={Ban} />
         ) : (
           <StatusIndicator status={FEEDBACK_TO_ISSUE_STATUS[status]} />
         )
@@ -126,7 +128,7 @@ export function FeedbackStatusBadge({
 export function UnpublishedBadge({ projectName }: { projectName?: string }) {
   const t = useTranslations("PublicFeedback");
   const badge = (
-    <Badge variant="secondary" icon={<EyeOff />} className="text-muted-foreground">
+    <Badge variant="secondary" icon={<HugeiconsIcon icon={ViewOffIcon} />} className="text-muted-foreground">
       {t("rejected")}
     </Badge>
   );
@@ -189,7 +191,7 @@ export function VoteButton({
             className
           )}
         >
-          <ChevronUp className={size === "md" ? "size-4" : "size-3.5"} />
+          <HugeiconsIcon icon={ArrowUp01Icon} className={size === "md" ? "size-4" : "size-3.5"} />
           {count}
         </button>
       </TooltipTrigger>
@@ -291,7 +293,7 @@ function FeedbackCommentsBadge({
             className="size-3.5 rounded-[4px]"
           />
         ) : (
-          <MessageSquare />
+          <HugeiconsIcon icon={Message01Icon} />
         )
       }
     >
@@ -347,7 +349,7 @@ export function BackToBoardLink({ basePath }: { basePath: string }) {
     <Button asChild className="w-fit">
       {/* basePath "" (custom domain): the root of the board is "/". */}
       <Link href={basePath || "/"}>
-        <ArrowLeft />
+        <HugeiconsIcon icon={ArrowLeft01Icon} />
         {t("back")}
       </Link>
     </Button>

@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Download01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import type { NodeViewRenderer } from "@tiptap/core";
 import {
   NodeViewWrapper,
@@ -7,7 +9,6 @@ import {
   type NodeViewProps,
 } from "@tiptap/react";
 import { useLocale, useTranslations } from "next-intl";
-import { Download, RotateCcw } from "lucide-react";
 import { cx } from "@/components/pages/blocks/cx";
 import { ResourceTypeIcon } from "@/components/resource-type-icon";
 import {
@@ -110,7 +111,7 @@ export function FileView({ node, selected }: NodeViewProps) {
           className="flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           onClick={() => uploads?.retry(uploadId)}
         >
-          <RotateCcw className="size-3" />
+          <HugeiconsIcon icon={Undo02Icon} className="size-3" />
           {t("uploadRetry")}
         </button>
       )}
@@ -143,7 +144,7 @@ export function FileView({ node, selected }: NodeViewProps) {
             window.location.href = event.currentTarget.href;
           }}
         >
-          <Download className="size-3" />
+          <HugeiconsIcon icon={Download01Icon} className="size-3" />
           {t("fileDownload")}
         </a>
       )}

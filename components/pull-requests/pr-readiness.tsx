@@ -1,13 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { AlertCircleIcon, ArrowDown01Icon, Clock01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  AlertCircle,
-  Check,
-  ChevronDown,
-  Clock,
-} from "lucide-react";
 import {
   Badge,
   Button,
@@ -138,7 +135,7 @@ export function PrReadinessBadge({
         variant="secondary"
         className={cn("shrink-0 gap-1.5 text-muted-foreground", className)}
       >
-        <Clock className="size-3" />
+        <HugeiconsIcon icon={Clock01Icon} className="size-3" />
         {t("readinessLoading")}
       </Badge>
     );
@@ -164,11 +161,11 @@ export function PrReadinessBadge({
       )}
     >
       {ready ? (
-        <Check className="size-3" />
+        <HugeiconsIcon icon={Tick01Icon} className="size-3" />
       ) : pending ? (
-        <Clock className="size-3" />
+        <HugeiconsIcon icon={Clock01Icon} className="size-3" />
       ) : (
-        <AlertCircle className="size-3" />
+        <HugeiconsIcon icon={AlertCircleIcon} className="size-3" />
       )}
       {t(STATE_KEYS[readiness.state])}
     </Badge>
@@ -197,7 +194,7 @@ export function PrReadinessIcon({
       readiness.state === "review_requested" ||
       readiness.state === "checks_running" ||
       readiness.state === "status_unavailable");
-  const Icon = unavailable ? AlertCircle : ready ? Check : pending ? Clock : AlertCircle;
+  const Icon = unavailable ? AlertCircleIcon : ready ? Tick01Icon : pending ? Clock01Icon : AlertCircleIcon;
   return (
     <AppTooltip label={label}>
       <span
@@ -211,7 +208,7 @@ export function PrReadinessIcon({
           className,
         )}
       >
-        <Icon className="size-3.5" aria-hidden />
+        <AppIcon icon={Icon} className="size-3.5" aria-hidden />
       </span>
     </AppTooltip>
   );
@@ -266,11 +263,11 @@ export function PrReadinessControl({
     readiness.state === "checks_running" ||
     readiness.state === "status_unavailable";
   const statusIcon = ready ? (
-    <Check className="size-3.5" />
+    <HugeiconsIcon icon={Tick01Icon} className="size-3.5" />
   ) : pending ? (
-    <Clock className="size-3.5" />
+    <HugeiconsIcon icon={Clock01Icon} className="size-3.5" />
   ) : (
-    <AlertCircle className="size-3.5" />
+    <HugeiconsIcon icon={AlertCircleIcon} className="size-3.5" />
   );
 
   return (
@@ -294,7 +291,7 @@ export function PrReadinessControl({
         >
           {statusIcon}
           {t(STATE_KEYS[readiness.state])}
-          <ChevronDown className="size-3.5" />
+          <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -309,7 +306,7 @@ export function PrReadinessControl({
               data-testid="pr-readiness-condition-passed"
               className="flex items-start gap-2.5 rounded-md bg-emerald-500/10 px-2.5 py-2"
             >
-              <Check className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <HugeiconsIcon icon={Tick01Icon} className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-emerald-700 dark:text-emerald-400">
                   {t(PASSED_KEYS[condition.kind], {
@@ -353,9 +350,9 @@ export function PrReadinessControl({
                 {blocker.kind === "checks" && checks && checks.total > 0 ? (
                   <ChecksDonut parts={checks.checks.map((check) => check.state)} />
                 ) : blocker.status === "pending" ? (
-                  <Clock className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <HugeiconsIcon icon={Clock01Icon} className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
                 ) : (
-                  <AlertCircle className="size-4 shrink-0 text-destructive" />
+                  <HugeiconsIcon icon={AlertCircleIcon} className="size-4 shrink-0 text-destructive" />
                 )}
                 <div className="min-w-40 flex-1">
                   <p
@@ -476,7 +473,7 @@ export function PrReadinessControl({
                       onMerge(preferredMethod);
                     }}
                   >
-                    {merging ? <Spinner /> : <Check />}
+                    {merging ? <Spinner /> : <HugeiconsIcon icon={Tick01Icon} />}
                     {t(mergeMethodKey(preferredMethod))}
                   </Button>
                   {otherMethods.length > 0 ? (
@@ -488,7 +485,7 @@ export function PrReadinessControl({
                           disabled={!readiness.mergeAllowed || !canMerge || merging}
                           aria-label={t("mergeMethodMenu")}
                         >
-                          <ChevronDown className="size-3.5" />
+                          <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">

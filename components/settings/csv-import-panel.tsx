@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Alert01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { Badge, Button, Spinner, cn } from "mangue-ui";
-import { TriangleAlert, X } from "lucide-react";
 import { CsvDropzone } from "@/components/import/csv-dropzone";
 import { ImportMappingEditor } from "@/components/settings/import-mapping-editor";
 import { useCsvImport } from "@/lib/use-csv-import";
@@ -82,7 +83,7 @@ export function CsvImportPanel({
               disabled={importing}
               aria-label={tc("cancel")}
             >
-              <X />
+              <HugeiconsIcon icon={Cancel01Icon} />
             </Button>
           </div>
 
@@ -108,7 +109,7 @@ export function CsvImportPanel({
               let us designate which one bears the name of the tickets — just above. */}
           {!hasTitleColumn && (
             <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500">
-              <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+              <HugeiconsIcon icon={Alert01Icon} className="size-3.5 shrink-0" aria-hidden />
               {t("importErrorInvalid")}
             </p>
           )}
@@ -120,7 +121,7 @@ export function CsvImportPanel({
                   key={i}
                   className="flex items-center gap-1.5 text-xs text-muted-foreground"
                 >
-                  <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+                  <HugeiconsIcon icon={Alert01Icon} className="size-3.5 shrink-0" aria-hidden />
                   {t(`importWarn_${w.key}`, {
                     value: w.value ?? "",
                     count: w.count,

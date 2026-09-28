@@ -1,4 +1,6 @@
 "use client";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, AiNetworkIcon, FileUploadIcon, LayoutGridIcon, LinkSquare01Icon } from "@hugeicons/core-free-icons";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 import { useGeneratingViews } from "@/lib/use-generating-views";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
@@ -25,7 +27,6 @@ import {
   toast,
 } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
-import { ExternalLink, FileUp, LayoutGrid, Network, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -192,18 +193,18 @@ function ProjectBoard() {
           id: "issue-family-board",
           label: tFamily("menuLabel"),
           keywords: ["family", "parent", "children", "famille", "sous-ticket"],
-          icon: <Network className="size-4" />,
+          icon: <HugeiconsIcon icon={AiNetworkIcon} className="size-4" />,
           children: [
             {
               id: "issue-family-board-current",
               label: tFamily("openHere"),
-              icon: <LayoutGrid className="size-4" />,
+              icon: <HugeiconsIcon icon={LayoutGridIcon} className="size-4" />,
               onSelect: () => window.history.pushState(null, "", href),
             },
             {
               id: "issue-family-board-new-tab",
               label: tFamily("openNewTab"),
-              icon: <ExternalLink className="size-4" />,
+              icon: <HugeiconsIcon icon={LinkSquare01Icon} className="size-4" />,
               onSelect: () => {
                 if (appTabs) void appTabs.create(href);
                 else window.open(href, "_blank", "noopener,noreferrer");
@@ -753,19 +754,19 @@ function ProjectBoard() {
  remains. Import and seed remain with the owner (the API reserves them for him, and he pays for the call). */
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
           <div className="mx-auto max-w-5xl">
-            <EmptyScene icon={LayoutGrid} title={t("emptyTitle")}>
+            <EmptyScene icon={LayoutGridIcon} title={t("emptyTitle")}>
               {isOwner ? (
                 <SplitButton
                   onClick={() => openCreate()}
                   menuLabel={t("emptyMoreWays")}
                   menu={
                     <DropdownMenuItem onSelect={() => setImportOpen(true)}>
-                      <FileUp />
+                      <HugeiconsIcon icon={FileUploadIcon} />
                       {t("emptyImport")}
                     </DropdownMenuItem>
                   }
                 >
-                  <Plus />
+                  <HugeiconsIcon icon={Add01Icon} />
                   {t("newIssue")}
                   <Kbd
                     size="sm"
@@ -776,7 +777,7 @@ function ProjectBoard() {
                 </SplitButton>
               ) : (
                 <Button type="button" onClick={() => openCreate()}>
-                  <Plus />
+                  <HugeiconsIcon icon={Add01Icon} />
                   {t("newIssue")}
                 </Button>
               )}

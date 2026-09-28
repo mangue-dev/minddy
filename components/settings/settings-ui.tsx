@@ -2,7 +2,7 @@
 
 import { Children, useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "mangue-ui";
-import type { LucideIcon } from "lucide-react";
+import { AppIcon } from "@/components/icon";
 import {
   settingsSectionAnchor,
   type SettingsSectionId,
@@ -267,7 +267,7 @@ export function SettingsListRow({
   truncateSubtitle = true,
   className,
 }: {
-  icon?: LucideIcon;
+  icon?: AppIcon;
   avatar?: ReactNode;
   title: ReactNode;
   subtitle?: ReactNode;
@@ -280,7 +280,7 @@ export function SettingsListRow({
       {avatar ??
         (Icon && (
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            <Icon className="size-4" />
+            <AppIcon icon={Icon} className="size-4" />
           </span>
         ))}
       <div className="min-w-0 flex-1">

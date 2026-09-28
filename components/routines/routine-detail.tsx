@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, GitPullRequestIcon, MoreHorizontalIcon, PauseCircleIcon, PencilIcon, PlayIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useFormatter, useLocale, useNow, useTranslations } from "next-intl";
@@ -19,18 +21,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import {
-  AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
-  GitPullRequest,
-  MoreHorizontal,
-  PauseCircle,
-  Pencil,
-  Play,
-  Trash2,
-} from "lucide-react";
-
 import { AgentConversation } from "@/components/agent/agent-conversation";
 import { AssistantShell } from "@/components/assistant/assistant-shell";
 import { AppContentHeader } from "@/components/app-content-header";
@@ -327,7 +317,7 @@ export function RoutineDetail({
           aria-label={t("backToRuns")}
           onClick={() => setOpenRunId(null)}
         >
-          <ChevronLeft />
+          <HugeiconsIcon icon={ArrowLeft01Icon} />
         </Button>
         {project ? (
           <ProjectOrb
@@ -390,7 +380,7 @@ export function RoutineDetail({
           className="md:hidden"
           onClick={onBack}
         >
-          <ChevronLeft />
+          <HugeiconsIcon icon={ArrowLeft01Icon} />
         </Button>
         {project ? (
           <ProjectOrb
@@ -413,7 +403,7 @@ export function RoutineDetail({
         {!routine.enabled ? (
           <Badge
             variant="secondary"
-            icon={<PauseCircle />}
+            icon={<HugeiconsIcon icon={PauseCircleIcon} />}
             // The amber product warning badges (the “Private” one
             // return): a state which is not an error, but which we do not want
             // discover by wondering why nothing happened.
@@ -477,7 +467,7 @@ export function RoutineDetail({
                   size="icon-sm"
                   aria-label={t("actionsLabel")}
                 >
-                  <MoreHorizontal className="size-4" />
+                  <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -485,11 +475,11 @@ export function RoutineDetail({
                   disabled={busy}
                   onSelect={() => void runNow()}
                 >
-                  <Play className="size-4" />
+                  <HugeiconsIcon icon={PlayIcon} className="size-4" />
                   {t("runNow")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setDraft(draftFrom(routine))}>
-                  <Pencil className="size-4" />
+                  <HugeiconsIcon icon={PencilIcon} className="size-4" />
                   {tCommon("edit")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -497,7 +487,7 @@ export function RoutineDetail({
                   variant="destructive"
                   onSelect={() => setConfirmingDelete(true)}
                 >
-                  <Trash2 className="size-4" />
+                  <HugeiconsIcon icon={Delete02Icon} className="size-4" />
                   {tCommon("moveToTrash")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -530,7 +520,7 @@ export function RoutineDetail({
             {!agentCapabilitiesLoading &&
             !routineSchedulingConfigured ? (
               <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-                <AlertTriangle className="size-3.5 shrink-0" />
+                <HugeiconsIcon icon={Alert01Icon} className="size-3.5 shrink-0" />
                 <span>
                   {t("unavailableScheduler")}
                 </span>
@@ -539,7 +529,7 @@ export function RoutineDetail({
 
             {routine.last_error ? (
               <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-                <AlertTriangle className="size-3.5 shrink-0" />
+                <HugeiconsIcon icon={Alert01Icon} className="size-3.5 shrink-0" />
                 <span>{routineErrorLabel(routine.last_error, t)}</span>
                 {routine.last_error === "quota" ? (
                   <Link
@@ -700,7 +690,7 @@ export function RoutineDetail({
                                                 )}
                                       </span>
                                     )}
-                                    <ChevronRight className="pointer-events-none relative size-4 shrink-0 text-muted-foreground" />
+                                    <HugeiconsIcon icon={ArrowRight01Icon} className="pointer-events-none relative size-4 shrink-0 text-muted-foreground" />
                                   </div>
                                 </td>
                               </tr>
@@ -721,14 +711,14 @@ export function RoutineDetail({
                   qu'on peut faire tout de suite sans attendre. */}
               {runs.length === 0 ? (
                 <div className="px-4 py-8">
-                  <EmptyScene icon={Play} title={t("noRunsYet")} size="compact">
+                  <EmptyScene icon={PlayIcon} title={t("noRunsYet")} size="compact">
                     {isOwner ? (
                       <Button
                         size="sm"
                         disabled={busy}
                         onClick={() => void runNow()}
                       >
-                        <Play className="size-4" />
+                        <HugeiconsIcon icon={PlayIcon} className="size-4" />
                         {t("runNow")}
                       </Button>
                     ) : null}
@@ -961,7 +951,7 @@ function PrHeaderAction({ run }: { run: RoutineRunSummary }) {
       onClick={open}
       className={cn(run.pr_state === "open" && PR_STATE_STYLES.open)}
     >
-      <GitPullRequest className="size-3.5" />
+      <HugeiconsIcon icon={GitPullRequestIcon} className="size-3.5" />
       {t("openPullRequest")}
     </Button>
   );

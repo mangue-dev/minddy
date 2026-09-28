@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Clock01Icon, GitMergeIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Button } from "mangue-ui";
-import { Clock, GitMerge, UserRound } from "lucide-react";
 import type { PublicIdentity, PublicPost, PublicProject } from "@/lib/feedback/types";
 import { FeedbackAuthDialog } from "../feedback-auth";
 import { BackToBoardLink, FeedbackPostRow, UnpublishedBadge } from "../feedback-bits";
@@ -45,7 +46,7 @@ export function MyFeedbackClient({
 
       {!identity ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed px-6 py-12 text-center">
-          <UserRound className="size-5 text-muted-foreground" />
+          <HugeiconsIcon icon={UserCircleIcon} className="size-5 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">{t("meSignInPrompt")}</p>
           <Button variant="outline" onClick={() => setAuthOpen(true)}>
             {t("signIn")}
@@ -92,7 +93,7 @@ export function MyFeedbackClient({
                       {entry.relation === "authored" &&
                         entry.post.isPublic &&
                         entry.post.reviewState === "pending" && (
-                          <Badge variant="secondary" icon={<Clock />}>
+                          <Badge variant="secondary" icon={<HugeiconsIcon icon={Clock01Icon} />}>
                             {t("pendingReview")}
                           </Badge>
                         )}
@@ -104,7 +105,7 @@ export function MyFeedbackClient({
                   footer={
                     entry.mergedFromTitle ? (
                       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <GitMerge className="size-3" />
+                        <HugeiconsIcon icon={GitMergeIcon} className="size-3" />
                         {t("meMergedFrom", { title: entry.mergedFromTitle })}
                       </p>
                     ) : undefined

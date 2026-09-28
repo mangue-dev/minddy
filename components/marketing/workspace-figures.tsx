@@ -1,24 +1,8 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { Add01Icon, ArrowReloadHorizontalIcon as IterationCw, ArrowRight01Icon, ArrowUpDownIcon, Calendar01Icon, DatabaseIcon, FileAttachmentIcon, FilterIcon, GitPullRequestIcon, Search01Icon, Settings02Icon, Target01Icon, TaskDone01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { getFormatter, getTranslations } from "next-intl/server";
 import type { CSSProperties, ReactNode } from "react";
-import {
-  ArrowDownUp,
-  ArrowUpDown,
-  Calendar,
-  CalendarDays,
-  ChevronRight,
-  Database,
-  FileText,
-  Filter,
-  GitPullRequest,
-  IterationCw,
-  ListChecks,
-  ListFilter,
-  Plus,
-  Search,
-  Settings2,
-  Target,
-  Users,
-} from "lucide-react";
 import { PriorityIndicator, StatusIndicator, EffortIndicator, ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { MentionChip } from "@/components/mention-chip";
 import { ProgressRing } from "@/components/progress-ring";
@@ -156,7 +140,7 @@ export async function BoardFigure() {
                     <span className="flex min-w-0 items-center gap-1 font-mono text-[11px] text-muted-foreground">
                       {ticket.inCycle && (
                         <span className="flex shrink-0 items-center text-blue-500 dark:text-blue-400">
-                          <IterationCw className="size-3" />
+                          <AppIcon icon={IterationCw} className="size-3" />
                         </span>
                       )}
                       <span className="truncate">AUR-{ticket.number}</span>
@@ -164,7 +148,7 @@ export async function BoardFigure() {
                     <span className="flex shrink-0 items-center gap-1.5">
                       {ticket.plan && (
                         <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-                          <ListChecks className="size-3.5 shrink-0" />
+                          <HugeiconsIcon icon={TaskDone01Icon} className="size-3.5 shrink-0" />
                           <span className="tabular-nums">{ticket.plan.done}/{ticket.plan.total}</span>
                         </span>
                       )}
@@ -172,7 +156,7 @@ export async function BoardFigure() {
                           chip in place of the plan indicator. */}
                       {ticket.pr && (
                         <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-500">
-                          <GitPullRequest className="size-3.5 shrink-0" />
+                          <HugeiconsIcon icon={GitPullRequestIcon} className="size-3.5 shrink-0" />
                           <span className="truncate">{tAgent("prBadge")}</span>
                         </span>
                       )}
@@ -197,7 +181,7 @@ export async function BoardFigure() {
                   {due && (
                     <div className="flex items-center justify-end pt-0.5">
                       <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                        <Calendar className="size-3 shrink-0" />
+                        <HugeiconsIcon icon={Calendar01Icon} className="size-3 shrink-0" />
                         {format.dateTime(due, dueDateFormat(due, { compact: true }))}
                       </span>
                     </div>
@@ -208,7 +192,7 @@ export async function BoardFigure() {
               {/* The column's "new ticket" affordance, always present on the
                   real board — decorative here: no hover, no pointer. */}
               <span className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-6 text-sm font-medium text-muted-foreground">
-                <Plus className="size-4" />
+                <HugeiconsIcon icon={Add01Icon} className="size-4" />
                 {board("newIssue")}
               </span>
             </div>
@@ -287,11 +271,8 @@ function FigureTreeLine({ label, database, depth, chevron, active }: {
 }) {
   return (
     <li className="flex items-center gap-1 py-1 pr-2" style={{ paddingLeft: 10 + depth * 12 }}>
-      <ChevronRight
-        aria-hidden
-        className={`size-2.5 shrink-0 text-muted-foreground transition-transform ${chevron === "open" ? "rotate-90" : ""} ${chevron === "none" ? "invisible" : ""}`}
-      />
-      {database ? <Database className="size-3 shrink-0 text-muted-foreground" /> : <FileText className="size-3 shrink-0 text-muted-foreground" />}
+      <HugeiconsIcon icon={ArrowRight01Icon} aria-hidden className={`size-2.5 shrink-0 text-muted-foreground transition-transform ${chevron === "open" ? "rotate-90" : ""} ${chevron === "none" ? "invisible" : ""}`} />
+      {database ? <HugeiconsIcon icon={DatabaseIcon} className="size-3 shrink-0 text-muted-foreground" /> : <HugeiconsIcon icon={FileAttachmentIcon} className="size-3 shrink-0 text-muted-foreground" />}
       <span className={`min-w-0 truncate text-[11px] leading-4 ${active ? "font-medium" : ""}`}>{label}</span>
     </li>
   );
@@ -323,7 +304,7 @@ export async function PagesFigure() {
         <div className="w-28 shrink-0 border-r border-border/60 py-2 sm:w-36 lg:w-44">
           <div className="flex items-center justify-between pb-1 pl-3 pr-2">
             <span className="text-[11px] font-medium text-muted-foreground">{t("navMenu_pages_title")}</span>
-            <Plus className="size-3.5 text-muted-foreground" aria-hidden />
+            <HugeiconsIcon icon={Add01Icon} className="size-3.5 text-muted-foreground" aria-hidden />
           </div>
           <ul>
             {FIGURE_TREE.map(line => (
@@ -339,27 +320,27 @@ export async function PagesFigure() {
             the name and status readable instead of clipping every cell. */}
         <div className="min-w-0 flex-1 py-2 pl-1 pr-2">
           <div className="flex items-center justify-end gap-1 pb-1.5">
-            <Filter className="size-3.5 text-muted-foreground" aria-hidden />
-            <ArrowDownUp className="size-3.5 text-muted-foreground" aria-hidden />
-            <Search className="size-3.5 text-muted-foreground" aria-hidden />
-            <Settings2 className="size-3.5 text-muted-foreground" aria-hidden />
+            <HugeiconsIcon icon={FilterIcon} className="size-3.5 text-muted-foreground" aria-hidden />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3.5 text-muted-foreground" aria-hidden />
+            <HugeiconsIcon icon={Search01Icon} className="size-3.5 text-muted-foreground" aria-hidden />
+            <HugeiconsIcon icon={Settings02Icon} className="size-3.5 text-muted-foreground" aria-hidden />
             <span className="ml-2 flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground">
-              <Plus className="size-3" aria-hidden />{tDb("new")}
+              <HugeiconsIcon icon={Add01Icon} className="size-3" aria-hidden />{tDb("new")}
             </span>
           </div>
           <div className="flex items-center border-b border-border/50 text-[11px] text-muted-foreground">
             <span className="min-w-0 flex-1 truncate px-2 py-1.5">{tDb("name")}</span>
-            <span className="flex w-20 shrink-0 items-center gap-1 px-1 py-1.5 sm:w-[6.5rem]"><ListFilter className="size-3 shrink-0" aria-hidden /><span className="truncate">{t("pagesFigure_colStatus")}</span></span>
-            <span className="hidden w-16 shrink-0 items-center gap-1 px-1 py-1.5 sm:flex"><Users className="size-3 shrink-0" aria-hidden /><span className="truncate">{t("pagesFigure_colOwner")}</span></span>
-            <span className="hidden w-20 shrink-0 items-center gap-1 px-1 py-1.5 sm:flex"><CalendarDays className="size-3 shrink-0" aria-hidden /><span className="truncate">{t("pagesFigure_colDue")}</span></span>
-            <span className="flex w-5 shrink-0 items-center justify-center"><Plus className="size-3 text-muted-foreground" aria-hidden /></span>
+            <span className="flex w-20 shrink-0 items-center gap-1 px-1 py-1.5 sm:w-[6.5rem]"><HugeiconsIcon icon={FilterIcon} className="size-3 shrink-0" aria-hidden /><span className="truncate">{t("pagesFigure_colStatus")}</span></span>
+            <span className="hidden w-16 shrink-0 items-center gap-1 px-1 py-1.5 sm:flex"><HugeiconsIcon icon={UserGroupIcon} className="size-3 shrink-0" aria-hidden /><span className="truncate">{t("pagesFigure_colOwner")}</span></span>
+            <span className="hidden w-20 shrink-0 items-center gap-1 px-1 py-1.5 sm:flex"><HugeiconsIcon icon={Calendar01Icon} className="size-3 shrink-0" aria-hidden /><span className="truncate">{t("pagesFigure_colDue")}</span></span>
+            <span className="flex w-5 shrink-0 items-center justify-center"><HugeiconsIcon icon={Add01Icon} className="size-3 text-muted-foreground" aria-hidden /></span>
           </div>
           {FIGURE_ENTRIES.map(entry => {
             const due = parseDueDate(entry.due);
             return (
               <div key={entry.key} className="flex h-10 items-center border-b border-border/40">
                 <span className="flex min-w-0 flex-1 items-center gap-1.5 px-2">
-                  <FileText className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+                  <HugeiconsIcon icon={FileAttachmentIcon} className="size-3 shrink-0 text-muted-foreground" aria-hidden />
                   <span className="min-w-0 truncate text-[11px]">{t(`pagesFigure_${entry.key}`)}</span>
                 </span>
                 <span className="flex w-20 shrink-0 items-center px-1 sm:w-[6.5rem]">
@@ -378,7 +359,7 @@ export async function PagesFigure() {
             );
           })}
           <span className="flex items-center gap-1.5 py-2 pl-2 text-[11px] text-muted-foreground">
-            <Plus className="size-3" aria-hidden />{tDb("newEntry")}
+            <HugeiconsIcon icon={Add01Icon} className="size-3" aria-hidden />{tDb("newEntry")}
           </span>
         </div>
       </div>
@@ -469,7 +450,7 @@ export async function SmartFigure() {
         </li>
         <li className="flex items-center gap-3">
           <span className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2 text-xs font-medium">
-            <ArrowUpDown className="size-3.5 shrink-0" />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3.5 shrink-0" />
             {t("feature_smartTriage_title")}
           </span>
           <span className="min-w-0 text-sm text-muted-foreground">{t("smartFigureTriage")}</span>
@@ -527,7 +508,7 @@ export async function ObjectivesFigure() {
         </div>
         <div className="flex items-center gap-2">
           <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground" aria-hidden>
-            <Target className="size-3.5" />
+            <HugeiconsIcon icon={Target01Icon} className="size-3.5" />
           </span>
           <div className="flex flex-col leading-tight">
             <span className="text-[11px] text-muted-foreground">{tObjectives("targetDatePlaceholder")}</span>

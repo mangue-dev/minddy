@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
-import { KeyRound, Layers, Lock } from "lucide-react";
+import { AppIcon } from "@/components/icon";
+import { KeyRoundIcon as KeyRound, LayersIcon as Layers, LockIcon } from "@hugeicons/core-free-icons";
 import { AGENT_PROVIDERS } from "@/lib/agent-providers";
 
 /**
@@ -31,7 +32,7 @@ import { AGENT_PROVIDERS } from "@/lib/agent-providers";
 const POINTS = [
   { key: "uncapped", icon: KeyRound },
   { key: "catalog", icon: Layers },
-  { key: "safe", icon: Lock },
+  { key: "safe", icon: LockIcon },
 ] as const;
 
 export async function SectionByok() {
@@ -71,7 +72,7 @@ export async function SectionByok() {
               return (
                 <li key={point.key} className="flex flex-col gap-2">
                   <span className="flex size-9 items-center justify-center rounded-lg border border-border bg-muted/60 text-muted-foreground">
-                    <Icon className="size-4" />
+                    <AppIcon icon={Icon} className="size-4" />
                   </span>
                   <h3 className="font-medium">{t(`byok_${point.key}_title`)}</h3>
                   <p className="text-sm leading-relaxed text-muted-foreground">

@@ -6,16 +6,10 @@
 // The row never crosses the line. Anything that no longer fits is represented
 // by a +X trigger whose popover shows the complete message context.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AtIcon, Book02Icon, FileAttachmentIcon, Folder01Icon, Target01Icon, UserIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  AtSign,
-  BookText,
-  FileText,
-  Folder,
-  Target,
-  User,
-} from "lucide-react";
 import { Button, CommandGroup, CommandItem } from "mangue-ui";
 import { SearchMenu } from "@/components/search-menu";
 import { StatusIndicator } from "@/components/issue-indicators";
@@ -124,14 +118,14 @@ function AddContextButton({
   };
 
   const KIND_ROWS: Array<{ kind: AddKind; icon: React.ReactNode; label: string }> = [
-    { kind: "member", icon: <User className="size-4" />, label: t("addContextMember") },
-    { kind: "project", icon: <Folder className="size-4" />, label: t("addContextProject") },
-    { kind: "issue", icon: <FileText className="size-4" />, label: t("addContextIssue") },
+    { kind: "member", icon: <HugeiconsIcon icon={UserIcon} className="size-4" />, label: t("addContextMember") },
+    { kind: "project", icon: <HugeiconsIcon icon={Folder01Icon} className="size-4" />, label: t("addContextProject") },
+    { kind: "issue", icon: <HugeiconsIcon icon={FileAttachmentIcon} className="size-4" />, label: t("addContextIssue") },
     // The target remains NEUTRAL here: the line designates the notion “an objective”,
     // not a lens whose color we follow.
     {
       kind: "objective",
-      icon: <Target className="size-4" />,
+      icon: <HugeiconsIcon icon={Target01Icon} className="size-4" />,
       label: t("addContextObjective"),
     },
     // The wiki only exists in a project: out of project scope (conversation
@@ -141,7 +135,7 @@ function AddContextButton({
       ? [
           {
             kind: "page" as const,
-            icon: <BookText className="size-4" />,
+            icon: <HugeiconsIcon icon={Book02Icon} className="size-4" />,
             label: t("addContextPage"),
           },
         ]
@@ -195,7 +189,7 @@ function AddContextButton({
             aria-label={t("addContext")}
             className="size-6 rounded-full text-muted-foreground"
           >
-            <AtSign className="size-3.5" />
+            <HugeiconsIcon icon={AtIcon} className="size-3.5" />
           </Button>
         }
       >
@@ -293,7 +287,7 @@ function AddContextButton({
  that of the page tree and its context pill. */}
                   <span className="flex size-5 shrink-0 items-center justify-center text-sm">
                     {page.icon ?? (
-                      <BookText className="size-4 text-muted-foreground" />
+                      <HugeiconsIcon icon={Book02Icon} className="size-4 text-muted-foreground" />
                     )}
                   </span>
                   <span className="truncate">{page.title}</span>

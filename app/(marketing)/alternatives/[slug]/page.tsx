@@ -1,8 +1,9 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon, BotIcon, CodeSimpleIcon as Code2, Download01Icon, FileAttachmentIcon, ImportIcon as Import, LinkSquare01Icon, MessageMultiple01Icon, Mic01Icon, RepeatOne02Icon, Target01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ArrowRight, Bot, Check, Code2, Download, ExternalLink, FileText, Import, MessagesSquare, Mic, Repeat2, Target, type LucideIcon } from "lucide-react";
 import { Button } from "mangue-ui/components/ui/button";
 import { cn } from "mangue-ui/lib/utils";
 import { publicPageMetadata } from "@/lib/seo";
@@ -15,18 +16,19 @@ import { ScreenshotSlot } from "@/components/marketing/screenshot-slot";
 import type { ScreenshotSlotId } from "@/components/marketing/screenshot-slots";
 import { TrackedCta } from "@/components/marketing/tracked-cta";
 import { Github } from "@/components/git/provider-icons";
+import { AppIcon } from "@/components/icon";
 import { MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
 
 const FEATURES = {
-  agents: { icon: Bot, tone: CARD_TONES.lavender, screenshot: "workflowAgent" },
-  pages: { icon: FileText, tone: CARD_TONES.sky, screenshot: "pagesEditor" },
-  numo: { icon: Bot, tone: CARD_TONES.butter },
-  routines: { icon: Repeat2, tone: CARD_TONES.peach },
-  planning: { icon: Target, tone: CARD_TONES.sage },
-  feedback: { icon: MessagesSquare, tone: CARD_TONES.sky },
-  capture: { icon: Mic, tone: CARD_TONES.lavender },
+  agents: { icon: BotIcon, tone: CARD_TONES.lavender, screenshot: "workflowAgent" },
+  pages: { icon: FileAttachmentIcon, tone: CARD_TONES.sky, screenshot: "pagesEditor" },
+  numo: { icon: BotIcon, tone: CARD_TONES.butter },
+  routines: { icon: RepeatOne02Icon, tone: CARD_TONES.peach },
+  planning: { icon: Target01Icon, tone: CARD_TONES.sage },
+  feedback: { icon: MessageMultiple01Icon, tone: CARD_TONES.sky },
+  capture: { icon: Mic01Icon, tone: CARD_TONES.lavender },
   openSource: { icon: Code2, tone: CARD_TONES.sage },
-} as const satisfies Record<(typeof COMPARISON_FEATURES)[number], { icon: LucideIcon; tone: string; screenshot?: ScreenshotSlotId }>;
+} as const satisfies Record<(typeof COMPARISON_FEATURES)[number], { icon: AppIcon; tone: string; screenshot?: ScreenshotSlotId }>;
 
 export function generateStaticParams() {
   return COMPARISONS.map(comparison => ({ slug: comparison.slug }));
@@ -63,10 +65,10 @@ export default async function AlternativePage({ params }: { params: Promise<{ sl
           <p className="mt-7 max-w-2xl text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg">{tc("heroSubtitle")}</p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <Button asChild size="lg" className="rounded-full">
-              <TrackedCta href={downloadHref} location="comparison">{tl("downloadMinddy")}<Download data-icon="inline-end" /></TrackedCta>
+              <TrackedCta href={downloadHref} location="comparison">{tl("downloadMinddy")}<HugeiconsIcon icon={Download01Icon} data-icon="inline-end" /></TrackedCta>
             </Button>
             <a href="#comparison" className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-medium transition-colors hover:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
-              {t("compareTitle")}<ArrowRight className="size-4" aria-hidden />
+              {t("compareTitle")}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4" aria-hidden />
             </a>
           </div>
         </div>
@@ -107,7 +109,7 @@ export default async function AlternativePage({ params }: { params: Promise<{ sl
                     <td className={cn("border-t border-black/5 px-5 py-5 leading-relaxed dark:border-white/5", CARD_TONES.sage)}>{t(`minddy_${row}`)}</td>
                     <td className={cn("border-t border-black/5 px-5 py-5 leading-relaxed dark:border-white/5", CARD_TONES.sky)}>
                       {tc(`them_${row}`)}{" "}
-                      {comparison.sources[row] && <a href={comparison.sources[row]} target="_blank" rel="noopener noreferrer" aria-label={t("sourceFor", { name: comparison.name, feature: t(`row_${row}`) })} className="inline-flex size-6 translate-y-1 items-center justify-center rounded-full opacity-65 transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-current"><ExternalLink className="size-3.5" aria-hidden /></a>}
+                      {comparison.sources[row] && <a href={comparison.sources[row]} target="_blank" rel="noopener noreferrer" aria-label={t("sourceFor", { name: comparison.name, feature: t(`row_${row}`) })} className="inline-flex size-6 translate-y-1 items-center justify-center rounded-full opacity-65 transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-current"><HugeiconsIcon icon={LinkSquare01Icon} className="size-3.5" aria-hidden /></a>}
                     </td>
                   </tr>
                 ))}
@@ -119,7 +121,7 @@ export default async function AlternativePage({ params }: { params: Promise<{ sl
             <p>{t("checkedNote", { date: reviewedDate })}</p>
             <div className="mt-1 flex flex-wrap gap-x-5 gap-y-1">
               {[[comparison.docsUrl, t("checkedDocsLink", { name: comparison.name })], [comparison.pricingUrl, t("checkedLink", { name: comparison.name })]].map(([href, label]) => (
-                <a key={href} href={href} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{label}<ExternalLink className="size-3.5" aria-hidden /></a>
+                <a key={href} href={href} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{label}<HugeiconsIcon icon={LinkSquare01Icon} className="size-3.5" aria-hidden /></a>
               ))}
             </div>
           </div>
@@ -134,10 +136,10 @@ export default async function AlternativePage({ params }: { params: Promise<{ sl
               const item = FEATURES[feature];
               const screenshot = "screenshot" in item ? item.screenshot : null;
               return <article key={feature} className={cn("flex min-w-0 flex-col rounded-2xl p-6 sm:p-8", item.tone, screenshot ? "md:col-span-3" : "md:col-span-2")}>
-                <item.icon className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+                <AppIcon icon={item.icon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
                 <h3 className="text-2xl leading-tight font-medium tracking-tight">{t(`feature_${feature}_title`)}</h3>
                 <p className="mt-3 text-sm leading-relaxed opacity-80">{t(`feature_${feature}_body`)}</p>
-                {feature === "openSource" && <a href={MINDDY_REPOSITORY_URL} target="_blank" rel="noopener noreferrer" className="mt-auto inline-flex min-h-11 w-fit items-center gap-2 rounded-sm pt-5 text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current"><Github className="size-4" aria-hidden />{t("viewSource")}<ExternalLink className="size-3.5" aria-hidden /></a>}
+                {feature === "openSource" && <a href={MINDDY_REPOSITORY_URL} target="_blank" rel="noopener noreferrer" className="mt-auto inline-flex min-h-11 w-fit items-center gap-2 rounded-sm pt-5 text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current"><Github className="size-4" aria-hidden />{t("viewSource")}<HugeiconsIcon icon={LinkSquare01Icon} className="size-3.5" aria-hidden /></a>}
                 {screenshot && <div className="mt-auto pt-7"><ScreenshotSlot id={screenshot} expandable sizes="(min-width: 1024px) 500px, (min-width: 768px) 45vw, 100vw" className="w-full shadow-lg shadow-black/5" /></div>}
               </article>;
             })}
@@ -157,7 +159,7 @@ export default async function AlternativePage({ params }: { params: Promise<{ sl
               <article key={point.prefix} className={cn("rounded-2xl p-6 sm:p-8", point.tone)}>
                 <h3 className="text-2xl font-medium tracking-tight">{point.title}</h3>
                 <ul className="mt-6 space-y-5">
-                  {COMPARISON_POINTS.map(index => <li key={index} className="flex gap-3 text-sm leading-relaxed"><Check className="mt-0.5 size-4 shrink-0" aria-hidden />{tc(`${point.prefix}_${index}`)}</li>)}
+                  {COMPARISON_POINTS.map(index => <li key={index} className="flex gap-3 text-sm leading-relaxed"><HugeiconsIcon icon={Tick01Icon} className="mt-0.5 size-4 shrink-0" aria-hidden />{tc(`${point.prefix}_${index}`)}</li>)}
                 </ul>
               </article>
             ))}
@@ -167,12 +169,12 @@ export default async function AlternativePage({ params }: { params: Promise<{ sl
 
       <section className="px-4 pt-4 pb-20 sm:px-6 sm:pb-28">
         <div className={cn("mx-auto max-w-6xl rounded-2xl p-6 sm:p-10", CARD_TONES.peach)}>
-          <Import className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+          <AppIcon icon={Import} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
           <h2 className="max-w-3xl text-3xl leading-tight font-medium tracking-[-0.035em] sm:text-4xl">{t("migrationTitle")}</h2>
           <p className="mt-4 max-w-2xl text-base leading-relaxed opacity-80">{t("migrationBody", { name: comparison.name })}</p>
           <div className="mt-8 flex flex-wrap items-center gap-4">
-            <Button asChild size="lg" className="rounded-full"><TrackedCta href={downloadHref} location="comparison">{tl("downloadMinddy")}<ArrowRight data-icon="inline-end" /></TrackedCta></Button>
-            <Link href={localizedHref("/mcp", locale)} className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">{t("seeMcp")}<ArrowRight className="size-4" aria-hidden /></Link>
+            <Button asChild size="lg" className="rounded-full"><TrackedCta href={downloadHref} location="comparison">{tl("downloadMinddy")}<HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" /></TrackedCta></Button>
+            <Link href={localizedHref("/mcp", locale)} className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">{t("seeMcp")}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4" aria-hidden /></Link>
           </div>
         </div>
       </section>

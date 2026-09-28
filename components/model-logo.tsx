@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { CpuIcon } from "@hugeicons/core-free-icons";
 import type { ComponentType } from "react";
 import {
   Ai21,
@@ -35,7 +37,6 @@ import {
   XiaomiMiMo,
   Zhipu,
 } from "@lobehub/icons";
-import { Cpu } from "lucide-react";
 import { cn } from "mangue-ui";
 import { providerFromModel } from "@/lib/model-display";
 
@@ -132,10 +133,7 @@ function LogoBySlug({
   const Logo = slug ? PROVIDER_LOGOS[slug] : undefined;
   if (Logo) return <Logo size={size} className={cn("shrink-0", className)} />;
   return (
-    <Cpu
-      className={cn("shrink-0 text-muted-foreground", className)}
-      style={{ width: size, height: size }}
-    />
+    <HugeiconsIcon icon={CpuIcon} className={cn("shrink-0 text-muted-foreground", className)} style={{ width: size, height: size }} />
   );
 }
 

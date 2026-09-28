@@ -1,10 +1,11 @@
-import { Ban, OctagonX, Link2, type LucideIcon } from "lucide-react";
+import type { AppIcon } from "@/components/icon";
 import type {
   IssueRelation,
   IssueRelationType,
   RelationEndpointType,
   ResolvedRelation,
 } from "./types";
+import { CancelCircleIcon as Ban, Link02Icon as Link2, OctagonXIcon as OctagonX } from "@hugeicons/core-free-icons";
 import type { ObjectiveStatus } from "./objective-constants";
 import {
   endpointType,
@@ -18,7 +19,7 @@ import { isClosedStatus, type IssueStatus } from "./issue-constants";
 
 export interface RelationMeta {
   value: IssueRelationType;
-  icon: LucideIcon;
+  icon: AppIcon;
   /** Tailwind text-color class for the icon (see the `!` note below). */
   color: string;
 }

@@ -1,5 +1,6 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { WorkflowCircle01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "mangue-ui";
-import { Workflow } from "lucide-react";
 import { NumoFace } from "@/components/numo-face";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";
 import { SmartAssignIcon, SmartFillIcon } from "@/components/smart-icons";
@@ -76,7 +77,7 @@ export function AutomationAvatar({
 }) {
   return (
     <span aria-hidden className={disc(className)}>
-      <Workflow className={cn("size-3", iconClassName)} />
+      <HugeiconsIcon icon={WorkflowCircle01Icon} className={cn("size-3", iconClassName)} />
     </span>
   );
 }

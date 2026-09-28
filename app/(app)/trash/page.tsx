@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import { ArrowLeft01Icon, Calendar01Icon, CircleIcon, DatabaseIcon, Delete02Icon, FileAttachmentIcon, MessageMultiple01Icon, MoreHorizontalIcon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
+import { useMemo, useState, type SVGProps } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Button,
@@ -14,19 +16,8 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import {
-  CalendarClock,
-  ChevronLeft,
-  CircleDashed,
-  Database,
-  FileText,
-  MessagesSquare,
-  MoreHorizontal,
-  RotateCcw,
-  Target,
-  Trash2,
-  type LucideIcon,
-} from "lucide-react";
+
+import { AppIcon } from "@/components/icon";
 
 import { EmptyScene } from "@/components/empty-scene";
 import { AppContentHeader } from "@/components/app-content-header";
@@ -49,13 +40,13 @@ import { useTrackView } from "@/lib/use-track-view";
 
 type TrashFilter = "all" | TrashType;
 
-const TYPE_ICON: Record<TrashType, LucideIcon> = {
-  issue: CircleDashed,
-  objective: Target,
-  page: FileText,
-  feedback: MessagesSquare,
-  routine: CalendarClock,
-  project: Trash2,
+const TYPE_ICON: Record<TrashType, IconSvgElement> = {
+  issue: CircleIcon,
+  objective: Target01Icon,
+  page: FileAttachmentIcon,
+  feedback: MessageMultiple01Icon,
+  routine: Calendar01Icon,
+  project: Delete02Icon,
 };
 
 const TYPE_ICON_STYLE: Record<TrashType, string> = {
@@ -93,7 +84,7 @@ function TrashRow({
   const t = useTranslations("Trash");
   const tPages = useTranslations("Pages");
   const locale = useLocale();
-  const Icon = item.type === "page" && item.is_database ? Database : TYPE_ICON[item.type];
+  const Icon = item.type === "page" && item.is_database ? DatabaseIcon : TYPE_ICON[item.type];
   const left = daysLeft(item.deleted_at, retentionDays);
   const title = item.title.trim() || tPages("untitled");
 
@@ -119,7 +110,7 @@ function TrashRow({
               TYPE_ICON_STYLE[item.type],
             )}
           >
-            <Icon className="size-5" aria-hidden />
+            <AppIcon icon={Icon} className="size-5" aria-hidden />
           </span>
         )}
 
@@ -181,12 +172,12 @@ function TrashRow({
               aria-label={t("moreActions")}
               data-sidebar-filter-result
             >
-              <MoreHorizontal className="size-4" />
+              <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={() => onRestore(item)}>
-              <RotateCcw />
+              <HugeiconsIcon icon={Undo02Icon} />
               {t("restore")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -194,7 +185,7 @@ function TrashRow({
               variant="destructive"
               onSelect={() => onPurge(item)}
             >
-              <Trash2 />
+              <HugeiconsIcon icon={Delete02Icon} />
               {t("purge")}
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -292,7 +283,10 @@ export default function TrashPage() {
     : items.length === 0
       ? t("emptyTitle")
       : t("emptyCategoryTitle");
-  const EmptyIcon = filter === "all" ? Trash2 : TYPE_ICON[filter];
+  const EmptyIcon = filter === "all" ? Delete02Icon : TYPE_ICON[filter];
+  const EmptySceneIcon = ({ className, style, ref }: SVGProps<SVGSVGElement>) => (
+    <HugeiconsIcon icon={EmptyIcon} ref={ref} className={className} style={style} />
+  );
 
   return (
     <div className="flex h-full min-h-0">
@@ -331,7 +325,7 @@ export default function TrashPage() {
             className="mr-auto md:hidden"
             onClick={() => setMobileDetail(false)}
           >
-            <ChevronLeft />
+            <HugeiconsIcon icon={ArrowLeft01Icon} />
           </Button>
           {items.length > 0 ? (
             <Button variant="ghost" onClick={() => setEmptyOpen(true)}>
@@ -354,7 +348,7 @@ export default function TrashPage() {
               </div>
             ) : groups.length === 0 ? (
               <EmptyScene
-                icon={EmptyIcon}
+                icon={EmptySceneIcon}
                 tone={filter === "all" ? "destructive" : undefined}
                 title={emptyTitle}
               />

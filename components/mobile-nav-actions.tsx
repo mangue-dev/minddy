@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import {
   DropdownMenu,
@@ -8,8 +10,8 @@ import {
   DropdownMenuItem,
   MobileNavItem,
 } from "mangue-ui";
-import { Plus } from "lucide-react";
 import { NumoIcon } from "@/components/numo-icon";
+import { AppIcon } from "@/components/icon";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useCreateActions } from "@/components/new-menu";
 
@@ -42,23 +44,20 @@ export function MobileNavActions() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <MobileNavItem label={tn("new")}>
-            <Plus className="size-[22px]" strokeWidth={2} />
+            <HugeiconsIcon icon={Add01Icon} className="size-[22px]" strokeWidth={2} />
           </MobileNavItem>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="end" sideOffset={12} className="w-52">
-          {actions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <DropdownMenuItem
-                key={action.key}
-                disabled={action.disabled}
-                onSelect={action.onSelect}
-              >
-                <Icon />
-                {action.label}
-              </DropdownMenuItem>
-            );
-          })}
+          {actions.map((action) => (
+            <DropdownMenuItem
+              key={action.key}
+              disabled={action.disabled}
+              onSelect={action.onSelect}
+            >
+              <AppIcon icon={action.icon} />
+              {action.label}
+            </DropdownMenuItem>
+          ))}
         </DropdownMenuContent>
       </DropdownMenu>
     </>

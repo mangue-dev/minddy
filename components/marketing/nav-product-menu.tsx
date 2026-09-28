@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowRight, ChevronDown } from "lucide-react";
 import { cn } from "mangue-ui/lib/utils";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
@@ -118,7 +119,7 @@ export function NavProductMenu({
           open ? "text-foreground" : "hover:text-foreground",
         )}>
         {label}
-        <ChevronDown aria-hidden className={cn("size-3.5 transition-transform duration-200 motion-reduce:transition-none", open && "rotate-180")} />
+        <HugeiconsIcon icon={ArrowDown01Icon} aria-hidden className={cn("size-3.5 transition-transform duration-200 motion-reduce:transition-none", open && "rotate-180")} />
       </button>
 
       {/* Position against the full-width header so long translations cannot push the panel offscreen. */}
@@ -154,7 +155,7 @@ export function NavProductMenu({
               <span className="text-sm font-medium text-foreground">{t("downloadMinddy")}</span>
               <span className="text-[13px] text-muted-foreground">{t("navMenu_download_desc")}</span>
             </span>
-            <ArrowRight className="size-4 shrink-0 text-foreground" aria-hidden />
+            <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-foreground" aria-hidden />
           </a>}
         </div>
       </div>

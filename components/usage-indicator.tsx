@@ -1,18 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useState, type ComponentType } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon, BotIcon, Calendar01Icon, DashboardSpeedIcon, InformationCircleIcon, Loading02Icon, Megaphone01Icon, Mic01Icon } from "@hugeicons/core-free-icons";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import {
-  ArrowRight,
-  Bot,
-  CalendarClock,
-  Gauge,
-  Info,
-  Loader2,
-  Megaphone,
-  Mic,
-} from "lucide-react";
 import {
   Badge,
   Button,
@@ -33,6 +25,7 @@ import {
 } from "@/lib/use-billing-query";
 import { createCheckoutApi, createPortalApi } from "@/lib/billing-api";
 import { CARD_TONES } from "@/components/marketing/card-tones";
+import { AppIcon } from "@/components/icon";
 import { NumoIcon } from "@/components/numo-icon";
 import { SmartAssignIcon } from "@/components/smart-icons";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
@@ -47,14 +40,19 @@ import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 
 // Numo in line icon: frozen face, aligned with the size of the lucid icons.
 // Its strokes are intrinsic to the drawing — strokeWidth deliberately ignored.
-function NumoRowIcon({ className }: { className?: string; strokeWidth?: number }) {
+function NumoRowIcon({
+  className,
+}: {
+  className?: string;
+  strokeWidth?: number | string;
+}) {
   return <NumoIcon animated={false} className={className} />;
 }
 
 export const SEGMENT_UI: Record<
   UsageSegmentId,
   {
-    icon: ComponentType<{ className?: string; strokeWidth?: number }>;
+    icon: AppIcon;
     text: string;
     labelKey:
       | "segmentAgents"
@@ -65,13 +63,13 @@ export const SEGMENT_UI: Record<
       | "segmentAutomations";
   }
 > = {
-  agents: { icon: Bot, text: "text-violet-600 dark:text-violet-400", labelKey: "segmentAgents" },
+  agents: { icon: BotIcon, text: "text-violet-600 dark:text-violet-400", labelKey: "segmentAgents" },
   // The routines (MIN-185), just after the agents: same engine, other line
   // bill — a subscription that we left running, not a gesture that we made.
-  routines: { icon: CalendarClock, text: "text-sky-600 dark:text-sky-400", labelKey: "segmentRoutines" },
+  routines: { icon: Calendar01Icon, text: "text-sky-600 dark:text-sky-400", labelKey: "segmentRoutines" },
   numo: { icon: NumoRowIcon, text: "text-blue-600 dark:text-blue-400", labelKey: "segmentNumo" },
-  dictation: { icon: Mic, text: "text-amber-600 dark:text-amber-400", labelKey: "segmentDictation" },
-  feedback: { icon: Megaphone, text: "text-emerald-600 dark:text-emerald-400", labelKey: "segmentFeedback" },
+  dictation: { icon: Mic01Icon, text: "text-amber-600 dark:text-amber-400", labelKey: "segmentDictation" },
+  feedback: { icon: Megaphone01Icon, text: "text-emerald-600 dark:text-emerald-400", labelKey: "segmentFeedback" },
   // What minddy fills out for you when the ticket is born: who takes it
   // (Smart Assign) and what it is (Smart-fill).
   automations: { icon: SmartAssignIcon, text: "text-fuchsia-600 dark:text-fuchsia-400", labelKey: "segmentAutomations" },
@@ -140,7 +138,7 @@ export function UsageIndicator({
             stateClass
           )}
         >
-          {(!sidebar || collapsed) && <Gauge className="size-[15px]" strokeWidth={2} />}
+          {(!sidebar || collapsed) && <HugeiconsIcon icon={DashboardSpeedIcon} className="size-[15px]" strokeWidth={2} />}
           {!collapsed
             ? loading
               ? "…"
@@ -286,7 +284,7 @@ export function UsageBreakdownBody({
         {nextReset && !loading && (
           <div className="flex pt-0.5">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-              <Info className="size-3.5" strokeWidth={2} />
+              <HugeiconsIcon icon={InformationCircleIcon} className="size-3.5" strokeWidth={2} />
               {t("resetsAt", { date: nextReset })}
             </span>
           </div>
@@ -319,7 +317,8 @@ export function UsageBreakdownBody({
                 onMouseLeave={() => setHoveredId(null)}
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                  <Icon
+                  <AppIcon
+                    icon={Icon}
                     className={cn(
                       "size-4 shrink-0 transition-colors",
                       isZero
@@ -402,7 +401,7 @@ function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
           onClick={() => void handleUpgrade()}
           disabled={redirecting}
         >
-          {redirecting && <Loader2 className="size-3.5 animate-spin" />}
+          {redirecting && <HugeiconsIcon icon={Loading02Icon} className="size-3.5 animate-spin" />}
           {t("upgradeTo", { plan: t(PLAN_LABEL_KEYS[nextPlanId]) })}
         </Button>
       )}
@@ -414,7 +413,7 @@ function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
       >
         <Link href="/billing" onClick={onNavigate}>
           {t("viewBilling")}
-          <ArrowRight className="size-3.5" />
+          <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" />
         </Link>
       </Button>
     </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { FileAttachmentIcon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import type { NodeViewRenderer } from "@tiptap/core";
 import {
@@ -11,7 +13,6 @@ import { useTranslations } from "next-intl";
 // `cx` and not `cn` of mango-ui: the barrel draws the emoji selector, and the
 // block register would cease to be importable outside the browser (see cx.ts).
 import { cx } from "@/components/pages/blocks/cx";
-import { FileText, RotateCcw } from "lucide-react";
 import {
   NODE_LINK_CLASS,
   isPlainNavigationClick,
@@ -91,12 +92,10 @@ export function SubpageView({ node, selected }: NodeViewProps) {
       {page?.icon ? (
         <span className="shrink-0 text-base leading-relaxed">{page.icon}</span>
       ) : (
-        <FileText
-          className={cx(
-            "size-4 shrink-0 text-muted-foreground",
-            orphan && "opacity-60"
-          )}
-        />
+        <HugeiconsIcon icon={FileAttachmentIcon} className={cx(
+                              "size-4 shrink-0 text-muted-foreground",
+                              orphan && "opacity-60"
+                            )} />
       )}
 
       {href ? (
@@ -139,7 +138,7 @@ export function SubpageView({ node, selected }: NodeViewProps) {
               .finally(() => setRestoring(false));
           }}
         >
-          <RotateCcw className="size-3" />
+          <HugeiconsIcon icon={Undo02Icon} className="size-3" />
           {t("subpageRestore")}
         </button>
       )}

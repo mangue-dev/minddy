@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Notification01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSonner, type ToastT } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell } from "lucide-react";
 import { cn, Popover, PopoverContent, PopoverTrigger } from "mangue-ui";
 import { useLocale, useTranslations } from "next-intl";
 import { transitions } from "@/lib/motion";
@@ -220,7 +221,7 @@ function StatusBell({
             "outline-none focus-visible:ring-2 focus-visible:ring-ring",
           )}
         >
-          <Bell className="size-3.5" />
+          <HugeiconsIcon icon={Notification01Icon} className="size-3.5" />
         </button>
       </PopoverTrigger>
       <PopoverContent side="top" align={align} sideOffset={8} className="w-80 gap-1">

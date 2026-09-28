@@ -20,6 +20,8 @@
 // Motion and breadcrumbs of the app (components/app-breadcrumb.tsx), including
 // this one takes the punctuation.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { FileAttachmentIcon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -29,7 +31,6 @@ import {
   DropdownMenuTrigger,
   cn,
 } from "mangue-ui";
-import { FileText } from "lucide-react";
 import { foldPath } from "@/lib/pages";
 import { isPlainNavigationClick } from "@/components/editor-node-link";
 
@@ -66,7 +67,7 @@ function Crumb({
       )}
     >
       <span className="flex size-3.5 shrink-0 items-center justify-center text-[11px] leading-none">
-        {page.icon ?? <FileText className="size-3" />}
+        {page.icon ?? <HugeiconsIcon icon={FileAttachmentIcon} className="size-3" />}
       </span>
       <span className="truncate">{page.title || t("untitled")}</span>
     </Link>
@@ -141,7 +142,7 @@ export function PageBreadcrumb({
                     }}
                   >
                     <span className="flex size-4 shrink-0 items-center justify-center text-xs leading-none">
-                      {page.icon ?? <FileText className="size-3.5" />}
+                      {page.icon ?? <HugeiconsIcon icon={FileAttachmentIcon} className="size-3.5" />}
                     </span>
                     <span className="truncate">{page.title || t("untitled")}</span>
                   </Link>

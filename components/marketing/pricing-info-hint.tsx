@@ -1,7 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
-import { Info } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "mangue-ui/components/ui/popover";
 
 /**
@@ -34,7 +35,7 @@ export function PricingInfoHint({ text }: { text: string }) {
           onPointerLeave={(e) => e.pointerType === "mouse" && setOpen(false)}
           className="inline-flex shrink-0 rounded-full text-muted-foreground/50 outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
         >
-          <Info className="size-3.5" />
+          <HugeiconsIcon icon={InformationCircleIcon} className="size-3.5" />
         </button>
       </PopoverTrigger>
       <PopoverContent

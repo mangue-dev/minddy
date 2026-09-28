@@ -1,7 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Tag01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "mangue-ui";
-import { Tag } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CategoryPill } from "@/components/category-pill";
 import { SearchMultiSelect, type PickerOption } from "@/components/search-select";
@@ -53,7 +54,7 @@ export function CategoryPicker({
         }
         trigger={
           <Button variant="outline" size="sm">
-            <Tag />
+            <HugeiconsIcon icon={Tag01Icon} />
             {selected.length === 0 ? tf("categories") : tc("add")}
           </Button>
         }

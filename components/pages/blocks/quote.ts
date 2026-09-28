@@ -1,5 +1,5 @@
 import { Blockquote } from "@tiptap/extension-blockquote";
-import { TextQuote } from "lucide-react";
+import { TextQuoteIcon as TextQuote } from "@hugeicons/core-free-icons";
 import type { PageBlock } from "@/components/pages/blocks/types";
 
 export const quoteBlock: PageBlock = {

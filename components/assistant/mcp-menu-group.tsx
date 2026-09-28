@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Alert01Icon, Settings01Icon } from "@hugeicons/core-free-icons";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem } from "mangue-ui";
-import { Settings, TriangleAlert } from "lucide-react";
 import { McpServiceLogo } from "@/components/mcp-service-logo";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { mcpPresetForUrl } from "@/lib/mcp-catalog";
@@ -54,7 +55,7 @@ export function McpMenuGroup({
                   role="img"
                   aria-label={t("unauthenticated")}
                 >
-                  <TriangleAlert className="size-4 text-orange-500" aria-hidden />
+                  <HugeiconsIcon icon={Alert01Icon} className="size-4 text-orange-500" aria-hidden />
                 </span>
               </TooltipTrigger>
               <TooltipContent>{t("unauthenticated")}</TooltipContent>
@@ -68,7 +69,7 @@ export function McpMenuGroup({
         onSelect={() => manage()}
         className="gap-2"
       >
-        <Settings className="size-4 shrink-0 text-muted-foreground" />
+        <HugeiconsIcon icon={Settings01Icon} className="size-4 shrink-0 text-muted-foreground" />
         <span>{t("manageConnections")}</span>
       </CommandItem>
     </CommandGroup>

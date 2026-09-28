@@ -1,4 +1,6 @@
 "use client";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon, Cancel01Icon, Delete02Icon, GitPullRequestIcon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { useAppTabDeparture } from "@/lib/app-tabs-context";
 import { useIssuePanelTab } from "@/lib/use-issue-panel-tab";
 
@@ -23,13 +25,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import {
-  ChevronRight,
-  GitPullRequest,
-  MoreHorizontal,
-  Trash2,
-  X,
-} from "lucide-react";
 import {
   AssigneeValue,
   CategoryValue,
@@ -851,7 +846,7 @@ export function IssueSidePanel({
             id: "open-pr",
             label: tAgent("viewPullRequest"),
             keywords: ["pull request", "pr", "review", "github", "gitlab", "merge"],
-            icon: <GitPullRequest className="size-4" />,
+            icon: <HugeiconsIcon icon={GitPullRequestIcon} className="size-4" />,
             onSelect: openPr,
           },
         ]
@@ -860,7 +855,7 @@ export function IssueSidePanel({
     {
       id: "delete",
       label: tCommon("moveToTrash"),
-      icon: <Trash2 className="size-4" />,
+      icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
       separatorBefore: true,
       variant: "destructive",
       onSelect: () => setConfirmDelete(true),
@@ -910,10 +905,7 @@ export function IssueSidePanel({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span className="flex items-center gap-1.5">
-                          <ChevronRight
-                            className="size-4 shrink-0 text-muted-foreground"
-                            aria-hidden
-                          />
+                          <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                           {issueIdentifier(projectKey, issue.number)}
                         </span>
                       </TooltipTrigger>
@@ -981,7 +973,7 @@ export function IssueSidePanel({
                     aria-label={t("moreActionsAriaLabel")}
                     className="rounded-full text-muted-foreground hover:text-foreground"
                   >
-                    <MoreHorizontal />
+                    <HugeiconsIcon icon={MoreHorizontalIcon} />
                   </Button>
                 }
               />
@@ -992,7 +984,7 @@ export function IssueSidePanel({
                   aria-label={tCommon("close")}
                   className="rounded-full text-muted-foreground hover:text-foreground"
                 >
-                  <X />
+                  <HugeiconsIcon icon={Cancel01Icon} />
                 </Button>
               </SidePanelClose>
             </div>

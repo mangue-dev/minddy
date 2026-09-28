@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AddToListIcon, ArrowUpDownIcon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Check, ChevronsUpDown, ListPlus } from "lucide-react";
 import {
   Button,
   Command,
@@ -223,7 +224,7 @@ export function ModelCombobox({
       {logoFor(m.id)}
       <span className="flex-1 truncate">{formatModelName(m.id)}</span>
       {multiplierBadge(m)}
-      <Check className={cn("size-4 shrink-0", value === m.id ? "opacity-100" : "opacity-0")} />
+      <HugeiconsIcon icon={Tick01Icon} className={cn("size-4 shrink-0", value === m.id ? "opacity-100" : "opacity-0")} />
     </CommandItem>
   );
 
@@ -306,7 +307,7 @@ export function ModelCombobox({
                       ? formatModelName(defaultModelId)
                       : defaultLabel}
                 </span>
-                <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
+                <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3 shrink-0 opacity-50" />
               </>
             )}
           </Button>
@@ -327,7 +328,7 @@ export function ModelCombobox({
             ) : (
               defaultRow
             )}
-            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 size-4 shrink-0 opacity-50" />
           </Button>
         )}
       </PopoverTrigger>
@@ -358,7 +359,7 @@ export function ModelCombobox({
             {allowDefault ? (
               <CommandItem value="__default__" onSelect={() => select("")}>
                 {defaultRow}
-                <Check className={cn("size-4 shrink-0", value ? "opacity-0" : "opacity-100")} />
+                <HugeiconsIcon icon={Tick01Icon} className={cn("size-4 shrink-0", value ? "opacity-0" : "opacity-100")} />
               </CommandItem>
             ) : null}
             {/* Grouped under its title when it is the recommended selection: the
@@ -377,7 +378,7 @@ export function ModelCombobox({
  keyboard, in continuity with the models above. */}
             {collapsed ? (
               <CommandItem value="__all__" onSelect={() => setShowAll(true)}>
-                <ListPlus className="size-4 shrink-0 text-muted-foreground" />
+                <HugeiconsIcon icon={AddToListIcon} className="size-4 shrink-0 text-muted-foreground" />
                 {/* No account announced: unfolding truncates to MAX_RESULTS,
  and promising "all 321 models" to show 50 would be
  false. What reaches them all is research. */}
@@ -388,9 +389,7 @@ export function ModelCombobox({
               <CommandItem value={`__free__${trimmed}`} onSelect={() => select(trimmed)}>
                 {logoFor(trimmed)}
                 <span className="flex-1 truncate">{freeTextLabel(trimmed)}</span>
-                <Check
-                  className={cn("size-4 shrink-0", value === trimmed ? "opacity-100" : "opacity-0")}
-                />
+                <HugeiconsIcon icon={Tick01Icon} className={cn("size-4 shrink-0", value === trimmed ? "opacity-100" : "opacity-0")} />
               </CommandItem>
             ) : null}
             {results.length === 0 && !showFreeText ? (

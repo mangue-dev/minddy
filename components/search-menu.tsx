@@ -8,10 +8,11 @@
 // same one the right-click context menu uses (see DropdownSearchRow), so all
 // searchable dropdowns share one look.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Search01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { Command as CommandPrimitive } from "cmdk";
-import { SearchIcon } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -40,7 +41,7 @@ export const searchInputClass =
 export function DropdownSearchRow({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2 px-2 py-1">
-      <SearchIcon className="size-4 shrink-0 opacity-50" />
+      <HugeiconsIcon icon={Search01Icon} className="size-4 shrink-0 opacity-50" />
       {children}
     </div>
   );

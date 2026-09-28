@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowRight01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, ChevronRight, RotateCcw } from "lucide-react";
 import {
   Button,
   Popover,
@@ -136,7 +137,7 @@ export function ConversationSettings() {
             <span className="shrink-0 text-muted-foreground">
               {t(REASONING_LABEL_KEYS[displayedReasoning])}
             </span>
-            <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
+            <HugeiconsIcon icon={ArrowDown01Icon} className="size-3 shrink-0 text-muted-foreground" />
           </Button>
         </PopoverTrigger>
         <PopoverContent
@@ -163,7 +164,7 @@ export function ConversationSettings() {
                   <span className="flex min-w-0 flex-col items-center leading-tight">
                     <span className="flex items-center gap-0.5 text-sm font-medium text-blue-500">
                       {t(REASONING_LABEL_KEYS[displayedReasoning])}
-                      <ChevronRight className="size-4" aria-hidden />
+                      <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" aria-hidden />
                     </span>
                     <span className="max-w-[13rem] truncate text-sm font-normal text-muted-foreground">
                       {resolvedModel
@@ -185,7 +186,7 @@ export function ConversationSettings() {
                   aria-label={t("modelSettingsReset")}
                   onClick={reset}
                 >
-                  <RotateCcw className="size-4" />
+                  <HugeiconsIcon icon={Undo02Icon} className="size-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t("modelSettingsReset")}</TooltipContent>

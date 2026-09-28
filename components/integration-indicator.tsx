@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Plug01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
-import { Plug } from "lucide-react";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import type { IssueCardIssue } from "@/lib/types";
 import {
@@ -37,7 +38,7 @@ export function IntegrationIndicator({
             className
           )}
         >
-          <Plug className={cn("size-3.5", iconClassName)} />
+          <HugeiconsIcon icon={Plug01Icon} className={cn("size-3.5", iconClassName)} />
         </span>
       </TooltipTrigger>
       <TooltipContent>

@@ -12,11 +12,11 @@
 // a long title should wrap as it will in the document, and
 // not scroll in a one-line slot.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SmileIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
-import { Smile } from "lucide-react";
-
 import { AutoTextarea } from "@/components/auto-textarea";
 import { EmojiPicker } from "@/components/pages/emoji-picker";
 import { useArrowField } from "@/lib/use-arrow-field";
@@ -132,7 +132,7 @@ export function PageHeader({
                 "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               )}
             >
-              <Smile className="size-3.5" />
+              <HugeiconsIcon icon={SmileIcon} className="size-3.5" />
               {t("addIcon")}
             </button>
           </EmojiPicker>

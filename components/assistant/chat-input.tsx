@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, ArrowUp01Icon, AttachmentIcon, Layers01Icon, SquareIcon } from "@hugeicons/core-free-icons";
 import {
   type ReactNode,
   useRef,
@@ -28,7 +30,6 @@ import {
   SendButtonWithCost,
   cn,
 } from "mangue-ui";
-import { ArrowUp, Layers, Paperclip, Plus, Square } from "lucide-react";
 import { AgentBeam } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { MentionChip } from "@/components/mention-chip";
@@ -1514,7 +1515,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                                 : t("addFilesOrContext")
                             }
                           >
-                            <Plus className="size-4" />
+                            <HugeiconsIcon icon={Add01Icon} className="size-4" />
                           </Button>
                         }
                       >
@@ -1532,7 +1533,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                               }}
                               className="gap-2"
                             >
-                              <Paperclip className="size-4 text-muted-foreground" />
+                              <HugeiconsIcon icon={AttachmentIcon} className="size-4 text-muted-foreground" />
                               {tAttach("addFiles")}
                               <CommandShortcut className="inline-flex items-center gap-0.5 tracking-normal">
                                 <Kbd size="sm">{modKey}</Kbd>
@@ -1559,7 +1560,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                                 onSelect={() => placeSkill(option.skill)}
                                 className="gap-2"
                               >
-                                <Layers className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                <HugeiconsIcon icon={Layers01Icon} className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                                 <span className="min-w-0">
                                   <span className="block truncate">{option.label}</span>
                                   <span className="block truncate text-xs text-muted-foreground">
@@ -1624,7 +1625,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                             aria-label={tAttach("addFiles")}
                             aria-keyshortcuts="Meta+Shift+A Control+Shift+A"
                           >
-                            <Plus className="size-4" />
+                            <HugeiconsIcon icon={Add01Icon} className="size-4" />
                           </Button>
                         </span>
                       </TooltipTrigger>
@@ -1654,7 +1655,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                           aria-expanded={stopConfirmOpen}
                           className="h-8 w-8 shrink-0 rounded-full bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
                         >
-                          <Square className="h-3 w-3 fill-white text-white dark:fill-black dark:text-black" />
+                          <HugeiconsIcon icon={SquareIcon} className="h-3 w-3 fill-white text-white dark:fill-black dark:text-black" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="top">{t("stop")}</TooltipContent>
@@ -1728,7 +1729,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                               aria-disabled="true"
                               className="pointer-events-none inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground"
                             >
-                              <ArrowUp className="h-3.5 w-3.5" />
+                              <HugeiconsIcon icon={ArrowUp01Icon} className="h-3.5 w-3.5" />
                             </span>
                           </span>
                         </TooltipTrigger>

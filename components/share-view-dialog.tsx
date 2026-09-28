@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Copy01Icon, Share02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { MIN_SHARE_PASSWORD_LENGTH } from "@/lib/share-password";
@@ -16,7 +18,6 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { Copy, Share2 } from "lucide-react";
 import type { View, ViewShareLevel } from "@/lib/types";
 import {
   CustomDomainSection,
@@ -134,7 +135,7 @@ export function ShareViewDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Share2 className="size-4 text-brand" />
+            <HugeiconsIcon icon={Share02Icon} className="size-4 text-brand" />
             {t("title")}
           </DialogTitle>
           <DialogDescription>
@@ -207,7 +208,7 @@ export function ShareViewDialog({
                   className="shrink-0"
                   onClick={copyLink}
                 >
-                  <Copy />
+                  <HugeiconsIcon icon={Copy01Icon} />
                   {t("copyLink")}
                 </Button>
               </div>

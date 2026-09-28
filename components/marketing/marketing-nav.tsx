@@ -1,10 +1,12 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { ArrowUpRight01Icon, Cancel01Icon, Download01Icon, EqualIcon as Equal } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { ArrowUpRight, Download, Equal, X } from "lucide-react";
 import { Button } from "mangue-ui/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "mangue-ui/components/ui/sheet";
 import { cn } from "mangue-ui/lib/utils";
@@ -179,7 +181,7 @@ export function MarketingNav() {
                 aria-label={t("mobileMenuOpen")}
                 className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground lg:hidden"
               >
-                <Equal className="h-5 w-5" />
+                <AppIcon icon={Equal} className="h-5 w-5" />
               </button>
             </SheetTrigger>
 
@@ -227,7 +229,7 @@ export function MarketingNav() {
           <SheetClose asChild>
             <button type="button" aria-label={t("mobileMenuClose")}
               className="-mr-2 flex size-11 items-center justify-center rounded-full transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">
-              <X className="size-5" aria-hidden />
+              <HugeiconsIcon icon={Cancel01Icon} className="size-5" aria-hidden />
             </button>
           </SheetClose>
         </div>
@@ -242,7 +244,7 @@ export function MarketingNav() {
                     rel={link.external ? "noreferrer" : undefined}
                     className={cn(MOBILE_ROW, "text-2xl")}>
                     {t(link.key)}
-                    {link.external && <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />}
+                    {link.external && <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-4 shrink-0 text-muted-foreground" aria-hidden />}
                   </a>
                 </SheetClose>
               </li>
@@ -268,7 +270,7 @@ export function MarketingNav() {
               <Link href={href("/download")}
                 onClick={() => track("landing_cta_clicked", { location: "nav" })}>
                 {t("downloadMinddy")}
-                <Download data-icon="inline-end" />
+                <HugeiconsIcon icon={Download01Icon} data-icon="inline-end" />
               </Link>
             </Button>
           </SheetClose>

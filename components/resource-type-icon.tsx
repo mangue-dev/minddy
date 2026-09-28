@@ -1,17 +1,6 @@
-import {
-  Braces,
-  FileArchive,
-  FileAudio,
-  FileCode2,
-  FileSpreadsheet,
-  FileText,
-  FileType2,
-  FileVideo,
-  ImageIcon,
-  Paperclip,
-  Presentation,
-} from "lucide-react";
 import { cn } from "mangue-ui";
+import { AppIcon } from "@/components/icon";
+import { ArchiveIcon as FileArchive, AudioLinesIcon as FileAudio, BracesIcon as Braces, FileCodeIcon as FileCode2, FileTextIcon as FileText, FileTypeIcon as FileType2, FileVideoIcon as FileVideo, ImageIcon, PaperclipIcon as Paperclip, PresentationIcon as Presentation, SheetIcon as FileSpreadsheet } from "@hugeicons/core-free-icons";
 
 /** Colored file-kind icon shared by attachment pills and page file blocks. */
 export function ResourceTypeIcon({
@@ -95,6 +84,6 @@ export function ResourceTypeIcon({
   })();
 
   return (
-    <type.Icon className={cn("shrink-0", type.color, className)} aria-hidden />
+    <AppIcon icon={type.Icon} className={cn("shrink-0", type.color, className)} aria-hidden />
   );
 }

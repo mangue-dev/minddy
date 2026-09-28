@@ -1,14 +1,9 @@
 "use client";
 
+import { AppIcon } from "@/components/icon";
+import { GitMergeIcon as GitMerge, GitPullRequestClosedIcon as GitPullRequestClosed, GitPullRequestDraftIcon as GitPullRequestDraft, GitPullRequestIcon as GitPullRequest } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { Badge, cn } from "mangue-ui";
-import {
-  GitMerge,
-  GitPullRequest,
-  GitPullRequestClosed,
-  GitPullRequestDraft,
-  type LucideIcon,
-} from "lucide-react";
 import type { PullRequestListItem } from "@/lib/agent-api";
 
 /**
@@ -42,7 +37,7 @@ export const PR_STATE_STYLES: Record<PrState, string> = {
   draft: "",
 };
 
-const STATE_ICONS: Record<PrState, LucideIcon> = {
+const STATE_ICONS: Record<PrState, AppIcon> = {
   open: GitPullRequest,
   merged: GitMerge,
   closed: GitPullRequestClosed,
@@ -72,7 +67,7 @@ export function PrStateBadge({
   return (
     <Badge
       variant="secondary"
-      icon={icon ? <Icon /> : undefined}
+      icon={icon ? <AppIcon icon={Icon} /> : undefined}
       className={cn(PR_STATE_STYLES[state], className)}
     >
       {t(STATE_LABELS[state])}

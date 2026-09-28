@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Alert01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
-import { ChevronRight, TriangleAlert } from "lucide-react";
 import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";
 import { useProjects } from "@/lib/projects-context";
 import { ProjectOrb } from "@/components/project-orb";
@@ -50,10 +51,7 @@ export function HomeSmartAssignWarning() {
  the description resumes at the edge of the block, like everywhere else on
  the welcome, instead of being shifted under an icon gutter. */}
         <p className="flex items-center gap-1.5 text-sm font-medium">
-          <TriangleAlert
-            className="size-4 shrink-0 text-amber-500"
-            aria-hidden
-          />
+          <HugeiconsIcon icon={Alert01Icon} className="size-4 shrink-0 text-amber-500" aria-hidden />
           {t("smartAssignWarningTitle")}
         </p>
         <p className="text-xs leading-relaxed text-muted-foreground">
@@ -87,7 +85,7 @@ export function HomeSmartAssignWarning() {
                     total: warning.memberCount,
                   })}
                 </span>
-                <ChevronRight className="size-3 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
+                <HugeiconsIcon icon={ArrowRight01Icon} className="size-3 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </li>
           );

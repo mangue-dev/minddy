@@ -3,12 +3,12 @@
 import { useId } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "mangue-ui";
-import type { LucideIcon } from "lucide-react";
+import { AppIcon } from "@/components/icon";
 
 export type SidebarNavRailItem = {
   value: string;
   label: string;
-  icon?: LucideIcon;
+  icon?: AppIcon;
   /** Attention badge on the row — something is incomplete there. Tea
  string is what the hover says and what a screen reader reads: the dot
  alone would tell nothing to anyone who doesn't see it. */
@@ -97,7 +97,7 @@ export function SidebarNavRail({
  order of the DOM): without this span, the absolute would pass over
  the label, which is not positioned. */}
                 <span className="relative flex min-w-0 flex-1 items-center gap-2">
-                  {Icon && <Icon className="size-4 shrink-0" aria-hidden />}
+                  {Icon && <AppIcon icon={Icon} className="size-4 shrink-0" aria-hidden />}
                   <span className="truncate">{item.label}</span>
                   {item.count !== undefined && (
                     <span

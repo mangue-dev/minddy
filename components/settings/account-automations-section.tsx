@@ -1,9 +1,9 @@
 "use client";
 
 import {useEffect, useState} from "react";
+import { FolderKanbanIcon } from "@hugeicons/core-free-icons";
 import {useTranslations} from "next-intl";
 import {Accordion, AccordionContent, AccordionItem, AccordionTrigger, Badge, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton, Switch, toast} from "mangue-ui";
-import {FolderKanban} from "lucide-react";
 import {useAuth} from "@/lib/auth-context";
 import {useProjects} from "@/lib/projects-context";
 import {SettingsGroup, SettingsListRow, SettingsRow} from "@/components/settings/settings-ui";
@@ -314,7 +314,7 @@ export function AccountAutomationsSection() {
         ) : owned.length === 0 ? (
           <EmptyScene
             size="compact"
-            icon={FolderKanban}
+            icon={FolderKanbanIcon}
             title={t("projectsEmpty")}
           />
         ) : (
