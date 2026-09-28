@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Share02Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, Share01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -98,7 +98,7 @@ export function OnboardingJoinDialog({
                 onClick={() => void share()}
                 disabled={!email}
               >
-                <HugeiconsIcon icon={Share02Icon} />
+                <HugeiconsIcon icon={Share01Icon} />
                 {t("joinShareCta")}
               </Button>
             )}

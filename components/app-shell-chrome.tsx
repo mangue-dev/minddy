@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Alert01Icon, ArrowLeft01Icon, ArrowReloadHorizontalIcon as IterationCw, BrushIcon, Calendar01Icon, CircleDotDashedIcon, Clock01Icon as FileClock, Delete02Icon, Download01Icon, FileAttachmentIcon, GitPullRequestIcon, Home01Icon, InboxIcon, KeyboardIcon, LayoutGridIcon, MessageMultiple01Icon, Notebook01Icon, Settings01Icon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AiAutoRotateIcon as CycleIcon, Alert01Icon, ArrowLeft01Icon, BrushIcon, BubbleChatDelayIcon, CircleDotDashedIcon, Clock01Icon as FileClock, Delete02Icon, Download01Icon, File02Icon, GitPullRequestIcon, Home01Icon, InboxIcon, KeyboardIcon, Layout3ColumnIcon, MessageMultiple01Icon, Settings01Icon, StickyNote02Icon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import {
   startTransition,
   useCallback,
@@ -681,7 +681,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       createItems.push({
         key: "create-page",
         label: tPages("newPage"),
-        icon: FileAttachmentIcon,
+        icon: File02Icon,
         keywords: [
           ...createKw,
           "page",
@@ -761,7 +761,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         {
           key: "open-notes",
           label: tScratch("open"),
-          icon: Notebook01Icon,
+          icon: StickyNote02Icon,
           keys: ["mod", "⇧", "K"],
           keywords: ["notes", "scratchpad", "todo", "tâches", "problems"],
           onSelect: () => openScratchpad("palette"),
@@ -792,7 +792,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 // entry into primary navigation.
                 key: "go-routines",
                 label: tRoutines("title"),
-                icon: Calendar01Icon,
+                icon: BubbleChatDelayIcon,
                 href: "/routines",
                 keys: ["G", "U"],
                 entityType: "navigation",
@@ -813,7 +813,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
          {
           key: "go-all-global",
           label: t("allIssues"),
-          icon: LayoutGridIcon,
+          icon: Layout3ColumnIcon,
           href: "/all",
           keys: ["G", "B"],
           entityType: "navigation",
@@ -825,7 +825,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           // the ↗ boards tab and the home map.
           key: "go-cycle",
           label: t("cycle"),
-          icon: IterationCw,
+          icon: CycleIcon,
           href: "/all?view=cycle",
           entityType: "navigation",
           keywords: [
@@ -914,7 +914,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: `pg-tickets-${p.id}`,
             label: t("tickets"),
-            icon: LayoutGridIcon,
+            icon: Layout3ColumnIcon,
             keywords: kw,
             meta: chip,
             metaText,
@@ -940,7 +940,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: `pg-pages-${p.id}`,
             label: t("pages"),
-            icon: FileAttachmentIcon,
+            icon: File02Icon,
             keywords: [...kw, "wiki", "documentation", "doc"],
             meta: chip,
             metaText,
@@ -1209,7 +1209,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               {
                 key: `wiki-${page.id}`,
                 label: page.title || tPages("untitled"),
-                icon: page.icon ? emojiIcon(page.icon) : FileAttachmentIcon,
+                icon: page.icon ? emojiIcon(page.icon) : File02Icon,
                 description: excerpt,
                 keywords: [project.name, project.key],
                 meta: projectChip(project),
@@ -1306,7 +1306,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const routinesItem: AppNavItem = {
     key: "routines",
     label: t("routines"),
-    icon: Calendar01Icon,
+    icon: BubbleChatDelayIcon,
     href: "/routines",
     active: isRoutines,
     shortcut: "U",
@@ -1331,7 +1331,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: "all-global",
             label: t("allIssues"),
-            icon: LayoutGridIcon,
+            icon: Layout3ColumnIcon,
             href: "/all",
             active: pathname === "/all",
             shortcut: "B",
@@ -1429,7 +1429,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             {
               key: "tickets",
               label: t("tickets"),
-              icon: LayoutGridIcon,
+              icon: Layout3ColumnIcon,
               href: base,
               active: pathname === base && !objectiveBoardId,
               // P (project) — B is the all-project board, from a project too.
@@ -1452,7 +1452,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             {
               key: "pages",
               label: t("pages"),
-              icon: FileAttachmentIcon,
+              icon: File02Icon,
               href: `${base}/pages`,
               active: pathname.startsWith(`${base}/pages`),
               shortcut: "W",

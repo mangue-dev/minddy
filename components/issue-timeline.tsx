@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, Delete02Icon, GlobeIcon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, PencilIcon, Plug01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Delete02Icon, GlobeIcon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, Edit04Icon, Plug01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import {
@@ -594,7 +594,7 @@ export function CommentBlock({
                     setEditing(true);
                   }}
                 >
-                  <HugeiconsIcon icon={PencilIcon} />
+                  <HugeiconsIcon icon={Edit04Icon} />
                   {tCommon("edit")}
                 </DropdownMenuItem>
               )}

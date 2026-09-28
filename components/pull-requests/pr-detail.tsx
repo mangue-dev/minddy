@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, GitPullRequestDraftIcon, GitPullRequestIcon, Link02Icon, LinkSquare01Icon, MailReply01Icon, Message01Icon, MoreHorizontalIcon, PencilIcon, Tick01Icon, Undo02Icon, ViewIcon, WorkHistoryIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, GitPullRequestDraftIcon, GitPullRequestIcon, HistoryIcon, Link02Icon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, Tick01Icon, Undo02Icon, ViewIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
@@ -444,13 +444,13 @@ function ThreadComment({
                       setEditing(true);
                     }}
                   >
-                    <HugeiconsIcon icon={PencilIcon} />
+                    <HugeiconsIcon icon={Edit04Icon} />
                     {t("editComment")}
                   </DropdownMenuItem>
                 ) : null}
                 {onQuoteReply ? (
                   <DropdownMenuItem onClick={onQuoteReply}>
-                    <HugeiconsIcon icon={MailReply01Icon} />
+                    <HugeiconsIcon icon={MessageSquareQuoteIcon} />
                     {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
                   </DropdownMenuItem>
                 ) : null}
@@ -459,7 +459,7 @@ function ThreadComment({
                     and the menu must never open empty. */}
                 {edited ? (
                   <DropdownMenuItem onSelect={() => setHistoryOpen(true)}>
-                    <HugeiconsIcon icon={WorkHistoryIcon} />
+                    <HugeiconsIcon icon={HistoryIcon} />
                     {t("viewPreviousVersions")}
                   </DropdownMenuItem>
                 ) : null}
@@ -1792,7 +1792,7 @@ export function PrDetail({
                       setEditingTitle(true);
                     }}
                   >
-                    <HugeiconsIcon icon={PencilIcon} />
+                    <HugeiconsIcon icon={Edit04Icon} />
                     {t("renamePr")}
                   </DropdownMenuItem>
                 ) : null}
@@ -1897,7 +1897,7 @@ export function PrDetail({
                       setEditingTitle(true);
                     }}
                   >
-                    <HugeiconsIcon icon={PencilIcon} />
+                    <HugeiconsIcon icon={Edit04Icon} />
                     {t("renamePr")}
                   </DropdownMenuItem>
                 ) : null}
@@ -2419,7 +2419,7 @@ export function PrDetail({
               {t("cancel")}
             </Button>
             <Button disabled={!!maintenanceAction || !titleDraft.trim()} onClick={() => void saveTitle()}>
-              {maintenanceAction ? <Spinner /> : <HugeiconsIcon icon={PencilIcon} />}
+              {maintenanceAction ? <Spinner /> : <HugeiconsIcon icon={Edit04Icon} />}
               {t("savePrTitle")}
             </Button>
           </DialogFooter>
@@ -2459,7 +2459,7 @@ export function PrDetail({
                   {t("mergeTabNumo")}
                 </TabsTrigger>
                 <TabsTrigger value="manual" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
-                  <HugeiconsIcon icon={PencilIcon} />
+                  <HugeiconsIcon icon={Edit04Icon} />
                   {t("mergeTabManual")}
                 </TabsTrigger>
               </TabsList>

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Notebook01Icon } from "@hugeicons/core-free-icons";
+import { StickyNote02Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
 import { KbdSequence } from "@/components/ui/kbd";
@@ -62,7 +62,7 @@ export function ScratchpadTrigger({
             !sidebar && !chrome && left > 0 && "gap-1.5 px-2.5"
           )}
         >
-          <HugeiconsIcon icon={Notebook01Icon} className={sidebar || chrome ? "size-4" : "size-[18px]"} />
+          <HugeiconsIcon icon={StickyNote02Icon} className={sidebar || chrome ? "size-4" : "size-[18px]"} />
           {left > 0 && (
             <span className="tabular-nums leading-none">{left}</span>
           )}

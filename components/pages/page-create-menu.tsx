@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { DatabaseIcon, FileAttachmentIcon } from "@hugeicons/core-free-icons";
+import { DatabaseIcon, File02Icon } from "@hugeicons/core-free-icons";
 import type { ReactElement } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -25,7 +25,7 @@ export function PageCreateMenu({
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onSelect={() => onCreate(false)}>
-          <HugeiconsIcon icon={FileAttachmentIcon} className="size-4" />
+          <HugeiconsIcon icon={File02Icon} className="size-4" />
           {t("newPage")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onCreate(true)}>

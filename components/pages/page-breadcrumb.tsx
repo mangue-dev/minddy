@@ -21,7 +21,7 @@
 // this one takes the punctuation.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { FileAttachmentIcon } from "@hugeicons/core-free-icons";
+import { File02Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -67,7 +67,7 @@ function Crumb({
       )}
     >
       <span className="flex size-3.5 shrink-0 items-center justify-center text-[11px] leading-none">
-        {page.icon ?? <HugeiconsIcon icon={FileAttachmentIcon} className="size-3" />}
+        {page.icon ?? <HugeiconsIcon icon={File02Icon} className="size-3" />}
       </span>
       <span className="truncate">{page.title || t("untitled")}</span>
     </Link>
@@ -142,7 +142,7 @@ export function PageBreadcrumb({
                     }}
                   >
                     <span className="flex size-4 shrink-0 items-center justify-center text-xs leading-none">
-                      {page.icon ?? <HugeiconsIcon icon={FileAttachmentIcon} className="size-3.5" />}
+                      {page.icon ?? <HugeiconsIcon icon={File02Icon} className="size-3.5" />}
                     </span>
                     <span className="truncate">{page.title || t("untitled")}</span>
                   </Link>

@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrangeByLettersAZIcon, ArrowReloadHorizontalIcon as IterationCw, ArrowUpRight01Icon, Delete02Icon, FilterIcon, FloppyDiskIcon, LinkSquare01Icon, Loading02Icon, LockIcon, MoreHorizontalIcon, PencilIcon, Plug01Icon, Share02Icon, Tick01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrangeByLettersAZIcon, AiAutoRotateIcon as CycleIcon, ArrowUpRight01Icon, Delete02Icon, FilterIcon, FloppyDiskIcon, LinkSquare01Icon, Loading02Icon, LockIcon, MoreHorizontalIcon, Edit04Icon, Plug01Icon, Share01Icon, Tick01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -882,7 +882,7 @@ export function BoardToolbar({
       {
         id: "rename",
         label: t("renameView"),
-        icon: <HugeiconsIcon icon={PencilIcon} className="size-4" />,
+        icon: <HugeiconsIcon icon={Edit04Icon} className="size-4" />,
         disabled: !editable,
         onSelect: () => view && setRenameTarget(view),
       },
@@ -891,7 +891,7 @@ export function BoardToolbar({
       actions.push({
         id: "share",
         label: t("shareView"),
-        icon: <HugeiconsIcon icon={Share02Icon} className="size-4" />,
+        icon: <HugeiconsIcon icon={Share01Icon} className="size-4" />,
         disabled: view === null,
         onSelect: () => view && setShareTarget(view),
       });
@@ -963,7 +963,7 @@ export function BoardToolbar({
                 <div className={cn(PILL_CLASS, pillTone(cycleTab.active))}>
                   {cycleTab.completionPercent === null ||
                   cycleTab.completionPercent === undefined ? (
-                    <AppIcon icon={IterationCw} className="size-3 shrink-0" aria-hidden />
+                    <AppIcon icon={CycleIcon} className="size-3 shrink-0" aria-hidden />
                   ) : (
                     <ProgressRing
                       percent={cycleTab.completionPercent}
@@ -1094,7 +1094,7 @@ export function BoardToolbar({
                 <DropdownMenuItem
                   onSelect={() => activeView && setRenameTarget(activeView)}
                 >
-                  <HugeiconsIcon icon={PencilIcon} />
+                  <HugeiconsIcon icon={Edit04Icon} />
                   {t("renameView")}
                 </DropdownMenuItem>
               )}
@@ -1102,7 +1102,7 @@ export function BoardToolbar({
                 <DropdownMenuItem
                   onSelect={() => activeView && setShareTarget(activeView)}
                 >
-                  <HugeiconsIcon icon={Share02Icon} />
+                  <HugeiconsIcon icon={Share01Icon} />
                   {t("shareView")}
                 </DropdownMenuItem>
               )}
@@ -1307,7 +1307,7 @@ function CycleTab({
       className={cn(PILL_CLASS, pillTone(active), isDragging && "opacity-50")}
     >
       {completionPercent === null || completionPercent === undefined ? (
-        <AppIcon icon={IterationCw} className="size-3 shrink-0" aria-hidden />
+        <AppIcon icon={CycleIcon} className="size-3 shrink-0" aria-hidden />
       ) : (
         <ProgressRing
           percent={completionPercent}

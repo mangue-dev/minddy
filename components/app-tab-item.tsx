@@ -1,6 +1,6 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, PencilIcon, PinIcon, PinOffIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Edit04Icon, PinIcon, PinOffIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
@@ -98,7 +98,7 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
     </button></TooltipTrigger><TooltipContent side="bottom">{t("close")}</TooltipContent></Tooltip>}
     <IssueContextMenu position={menu} searchable={false} onClose={() => { setMenu(null); ref.current?.focus(); }} actions={[
       { id: "pin", label: t(tab.pinned ? "unpin" : "pin"), icon: tab.pinned ? <HugeiconsIcon icon={PinOffIcon} /> : <HugeiconsIcon icon={PinIcon} />, onSelect: onPin, disabled: busy },
-      { id: "rename", label: t("rename"), icon: <HugeiconsIcon icon={PencilIcon} />, onSelect: onRename, disabled: busy },
+      { id: "rename", label: t("rename"), icon: <HugeiconsIcon icon={Edit04Icon} />, onSelect: onRename, disabled: busy },
       { id: "close", label: t("close"), icon: <HugeiconsIcon icon={Cancel01Icon} />, onSelect: onClose, disabled: last || busy, separatorBefore: true },
     ]} />
   </div>;

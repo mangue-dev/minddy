@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { FileAttachmentIcon, Undo02Icon } from "@hugeicons/core-free-icons";
+import { File02Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import type { NodeViewRenderer } from "@tiptap/core";
 import {
@@ -92,7 +92,7 @@ export function SubpageView({ node, selected }: NodeViewProps) {
       {page?.icon ? (
         <span className="shrink-0 text-base leading-relaxed">{page.icon}</span>
       ) : (
-        <HugeiconsIcon icon={FileAttachmentIcon} className={cx(
+        <HugeiconsIcon icon={File02Icon} className={cx(
                               "size-4 shrink-0 text-muted-foreground",
                               orphan && "opacity-60"
                             )} />

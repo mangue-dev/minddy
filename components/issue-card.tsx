@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowReloadHorizontalIcon as IterationCw, ArrowRight01Icon, Calendar01Icon, Delete02Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, Link02Icon, RepeatIcon, Target01Icon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon, ArrowRight01Icon, Calendar01Icon, DateTimeIcon, Delete02Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, Link02Icon, RepeatIcon, Target01Icon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
 import {
   memo,
   useCallback,
@@ -783,7 +783,7 @@ export const IssueCardBody = memo(function IssueCardBody({
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="flex shrink-0 items-center text-blue-500 dark:text-blue-400">
-                  <AppIcon icon={IterationCw}
+                  <AppIcon icon={AiAutoRotateIcon}
                     className="size-3"
                     aria-label={tCycles("inCurrentCycle")}
                   />
@@ -1452,7 +1452,7 @@ const IssueCardContent = memo(function IssueCardContent({
                 "calendrier",
                 "calendar",
               ],
-              icon: <HugeiconsIcon icon={Calendar01Icon} className="size-4" />,
+              icon: <HugeiconsIcon icon={DateTimeIcon} className="size-4" />,
               shortcut: KEY_FOR_FIELD.dueDate,
               onSelect: () => openFieldAtPointer("dueDate"),
             },

@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, BotIcon, CodeSimpleIcon as Code2, Download01Icon, FileAttachmentIcon, ImportIcon as Import, LinkSquare01Icon, MessageMultiple01Icon, Mic01Icon, RepeatOne02Icon, Target01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, BotIcon, CodeSimpleIcon as Code2, Download01Icon, File02Icon, ImportIcon as Import, LinkSquare01Icon, MessageMultiple01Icon, Mic01Icon, RepeatOne02Icon, Target01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -21,7 +21,7 @@ import { MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
 
 const FEATURES = {
   agents: { icon: BotIcon, tone: CARD_TONES.lavender, screenshot: "workflowAgent" },
-  pages: { icon: FileAttachmentIcon, tone: CARD_TONES.sky, screenshot: "pagesEditor" },
+  pages: { icon: File02Icon, tone: CARD_TONES.sky, screenshot: "pagesEditor" },
   numo: { icon: BotIcon, tone: CARD_TONES.butter },
   routines: { icon: RepeatOne02Icon, tone: CARD_TONES.peach },
   planning: { icon: Target01Icon, tone: CARD_TONES.sage },

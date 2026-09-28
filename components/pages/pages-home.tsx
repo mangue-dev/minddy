@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, FileAttachmentIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, File02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
@@ -43,7 +43,7 @@ export function PagesHome({
     <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
       <div className="mx-auto max-w-5xl">
         <EmptyScene
-          icon={FileAttachmentIcon}
+          icon={File02Icon}
           title={pages.length === 0 ? t("emptyTitle") : t("pickTitle")}
         >
           <PageCreateMenu onCreate={onCreate} trigger={<Button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, BotIcon, Calendar01Icon, DashboardSpeedIcon, InformationCircleIcon, Loading02Icon, Megaphone01Icon, Mic01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, BotIcon, BubbleChatDelayIcon, DashboardSpeedIcon, FlowIcon, InformationCircleIcon, Loading02Icon, MessageMultiple01Icon, Mic01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -27,7 +27,6 @@ import { createCheckoutApi, createPortalApi } from "@/lib/billing-api";
 import { CARD_TONES } from "@/components/marketing/card-tones";
 import { AppIcon } from "@/components/icon";
 import { NumoIcon } from "@/components/numo-icon";
-import { SmartAssignIcon } from "@/components/smart-icons";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 
 /**
@@ -66,13 +65,13 @@ export const SEGMENT_UI: Record<
   agents: { icon: BotIcon, text: "text-violet-600 dark:text-violet-400", labelKey: "segmentAgents" },
   // The routines (MIN-185), just after the agents: same engine, other line
   // bill — a subscription that we left running, not a gesture that we made.
-  routines: { icon: Calendar01Icon, text: "text-sky-600 dark:text-sky-400", labelKey: "segmentRoutines" },
+  routines: { icon: BubbleChatDelayIcon, text: "text-sky-600 dark:text-sky-400", labelKey: "segmentRoutines" },
   numo: { icon: NumoRowIcon, text: "text-blue-600 dark:text-blue-400", labelKey: "segmentNumo" },
   dictation: { icon: Mic01Icon, text: "text-amber-600 dark:text-amber-400", labelKey: "segmentDictation" },
-  feedback: { icon: Megaphone01Icon, text: "text-emerald-600 dark:text-emerald-400", labelKey: "segmentFeedback" },
+  feedback: { icon: MessageMultiple01Icon, text: "text-emerald-600 dark:text-emerald-400", labelKey: "segmentFeedback" },
   // What minddy fills out for you when the ticket is born: who takes it
   // (Smart Assign) and what it is (Smart-fill).
-  automations: { icon: SmartAssignIcon, text: "text-fuchsia-600 dark:text-fuchsia-400", labelKey: "segmentAutomations" },
+  automations: { icon: FlowIcon, text: "text-fuchsia-600 dark:text-fuchsia-400", labelKey: "segmentAutomations" },
 };
 
 const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> = {

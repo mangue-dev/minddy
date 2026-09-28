@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, AttachmentIcon, Cancel01Icon, FileAttachmentIcon, Link02Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AttachmentIcon, Cancel01Icon, File02Icon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -216,7 +216,7 @@ export function AddResourceButton({
           </DropdownMenuItem>
           {pages && (
             <DropdownMenuItem onSelect={() => setPageOpen(true)}>
-              <HugeiconsIcon icon={FileAttachmentIcon} className="size-4" />
+              <HugeiconsIcon icon={File02Icon} className="size-4" />
               <span>{t("addPage")}</span>
             </DropdownMenuItem>
           )}
@@ -336,7 +336,7 @@ function PageOptions({
           }
         >
           <span className="w-4 shrink-0 text-center">
-            {page.icon ?? <HugeiconsIcon icon={FileAttachmentIcon} className="inline size-3.5 opacity-70" />}
+            {page.icon ?? <HugeiconsIcon icon={File02Icon} className="inline size-3.5 opacity-70" />}
           </span>
           <span className="truncate">{page.title.trim() || t("untitledPage")}</span>
         </CommandItem>
@@ -742,7 +742,7 @@ export function ResourcePills({
       {emoji ? (
         <span className="text-xs leading-none">{emoji}</span>
       ) : (
-        <HugeiconsIcon icon={FileAttachmentIcon} className="size-4 text-indigo-500 dark:text-indigo-400" aria-hidden />
+        <HugeiconsIcon icon={File02Icon} className="size-4 text-indigo-500 dark:text-indigo-400" aria-hidden />
       )}
     </ResourceFigure>;
 
