@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, AiAutoRotateIcon as CycleIcon, Alert01Icon, ArrowLeft01Icon, BrushIcon, BubbleChatDelayIcon, CircleDotDashedIcon, Clock01Icon as FileClock, Delete02Icon, Download01Icon, File02Icon, GitPullRequestIcon, Home01Icon, InboxIcon, KeyboardIcon, Layout3ColumnIcon, LayoutGridIcon, MessageMultiple01Icon, Settings01Icon, StickyNote02Icon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AiAutoRotateIcon as CycleIcon, Alert01Icon, ArrowLeft01Icon, BrushIcon, BubbleChatDelayIcon, CircleDotDashedIcon, Clock01Icon as FileClock, Delete02Icon, Download01Icon, File02Icon, GitPullRequestIcon, Home01Icon, InboxIcon, KeyboardIcon, Layout3ColumnIcon, MessageMultiple01Icon, Settings01Icon, StickyNote02Icon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import {
   startTransition,
   useCallback,
@@ -914,7 +914,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: `pg-tickets-${p.id}`,
             label: t("tickets"),
-            icon: LayoutGridIcon,
+            icon: Layout3ColumnIcon,
             keywords: kw,
             meta: chip,
             metaText,
@@ -1331,7 +1331,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: "all-global",
             label: t("allIssues"),
-            icon: LayoutGridIcon,
+            icon: Layout3ColumnIcon,
             href: "/all",
             active: pathname === "/all",
             shortcut: "B",
