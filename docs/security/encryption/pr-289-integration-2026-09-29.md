@@ -123,3 +123,27 @@ schema guards passed. Core review found no new blocker. The remaining upload
 review thread can be resolved against this explicit scope change after the new
 candidate CI passes. Production activation
 still requires the operational evidence above.
+
+## Attachment metadata retirement — 30 September 2026
+
+The subsequent attachment-cleanup review found that deleting Storage bytes did
+not retire `attachment_object_encrypted` rows or aliases targeting those rows.
+Both immediate cleanup and the nightly sweep now delete target aliases before
+registry parents, only after successful Storage removal. Shared-reference checks
+remain in place. Immediate cleanup remains best effort; nightly metadata errors
+are reported rather than counted as successful retirement.
+
+The additive migration extends the existing service-only orphan scan to include
+aged, unreferenced registry paths whose Storage bytes are already absent. This
+repairs earlier leftovers and retries interrupted metadata retirement while
+preserving the grace period, both reference-table checks, and bounded batches.
+The changed SQL function and two new literal service metadata access paths are
+recorded in the reviewed inventories; unrelated SQL entries remain unchanged.
+
+Thirty-six focused tests passed across six files. The new retirement regression
+and existing object-encryption regression passed on the isolated PostgreSQL
+schema. The fixture uses the same transaction-local Storage deletion permission
+as existing SQL regressions and supplies encrypted logical-size metadata; no
+application assertion or quota guard was disabled. Lint, typecheck,
+owned-English, encrypted-access, schema/consumer inventory checks, and diff checks
+passed. No production migration or data operation was performed.

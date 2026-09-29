@@ -7282,7 +7282,7 @@
       "functionReferences": []
     },
     "orphan_attachment_objects(timestamp with time zone,integer)": {
-      "sha256": "b56b9b6b5954e32ae5914758ccf09075a19222385c49ac2a7e1c12a20db7f8b1",
+      "sha256": "441ea1f711ad3f10e99242727e58aeedf970234de44713671a52cd7dbd1e0103",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -7291,7 +7291,8 @@
       "relations": [
         "projects",
         "page_files",
-        "attachments"
+        "attachments",
+        "attachment_object_encrypted"
       ],
       "protectedRelations": [
         "projects",

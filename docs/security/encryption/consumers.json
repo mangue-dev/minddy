@@ -472,7 +472,7 @@
     "file": "app/api/attachments/upload/route.ts",
     "operation": "rpc",
     "resource": "account_storage_quota_allows",
-    "line": 42,
+    "line": 43,
     "storage": false
   },
   {
@@ -2327,77 +2327,77 @@
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "rpc",
     "resource": "reserve_forge_attachment_publications",
-    "line": 977,
+    "line": 978,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "rpc",
     "resource": "finish_forge_attachment_publications",
-    "line": 986,
+    "line": 987,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "rpc",
     "resource": "finish_forge_attachment_publications",
-    "line": 990,
+    "line": 991,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 1091,
+    "line": 1092,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 1730,
+    "line": 1728,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "rpc",
     "resource": "activate_forge_attachment_encryption",
-    "line": 1738,
+    "line": 1736,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": null,
-    "line": 1742,
+    "line": 1740,
     "storage": true
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": null,
-    "line": 1752,
+    "line": 1750,
     "storage": true
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": "forge_attachment_objects",
-    "line": 1759,
+    "line": 1757,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": null,
-    "line": 1766,
+    "line": 1764,
     "storage": true
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 2613,
+    "line": 2611,
     "storage": false
   },
   {
@@ -3775,22 +3775,36 @@
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
-    "resource": "attachments",
-    "line": 791,
-    "storage": true
+    "resource": "attachment_object_aliases",
+    "line": 770,
+    "storage": false
   },
   {
     "file": "lib/server/attachments.ts",
-    "operation": "rpc",
-    "resource": "orphan_attachment_objects",
-    "line": 843,
+    "operation": "from",
+    "resource": "attachment_object_encrypted",
+    "line": 773,
     "storage": false
   },
   {
     "file": "lib/server/attachments.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 858,
+    "line": 807,
+    "storage": true
+  },
+  {
+    "file": "lib/server/attachments.ts",
+    "operation": "rpc",
+    "resource": "orphan_attachment_objects",
+    "line": 862,
+    "storage": false
+  },
+  {
+    "file": "lib/server/attachments.ts",
+    "operation": "from",
+    "resource": "attachments",
+    "line": 875,
     "storage": true
   },
   {

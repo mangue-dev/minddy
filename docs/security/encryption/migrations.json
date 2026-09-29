@@ -214,5 +214,6 @@
   "20270109200003_agent_key_provisioning_intent.sql": "ee051773d7855b46dd7dcd416e7f5f9413825d512baf4d2429dff472ed80c8df",
   "20270109200004_agent_allocation_failed_request_revocation.sql": "eaf6d72c2aba461aa75c3b5e524a73b6881badb082b45999eb891ded45344d52",
   "20270109200005_agent_allocation_erasure_completeness.sql": "31c707b3d5fe484fa8c18154317fa6102c24f703004a380e767b9217600255ae",
-  "20270109200006_numo_encrypted_stop_cascade.sql": "80f245855c425c03de4ff645aef3c1ea5c3d7aacfe9eed0d72e0eae2394de781"
+  "20270109200006_numo_encrypted_stop_cascade.sql": "80f245855c425c03de4ff645aef3c1ea5c3d7aacfe9eed0d72e0eae2394de781",
+  "20270109200007_attachment_object_retirement.sql": "972dc75b104936bce126458ff4afb5510bd675239bd78daa1aabbf4183dd2c10"
 }

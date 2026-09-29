@@ -760,6 +760,22 @@ async function unreferencedPaths(
   return paths.filter((p) => !held.has(p));
 }
 
+/** Forget aliases before their registry parents, only after Storage deletion succeeds. */
+async function forgetRemovedAttachmentObjects(
+  service: SupabaseClient,
+  paths: string[],
+): Promise<void> {
+  for (let i = 0; i < paths.length; i += 100) {
+    const chunk = paths.slice(i, i + 100);
+    const aliases = await service.from("attachment_object_aliases")
+      .delete().in("new_path", chunk);
+    if (aliases.error) throw new Error("Unable to remove retired attachment aliases");
+    const registry = await service.from("attachment_object_encrypted")
+      .delete().in("path", chunk);
+    if (registry.error) throw new Error("Unable to unregister retired attachment objects");
+  }
+}
+
 /**
  * Best-effort storage cleanup — a failure must never fail the business write
  * (the leftover is an orphan object, same class as an abandoned upload).
@@ -790,10 +806,12 @@ export async function removeStorageObjects(
   try {
     const { error } = await service.storage.from("attachments").remove(orphans);
     if (error) {
-      console.error("[attachments] storage cleanup failed:", error.message);
+      console.error("[attachments] storage_cleanup_failed");
+      return;
     }
-  } catch (e) {
-    console.error("[attachments] storage cleanup failed:", (e as Error).message);
+    await forgetRemovedAttachmentObjects(service, orphans);
+  } catch {
+    console.error("[attachments] storage_cleanup_failed");
   }
 }
 
@@ -823,8 +841,8 @@ export const ORPHAN_ATTACHMENT_DAYS = 7;
 /**
  * Objects in the bucket that are no longer designated by any line, after the timeout.
  *
- * Sending an attachment is DIRECT-TO-STORAGE: the bytes leave the
- * browser before the resource is saved, and everything that happens
+ * Uploading an attachment stores the bytes before the resource is saved.
+ * Everything that happens
  * in between — a composer closed, a tab lost, a creation canceled —
  * leaves the object alone in the bucket. Nobody showed it anymore, nobody counted it, and nothing deleted it.
  *
@@ -833,7 +851,8 @@ export const ORPHAN_ATTACHMENT_DAYS = 7;
  * nowhere” is exactly what an anti-join can do and we can't.
  *
  * Bounded batch like other nightly sweep purges; the next day resumes
- * the rest. Returns the number of objects actually deleted.
+ * the rest. Also retries retirement of metadata whose bytes are already gone.
+ * Returns the number of retired object paths.
  */
 export async function sweepOrphanAttachments(
   service: SupabaseClient,
@@ -849,9 +868,7 @@ export async function sweepOrphanAttachments(
   const paths = ((data ?? []) as { name: string }[]).map((row) => row.name);
   if (paths.length === 0) return 0;
 
-  // Not `removeStorageObjects`: its rereading “is this path still mentioned? »
-  // just made by the query above, on both tables and in one
-  // times. Redoing it path by path would cost half the sweep.
+  // The RPC already checked both reference tables; do not repeat those reads.
   let removed = 0;
   for (let i = 0; i < paths.length; i += 100) {
     const chunk = paths.slice(i, i + 100);
@@ -859,9 +876,10 @@ export async function sweepOrphanAttachments(
       .from("attachments")
       .remove(chunk);
     if (removeError) {
-      console.error("[attachments] orphan sweep failed:", removeError.message);
+      console.error("[attachments] orphan_sweep_failed");
       break;
     }
+    await forgetRemovedAttachmentObjects(service, chunk);
     removed += chunk.length;
   }
   return removed;
