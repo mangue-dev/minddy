@@ -79,6 +79,13 @@ resolved. The Stop boundary changes passed a further 15 focused tests. All
 pre-existing 102 non-merge commits have exact author-matching DCO trailers; the
 integration commit also carries its author-matching sign-off.
 
+The first pull-request CI run on `7fb956554` exposed high-severity Undici
+advisories in the inherited desktop lockfile. The final iteration updates only
+the two already-permitted transitive versions: `6.28.0` to `6.29.0` and `7.29.0`
+to `7.30.0`. No override, manifest change, or audit suppression was added. The
+desktop audit reports zero vulnerabilities; its bundle and 316 tests across
+45 files pass.
+
 Required GitHub checks on the pushed candidate must still be confirmed. The final
 GitHub review records the exact SHA, check links, and mergeability after the runs
 finish; the local results above do not substitute for those remote checks.
