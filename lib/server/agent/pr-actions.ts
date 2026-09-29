@@ -1,4 +1,5 @@
 import { issueStore } from "@/lib/server/issue-store";
+import { MAX_ATTACHMENT_UPLOAD_BYTES } from "@/lib/attachment-upload-limits";
 import "server-only";
 
 import { after, NextResponse, type NextRequest } from "next/server";
@@ -1682,9 +1683,6 @@ export async function prFileBytesResponse(
 
 // ── PR comment attachments ───────────────────────────────────────────────────
 
-/** Same limit as ticket attachments (and bucket). */
-const MAX_FORGE_ATTACHMENT_BYTES = 20 * 1024 * 1024;
-
 /** Restrict the type served by the capability proxy to the inline allowlist. */
 const servedAttachmentType = servedMimeType;
 
@@ -1716,7 +1714,7 @@ export async function prAttachmentResponse(
   const actor = await requireActor(scope, "read");
   if (!actor.ok) return actor.response;
 
-  if (file.size > MAX_FORGE_ATTACHMENT_BYTES) {
+  if (file.size > MAX_ATTACHMENT_UPLOAD_BYTES) {
     return NextResponse.json({ error: "File too large" }, { status: 413 });
   }
 

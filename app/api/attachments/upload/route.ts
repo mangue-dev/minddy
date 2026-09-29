@@ -5,7 +5,8 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
 import { projectStorageAllowed } from "@/lib/server/storage-quota";
 import { resolveUploadedMimeType } from "@/lib/inline-safe";
-import { MAX_ATTACHMENT_BYTES, opaqueAttachmentPath,
+import { MAX_ATTACHMENT_UPLOAD_BYTES } from "@/lib/attachment-upload-limits";
+import { opaqueAttachmentPath,
   uploadPrivateAttachmentObject } from "@/lib/server/attachments";
 
 export const runtime = "nodejs";
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
   const prefix = form?.get("prefix");
   const file = form?.get("file");
   if (typeof prefix !== "string" || !(file instanceof File) ||
-      !Number.isSafeInteger(file.size) || file.size > MAX_ATTACHMENT_BYTES ||
+      !Number.isSafeInteger(file.size) || file.size > MAX_ATTACHMENT_UPLOAD_BYTES ||
       !file.name.trim()) {
     return NextResponse.json({ error: "Invalid attachment" }, { status: 400 });
   }

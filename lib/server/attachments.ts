@@ -25,7 +25,7 @@ import { getBlindIndexKeys } from "@/lib/server/encryption/registry";
 import { decodeAttachmentRow, encodeAttachmentValue,
   shouldEncryptAttachmentMetadata } from "@/lib/server/attachment-content";
 
-/** Client-checked too (use-attachment-uploads) — keep the two in sync. */
+/** Retain the historical descriptor limit so existing stored files remain usable. */
 export const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024; // 20 MB
 /** Files and links confounded — a resource is a resource (MIN-184). */
 export const MAX_ATTACHMENTS_PER_ENTITY = 10;
@@ -96,7 +96,7 @@ function parsePageResource(a: Record<string, unknown>): PageResourceInput | null
 
 /**
  * Validate the resource descriptors a client sends — a FILE (after its
- * direct-to-storage upload) or a LINK (after /link-preview resolved its title
+ * authenticated upload) or a LINK (after /link-preview resolved its title
  * and favicon). `requiredPrefix` pins the path family a file is allowed to
  * reference (`projects/{pid}/` or `chat/{uid}/`) so nobody can register a row
  * pointing at someone else's file. Returns null when the payload is malformed
@@ -237,7 +237,7 @@ export async function uploadPrivateAttachmentObject(service: SupabaseClient,
 /**
  * Server-side upload + row registration in one step — for callers that carry
  * the file content themselves (MCP agents send it inline as base64; they have
- * no browser to do the direct-to-storage upload). Callers have checked
+ * no browser to do the authenticated upload). Callers have checked
  * project access. Throws on failure; a failed row insert cleans up the
  * just-uploaded object.
  */

@@ -1,6 +1,8 @@
 "use client";
 
 import { createUuid } from "@/lib/create-uuid";
+import { MAX_ATTACHMENT_UPLOAD_BYTES, MAX_ATTACHMENT_UPLOAD_MB } from
+  "@/lib/attachment-upload-limits";
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -10,8 +12,6 @@ import type { LinkResourceInput, ResourceInput, ResourceKind } from "@/lib/types
 import { trackEvent } from "./analytics";
 import { sizeBucket } from "./analytics-sanitize";
 
-/** Server-checked too (parseResourcesInput) — keep the two in sync. */
-export const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024; // 20 MB
 /** Files and links confounded — a resource is a resource (MIN-184). */
 export const MAX_ATTACHMENTS = 10;
 
@@ -104,8 +104,8 @@ export function useAttachmentUploads(
           toast.error(t("tooMany", { max }));
           break;
         }
-        if (file.size > MAX_ATTACHMENT_BYTES) {
-          toast.error(t("tooLarge", { name: file.name, max: 20 }));
+        if (file.size > MAX_ATTACHMENT_UPLOAD_BYTES) {
+          toast.error(t("tooLarge", { name: file.name, max: MAX_ATTACHMENT_UPLOAD_MB }));
           continue;
         }
         slots -= 1;
@@ -132,7 +132,7 @@ export function useAttachmentUploads(
               blob !== file ? renameForType(entry.file_name, mime) : entry.file_name;
             const form = new FormData();
             form.set("prefix", prefix);
-            form.set("file", blob, fileName);
+            form.set("file", blob, fileName.slice(0, 200));
             const response = await fetch("/api/attachments/upload", {
               method: "POST", body: form,
             });

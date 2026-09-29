@@ -104,3 +104,22 @@ by this review. Historical evidence in the closure matrix and prior checkpoints
 remains unchanged. MIN-591 can remain in progress while code integration is
 validated; only independently evidenced operational completion can close its
 application-wide delivery requirements.
+
+## Accepted upload contract — 30 September 2026
+
+After the three review iterations, the owner explicitly accepted reducing new
+browser attachment uploads from 20 MiB to approximately 4.5 MB. The shared ingress limit
+is 4,500,000 decimal bytes minus 16 KiB reserved for the multipart envelope.
+Ticket/chat and forge composers use the same limit as their server handlers;
+all six locale error catalogs reflect the new upload contract. Multipart
+filenames are bounded to the existing 200-character metadata limit.
+
+The historical 20 MiB descriptor and object-codec limits remain intact so stored
+attachments and migration/backfill inputs are not rejected by the new ingress
+policy. Focused regression coverage checks actual serialized multipart size,
+private and forge rejection boundaries, and historical descriptor compatibility.
+The 120 focused tests, lint, typecheck, owned-English, encrypted-access, and
+schema guards passed. Core review found no new blocker. The remaining upload
+review thread can be resolved against this explicit scope change after the new
+candidate CI passes. Production activation
+still requires the operational evidence above.
