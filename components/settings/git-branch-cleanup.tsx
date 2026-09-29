@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Alert01Icon, BrushIcon, LinkSquare01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -15,8 +17,6 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { AlertTriangle, Brush, ExternalLink } from "lucide-react";
-
 import {
   deleteAgentBranchesApi,
   fetchAgentBranchesApi,
@@ -222,7 +222,7 @@ export function BranchCleanupDialog({
                             onClick={(e) => e.stopPropagation()}
                           >
                             #{b.prNumber}
-                            <ExternalLink className="size-3" />
+                            <HugeiconsIcon icon={LinkSquare01Icon} className="size-3" />
                           </a>
                         )}
                       </span>
@@ -247,7 +247,7 @@ export function BranchCleanupDialog({
 
         {hasRejectedSelected && (
           <p className="flex items-start gap-2 rounded-md border border-border bg-muted/50 p-2.5 text-xs text-muted-foreground">
-            <AlertTriangle className="mt-px size-3.5 shrink-0" />
+            <HugeiconsIcon icon={Alert01Icon} className="mt-px size-3.5 shrink-0" />
             {t("gitCleanBranchesRejectedWarning")}
           </p>
         )}
@@ -256,7 +256,7 @@ export function BranchCleanupDialog({
  agent session can still push on the branch that is being deleted. */}
         {inUseSelected > 0 && (
           <p className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2.5 text-xs text-destructive">
-            <AlertTriangle className="mt-px size-3.5 shrink-0" />
+            <HugeiconsIcon icon={Alert01Icon} className="mt-px size-3.5 shrink-0" />
             {t("gitCleanBranchesInUseWarning", { count: inUseSelected })}
           </p>
         )}
@@ -318,7 +318,7 @@ export function GitBranchCleanup({
         hint={t("gitCleanBranchesHint")}
         control={
           <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
-            <Brush className="size-4" />
+            <HugeiconsIcon icon={BrushIcon} className="size-4" />
             {t("gitCleanBranches")}
           </Button>
         }

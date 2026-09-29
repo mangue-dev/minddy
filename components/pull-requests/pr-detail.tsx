@@ -1,5 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, GitPullRequestDraftIcon, GitPullRequestIcon, HistoryIcon, Link02Icon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, Tick01Icon, Undo02Icon, ViewIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
@@ -24,27 +27,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import {
-  ArrowLeft,
-  ArrowUp,
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  Copy,
-  Ellipsis,
-  Eye,
-  ExternalLink,
-  GitPullRequest,
-  GitPullRequestDraft,
-  History,
-  Link2,
-  MessageSquare,
-  MoreHorizontal,
-  Pencil,
-  Reply,
-  RotateCcw,
-  X,
-} from "lucide-react";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { AppContentHeader } from "@/components/app-content-header";
 import { BotBadge, GitLogin } from "@/components/git/git-login";
@@ -203,7 +185,7 @@ function CopyBranchButton({ value }: { value: string }) {
           aria-label={t("copyBranch")}
           onClick={() => void copy()}
         >
-          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+          {copied ? <HugeiconsIcon icon={Tick01Icon} className="size-3.5" /> : <HugeiconsIcon icon={Copy01Icon} className="size-3.5" />}
         </Button>
       </TooltipTrigger>
       <TooltipContent side="top">{t("copyBranch")}</TooltipContent>
@@ -451,7 +433,7 @@ function ThreadComment({
                   aria-label={t("commentMoreActions")}
                   className="-my-1 size-7 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                 >
-                  <Ellipsis className="size-4" />
+                  <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -462,13 +444,13 @@ function ThreadComment({
                       setEditing(true);
                     }}
                   >
-                    <Pencil />
+                    <HugeiconsIcon icon={Edit04Icon} />
                     {t("editComment")}
                   </DropdownMenuItem>
                 ) : null}
                 {onQuoteReply ? (
                   <DropdownMenuItem onClick={onQuoteReply}>
-                    <Reply />
+                    <HugeiconsIcon icon={MessageSquareQuoteIcon} />
                     {t(quotingNumo ? "quoteReplyNumo" : "quoteReply")}
                   </DropdownMenuItem>
                 ) : null}
@@ -477,7 +459,7 @@ function ThreadComment({
                     and the menu must never open empty. */}
                 {edited ? (
                   <DropdownMenuItem onSelect={() => setHistoryOpen(true)}>
-                    <History />
+                    <HugeiconsIcon icon={HistoryIcon} />
                     {t("viewPreviousVersions")}
                   </DropdownMenuItem>
                 ) : null}
@@ -1696,7 +1678,7 @@ export function PrDetail({
           className="md:hidden"
           onClick={onBack}
         >
-          <ChevronLeft />
+          <HugeiconsIcon icon={ArrowLeft01Icon} />
         </Button>
         {/* The project orb opens the header, like that of a conversation
             the agent: the column no longer says the project line by line (it is
@@ -1733,11 +1715,7 @@ export function PrDetail({
                   }}
                   className="flex min-w-0 items-center gap-1 text-muted-foreground outline-none hover:text-foreground"
                 >
-                  <Link2
-                    data-testid="pr-issue-link-icon"
-                    className="size-3.5 shrink-0"
-                    aria-hidden
-                  />
+                  <HugeiconsIcon icon={Link02Icon} data-testid="pr-issue-link-icon" className="size-3.5 shrink-0" aria-hidden />
                   <span className="truncate">{linkedIssue}</span>
                 </button>
               </TooltipTrigger>
@@ -1791,7 +1769,7 @@ export function PrDetail({
                   size="icon-sm"
                   aria-label={t("moreActions")}
                 >
-                  <MoreHorizontal />
+                  <HugeiconsIcon icon={MoreHorizontalIcon} />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -1802,7 +1780,7 @@ export function PrDetail({
                       target="_blank"
                       rel="noreferrer"
                     >
-                      <ExternalLink />
+                      <HugeiconsIcon icon={LinkSquare01Icon} />
                       {t(item.provider === "gitlab" ? "openOnGitlab" : "openOnGithub")}
                     </a>
                   </DropdownMenuItem>
@@ -1814,7 +1792,7 @@ export function PrDetail({
                       setEditingTitle(true);
                     }}
                   >
-                    <Pencil />
+                    <HugeiconsIcon icon={Edit04Icon} />
                     {t("renamePr")}
                   </DropdownMenuItem>
                 ) : null}
@@ -1827,7 +1805,7 @@ export function PrDetail({
                 onClick={() => void act("reopen")}
                 disabled={!!acting}
               >
-                {acting === "reopen" ? <Spinner /> : <RotateCcw />}
+                {acting === "reopen" ? <Spinner /> : <HugeiconsIcon icon={Undo02Icon} />}
                 {t("reopen")}
               </Button>
             ) : null}
@@ -1856,16 +1834,16 @@ export function PrDetail({
                     <Button variant="outline" size="sm">
                       {aiReviewActive ? <Spinner /> : null}
                       {t("review")}
-                      <ChevronDown className="size-3.5" />
+                      <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => openReview("approve")}>
-                      <Check />
+                      <HugeiconsIcon icon={Tick01Icon} />
                       {t("reviewApprove")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => openReview("comment")}>
-                      <MessageSquare />
+                      <HugeiconsIcon icon={Message01Icon} />
                       {t("reviewComment")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -1879,7 +1857,7 @@ export function PrDetail({
                   onClick={() => setConfirmAction({ kind: "close" })}
                   disabled={!!acting || isWorking}
                 >
-                  {acting === "close" ? <Spinner /> : <X />}
+                  {acting === "close" ? <Spinner /> : <HugeiconsIcon icon={Cancel01Icon} />}
                   {t("closePullRequest")}
                 </Button>
               ) : null}
@@ -1896,7 +1874,7 @@ export function PrDetail({
                   size="icon-sm"
                   aria-label={t("moreActions")}
                 >
-                  <MoreHorizontal />
+                  <HugeiconsIcon icon={MoreHorizontalIcon} />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -1907,7 +1885,7 @@ export function PrDetail({
                       target="_blank"
                       rel="noreferrer"
                     >
-                      <ExternalLink />
+                      <HugeiconsIcon icon={LinkSquare01Icon} />
                       {t(item.provider === "gitlab" ? "openOnGitlab" : "openOnGithub")}
                     </a>
                   </DropdownMenuItem>
@@ -1919,7 +1897,7 @@ export function PrDetail({
                       setEditingTitle(true);
                     }}
                   >
-                    <Pencil />
+                    <HugeiconsIcon icon={Edit04Icon} />
                     {t("renamePr")}
                   </DropdownMenuItem>
                 ) : null}
@@ -1940,7 +1918,7 @@ export function PrDetail({
                       className="2xl:hidden"
                       onSelect={startFileReview}
                     >
-                      <Eye />
+                      <HugeiconsIcon icon={ViewIcon} />
                       {t("reviewStart")}
                     </DropdownMenuItem>
                   </>
@@ -1954,7 +1932,7 @@ export function PrDetail({
                         disabled={!!acting || isWorking}
                         onSelect={() => void act("convert_to_draft")}
                       >
-                        {acting === "convert_to_draft" ? <Spinner /> : <GitPullRequestDraft />}
+                        {acting === "convert_to_draft" ? <Spinner /> : <HugeiconsIcon icon={GitPullRequestDraftIcon} />}
                         {t("convertToDraft")}
                       </DropdownMenuItem>
                     ) : null}
@@ -1965,7 +1943,7 @@ export function PrDetail({
                       disabled={!!acting || isWorking}
                       onSelect={() => setConfirmAction({ kind: "close" })}
                     >
-                      <X />
+                      <HugeiconsIcon icon={Cancel01Icon} />
                       {t("closePullRequest")}
                     </DropdownMenuItem>
                   </>
@@ -1985,7 +1963,7 @@ export function PrDetail({
                 disabled={!!acting || isWorking}
                 onClick={() => void act("ready_for_review")}
               >
-                {acting === "ready_for_review" ? <Spinner /> : <GitPullRequest />}
+                {acting === "ready_for_review" ? <Spinner /> : <HugeiconsIcon icon={GitPullRequestIcon} />}
                 {t("openPullRequest")}
               </Button>
             ) : effectiveReadiness ? (
@@ -2094,7 +2072,7 @@ export function PrDetail({
                 </span>
               ) : null}
               {baseBranch && headBranch ? (
-                <ArrowLeft className="size-3.5" aria-hidden />
+                <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" aria-hidden />
               ) : null}
               {headBranch ? (
                 <span className="inline-flex items-center gap-0.5">
@@ -2367,7 +2345,7 @@ export function PrDetail({
                             size="sm"
                             onClick={fileReviewActive ? finishFileReview : startFileReview}
                           >
-                            {fileReviewActive ? <Check /> : <Eye />}
+                            {fileReviewActive ? <HugeiconsIcon icon={Tick01Icon} /> : <HugeiconsIcon icon={ViewIcon} />}
                             {t(fileReviewActive ? "reviewFinish" : "reviewStart")}
                           </Button>
                         </div>
@@ -2387,7 +2365,7 @@ export function PrDetail({
                         size="sm"
                         onClick={finishFileReview}
                       >
-                        <Check />
+                        <HugeiconsIcon icon={Tick01Icon} />
                         {t("reviewFinish")}
                       </Button>
                     </div>
@@ -2413,7 +2391,7 @@ export function PrDetail({
               scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" })
             }
           >
-            <ArrowUp className="size-4" />
+            <HugeiconsIcon icon={ArrowUp01Icon} className="size-4" />
           </Button>
         ) : null}
       </div>
@@ -2441,7 +2419,7 @@ export function PrDetail({
               {t("cancel")}
             </Button>
             <Button disabled={!!maintenanceAction || !titleDraft.trim()} onClick={() => void saveTitle()}>
-              {maintenanceAction ? <Spinner /> : <Pencil />}
+              {maintenanceAction ? <Spinner /> : <HugeiconsIcon icon={Edit04Icon} />}
               {t("savePrTitle")}
             </Button>
           </DialogFooter>
@@ -2481,7 +2459,7 @@ export function PrDetail({
                   {t("mergeTabNumo")}
                 </TabsTrigger>
                 <TabsTrigger value="manual" className={cn(TAB_TRIGGER_DENSE, "gap-1.5")}>
-                  <Pencil />
+                  <HugeiconsIcon icon={Edit04Icon} />
                   {t("mergeTabManual")}
                 </TabsTrigger>
               </TabsList>
@@ -2667,19 +2645,19 @@ export function PrDetail({
                   verdict: "comment",
                   label: t("reviewComment"),
                   hint: t("reviewChoiceCommentHint"),
-                  icon: MessageSquare,
+                  icon: Message01Icon,
                 },
                 {
                   verdict: "approve",
                   label: t("reviewApprove"),
                   hint: t("reviewChoiceApproveHint"),
-                  icon: Check,
+                  icon: Tick01Icon,
                 },
                 {
                   verdict: "request_changes",
                   label: t("reviewRequestChanges"),
                   hint: t("reviewChoiceChangesHint"),
-                  icon: X,
+                  icon: Cancel01Icon,
                 },
               ] as const).map((choice) => {
                 const Icon = choice.icon;
@@ -2708,7 +2686,7 @@ export function PrDetail({
                           : "border-border text-muted-foreground",
                       )}
                     >
-                      <Icon className="size-3" />
+                      <AppIcon icon={Icon} className="size-3" />
                     </span>
                     <span className="grid gap-0.5">
                       <span className="text-sm font-medium">{choice.label}</span>

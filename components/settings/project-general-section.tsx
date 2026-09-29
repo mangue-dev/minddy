@@ -1,10 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Delete02Icon, Logout01Icon } from "@hugeicons/core-free-icons";
 import {useEffect, useState} from "react";
 import {useRouter} from "next/navigation";
 import {useTranslations} from "next-intl";
 import {Badge, Button, Input, Spinner, toast} from "mangue-ui";
-import {LogOut, Trash2} from "lucide-react";
 import {useAuth} from "@/lib/auth-context";
 import {useProjects} from "@/lib/projects-context";
 import {removeMemberApi} from "@/lib/members-api";
@@ -125,7 +126,7 @@ export function ProjectGeneralSection({
               disabled={leaving}
               onClick={() => void handleLeave()}
             >
-              {leaving ? <Spinner /> : <LogOut />}
+              {leaving ? <Spinner /> : <HugeiconsIcon icon={Logout01Icon} />}
               {t("leave")}
             </Button>
           }
@@ -212,7 +213,7 @@ export function ProjectGeneralSection({
               size="sm"
               onClick={onRequestDelete}
             >
-              <Trash2 />
+              <HugeiconsIcon icon={Delete02Icon} />
               {tc("moveToTrash")}
             </Button>
           }

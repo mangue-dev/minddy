@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, Copy01Icon, FilterIcon, TickDouble01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -23,8 +25,6 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { CheckCheck, ChevronDown, Copy, ListFilter } from "lucide-react";
-
 import { NumoIcon } from "@/components/numo-icon";
 import {
   useReviewReplies,
@@ -146,7 +146,7 @@ export function PrUnresolvedConversations({
           className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-2"
         >
           <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-            <ListFilter className="size-3" />
+            <HugeiconsIcon icon={FilterIcon} className="size-3" />
           </span>
           <span className="min-w-0 flex-1 text-sm font-medium">
             {t("unresolvedWorkspaceTitle", { count: threads.length })}
@@ -179,7 +179,7 @@ export function PrUnresolvedConversations({
                   size="sm"
                   onClick={() => setConfirmOutdated(true)}
                 >
-                  <CheckCheck />
+                  <HugeiconsIcon icon={TickDouble01Icon} />
                   {t("resolveOutdated", { count: outdated.length })}
                 </Button>
               ) : null}
@@ -191,12 +191,12 @@ export function PrUnresolvedConversations({
                     size="sm"
                   >
                     {t("fixAllConversations")}
-                    <ChevronDown className="size-3.5" />
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
                   <DropdownMenuItem onSelect={() => void copyPrompt(threads)}>
-                    <Copy />
+                    <HugeiconsIcon icon={Copy01Icon} />
                     {t("copyUnresolvedPrompt")}
                   </DropdownMenuItem>
                   {canLaunch ? (
@@ -215,7 +215,7 @@ export function PrUnresolvedConversations({
                       data-testid="pr-fix-all-resolve"
                       onSelect={() => setConfirmResolveAll(true)}
                     >
-                      <CheckCheck />
+                      <HugeiconsIcon icon={TickDouble01Icon} />
                       {t("resolveAll")}
                     </DropdownMenuItem>
                   ) : null}
@@ -263,7 +263,7 @@ export function PrUnresolvedConversations({
               disabled={resolvingOutdated}
               onClick={() => void resolveOutdated()}
             >
-              {resolvingOutdated ? <Spinner /> : <CheckCheck />}
+              {resolvingOutdated ? <Spinner /> : <HugeiconsIcon icon={TickDouble01Icon} />}
               {t("resolveOutdatedConfirm", { count: outdated.length })}
             </Button>
           </DialogFooter>
@@ -293,7 +293,7 @@ export function PrUnresolvedConversations({
               disabled={resolvingAll}
               onClick={() => void resolveAll()}
             >
-              {resolvingAll ? <Spinner /> : <CheckCheck />}
+              {resolvingAll ? <Spinner /> : <HugeiconsIcon icon={TickDouble01Icon} />}
               {t("resolveAllConfirm")}
             </Button>
           </DialogFooter>

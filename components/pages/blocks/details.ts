@@ -3,7 +3,7 @@ import {
   DetailsContent,
   DetailsSummary,
 } from "@tiptap/extension-details";
-import { ChevronRight } from "lucide-react";
+import { ChevronRightIcon } from "@hugeicons/core-free-icons";
 import type {
   MarkdownNode,
   MarkdownState,
@@ -87,7 +87,7 @@ export function setDetailsLabels(next: {
   labels.collapse = next.collapse;
 }
 
-/** The chevron of the button, in inline SVG — same layout as `ChevronRight`. */
+/** The chevron of the button, in inline SVG — same layout as `ChevronRightIcon`. */
 const CHEVRON =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
 
@@ -141,7 +141,7 @@ export const detailsBlock: PageBlock = {
   id: "details",
   nodeName: "details",
   extensions: [PageDetails, PageDetailsSummary, PageDetailsContent],
-  icon: ChevronRight,
+  icon: ChevronRightIcon,
   labelKey: "blockDetails",
   slash: {
     group: "advanced",

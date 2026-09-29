@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { DatabaseIcon, File02Icon } from "@hugeicons/core-free-icons";
 import type { ReactElement } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -8,7 +10,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "mangue-ui";
-import { Database, FileText } from "lucide-react";
 
 export function PageCreateMenu({
   trigger,
@@ -24,11 +25,11 @@ export function PageCreateMenu({
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onSelect={() => onCreate(false)}>
-          <FileText className="size-4" />
+          <HugeiconsIcon icon={File02Icon} className="size-4" />
           {t("newPage")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onCreate(true)}>
-          <Database className="size-4" />
+          <HugeiconsIcon icon={DatabaseIcon} className="size-4" />
           {tDatabase("newDatabase")}
         </DropdownMenuItem>
       </DropdownMenuContent>

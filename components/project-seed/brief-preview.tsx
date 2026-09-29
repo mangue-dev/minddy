@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowTurnDownIcon, Target01Icon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Button, Checkbox, Spinner, cn } from "mangue-ui";
-import { CornerDownRight, Target } from "lucide-react";
 import { PriorityIndicator, EffortIndicator } from "@/components/issue-indicators";
 import type { IssueEffort, IssuePriority } from "@/lib/issue-constants";
 import type { SeedIssue, SeedProposal } from "@/lib/seed/types";
@@ -119,7 +120,7 @@ export function BriefPreview({
                   <span className="flex min-w-0 flex-col gap-0.5">
                     <span className="flex items-center gap-1.5 text-sm font-medium">
                       {group.key ? (
-                        <Target className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        <HugeiconsIcon icon={Target01Icon} className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
                       ) : null}
                       {group.name}
                     </span>
@@ -205,7 +206,7 @@ function IssueRow({
         aria-label={issue.title}
       />
       {issue.parentKey && (
-        <CornerDownRight className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+        <HugeiconsIcon icon={ArrowTurnDownIcon} className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
       )}
       {/* The title is edited where it reads: no mode, no dialog — the
  field only has a border at the focus. */}

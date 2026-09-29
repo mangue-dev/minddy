@@ -1,11 +1,12 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Settings02Icon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem, CommandSeparator } from "mangue-ui";
-import { Settings2 } from "lucide-react";
 import { SearchMenu } from "@/components/search-menu";
 import { checkedProps, PickerCreateRow } from "@/components/search-select";
 import { CATEGORY_COLORS } from "@/lib/category-colors";
@@ -175,7 +176,7 @@ export function DatabaseSelectCell({
               setManage(true);
             }}
           >
-            <Settings2 className="size-4" />
+            <HugeiconsIcon icon={Settings02Icon} className="size-4" />
             {t("editOptions")}
           </CommandItem>
         </CommandGroup>

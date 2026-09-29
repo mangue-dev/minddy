@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { FileUploadIcon } from "@hugeicons/core-free-icons";
 import {
   siGithub,
   siJira,
@@ -5,7 +7,6 @@ import {
   siNotion,
   siTrello,
 } from "simple-icons";
-import { FileUp } from "lucide-react";
 import { cn } from "mangue-ui";
 import type { ImportGuideId } from "@/lib/import-guides";
 import { BrandLogo } from "@/components/brand-logo";
@@ -56,11 +57,7 @@ export function ImportSourceLogo({
   const mark = IMPORT_SOURCE_MARKS[source as ImportGuideId];
   if (!mark) {
     return (
-      <FileUp
-        aria-hidden
-        className={cn("shrink-0 text-muted-foreground", className)}
-        style={{ width: size, height: size }}
-      />
+      <HugeiconsIcon icon={FileUploadIcon} aria-hidden className={cn("shrink-0 text-muted-foreground", className)} style={{ width: size, height: size }} />
     );
   }
 

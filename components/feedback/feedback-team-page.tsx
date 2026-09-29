@@ -1,4 +1,7 @@
 "use client";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { Add01Icon, Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, FilterIcon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, Tick01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -31,31 +34,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import {
-  Ban,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  Clock,
-  Copy,
-  GitMerge,
-  Globe,
-  Link2,
-  Languages,
-  ListFilter,
-  Lock,
-  MessagesSquare,
-  MoreHorizontal,
-  Plus,
-  Send,
-  ShieldAlert,
-  Sparkles,
-  Trash2,
-  TriangleAlert,
-  Undo2,
-  X,
-} from "lucide-react";
 // (ChevronUp sert au compteur de voix des posts)
 import { EmptyScene } from "@/components/empty-scene";
 import { AppContentHeader } from "@/components/app-content-header";
@@ -280,7 +258,7 @@ function FeedbackFilterMenu({
           aria-label={tooltip}
         >
           <span className="relative flex items-center justify-center">
-            <ListFilter className="size-[18px]" />
+            <HugeiconsIcon icon={FilterIcon} className="size-[18px]" />
             {active ? (
               <span
                 aria-hidden
@@ -309,7 +287,7 @@ function FeedbackFilterMenu({
             {...checkedProps(state === value)}
           >
             {value === "spam" ? (
-              <Ban className="size-4 shrink-0 text-muted-foreground" />
+              <AppIcon icon={Ban} className="size-4 shrink-0 text-muted-foreground" />
             ) : (
               <StatusIndicator
                 status={FEEDBACK_TO_ISSUE_STATUS[value]}
@@ -456,7 +434,7 @@ function VoteCount({
         className
       )}
     >
-      <ChevronUp className={size === "md" ? "size-3.5" : "size-3"} />
+      <HugeiconsIcon icon={ArrowUp01Icon} className={size === "md" ? "size-3.5" : "size-3"} />
       {count}
     </span>
   );
@@ -479,7 +457,7 @@ function VisibilityBadge({
   return (
     <Badge
       variant="secondary"
-      icon={isPublic ? <Globe /> : <Lock />}
+      icon={isPublic ? <HugeiconsIcon icon={GlobeIcon} /> : <HugeiconsIcon icon={LockIcon} />}
       className={cn(
         isPublic
           ? "bg-sky-500/10 text-sky-700 dark:bg-sky-400/10 dark:text-sky-400"
@@ -534,7 +512,7 @@ function ReviewBadges({
   return (
     <>
       {reviewState === "pending" && (
-        <Badge variant="secondary" icon={<Clock />} className={className}>
+        <Badge variant="secondary" icon={<HugeiconsIcon icon={Clock01Icon} />} className={className}>
           {t("reviewPending")}
         </Badge>
       )}
@@ -543,7 +521,7 @@ function ReviewBadges({
           <TooltipTrigger asChild>
             <Badge
               variant="secondary"
-              icon={<TriangleAlert />}
+              icon={<HugeiconsIcon icon={Alert01Icon} />}
               className={cn("text-muted-foreground", className)}
             >
               {t("reviewFailed")}
@@ -558,7 +536,7 @@ function ReviewBadges({
             <TooltipTrigger asChild>
               <Badge
                 variant="secondary"
-                icon={<ShieldAlert />}
+                icon={<HugeiconsIcon icon={Shield01Icon} />}
                 className={cn(
                   "bg-amber-500/10 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400",
                   className
@@ -572,7 +550,7 @@ function ReviewBadges({
         ) : (
           <Badge
             variant="secondary"
-            icon={<ShieldAlert />}
+            icon={<HugeiconsIcon icon={Shield01Icon} />}
             className={cn(
               "bg-amber-500/10 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400",
               className
@@ -654,9 +632,9 @@ function AuthorValue({
           className="-m-1 inline-flex size-6 shrink-0 items-center justify-center rounded-full text-background/70 outline-none transition-colors hover:bg-background/15 hover:text-background focus-visible:bg-background/15 focus-visible:text-background focus-visible:ring-1 focus-visible:ring-background/60"
         >
           {copied ? (
-            <Check aria-hidden="true" className="size-3.5" />
+            <HugeiconsIcon icon={Tick01Icon} aria-hidden="true" className="size-3.5" />
           ) : (
-            <Copy aria-hidden="true" className="size-3.5" />
+            <HugeiconsIcon icon={Copy01Icon} aria-hidden="true" className="size-3.5" />
           )}
         </button>
       </TooltipContent>
@@ -736,10 +714,10 @@ function FeedbackRow({
           )
         ) : null}
         {post.issue_id ? (
-          <Link2 className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+          <HugeiconsIcon icon={Link02Icon} className="size-3 shrink-0 text-muted-foreground" aria-hidden />
         ) : null}
         {post.suggested_merge_into_id ? (
-          <Sparkles className="size-3 shrink-0 text-brand" aria-hidden />
+          <HugeiconsIcon icon={SparklesIcon} className="size-3 shrink-0 text-brand" aria-hidden />
         ) : null}
         <span className="ml-auto flex shrink-0 items-center gap-1.5">
           <FeedbackStatusBadge status={post.status} className={LIST_BADGE} />
@@ -1106,7 +1084,7 @@ export function FeedbackTeamPage() {
                   aria-label={t("newFeedback")}
                   onClick={() => setCreateOpen(true)}
                 >
-                  <Plus className="size-[18px]" />
+                  <HugeiconsIcon icon={Add01Icon} className="size-[18px]" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t("newFeedback")}</TooltipContent>
@@ -1132,7 +1110,7 @@ export function FeedbackTeamPage() {
                nothing to offer as long as it is the seizure that restricts. */
             <EmptyScene
               size="compact"
-              icon={MessagesSquare}
+              icon={MessageMultiple01Icon}
               /* The empty column NAMES what we were looking for. “No return in
                   this filter" returned to reopen the menu to remember which one
                   was asked — while the answer lies in the sentence.
@@ -1232,9 +1210,9 @@ export function FeedbackTeamPage() {
           <div className="flex h-full flex-col">
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
               <div className="mx-auto max-w-5xl">
-                <EmptyScene icon={MessagesSquare} title={t("emptyTitle")}>
+                <EmptyScene icon={MessageMultiple01Icon} title={t("emptyTitle")}>
                   <Button onClick={() => setCreateOpen(true)}>
-                    <Plus />
+                    <HugeiconsIcon icon={Add01Icon} />
                     {t("newFeedback")}
                   </Button>
                   {/* Pay for the collection is done HERE, not at the end of a link:
@@ -1244,13 +1222,13 @@ export function FeedbackTeamPage() {
                       offer — he therefore keeps the link. */}
                   {isOwner ? (
                     <Button variant="outline" onClick={() => setSetupOpen(true)}>
-                      <Globe />
+                      <HugeiconsIcon icon={GlobeIcon} />
                       {t("emptyConfigure")}
                     </Button>
                   ) : (
                     <Button variant="outline" asChild>
                       <Link href={`/projects/${projectId}/settings?tab=feedback`}>
-                        <Globe />
+                        <HugeiconsIcon icon={GlobeIcon} />
                         {t("emptyConfigure")}
                       </Link>
                     </Button>
@@ -1622,7 +1600,7 @@ function FeedbackDetail({
           className="md:hidden"
           onClick={onBack}
         >
-          <ChevronLeft />
+          <HugeiconsIcon icon={ArrowLeft01Icon} />
         </Button>
         {/* What's left here: review alerts, the only things that require
             a reaction. The voices, the date and the origin came down
@@ -1648,7 +1626,7 @@ function FeedbackDetail({
               menuLabel={t("linkToIssue")}
               menu={
                 <DropdownMenuItem onSelect={() => setLinkOpen(true)}>
-                  <Link2 className="size-4" />
+                  <HugeiconsIcon icon={Link02Icon} className="size-4" />
                   {t("linkToIssue")}
                 </DropdownMenuItem>
               }
@@ -1671,7 +1649,7 @@ function FeedbackDetail({
               menuLabel={t("markSpam")}
               menu={
                 <DropdownMenuItem onSelect={() => askStatus("spam")}>
-                  <Ban className="size-4" />
+                  <AppIcon icon={Ban} className="size-4" />
                   {t("markSpam")}
                 </DropdownMenuItem>
               }
@@ -1682,7 +1660,7 @@ function FeedbackDetail({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon-sm" aria-label="…">
-                <MoreHorizontal className="size-4" />
+                <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -1693,18 +1671,18 @@ function FeedbackDetail({
                 <DropdownMenuItem
                   onSelect={() => patch.mutate({ review_state: "published" })}
                 >
-                  <Send className="size-4" />
+                  <HugeiconsIcon icon={SentIcon} className="size-4" />
                   {t("publishReview")}
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem onSelect={() => setMergeOpen(true)}>
-                <GitMerge className="size-4" />
+                <HugeiconsIcon icon={GitMergeIcon} className="size-4" />
                 {t("mergeInto")}
               </DropdownMenuItem>
               {/* Unlink followed the ticket in the file: it is done on the
                   line of the ticket itself, where you see it. */}
               <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
-                <Trash2 className="size-4" />
+                <HugeiconsIcon icon={Delete02Icon} className="size-4" />
                 {t("deletePost")}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -1721,7 +1699,7 @@ function FeedbackDetail({
         <div className="mx-auto flex max-w-3xl flex-col gap-6">
         {post.suggested_merge_into_id && post.suggested_title && (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-brand/30 bg-brand/5 px-3 py-2">
-            <Sparkles className="size-3.5 shrink-0 text-brand" />
+            <HugeiconsIcon icon={SparklesIcon} className="size-3.5 shrink-0 text-brand" />
             <p className="min-w-0 flex-1 text-xs">
               {t("suggestionBanner", {
                 title: post.suggested_title,
@@ -1785,7 +1763,7 @@ function FeedbackDetail({
             </div>
             {showTranslated ? (
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Languages className="size-3.5" />
+                <HugeiconsIcon icon={LanguageCircleIcon} className="size-3.5" />
                 {t("translatedFrom", {
                   language: languageLabel(post.source_language ?? "", locale),
                 })}
@@ -1843,7 +1821,7 @@ function FeedbackDetail({
         {rawDiffers && (
           <details className="group rounded-md border border-border/60 px-3 py-2">
             <summary className="flex list-none items-center gap-1.5 text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
-              <ChevronRight className="size-3.5 shrink-0 transition-transform group-open:rotate-90" />
+              <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0 transition-transform group-open:rotate-90" />
               {t("rawTitle")}
             </summary>
             {/* ml-1.5 + pl-3: the net falls in the axis of the rafter, and the
@@ -1909,7 +1887,7 @@ function FeedbackDetail({
                   label: tStatus(`status.${status}`),
                   icon:
                     status === "spam" ? (
-                      <Ban className="size-4 shrink-0 text-muted-foreground" />
+                      <AppIcon icon={Ban} className="size-4 shrink-0 text-muted-foreground" />
                     ) : (
                       <StatusIndicator
                         status={FEEDBACK_TO_ISSUE_STATUS[status]}
@@ -1945,7 +1923,7 @@ function FeedbackDetail({
                     className={cn(TRIGGER, "text-muted-foreground")}
                     onClick={() => setLinkOpen(true)}
                   >
-                    <Link2 className="size-4" />
+                    <HugeiconsIcon icon={Link02Icon} className="size-4" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>{t("linkToIssue")}</TooltipContent>
@@ -1984,7 +1962,7 @@ function FeedbackDetail({
                     .catch((e: Error) => toast.error(e.message || t("errorGeneric")))
                 }
               >
-                <X />
+                <HugeiconsIcon icon={Cancel01Icon} />
               </Button>
             </div>
           ) : null}
@@ -2019,12 +1997,12 @@ function FeedbackDetail({
                   {
                     value: "public",
                     label: t("public"),
-                    icon: <Globe className="size-4 shrink-0" />,
+                    icon: <HugeiconsIcon icon={GlobeIcon} className="size-4 shrink-0" />,
                   },
                   {
                     value: "private",
                     label: t("private"),
-                    icon: <Lock className="size-4 shrink-0" />,
+                    icon: <HugeiconsIcon icon={LockIcon} className="size-4 shrink-0" />,
                   },
                 ]}
                 align="end"
@@ -2067,7 +2045,7 @@ function FeedbackDetail({
 
         {post.merged_from.length > 0 && (
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <GitMerge className="size-3" />
+            <HugeiconsIcon icon={GitMergeIcon} className="size-3" />
             {t("mergedFromLabel")} : {post.merged_from.map((m) => m.title).join(" · ")}
           </p>
         )}
@@ -2089,7 +2067,7 @@ function FeedbackDetail({
                   disabled={action.isPending}
                   onClick={() => action.mutate({ path: `merges/${event.id}/undo` })}
                 >
-                  <Undo2 className="size-3.5" />
+                  <HugeiconsIcon icon={Undo02Icon} className="size-3.5" />
                   {t("undo")}
                 </Button>
               </div>
@@ -2280,7 +2258,7 @@ function MergeDialog({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <GitMerge className="size-4 text-brand" />
+              <HugeiconsIcon icon={GitMergeIcon} className="size-4 text-brand" />
               {t("mergeDialogTitle")}
             </DialogTitle>
             <DialogDescription>{t("mergeDialogDesc")}</DialogDescription>
@@ -2330,7 +2308,7 @@ function MergeDialog({
                 if (target) onMerge(target.id);
               }}
             >
-              <GitMerge className="size-4" />
+              <HugeiconsIcon icon={GitMergeIcon} className="size-4" />
               {t("merge")}
             </Button>
           </DialogFooter>
@@ -2381,7 +2359,7 @@ function LinkIssueDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Link2 className="size-4 text-brand" />
+            <HugeiconsIcon icon={Link02Icon} className="size-4 text-brand" />
             {t("linkToIssue")}
           </DialogTitle>
           <DialogDescription>{t("linkIssueDialogDesc")}</DialogDescription>
@@ -2620,7 +2598,7 @@ function AuthorPicker({
             onCreateRequested(typed);
           }}
         >
-          <Plus className="size-4 shrink-0 text-muted-foreground" />
+          <HugeiconsIcon icon={Add01Icon} className="size-4 shrink-0 text-muted-foreground" />
           <span className="truncate">
             {typed ? t("authorNew", { name: typed }) : t("authorCreate")}
           </span>
@@ -2678,7 +2656,7 @@ function NewAuthorFields({
             aria-label={t("authorBack")}
             onClick={onCancel}
           >
-            <Undo2 className="size-4" />
+            <HugeiconsIcon icon={Undo02Icon} className="size-4" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>{t("authorBack")}</TooltipContent>

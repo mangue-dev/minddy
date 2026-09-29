@@ -1,8 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { BoxesIcon as Boxes, PlugIcon as Plug } from "@hugeicons/core-free-icons";
 import { Checkbox, Input } from "mangue-ui";
-import { Boxes, Plug } from "lucide-react";
 import { WizardChoiceCard } from "@/components/wizard/wizard-choice-card";
 import type { WizardStep } from "@/components/wizard/wizard-dialog";
 import {

@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, Loading02Icon, WorkHistoryIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ChevronDown, ChevronLeft, ChevronRight, History, Loader2 } from "lucide-react";
 import {
   Button,
   Collapsible,
@@ -20,6 +21,7 @@ import { fetchUsageHistoryApi } from "@/lib/billing-api";
 import { formatBudgetPercent, useBillingSummary } from "@/lib/use-billing-query";
 import { FEATURE_LABEL_KEYS } from "@/lib/usage-features";
 import { SEGMENT_UI } from "@/components/usage-indicator";
+import { AppIcon } from "@/components/icon";
 import { EmptyState } from "@/components/empty-state";
 import type { UsageHistoryEntry } from "@/lib/billing-types";
 
@@ -90,18 +92,16 @@ export function UsageHistorySection() {
     >
       <CollapsibleTrigger className="group flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
         <div className="flex min-w-0 items-center gap-2.5">
-          <History className="size-4 shrink-0 text-foreground/70" strokeWidth={2} />
+          <HugeiconsIcon icon={WorkHistoryIcon} className="size-4 shrink-0 text-foreground/70" strokeWidth={2} />
           <span className="text-sm font-semibold">{t("historyTitle")}</span>
           <span className="truncate text-xs text-muted-foreground">
             {t("historySubtitle")}
           </span>
         </div>
-        <ChevronDown
-          className={cn(
-            "size-4 shrink-0 text-muted-foreground transition-transform",
-            open && "rotate-180"
-          )}
-        />
+        <HugeiconsIcon icon={ArrowDown01Icon} className={cn(
+                          "size-4 shrink-0 text-muted-foreground transition-transform",
+                          open && "rotate-180"
+                        )} />
       </CollapsibleTrigger>
 
       <CollapsibleContent>
@@ -130,12 +130,12 @@ export function UsageHistorySection() {
 
           {!loadedOnce || (loading && entries.length === 0) ? (
             <div className="flex items-center justify-center gap-2 border-t border-border px-4 py-8 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" />
+              <HugeiconsIcon icon={Loading02Icon} className="size-4 animate-spin" />
             </div>
           ) : total === 0 ? (
             <div className="border-t border-border p-4">
               <EmptyState
-                icon={<History className="size-6" />}
+                icon={<HugeiconsIcon icon={WorkHistoryIcon} className="size-6" />}
                 description={t("historyEmpty")}
               />
             </div>
@@ -156,7 +156,8 @@ export function UsageHistorySection() {
                       className="flex items-center justify-between gap-3 px-4 py-2.5"
                     >
                       <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                        <Icon
+                        <AppIcon
+                          icon={Icon}
                           className={cn("size-4 shrink-0", ui.text)}
                           strokeWidth={2}
                         />
@@ -195,7 +196,7 @@ export function UsageHistorySection() {
                       disabled={loading || page === 0}
                       onClick={() => setPage((p) => Math.max(0, p - 1))}
                     >
-                      <ChevronLeft className="size-4" />
+                      <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -204,7 +205,7 @@ export function UsageHistorySection() {
                       disabled={loading || page >= pages - 1}
                       onClick={() => setPage((p) => Math.min(pages - 1, p + 1))}
                     >
-                      <ChevronRight className="size-4" />
+                      <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />
                     </Button>
                   </div>
                 </div>

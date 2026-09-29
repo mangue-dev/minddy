@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
 import { cn } from "mangue-ui";
-import { Info } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -27,7 +28,7 @@ export function InfoHint({ text }: { text: string }) {
           aria-label={text}
           className="inline-flex shrink-0 text-muted-foreground/50 transition-colors hover:text-foreground"
         >
-          <Info className="size-3.5" />
+          <HugeiconsIcon icon={InformationCircleIcon} className="size-3.5" />
         </button>
       </TooltipTrigger>
       <TooltipContent className="max-w-[260px] text-xs leading-snug">

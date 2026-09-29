@@ -1,7 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUpDownIcon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
 import {
   Button,
   Command,
@@ -112,7 +113,7 @@ export function ByokModelCombobox({
               <span className="truncate">{defaultLabel}</span>
             </span>
           )}
-          <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+          <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       {/* Same width ceiling as `ModelCombobox`: a long native id must not leave the screen. */}
@@ -126,15 +127,13 @@ export function ByokModelCombobox({
             <CommandItem value="__default__" onSelect={() => select("")}>
               <ProviderLogo provider={provider} />
               <span className="flex-1 truncate text-muted-foreground">{defaultLabel}</span>
-              <Check className={cn("size-4 shrink-0", value ? "opacity-0" : "opacity-100")} />
+              <HugeiconsIcon icon={Tick01Icon} className={cn("size-4 shrink-0", value ? "opacity-0" : "opacity-100")} />
             </CommandItem>
             {results.map((m) => (
               <CommandItem key={m.id} value={m.id} onSelect={() => select(m.id)}>
                 <ProviderLogo provider={provider} />
                 <span className="flex-1 truncate">{formatModelName(m.id) || m.id}</span>
-                <Check
-                  className={cn("size-4 shrink-0", value === m.id ? "opacity-100" : "opacity-0")}
-                />
+                <HugeiconsIcon icon={Tick01Icon} className={cn("size-4 shrink-0", value === m.id ? "opacity-100" : "opacity-0")} />
               </CommandItem>
             ))}
             {showFreeText ? (

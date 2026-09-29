@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Alert01Icon, Message01Icon, MoreHorizontalIcon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 
 // An open PAGE (MIN-270): its header, its body, and what links them to the
@@ -35,12 +37,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import {
-  Check,
-  MessageSquare,
-  MoreHorizontal,
-  TriangleAlert,
-} from "lucide-react";
 import type { Editor, JSONContent } from "@tiptap/react";
 
 import { eventKey } from "@/lib/keyboard/event-key";
@@ -213,9 +209,9 @@ function PageStatus({
             {state === "saving" ? (
               <Spinner className="size-3.5" />
             ) : state === "conflict" ? (
-              <TriangleAlert className="size-3.5" />
+              <HugeiconsIcon icon={Alert01Icon} className="size-3.5" />
             ) : (
-              <Check className="size-3.5" />
+              <HugeiconsIcon icon={Tick01Icon} className="size-3.5" />
             )}
           </span>
         </Button>
@@ -969,7 +965,7 @@ function PageSurface({
                 onFocus={warmPageActivity}
                 onClick={() => openHistory("activity")}
               >
-                <MessageSquare className="size-3.5" />
+                <HugeiconsIcon icon={Message01Icon} className="size-3.5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">{t("comments")}</TooltipContent>
@@ -986,7 +982,7 @@ function PageSurface({
                 className="text-muted-foreground hover:text-foreground"
                 aria-label={t("pageOptions")}
               >
-                <MoreHorizontal className="size-4" />
+                <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
               </Button>
             }
           />

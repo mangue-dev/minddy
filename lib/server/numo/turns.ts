@@ -829,20 +829,43 @@ async function checkpointTurn(input: {
   return hydrateNumoTurn(turn);
 }
 
+// In-process stop registry: the stop POST (turn route / automations) runs in
+// the same Node process as the executing turn most of the time, so a stop can
+// be delivered as an event instead of waiting for the next `stopRequested`
+// poll. Map value = the notifier registered by the executing turn; multi-pod
+// deployments keep the DB read as the eventual backstop.
+const turnStopSignals = new Map<string, () => void>();
+
+function signalLocalTurnStop(turnId: string): boolean {
+  const notify = turnStopSignals.get(turnId);
+  if (!notify) return false;
+  notify();
+  return true;
+}
+
+export function signalNumoTurnStopInProcess(turnId: string): boolean {
+  return signalLocalTurnStop(turnId);
+}
+
 async function stopRequested(service: SupabaseClient, turnId: string, claimToken: string) {
   const { data } = await service.from("numo_assistant_turns")
     .select("status").eq("id", turnId).eq("claim_token", claimToken).maybeSingle();
   return (data as { status?: string } | null)?.status === "stopping";
 }
 
-async function interruptActiveWorker(service: SupabaseClient, runId: string | null) {
-  if (!runId) return;
+/**
+ * Stop EVERY live worker of a turn (MIN-599): the awaited run, but also any
+ * other worker the turn left running (multi-launch tool round, relaunch race).
+ * The turn is the ownership boundary, `parent_numo_turn_id` is the join — the
+ * same cascade as the SQL stop RPC, for the in-process paths.
+ */
+async function interruptTurnWorkers(service: SupabaseClient, turnId: string) {
   const { error } = await service.from("agent_runs")
     .update({ interrupt_requested: true })
-    .eq("id", runId)
+    .eq("parent_numo_turn_id", turnId)
     .in("status", ["queued", "running"]);
   if (error) {
-    console.error("[numo-turn] worker_interrupt_failed", runId);
+    console.error("[numo-turn] worker_interrupt_failed", turnId);
   }
 }
 
@@ -951,6 +974,43 @@ async function executeNumoTurnCore(input: {
   const claimedRow = compositeRow<NumoTurn>(claimedData);
   if (!claimedRow) return { status: "not_claimed" };
   const claimed = await hydrateNumoTurn(claimedRow);
+  // A stop asked while this very process executes the turn must reach the
+  // running LLM loop as an event, not on the next 1 s `stopRequested` poll.
+  // The DB `stopping` status stays the cross-instance authority: the local
+  // flag only shortens the path when the stop POST lands in this process.
+  let localStopRequested = false;
+  turnStopSignals.set(claimed.id, () => {
+    localStopRequested = true;
+  });
+  try {
+    return await executeClaimedNumoTurn({
+      turnId: input.turnId,
+      turn: claimed,
+      claimToken,
+      readClient: input.readClient,
+      liveEmitter: input.liveEmitter,
+      aiRuntime: input.aiRuntime,
+      allowRetryable: input.allowRetryable === true,
+      isStopRequestedLocally: () => localStopRequested,
+    });
+  } finally {
+    turnStopSignals.delete(claimed.id);
+  }
+}
+
+async function executeClaimedNumoTurn(input: {
+  turnId: string;
+  turn: NumoTurn;
+  claimToken: string;
+  readClient?: SupabaseClient;
+  liveEmitter?: SafeEmitter;
+  aiRuntime?: ResolvedAiRuntime;
+  allowRetryable?: boolean;
+  isStopRequestedLocally: () => boolean;
+}): Promise<ExecuteNumoTurnResult> {
+  const service = getServiceClient();
+  const claimToken = input.claimToken;
+  const claimed = input.turn;
   let latestCheckpoint = claimed.checkpoint;
   let latestActiveRunId = claimed.active_run_id;
 
@@ -1115,7 +1175,20 @@ async function executeNumoTurnCore(input: {
       },
       toolLedger: createToolLedger(service, claimed.id, claimToken,
         claimed.user_id),
-      shouldStop: () => stopRequested(service, claimed.id, claimToken),
+      shouldStop: async () =>
+        input.isStopRequestedLocally() || await stopRequested(service, claimed.id, claimToken),
+      onStopSignal: (notify) => {
+        // The registry entry already flips the local flag on a stop; the
+        // contributor above re-registers this exact callback so an event stop
+        // also unblocks a pending stream read. The registry value is replaced,
+        // not stacked: only the live execution of this turn listens.
+        turnStopSignals.set(claimed.id, notify);
+        return () => {
+          if (turnStopSignals.get(claimed.id) === notify) {
+            turnStopSignals.delete(claimed.id);
+          }
+        };
+      },
       beforeGeneration: () => ensureNumoOperationBudget(claimed, runtime),
       onGeneration: async (generation, roundCount) => {
         await recordAiUsage({
@@ -1140,11 +1213,11 @@ async function executeNumoTurnCore(input: {
       ...(execution.workerInput ? { workerInput: execution.workerInput } : {}),
     });
 
-    if (await stopRequested(service, claimed.id, claimToken)) {
+    if (input.isStopRequestedLocally() || await stopRequested(service, claimed.id, claimToken)) {
       const activeRunId = result.suspension?.kind === "work"
         ? result.suspension.runId
         : claimed.active_run_id;
-      await interruptActiveWorker(service, activeRunId);
+      await interruptTurnWorkers(service, claimed.id);
       const turn = await checkpointTurn({
         service,
         turnId: claimed.id,
@@ -1293,7 +1366,7 @@ async function executeNumoTurnCore(input: {
         return { status: "not_claimed" };
       }
       if (current?.status === "stopping" && current.claim_token === claimToken) {
-        await interruptActiveWorker(service, current.active_run_id);
+        await interruptTurnWorkers(service, current.id);
         const stopped = await checkpointTurn({
           service,
           turnId: claimed.id,
@@ -1358,7 +1431,7 @@ async function executeNumoTurnCore(input: {
       }
       turn = await hydrateNumoTurn(data as NumoTurn);
       if (turn.status === "stopping" && turn.claim_token === claimToken) {
-        await interruptActiveWorker(service, turn.active_run_id);
+        await interruptTurnWorkers(service, turn.id);
         turn = await checkpointTurn({
           service,
           turnId: claimed.id,
@@ -1436,6 +1509,11 @@ export async function requestNumoTurnStop(conversationId: string, userId: string
   });
   if (error) throw new Error(error.message);
   const turn = compositeRow<NumoTurn>(data);
+  if (turn && turn.status === "stopping") {
+    // The stop was recorded; if the executing turn lives in this process,
+    // wake it now instead of on the next 1 s poll.
+    signalLocalTurnStop(turn.id);
+  }
   return turn ? hydrateNumoTurn(turn, userId) : null;
 }
 

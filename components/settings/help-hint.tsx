@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Popover, PopoverContent, PopoverTrigger } from "mangue-ui";
-import { Info } from "lucide-react";
 
 /**
  * The little ⓘ that opens the detailed explanation — it OUTs the prose of the settings.
@@ -24,7 +25,7 @@ export function HelpHint({ children }: { children: ReactNode }) {
         aria-label={t("feedbackLearnMore")}
         className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 outline-hidden transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <Info className="size-3.5" />
+        <HugeiconsIcon icon={InformationCircleIcon} className="size-3.5" />
       </PopoverTrigger>
       <PopoverContent
         align="start"

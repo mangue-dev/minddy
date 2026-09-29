@@ -7,6 +7,7 @@ import {
   formatAgentDelegationPrompt,
 } from "./delegation";
 import {
+  INTERRUPTED_DELEGATION_NOTE,
   parseAgentDelegationBrief,
   parseAgentDelegationResult,
 } from "./agent-contract";
@@ -138,6 +139,16 @@ describe("code delegation contracts", () => {
       run: run({ error_message: "Push was rejected." }),
       events: [],
     }).status).toBe("partial");
+
+    // MIN-599 — the interrupted note stamped at rest by the executor keeps the
+    // stop honest: `partial`, and the note doubles as the summary when the
+    // worker had written no outcome yet.
+    const interrupted = buildAgentDelegationResult({
+      run: run({ outcome: null, error_message: INTERRUPTED_DELEGATION_NOTE }),
+      events: [],
+    });
+    expect(interrupted.status).toBe("partial");
+    expect(interrupted.summary).toBe(INTERRUPTED_DELEGATION_NOTE);
 
     const failed = buildAgentDelegationResult({
       run: run({

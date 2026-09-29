@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowUpDownIcon, FilterIcon, Megaphone01Icon, MessageMultiple01Icon, Mic01Icon, Search01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { useEffect, useRef, useState, useTransition, type CSSProperties, type Ref } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -20,7 +22,6 @@ import {
   Switch,
   toast,
 } from "mangue-ui";
-import { ArrowUpDown, Check, ChevronDown, ListFilter, Mic, MessagesSquare, Megaphone, Search } from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { AgentBeamOverlay } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
@@ -71,6 +72,40 @@ import {
 
 const SIMILAR_DEBOUNCE_MS = 1000;
 const SIMILAR_MIN_CHARS = 15;
+
+function SearchSceneIcon({ className, style, strokeWidth, ref }: {
+  className?: string;
+  style?: CSSProperties;
+  strokeWidth?: number | string;
+  ref?: Ref<SVGSVGElement>;
+}) {
+  return (
+    <HugeiconsIcon
+      ref={ref}
+      icon={Search01Icon}
+      className={className}
+      style={style}
+      strokeWidth={typeof strokeWidth === "number" ? strokeWidth : undefined}
+    />
+  );
+}
+
+function MessageSceneIcon({ className, style, strokeWidth, ref }: {
+  className?: string;
+  style?: CSSProperties;
+  strokeWidth?: number | string;
+  ref?: Ref<SVGSVGElement>;
+}) {
+  return (
+    <HugeiconsIcon
+      ref={ref}
+      icon={MessageMultiple01Icon}
+      className={className}
+      style={style}
+      strokeWidth={typeof strokeWidth === "number" ? strokeWidth : undefined}
+    />
+  );
+}
 
 export function FeedbackBoardClient({
   token,
@@ -130,7 +165,7 @@ export function FeedbackBoardClient({
         )}
 
         <Button className="desktop:hidden" onClick={() => setComposerOpen(true)}>
-          <Megaphone />
+          <HugeiconsIcon icon={Megaphone01Icon} />
           {t("composerTitle")}
         </Button>
 
@@ -151,7 +186,7 @@ export function FeedbackBoardClient({
                typed, and the output it suggests is to erase them — not
                to widen the filter, which is not what has just emptied the
                liste. */
-            <EmptyScene icon={Search} title={t("emptySearch", { query })}>
+            <EmptyScene icon={SearchSceneIcon} title={t("emptySearch", { query })}>
               <Button variant="outline" onClick={() => setSearch("")}>
                 {t("emptySearchClear")}
               </Button>
@@ -163,7 +198,7 @@ export function FeedbackBoardClient({
                living returns: empty here does not mean empty quite simply, it is
                the server that decides (`boardEmpty`), not the filter. */
             <EmptyScene
-              icon={MessagesSquare}
+              icon={MessageSceneIcon}
               title={
                 boardEmpty || filter === "all"
                   ? t("empty")
@@ -173,7 +208,7 @@ export function FeedbackBoardClient({
             >
               {boardEmpty || filter === "all" ? (
                 <Button onClick={() => setComposerOpen(true)}>
-                  <Megaphone />
+                  <HugeiconsIcon icon={Megaphone01Icon} />
                   {t("composerTitle")}
                 </Button>
               ) : (
@@ -217,7 +252,7 @@ export function FeedbackBoardClient({
             button and “center” no longer means anything (MIN-255). */}
         <div className="flex h-6 items-center">
           <Button className="w-full" onClick={() => setComposerOpen(true)}>
-            <Megaphone />
+            <HugeiconsIcon icon={Megaphone01Icon} />
             {t("composerTitle")}
           </Button>
         </div>
@@ -307,9 +342,9 @@ function StatusFilterMenu({
           type="button"
           className="flex w-fit shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ListFilter className="size-3" />
+          <HugeiconsIcon icon={FilterIcon} className="size-3" />
           {label}
-          <ChevronDown className="size-3" />
+          <HugeiconsIcon icon={ArrowDown01Icon} className="size-3" />
         </button>
       }
     >
@@ -409,9 +444,9 @@ function FilterBar({
             type="button"
             className="flex w-fit shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            <ArrowUpDown className="size-3" />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3" />
             {sort === "top" ? t("sortTop") : t("sortRecent")}
-            <ChevronDown className="size-3" />
+            <HugeiconsIcon icon={ArrowDown01Icon} className="size-3" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -421,7 +456,7 @@ function FilterBar({
               onSelect={() => router.push(buildHref(basePath, value, filter))}
             >
               {value === "top" ? t("sortTop") : t("sortRecent")}
-              {sort === value && <Check className="ml-auto size-4" />}
+              {sort === value && <HugeiconsIcon icon={Tick01Icon} className="ml-auto size-4" />}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
@@ -904,7 +939,7 @@ function ComposerDialog({
                     aria-label={t("voiceTooltip")}
                     className="-ml-2 inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                   >
-                    <Mic className="size-4" />
+                    <HugeiconsIcon icon={Mic01Icon} className="size-4" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top">{t("voiceTooltip")}</TooltipContent>

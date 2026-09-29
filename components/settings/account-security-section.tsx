@@ -1,10 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Copy01Icon, Download01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import {useState} from "react";
 import {useTranslations} from "next-intl";
 import {useQueryClient} from "@tanstack/react-query";
 import {AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Badge, Button, Checkbox, Spinner, toast} from "mangue-ui";
-import {Check, Copy, Download} from "lucide-react";
 import {useAuth} from "@/lib/auth-context";
 import {SettingsGroup, SettingsEmpty} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
@@ -249,11 +250,11 @@ export function AccountSecuritySection() {
 
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => void copyCodes()}>
-                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                {copied ? <HugeiconsIcon icon={Tick01Icon} className="size-4" /> : <HugeiconsIcon icon={Copy01Icon} className="size-4" />}
                 {t("copyCodes")}
               </Button>
               <Button variant="outline" size="sm" onClick={downloadCodes}>
-                <Download className="size-4" />
+                <HugeiconsIcon icon={Download01Icon} className="size-4" />
                 {t("downloadCodes")}
               </Button>
             </div>

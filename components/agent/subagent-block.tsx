@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { BotIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useNow, useTranslations } from "next-intl";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, cn } from "mangue-ui";
-import { Bot } from "lucide-react";
 import { Markdown } from "@/components/markdown";
 import type { MessageKey } from "@/lib/i18n-keys";
 
@@ -108,7 +109,7 @@ export function SubagentBlock({
 
   const row = (
     <div className="flex items-center gap-2 py-0.5 text-xs text-muted-foreground">
-      <Bot className={cn("size-3 shrink-0", state === "Failed" && "text-destructive")} />
+      <HugeiconsIcon icon={BotIcon} className={cn("size-3 shrink-0", state === "Failed" && "text-destructive")} />
       <span className={cn("flex-1 truncate text-left", running && "text-shimmer")}>{label}</span>
       {/* Tabular: the counter must not dance while changing digits. */}
       <span className="shrink-0 tabular-nums">{counter}</span>

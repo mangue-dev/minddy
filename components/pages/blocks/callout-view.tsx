@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { HappyIcon } from "@hugeicons/core-free-icons";
 import { useLayoutEffect, useRef } from "react";
 import type { NodeViewRenderer } from "@tiptap/core";
 import {
@@ -9,7 +11,6 @@ import {
   type NodeViewProps,
 } from "@tiptap/react";
 import { useTranslations } from "next-intl";
-import { SmilePlus } from "lucide-react";
 import { EmojiPicker } from "@/components/pages/emoji-picker";
 import {
   PAGE_COLORS,
@@ -142,7 +143,7 @@ export function CalloutView({ node, editor, updateAttributes }: NodeViewProps) {
             aria-label={icon ? t("changeIcon") : t("addIcon")}
             className="page-callout-icon page-callout-icon-button"
           >
-            {icon ?? <SmilePlus aria-hidden className="size-4" />}
+            {icon ?? <HugeiconsIcon icon={HappyIcon} aria-hidden className="size-4" />}
           </button>
         </EmojiPicker>
       ) : icon ? (

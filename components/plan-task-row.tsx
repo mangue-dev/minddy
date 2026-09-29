@@ -1,5 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { CancelCircleIcon as CircleSlash, CircleIcon, MinusSignIcon, MoreHorizontalIcon, PlayIcon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -9,7 +12,6 @@ import {
   DropdownMenuTrigger,
   cn,
 } from "mangue-ui";
-import { Check, Circle, CircleSlash, Ellipsis, Minus, Play } from "lucide-react";
 import { Markdown } from "@/components/markdown";
 import type { PlanTask, PlanTaskState } from "@/lib/plan";
 
@@ -59,8 +61,8 @@ export function TaskRow({
         {task.state === "in_progress" && (
           <span className="size-2 rounded-[2px] bg-primary" />
         )}
-        {task.state === "completed" && <Check className="size-3" />}
-        {task.state === "cancelled" && <Minus className="size-3" />}
+        {task.state === "completed" && <HugeiconsIcon icon={Tick01Icon} className="size-3" />}
+        {task.state === "cancelled" && <HugeiconsIcon icon={MinusSignIcon} className="size-3" />}
       </button>
 
       <div
@@ -80,31 +82,31 @@ export function TaskRow({
             aria-label={t("taskMenuAria")}
             className="-my-0.5 size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/task:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
           >
-            <Ellipsis className="size-4" />
+            <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {task.state !== "pending" && (
             <DropdownMenuItem onSelect={() => onSetState("pending")}>
-              <Circle />
+              <HugeiconsIcon icon={CircleIcon} />
               {t("markPending")}
             </DropdownMenuItem>
           )}
           {task.state !== "in_progress" && (
             <DropdownMenuItem onSelect={() => onSetState("in_progress")}>
-              <Play />
+              <HugeiconsIcon icon={PlayIcon} />
               {t("markInProgress")}
             </DropdownMenuItem>
           )}
           {task.state !== "completed" && (
             <DropdownMenuItem onSelect={() => onSetState("completed")}>
-              <Check />
+              <HugeiconsIcon icon={Tick01Icon} />
               {t("markCompleted")}
             </DropdownMenuItem>
           )}
           {task.state !== "cancelled" && (
             <DropdownMenuItem onSelect={() => onSetState("cancelled")}>
-              <CircleSlash />
+              <AppIcon icon={CircleSlash} />
               {t("cancelTask")}
             </DropdownMenuItem>
           )}

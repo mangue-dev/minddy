@@ -1,11 +1,8 @@
 "use client";
 
-import type { ComponentType, SVGProps } from "react";
-import {
-  ArrowRight,
-  ChevronDown,
-  Loader2,
-} from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowRight01Icon, Loading02Icon } from "@hugeicons/core-free-icons";
+import type { ComponentType } from "react";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import { useTranslations } from "next-intl";
 import {
@@ -27,7 +24,7 @@ import {
  * “Connect {provider}” by provider ACTIF. Read the catalog since
  * `@/lib/repo-providers` — a new provider appears automatically.
  */
-const ICONS: Record<RepoProviderIconName, ComponentType<SVGProps<SVGSVGElement>>> = {
+const ICONS: Record<RepoProviderIconName, ComponentType<Omit<React.ComponentProps<typeof HugeiconsIcon>, "icon">>> = {
   github: Github,
   gitlab: Gitlab,
 };
@@ -85,7 +82,7 @@ export function ProviderConnectButtons({
             onClick={() => onConnect(provider.id)}
           >
             {isConnecting ? (
-              <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+              <HugeiconsIcon icon={Loading02Icon} className="h-4 w-4 shrink-0 animate-spin" />
             ) : (
               <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
             )}
@@ -101,7 +98,7 @@ export function ProviderConnectButtons({
  right of a button which occupies the entire width. A button at just its
  width has no far edge. */}
             {!isConnecting && !inline && (
-              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <HugeiconsIcon icon={ArrowRight01Icon} className="h-4 w-4 shrink-0 text-muted-foreground" />
             )}
           </Button>
         );
@@ -146,7 +143,7 @@ export function ProviderConnectMenu({
         disabled={disabled || connecting != null}
         onClick={() => onConnect(provider.id)}
       >
-        {connecting === provider.id ? <Loader2 className="animate-spin" /> : <Icon />}
+        {connecting === provider.id ? <HugeiconsIcon icon={Loading02Icon} className="animate-spin" /> : <Icon />}
         {t("gitConnectWith", { provider: provider.displayName })}
       </Button>
     );
@@ -162,9 +159,9 @@ export function ProviderConnectMenu({
           className="group"
           disabled={disabled || connecting != null}
         >
-          {connecting && <Loader2 className="animate-spin" />}
+          {connecting && <HugeiconsIcon icon={Loading02Icon} className="animate-spin" />}
           {t("gitConnect")}
-          <ChevronDown className="transition-transform group-data-[state=open]:rotate-180" />
+          <HugeiconsIcon icon={ArrowDown01Icon} className="transition-transform group-data-[state=open]:rotate-180" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="w-52">

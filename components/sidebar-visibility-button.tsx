@@ -1,7 +1,8 @@
 "use client";
 
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { AppIcon } from "@/components/icon";
+import { PanelLeftCloseIcon, PanelLeftOpenIcon } from "@hugeicons/core-free-icons";
 import { cn } from "mangue-ui";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { KbdSequence } from "@/components/ui/kbd";
@@ -13,7 +14,7 @@ export function SidebarVisibilityButton({ collapsed }: { collapsed: boolean }) {
   const t = useTranslations("Nav");
   const { disabled, hidden, toggle } = useSidebarVisibility();
   const label = t(hidden ? "showSidebar" : "hideSidebar");
-  const Icon = hidden ? PanelLeftOpen : PanelLeftClose;
+  const Icon = hidden ? PanelLeftCloseIcon : PanelLeftOpenIcon;
   const button = (
     <button
       type="button"
@@ -28,7 +29,7 @@ export function SidebarVisibilityButton({ collapsed }: { collapsed: boolean }) {
         collapsed ? "w-9" : "w-full pr-2",
       )}
     >
-      <Icon className="size-4 shrink-0" aria-hidden />
+      <AppIcon icon={Icon} className="size-4 shrink-0" aria-hidden />
       {!collapsed && <span className="truncate">{label}</span>}
     </button>
   );

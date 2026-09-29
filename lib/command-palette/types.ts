@@ -2,10 +2,10 @@
  * Core type definitions for the command palette.
  */
 
-import type { ComponentType, ReactNode, SVGProps } from "react";
+import type { ReactNode } from "react";
+import type { AppIcon } from "@/components/icon";
 
-/** SVG icon component type (any component rendering an svg works) */
-export type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
+export type { AppIcon, IconComponent } from "@/components/icon";
 
 // =============================================================================
 // PALETTE ITEM
@@ -91,8 +91,8 @@ export interface CategoryDefinition {
   id: string;
   /** Tab + group header label. */
   label: string;
-  /** Tab icon. */
-  icon?: IconComponent;
+  /** Tab icon — Hugeicons data or a React SVG component. */
+  icon?: AppIcon;
   /**
    * Base score bonus applied to items of this category when searching.
    * Lets you keep e.g. commands above raw data in mixed results.

@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Popover, PopoverContent, PopoverTrigger } from "mangue-ui";
-import { ChevronDown, ChevronRight } from "lucide-react";
 import type { PullRequestFile } from "@/lib/agent-api";
 import { buildFileTree, type FileTreeNode } from "@/lib/pr-file-tree";
 import { DiffCounters, FileStatusIcon } from "@/components/pull-requests/pr-file-marks";
@@ -110,9 +111,9 @@ function TreeRows({
               >
                 <Rails depth={depth} />
                 {open ? (
-                  <ChevronDown className="mt-px size-3.5 shrink-0 text-muted-foreground" />
+                  <HugeiconsIcon icon={ArrowDown01Icon} className="mt-px size-3.5 shrink-0 text-muted-foreground" />
                 ) : (
-                  <ChevronRight className="mt-px size-3.5 shrink-0 text-muted-foreground" />
+                  <HugeiconsIcon icon={ArrowRight01Icon} className="mt-px size-3.5 shrink-0 text-muted-foreground" />
                 )}
                 {/* The folder in half bold, the file in normal: it is the
  structure which bears, and the file name which we then read.
@@ -249,7 +250,7 @@ export function PrFileTreeButton({
               <span className="ml-1 shrink-0 tabular-nums text-red-600 dark:text-red-400">
                 −{totalDeletions}
               </span>
-              <ChevronDown className="ml-1 size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
+              <HugeiconsIcon icon={ArrowDown01Icon} className="ml-1 size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
             </button>
           </PopoverTrigger>
         </TooltipTrigger>

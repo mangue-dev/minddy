@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, BulbIcon, Calendar01Icon, Cancel01Icon, Clock01Icon, CollapseIcon, ExpandIcon, Search01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import {
   useCallback,
   useEffect,
@@ -11,17 +13,6 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
-import {
-  CalendarClock,
-  History,
-  Lightbulb,
-  ListTodo,
-  Maximize2,
-  Minimize2,
-  Plus,
-  Search,
-  X,
-} from "lucide-react";
 import {
   Button,
   cn,
@@ -55,6 +46,7 @@ import { WorkAccordion } from "@/components/assistant/work-accordion";
 import { WorkEvents } from "@/components/assistant/work-events";
 import { workEventsRevealKey, type WorkEvent } from "@/lib/work-event-groups";
 import { liveSecretRevealKey } from "@/components/assistant/secret-callout";
+import { AppIcon } from "@/components/icon";
 import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
 import {
   buildAssistantBlocks,
@@ -98,22 +90,22 @@ import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 const STARTERS = [
   {
     key: "s1",
-    icon: Search,
+    icon: Search01Icon,
     iconClassName: "text-blue-600 dark:text-blue-400",
   },
   {
     key: "s2",
-    icon: Plus,
+    icon: Add01Icon,
     iconClassName: "text-violet-600 dark:text-violet-400",
   },
   {
     key: "s3",
-    icon: ListTodo,
+    icon: TaskEdit01Icon,
     iconClassName: "text-emerald-600 dark:text-emerald-400",
   },
   {
     key: "s4",
-    icon: Lightbulb,
+    icon: BulbIcon,
     iconClassName: "text-rose-600 dark:text-rose-400",
   },
 ] as const;
@@ -609,7 +601,7 @@ export const AssistantShell = forwardRef<
           aria-label={t("newConversation")}
           onClick={handleNewConversation}
         >
-          <Plus className="size-4" />
+          <HugeiconsIcon icon={Add01Icon} className="size-4" />
         </Button>
       </TooltipTrigger>
       <TooltipContent>{t("newConversation")}</TooltipContent>
@@ -650,7 +642,7 @@ export const AssistantShell = forwardRef<
                 size="icon-sm"
                 aria-label={t("conversations")}
               >
-                <History className="h-4 w-4" />
+                <HugeiconsIcon icon={Clock01Icon} className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
           </TooltipTrigger>
@@ -699,9 +691,9 @@ export const AssistantShell = forwardRef<
               onClick={onToggleDisplayMode}
             >
               {isExpanded ? (
-                <Minimize2 className="h-4 w-4" />
+                <HugeiconsIcon icon={CollapseIcon} className="h-4 w-4" />
               ) : (
-                <Maximize2 className="h-4 w-4" />
+                <HugeiconsIcon icon={ExpandIcon} className="h-4 w-4" />
               )}
             </Button>
           </TooltipTrigger>
@@ -723,7 +715,7 @@ export const AssistantShell = forwardRef<
             aria-label={t("newConversation")}
             onClick={handleNewConversation}
           >
-            <Plus className="h-4 w-4" />
+            <HugeiconsIcon icon={Add01Icon} className="h-4 w-4" />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom" sideOffset={6}>
@@ -740,7 +732,7 @@ export const AssistantShell = forwardRef<
               aria-label={tc("close")}
               onClick={onClose}
             >
-              <X className="h-4 w-4" />
+              <HugeiconsIcon icon={Cancel01Icon} className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom" sideOffset={6} align="end">
@@ -775,7 +767,7 @@ export const AssistantShell = forwardRef<
           aria-label={tc("close")}
           onClick={onClose}
         >
-          <X className="size-4" />
+          <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
         </Button>
       ) : null}
       <NumoIcon state="idle" className="size-12 text-muted-foreground" />
@@ -836,7 +828,7 @@ export const AssistantShell = forwardRef<
               className="gap-1.5"
               onClick={() => setMobileSidebarOpen(true)}
             >
-              <History className="h-4 w-4" />
+              <HugeiconsIcon icon={Clock01Icon} className="h-4 w-4" />
               <span className="text-xs">{t("title")}</span>
             </Button>
             {mobileSubtitle && (
@@ -879,7 +871,7 @@ export const AssistantShell = forwardRef<
                     convoMaxW,
                   )}
                 >
-                  <CalendarClock className="size-3.5" aria-hidden />
+                  <HugeiconsIcon icon={Calendar01Icon} className="size-3.5" aria-hidden />
                   <span>{tRoutines("routineOccurrence")}</span>
                   <span aria-hidden>·</span>
                   <span>
@@ -1124,7 +1116,8 @@ export const AssistantShell = forwardRef<
                           type="button"
                           variant="outline"
                         >
-                          <Icon
+                          <AppIcon
+                            icon={Icon}
                             className={cn("size-5 shrink-0", iconClassName)}
                             aria-hidden
                           />

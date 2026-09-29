@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Download01Icon, Upload01Icon } from "@hugeicons/core-free-icons";
 import {useEffect, useRef, useState} from "react";
 import {useTranslations} from "next-intl";
 import {AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Button, Input, Spinner, toast} from "mangue-ui";
-import {Download, Upload} from "lucide-react";
 import {useAuth} from "@/lib/auth-context";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
@@ -180,7 +181,7 @@ export function AccountDataSection() {
                 onClick={() => importInputRef.current?.click()}
                 disabled={importing}
               >
-                {importing ? <Spinner /> : <Upload className="size-4" />}
+                {importing ? <Spinner /> : <HugeiconsIcon icon={Upload01Icon} className="size-4" />}
                 {t("importButton")}
               </Button>
             </>
@@ -197,7 +198,7 @@ export function AccountDataSection() {
           hint={t("exportHint")}
           control={
             <Button variant="outline" onClick={() => void handleExport()} disabled={exporting}>
-              {exporting ? <Spinner /> : <Download className="size-4" />}
+              {exporting ? <Spinner /> : <HugeiconsIcon icon={Download01Icon} className="size-4" />}
               {t("exportButton")}
             </Button>
           }

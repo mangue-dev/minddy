@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { AppIcon } from "@/components/icon";
+import { FlowIcon as Workflow, OctagonXIcon as OctagonX, PauseCircleIcon as PauseCircle, TimerIcon as Timer } from "@hugeicons/core-free-icons";
 import { useNow, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Spinner, toast } from "mangue-ui";
-import { OctagonX, PauseCircle, Timer, Workflow } from "lucide-react";
 import { postIssueAutomationApi } from "@/lib/agent-api";
 import { issueChainQueryKey, useIssueChainQuery } from "@/lib/use-agent-runs";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -87,7 +88,7 @@ export function ChainStatusBar({ issueId }: { issueId: string }) {
   return (
     <div className="rounded-lg border border-border px-3 py-2.5">
       <div className="flex items-center gap-2">
-        <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+        <AppIcon icon={Icon} className="size-4 shrink-0 text-muted-foreground" aria-hidden />
         <p className="min-w-0 flex-1 truncate text-sm">
           {pending
             ? t("chainPending", { minutes: minutesLeft })

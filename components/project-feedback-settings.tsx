@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, CodeSimpleIcon as Code2, Copy01Icon, LinkSquare01Icon, MessageMultiple01Icon, Refresh01Icon, Tick01Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -17,17 +19,6 @@ import {
   Switch,
   cn,
 } from "mangue-ui";
-import {
-  Check,
-  ChevronDown,
-  Code2,
-  Copy,
-  ExternalLink,
-  Eye,
-  EyeOff,
-  MessagesSquare,
-  RefreshCw,
-} from "lucide-react";
 import { getAppEnv } from "@/lib/env";
 import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
@@ -160,7 +151,7 @@ export function ProjectFeedbackSettings({
           open={wizardOpen}
           onOpenChange={setWizardOpen}
         />
-        <EmptyScene icon={MessagesSquare} title={t("feedbackSetupEmptyTitle")}>
+        <EmptyScene icon={MessageMultiple01Icon} title={t("feedbackSetupEmptyTitle")}>
           {isOwner && (
             <Button onClick={() => setWizardOpen(true)}>
               {t("feedbackSetupButton")}
@@ -462,14 +453,14 @@ function SsoSetup({
           aria-label={reveal ? t("feedbackSsoHide") : t("feedbackSsoReveal")}
           onClick={() => setReveal((r) => !r)}
         >
-          {reveal ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          {reveal ? <HugeiconsIcon icon={ViewOffIcon} className="size-4" /> : <HugeiconsIcon icon={ViewIcon} className="size-4" />}
         </Button>
         <CopyButton value={envLine} />
       </div>
 
       <Collapsible>
         <CollapsibleTrigger className="group flex items-center gap-1 text-xs text-muted-foreground outline-hidden transition-colors hover:text-foreground">
-          <ChevronDown className="size-3.5 transition-transform group-data-[state=open]:rotate-180" />
+          <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 transition-transform group-data-[state=open]:rotate-180" />
           {t("feedbackSsoDetails")}
         </CollapsibleTrigger>
         <CollapsibleContent className="flex flex-col gap-2 pt-2">
@@ -490,7 +481,7 @@ function SsoSetup({
           disabled={busy}
           onClick={() => setConfirmRotate(true)}
         >
-          <RefreshCw className="size-3.5" />
+          <HugeiconsIcon icon={Refresh01Icon} className="size-3.5" />
           {t("feedbackSsoRotate")}
         </Button>
         <Button
@@ -533,7 +524,7 @@ function PublicUrlLink({ url }: { url: string }) {
         className="group flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-xs transition-colors hover:border-brand/40 hover:text-brand"
       >
         <span className="truncate">{display}</span>
-        <ExternalLink className="size-3.5 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
+        <HugeiconsIcon icon={LinkSquare01Icon} className="size-3.5 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
       </a>
       <CopyButton value={url} />
     </div>
@@ -553,7 +544,7 @@ function CopyButton({ value }: { value: string }) {
         setTimeout(() => setCopied(false), 1500);
       }}
     >
-      {copied ? <Check className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
+      {copied ? <HugeiconsIcon icon={Tick01Icon} className="size-4 text-emerald-500" /> : <HugeiconsIcon icon={Copy01Icon} className="size-4" />}
     </Button>
   );
 }

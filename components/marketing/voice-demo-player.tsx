@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowRight01Icon, Loading02Icon, Mic01Icon, SquareIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { cn } from "mangue-ui/lib/utils";
-import { ArrowDown, ArrowRight, Loader2, Mic, Square } from "lucide-react";
 import { PriorityIndicator } from "@/components/issue-indicators";
 import { DictateWaveform } from "@/components/ai-elements/dictate-waveform";
 import { useAnalytics } from "@/lib/use-analytics";
@@ -419,9 +420,9 @@ export function VoiceDemoPlayer({ labels, embedded = false }: { labels: VoiceDem
               disabled={status === "processing"}
               aria-label={status === "recording" ? t("voiceDemoStop") : t("voiceDemoStart")}
               className="flex size-24 items-center justify-center rounded-full transition-colors hover:bg-white/30 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current disabled:opacity-50 dark:hover:bg-white/5">
-              {status === "processing" ? <Loader2 className="size-12 animate-spin motion-reduce:animate-none" strokeWidth={1.25} aria-hidden /> :
-                status === "recording" ? <Square className="size-9" strokeWidth={1.25} aria-hidden /> :
-                <Mic className="size-14" strokeWidth={1.25} aria-hidden />}
+              {status === "processing" ? <HugeiconsIcon icon={Loading02Icon} className="size-12 animate-spin motion-reduce:animate-none" strokeWidth={1.25} aria-hidden /> :
+                status === "recording" ? <HugeiconsIcon icon={SquareIcon} className="size-9" strokeWidth={1.25} aria-hidden /> :
+                <HugeiconsIcon icon={Mic01Icon} className="size-14" strokeWidth={1.25} aria-hidden />}
             </button>
             <div className="absolute inset-x-0 top-[calc(50%+3.5rem)] text-center text-sm" role="status">
               {error || (status === "recording" ? `${t("voiceDemoStop")} · ${formatTime(elapsedMs)}` : status === "processing" ? t("voiceDemoProcessing") : "")}
@@ -480,11 +481,11 @@ export function VoiceDemoPlayer({ labels, embedded = false }: { labels: VoiceDem
                 />
               )}
               {status === "processing" ? (
-                <Loader2 className="relative size-6 animate-spin" />
+                <HugeiconsIcon icon={Loading02Icon} className="relative size-6 animate-spin" />
               ) : status === "recording" ? (
-                <Square className="relative size-5 fill-current" />
+                <HugeiconsIcon icon={SquareIcon} className="relative size-5 fill-current" />
               ) : (
-                <Mic className="relative size-6" />
+                <HugeiconsIcon icon={Mic01Icon} className="relative size-6" />
               )}
             </span>
 
@@ -561,8 +562,8 @@ export function VoiceDemoPlayer({ labels, embedded = false }: { labels: VoiceDem
 
         {/* Reading direction: to the right on the big screen, downwards otherwise. */}
         {!embedded && <div className="flex justify-center self-center text-muted-foreground" aria-hidden>
-          <ArrowDown className="size-5 md:hidden" />
-          <ArrowRight className="hidden size-5 md:block" />
+          <HugeiconsIcon icon={ArrowDown01Icon} className="size-5 md:hidden" />
+          <HugeiconsIcon icon={ArrowRight01Icon} className="hidden size-5 md:block" />
         </div>}
 
         {/* The resulting issue preview. */}

@@ -1,28 +1,8 @@
 "use client";
 
-import {
-  AppWindowMac,
-  BellRing,
-  CalendarRange,
-  Command,
-  Crosshair,
-  FileText,
-  Inbox,
-  Layers,
-  LayoutList,
-  Link2,
-  ListFilter,
-  MessagesSquare,
-  Mic,
-  PencilLine,
-  Plug2,
-  RefreshCw,
-  Search,
-  Target,
-  Upload,
-  type LucideIcon,
-} from "lucide-react";
 import { IsoIcon, isoGlyph } from "@/components/illustrations/iso-icon";
+import type { AppIcon } from "@/components/icon";
+import { AppWindowMacIcon as AppWindowMac, BellRingIcon as BellRing, CalendarRangeIcon as CalendarRange, CommandIcon as Command, CrosshairIcon as Crosshair, FileTextIcon as FileText, FilterHorizontalIcon as ListFilter, InboxIcon as Inbox, LayersIcon as Layers, LayoutListIcon as LayoutList, Link02Icon as Link2, MessageMultiple01Icon as MessagesSquare, Mic01Icon as Mic, PencilLineIcon as PencilLine, Plug02Icon as Plug2, RefreshIcon as RefreshCw, Search01Icon as Search, Target01Icon as Target, Upload04Icon as Upload } from "@hugeicons/core-free-icons";
 
 /**
  * The icons of the landing, in the isometry of the application (MIN-254).
@@ -65,7 +45,7 @@ const ICONS = {
   share: Link2,
   triage: ListFilter,
   window: AppWindowMac,
-} as const satisfies Record<string, LucideIcon>;
+} as const satisfies Record<string, AppIcon>;
 
 export type IsoTileName = keyof typeof ICONS;
 

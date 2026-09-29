@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, ArrowDown01Icon, FolderAddIcon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -10,14 +12,7 @@ import {
   cn,
 } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
-import {
-  ChevronDown,
-  ListTodo,
-  FolderPlus,
-  Plus,
-  Target,
-  type LucideIcon,
-} from "lucide-react";
+import { AppIcon } from "@/components/icon";
 import { useProjects } from "@/lib/projects-context";
 import { useCreate } from "@/lib/create-context";
 import { usePlanGates } from "@/lib/use-billing-query";
@@ -35,7 +30,7 @@ const NEW_ISSUE_TOOLTIP_DELAY_MS = SIDEBAR_TOOLTIP_DELAY_MS * 2;
 
 export interface CreateAction {
   key: string;
-  icon: LucideIcon;
+  icon: AppIcon;
   label: string;
   disabled?: boolean;
   /** Keyboard hint shown on the desktop menu (e.g. "C"). */
@@ -66,7 +61,7 @@ export function useCreateActions(): CreateAction[] {
   return [
     {
       key: "new-issue",
-      icon: ListTodo,
+      icon: TaskEdit01Icon,
       label: t("newIssue"),
       disabled: !canCreate,
       shortcut: "C",
@@ -75,7 +70,7 @@ export function useCreateActions(): CreateAction[] {
     },
     {
       key: "new-objective",
-      icon: Target,
+      icon: Target01Icon,
       label: t("newObjective"),
       disabled: !canCreate,
       shortcut: "O",
@@ -84,7 +79,7 @@ export function useCreateActions(): CreateAction[] {
     },
     {
       key: "new-project",
-      icon: FolderPlus,
+      icon: FolderAddIcon,
       label: t("newProject"),
       // Project ceiling of the plan reached (MIN-72) → action grayed out.
       disabled: projectLimitReached,
@@ -130,7 +125,7 @@ export function NewMenu({
                 : "flex-1 gap-3 pr-3 pl-[9px]",
             )}
           >
-            <Plus className="size-[18px] shrink-0" />
+            <HugeiconsIcon icon={Add01Icon} className="size-[18px] shrink-0" />
             {!collapsed ? <span className="truncate">{issueAction.label}</span> : null}
           </Button>
         </TooltipTrigger>
@@ -151,33 +146,30 @@ export function NewMenu({
               className="group gap-1.5 shadow-none"
             >
               <span className="truncate">{t("new")}</span>
-              <ChevronDown className="size-3.5 transition-transform group-data-[state=open]:rotate-180" />
+              <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 transition-transform group-data-[state=open]:rotate-180" />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
         <TooltipContent side="right">{t("newIssue")}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align={sidebar ? "start" : "end"} className="w-52">
-        {actions.map((action) => {
-          const Icon = action.icon;
-          return (
-            <DropdownMenuItem
-              key={action.key}
-              disabled={action.disabled}
-              onPointerEnter={action.onWarm}
-              onFocus={action.onWarm}
-              onSelect={action.onSelect}
-            >
-              <Icon />
-              {action.label}
-              {action.shortcut ? (
-                <Kbd size="sm" className="ml-auto">
-                  {action.shortcut}
-                </Kbd>
-              ) : null}
-            </DropdownMenuItem>
-          );
-        })}
+        {actions.map((action) => (
+          <DropdownMenuItem
+            key={action.key}
+            disabled={action.disabled}
+            onPointerEnter={action.onWarm}
+            onFocus={action.onWarm}
+            onSelect={action.onSelect}
+          >
+            <AppIcon icon={action.icon} />
+            {action.label}
+            {action.shortcut ? (
+              <Kbd size="sm" className="ml-auto">
+                {action.shortcut}
+              </Kbd>
+            ) : null}
+          </DropdownMenuItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );

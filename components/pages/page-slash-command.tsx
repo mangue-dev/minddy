@@ -18,6 +18,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { AppIcon } from "@/components/icon";
 import { Extension, type Editor, type Range } from "@tiptap/core";
 import { ReactRenderer } from "@tiptap/react";
 import { Suggestion, type SuggestionProps } from "@tiptap/suggestion";
@@ -157,7 +158,7 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
           keyboard && "pointer-events-none"
         )}
       >
-        <Icon className="size-4 shrink-0 text-muted-foreground" />
+        <AppIcon icon={Icon} className="size-4 shrink-0 text-muted-foreground" />
         <span className="truncate">{item.label}</span>
       </button>
     );

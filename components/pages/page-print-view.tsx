@@ -1,10 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { File02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Spinner } from "mangue-ui";
-import { FileText } from "lucide-react";
 import type { JSONContent } from "@tiptap/core";
 
 import { pageDatabaseDocument } from "@/lib/page-database-document";
@@ -122,7 +123,7 @@ export function PagePrintView({
                   {page.icon}
                 </span>
               ) : (
-                <FileText aria-hidden className="mt-1.5 size-6 shrink-0 text-muted-foreground" />
+                <HugeiconsIcon icon={File02Icon} aria-hidden className="mt-1.5 size-6 shrink-0 text-muted-foreground" />
               )}
               <span className="min-w-0">{page.title || t("untitled")}</span>
             </h1>

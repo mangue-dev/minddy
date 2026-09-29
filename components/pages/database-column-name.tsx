@@ -1,5 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { Edit04Icon, Settings02Icon } from "@hugeicons/core-free-icons";
 import { useRef, useState, type DragEvent } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -9,7 +12,6 @@ import {
   DropdownMenuTrigger,
   Input,
 } from "mangue-ui";
-import { Pencil, Settings2 } from "lucide-react";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { PROPERTY_ICONS } from "./database-property-icons";
 import type { PageSummary } from "@/lib/pages-api";
@@ -148,7 +150,7 @@ export function DatabaseColumnName({
               }
             }}
           >
-            {Icon && <Icon className="size-3.5 shrink-0" />}
+            {Icon && <AppIcon icon={Icon} className="size-3.5 shrink-0" />}
             <span className="min-w-0 truncate">
               {name}
             </span>
@@ -163,12 +165,12 @@ export function DatabaseColumnName({
         }}
       >
         <DropdownMenuItem onSelect={start}>
-          <Pencil className="size-4" />
+          <HugeiconsIcon icon={Edit04Icon} className="size-4" />
           {t("rename")}
         </DropdownMenuItem>
         {property && onEdit && (
           <DropdownMenuItem onSelect={() => onEdit(property)}>
-            <Settings2 className="size-4" />
+            <HugeiconsIcon icon={Settings02Icon} className="size-4" />
             {t("editColumn")}
           </DropdownMenuItem>
         )}

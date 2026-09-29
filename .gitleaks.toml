@@ -137,6 +137,7 @@ paths = [
 description = "Exact synthetic credential fixtures and non-secret release identifiers."
 targetRules = ["generic-api-key"]
 paths = [
+  '''(?:^|/)lib/server/forge-relay/provisioning-content\.test\.ts$''',
   '''(?:^|/)deploy/self-hosted/\.env\.example$''',
   '''(?:^|/)desktop/released\.json$''',
   '''(?:^|/)scripts/(?:linux-desktop-release\.test|validate-self-hosted-compose)\.mjs$''',

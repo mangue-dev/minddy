@@ -1,7 +1,6 @@
 "use client";
-
-import { MessageSquare } from "lucide-react";
-
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Message01Icon } from "@hugeicons/core-free-icons";
 import {
   Tooltip,
   TooltipContent,
@@ -38,7 +37,7 @@ export function BlockCommentBadge({
             onOpen(blockId);
           }}
         >
-          <MessageSquare aria-hidden />
+          <HugeiconsIcon icon={Message01Icon} aria-hidden />
           <span>{count}</span>
         </button>
       </TooltipTrigger>

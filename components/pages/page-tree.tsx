@@ -16,6 +16,8 @@
 // line. A sensor that only renders colliding rectangles would require
 // recalculate next.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, ArrowRight01Icon, DatabaseIcon, File02Icon, MoreHorizontalIcon, StarIcon } from "@hugeicons/core-free-icons";
 import {
   useCallback,
   useEffect,
@@ -26,15 +28,6 @@ import {
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
-import {
-  ChevronRight,
-  FileText,
-  Database,
-  MoreHorizontal,
-  Plus,
-  Star,
-} from "lucide-react";
-
 import type { PageSummary } from "@/lib/pages-api";
 import type { PageTreeNode } from "@/lib/pages";
 import { ancestorsOf, splitFavoritePageTree } from "@/lib/pages";
@@ -446,12 +439,10 @@ function PageRow({
           !hasChildren && "invisible"
         )}
       >
-        <ChevronRight
-          className={cn(
-            "size-3 text-muted-foreground transition-transform",
-            open && "rotate-90"
-          )}
-        />
+        <HugeiconsIcon icon={ArrowRight01Icon} className={cn(
+                              "size-3 text-muted-foreground transition-transform",
+                              open && "rotate-90"
+                            )} />
       </button>
 
       <Link
@@ -469,7 +460,7 @@ function PageRow({
       >
         <span className="flex size-4 shrink-0 items-center justify-center text-sm leading-none">
           {page.icon ?? (
-            page.database_schema != null ? <Database className="size-3.5 text-muted-foreground" /> : <FileText className="size-3.5 text-muted-foreground" />
+            page.database_schema != null ? <HugeiconsIcon icon={DatabaseIcon} className="size-3.5 text-muted-foreground" /> : <HugeiconsIcon icon={File02Icon} className="size-3.5 text-muted-foreground" />
           )}
         </span>
         <span
@@ -512,7 +503,7 @@ function PageRow({
               className="size-6"
               aria-label={t("pageOptions")}
             >
-              <MoreHorizontal className="size-3.5" />
+              <HugeiconsIcon icon={MoreHorizontalIcon} className="size-3.5" />
             </Button>
           }
         />
@@ -523,7 +514,7 @@ function PageRow({
           aria-label={t("newSubpage")}
           onClick={() => onCreateChild(page.id)}
         >
-          <Plus className="size-3.5" />
+          <HugeiconsIcon icon={Add01Icon} className="size-3.5" />
         </Button>
       </div>
 
@@ -544,7 +535,7 @@ function PageRow({
           aria-hidden
           className="flex size-6 shrink-0 items-center justify-center"
         >
-          <Star className="size-3 fill-amber-400 text-amber-400" />
+          <HugeiconsIcon icon={StarIcon} className="size-3 fill-amber-400 text-amber-400" />
         </span>
       )}
     </div>

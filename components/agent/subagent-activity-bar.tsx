@@ -1,9 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { ArrowRight01Icon, BotIcon, CheckmarkCircle01Icon as CheckCircle2 } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useNow, useTranslations } from "next-intl";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, Spinner, cn } from "mangue-ui";
-import { Bot, CheckCircle2, ChevronRight } from "lucide-react";
 import { AgentBeam } from "@/components/agent-beam";
 import type { TurnSubagent } from "@/lib/agent-subagents";
 
@@ -77,8 +79,8 @@ export function SubagentActivityBar({ subagents }: { subagents: TurnSubagent[] }
           <Collapsible open={open} onOpenChange={setOpen}>
             <div className="flex items-center gap-2 px-3 py-2.5">
               <CollapsibleTrigger className="group flex min-w-0 flex-1 items-center gap-1.5 text-xs font-medium text-muted-foreground outline-hidden transition-colors hover:text-foreground">
-                <ChevronRight className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
-                <Bot className="size-3.5 shrink-0" />
+                <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
+                <HugeiconsIcon icon={BotIcon} className="size-3.5 shrink-0" />
                 <span className="truncate text-shimmer">
                   {t("subagentsWorking", { count: running.length })}
                 </span>
@@ -110,7 +112,7 @@ export function SubagentActivityBar({ subagents }: { subagents: TurnSubagent[] }
  minddy's “it turns” (the conversations column,
  the header of a folded project). An immobile mark can only be distinguished from ✓ by its shape, while the difference to read is there: one is still moving. */}
                       {done ? (
-                        <CheckCircle2 className="size-3.5 shrink-0 text-brand" />
+                        <AppIcon icon={CheckCircle2} className="size-3.5 shrink-0 text-brand" />
                       ) : (
                         <Spinner className="size-3.5 shrink-0 text-brand" />
                       )}

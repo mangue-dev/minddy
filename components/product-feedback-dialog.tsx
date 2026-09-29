@@ -1,10 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Loading02Icon, SentIcon } from "@hugeicons/core-free-icons";
 import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Input, Textarea, toast } from "mangue-ui";
-import { Loader2, Send } from "lucide-react";
-
 import { FormDialog } from "@/components/form-dialog";
 import {
   FEEDBACK_BODY_MAX,
@@ -81,9 +81,9 @@ export function ProductFeedbackDialog({
       submitting={submitting}
       submitIcon={
         submitting ? (
-          <Loader2 className="size-4 animate-spin" aria-hidden />
+          <HugeiconsIcon icon={Loading02Icon} className="size-4 animate-spin" aria-hidden />
         ) : (
-          <Send className="size-4" aria-hidden />
+          <HugeiconsIcon icon={SentIcon} className="size-4" aria-hidden />
         )
       }
       cancelLabel={tc("cancel")}

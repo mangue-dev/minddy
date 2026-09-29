@@ -44,8 +44,12 @@ function queryFor(table: string) {
     },
     eq: (column: string, value: unknown) => {
       filters[column] = value;
-      if (table === "agent_runs" && column === "id"
-          && updated?.interrupt_requested === true && typeof value === "string") {
+      // MIN-599: interrupts target the whole worker set of a turn
+      // (`parent_numo_turn_id`), while legacy single-run interrupts keep
+      // filtering on `id`.
+      if (table === "agent_runs" && updated?.interrupt_requested === true
+          && (column === "id" || column === "parent_numo_turn_id")
+          && typeof value === "string") {
         h.interruptions.push(value);
       }
       return query;
@@ -716,7 +720,7 @@ describe("durable Numo execution", () => {
     });
 
     expect(result.status).toBe("stopped");
-    expect(h.interruptions).toEqual(["51600000-0000-4000-8000-000000000099"]);
+    expect(h.interruptions).toEqual(["51600000-0000-4000-8000-000000000001"]);
     expect(h.checkpoints.at(-1)).toMatchObject({
       p_status: "stopped",
       p_active_run_id: "51600000-0000-4000-8000-000000000099",

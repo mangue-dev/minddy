@@ -1,5 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, BarChartIcon, CreditCardIcon, Delete02Icon, HelpCircleIcon, Home01Icon, Logout01Icon, Megaphone01Icon, Settings01Icon, Shield01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { AppIcon } from "@/components/icon";
 import {
   useCallback,
   useEffect,
@@ -40,22 +43,6 @@ import {
   type ContextMenuAction,
 } from "@/components/issue-context-menu";
 import { useNavigationContextActions } from "@/components/navigation-context-actions";
-import {
-  LogOut,
-  Megaphone,
-  BarChart3,
-  CreditCard,
-  Settings,
-  ArrowUpRight,
-  Shield,
-  CircleHelp,
-  Trash2,
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Home,
-} from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { useIsAdmin } from "@/lib/use-is-admin";
@@ -128,7 +115,9 @@ const AVATAR_PL = "pl-[7px]";
  */
 
 /** A sidebar nav item that can advertise its `G`-chord second key (e.g. "M"). */
-export type AppNavItem = NavItem & {
+export type AppNavItem = Omit<NavItem, "icon"> & {
+  /** Hugeicons icon data, or a React SVG component (Lucide, bespoke icons). */
+  icon?: AppIcon;
   shortcut?: string;
   /**
    * This page descends in the sidebar's navigation levels (MIN-546): reaching
@@ -190,7 +179,9 @@ function SidebarRow({ item }: { item: AppNavItem }) {
 
   const inner = (
     <>
-      {Icon ? <Icon className="h-[18px] w-[18px] shrink-0" /> : null}
+      {Icon ? (
+        <AppIcon icon={Icon} className="h-[18px] w-[18px] shrink-0" />
+      ) : null}
       <span className="min-w-0 truncate">{item.label}</span>
       {hint ? (
         <Kbd size="sm" className="ml-auto shrink-0">
@@ -200,10 +191,7 @@ function SidebarRow({ item }: { item: AppNavItem }) {
         <span className="ml-auto flex items-center gap-2">
           {item.badge}
           {item.descends ? (
-            <ChevronRight
-              className="size-3.5 shrink-0 text-sidebar-foreground/40"
-              aria-hidden
-            />
+            <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0 text-sidebar-foreground/40" aria-hidden />
           ) : null}
         </span>
       )}
@@ -418,10 +406,7 @@ function ProjectContextRow({
         className="size-[18px] rounded-[5px]"
       />
       <span className="min-w-0 flex-1 truncate">{currentProject.name}</span>
-      <ChevronDown
-        className="size-3.5 shrink-0 text-sidebar-foreground/45"
-        aria-hidden
-      />
+      <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0 text-sidebar-foreground/45" aria-hidden />
     </DropdownMenuTrigger>
   );
 
@@ -447,8 +432,8 @@ function ProjectContextRow({
               whileTap={{ scale: 0.97 }}
               transition={transitions.snappy}
             >
-              <ChevronLeft className="size-3.5" aria-hidden />
-              <Home className="size-[18px]" aria-hidden />
+              <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" aria-hidden />
+              <HugeiconsIcon icon={Home01Icon} className="size-[18px]" aria-hidden />
             </motion.button>
           </TooltipTrigger>
           <TooltipContent side="right" className="flex items-center gap-2">
@@ -485,7 +470,7 @@ function ProjectContextRow({
                   className="size-[18px] rounded-[5px]"
                 />
                 <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                {current ? <Check className="ml-auto size-4 shrink-0" /> : null}
+                {current ? <HugeiconsIcon icon={Tick01Icon} className="ml-auto size-4 shrink-0" /> : null}
               </Link>
             </DropdownMenuItem>
           );
@@ -586,33 +571,33 @@ function AccountButton({
               {hasManagedService && (
                 <DropdownMenuItem asChild>
                   <Link href="/billing">
-                    <CreditCard />
+                    <HugeiconsIcon icon={CreditCardIcon} />
                     {t("billing")}
                   </Link>
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem asChild>
                 <Link href="/settings">
-                  <Settings />
+                  <HugeiconsIcon icon={Settings01Icon} />
                   {t("accountSettings")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/trash">
-                  <Trash2 />
+                  <HugeiconsIcon icon={Delete02Icon} />
                   {t("trash")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/statistics">
-                  <BarChart3 />
+                  <HugeiconsIcon icon={BarChartIcon} />
                   {t("statistics")}
                 </Link>
               </DropdownMenuItem>
               {isAdmin && (
                 <DropdownMenuItem asChild>
                   <Link href="/admin">
-                    <Shield />
+                    <HugeiconsIcon icon={Shield01Icon} />
                     {t("adminDashboard")}
                   </Link>
                 </DropdownMenuItem>
@@ -625,7 +610,7 @@ function AccountButton({
                   openSignOutConfirmation();
                 }}
               >
-                <LogOut />
+                <HugeiconsIcon icon={Logout01Icon} />
                 {t("signOut")}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -733,7 +718,7 @@ function ChangelogButton({
       aria-label={t("whatsNew")}
       className={SIDEBAR_COMPACT_CONTROL_CLASS}
     >
-      <CircleHelp className="size-[18px]" />
+      <HugeiconsIcon icon={HelpCircleIcon} className="size-[18px]" />
     </button>
   );
 
@@ -799,12 +784,12 @@ function ChangelogButton({
                 }}
                 className="py-1.5 max-[1199px]:py-1.5"
               >
-                <Megaphone className="size-4 shrink-0 text-muted-foreground" />
+                <HugeiconsIcon icon={Megaphone01Icon} className="size-4 shrink-0 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate">
                   {t("shareFeedback")}
                 </span>
                 {!productFeedbackIntegrationEnabled ? (
-                  <ArrowUpRight className="ml-auto size-4 shrink-0 text-muted-foreground" />
+                  <HugeiconsIcon icon={ArrowUpRight01Icon} className="ml-auto size-4 shrink-0 text-muted-foreground" />
                 ) : null}
               </DropdownMenuItem>
             </>
@@ -1027,10 +1012,7 @@ export function AppSidebar({
               >
                 {/* Out of the flow: the label is centered on the FULL row
                     width, the chevron does not push it off-center. */}
-                <ChevronLeft
-                  className="absolute left-[9px] top-1/2 size-[18px] shrink-0 -translate-y-1/2"
-                  aria-hidden
-                />
+                <HugeiconsIcon icon={ArrowLeft01Icon} className="absolute left-[9px] top-1/2 size-[18px] shrink-0 -translate-y-1/2" aria-hidden />
                 <span className="min-w-0 flex-1 truncate text-center">
                   {back.label}
                 </span>

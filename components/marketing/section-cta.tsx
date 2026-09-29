@@ -1,5 +1,6 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { getTranslations } from "next-intl/server";
-import { ArrowRight } from "lucide-react";
 import { Button } from "mangue-ui/components/ui/button";
 import { TrackedCta } from "./tracked-cta";
 import { Reveal, RevealHeading } from "./reveal";
@@ -33,7 +34,7 @@ export async function SectionCta() {
           <Button asChild size="lg">
             <TrackedCta href="/signup" location="cta_section">
               {t("ctaButton")}
-              <ArrowRight data-icon="inline-end" />
+              <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
             </TrackedCta>
           </Button>
         </Reveal>

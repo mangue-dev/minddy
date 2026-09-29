@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Button,
@@ -8,7 +10,6 @@ import {
   DialogDescription,
   DialogTitle,
 } from "mangue-ui";
-import { X } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { MessageKey } from "@/lib/i18n-keys";
 import { CHANGELOG_ENTRIES } from "@/lib/changelog";
@@ -62,7 +63,7 @@ export function WhatsNewDialog({
             onClick={() => onOpenChange(false)}
             className="rounded-full text-muted-foreground hover:text-foreground"
           >
-            <X className="size-4" />
+            <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
           </Button>
         </div>
 

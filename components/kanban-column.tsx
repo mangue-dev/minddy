@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon } from "@hugeicons/core-free-icons";
 import { Fragment, memo, useCallback, useRef } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { cn } from "mangue-ui";
@@ -11,7 +13,6 @@ import {
   type BoardLandingPreview,
   useRevealDropIndicator,
 } from "@/components/board-drop-indicator";
-import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { StatusMeta, IssueStatus } from "@/lib/issue-constants";
 import type {
@@ -212,7 +213,7 @@ export const KanbanColumn = memo(function KanbanColumn({
             onClick={() => onCreateIssue(status.value)}
             className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-6 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/40 hover:text-foreground"
           >
-            <Plus className="size-4" />
+            <HugeiconsIcon icon={Add01Icon} className="size-4" />
             {t("newIssue")}
           </button>
         </div>

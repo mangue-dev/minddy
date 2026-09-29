@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ImageNotFound01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { NodeViewRenderer } from "@tiptap/core";
 import {
@@ -8,7 +10,6 @@ import {
   type NodeViewProps,
 } from "@tiptap/react";
 import { useTranslations } from "next-intl";
-import { ImageOff, RotateCcw } from "lucide-react";
 // `cx` and not `cn` of mango-ui: the barrel draws the emoji selector, and the
 // block register would cease to be importable outside the browser (see cx.ts).
 import { cx } from "@/components/pages/blocks/cx";
@@ -203,7 +204,7 @@ export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewPr
             failed || abandoned ? "text-muted-foreground" : "text-muted-foreground"
           )}
         >
-          <ImageOff className="size-4 shrink-0" />
+          <HugeiconsIcon icon={ImageNotFound01Icon} className="size-4 shrink-0" />
           <span className="min-w-0 flex-1 truncate">
             {failed
               ? t("uploadFailed", { name: upload!.file.name })
@@ -217,7 +218,7 @@ export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewPr
               className="flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium transition-colors hover:bg-muted hover:text-foreground"
               onClick={() => uploads?.retry(uploadId)}
             >
-              <RotateCcw className="size-3" />
+              <HugeiconsIcon icon={Undo02Icon} className="size-3" />
               {t("uploadRetry")}
             </button>
           )}

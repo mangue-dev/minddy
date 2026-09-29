@@ -1,5 +1,5 @@
 import { HorizontalRule } from "@tiptap/extension-horizontal-rule";
-import { Minus } from "lucide-react";
+import { MinusSignIcon as Minus } from "@hugeicons/core-free-icons";
 import type { PageBlock } from "@/components/pages/blocks/types";
 
 /**

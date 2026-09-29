@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon, Delete02Icon, GlobeIcon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, Edit04Icon, Plug01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import {
@@ -13,16 +15,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import {
-  ChevronRight,
-  Ellipsis,
-  Globe,
-  Lock,
-  MessagesSquare,
-  Pencil,
-  Plug,
-  Trash2,
-} from "lucide-react";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import { mcpActorLabel } from "@/lib/mcp-agents";
 import {
@@ -220,7 +212,7 @@ function BoardAvatar({ className }: { className?: string }) {
         className,
       )}
     >
-      <MessagesSquare className="size-3" />
+      <HugeiconsIcon icon={MessageMultiple01Icon} className="size-3" />
     </span>
   );
 }
@@ -260,7 +252,7 @@ function IntegrationAvatar({ className }: { className?: string }) {
         className,
       )}
     >
-      <Plug className="size-3.5" />
+      <HugeiconsIcon icon={Plug01Icon} className="size-3.5" />
     </span>
   );
 }
@@ -560,7 +552,7 @@ export function CommentBlock({
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand/10 px-1.5 py-0.5 text-[11px] font-medium text-brand">
-                <Globe className="size-3" />
+                <HugeiconsIcon icon={GlobeIcon} className="size-3" />
                 {t("publicComment")}
               </span>
             </TooltipTrigger>
@@ -589,7 +581,7 @@ export function CommentBlock({
                 aria-label={t("commentActions")}
                 className="-my-1 size-6 rounded-full text-muted-foreground opacity-0 transition-opacity group-hover/comment:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
               >
-                <Ellipsis className="size-4" />
+                <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -600,13 +592,13 @@ export function CommentBlock({
                     setEditing(true);
                   }}
                 >
-                  <Pencil />
+                  <HugeiconsIcon icon={Edit04Icon} />
                   {tCommon("edit")}
                 </DropdownMenuItem>
               )}
               {canDelete && (
                 <DropdownMenuItem variant="destructive" onSelect={() => setConfirmDelete(true)}>
-                  <Trash2 />
+                  <HugeiconsIcon icon={Delete02Icon} />
                   {tCommon("delete")}
                 </DropdownMenuItem>
               )}
@@ -881,7 +873,7 @@ export function ReplyComposer({
       <div className="flex items-center justify-end gap-2 px-2.5 pb-2.5">
         {threadIsPublic && (
           <span className="mr-auto inline-flex items-center gap-1.5 text-xs font-medium text-brand">
-            <Globe className="size-3.5" />
+            <HugeiconsIcon icon={GlobeIcon} className="size-3.5" />
             {t("replyGoesPublic")}
           </span>
         )}
@@ -1032,7 +1024,7 @@ function EventsGroup({
         className="flex w-full items-center gap-2.5 text-left outline-none"
       >
         <span className="flex size-5 shrink-0 items-center justify-center text-muted-foreground">
-          <ChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} />
+          <HugeiconsIcon icon={ArrowRight01Icon} className={cn("size-3.5 transition-transform", open && "rotate-90")} />
         </span>
         <span className="text-sm text-muted-foreground transition-colors hover:text-foreground">
           {t("eventsCount", { count: items.length })}
@@ -1361,7 +1353,7 @@ function VisibilityToggle({
         (disabled || locked) && "cursor-not-allowed opacity-50"
       )}
     >
-      {isPublic ? <Globe className="size-3.5" /> : <Lock className="size-3.5" />}
+      {isPublic ? <HugeiconsIcon icon={GlobeIcon} className="size-3.5" /> : <HugeiconsIcon icon={LockIcon} className="size-3.5" />}
       {isPublic ? t("visibilityPublic") : t("visibilityInternal")}
     </button>
   );

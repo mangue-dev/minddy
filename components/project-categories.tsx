@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, Cancel01Icon, Delete02Icon, Edit04Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, ConfirmDeleteDialog, Input, Spinner, cn, toast } from "mangue-ui";
-import { Pencil, Plus, Trash2, Check, X } from "lucide-react";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import {
   SettingsEmpty,
@@ -89,10 +90,10 @@ function CategoryRow({
               setColor(category.color);
             }}
           >
-            <X />
+            <HugeiconsIcon icon={Cancel01Icon} />
           </Button>
           <Button size="icon-sm" aria-label={tc("save")} disabled={saving} onClick={save}>
-            {saving ? <Spinner /> : <Check />}
+            {saving ? <Spinner /> : <HugeiconsIcon icon={Tick01Icon} />}
           </Button>
         </div>
       </div>
@@ -118,10 +119,10 @@ function CategoryRow({
             aria-label={tc("edit")}
             onClick={() => setEditing(true)}
           >
-            <Pencil />
+            <HugeiconsIcon icon={Edit04Icon} />
           </Button>
           <Button variant="ghost" size="icon-sm" aria-label={tc("delete")} onClick={onDelete}>
-            <Trash2 />
+            <HugeiconsIcon icon={Delete02Icon} />
           </Button>
         </>
       }
@@ -173,7 +174,7 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
             />
           </div>
           <Button type="submit" disabled={creating || !name.trim()}>
-            {creating ? <Spinner /> : <Plus />}
+            {creating ? <Spinner /> : <HugeiconsIcon icon={Add01Icon} />}
             {tc("add")}
           </Button>
         </div>

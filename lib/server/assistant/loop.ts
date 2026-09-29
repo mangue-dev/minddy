@@ -226,6 +226,13 @@ export interface ProcessChatContext extends ToolContext {
   registerActiveRun?: (runId: string) => void;
   toolLedger?: ToolExecutionLedger;
   shouldStop?: () => Promise<boolean>;
+  /**
+   * Registers a synchronous stop listener, called the instant a stop request
+   * lands in this process. The loop uses it to resolve a pending blocked
+   * stream read immediately instead of waiting for the next chunk (or the
+   * next polled `shouldStop` after it) to notice.
+   */
+  onStopSignal?: (notify: () => void) => () => void;
   /** Budget gate immediately before every provider generation. */
   beforeGeneration?: (roundCount: number) => Promise<void>;
   /** Persist one generation before any tool it requested can launch work. */
@@ -346,10 +353,15 @@ export async function processChat(
   const redactor = new SecretRedactor();
   let suspension: ProcessChatSuspension | null = null;
   let resumeCheckpoint = context.resumeCheckpoint ?? null;
+  // True as soon as a stop was observed anywhere in the round (mid-stream or
+  // between tools): the loop stops handing the turn back with no persisted
+  // work beyond the durable checkpoints already written.
+  let stopObserved = false;
 
   while (continueLoop) {
     continueLoop = false;
-    if (await context.shouldStop?.()) break;
+    stopObserved = (await context.shouldStop?.()) ?? false;
+    if (stopObserved) break;
     const resumingTools = resumeCheckpoint?.phase === "tools";
     roundCount = resumingTools
       ? Math.max(roundCount, resumeCheckpoint?.roundCount ?? 1)
@@ -393,7 +405,6 @@ export async function processChat(
       const generationController = new AbortController();
       let idleTimer: ReturnType<typeof setTimeout> | null = null;
       let idleAborted = false;
-      let stopObserved = false;
       let lastStopCheckAt = 0;
       const armIdleTimer = () => {
         if (idleTimer) clearTimeout(idleTimer);
@@ -403,6 +414,15 @@ export async function processChat(
         }, STREAM_IDLE_TIMEOUT_MS);
       };
       armIdleTimer();
+      // Event-driven stop must be armed BEFORE the provider request: a stop
+      // submitted while `fetchAiChat` still awaits response headers aborts the
+      // connection attempt itself instead of waiting for the headers (or the
+      // idle watchdog) to free it. The listener stays armed for the whole
+      // round, and every exit path below disarms it.
+      const stopSignalOff = context.onStopSignal?.(() => {
+        stopObserved = true;
+        generationController.abort();
+      }) ?? null;
       let call;
       try {
         call = await fetchAiChat(
@@ -421,9 +441,16 @@ export async function processChat(
           { signal: generationController.signal },
         );
       } catch (error) {
+        stopSignalOff?.();
+        if (idleTimer) clearTimeout(idleTimer);
         // The watchdog also covers the connection phase: a provider that
         // accepts the request and never answers must end as a retryable idle
         // failure, not as an opaque abort.
+        if (stopObserved) {
+          // The stop fired during the connection attempt: hand the turn back
+          // unpersisted, like a stop observed mid-stream.
+          break;
+        }
         if (idleAborted || generationController.signal.aborted) throw new LlmStreamIdleError();
         throw error;
       }
@@ -431,21 +458,28 @@ export async function processChat(
       requestModel = call.model;
       // These early exits leave before the stream try/finally disarms the
       // watchdog: without an explicit cleanup every provider refusal would
-      // keep a 90 s timer armed on an already-abandoned controller.
+      // keep a 90 s timer armed on an already-abandoned controller. The stop
+      // listener is also dropped: nothing below subscribes anymore.
       if (!response.ok) {
         if (idleTimer) clearTimeout(idleTimer);
+        stopSignalOff?.();
         const errorText = await response.text();
         throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
       }
       const reader = response.body?.getReader();
       if (!reader) {
         if (idleTimer) clearTimeout(idleTimer);
+        stopSignalOff?.();
         throw new Error("No response body from LLM");
       }
 
       const decoder = new TextDecoder();
       let buffer = "";
       const reasoningStream = new AssistantReasoningStream(emitter);
+      // A stop requested while the loop sits on a pending `reader.read()`
+      // (silent reasoning phases) aborts the provider request, which errors
+      // the body stream and unblocks the pending read; the read rejection
+      // sees `stopObserved` and the round is handed back unpersisted.
       try {
         while (true) {
           // A stop that arrives mid-stream aborts the provider request right
@@ -537,6 +571,7 @@ export async function processChat(
         }
       } finally {
         if (idleTimer) clearTimeout(idleTimer);
+        stopSignalOff?.();
         roundReasoning = reasoningStream.finish();
       }
       const generation = {
@@ -559,7 +594,7 @@ export async function processChat(
     }
 
     // Process completed tool calls
-    if (toolCallAccumulators.size > 0) {
+    if (toolCallAccumulators.size > 0 && !stopObserved) {
       const assistantToolCalls: AssistantToolCall[] = [];
       for (const [, acc] of toolCallAccumulators) {
         if (acc.name === "ask_user" && context.workerInput) {
@@ -667,8 +702,11 @@ export async function processChat(
       // which it puts before the user's eyes awaits his gesture.
       let pausedByTool = false;
 
-      // Execute each tool and save results to DB
+      // Execute each tool and save results to DB. A stop requested while a
+      // slow tool runs must not wait for the round to finish executing: the
+      // check between tools shortens the wait to at most one tool.
       for (const [, acc] of toolCallAccumulators) {
+        if (await context.shouldStop?.()) break;
         const alreadyCompleted = completedToolCallIds.has(acc.id);
         if (acc.name === "ask_user") {
           // ask_user: emit a synthetic result and do NOT continue the loop
@@ -834,7 +872,7 @@ export async function processChat(
       // - ask_user, or a tool that hands the turn back: stop and wait for user
       // - other tools: continue normally with tools enabled (round cap only —
       //   minddy tools chain legitimately: create issue → set categories → comment)
-      if (!hasAskUser && !pausedByTool && roundCount <= MAX_TOOL_EXECUTION_ROUNDS) {
+      if (!hasAskUser && !pausedByTool && !stopObserved && roundCount <= MAX_TOOL_EXECUTION_ROUNDS) {
         await context.persistCheckpoint?.({ phase: "model", roundCount });
         continueLoop = true;
       }

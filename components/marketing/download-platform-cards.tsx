@@ -1,7 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { ArrowUpRight01Icon, Download04Icon as ArrowDownToLine } from "@hugeicons/core-free-icons";
 import { useEffect, useState, type ReactNode } from "react";
-import { ArrowDownToLine, ArrowUpRight } from "lucide-react";
 import { resolveInstallPlatform, WINDOWS_STORE_DEEP_LINK, type InstallPlatform } from "@/lib/desktop/install-prompt";
 import { showMobileInstallGuide } from "@/lib/mobile-install-guide";
 import { TrackedDownloadLink } from "./tracked-download-link";
@@ -110,17 +112,17 @@ export function DownloadPlatformCards({ copy, macRelease, linuxRelease, mobileGu
           <Architecture platform="macos" label={copy.architecture} value={macArch} onChange={setMacArch} />
           <TrackedDownloadLink platform="macos" format="dmg" arch={macArch}
             href={macArch === "arm64" ? "/api/desktop/download" : "/api/desktop/download?arch=x64"} className={`${ACTION} w-full`}>
-            <ArrowDownToLine className="size-4" aria-hidden />{copy.download} <span className="opacity-60">.dmg</span>
+            <AppIcon icon={ArrowDownToLine} className="size-4" aria-hidden />{copy.download} <span className="opacity-60">.dmg</span>
           </TrackedDownloadLink>
           <p className="mt-3 text-xs opacity-70">{macRelease[macArch]}</p>
           </> : card.platform === "windows" ? <>
-          <a href={WINDOWS_STORE_DEEP_LINK} className={`${ACTION} w-full`}>Microsoft Store<ArrowUpRight className="size-4" aria-hidden /></a>
+          <a href={WINDOWS_STORE_DEEP_LINK} className={`${ACTION} w-full`}>Microsoft Store<HugeiconsIcon icon={ArrowUpRight01Icon} className="size-4" aria-hidden /></a>
           <p className="mt-3 text-xs opacity-70">{copy.windowsUpdates}</p>
           </> : card.platform === "linux" ? <>
           <Architecture platform="linux" label={copy.architecture} value={linuxArch} onChange={setLinuxArch} />
           <TrackedDownloadLink platform="linux" format="AppImage" arch={linuxArch}
             href={`/api/desktop/download?platform=linux&format=AppImage&arch=${linuxArch}`} className={`${ACTION} w-full`}>
-            <ArrowDownToLine className="size-4" aria-hidden />{copy.download} <span className="opacity-60">AppImage</span>
+            <AppIcon icon={ArrowDownToLine} className="size-4" aria-hidden />{copy.download} <span className="opacity-60">AppImage</span>
           </TrackedDownloadLink>
           <p className="mt-3 text-xs opacity-70">{linuxRelease[linuxArch]}</p>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3">
@@ -132,10 +134,10 @@ export function DownloadPlatformCards({ copy, macRelease, linuxRelease, mobileGu
             </span>
           </div>
           </> : card.platform === "android" && platform === "android" && canPrompt ? (
-            <button type="button" className={ACTION} onClick={() => void promptInstall()}>{copy.androidInstall}<ArrowDownToLine className="size-4" aria-hidden /></button>
+            <button type="button" className={ACTION} onClick={() => void promptInstall()}>{copy.androidInstall}<AppIcon icon={ArrowDownToLine} className="size-4" aria-hidden /></button>
           ) : (
             <a href={mobileGuideHref} className={TEXT_LINK} onClick={event => { event.preventDefault(); showMobileInstallGuide(card.platform as "ios" | "android"); }}>
-              {copy.guide}<ArrowUpRight className="size-4" aria-hidden />
+              {copy.guide}<HugeiconsIcon icon={ArrowUpRight01Icon} className="size-4" aria-hidden />
             </a>
           )}
         </PlatformCard>

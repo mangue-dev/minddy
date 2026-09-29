@@ -10,10 +10,11 @@
 // Adding is the same two steps in ONE popover as on a ticket: pick the type,
 // then the target among the project's open issues and other objectives.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, CommandGroup, CommandItem, cn, toast } from "mangue-ui";
-import { Link2, X } from "lucide-react";
 import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import {
   RELATION_PRIORITY,
@@ -134,7 +135,7 @@ export function ObjectiveRelationsSection({
               aria-label={t("addRelationAria")}
               className={cn(TRIGGER, "text-muted-foreground")}
             >
-              <Link2 className="size-4" />
+              <HugeiconsIcon icon={Link02Icon} className="size-4" />
             </button>
           }
         >
@@ -286,7 +287,7 @@ export function ObjectiveRelationsSection({
                           )
                         }
                       >
-                        <X />
+                        <HugeiconsIcon icon={Cancel01Icon} />
                       </Button>
                     </div>
                   );

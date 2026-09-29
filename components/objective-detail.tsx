@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, Delete02Icon, Mic01Icon, MoreHorizontalIcon, TaskEdit01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -20,14 +22,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import {
-  Check,
-  ChevronLeft,
-  ListTodo,
-  Mic,
-  MoreHorizontal,
-  Trash2,
-} from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { AppContentHeader } from "@/components/app-content-header";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the objectives route —
@@ -173,7 +167,7 @@ function ObjectiveColorValue({
               )}
               style={{ backgroundColor: c }}
             >
-              {value === c && <Check className="size-3.5 text-white" />}
+              {value === c && <HugeiconsIcon icon={Tick01Icon} className="size-3.5 text-white" />}
             </button>
           ))}
         </div>
@@ -398,7 +392,7 @@ export function ObjectiveDetail({
           className="md:hidden"
           onClick={onBack}
         >
-          <ChevronLeft />
+          <HugeiconsIcon icon={ArrowLeft01Icon} />
         </Button>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
@@ -427,7 +421,7 @@ export function ObjectiveDetail({
 
           <Button asChild variant="outline" size="sm">
             <Link href={issuesHref}>
-              <ListTodo />
+              <HugeiconsIcon icon={TaskEdit01Icon} />
               {t("viewLinkedIssues", {
                 issues: tIssue("entityPlural").toLowerCase(),
               })}
@@ -459,7 +453,7 @@ export function ObjectiveDetail({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon-sm" aria-label={tCommon("manage")}>
-                <MoreHorizontal />
+                <HugeiconsIcon icon={MoreHorizontalIcon} />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -467,7 +461,7 @@ export function ObjectiveDetail({
                 disabled={numoBusy}
                 onSelect={() => dictateRef.current?.toggle()}
               >
-                <Mic />
+                <HugeiconsIcon icon={Mic01Icon} />
                 {t("dictateEditTooltip")}
               </DropdownMenuItem>
               {/* Which MODIFIES the objective on one side of the line, which REMOVES it from
@@ -478,7 +472,7 @@ export function ObjectiveDetail({
                 variant="destructive"
                 onSelect={() => setConfirmDelete(true)}
               >
-                <Trash2 />
+                <HugeiconsIcon icon={Delete02Icon} />
                 {tCommon("moveToTrash")}
               </DropdownMenuItem>
             </DropdownMenuContent>

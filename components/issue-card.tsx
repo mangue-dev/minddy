@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AiAutoRotateIcon, ArrowRight01Icon, Calendar01Icon, DateTimeIcon, Delete02Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, Link02Icon, RepeatIcon, Target01Icon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
 import {
   memo,
   useCallback,
@@ -12,22 +14,8 @@ import { useRouter } from "next/navigation";
 import { useDraggable } from "@dnd-kit/core";
 import { useTranslations, useFormatter } from "next-intl";
 import { ConfirmDeleteDialog, Spinner, cn, toast } from "mangue-ui";
+import { AppIcon } from "@/components/icon";
 import { AgentBeam } from "@/components/agent-beam";
-import {
-  Calendar,
-  ChevronRight,
-  GitMerge,
-  GitPullRequest,
-  GitPullRequestDraft,
-  IterationCw,
-  Link2,
-  ListChecks,
-  Repeat,
-  Target,
-  Trash2,
-  Triangle,
-  User,
-} from "lucide-react";
 import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
 import {
   CustomPromptDialog,
@@ -248,7 +236,7 @@ function EffortPick({
     <EffortIndicator effort={value} />
   ) : (
     <span className="inline-flex items-center gap-1 text-muted-foreground/60">
-      <Triangle className="size-[18px] shrink-0" />
+      <HugeiconsIcon icon={TriangleIcon} className="size-[18px] shrink-0" />
       <span className="text-sm font-medium leading-none">–</span>
     </span>
   );
@@ -419,7 +407,7 @@ function AssigneePick({
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground/60">
-          <User className="size-3.5" />
+          <HugeiconsIcon icon={UserIcon} className="size-3.5" />
         </span>
       </TooltipTrigger>
       <TooltipContent>{tField("unassigned")}</TooltipContent>
@@ -482,9 +470,9 @@ function DueDatePick({
     return (
       <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
         {recurrence ? (
-          <Repeat className="size-3 shrink-0" />
+          <HugeiconsIcon icon={RepeatIcon} className="size-3 shrink-0" />
         ) : (
-          <Calendar className="size-3 shrink-0" />
+          <HugeiconsIcon icon={Calendar01Icon} className="size-3 shrink-0" />
         )}
         {format.dateTime(parsed, dueDateFormat(parsed, { compact: true }))}
       </span>
@@ -542,7 +530,7 @@ function PlanPick({
   const t = useTranslations("IssueUI");
   const content = (
     <>
-      <ListChecks className="size-3.5 shrink-0" />
+      <HugeiconsIcon icon={TaskDone01Icon} className="size-3.5 shrink-0" />
       <span className="tabular-nums">
         {progress.done}/{progress.total}
       </span>
@@ -595,10 +583,10 @@ function PrPick({
   const t = useTranslations("Agent");
   const merged = state === "merged";
   const draft = state === "draft";
-  const Icon = merged ? GitMerge : draft ? GitPullRequestDraft : GitPullRequest;
+  const Icon = merged ? GitMergeIcon : draft ? GitPullRequestDraftIcon : GitPullRequestIcon;
   const content = (
     <>
-      <Icon className="size-3.5 shrink-0" />
+      <AppIcon icon={Icon} className="size-3.5 shrink-0" />
       <span className="truncate">
         {merged ? t("prMerged") : draft ? t("prBadge") : t("prOpen")}
       </span>
@@ -795,7 +783,7 @@ export const IssueCardBody = memo(function IssueCardBody({
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="flex shrink-0 items-center text-blue-500 dark:text-blue-400">
-                  <IterationCw
+                  <AppIcon icon={AiAutoRotateIcon}
                     className="size-3"
                     aria-label={tCycles("inCurrentCycle")}
                   />
@@ -835,7 +823,7 @@ export const IssueCardBody = memo(function IssueCardBody({
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="flex min-w-0 items-center gap-1">
-                  <ChevronRight className="size-3 shrink-0" aria-hidden />
+                  <HugeiconsIcon icon={ArrowRight01Icon} className="size-3 shrink-0" aria-hidden />
                   <span className="truncate">
                     {issueIdentifier(projectKey, issue.number)}
                   </span>
@@ -1410,7 +1398,7 @@ const IssueCardContent = memo(function IssueCardContent({
                 "gitlab",
                 "merge",
               ],
-              icon: <GitPullRequest className="size-4" />,
+              icon: <HugeiconsIcon icon={GitPullRequestIcon} className="size-4" />,
               onSelect: openPr,
             },
           ]
@@ -1424,7 +1412,7 @@ const IssueCardContent = memo(function IssueCardContent({
               id: "relations",
               label: tRel("relations"),
               keywords: ["relation", "link", "lier", "bloc", "block"],
-              icon: <Link2 className="size-4" />,
+              icon: <HugeiconsIcon icon={Link02Icon} className="size-4" />,
               children: RELATION_TYPES.map((type) => ({
                 id: `relation-${type}`,
                 label: tRel(`action_${type}`),
@@ -1444,7 +1432,7 @@ const IssueCardContent = memo(function IssueCardContent({
               id: "set-objective",
               label: t("actionLinkObjective"),
               keywords: ["objectif", "objective", "goal", "lier", "link"],
-              icon: <Target className="size-4" />,
+              icon: <HugeiconsIcon icon={Target01Icon} className="size-4" />,
               shortcut: KEY_FOR_FIELD.objective,
               onSelect: () => openFieldAtPointer("objective"),
             },
@@ -1464,7 +1452,7 @@ const IssueCardContent = memo(function IssueCardContent({
                 "calendrier",
                 "calendar",
               ],
-              icon: <Calendar className="size-4" />,
+              icon: <HugeiconsIcon icon={DateTimeIcon} className="size-4" />,
               shortcut: KEY_FOR_FIELD.dueDate,
               onSelect: () => openFieldAtPointer("dueDate"),
             },
@@ -1484,7 +1472,7 @@ const IssueCardContent = memo(function IssueCardContent({
                 "remove",
                 "archiver",
               ],
-              icon: <Trash2 className="size-4" />,
+              icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
               separatorBefore: true,
               variant: "destructive" as const,
               onSelect: () => setConfirmDelete(true),

@@ -1,5 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { ArrowDown01Icon, ArrowRight01Icon, TextWrapIcon as WrapText } from "@hugeicons/core-free-icons";
 import {
   memo,
   useCallback,
@@ -12,7 +15,6 @@ import {
 import { flushSync } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { Badge, Checkbox, cn, SegmentedControl, toast, useIsMobile } from "mangue-ui";
-import { ChevronDown, ChevronRight, WrapText } from "lucide-react";
 import { applyPatch } from "diff";
 import { getLineAnnotationName, parsePatchFiles } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
@@ -794,9 +796,9 @@ const PrDiffFile = memo(function PrDiffFile({
           className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:bg-muted/60"
         >
           {collapsed ? (
-            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-muted-foreground" />
           ) : (
-            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+            <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0 text-muted-foreground" />
           )}
           <FilePathLabel path={file.filename} previousPath={file.previous_filename} />
           <FileStatusBadge status={fileStatusOf(file)} />
@@ -1097,7 +1099,7 @@ export function PrDiff({
                       : "border-border text-muted-foreground hover:bg-muted",
                   )}
                 >
-                  <WrapText className="size-3.5" />
+                  <AppIcon icon={WrapText} className="size-3.5" />
                 </button>
               </AppTooltip>
               <SegmentedControl

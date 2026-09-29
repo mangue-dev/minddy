@@ -1,10 +1,11 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Copy01Icon, LinkSquare01Icon, Refresh01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge, Button, Input, Spinner, cn, toast } from "mangue-ui";
-import { Check, Copy, ExternalLink, RefreshCw } from "lucide-react";
 
 /**
  * “Custom domain” section (MIN-36), shared between the settings of the
@@ -167,7 +168,7 @@ export function CustomDomainSection({
                 className="group flex w-fit items-center gap-1.5 font-mono text-xs transition-colors hover:text-brand"
               >
                 {domain.domain}
-                <ExternalLink className="size-3 opacity-60 transition-opacity group-hover:opacity-100" />
+                <HugeiconsIcon icon={LinkSquare01Icon} className="size-3 opacity-60 transition-opacity group-hover:opacity-100" />
               </a>
             ) : (
               <p className="font-mono text-xs">{domain.domain}</p>
@@ -196,7 +197,7 @@ export function CustomDomainSection({
                   disabled={busy}
                   onClick={() => void mutate(() => api<CustomDomainPayload>(`${endpoint}?refresh=1`))}
                 >
-                  {busy ? <Spinner /> : <RefreshCw className="size-3.5" />}
+                  {busy ? <Spinner /> : <HugeiconsIcon icon={Refresh01Icon} className="size-3.5" />}
                   {t("refresh")}
                 </Button>
               )}
@@ -281,9 +282,9 @@ function CopyValueButton({ value }: { value: string }) {
       }}
     >
       {copied ? (
-        <Check className="size-3.5 text-emerald-500" />
+        <HugeiconsIcon icon={Tick01Icon} className="size-3.5 text-emerald-500" />
       ) : (
-        <Copy className="size-3.5" />
+        <HugeiconsIcon icon={Copy01Icon} className="size-3.5" />
       )}
     </button>
   );

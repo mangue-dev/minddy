@@ -2255,6 +2255,16 @@ export async function requestInterrupt(runId: string): Promise<void> {
   if (error) throw new Error(`Could not request agent interruption: ${error.message}`);
 }
 
+/** Discard queued steering after an authorized stop of a Numo-owned worker. */
+export async function discardPendingWorkerMessages(runId: string): Promise<void> {
+  const { error } = await getServiceClient()
+    .from("agent_run_messages")
+    .update({ consumed_at: new Date().toISOString() })
+    .eq("run_id", runId)
+    .is("consumed_at", null);
+  if (error) throw new Error("Unable to discard stopped worker messages");
+}
+
 /** Reads the interrupt flag (poll via loop: round boundary + stream). */
 export async function readInterruptFlag(runId: string): Promise<boolean> {
   const service = getServiceClient();

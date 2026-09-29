@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Download01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -19,7 +21,6 @@ import {
   Spinner,
   toast,
 } from "mangue-ui";
-import { Download } from "lucide-react";
 import { exportIssuesApi } from "@/lib/export-api";
 import { ALL_STATUSES, CLOSED_STATUSES, type IssueStatus } from "@/lib/issue-constants";
 import { StatusIndicator } from "@/components/issue-indicators";
@@ -157,7 +158,7 @@ export function ExportIssuesDialog({
             // remaining off, rather than an error after the click.
             disabled={exporting || statuses.size === 0}
           >
-            {exporting ? <Spinner /> : <Download />}
+            {exporting ? <Spinner /> : <HugeiconsIcon icon={Download01Icon} />}
             {t("submit")}
           </Button>
         </DialogFooter>

@@ -1,16 +1,23 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AddToListIcon, Clock01Icon, Copy01Icon, MessageMultiple01Icon, Tick01Icon, WebhookIcon } from "@hugeicons/core-free-icons";
+import type { IconSvgElement } from "@hugeicons/react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Input, Textarea, toast } from "mangue-ui";
-import {
-  Check,
-  Clock,
-  Copy,
-  ListPlus,
-  MessagesSquare,
-  Webhook,
-} from "lucide-react";
+import { type SceneIcon } from "@/components/illustrations/iso-icon";
+
+function sceneIcon(icon: IconSvgElement): SceneIcon {
+  return function HugeiconsSceneIcon({ className, style }) {
+    return <HugeiconsIcon icon={icon} className={className} style={style} />;
+  };
+}
+
+const AddToListSceneIcon = sceneIcon(AddToListIcon);
+const MessageMultipleSceneIcon = sceneIcon(MessageMultiple01Icon);
+const WebhookSceneIcon = sceneIcon(WebhookIcon);
+const ClockSceneIcon = sceneIcon(Clock01Icon);
 import { NumoIcon } from "@/components/numo-icon";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import {
@@ -227,14 +234,14 @@ export function CreateIntegrationWizard({
         >
           <WizardChoiceCard
             selected={kind === "issues"}
-            icon={ListPlus}
+            icon={AddToListSceneIcon}
             label={t("integrationKind_issues")}
             description={t("integrationKindIssuesDesc")}
             onSelect={() => setKind("issues")}
           />
           <WizardChoiceCard
             selected={kind === "feedback"}
-            icon={MessagesSquare}
+            icon={MessageMultipleSceneIcon}
             label={t("integrationKind_feedback")}
             description={t("integrationKindFeedbackDesc")}
             onSelect={() => setKind("feedback")}
@@ -329,14 +336,14 @@ export function CreateIntegrationWizard({
         >
           <WizardChoiceCard
             selected={wantsWebhook === true}
-            icon={Webhook}
+            icon={WebhookSceneIcon}
             label={t("integrationWizardWebhookYes")}
             description={t("integrationWizardWebhookYesDesc")}
             onSelect={() => setWantsWebhook(true)}
           />
           <WizardChoiceCard
             selected={wantsWebhook === false}
-            icon={Clock}
+            icon={ClockSceneIcon}
             label={t("integrationWizardWebhookNo")}
             description={t("integrationWizardWebhookNoDesc")}
             onSelect={() => setWantsWebhook(false)}
@@ -372,7 +379,7 @@ export function CreateIntegrationWizard({
                 toast.success(t("keyCopied"));
               }}
             >
-              <Copy className="size-4" />
+              <HugeiconsIcon icon={Copy01Icon} className="size-4" />
             </Button>
           </div>
 
@@ -390,9 +397,9 @@ export function CreateIntegrationWizard({
                 onClick={() => void copyPrompt()}
               >
                 {copied ? (
-                  <Check className="size-4 text-emerald-500" />
+                  <HugeiconsIcon icon={Tick01Icon} className="size-4 text-emerald-500" />
                 ) : (
-                  <Copy className="size-4" />
+                  <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                 )}
                 {t("feedbackWizardCopy")}
               </Button>

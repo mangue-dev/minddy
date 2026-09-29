@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, CollapseIcon, ExpandIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -8,7 +10,6 @@ import {
   SheetContent,
   SheetTitle,
 } from "mangue-ui";
-import { Maximize2, Minimize2, X } from "lucide-react";
 import {
   panelSheetClassName,
   panelOverlayClassName,
@@ -89,9 +90,9 @@ export function AgentChatModal({
                     onClick={toggleDisplayMode}
                   >
                     {isExpanded ? (
-                      <Minimize2 className="h-4 w-4" />
+                      <HugeiconsIcon icon={CollapseIcon} className="h-4 w-4" />
                     ) : (
-                      <Maximize2 className="h-4 w-4" />
+                      <HugeiconsIcon icon={ExpandIcon} className="h-4 w-4" />
                     )}
                   </Button>
                 </TooltipTrigger>
@@ -108,7 +109,7 @@ export function AgentChatModal({
                     aria-label={tc("close")}
                     onClick={() => onOpenChange(false)}
                   >
-                    <X className="h-4 w-4" />
+                    <HugeiconsIcon icon={Cancel01Icon} className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" sideOffset={6} align="end">

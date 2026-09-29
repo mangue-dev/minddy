@@ -1,10 +1,13 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Activity01Icon, AiAutoRotateIcon, ArrowRight01Icon, Book01Icon, Book02Icon, BookOpen01Icon, BotIcon, Calendar01Icon, Cancel01Icon, DashboardSpeedIcon, Delete02Icon, FileAddIcon as FilePlus2, FileEditIcon as FilePen, FileRemoveIcon, FileSearchIcon, FileStackIcon as FileStack, FileSymlinkIcon as FileSymlink, FilterIcon, FolderTreeIcon as FolderTree, GitMergeIcon, GitPullRequestIcon, GlobeIcon, InboxIcon, LayoutGridIcon, Link02Icon, ListIcon, MailRemove01Icon, MailReply01Icon, Message01Icon, MessageCircleQuestionMarkIcon as MessageCircleQuestion, MessageMultiple01Icon, MessageProgrammingIcon, Notebook01Icon, NotebookIcon, Plug01Icon, Search01Icon, Settings02Icon, ShieldCheckIcon as ShieldCheck, SlidersHorizontalIcon, SparklesIcon, Tag01Icon, TagsIcon, Target01Icon, TaskDone01Icon, TerminalIcon as Terminal, TickDouble01Icon, Undo02Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
 import { matchAskUserAnswers, parseAskUserQuestions } from "@/lib/ask-user";
+import { AppIcon } from "@/components/icon";
 import { SeedProposalCard } from "./seed-proposal-card";
 import { liveSecretOf, SecretCallout } from "./secret-callout";
 import type { DelegatedWorkCall } from "./delegated-work-card";
@@ -12,62 +15,6 @@ import { isDelegatedWorkToolCall } from "@/lib/delegated-work-state";
 import { useGroupedActions } from "./grouped-actions-context";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { SeedProposal } from "@/lib/seed/types";
-import {
-  Activity,
-  BookOpen,
-  BookPlus,
-  BookText,
-  Bot,
-  CalendarClock,
-  CheckCheck,
-  ChevronRight,
-  ClipboardCheck,
-  FilePen,
-  FilePlus2,
-  FileSearch,
-  FileStack,
-  FileSymlink,
-  FileX,
-  Filter,
-  FolderTree,
-  Gauge,
-  GitMerge,
-  GitPullRequest,
-  GitPullRequestCreate,
-  Globe,
-  Inbox,
-  IterationCw,
-  LayoutGrid,
-  Link2,
-  List,
-  ListChecks,
-  MailX,
-  MessageCircleQuestion,
-  MessageSquare,
-  MessageSquareCode,
-  MessagesSquare,
-  Notebook,
-  NotebookPen,
-  Plug,
-  Reply,
-  RotateCcw,
-  Search,
-  Settings2,
-  ShieldCheck,
-  SlidersHorizontal,
-  Sparkles,
-  Tag,
-  Tags,
-  Target,
-  Terminal,
-  Trash2,
-  User,
-  UserCog,
-  UserMinus,
-  UserPlus,
-  Users,
-  X,
-} from "lucide-react";
 
 export interface ToolCallItem {
   id: string;
@@ -127,7 +74,7 @@ function seedProposalOf(
 type TranslateFn = ReturnType<typeof useTranslations<"ToolCall">>;
 
 interface ToolMeta {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: AppIcon;
   getLabel: (
     args: Record<string, unknown>,
     result: Record<string, unknown> | undefined,
@@ -169,7 +116,7 @@ function resultCount(
  * flat summary that `toolArgSummary` persists for an agent run (`count`).
  */
 const SCRATCHPAD_TASKS_META: ToolMeta = {
-  icon: ListChecks,
+  icon: TaskDone01Icon,
   getLabel: (args, result, success, status, t) => {
     if (status === "running") return t("updatingScratchpadTasks");
     if (!success) return t("updateScratchpadTasksFailed");
@@ -190,7 +137,7 @@ const SCRATCHPAD_TASKS_META: ToolMeta = {
  * `read_page` (code agent) — same gesture, same line in the thread.
  */
 const PAGE_READ_META: ToolMeta = {
-  icon: BookText,
+  icon: Book02Icon,
   getLabel: (_args, result, success, status, t) => {
     if (status === "running") return t("loadingPage");
     if (!success) return t("pageNotFound");
@@ -201,7 +148,7 @@ const PAGE_READ_META: ToolMeta = {
 
 /** Reading feedback from the board. `get_feedback` (Numo) and `read_feedback` (agent). */
 const FEEDBACK_READ_META: ToolMeta = {
-  icon: MessagesSquare,
+  icon: MessageMultiple01Icon,
   getLabel: (_args, _result, success, status, t) => {
     if (status === "running") return t("loadingFeedbackPost");
     return success ? t("feedbackPostLoaded") : t("feedbackPostNotFound");
@@ -247,14 +194,14 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   list_projects: {
-    icon: LayoutGrid,
+    icon: LayoutGridIcon,
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingProjects");
       return t("foundProjects", { count: resultCount(result, "projects") });
     },
   },
   list_inbox: {
-    icon: Inbox,
+    icon: InboxIcon,
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingInbox");
       return t("foundInboxNotifications", {
@@ -263,14 +210,14 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   list_issues: {
-    icon: List,
+    icon: ListIcon,
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingIssues");
       return t("foundIssues", { count: resultCount(result, "issues") });
     },
   },
   search_issues: {
-    icon: Search,
+    icon: Search01Icon,
     getLabel: (args, result, _success, status, t) => {
       if (status === "running")
         return t("searchingIssues", { query: queryLabel(args) });
@@ -278,7 +225,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   get_issue: {
-    icon: FileSearch,
+    icon: FileSearchIcon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("loadingIssue");
       if (!success) return t("issueNotFound");
@@ -291,35 +238,35 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   list_members: {
-    icon: Users,
+    icon: UserGroupIcon,
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingMembers");
       return t("foundMembers", { count: resultCount(result, "members") });
     },
   },
   get_objective: {
-    icon: Target,
+    icon: Target01Icon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("loadingObjectives");
       return t("foundObjectives", { count: success && result?.objective ? 1 : 0 });
     },
   },
   list_objectives: {
-    icon: Target,
+    icon: Target01Icon,
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingObjectives");
       return t("foundObjectives", { count: resultCount(result, "objectives") });
     },
   },
   list_categories: {
-    icon: Tags,
+    icon: TagsIcon,
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingCategories");
       return t("foundCategories", { count: resultCount(result, "categories") });
     },
   },
   list_views: {
-    icon: SlidersHorizontal,
+    icon: SlidersHorizontalIcon,
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingViews");
       return t("foundViews", { count: resultCount(result, "views") });
@@ -342,7 +289,7 @@ const TOOL_META: Record<string, ToolMeta> = {
   // is displayed as a map (see below); this line is what one remains
   // once the conversation starts again.
   propose_backlog: {
-    icon: Sparkles,
+    icon: SparklesIcon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("proposingBacklog");
       if (!success) return t("proposeBacklogFailed");
@@ -362,14 +309,14 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   append_to_plan: {
-    icon: ListChecks,
+    icon: TaskDone01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("appendingToPlan");
       return success ? t("planAppended") : t("appendToPlanFailed");
     },
   },
   update_plan_tasks: {
-    icon: ListChecks,
+    icon: TaskDone01Icon,
     getLabel: (args, result, success, status, t) => {
       if (status === "running") return t("updatingPlanTasks");
       if (!success) return t("updatePlanTasksFailed");
@@ -396,14 +343,14 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   // ── Pages: the project wiki (MIN-273) ─────────────────────────────────
   list_pages: {
-    icon: BookOpen,
+    icon: BookOpen01Icon,
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingPages");
       return t("foundPages", { count: resultCount(result, "pages") });
     },
   },
   search_pages: {
-    icon: BookOpen,
+    icon: BookOpen01Icon,
     getLabel: (args, result, _success, status, t) => {
       const query = typeof args.query === "string" ? args.query.trim() : "";
       if (status === "running")
@@ -413,7 +360,7 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   get_page: PAGE_READ_META,
   create_page: {
-    icon: BookPlus,
+    icon: Book01Icon,
     getLabel: (args, _result, success, status, t) => {
       const title = typeof args.title === "string" ? args.title.trim() : "";
       if (status === "running") return t("creatingPage");
@@ -422,21 +369,21 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   update_page_database: {
-    icon: BookText,
+    icon: Book02Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("updatingPage");
       return success ? t("pageUpdated") : t("updatePageFailed");
     },
   },
   update_page: {
-    icon: BookText,
+    icon: Book02Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("updatingPage");
       return success ? t("pageUpdated") : t("updatePageFailed");
     },
   },
   append_to_page: {
-    icon: BookPlus,
+    icon: Book01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("appendingToPage");
       return success ? t("pageAppended") : t("appendToPageFailed");
@@ -450,28 +397,28 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   set_issue_categories: {
-    icon: Tags,
+    icon: TagsIcon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("settingCategories");
       return success ? t("categoriesSet") : t("setCategoriesFailed");
     },
   },
   add_comment: {
-    icon: MessageSquare,
+    icon: Message01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("addingComment");
       return success ? t("commentAdded") : t("addCommentFailed");
     },
   },
   add_resource: {
-    icon: Link2,
+    icon: Link02Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("addingResource");
       return success ? t("resourceAdded") : t("addResourceFailed");
     },
   },
   create_view: {
-    icon: SlidersHorizontal,
+    icon: SlidersHorizontalIcon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("creatingView");
       if (!success) return t("createViewFailed");
@@ -481,14 +428,14 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   update_view: {
-    icon: SlidersHorizontal,
+    icon: SlidersHorizontalIcon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("updatingView");
       return success ? t("viewUpdated") : t("updateViewFailed");
     },
   },
   create_objective: {
-    icon: Target,
+    icon: Target01Icon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("creatingObjective");
       if (!success) return t("createObjectiveFailed");
@@ -501,7 +448,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   update_objective: {
-    icon: Target,
+    icon: Target01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("updatingObjective");
       return success ? t("objectiveUpdated") : t("updateObjectiveFailed");
@@ -513,7 +460,7 @@ const TOOL_META: Record<string, ToolMeta> = {
   // therefore falls back on the wording without a name where the thread does not carry the
   // results.
   read_objective: {
-    icon: Target,
+    icon: Target01Icon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("loadingObjective");
       if (!success) return t("objectiveNotFound");
@@ -526,14 +473,14 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   comment_objective: {
-    icon: MessageSquare,
+    icon: Message01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("commentingObjective");
       return success ? t("objectiveCommented") : t("commentObjectiveFailed");
     },
   },
   create_category: {
-    icon: Tag,
+    icon: Tag01Icon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("creatingCategory");
       if (!success) return t("createCategoryFailed");
@@ -545,7 +492,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   triage_decision: {
-    icon: Filter,
+    icon: FilterIcon,
     getLabel: (args, _result, success, status, t) => {
       if (status === "running") return t("applyingTriage");
       if (!success) return t("triageFailed");
@@ -557,70 +504,70 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   update_project: {
-    icon: Settings2,
+    icon: Settings02Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("updatingProject");
       return success ? t("projectUpdated") : t("updateProjectFailed");
     },
   },
   invite_member: {
-    icon: UserPlus,
+    icon: UserAdd01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("invitingMember");
       return success ? t("memberInvited") : t("inviteMemberFailed");
     },
   },
   remove_member: {
-    icon: UserMinus,
+    icon: UserMinus01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("removingMember");
       return success ? t("memberRemoved") : t("removeMemberFailed");
     },
   },
   cancel_invitation: {
-    icon: MailX,
+    icon: MailRemove01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("cancellingInvitation");
       return success ? t("invitationCancelled") : t("cancelInvitationFailed");
     },
   },
   update_category: {
-    icon: Tag,
+    icon: Tag01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("updatingCategory");
       return success ? t("categoryUpdated") : t("updateCategoryFailed");
     },
   },
   create_integration: {
-    icon: Plug,
+    icon: Plug01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("creatingIntegration");
       return success ? t("integrationCreated") : t("createIntegrationFailed");
     },
   },
   update_integration_webhook: {
-    icon: Plug,
+    icon: Plug01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("updatingWebhook");
       return success ? t("webhookUpdated") : t("updateWebhookFailed");
     },
   },
   revoke_integration: {
-    icon: Plug,
+    icon: Plug01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("revokingIntegration");
       return success ? t("integrationRevoked") : t("revokeIntegrationFailed");
     },
   },
   get_feedback_board: {
-    icon: Globe,
+    icon: GlobeIcon,
     getLabel: (_args, _result, _success, status, t) => {
       if (status === "running") return t("loadingFeedbackBoard");
       return t("feedbackBoardLoaded");
     },
   },
   configure_feedback_board: {
-    icon: Globe,
+    icon: GlobeIcon,
     getLabel: (args, _result, success, status, t) => {
       if (status === "running") return t("configuringFeedbackBoard");
       if (!success) return t("configureFeedbackBoardFailed");
@@ -631,7 +578,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   list_integrations: {
-    icon: Plug,
+    icon: Plug01Icon,
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingIntegrations");
       return t("foundIntegrations", {
@@ -640,7 +587,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   link_issues: {
-    icon: Link2,
+    icon: Link02Icon,
     getLabel: (args, _result, success, status, t) => {
       const removing = args.remove === true;
       if (status === "running")
@@ -652,7 +599,7 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   // ── Feedback ─────────────────────────────────────────────────────────
   list_feedback: {
-    icon: MessagesSquare,
+    icon: MessageMultiple01Icon,
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingFeedback");
       return t("foundFeedback", { count: resultCount(result, "feedback") });
@@ -673,21 +620,21 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   link_feedback_to_issue: {
-    icon: Link2,
+    icon: Link02Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("linkingFeedback");
       return success ? t("feedbackLinked") : t("linkFeedbackFailed");
     },
   },
   unlink_feedback: {
-    icon: Link2,
+    icon: Link02Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("unlinkingFeedback");
       return success ? t("feedbackUnlinked") : t("unlinkFeedbackFailed");
     },
   },
   add_feedback_comment: {
-    icon: MessagesSquare,
+    icon: MessageMultiple01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("addingFeedbackComment");
       return success
@@ -696,7 +643,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   respond_to_feedback: {
-    icon: MessagesSquare,
+    icon: MessageMultiple01Icon,
     getLabel: (args, _result, success, status, t) => {
       // The VIDED public response is not a published response: it is its
       // indent, and that's what the user should read in the thread.
@@ -712,14 +659,14 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   // ── Agent de code & pull requests ────────────────────────────────────
   list_agent_models: {
-    icon: Bot,
+    icon: BotIcon,
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingAgentModels");
       return t("foundAgentModels", { count: resultCount(result, "models") });
     },
   },
   launch_code_agent: {
-    icon: Sparkles,
+    icon: SparklesIcon,
     getLabel: (args, result, success, status, t) => {
       if (status === "running") return t("launchingCodeAgent");
       if (!success) return t("launchCodeAgentFailed");
@@ -735,7 +682,7 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   // ── Routines (MIN-185) ───────────────────────────────────────────────
   create_routine: {
-    icon: CalendarClock,
+    icon: Calendar01Icon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("creatingRoutine");
       if (!success) return t("createRoutineFailed");
@@ -748,14 +695,14 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   list_routines: {
-    icon: CalendarClock,
+    icon: Calendar01Icon,
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingRoutines");
       return t("foundRoutines", { count: resultCount(result, "routines") });
     },
   },
   update_routine: {
-    icon: CalendarClock,
+    icon: Calendar01Icon,
     getLabel: (args, _result, success, status, t) => {
       if (status === "running") return t("updatingRoutine");
       if (!success) return t("updateRoutineFailed");
@@ -767,21 +714,21 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   // ── Routine runs (MIN-589) ─────────────────────────────────────────────
   list_routine_runs: {
-    icon: CalendarClock,
+    icon: Calendar01Icon,
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingRoutineRuns");
       return t("foundRoutineRuns", { count: resultCount(result, "runs") });
     },
   },
   read_routine_occurrence: {
-    icon: CalendarClock,
+    icon: Calendar01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("loadingRoutineOccurrence");
       return success ? t("routineOccurrenceLoaded") : t("routineOccurrenceNotFound");
     },
   },
   read_pull_request: {
-    icon: GitPullRequest,
+    icon: GitPullRequestIcon,
     getLabel: (args, result, success, status, t) => {
       if (status === "running") return t("loadingPullRequest");
       if (!success) return t("pullRequestNotFound");
@@ -795,7 +742,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   link_pull_request: {
-    icon: GitPullRequest,
+    icon: GitPullRequestIcon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("linkingPullRequest");
       return success ? t("pullRequestLinked") : t("linkPullRequestFailed");
@@ -803,7 +750,7 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   // ── PR management without touching the code (MIN-550) ─────────────────
   merge_pull_request: {
-    icon: GitMerge,
+    icon: GitMergeIcon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("mergingPullRequest");
       if (!success) return t("mergePullRequestFailed");
@@ -821,21 +768,21 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   post_pull_request_comment: {
-    icon: MessageSquare,
+    icon: Message01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("postingPrComment");
       return success ? t("prCommentPosted") : t("prCommentFailed");
     },
   },
   edit_own_pull_request_comment: {
-    icon: MessagesSquare,
+    icon: MessageMultiple01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("editingPrComment");
       return success ? t("prCommentEdited") : t("editPrCommentFailed");
     },
   },
   resolve_pull_request_threads: {
-    icon: CheckCheck,
+    icon: TickDouble01Icon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("resolvingPrConversations");
       if (!success) return t("resolvePrConversationsFailed");
@@ -859,7 +806,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   resolve_pull_request_thread: {
-    icon: CheckCheck,
+    icon: TickDouble01Icon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("resolvingPrConversation");
       if (!success) return t("resolvePrConversationFailed");
@@ -870,56 +817,56 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   // ── Corbeille (MIN-133) ──────────────────────────────────────────────
   list_trash: {
-    icon: Trash2,
+    icon: Delete02Icon,
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingTrash");
       return t("foundTrashItems", { count: resultCount(result, "items") });
     },
   },
   move_to_trash: {
-    icon: Trash2,
+    icon: Delete02Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("movingToTrash");
       return success ? t("movedToTrash") : t("moveToTrashFailed");
     },
   },
   restore_from_trash: {
-    icon: RotateCcw,
+    icon: Undo02Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("restoringFromTrash");
       return success ? t("restoredFromTrash") : t("restoreFromTrashFailed");
     },
   },
   list_global_filter_options: {
-    icon: SlidersHorizontal,
+    icon: SlidersHorizontalIcon,
     getLabel: (_args, _result, _success, status, t) => {
       if (status === "running") return t("loadingFilterOptions");
       return t("filterOptionsLoaded");
     },
   },
   get_account_settings: {
-    icon: User,
+    icon: UserIcon,
     getLabel: (_args, _result, _success, status, t) => {
       if (status === "running") return t("loadingAccountSettings");
       return t("accountSettingsLoaded");
     },
   },
   get_user_stats: {
-    icon: Activity,
+    icon: Activity01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("loadingUserStats");
       return success ? t("userStatsLoaded") : t("loadUserStatsFailed");
     },
   },
   get_plan_usage: {
-    icon: Gauge,
+    icon: DashboardSpeedIcon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("loadingPlanUsage");
       return success ? t("planUsageLoaded") : t("loadPlanUsageFailed");
     },
   },
   update_account_settings: {
-    icon: UserCog,
+    icon: UserSettings01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("updatingAccountSettings");
       return success
@@ -928,14 +875,14 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   get_cycle: {
-    icon: IterationCw,
+    icon: AiAutoRotateIcon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("loadingCycle");
       return success ? t("cycleLoaded") : t("loadCycleFailed");
     },
   },
   fill_cycle: {
-    icon: IterationCw,
+    icon: AiAutoRotateIcon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("fillingCycle");
       if (!success) return t("fillCycleFailed");
@@ -944,7 +891,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   add_issues_to_cycle: {
-    icon: IterationCw,
+    icon: AiAutoRotateIcon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("addingToCycle");
       if (!success) return t("addToCycleFailed");
@@ -953,7 +900,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   move_issues: {
-    icon: IterationCw,
+    icon: AiAutoRotateIcon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("movingBetweenCycles");
       if (!success) return t("moveBetweenCyclesFailed");
@@ -962,7 +909,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   remove_issues_from_cycle: {
-    icon: IterationCw,
+    icon: AiAutoRotateIcon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("removingFromCycle");
       if (!success) return t("removeFromCycleFailed");
@@ -971,14 +918,14 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   get_scratchpad: {
-    icon: Notebook,
+    icon: NotebookIcon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("loadingScratchpad");
       return success ? t("scratchpadLoaded") : t("loadScratchpadFailed");
     },
   },
   add_scratchpad_tasks: {
-    icon: NotebookPen,
+    icon: Notebook01Icon,
     getLabel: (args, result, success, status, t) => {
       if (status === "running") return t("addingScratchpadTasks");
       if (!success) return t("addScratchpadTasksFailed");
@@ -996,28 +943,28 @@ const TOOL_META: Record<string, ToolMeta> = {
   update_scratchpad_tasks: SCRATCHPAD_TASKS_META,
   update_scratchpad_task: SCRATCHPAD_TASKS_META,
   set_scratchpad: {
-    icon: NotebookPen,
+    icon: Notebook01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("updatingScratchpad");
       return success ? t("scratchpadUpdated") : t("updateScratchpadFailed");
     },
   },
   list_mcp_tools: {
-    icon: Plug,
+    icon: Plug01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("listingMcpTools");
       return success ? t("mcpToolsListed") : t("listMcpToolsFailed");
     },
   },
   list_mcp_presets: {
-    icon: Plug,
+    icon: Plug01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("listingMcpPresets");
       return success ? t("mcpPresetsListed") : t("listMcpPresetsFailed");
     },
   },
   configure_mcp_connection: {
-    icon: Plug,
+    icon: Plug01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("configuringMcpConnection");
       return success
@@ -1026,7 +973,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   call_mcp_tool: {
-    icon: Plug,
+    icon: Plug01Icon,
     getLabel: (args, _result, success, status, t) => {
       // The wrapper tool carries the REAL MCP tool in its arguments
       // (`lib/mcp-client-tools.ts`): naming it is the whole point of the
@@ -1056,7 +1003,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   web_search: {
-    icon: Globe,
+    icon: GlobeIcon,
     getLabel: (args, result, success, status, t) => {
       const query = queryLabel(args);
       if (status === "running") return t("searchingWeb", { query });
@@ -1079,7 +1026,7 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   // ── Code agent (MIN-46): same tool-call lines as Numo. ──────────
   read_file: {
-    icon: FileSearch,
+    icon: FileSearchIcon,
     getLabel: (args, _r, _s, _st, t) =>
       t("agentReadFile", { path: (args.path as string) || "…" }),
   },
@@ -1089,12 +1036,12 @@ const TOOL_META: Record<string, ToolMeta> = {
       t("agentListDir", { path: (args.path as string) || "…" }),
   },
   glob: {
-    icon: FileSearch,
+    icon: FileSearchIcon,
     getLabel: (args, _r, _s, _st, t) =>
       t("agentGlob", { pattern: (args.pattern as string) || "…" }),
   },
   grep: {
-    icon: Search,
+    icon: Search01Icon,
     getLabel: (args, _r, _s, _st, t) =>
       t("agentGrep", { pattern: (args.pattern as string) || "…" }),
   },
@@ -1134,7 +1081,7 @@ const TOOL_META: Record<string, ToolMeta> = {
       }),
   },
   delete_file: {
-    icon: FileX,
+    icon: FileRemoveIcon,
     getLabel: (args, _r, _s, _st, t) =>
       t("agentDeleteFile", { path: (args.path as string) || "…" }),
   },
@@ -1147,20 +1094,20 @@ const TOOL_META: Record<string, ToolMeta> = {
   // `add_scratchpad_tasks` and `set_scratchpad` reuse the entries as is
   // from Numo above: same names, same forms of result.
   read_issue: {
-    icon: FileSearch,
+    icon: FileSearchIcon,
     getLabel: (args, _r, _s, _st, t) => {
       const issue = targetIssue(args);
       return issue ? t("agentReadIssueTarget", { issue }) : t("agentReadIssue");
     },
   },
   read_resource: {
-    icon: FileSearch,
+    icon: FileSearchIcon,
     getLabel: (_a, _r, _s, _st, t) => t("agentReadResource"),
   },
   // The name before MIN-184: the runs already carried out carry it in their
   // events, and a replay should not show an unlabeled call.
   read_attachment: {
-    icon: FileSearch,
+    icon: FileSearchIcon,
     getLabel: (_a, _r, _s, _st, t) => t("agentReadResource"),
   },
   update_issue: {
@@ -1182,11 +1129,11 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   read_scratchpad: {
-    icon: Notebook,
+    icon: NotebookIcon,
     getLabel: (_a, _r, _s, _st, t) => t("agentReadScratchpad"),
   },
   run_background: {
-    icon: Activity,
+    icon: Activity01Icon,
     // One line per ACTION: “launch npm run dev” and “probe bg-1” do not tell
     // not the same thing. `job_id` comes from template arguments (start doesn't have any
     // again) or the result, which carries it for the three actions.
@@ -1203,7 +1150,7 @@ const TOOL_META: Record<string, ToolMeta> = {
   // thinking_effort }`: the line says what was delegated and to whom, otherwise a turn
   // who delegates only displays an anonymous “Processing…”.
   spawn_agent: {
-    icon: Bot,
+    icon: BotIcon,
     getLabel: (args, _result, success, status, t) => {
       if (!success && status === "complete") return t("agentSpawnRefused");
       const task = typeof args.task === "string" ? args.task.trim() : "";
@@ -1214,12 +1161,12 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   agent_status: {
-    icon: Activity,
+    icon: Activity01Icon,
     getLabel: (args, _r, _s, _st, t) =>
       t("agentSubagentStatus", { id: (args.id as string) || "…" }),
   },
   list_agents: {
-    icon: Bot,
+    icon: BotIcon,
     // Worded WITHOUT consideration, deliberately. `list_agents` has no arguments, and the
     // thread of an agent run does NOT carry the result of tools: `buildFeed`
     // only keeps `{status, success}` per tool-call. Wording that would read
@@ -1233,7 +1180,7 @@ const TOOL_META: Record<string, ToolMeta> = {
   // `webfetch` arrives under the name of opencode: it has no opposite house,
   // so no name to translate ([opencode-events.ts](lib/server/agent/vm/opencode-events.ts)).
   webfetch: {
-    icon: Globe,
+    icon: GlobeIcon,
     getLabel: (args, _r, _s, _st, t) =>
       t("agentWebFetch", { url: (args.url as string) || "…" }),
   },
@@ -1250,7 +1197,7 @@ const TOOL_META: Record<string, ToolMeta> = {
   // was doing. The title comes from the arguments, which `toolArgSummary` persists; A
   // failure (nothing to deliver, PR refused to reopen) is said, it cannot be guessed.
   create_pr: {
-    icon: GitPullRequestCreate,
+    icon: GitPullRequestIcon,
     getLabel: (args, _result, success, status, t) => {
       if (status === "complete" && !success) return t("agentCreatePrFailed");
       const raw = typeof args.title === "string" ? args.title.trim() : "";
@@ -1259,7 +1206,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   validate_changes: {
-    icon: ClipboardCheck,
+    icon: TaskDone01Icon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("validatingChanges");
       return success ? t("changesValidated") : t("validateChangesFailed");
@@ -1268,14 +1215,14 @@ const TOOL_META: Record<string, ToolMeta> = {
   // The three writings of a REREADING session (MIN-168): the pull request
   // is that of the session, so never a number.
   comment_pr: {
-    icon: MessageSquare,
+    icon: Message01Icon,
     getLabel: (_a, _r, success, status, t) =>
       status === "complete" && !success
         ? t("agentCommentPrFailed")
         : t("agentCommentPr"),
   },
   comment_pr_line: {
-    icon: MessageSquareCode,
+    icon: MessageProgrammingIcon,
     getLabel: (args, _r, success, status, t) => {
       if (status === "complete" && !success)
         return t("agentCommentPrLineFailed");
@@ -1286,7 +1233,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   reply_pr_thread: {
-    icon: Reply,
+    icon: MailReply01Icon,
     getLabel: (_a, _r, success, status, t) =>
       status === "complete" && !success
         ? t("agentReplyPrThreadFailed")
@@ -1294,11 +1241,11 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   // PROJECT pull requests (MIN-267): these have a number.
   list_pull_requests: {
-    icon: GitPullRequest,
+    icon: GitPullRequestIcon,
     getLabel: (_a, _r, _s, _st, t) => t("agentListPullRequests"),
   },
   comment_pull_request: {
-    icon: MessageSquare,
+    icon: Message01Icon,
     getLabel: (args, _r, success, status, t) => {
       if (status === "complete" && !success) return t("agentCommentPrFailed");
       const number = prNumber(args);
@@ -1308,7 +1255,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   comment_pull_request_line: {
-    icon: MessageSquareCode,
+    icon: MessageProgrammingIcon,
     getLabel: (args, _r, success, status, t) => {
       if (status === "complete" && !success)
         return t("agentCommentPrLineFailed");
@@ -1319,7 +1266,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   reply_pull_request_thread: {
-    icon: Reply,
+    icon: MailReply01Icon,
     getLabel: (_a, _r, success, status, t) =>
       status === "complete" && !success
         ? t("agentReplyPrThreadFailed")
@@ -1328,7 +1275,7 @@ const TOOL_META: Record<string, ToolMeta> = {
   // The VERDICT carries the information: an approval and a request for
   // modifications do not commit the same thing, and the forge records them.
   review_pull_request: {
-    icon: ClipboardCheck,
+    icon: TaskDone01Icon,
     getLabel: (args, _r, success, status, t) => {
       if (status === "complete" && !success) return t("agentReviewPrFailed");
       const number = prNumber(args) ?? 0;
@@ -1342,7 +1289,7 @@ const TOOL_META: Record<string, ToolMeta> = {
   // Merging is irreversible: the line NAMES it rather than saying
   // “pull request update”.
   set_pull_request_state: {
-    icon: GitMerge,
+    icon: GitMergeIcon,
     getLabel: (args, _r, success, status, t) => {
       if (status === "complete" && !success) return t("agentSetPrStateFailed");
       const number = prNumber(args) ?? 0;
@@ -1354,7 +1301,7 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
 };
 
-const DEFAULT_ICON = LayoutGrid;
+const DEFAULT_ICON = LayoutGridIcon;
 
 function getDefaultLabel(status: string, t: TranslateFn): string {
   if (status === "running") return t("processing");
@@ -1534,13 +1481,11 @@ function AskUserSummaryRow({
         onClick={() => setOpen((o) => !o)}
         className="group h-auto w-full justify-start gap-2 bg-transparent px-0 py-0.5 text-left text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
       >
-        <ChevronRight
-          className={cn(
-            "h-3 w-3 shrink-0 transition-transform",
-            open && "rotate-90",
-          )}
-        />
-        <MessageCircleQuestion className="h-3 w-3 shrink-0" />
+        <HugeiconsIcon icon={ArrowRight01Icon} className={cn(
+                          "h-3 w-3 shrink-0 transition-transform",
+                          open && "rotate-90",
+                        )} />
+        <AppIcon icon={MessageCircleQuestion} className="h-3 w-3 shrink-0" />
         <span className="flex-1 truncate">{label}</span>
       </Button>
       {open && (
@@ -1574,7 +1519,7 @@ function ToolCallRow({ item, t }: { item: ToolCallItem; t: TranslateFn }) {
         isError ? "text-destructive" : "text-muted-foreground",
       )}
     >
-      <Icon className="h-3 w-3 shrink-0" />
+      <AppIcon icon={Icon} className="h-3 w-3 shrink-0" />
       {/* Action IN PROGRESS → the label itself shimmer (no spinner: the text
  which breathes already says “it spins”, without adding a rotating object). */}
       <span
@@ -1585,7 +1530,7 @@ function ToolCallRow({ item, t }: { item: ToolCallItem; t: TranslateFn }) {
       >
         {label}
       </span>
-      {isError ? <X className="h-3 w-3 shrink-0" /> : null}
+      {isError ? <HugeiconsIcon icon={Cancel01Icon} className="h-3 w-3 shrink-0" /> : null}
     </div>
   );
 }
@@ -1673,12 +1618,10 @@ export function ToolCallList({
               : "text-muted-foreground hover:text-foreground",
           )}
         >
-          <ChevronRight
-            className={cn(
-              "h-3 w-3 shrink-0 transition-transform",
-              expanded && "rotate-90",
-            )}
-          />
+          <HugeiconsIcon icon={ArrowRight01Icon} className={cn(
+                              "h-3 w-3 shrink-0 transition-transform",
+                              expanded && "rotate-90",
+                            )} />
           <span className={cn("flex-1 truncate", anyRunning && "text-shimmer")}>
             {label}
           </span>

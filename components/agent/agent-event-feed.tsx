@@ -1,5 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { Alert01Icon, ArrowDown01Icon, BrainIcon, CancelCircleIcon as CircleSlash, CloudIcon, CloudLoadingIcon, GitCommitIcon } from "@hugeicons/core-free-icons";
 import {
   useCallback,
   useLayoutEffect,
@@ -9,15 +12,6 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
-import {
-  AlertTriangle,
-  ArrowDown,
-  Brain,
-  CircleSlash,
-  Cloud,
-  CloudOff,
-  GitCommit,
-} from "lucide-react";
 import { ChatMessage } from "@/components/assistant/chat-message";
 import { WorkAccordion } from "@/components/assistant/work-accordion";
 import { WorkEvents } from "@/components/assistant/work-events";
@@ -980,7 +974,7 @@ function InterruptedRow() {
   const t = useTranslations("Agent");
   return (
     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-      <CircleSlash className="size-3 shrink-0" />
+      <AppIcon icon={CircleSlash} className="size-3 shrink-0" />
       {t("turnInterrupted")}
     </div>
   );
@@ -1029,7 +1023,7 @@ function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
     const key = item.code ? ERROR_CODE_KEYS[item.code] : undefined;
     return (
       <div className="flex items-start gap-2 text-sm text-destructive">
-        <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+        <HugeiconsIcon icon={Alert01Icon} className="mt-0.5 size-4 shrink-0" />
         <span className="whitespace-pre-wrap">{key ? t(key) : item.text}</span>
       </div>
     );
@@ -1037,7 +1031,7 @@ function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
   if (item.variant === "reasoningUnsupported") {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <Brain className="size-3 shrink-0" />
+        <HugeiconsIcon icon={BrainIcon} className="size-3 shrink-0" />
         {t("reasoningUnsupported")}
       </div>
     );
@@ -1045,7 +1039,7 @@ function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
   if (item.variant === "providerRetry") {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <CloudOff className="size-3 shrink-0" />
+        <HugeiconsIcon icon={CloudLoadingIcon} className="size-3 shrink-0" />
         {t("providerRetry")}
       </div>
     );
@@ -1053,7 +1047,7 @@ function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
   if (item.variant === "localDeclined") {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <Cloud className="size-3 shrink-0" />
+        <HugeiconsIcon icon={CloudIcon} className="size-3 shrink-0" />
         {t(LOCAL_DECLINED_KEYS[item.code ?? ""] ?? "localDeclined")}
       </div>
     );
@@ -1061,7 +1055,7 @@ function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
   if (item.variant === "currentRepoOverlap") {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <GitCommit className="size-3 shrink-0" />
+        <HugeiconsIcon icon={GitCommitIcon} className="size-3 shrink-0" />
         {t("currentRepoOverlap", { count: item.count ?? 0 })}
       </div>
     );
@@ -1069,7 +1063,7 @@ function NoteRow({ item }: { item: Extract<FeedItem, { kind: "note" }> }) {
   // commit
   return (
     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-      <GitCommit className="size-4 shrink-0" />
+      <HugeiconsIcon icon={GitCommitIcon} className="size-4 shrink-0" />
       {t("commitLabel")}
     </div>
   );
@@ -1464,7 +1458,7 @@ export function AgentEventFeed({
               onClick={scrollToEnd}
               className="rounded-full bg-background shadow-sm dark:bg-background dark:hover:bg-muted"
             >
-              <ArrowDown className="size-4" />
+              <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
             </Button>
           </AppTooltip>
         </div>

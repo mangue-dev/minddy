@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
-import { Command, FileText, Layers, MessagesSquare, NotebookPen, Target } from "lucide-react";
+import { AppIcon } from "@/components/icon";
+import { CommandIcon as Command, FileTextIcon as FileText, LayersIcon as Layers, MessageMultiple01Icon as MessagesSquare, NotebookPenIcon as NotebookPen, Target01Icon as Target } from "@hugeicons/core-free-icons";
 import { SmartFillIcon } from "@/components/smart-icons";
 import { ScreenshotSlot } from "./screenshot-slot";
 import { FeatureDisclosure } from "./feature-disclosure";
@@ -69,7 +70,7 @@ export async function SectionWorkspace() {
               {card.id === "scratchpad" ? (
                 <div className="grid h-full items-center gap-8 px-6 py-8 sm:px-8 lg:grid-cols-2">
                   <div className="flex h-full flex-col">
-                    <card.icon className="mb-5 size-5 shrink-0" strokeWidth={1.5} aria-hidden />
+                    <AppIcon icon={card.icon} className="mb-5 size-5 shrink-0" strokeWidth={1.5} aria-hidden />
                     <h3 className="text-xl font-medium tracking-tight sm:text-2xl">{card.title}</h3>
                     <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{card.description}</p>
                   </div>
@@ -77,7 +78,7 @@ export async function SectionWorkspace() {
                 </div>
               ) : (
                 <div className="flex h-full flex-col px-6 pt-6 pb-20 sm:px-8 sm:pt-8">
-                  <card.icon className={`mb-5 shrink-0 ${card.id === "smart" ? "h-4 w-8" : "size-5"}`} strokeWidth={1.5} aria-hidden />
+                  <AppIcon icon={card.icon} className={`mb-5 shrink-0 ${card.id === "smart" ? "h-4 w-8" : "size-5"}`} strokeWidth={1.5} aria-hidden />
                   <h3 className="text-xl font-medium tracking-tight sm:text-2xl">{card.title}</h3>
                   <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-80">{card.description}</p>
                   <div className="mt-auto pt-6">

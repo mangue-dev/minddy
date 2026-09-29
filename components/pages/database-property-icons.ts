@@ -1,13 +1,4 @@
-import {
-  CalendarDays,
-  CheckSquare,
-  Type,
-  Users,
-  Hash,
-  ListFilter,
-  Tags,
-  Clock,
-} from "lucide-react";
+import { CalendarDaysIcon, CheckmarkSquare01Icon as CheckSquare, ClockIcon as Clock, FilterHorizontalIcon as ListFilter, HashIcon as Hash, TagsIcon as Tags, TypeIcon as Type, UserGroupIcon as Users } from "@hugeicons/core-free-icons";
 
 export const PROPERTY_ICONS = {
   text: Type,
@@ -15,7 +6,7 @@ export const PROPERTY_ICONS = {
   select: ListFilter,
   multi_select: Tags,
   created_at: Clock,
-  date: CalendarDays,
+  date: CalendarDaysIcon,
   people: Users,
   checkbox: CheckSquare,
 };

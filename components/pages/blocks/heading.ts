@@ -1,5 +1,5 @@
 import { Heading } from "@tiptap/extension-heading";
-import { Heading1, Heading2, Heading3 } from "lucide-react";
+import { Heading01Icon as Heading1, Heading02Icon as Heading2, Heading03Icon as Heading3 } from "@hugeicons/core-free-icons";
 import type { PageBlock } from "@/components/pages/blocks/types";
 
 /**

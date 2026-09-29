@@ -178,7 +178,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_title_encryption_scopes"
@@ -194,7 +194,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "mcp_content_scope",
         "user_mcp_connections",
@@ -225,7 +225,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pages",
         "page_content_encryption_scope"
@@ -241,7 +241,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "push_content_scope",
         "push_content_write_scope"
@@ -257,7 +257,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "view_content_encryption_scope"
       ],
@@ -332,7 +332,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "mcp_content_scope",
         "user_mcp_connections",
@@ -418,7 +418,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -445,7 +445,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pages",
         "page_content_encryption_scope"
@@ -463,7 +463,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "push_content_scope",
         "push_subscriptions"
@@ -482,7 +482,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "views",
         "view_content_encryption_scope"
@@ -550,7 +550,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "api_key_content_scope"
       ],
@@ -563,7 +563,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "app_tab_content_scope"
       ],
@@ -578,7 +578,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "project_content_encryption_scope"
@@ -739,7 +739,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_conversations",
@@ -759,7 +759,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_run_messages",
@@ -778,7 +778,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_artifacts",
         "agent_pr_url_encryption_scopes"
@@ -794,7 +794,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "billing_identity_scope"
       ],
@@ -809,7 +809,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "issue_encryption_scopes"
       ],
@@ -822,7 +822,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_turn_intent_scope"
       ],
@@ -846,7 +846,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pull_request_url_encryption_scope"
       ],
@@ -859,7 +859,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "view_share_token_encryption_scope"
       ],
@@ -940,7 +940,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -970,7 +970,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": [
@@ -984,7 +984,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_summary_encryption_scopes"
       ],
@@ -997,7 +997,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_verdict_encryption_scopes"
       ],
@@ -1010,7 +1010,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_mention_key_encryption_scope"
       ],
@@ -1023,7 +1023,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_tool_content_scope"
       ],
@@ -1036,7 +1036,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_final_content_scope"
       ],
@@ -1049,7 +1049,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_user_message_scope"
       ],
@@ -1088,7 +1088,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "api_keys",
         "api_key_content_scope"
@@ -1106,7 +1106,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "app_tabs",
         "app_tab_content_scope"
@@ -1125,7 +1125,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "project_icon_encryption_scope",
@@ -1200,7 +1200,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_conversations",
@@ -1218,7 +1218,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_messages",
@@ -1238,7 +1238,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_launch_encryption_scopes"
@@ -1254,7 +1254,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_conversations",
@@ -1296,7 +1296,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "issues",
         "github_issue_comment_url_encryption_scopes"
@@ -1336,7 +1336,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "conversations",
         "numo_assistant_turns",
@@ -1356,7 +1356,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_final_content_scope"
       ],
@@ -1369,7 +1369,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "oauth_code_content_scope"
       ],
@@ -1382,13 +1382,13 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
     },
     "recover_stale_numo_turns()": {
-      "sha256": "9ea7393dcc270db098e004d02036e41f5846052c780345caa4f7f803800388a7",
+      "sha256": "d030e8e5328452d414efc690343cc01bbec10b4a585b72641cf076db903b5d27",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1397,12 +1397,16 @@
       "relations": [
         "agent_runs",
         "conversations",
-        "numo_assistant_turns"
+        "agent_run_messages",
+        "numo_assistant_turns",
+        "agent_run_input_requests"
       ],
       "protectedRelations": [
         "agent_runs",
         "conversations",
-        "numo_assistant_turns"
+        "agent_run_messages",
+        "numo_assistant_turns",
+        "agent_run_input_requests"
       ],
       "functionReferences": []
     },
@@ -1447,7 +1451,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -1497,7 +1501,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "billing_accounts",
         "billing_identity_scope"
@@ -1516,7 +1520,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "project_invitations",
         "invitation_email_scope"
@@ -1629,7 +1633,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_branch_prefix_scope"
       ],
@@ -1644,7 +1648,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_launch_encryption_scopes"
@@ -1660,7 +1664,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "attachments",
         "attachment_metadata_encryption_scope"
@@ -1676,7 +1680,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "envelope_data_keys"
       ],
@@ -1689,7 +1693,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_sso_encryption_scope"
       ],
@@ -1702,7 +1706,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "integration_content_scope"
       ],
@@ -1717,7 +1721,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_tool_content_scope"
       ],
@@ -1730,7 +1734,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "saved_view_bookmark_encryption_scope"
       ],
@@ -1743,7 +1747,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "user_ai_key_content_scope"
       ],
@@ -1881,7 +1885,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_users",
         "feedback_boards"
@@ -1898,7 +1902,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_default_branch_scope"
       ],
@@ -1911,7 +1915,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_tool_content_scope"
       ],
@@ -1924,7 +1928,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "oauth_client_content_scope"
       ],
@@ -1937,7 +1941,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "envelope_data_keys"
       ],
@@ -1961,7 +1965,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pr_comment_edit_encryption_scope"
       ],
@@ -1974,7 +1978,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pull_request_content_encryption_scope"
       ],
@@ -2024,7 +2028,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{=X/supabase_admin,supabase_admin=X/supabase_admin,postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -2050,7 +2054,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "git_connections",
         "git_user_identities",
@@ -2071,7 +2075,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "oauth_code_content_scope",
         "oauth_authorization_codes"
@@ -2089,7 +2093,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -2129,7 +2133,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "categories"
       ],
@@ -2206,7 +2210,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "agent_conversations",
@@ -2224,7 +2228,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_conversations",
@@ -2242,7 +2246,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -2253,7 +2257,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_routine_content_encryption_scope"
       ],
@@ -2266,7 +2270,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_base_branch_encryption_scopes"
       ],
@@ -2279,7 +2283,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_artifacts",
         "agent_work_branch_encryption_scopes"
@@ -2295,7 +2299,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "app_config_encryption_scope"
       ],
@@ -2325,7 +2329,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "issues",
         "github_issue_metadata_encryption_scopes"
@@ -2341,7 +2345,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_assistant_turns",
         "numo_event_content_scope"
@@ -2368,7 +2372,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_launch_encryption_scopes"
@@ -2448,7 +2452,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "user_agent_preferences",
         "agent_branch_prefix_scope"
@@ -2467,7 +2471,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "integrations",
         "integration_content_scope"
@@ -2486,7 +2490,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "user_ai_keys",
         "user_ai_key_content_scope"
@@ -2504,7 +2508,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -2515,7 +2519,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "objectives"
       ],
@@ -2590,7 +2594,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_conversations",
         "agent_context_encryption_scopes"
@@ -2606,7 +2610,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_delegation_encryption_scopes"
       ],
@@ -2619,7 +2623,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_event_encryption_scopes"
@@ -2635,7 +2639,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -2646,7 +2650,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "conversations",
@@ -2668,7 +2672,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "project_icon_encryption_scope",
@@ -2696,7 +2700,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "stripe_webhook_payload_scope"
       ],
@@ -2801,7 +2805,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -2812,7 +2816,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -2842,7 +2846,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "oauth_clients",
         "oauth_client_content_scope"
@@ -2860,7 +2864,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "saved_views",
         "saved_view_bookmark_encryption_scope"
@@ -2887,7 +2891,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin}",
+      "acl": "{postgres=X/postgres}",
       "relations": [
         "agent_run_live_snapshots"
       ],
@@ -2944,7 +2948,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_result_encryption_scopes",
         "agent_work_branch_encryption_scopes"
@@ -2958,7 +2962,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_launch_encryption_scopes"
       ],
@@ -2971,7 +2975,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": [
@@ -2984,7 +2988,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_chains",
         "numo_automation_content_scope"
@@ -3000,7 +3004,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_conversation_title_scope"
       ],
@@ -3099,7 +3103,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_routines",
         "agent_routine_content_encryption_scope"
@@ -3117,7 +3121,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "project_icon_encryption_scope",
@@ -3198,7 +3202,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "agent_runs",
@@ -3219,7 +3223,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_run_events"
       ],
@@ -3234,7 +3238,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_journal_encryption_scopes"
@@ -3250,7 +3254,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_run_messages",
         "agent_launch_encryption_scopes"
@@ -3266,7 +3270,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_deployment_encryption_scopes"
       ],
@@ -3279,7 +3283,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_conversations",
         "agent_launch_encryption_scopes"
@@ -3295,7 +3299,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": [
@@ -3308,7 +3312,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -3319,7 +3323,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "envelope_data_keys"
       ],
@@ -3332,7 +3336,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -3343,7 +3347,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_surface_destination_encryption_scope"
       ],
@@ -3356,7 +3360,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "envelope_data_keys"
       ],
@@ -3473,7 +3477,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "project_git_links",
         "forge_default_branch_scope"
@@ -3491,7 +3495,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pull_requests",
         "pr_comment_edits",
@@ -3518,7 +3522,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -3529,7 +3533,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -3540,7 +3544,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_sandbox_allocations",
         "agent_account_erasure_fences"
@@ -3554,7 +3558,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "agent_sandbox_allocations",
@@ -3656,7 +3660,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_conversations",
@@ -3674,7 +3678,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_artifacts",
         "agent_pr_url_encryption_scopes"
@@ -3690,7 +3694,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_conversations",
@@ -3708,7 +3712,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_conversations",
@@ -3726,7 +3730,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "issues",
         "comments",
@@ -3751,7 +3755,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_users",
         "feedback_identity_encryption_scope"
@@ -3767,7 +3771,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_users",
         "feedback_boards"
@@ -3784,7 +3788,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "git_connections",
         "git_user_identities",
@@ -3804,7 +3808,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "project_git_links",
         "forge_repository_names",
@@ -3822,7 +3826,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "conversations",
@@ -3844,7 +3848,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -3904,7 +3908,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -3923,7 +3927,7 @@
       ]
     },
     "request_numo_turn_stop(uuid,uuid)": {
-      "sha256": "86852e6178dae0c282c72906b3041257ff2070f2a044d077c22214ec9720a6f3",
+      "sha256": "697760d99aa3131158c47288a7e33a0319775f985ea7f95f08239cc356f32919",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3951,7 +3955,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "agent_runs",
@@ -4006,7 +4010,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_conversation_contexts",
         "agent_context_encryption_scopes"
@@ -4022,7 +4026,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_run_journal"
       ],
@@ -4037,7 +4041,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "custom_domain_verification_scope"
       ],
@@ -4078,7 +4082,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -4089,7 +4093,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "project_git_webhook_secret_scope"
       ],
@@ -4119,7 +4123,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -4159,7 +4163,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": [
@@ -4172,7 +4176,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
       "relations": [
         "attachment_object_encryption_scope"
       ],
@@ -4185,7 +4189,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "attachment_object_encrypted",
         "attachment_object_encryption_scope"
@@ -4199,7 +4203,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "invitation_email_scope"
       ],
@@ -4212,7 +4216,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "provider_operation_resource_encryption_scope"
       ],
@@ -4238,7 +4242,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -4249,7 +4253,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects"
       ],
@@ -4309,7 +4313,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "attachments",
@@ -4327,7 +4331,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_relay_delivery_encryption_scope"
       ],
@@ -4340,7 +4344,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_relay_instance_content_scope"
       ],
@@ -4353,7 +4357,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "project_icon_encryption_scope"
       ],
@@ -4381,7 +4385,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -4425,7 +4429,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "custom_domains",
         "custom_domain_verification_scope"
@@ -4444,7 +4448,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -4455,7 +4459,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "agent_runs",
@@ -4493,7 +4497,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "attachments",
@@ -4512,7 +4516,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin}",
+      "acl": "{postgres=X/postgres}",
       "relations": [
         "agent_run_live_snapshots"
       ],
@@ -4525,7 +4529,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pull_requests",
         "project_git_links"
@@ -4542,7 +4546,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin}",
+      "acl": "{postgres=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -4553,7 +4557,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pull_requests",
         "project_git_links"
@@ -4613,7 +4617,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_sandbox_allocations"
       ],
@@ -4645,7 +4649,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_sandbox_allocations"
       ],
@@ -4658,7 +4662,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_attachment_encryption_scope"
       ],
@@ -4673,7 +4677,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_relay_user_deliveries",
         "forge_relay_user_delivery_scope"
@@ -4692,7 +4696,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "project_git_links",
         "project_git_webhook_secret_scope"
@@ -4711,7 +4715,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_sandbox_allocations",
         "agent_project_erasure_fences"
@@ -4725,7 +4729,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runtime_sessions",
         "agent_base_branch_encryption_scopes"
@@ -4741,7 +4745,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "agent_project_erasure_fences"
@@ -4757,7 +4761,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_artifacts",
         "agent_runtime_sessions",
@@ -4775,7 +4779,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "ai_decision_evaluation_scope"
       ],
@@ -4790,7 +4794,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -4801,7 +4805,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_worker_legacy_bindings"
       ],
@@ -4830,7 +4834,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "attachments",
@@ -4868,7 +4872,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_sandbox_allocations"
       ],
@@ -4897,7 +4901,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_relay_instances",
         "forge_relay_instance_content_scope"
@@ -4915,7 +4919,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "stripe_webhook_events",
         "stripe_webhook_payload_scope"
@@ -4931,7 +4935,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_sandbox_allocations"
       ],
@@ -4955,7 +4959,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "categories"
       ],
@@ -4985,7 +4989,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "github_issue_comment_syncs",
         "github_issue_comment_url_encryption_scopes"
@@ -5001,7 +5005,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_sandbox_allocations"
       ],
@@ -5014,7 +5018,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -5025,7 +5029,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_sandbox_allocations"
       ],
@@ -5053,7 +5057,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -5064,7 +5068,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_sandbox_allocations",
         "agent_account_erasure_fences"
@@ -5078,7 +5082,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_messages",
         "agent_launch_encryption_scopes"
@@ -5094,7 +5098,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "attachments",
         "attachment_object_encryption_scope"
@@ -5112,7 +5116,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_relay_provisioning_scope"
       ],
@@ -5138,7 +5142,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin}",
+      "acl": "{postgres=X/postgres}",
       "relations": [
         "pull_requests",
         "project_git_links",
@@ -5158,7 +5162,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -5181,12 +5185,12 @@
       ]
     },
     "upsert_billing_account_patch(uuid,jsonb)": {
-      "sha256": "a5f937319e8f8707623b3afe2de2da753556a5eebdec3e2392949849e2ae58f2",
+      "sha256": "23d37975596597e2dc2cee66fb1013f8eda1204d8ef1b792b6886a7ba28b820b",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "billing_accounts"
       ],
@@ -5217,7 +5221,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "ai_decision_evaluations",
         "ai_decision_evaluation_scope"
@@ -5291,7 +5295,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -5302,7 +5306,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_relay_user_delivery_scope"
       ],
@@ -5317,7 +5321,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "project_icon_encrypted_objects"
@@ -5349,7 +5353,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_assistant_turns"
       ],
@@ -5466,7 +5470,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_worker_legacy_bindings"
       ],
@@ -5510,7 +5514,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "github_issue_sync_metadata",
         "github_issue_metadata_encryption_scopes"
@@ -5526,7 +5530,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin}",
+      "acl": "{postgres=X/postgres}",
       "relations": [
         "attachments",
         "forge_attachment_objects"
@@ -5542,7 +5546,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_chains"
       ],
@@ -5558,7 +5562,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_merge_events",
         "feedback_merge_event_links"
@@ -5572,7 +5576,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_assistant_turns"
       ],
@@ -5587,7 +5591,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "page_files"
       ],
@@ -5602,7 +5606,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_relay_provisioning",
         "forge_relay_provisioning_scope"
@@ -5621,7 +5625,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -5645,7 +5649,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -5656,7 +5660,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_boards"
       ],
@@ -5671,7 +5675,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_turn_events",
         "numo_assistant_turns"
@@ -5703,7 +5707,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "agent_runs",
@@ -5725,7 +5729,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_sandbox_allocations",
         "agent_account_erasure_fences",
@@ -5740,7 +5744,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_sandbox_allocations",
         "agent_account_erasure_fences",
@@ -5755,7 +5759,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "agent_runs",
@@ -5792,7 +5796,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "attachments",
         "forge_attachment_objects"
@@ -5808,7 +5812,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_users",
         "feedback_boards",
@@ -5841,7 +5845,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin}",
+      "acl": "{postgres=X/postgres}",
       "relations": [
         "attachments",
         "forge_attachment_objects"
@@ -5872,7 +5876,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_turn_events",
         "numo_assistant_turns",
@@ -5890,7 +5894,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_boards"
       ],
@@ -5905,7 +5909,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "project_git_links"
       ],
@@ -5920,7 +5924,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pr_comment_edits"
       ],
@@ -5935,7 +5939,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_sandbox_allocations"
       ],
@@ -5948,7 +5952,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_relay_audit"
       ],
@@ -6002,7 +6006,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs"
       ],
@@ -6017,7 +6021,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "view_shares"
       ],
@@ -6032,7 +6036,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "conversations",
@@ -6140,7 +6144,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin}",
+      "acl": "{postgres=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -6169,7 +6173,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_assistant_turns"
       ],
@@ -6184,7 +6188,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "project_invitations",
         "invitation_email_rotation_attempts"
@@ -6200,7 +6204,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects"
       ],
@@ -6215,7 +6219,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_sandbox_allocations"
       ],
@@ -6228,7 +6232,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -6253,7 +6257,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "app_config"
       ],
@@ -6268,7 +6272,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "conversations",
         "numo_turn_events",
@@ -6297,7 +6301,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_otp_codes"
       ],
@@ -6312,7 +6316,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_turn_events",
         "numo_assistant_turns"
@@ -6329,7 +6333,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "conversations"
       ],
@@ -6376,7 +6380,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_mention_throttle"
       ],
@@ -6391,7 +6395,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -6402,7 +6406,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_assistant_turns"
       ],
@@ -6419,7 +6423,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pull_requests"
       ],
@@ -6434,7 +6438,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "attachments",
         "attachment_object_migration_attempts"
@@ -6500,7 +6504,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_run_journal"
       ],
@@ -6531,7 +6535,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_attachment_objects"
       ],
@@ -6544,7 +6548,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "envelope_data_keys",
         "project_invitations",
@@ -6577,7 +6581,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs"
       ],
@@ -6592,7 +6596,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_artifacts"
@@ -6609,7 +6613,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_surface_events"
       ],
@@ -6624,7 +6628,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_attachment_objects"
       ],
@@ -6656,7 +6660,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_posts"
       ],
@@ -6719,7 +6723,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "attachments",
         "pull_requests",
@@ -6758,7 +6762,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "projects",
         "attachments",
@@ -6778,7 +6782,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "provider_operation_reservations"
       ],
@@ -6791,7 +6795,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_artifacts",
         "agent_conversations"
@@ -6808,7 +6812,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "page_files",
         "attachments",
@@ -6846,7 +6850,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "api_keys",
         "integrations",
@@ -6875,7 +6879,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs"
       ],
@@ -6890,7 +6894,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pull_requests",
         "pr_comment_edits",
@@ -6929,7 +6933,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "issues",
         "github_issue_sync_metadata"
@@ -6959,7 +6963,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "conversations",
         "agent_routines",
@@ -6978,7 +6982,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_turns",
@@ -7014,7 +7018,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_messages",
@@ -7069,7 +7073,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "attachments",
         "forge_attachment_objects"
@@ -7100,7 +7104,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_merge_events"
       ],
@@ -7128,7 +7132,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "conversations",
@@ -7184,7 +7188,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_attachment_objects"
       ],
@@ -7197,7 +7201,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_attachment_objects"
       ],
@@ -7210,7 +7214,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_turn_events",
         "numo_assistant_turns"
@@ -7250,7 +7254,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_run_live_snapshots"
@@ -7266,7 +7270,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "assistant_messages",
         "numo_assistant_turns"
@@ -7302,7 +7306,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "user_agent_preferences"
       ],
@@ -7319,7 +7323,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_boards"
       ],
@@ -7349,7 +7353,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pages",
         "views",
@@ -7455,7 +7459,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "app_config"
       ],
@@ -7529,7 +7533,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_messages",
         "agent_run_events",
@@ -7548,7 +7552,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_relay_deliveries"
       ],
@@ -7563,7 +7567,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "provider_operation_reservations",
         "provider_operation_resource_encryption_scope"
@@ -7577,7 +7581,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "attachments"
       ],
@@ -7592,7 +7596,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "issues"
       ],
@@ -7607,7 +7611,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_users",
         "feedback_otp_codes"
@@ -7624,7 +7628,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs"
       ],
@@ -7639,7 +7643,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pull_requests",
         "pr_comment_edits",
@@ -7692,7 +7696,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_artifacts",
         "agent_conversations"
@@ -7709,7 +7713,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_turns",
         "agent_conversations"
@@ -7726,7 +7730,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "attachments",
         "forge_attachment_objects"
@@ -7742,7 +7746,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "categories"
       ],
@@ -7757,7 +7761,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_conversations",
         "agent_runtime_sessions"
@@ -7774,7 +7778,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_conversations",
         "agent_runtime_sessions"
@@ -7791,7 +7795,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "objectives"
       ],
@@ -7830,7 +7834,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "page_files",
         "attachments",
@@ -7864,7 +7868,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [],
       "protectedRelations": [],
       "functionReferences": []
@@ -7875,7 +7879,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs"
       ],
@@ -7906,7 +7910,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "conversations",
         "numo_assistant_turns"
@@ -7938,7 +7942,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pages"
       ],
@@ -8004,7 +8008,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_posts"
       ],
@@ -8019,7 +8023,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "project_drafts"
       ],
@@ -8066,7 +8070,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pull_requests"
       ],
@@ -8081,7 +8085,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "pull_requests",
@@ -8100,7 +8104,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "attachments",
         "forge_attachment_objects"
@@ -8118,7 +8122,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "project_drafts"
       ],
@@ -8133,7 +8137,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs"
       ],
@@ -8148,7 +8152,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_messages",
         "agent_conversations"
@@ -8165,7 +8169,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin}",
+      "acl": "{postgres=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_messages",
@@ -8199,7 +8203,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_messages"
@@ -8216,7 +8220,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_users"
       ],
@@ -8231,7 +8235,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "conversations",
         "agent_routines",
@@ -8252,7 +8256,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "view_shares"
       ],
@@ -8267,7 +8271,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pages",
         "page_files",
@@ -8287,7 +8291,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_conversations",
         "agent_conversation_contexts"
@@ -8304,7 +8308,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "provider_operation_reservations"
       ],
@@ -8317,7 +8321,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "user_ai_keys"
       ],
@@ -8332,7 +8336,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "assistant_messages",
         "numo_assistant_turns"
@@ -8349,7 +8353,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "forge_mention_throttle"
       ],
@@ -8362,7 +8366,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "conversations",
         "numo_assistant_turns",
@@ -8420,7 +8424,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "issues",
         "projects",
@@ -8442,7 +8446,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "conversations",
         "assistant_messages",
@@ -8461,7 +8465,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "push_subscriptions"
       ],
@@ -8478,7 +8482,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs"
       ],
@@ -8493,7 +8497,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pull_requests",
         "pr_comment_edits",
@@ -8517,7 +8521,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_otp_codes"
       ],
@@ -8532,7 +8536,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_conversations"
       ],
@@ -8547,7 +8551,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "assistant_messages"
       ],
@@ -8562,7 +8566,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "provider_operation_reservations",
         "provider_operation_resource_encryption_scope"
@@ -8600,7 +8604,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "assistant_messages",
         "numo_assistant_turns"
@@ -8630,7 +8634,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_conversations",
         "agent_runtime_sessions"
@@ -8647,7 +8651,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_runtime_sessions"
@@ -8679,7 +8683,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "issues",
         "github_issue_comment_syncs"
@@ -8696,7 +8700,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "user_ai_keys",
         "user_ai_capability_assignments"
@@ -8743,7 +8747,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "agent_conversations"
@@ -8760,7 +8764,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
         "numo_assistant_turns",
@@ -8779,7 +8783,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "issues",
         "github_issue_sync_metadata"
@@ -8814,7 +8818,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "git_connections"
       ],
@@ -8897,7 +8901,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "ai_usage",
         "agent_runs",
@@ -8919,7 +8923,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "numo_assistant_turns",
         "numo_tool_operations"
@@ -8936,7 +8940,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_run_journal"
       ],
@@ -8951,7 +8955,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "feedback_users",
         "feedback_boards",
@@ -8987,7 +8991,7 @@
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,service_role=X/supabase_admin}",
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "comments",
         "github_issue_comment_syncs"

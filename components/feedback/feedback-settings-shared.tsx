@@ -1,11 +1,12 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Alert01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import {useEffect, useRef, useState} from "react";
 import type {ReactNode} from "react";
 import {useLocale, useTranslations} from "next-intl";
 import {useQuery, useQueryClient} from "@tanstack/react-query";
 import {Checkbox, ColorInput, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch, cn, toast} from "mangue-ui";
-import {ChevronDown, TriangleAlert} from "lucide-react";
 import {defaultLocale} from "@/i18n/config";
 import {DEFAULT_BOARD_ACCENT} from "@/lib/feedback/accent";
 import {FEEDBACK_LANGUAGES, languageLabel, normalizeLanguage} from "@/lib/feedback/languages";
@@ -537,7 +538,7 @@ export function NumoReviewGroup({
       {!reviewOn && (
         <div className="py-3.5">
           <p className="flex items-start gap-2 text-xs leading-relaxed text-amber-600 dark:text-amber-500">
-            <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+            <HugeiconsIcon icon={Alert01Icon} className="mt-0.5 size-3.5 shrink-0" />
             {t("feedbackReviewOffWarning")}
           </p>
         </div>
@@ -723,7 +724,7 @@ export function FeedbackTranslationGroup({
                               count: selectedSkip.length,
                             })}
                     </span>
-                    <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0 text-muted-foreground" />
                   </button>
                 }
               />

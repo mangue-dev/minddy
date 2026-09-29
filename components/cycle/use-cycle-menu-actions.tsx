@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback } from "react";
+import { AppIcon } from "@/components/icon";
+import { AiAutoRotateIcon as CycleIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { IterationCw } from "lucide-react";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import type { Issue } from "@/lib/types";
 
@@ -72,7 +73,7 @@ export function useCycleMenuActions(
             id: "cycle-remove",
             label: t("removeFromCycle"),
             keywords: ["cycle", "semaine", "week", "sprint"],
-            icon: <IterationCw className="size-4" />,
+            icon: <AppIcon icon={CycleIcon} className="size-4" />,
             onSelect: () => onSetCycle(issue, null),
           },
         ];
@@ -83,7 +84,7 @@ export function useCycleMenuActions(
           id: "cycle-add",
           label: t("addToCycle"),
           keywords: ["cycle", "semaine", "week", "sprint", "suivant", "next"],
-          icon: <IterationCw className="size-4" />,
+          icon: <AppIcon icon={CycleIcon} className="size-4" />,
           ...(nextCycleId
             ? {
                 children: [

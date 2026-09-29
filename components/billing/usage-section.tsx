@@ -1,7 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Bot, FolderKanban, Ticket, Users } from "lucide-react";
+import { AppIcon } from "@/components/icon";
+import { BotIcon as Bot, FolderKanbanIcon, TicketIcon as Ticket, UserGroupIcon as Users } from "@hugeicons/core-free-icons";
 import { UsageBreakdownBody } from "@/components/usage-indicator";
 import { useBillingSummary } from "@/lib/use-billing-query";
 
@@ -22,7 +23,7 @@ export function UsageSection() {
       {usage && (
         <div className="space-y-1.5 border-t border-border px-4 py-3 text-sm">
           <LimitRow
-            icon={FolderKanban}
+            icon={FolderKanbanIcon}
             label={t("limitProjects")}
             value={
               usage.limits.maxProjects == null
@@ -64,14 +65,14 @@ function LimitRow({
   label,
   value,
 }: {
-  icon: typeof FolderKanban;
+  icon: typeof FolderKanbanIcon;
   label: string;
   value: string;
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="flex items-center gap-2.5 text-foreground/80">
-        <Icon className="size-4 text-foreground/70" strokeWidth={2} />
+        <AppIcon icon={Icon} className="size-4 text-foreground/70" strokeWidth={2} />
         {label}
       </span>
       <span className="font-medium tabular-nums">{value}</span>

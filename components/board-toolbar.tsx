@@ -1,5 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { Add01Icon, ArrangeByLettersAZIcon, AiAutoRotateIcon as CycleIcon, ArrowUpRight01Icon, Delete02Icon, FilterIcon, FloppyDiskIcon, LinkSquare01Icon, Loading02Icon, LockIcon, MoreHorizontalIcon, Edit04Icon, Plug01Icon, Share01Icon, Tick01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -41,26 +44,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import {
-  ArrowDownZA,
-  ArrowUpAZ,
-  ArrowUpRight,
-  Check,
-  CircleUser,
-  IterationCw,
-  ListFilter,
-  Loader2,
-  Lock,
-  MoreHorizontal,
-  Plug,
-  Plus,
-  Save,
-  Pencil,
-  Share2,
-  Trash2,
-  Triangle,
-  ExternalLink,
-} from "lucide-react";
 import {
   StatusIndicator,
   PriorityIndicator,
@@ -221,7 +204,7 @@ function MenuToggleRow({
       }}
     >
       <span className="flex min-w-0 flex-1 items-center gap-2">{children}</span>
-      {active && <Check className="size-4 shrink-0" />}
+      {active && <HugeiconsIcon icon={Tick01Icon} className="size-4 shrink-0" />}
     </DropdownMenuItem>
   );
 }
@@ -332,7 +315,7 @@ function FiltersPopover({
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm" aria-label={tc("filters")}>
-              <ListFilter className={cn(count > 0 && "text-primary")} />
+              <HugeiconsIcon icon={FilterIcon} className={cn(count > 0 && "text-primary")} />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
@@ -427,10 +410,10 @@ function FiltersPopover({
                   aria-disabled
                 >
                   <span className="flex min-w-0 flex-1 items-center gap-2">
-                    <CircleUser className="size-4 shrink-0 text-muted-foreground" />
+                    <HugeiconsIcon icon={UserCircleIcon} className="size-4 shrink-0 text-muted-foreground" />
                     {tf("assignedToMe")}
                   </span>
-                  <Lock className="size-3.5 shrink-0 text-muted-foreground" />
+                  <HugeiconsIcon icon={LockIcon} className="size-3.5 shrink-0 text-muted-foreground" />
                 </div>
               </TooltipTrigger>
               <TooltipContent>{t("myViewLockedHint")}</TooltipContent>
@@ -443,7 +426,7 @@ function FiltersPopover({
                   setFilters({ ...f, assignee: toggle(f.assignee, ME_ASSIGNEE) })
                 }
               >
-                <CircleUser className="size-4 shrink-0 text-muted-foreground" />
+                <HugeiconsIcon icon={UserCircleIcon} className="size-4 shrink-0 text-muted-foreground" />
                 {tf("assignedToMe")}
               </MenuToggleRow>
               <MenuToggleRow
@@ -475,7 +458,7 @@ function FiltersPopover({
                 setFilters({ ...f, effort: toggle<IssueEffort>(f.effort, e.value) })
               }
             >
-              <Triangle className="size-4 text-muted-foreground" />
+              <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />
               {e.label}
             </MenuToggleRow>
           ))}
@@ -546,7 +529,7 @@ function FiltersPopover({
                   setFilters({ ...f, integration: toggleFacet(f.integration, o.ids) })
                 }
               >
-                <Plug className="size-3.5 shrink-0 text-blue-500 dark:text-blue-400" />
+                <HugeiconsIcon icon={Plug01Icon} className="size-3.5 shrink-0 text-blue-500 dark:text-blue-400" />
                 <span className="truncate">{o.label}</span>
               </MenuToggleRow>
             ))}
@@ -594,7 +577,7 @@ function FiltersPopover({
               }}
             >
               {tSort(s)}
-              {config.sort === s && <Check className="ml-auto size-4" />}
+              {config.sort === s && <HugeiconsIcon icon={Tick01Icon} className="ml-auto size-4" />}
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
@@ -617,12 +600,12 @@ function FiltersPopover({
             }}
           >
             {sortDirection === "asc" ? (
-              <ArrowDownZA className="text-muted-foreground" />
+              <HugeiconsIcon icon={ArrangeByLettersAZIcon} className="text-muted-foreground" />
             ) : (
-              <ArrowUpAZ className="text-muted-foreground" />
+              <HugeiconsIcon icon={ArrangeByLettersAZIcon} className="text-muted-foreground" />
             )}
             {t("reverseOrder")}
-            {sortDirection === "desc" && <Check className="ml-auto size-4" />}
+            {sortDirection === "desc" && <HugeiconsIcon icon={Tick01Icon} className="ml-auto size-4" />}
           </DropdownMenuItem>
         </FilterSub>
       </DropdownMenuContent>
@@ -893,13 +876,13 @@ export function BoardToolbar({
       {
         id: "open-new-tab",
         label: tActions("openInNewTab"),
-        icon: <ExternalLink className="size-4" />,
+        icon: <HugeiconsIcon icon={LinkSquare01Icon} className="size-4" />,
         onSelect: () => openViewInNewTab(view),
       },
       {
         id: "rename",
         label: t("renameView"),
-        icon: <Pencil className="size-4" />,
+        icon: <HugeiconsIcon icon={Edit04Icon} className="size-4" />,
         disabled: !editable,
         onSelect: () => view && setRenameTarget(view),
       },
@@ -908,7 +891,7 @@ export function BoardToolbar({
       actions.push({
         id: "share",
         label: t("shareView"),
-        icon: <Share2 className="size-4" />,
+        icon: <HugeiconsIcon icon={Share01Icon} className="size-4" />,
         disabled: view === null,
         onSelect: () => view && setShareTarget(view),
       });
@@ -916,7 +899,7 @@ export function BoardToolbar({
     actions.push({
       id: "delete",
       label: t("deleteView"),
-      icon: <Trash2 className="size-4" />,
+      icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
       variant: "destructive",
       separatorBefore: true,
       // A board keeps at least one custom view (same rule as “⋯”).
@@ -980,7 +963,7 @@ export function BoardToolbar({
                 <div className={cn(PILL_CLASS, pillTone(cycleTab.active))}>
                   {cycleTab.completionPercent === null ||
                   cycleTab.completionPercent === undefined ? (
-                    <IterationCw className="size-3 shrink-0" aria-hidden />
+                    <AppIcon icon={CycleIcon} className="size-3 shrink-0" aria-hidden />
                   ) : (
                     <ProgressRing
                       percent={cycleTab.completionPercent}
@@ -990,7 +973,7 @@ export function BoardToolbar({
                   )}
                   {t("cycleTab")}
                   {cycleTab.external && (
-                    <ArrowUpRight className="size-3 shrink-0" aria-hidden />
+                    <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-3 shrink-0" aria-hidden />
                   )}
                 </div>
               ) : activeDragView ? (
@@ -1001,7 +984,7 @@ export function BoardToolbar({
                   )}
                 >
                   {generatingViewIds.has(activeDragView.id) && (
-                    <Loader2 className="size-3 shrink-0 animate-spin" />
+                    <HugeiconsIcon icon={Loading02Icon} className="size-3 shrink-0 animate-spin" />
                   )}
                   {activeDragView.kind === "my" &&
                     (myAvatarSource ? (
@@ -1030,7 +1013,7 @@ export function BoardToolbar({
                 aria-label={t("newView")}
                 onClick={() => setCreateOpen(true)}
               >
-                <Plus />
+                <HugeiconsIcon icon={Add01Icon} />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t("newView")}</TooltipContent>
@@ -1047,18 +1030,18 @@ export function BoardToolbar({
               menuLabel={t("saveOptions")}
               menu={
                 <DropdownMenuItem onSelect={() => setSaveAsOpen(true)}>
-                  <Plus />
+                  <HugeiconsIcon icon={Add01Icon} />
                   {t("saveAsNewView")}
                 </DropdownMenuItem>
               }
             >
-              <Save />
+              <HugeiconsIcon icon={FloppyDiskIcon} />
               {tc("save")}
             </SplitButton>
           )}
           {dirty && !activeView && (
             <Button size="sm" onClick={() => setCreateOpen(true)}>
-              <Save />
+              <HugeiconsIcon icon={FloppyDiskIcon} />
               {t("saveAsView")}
             </Button>
           )}
@@ -1091,7 +1074,7 @@ export function BoardToolbar({
                     disabled={!activeView}
                     aria-label={t("viewOptions", { name: activeView?.name ?? "" })}
                   >
-                    <MoreHorizontal />
+                    <HugeiconsIcon icon={MoreHorizontalIcon} />
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
@@ -1102,7 +1085,7 @@ export function BoardToolbar({
             <DropdownMenuContent align="end">
               {activeView && (
                 <DropdownMenuItem onSelect={() => openViewInNewTab(activeView)}>
-                  <ExternalLink />
+                  <HugeiconsIcon icon={LinkSquare01Icon} />
                   {tActions("openInNewTab")}
                 </DropdownMenuItem>
               )}
@@ -1111,7 +1094,7 @@ export function BoardToolbar({
                 <DropdownMenuItem
                   onSelect={() => activeView && setRenameTarget(activeView)}
                 >
-                  <Pencil />
+                  <HugeiconsIcon icon={Edit04Icon} />
                   {t("renameView")}
                 </DropdownMenuItem>
               )}
@@ -1119,7 +1102,7 @@ export function BoardToolbar({
                 <DropdownMenuItem
                   onSelect={() => activeView && setShareTarget(activeView)}
                 >
-                  <Share2 />
+                  <HugeiconsIcon icon={Share01Icon} />
                   {t("shareView")}
                 </DropdownMenuItem>
               )}
@@ -1131,7 +1114,7 @@ export function BoardToolbar({
                     disabled={customCount <= 1}
                     onSelect={() => activeView && setDeleteTarget(activeView)}
                   >
-                    <Trash2 />
+                    <HugeiconsIcon icon={Delete02Icon} />
                     {t("deleteView")}
                   </DropdownMenuItem>
                 </>
@@ -1274,10 +1257,7 @@ function ViewChip({
       className={cn(PILL_CLASS, pillTone(active), isDragging && "opacity-50")}
     >
       {generating && (
-        <Loader2
-          className="size-3 shrink-0 animate-spin"
-          aria-label={t("viewGenerating")}
-        />
+        <HugeiconsIcon icon={Loading02Icon} className="size-3 shrink-0 animate-spin" aria-label={t("viewGenerating")} />
       )}
       {isSystem &&
         (avatarSeed ? (
@@ -1327,7 +1307,7 @@ function CycleTab({
       className={cn(PILL_CLASS, pillTone(active), isDragging && "opacity-50")}
     >
       {completionPercent === null || completionPercent === undefined ? (
-        <IterationCw className="size-3 shrink-0" aria-hidden />
+        <AppIcon icon={CycleIcon} className="size-3 shrink-0" aria-hidden />
       ) : (
         <ProgressRing
           percent={completionPercent}
@@ -1336,7 +1316,7 @@ function CycleTab({
         />
       )}
       {t("cycleTab")}
-      {external && <ArrowUpRight className="size-3 shrink-0" aria-hidden />}
+      {external && <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-3 shrink-0" aria-hidden />}
     </button>
   );
 }

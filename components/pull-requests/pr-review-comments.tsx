@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowRight01Icon, ArrowTurnDownIcon, CheckmarkCircle01Icon, Copy01Icon, HappyIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useNow, useTranslations } from "next-intl";
@@ -16,14 +18,6 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import {
-  ChevronDown,
-  ChevronRight,
-  CircleCheck,
-  Copy,
-  CornerDownRight,
-  SmilePlus,
-} from "lucide-react";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { PrHunk } from "@/components/pull-requests/pr-hunk";
@@ -388,7 +382,7 @@ export function ReactionPicker({
               aria-label={t("addReaction")}
               className={cn("size-7 rounded-full text-muted-foreground", className)}
             >
-              <SmilePlus className="size-4" />
+              <HugeiconsIcon icon={HappyIcon} className="size-4" />
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
@@ -692,7 +686,7 @@ export function ReviewThreadCard({
         <div className="flex items-center gap-1.5">
           {resolved ? (
             <span className="mr-auto flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-              <CircleCheck className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <HugeiconsIcon icon={CheckmarkCircle01Icon} className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <span className="truncate">{resolvedLabel}</span>
             </span>
           ) : null}
@@ -735,12 +729,12 @@ export function ReviewThreadCard({
                       className="-ml-px rounded-l-none px-2"
                       aria-label={t("conversationActions")}
                     >
-                      <ChevronDown className="size-3.5" />
+                      <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => threadActions.copyPrompt(thread)}>
-                      <Copy />
+                      <HugeiconsIcon icon={Copy01Icon} />
                       {t("copyPromptShort")}
                     </DropdownMenuItem>
                     {threadActions.launchNumo ? (
@@ -797,7 +791,7 @@ export function LineWidget({
     <div className="flex flex-col gap-2 bg-muted/20 px-3 py-2.5">
       {/* The arrow ↳ says “this relates to the above”. */}
       <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-        <CornerDownRight className="size-3 shrink-0" />
+        <HugeiconsIcon icon={ArrowTurnDownIcon} className="size-3 shrink-0" />
         <span className="font-mono">{label}</span>
       </div>
       {children}
@@ -840,9 +834,9 @@ export function StaleThreads({
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-muted-foreground transition-colors hover:bg-muted/60"
       >
         {open ? (
-          <ChevronDown className="size-3.5 shrink-0" />
+          <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0" />
         ) : (
-          <ChevronRight className="size-3.5 shrink-0" />
+          <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0" />
         )}
         {label ? label(threads.length) : t("staleConversations", { count: threads.length })}
       </button>

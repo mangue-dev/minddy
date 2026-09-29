@@ -1,5 +1,7 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -13,7 +15,6 @@ import {
   SelectValue,
   cn,
 } from "mangue-ui";
-import { ChevronDown, Sparkles } from "lucide-react";
 import {
   ISSUE_EFFORTS,
   ISSUE_PRIORITIES,
@@ -142,13 +143,13 @@ export function ImportMappingEditor({
     <span className="flex items-center gap-2 text-xs text-muted-foreground">
       {aiPending && (
         <span className="flex items-center gap-1">
-          <Sparkles className="size-3 animate-pulse" aria-hidden />
+          <HugeiconsIcon icon={SparklesIcon} className="size-3 animate-pulse" aria-hidden />
           {t("importMappingPending")}
         </span>
       )}
       {!aiPending && aiApplied && (
         <span className="flex items-center gap-1">
-          <Sparkles className="size-3" aria-hidden />
+          <HugeiconsIcon icon={SparklesIcon} className="size-3" aria-hidden />
           {t("importMappingByNumo")}
         </span>
       )}
@@ -292,10 +293,7 @@ export function ImportMappingEditor({
       className={cn("rounded-lg border border-border", className)}
     >
       <CollapsibleTrigger className="group flex w-full items-center gap-2 px-3 py-2.5 text-left outline-hidden">
-        <ChevronDown
-          className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
-          aria-hidden
-        />
+        <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" aria-hidden />
         <span className="text-sm font-medium">{t("importMappingTitle")}</span>
         <span className="ml-auto">{summary}</span>
       </CollapsibleTrigger>

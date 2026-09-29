@@ -5,10 +5,11 @@
 // context about the document, not part of its editable body. An empty result is
 // deliberately absent, and both citation sources use the same presentation.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { File02Icon, HashtagIcon } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { FileText, Hash } from "lucide-react";
 import { cn } from "mangue-ui";
 
 import { fetchPageBacklinksApi } from "@/lib/pages-api";
@@ -112,9 +113,9 @@ function BacklinkPill({
             {item.kind === "page" && item.icon ? (
               <span className="text-[11px] leading-none">{item.icon}</span>
             ) : item.kind === "page" ? (
-              <FileText className="h-3 w-3" />
+              <HugeiconsIcon icon={File02Icon} className="h-3 w-3" />
             ) : (
-              <Hash className="h-3 w-3" />
+              <HugeiconsIcon icon={HashtagIcon} className="h-3 w-3" />
             )}
           </PillIcon>
         )}

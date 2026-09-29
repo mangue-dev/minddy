@@ -1,43 +1,10 @@
 "use client";
 
-/**
- * Status cards of a pull request (MIN-548).
- *
- * Every condition that currently stands between the PR and the merge — plus
- * the checks and deployment stories, including when they succeed — renders as
- * one tinted card, with the same color grammar as the state badges:
- * red = blocked, orange = in progress, green = passed. A card shows an
- * illustration, a title, and when the forge dates it, a duration (ticking
- * while work runs, frozen once it settles).
- *
- * Cards read in a fixed order: the fix card leads, unresolved conversations
- * follow, then every error before every in-progress story before every
- * settled one.
- *
- * The grid is a bento: same height for every card, wrapping line by line —
- * no carousel, no horizontal scroll. A card never needs the whole width, but
- * may take it.
- *
- * Cards are interactive where a quick fix exists: hover blurs the content and
- * reveals a centered action button ("Update branch", "View deployment"…),
- * while click-through cards (checks, unresolved conversations) open the
- * matching surface directly.
- */
-
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { AlertCircleIcon, ArrowUpRight01Icon, GitBranchIcon, GitMergeIcon, GitPullRequestDraftIcon, Shield01Icon, Tick01Icon, UserRoundCheckIcon as UserRoundCheck, ViewIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNow, useTranslations } from "next-intl";
-import {
-  ArrowUpRight,
-  Check,
-  CircleAlert,
-  Eye,
-  GitBranch,
-  GitMerge,
-  GitPullRequestDraft,
-  ShieldAlert,
-  UserRoundCheck,
-  Wrench,
-} from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -748,22 +715,22 @@ function HoverWordOverlay({
 
 function blockerIcon(kind: ReadinessBlocker["kind"]) {  switch (kind) {
     case "draft":
-      return <GitPullRequestDraft />;
+      return <HugeiconsIcon icon={GitPullRequestDraftIcon} />;
     case "review_requested":
-      return <Eye />;
+      return <HugeiconsIcon icon={ViewIcon} />;
     case "changes_requested":
-      return <CircleAlert />;
+      return <HugeiconsIcon icon={AlertCircleIcon} />;
     case "approvals":
-      return <UserRoundCheck />;
+      return <AppIcon icon={UserRoundCheck} />;
     case "branch":
-      return <GitBranch />;
+      return <HugeiconsIcon icon={GitBranchIcon} />;
     case "conflicts":
-      return <GitMerge />;
+      return <HugeiconsIcon icon={GitMergeIcon} />;
     case "policy":
-      return <ShieldAlert />;
+      return <HugeiconsIcon icon={Shield01Icon} />;
     case "mergeability":
     case "checks":
-      return <CircleAlert />;
+      return <HugeiconsIcon icon={AlertCircleIcon} />;
   }
 }
 
@@ -813,15 +780,15 @@ function PrStatusCardView({
         ) : card.avatars ? (
           <AvatarCascade users={card.avatars} />
         ) : card.id === "checks-passed" ? (
-          <Check />
+          <HugeiconsIcon icon={Tick01Icon} />
         ) : card.id === "deployment" ? (
-          <ArrowUpRight />
+          <HugeiconsIcon icon={ArrowUpRight01Icon} />
         ) : card.id === "numo-review" ||
           card.id === "numo-fix" ||
           card.id === "numo-merge" ? (
           <NumoIcon animated={false} />
         ) : card.id === "fix" ? (
-          <Wrench />
+          <HugeiconsIcon icon={Wrench01Icon} />
         ) : (
           blockerIcon(card.iconKind)
         )}

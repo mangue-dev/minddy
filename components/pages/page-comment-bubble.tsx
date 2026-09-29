@@ -12,21 +12,15 @@
 // toolbar button receives the pointer. Comments anchor to the first top-level
 // block containing the selection start, matching block handles and block links.
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { CodeSimpleIcon as Code2, Link02Icon, MessageAdd01Icon, TextBoldIcon, TextItalicIcon, TextStrikethroughIcon, Unlink01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
-import {
-  Bold,
-  Code2,
-  Italic,
-  Link2,
-  MessageSquarePlus,
-  Strikethrough,
-  Unlink,
-} from "lucide-react";
 import { cn } from "mangue-ui";
 import { MarkdownLinkEditDialog } from "@/components/markdown-link-menu";
 
@@ -158,35 +152,35 @@ export function PageCommentBubble({
           active={active?.bold}
           onClick={() => editor?.chain().focus().toggleBold().run()}
         >
-          <Bold className="size-4" />
+          <HugeiconsIcon icon={TextBoldIcon} className="size-4" />
         </ToolbarButton>
         <ToolbarButton
           label={t("selectionItalic")}
           active={active?.italic}
           onClick={() => editor?.chain().focus().toggleItalic().run()}
         >
-          <Italic className="size-4" />
+          <HugeiconsIcon icon={TextItalicIcon} className="size-4" />
         </ToolbarButton>
         <ToolbarButton
           label={t("selectionStrike")}
           active={active?.strike}
           onClick={() => editor?.chain().focus().toggleStrike().run()}
         >
-          <Strikethrough className="size-4" />
+          <HugeiconsIcon icon={TextStrikethroughIcon} className="size-4" />
         </ToolbarButton>
         <ToolbarButton
           label={t("selectionCode")}
           active={active?.code}
           onClick={() => editor?.chain().focus().toggleCode().run()}
         >
-          <Code2 className="size-4" />
+          <AppIcon icon={Code2} className="size-4" />
         </ToolbarButton>
         <ToolbarButton
           label={active?.link ? t("selectionEditLink") : t("selectionAddLink")}
           active={active?.link}
           onClick={() => setEditLinkOpen(true)}
         >
-          <Link2 className="size-4" />
+          <HugeiconsIcon icon={Link02Icon} className="size-4" />
         </ToolbarButton>
         {active?.link ? (
           <ToolbarButton
@@ -195,12 +189,12 @@ export function PageCommentBubble({
               editor?.chain().focus().extendMarkRange("link").unsetLink().run()
             }
           >
-            <Unlink className="size-4" />
+            <HugeiconsIcon icon={Unlink01Icon} className="size-4" />
           </ToolbarButton>
         ) : null}
         <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
         <ToolbarButton label={t("commentSelection")} onClick={comment}>
-          <MessageSquarePlus className="size-4" />
+          <HugeiconsIcon icon={MessageAdd01Icon} className="size-4" />
         </ToolbarButton>
       </BubbleMenu>
       <MarkdownLinkEditDialog

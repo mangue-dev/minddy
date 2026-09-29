@@ -1,8 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { AppIcon } from "@/components/icon";
+import { ArrowDown01Icon, ArrowUp01Icon, DiffIcon as Diff } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, ChevronUp, Diff } from "lucide-react";
 import { Button, cn } from "mangue-ui";
 import type { AgentFileChange } from "@/lib/agent-api";
 import { changeTotals } from "@/lib/agent-changed-files";
@@ -136,7 +138,7 @@ export function ChangedFilesBlock({
       >
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent/50">
-            <Diff className="size-5 text-muted-foreground" aria-hidden />
+            <AppIcon icon={Diff} className="size-5 text-muted-foreground" aria-hidden />
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-foreground">{summary}</p>
@@ -166,7 +168,7 @@ export function ChangedFilesBlock({
               count: files.length - INITIAL_VISIBLE_FILES,
             })}
           </span>
-          {isExpanded ? <ChevronUp className="size-4 shrink-0" aria-hidden /> : <ChevronDown className="size-4 shrink-0" aria-hidden />}
+          {isExpanded ? <HugeiconsIcon icon={ArrowUp01Icon} className="size-4 shrink-0" aria-hidden /> : <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" aria-hidden />}
         </button>
       ) : null}
 
