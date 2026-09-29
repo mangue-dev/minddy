@@ -367,4 +367,67 @@ describe("Numo conversation settings", () => {
     expect(value.state.error).toBeNull();
     expect(value.state.messages.at(-1)?.id).toBe("final");
   });
+
+  it("idles the thread instantly on stop and still records the durable stop", async () => {
+    // Reference experience: pressing stop must freeze the thread at once,
+    // not keep a busy presentation until polling confirms. The durable stop
+    // must still be sent, quietly reconciled afterwards.
+    const fetches: string[] = [];
+    let stopPosted = false;
+    h.webFetch.mockImplementation(async (url: string, init?: { body?: string }) => {
+      fetches.push(String(url));
+      if (String(url).endsWith("/turn")) {
+        stopPosted = true;
+        expect(JSON.parse(String(init?.body))).toMatchObject({ action: "stop" });
+        return Response.json({ turn_id: "turn-1", status: "stopping" });
+      }
+      if (String(url).includes("/status")) {
+        return Response.json({ status: stopPosted ? "stopped" : "running", error_message: null, activity: [] });
+      }
+      if (String(url).includes("/messages")) {
+        return Response.json([message("final", "assistant", "2026-09-12T10:00:03.000Z")]);
+      }
+      return Response.json({ status: "idle", error_message: null });
+    });
+
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.loadConversation(conversationId, null));
+    await act(async () => value.sendMessage(null, "Hang the stream, then answer"));
+    // The stream closed without a terminal event: reconciliation rode in.
+
+    await act(async () => { value.abort(); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+
+    expect(value.state.status).toBe("idle");
+    expect(stopPosted).toBe(true);
+  });
+
+  it("restores the busy presentation when the authoritative turn keeps running", async () => {
+    // The optimistic idle must not stick if the stop did not win: a turn
+    // that is still running means the composer freezes misleadingly.
+    h.webFetch.mockImplementation(async (url: string) => {
+      if (String(url).endsWith("/turn")) {
+        return Response.json({ turn_id: "turn-1", status: "stopping" });
+      }
+      if (String(url).includes("/api/assistant/chat")) {
+        return new Response(
+          'event: content_delta\ndata: {"delta":"partial"}\n\n',
+          { headers: { "X-Numo-Conversation-Id": conversationId } },
+        );
+      }
+      if (String(url).includes("/status")) {
+        return Response.json({ status: "running", error_message: null, activity: [] });
+      }
+      if (String(url).includes("/messages")) {
+        return Response.json([message("final", "assistant", "2026-09-12T10:00:03.000Z")]);
+      }
+      return Response.json({ status: "idle", error_message: null });
+    });
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.loadConversation(conversationId, null));
+    await act(async () => value.sendMessage(null, "Hello"));
+    await act(async () => { value.abort(); });
+    // Quiet poll observed the still-running turn: back to the busy card.
+    expect(value.state.status).toBe("generating_server");
+  });
 });
