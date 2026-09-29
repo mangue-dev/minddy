@@ -41,6 +41,20 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const working = WORKING.includes(run.status);
   if (working) {
     await requestInterrupt(runId);
+    // The executor keeps a run alive when an UNCONSUMED message remains (it
+    // re-queues instead of resting) — the composer's steer-then-interrupt pair
+    // relies on it for a STANDALONE conversation, which must keep reading its
+    // message. A Numo worker has no such pairing — its steering is queued
+    // directly on the run by `steer_numo_worker` — so an individual stop
+    // SWALLOWS it, like the conversation-wide stop RPC does: without this, the
+    // stop would answer ok while the worker carried on with a stale steer.
+    if (run.parent_numo_turn_id) {
+      await getServiceClient()
+        .from("agent_run_messages")
+        .update({ consumed_at: new Date().toISOString() })
+        .eq("run_id", runId)
+        .is("consumed_at", null);
+    }
     // Make the stop IMMEDIATE where a poll would delay it (PR 304 reference):
     // a run interrupted while QUEUED would otherwise rest only on the next
     // drain tick — the kick claims it right away and the interrupt path stamps

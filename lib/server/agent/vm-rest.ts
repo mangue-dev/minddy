@@ -32,7 +32,10 @@ import {
   stampRunResult,
   type AgentRun,
 } from "./runs";
-import type { EmitAgentEvent } from "./agent-contract";
+import {
+  INTERRUPTED_DELEGATION_NOTE,
+  type EmitAgentEvent,
+} from "./agent-contract";
 import type { VmTurnReport } from "./vm/protocol";
 import { localDiffPayload } from "./local-diff-payload";
 
@@ -292,7 +295,17 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
 
   if (report.status === "interrupted") {
     await clearInterrupt(run.id).catch(() => {});
-    await restStamp({});
+    // restStamp RE-QUEUES when steering is still queued (a message drained but
+    // unplayed at the cut): that run continues, so it must not carry the
+    // interrupted marker.
+    const pending = await hasPendingRunMessages(run.id).catch(() => false);
+    // An interrupted Numo worker must not read as a completed handoff
+    // (MIN-599): the marker keeps the delegation result `partial`. A
+    // standalone conversation stays as it was — interrupt, no note.
+    const interruptedNote = !pending && run.parent_numo_turn_id
+      ? { error_message: INTERRUPTED_DELEGATION_NOTE }
+      : {};
+    await restStamp({ ...interruptedNote });
     await revokeKey(run);
     return;
   }
