@@ -725,14 +725,19 @@ async function stopRequested(service: SupabaseClient, turnId: string, claimToken
   return (data as { status?: string } | null)?.status === "stopping";
 }
 
-async function interruptActiveWorker(service: SupabaseClient, runId: string | null) {
-  if (!runId) return;
+/**
+ * Stop EVERY live worker of a turn (MIN-599): the awaited run, but also any
+ * other worker the turn left running (multi-launch tool round, relaunch race).
+ * The turn is the ownership boundary, `parent_numo_turn_id` is the join — the
+ * same cascade as the SQL stop RPC, for the in-process paths.
+ */
+async function interruptTurnWorkers(service: SupabaseClient, turnId: string) {
   const { error } = await service.from("agent_runs")
     .update({ interrupt_requested: true })
-    .eq("id", runId)
+    .eq("parent_numo_turn_id", turnId)
     .in("status", ["queued", "running"]);
   if (error) {
-    console.error(`[numo-turn] worker ${runId} interrupt failed:`, error.message);
+    console.error(`[numo-turn] turn ${turnId} worker interrupts failed:`, error.message);
   }
 }
 
@@ -1021,7 +1026,7 @@ async function executeClaimedNumoTurn(input: {
       const activeRunId = result.suspension?.kind === "work"
         ? result.suspension.runId
         : claimed.active_run_id;
-      await interruptActiveWorker(service, activeRunId);
+      await interruptTurnWorkers(service, claimed.id);
       const turn = await checkpointTurn({
         service,
         turnId: claimed.id,
@@ -1167,7 +1172,7 @@ async function executeClaimedNumoTurn(input: {
         return { status: "not_claimed" };
       }
       if (current?.status === "stopping" && current.claim_token === claimToken) {
-        await interruptActiveWorker(service, current.active_run_id);
+        await interruptTurnWorkers(service, current.id);
         const stopped = await checkpointTurn({
           service,
           turnId: claimed.id,
@@ -1227,7 +1232,7 @@ async function executeClaimedNumoTurn(input: {
       }
       turn = data as NumoTurn;
       if (turn.status === "stopping" && turn.claim_token === claimToken) {
-        await interruptActiveWorker(service, turn.active_run_id);
+        await interruptTurnWorkers(service, turn.id);
         turn = await checkpointTurn({
           service,
           turnId: claimed.id,

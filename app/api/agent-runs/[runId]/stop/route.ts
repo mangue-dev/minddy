@@ -29,12 +29,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
 
-  if (run.parent_numo_turn_id) {
-    return NextResponse.json(
-      { error: "workerOwnedByNumo", code: "workerOwnedByNumo" },
-      { status: 409 },
-    );
-  }
+  // A worker delegated by Numo (MIN-599) is stoppable INDIVIDUALLY: the read
+  // gate above is the same boundary as the worker's own conversation, and the
+  // interrupt only asks the worker to rest — Numo keeps its turn and resumes
+  // when the delegation result flows back. Steering stays Numo-mediated
+  // (`workerOwnedByNumo` on /steer); stopping is not steering.
 
   // We only interrupt a run that WORKS; at rest there is nothing to interrupt.
   const working = WORKING.includes(run.status);

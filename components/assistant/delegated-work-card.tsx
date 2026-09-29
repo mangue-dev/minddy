@@ -1,14 +1,20 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon, BotIcon, CancelCircleIcon as Ban, CheckmarkCircle01Icon as CheckCircle2, GitBranchIcon, GitCommitIcon, GitPullRequestIcon, HelpCircleIcon, LinkSquare01Icon, Loading02Icon, PackageIcon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, BotIcon, CancelCircleIcon as Ban, CheckmarkCircle01Icon as CheckCircle2, GitBranchIcon, GitCommitIcon, GitPullRequestIcon, HelpCircleIcon, LinkSquare01Icon, Loading02Icon, PackageIcon, SquareIcon } from "@hugeicons/core-free-icons";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useNow, useTranslations } from "next-intl";
 import {
   Button,
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
   SidePanel,
   SidePanelBody,
   SidePanelContent,
@@ -16,13 +22,16 @@ import {
   SidePanelHeader,
   SidePanelTitle,
   Spinner,
+  toast,
   cn,
 } from "mangue-ui";
 import { AgentDiffSheet } from "@/components/agent/agent-diff-sheet";
 import { AppIcon } from "@/components/icon";
 import { ModelLogo } from "@/components/model-logo";
 import { NumoIcon } from "@/components/numo-icon";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  interruptAgentRunApi,
   isAgentRunWorking,
   type AgentRunSummary,
 } from "@/lib/agent-api";
@@ -138,6 +147,110 @@ function msOr(iso: string | null, fallback: number): number {
   if (!iso) return fallback;
   const ms = Date.parse(iso);
   return Number.isNaN(ms) ? fallback : ms;
+}
+
+/**
+ * INDIVIDUAL stop of a delegated worker (MIN-599). Same gesture as the Numo
+ * stop in the composer (one click to reconsider, then interrupt): the flag
+ * drops, the worker rests, and Numo resumes on the delegation result. The
+ * button disappears with the working state — at rest there is nothing to stop.
+ */
+function DelegatedWorkStopButton({
+  runId,
+  working,
+}: {
+  runId: string;
+  working: boolean;
+}) {
+  const t = useTranslations("Agent");
+  const tCommon = useTranslations("Common");
+  const [stopping, setStopping] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const confirmationId = useId();
+  const titleId = `${confirmationId}-title`;
+  const descriptionId = `${confirmationId}-description`;
+
+  if (!working) return null;
+
+  const stop = async () => {
+    setStopping(true);
+    try {
+      await interruptAgentRunApi(runId);
+    } catch (error) {
+      // The stop did not land (network, run already at rest): hand control
+      // back instead of leaving a dead button spinning.
+      setStopping(false);
+      toast.error((error as Error).message);
+    }
+  };
+
+  return (
+    <Popover open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <PopoverAnchor asChild>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              className="shrink-0 text-muted-foreground"
+              disabled={stopping}
+              onClick={() => setConfirmOpen(true)}
+              aria-label={t("delegatedWorkStop")}
+              aria-haspopup="dialog"
+              aria-controls={confirmationId}
+              aria-expanded={confirmOpen}
+            >
+              {stopping ? (
+                <Spinner className="size-3.5" aria-hidden />
+              ) : (
+                <HugeiconsIcon icon={SquareIcon} className="size-3.5" aria-hidden />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">{t("delegatedWorkStop")}</TooltipContent>
+        </Tooltip>
+      </PopoverAnchor>
+      <PopoverContent
+        id={confirmationId}
+        role="dialog"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        side="top"
+        align="end"
+        sideOffset={8}
+        collisionPadding={10}
+        className="w-72 gap-3 rounded-xl p-3"
+      >
+        <PopoverHeader>
+          <PopoverTitle id={titleId}>{t("delegatedWorkStopConfirmTitle")}</PopoverTitle>
+          <PopoverDescription id={descriptionId}>
+            {t("delegatedWorkStopConfirmDescription")}
+          </PopoverDescription>
+        </PopoverHeader>
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setConfirmOpen(false)}
+          >
+            {tCommon("cancel")}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              setConfirmOpen(false);
+              void stop();
+            }}
+          >
+            {t("delegatedWorkStop")}
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 /** Compact ticking chrono, same format as the agent pill ("2 min 3s"). */
@@ -332,6 +445,9 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
               />
             </div>
           </div>
+          {runId ? (
+            <DelegatedWorkStopButton runId={runId} working={working} />
+          ) : null}
           <Button
             type="button"
             variant="outline"
@@ -418,17 +534,20 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
             className="flex w-[min(760px,calc(100vw-1rem))] flex-col"
           >
             <SidePanelHeader className="border-b-0">
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <SidePanelTitle className="line-clamp-2 text-sm font-medium leading-5">
-                  {title}
-                </SidePanelTitle>
-                <SidePanelDescription>
-                  <DelegatedWorkMeta
-                    state={state}
-                    run={run}
-                    changedFileCount={changedFileCount}
-                  />
-                </SidePanelDescription>
+              <div className="flex min-w-0 flex-1 items-start gap-2">
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <SidePanelTitle className="line-clamp-2 text-sm font-medium leading-5">
+                    {title}
+                  </SidePanelTitle>
+                  <SidePanelDescription>
+                    <DelegatedWorkMeta
+                      state={state}
+                      run={run}
+                      changedFileCount={changedFileCount}
+                    />
+                  </SidePanelDescription>
+                </div>
+                <DelegatedWorkStopButton runId={runId} working={working} />
               </div>
             </SidePanelHeader>
             <SidePanelBody className="flex min-h-0 flex-1 flex-col p-0">
