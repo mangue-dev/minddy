@@ -577,9 +577,16 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
   }, []);
 
   const startPolling = useCallback(
-    (conversationId: string, projectId: string | null) => {
+    (
+      conversationId: string,
+      projectId: string | null,
+      options?: { quiet?: boolean },
+    ) => {
       stopPolling();
-      dispatch({ type: "GENERATING_SERVER" });
+      // A quiet poll (right after a stop) does not present the conversation
+      // as busy: the optimistic idle pasted by the stop must not be undone
+      // unless the authoritative status says the turn is still working.
+      if (!options?.quiet) dispatch({ type: "GENERATING_SERVER" });
       let after = -1;
       // Suspension already reflected in the thread: `<turn>:<run>` last reloaded.
       let reloadedSuspension: string | null = null;
@@ -655,6 +662,14 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             dispatch({ type: "GENERATING_SERVER" });
           }
 
+          if (status === "stopping" && options?.quiet) {
+            // The stop is recorded but the durable turn has not landed yet:
+            // keep the optimistic idle and re-check sooner than the regular
+            // cadence so the thread settles as fast as the server does.
+            pollRef.current = setTimeout(poll, POLL_INTERVAL_MS);
+            return;
+          }
+
           if (status === "idle" || status === "completed" || status === "waiting_input" || status === "stopped") {
             // Generation complete - reload messages
             const messages =
@@ -705,7 +720,10 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             return;
           }
 
-          // Still generating - continue polling
+          // Still generating - continue polling. A quiet poll that finds the
+          // turn alive (stop refused or another writer re-queued it) restores
+          // the busy presentation, then follows the regular cadence.
+          if (options?.quiet) dispatch({ type: "GENERATING_SERVER" });
           pollRef.current = setTimeout(poll, POLL_INTERVAL_MS);
         } catch {
           // Network error during polling - retry
@@ -1196,7 +1214,11 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     const projectId = liveConvRef.current.id
       ? liveConvRef.current.projectId
       : state.conversationProjectId;
-    dispatch({ type: "GENERATING_SERVER" });
+    // Reference experience (Codex, Claude): pressing stop freezes the thread
+    // instantly. The partial stream is dropped now and polling stays quiet —
+    // it only speaks if the authoritative state disagrees (stop refused,
+    // generation still alive).
+    dispatch({ type: "DONE" });
     void (async () => {
       try {
         const response = await fetch(`/api/assistant/conversations/${conversationId}/turn`, {
@@ -1212,11 +1234,11 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           });
           return;
         }
-        startPolling(conversationId, projectId);
+        startPolling(conversationId, projectId, { quiet: true });
       } catch {
         // A connection failure does not establish whether the durable stop was
         // recorded. Polling resolves that ambiguity from authoritative state.
-        startPolling(conversationId, projectId);
+        startPolling(conversationId, projectId, { quiet: true });
       }
     })();
     trackEvent("assistant_stopped", {});
