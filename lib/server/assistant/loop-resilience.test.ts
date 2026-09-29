@@ -538,6 +538,57 @@ describe("Numo chat loop resilience", () => {
     expect(result.fullContent).toBe("");
   });
 
+  it("aborts a stalled connection the instant a stop signal fires", async () => {
+    // The stop can land while `fetchAiChat` still awaits the response
+    // headers: the listener must already be armed there, and the abort must
+    // end the round like a mid-stream stop — not wait for the idle watchdog.
+    const observed: { signal: AbortSignal | null } = { signal: null };
+    fetchOpenRouter.mockImplementation(async (_url, _model, buildRequest) => {
+      const signal = (buildRequest("model") as RequestInit).signal as AbortSignal;
+      observed.signal = signal;
+      // Headers never arrive; the abort must reject the connection itself.
+      return new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(new Error("The operation was aborted")));
+      });
+    });
+    const stopListeners: Array<() => void> = [];
+    const onStopSignal = vi.fn((notify: () => void) => {
+      stopListeners.push(notify);
+      return () => {
+        const index = stopListeners.indexOf(notify);
+        if (index >= 0) stopListeners.splice(index, 1);
+      };
+    });
+    // The polled channel never reports the stop: only the event listener does.
+    const shouldStop = vi.fn(async () => false);
+
+    const assertion = expect(processChat(
+      [{ role: "user", content: "Connect, then get stopped before answering" }],
+      [],
+      { emit: vi.fn() } as never,
+      {
+        model: "model",
+        conversationId: "conversation",
+        projectId: "project",
+        userId: "user",
+        supabase: fakeService(),
+        service: fakeService(),
+        locale: "en",
+        shouldStop,
+        onStopSignal,
+      },
+    )).resolves.toMatchObject({ fullContent: "", suspension: null });
+
+    // The listener must be installed before the provider request is sent.
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(stopListeners.length).toBeGreaterThan(0);
+    stopListeners.forEach((notify) => notify());
+    await assertion;
+
+    expect(observed.signal?.aborted).toBe(true);
+    expect(executeTool).not.toHaveBeenCalled();
+  });
+
   it("aborts the provider request the instant a stop signal fires while reading", async () => {
     const observed: { signal: AbortSignal | null } = { signal: null };
     fetchOpenRouter.mockImplementation(async (_url, _model, buildRequest) => {

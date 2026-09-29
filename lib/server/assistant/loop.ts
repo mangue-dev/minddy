@@ -405,6 +405,15 @@ export async function processChat(
         }, STREAM_IDLE_TIMEOUT_MS);
       };
       armIdleTimer();
+      // Event-driven stop must be armed BEFORE the provider request: a stop
+      // submitted while `fetchAiChat` still awaits response headers aborts the
+      // connection attempt itself instead of waiting for the headers (or the
+      // idle watchdog) to free it. The listener stays armed for the whole
+      // round, and every exit path below disarms it.
+      const stopSignalOff = context.onStopSignal?.(() => {
+        stopObserved = true;
+        generationController.abort();
+      }) ?? null;
       let call;
       try {
         call = await fetchAiChat(
@@ -423,9 +432,16 @@ export async function processChat(
           { signal: generationController.signal },
         );
       } catch (error) {
+        stopSignalOff?.();
+        if (idleTimer) clearTimeout(idleTimer);
         // The watchdog also covers the connection phase: a provider that
         // accepts the request and never answers must end as a retryable idle
         // failure, not as an opaque abort.
+        if (stopObserved) {
+          // The stop fired during the connection attempt: hand the turn back
+          // unpersisted, like a stop observed mid-stream.
+          break;
+        }
         if (idleAborted || generationController.signal.aborted) throw new LlmStreamIdleError();
         throw error;
       }
@@ -433,30 +449,28 @@ export async function processChat(
       requestModel = call.model;
       // These early exits leave before the stream try/finally disarms the
       // watchdog: without an explicit cleanup every provider refusal would
-      // keep a 90 s timer armed on an already-abandoned controller.
+      // keep a 90 s timer armed on an already-abandoned controller. The stop
+      // listener is also dropped: nothing below subscribes anymore.
       if (!response.ok) {
         if (idleTimer) clearTimeout(idleTimer);
+        stopSignalOff?.();
         const errorText = await response.text();
         throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
       }
       const reader = response.body?.getReader();
       if (!reader) {
         if (idleTimer) clearTimeout(idleTimer);
+        stopSignalOff?.();
         throw new Error("No response body from LLM");
       }
 
       const decoder = new TextDecoder();
       let buffer = "";
       const reasoningStream = new AssistantReasoningStream(emitter);
-      // Event-driven stop: a stop requested while the loop sits on a pending
-      // `reader.read()` (silent reasoning phases) is caught here instead of
-      // after the next chunk. Aborting the provider request errors the body
-      // stream, which unblocks the pending read; the read rejection sees
-      // `stopObserved` and the round is handed back unpersisted.
-      const stopSignalOff = context.onStopSignal?.(() => {
-        stopObserved = true;
-        generationController.abort();
-      }) ?? null;
+      // A stop requested while the loop sits on a pending `reader.read()`
+      // (silent reasoning phases) aborts the provider request, which errors
+      // the body stream and unblocks the pending read; the read rejection
+      // sees `stopObserved` and the round is handed back unpersisted.
       try {
         while (true) {
           // A stop that arrives mid-stream aborts the provider request right
