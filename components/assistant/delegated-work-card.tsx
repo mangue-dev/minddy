@@ -1,14 +1,20 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon, BotIcon, CancelCircleIcon as Ban, CheckmarkCircle01Icon as CheckCircle2, GitBranchIcon, GitCommitIcon, GitPullRequestIcon, HelpCircleIcon, LinkSquare01Icon, Loading02Icon, PackageIcon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, BotIcon, CancelCircleIcon as Ban, CheckmarkCircle01Icon as CheckCircle2, GitBranchIcon, GitCommitIcon, GitPullRequestIcon, HelpCircleIcon, LinkSquare01Icon, Loading02Icon, PackageIcon, SquareIcon } from "@hugeicons/core-free-icons";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useNow, useTranslations } from "next-intl";
 import {
   Button,
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
   SidePanel,
   SidePanelBody,
   SidePanelContent,
@@ -16,13 +22,16 @@ import {
   SidePanelHeader,
   SidePanelTitle,
   Spinner,
+  toast,
   cn,
 } from "mangue-ui";
 import { AgentDiffSheet } from "@/components/agent/agent-diff-sheet";
 import { AppIcon } from "@/components/icon";
 import { ModelLogo } from "@/components/model-logo";
 import { NumoIcon } from "@/components/numo-icon";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  interruptAgentRunApi,
   isAgentRunWorking,
   type AgentRunSummary,
 } from "@/lib/agent-api";
@@ -90,6 +99,7 @@ const STATE_ICONS = {
   starting: Loading02Icon,
   queued: Loading02Icon,
   running: Loading02Icon,
+  stopping: Loading02Icon,
   waiting_input: HelpCircleIcon,
   completed: CheckCircle2,
   failed: AlertCircleIcon,
@@ -140,6 +150,103 @@ function msOr(iso: string | null, fallback: number): number {
   return Number.isNaN(ms) ? fallback : ms;
 }
 
+/**
+ * INDIVIDUAL stop of a delegated worker (MIN-599). Same gesture as the Numo
+ * stop in the composer (one click to reconsider, then interrupt): the flag
+ * drops, the worker rests, and Numo resumes on the delegation result. The
+ * button disappears with the working state — at rest there is nothing to stop.
+ *
+ * The STOP STATE lives in the card, not here: both anchors (card and side
+ * panel) fold to the same optimistic "stopping" presentation the instant the
+ * stop is confirmed, without waiting for the server (PR 304 reference).
+ */
+function DelegatedWorkStopButton({
+  working,
+  stopping,
+  onStop,
+}: {
+  working: boolean;
+  stopping: boolean;
+  onStop: () => void;
+}) {
+  const t = useTranslations("Agent");
+  const tCommon = useTranslations("Common");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const confirmationId = useId();
+  const titleId = `${confirmationId}-title`;
+  const descriptionId = `${confirmationId}-description`;
+
+  if (!working) return null;
+
+  return (
+    <Popover open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <PopoverAnchor asChild>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              className="shrink-0 text-muted-foreground"
+              disabled={stopping}
+              onClick={() => setConfirmOpen(true)}
+              aria-label={t("delegatedWorkStop")}
+              aria-haspopup="dialog"
+              aria-controls={confirmationId}
+              aria-expanded={confirmOpen}
+            >
+              {stopping ? (
+                <Spinner className="size-3.5" aria-hidden />
+              ) : (
+                <HugeiconsIcon icon={SquareIcon} className="size-3.5" aria-hidden />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">{t("delegatedWorkStop")}</TooltipContent>
+        </Tooltip>
+      </PopoverAnchor>
+      <PopoverContent
+        id={confirmationId}
+        role="dialog"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        side="top"
+        align="end"
+        sideOffset={8}
+        collisionPadding={10}
+        className="w-72 gap-3 rounded-xl p-3"
+      >
+        <PopoverHeader>
+          <PopoverTitle id={titleId}>{t("delegatedWorkStopConfirmTitle")}</PopoverTitle>
+          <PopoverDescription id={descriptionId}>
+            {t("delegatedWorkStopConfirmDescription")}
+          </PopoverDescription>
+        </PopoverHeader>
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setConfirmOpen(false)}
+          >
+            {tCommon("cancel")}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              setConfirmOpen(false);
+              onStop();
+            }}
+          >
+            {t("delegatedWorkStop")}
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 /** Compact ticking chrono, same format as the agent pill ("2 min 3s"). */
 function elapsedLabel(
   t: ReturnType<typeof useTranslations<"Agent">>,
@@ -187,7 +294,10 @@ function DelegatedWorkMeta({
           icon={StateIcon}
           className={cn(
             "size-3.5",
-            (state === "starting" || state === "queued" || state === "running") &&
+            (state === "starting" ||
+              state === "queued" ||
+              state === "running" ||
+              state === "stopping") &&
               "animate-spin",
           )}
           aria-hidden
@@ -276,7 +386,32 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
   const [diffFocus, setDiffFocus] = useState<string | null>(null);
-  const state = delegatedWorkState(call, run);
+  // Optimistic stop (PR 304 reference): the confirmed stop folds the whole
+  // presentation immediately — state line, live feed, chrono — and only the
+  // quiet reconciliation of the run query settles the card into its final
+  // state when the worker actually rests.
+  const [stopping, setStopping] = useState(false);
+  const rawState = delegatedWorkState(call, run);
+  const state: DelegatedWorkState =
+    stopping && working ? "stopping" : rawState;
+
+  useEffect(() => {
+    if (!working) setStopping(false);
+  }, [working]);
+
+  const stopWorker = async () => {
+    if (!runId) return;
+    setStopping(true);
+    try {
+      await interruptAgentRunApi(runId);
+    } catch (error) {
+      // The stop did not land (network, run already at rest): hand control
+      // back instead of leaving a dead presentation.
+      setStopping(false);
+      toast.error((error as Error).message);
+    }
+  };
+
   // The titler stamps a short `agent_runs.title` on the run at launch: prefer
   // it over the raw launch prompt, which can run for paragraphs. Until it lands
   // (or for old runs without one) the delegation arguments remain the fallback.
@@ -332,6 +467,13 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
               />
             </div>
           </div>
+          {runId ? (
+            <DelegatedWorkStopButton
+              working={working}
+              stopping={stopping}
+              onStop={() => void stopWorker()}
+            />
+          ) : null}
           <Button
             type="button"
             variant="outline"
@@ -418,17 +560,24 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
             className="flex w-[min(760px,calc(100vw-1rem))] flex-col"
           >
             <SidePanelHeader className="border-b-0">
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <SidePanelTitle className="line-clamp-2 text-sm font-medium leading-5">
-                  {title}
-                </SidePanelTitle>
-                <SidePanelDescription>
-                  <DelegatedWorkMeta
-                    state={state}
-                    run={run}
-                    changedFileCount={changedFileCount}
-                  />
-                </SidePanelDescription>
+              <div className="flex min-w-0 flex-1 items-start gap-2">
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <SidePanelTitle className="line-clamp-2 text-sm font-medium leading-5">
+                    {title}
+                  </SidePanelTitle>
+                  <SidePanelDescription>
+                    <DelegatedWorkMeta
+                      state={state}
+                      run={run}
+                      changedFileCount={changedFileCount}
+                    />
+                  </SidePanelDescription>
+                </div>
+                <DelegatedWorkStopButton
+                  working={working}
+                  stopping={stopping}
+                  onStop={() => void stopWorker()}
+                />
               </div>
             </SidePanelHeader>
             <SidePanelBody className="flex min-h-0 flex-1 flex-col p-0">
@@ -439,6 +588,7 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
                 status={run?.status ?? "queued"}
                 prompt={run?.prompt}
                 promptMentions={run?.prompt_mentions}
+                stopping={stopping}
                 onOpenFile={(path) => openDiff(path)}
                 onOpenDiff={() => openDiff()}
                 hiddenQuestionEventId={hiddenQuestionEventId}

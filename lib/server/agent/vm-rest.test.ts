@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { INTERRUPTED_DELEGATION_NOTE } from "./agent-contract";
 import type { VmTurnReport } from "./vm/protocol";
 
 /**
@@ -325,6 +326,34 @@ describe("les quatre sorties, et elles quittent toutes `running`", () => {
     await landVmTurn(run(), report({ status: "interrupted" }));
     expect(h.stamped.find((f) => f.status === "completed")).toBeDefined();
     expect(h.notifications).toEqual([]);
+  });
+
+  it("interruption of a Numo worker: the handoff stays honest (partial marker)", async () => {
+    // MIN-599 — the executor stamps an interrupted run as `completed`; without
+    // the marker, Numo would receive `worker_completed` and proceed as if the
+    // objective succeeded.
+    h.run = { ...RUN, parent_numo_turn_id: "turn-1" };
+    await landVmTurn(run(), report({ status: "interrupted" }));
+    expect(h.stamped.find((f) => f.status === "completed")).toMatchObject({
+      error_message: INTERRUPTED_DELEGATION_NOTE,
+    });
+  });
+
+  it("interruption of a STANDALONE conversation keeps the bare interrupt", async () => {
+    await landVmTurn(run(), report({ status: "interrupted" }));
+    expect(h.stamped.find((f) => f.status === "completed")).not.toHaveProperty(
+      "error_message",
+    );
+  });
+
+  it("interruption with pending steering re-queues WITHOUT the interrupted marker", async () => {
+    // The run continues (it will drain the message), so it is not "stopped".
+    h.run = { ...RUN, parent_numo_turn_id: "turn-1" };
+    h.pendingMessages = true;
+    await landVmTurn(run(), report({ status: "interrupted" }));
+    const queued = h.stamped.find((f) => f.status === "queued");
+    expect(queued).toBeDefined();
+    expect(queued).not.toHaveProperty("error_message");
   });
 
   it("budget épuisé : la carte qui dit pourquoi, et PAS de re-queue", async () => {

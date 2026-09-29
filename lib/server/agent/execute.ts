@@ -44,7 +44,11 @@ import {
   REPO_INSTRUCTION_FILES,
   type InstructionsState,
 } from "./repo-instructions";
-import type { AgentChatMessage, EmitAgentEvent } from "./agent-contract";
+import {
+  INTERRUPTED_DELEGATION_NOTE,
+  type AgentChatMessage,
+  type EmitAgentEvent,
+} from "./agent-contract";
 import {
   isWebSearchEnabled,
   MAX_WEB_SEARCHES_PER_TURN,
@@ -650,6 +654,13 @@ export async function executeAgentRun(
     if (run.interrupt_requested) {
       await clearInterrupt(run.id);
       const pending = await hasPendingRunMessages(run.id);
+      // A Numo worker interrupted for good must NOT hand its parent a
+      // "completed" delegation result (MIN-599): the marker keeps the handoff
+      // honest (`partial`). Only when the run actually rests — a re-queued run
+      // carries its pending message instead.
+      const interruptedNote = !pending && run.parent_numo_turn_id
+        ? { error_message: INTERRUPTED_DELEGATION_NOTE }
+        : {};
       await stampRun(run.id, {
         status: pending ? "queued" : "completed",
         ...(pending ? { not_before: new Date().toISOString() } : {}),
@@ -657,6 +668,7 @@ export async function executeAgentRun(
         attempts: 0,
         last_activity_at: new Date().toISOString(),
         interrupt_requested: false,
+        ...interruptedNote,
       });
       return "interrupted";
     }
