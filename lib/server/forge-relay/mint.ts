@@ -120,8 +120,8 @@ async function recordRelayAudit(
       .from("forge_relay_audit")
       .insert({ instance_id: instanceId, action, detail: {} });
     if (error) throw error;
-  } catch (err) {
-    console.error("[forge-relay] audit write failed:", (err as Error).message);
+  } catch {
+    console.error("[forge-relay] audit_write_failed");
   }
 }
 

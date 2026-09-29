@@ -68,7 +68,7 @@ export async function listPublicComments(params: {
     .order("created_at", { ascending: true })
     .limit(PUBLIC_THREAD_LIMIT);
   if (error) {
-    console.error("[feedback-comments] list failed:", error.message);
+    console.error("[feedback-comments] list_failed");
     return [];
   }
   return ((data ?? []) as unknown as PublicCommentRow[]).map((row) =>
@@ -107,7 +107,7 @@ export async function publicCommentSummaries(
     .in("feedback_post_id", postIds)
     .eq("visibility", "public");
   if (error) {
-    console.error("[feedback-comments] summaries failed:", error.message);
+    console.error("[feedback-comments] summaries_failed");
     return summaries;
   }
 
@@ -218,7 +218,7 @@ export async function addPublicComment(params: {
     .select(PUBLIC_COMMENT_SELECT)
     .single();
   if (error || !data) {
-    console.error("[feedback-comments] create failed:", error?.message);
+    console.error("[feedback-comments] create_failed");
     return { ok: false, error: "failed" };
   }
 
@@ -273,7 +273,7 @@ export async function deletePublicComment(params: {
     }
   );
   if (error) {
-    console.error("[feedback-comments] delete failed:", error.message);
+    console.error("[feedback-comments] delete_failed");
     return false;
   }
   return data === true;

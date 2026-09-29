@@ -1992,7 +1992,12 @@
     "closeDescription": "Lo encontrarás en tus recientes borradores.",
     "closeConfirm": "Guardar",
     "closeDiscard": "Desechar",
-    "keepEditing": "Volver"
+    "keepEditing": "Volver",
+    "saveFailed": "No se pudo guardar el borrador. Mantén este diálogo abierto e inténtalo de nuevo.",
+    "restoreFailed": "No se pudieron recuperar los borradores. Comprueba tu conexión e inténtalo de nuevo.",
+    "deleteFailed": "No se pudo eliminar el borrador. Inténtalo de nuevo.",
+    "recoverLegacy": "Recuperar borradores antiguos en este dispositivo",
+    "legacyWarning": "Recupera solo los borradores que creaste en este dispositivo."
   },
   "Pages": {
     "placeholder": "Escribe o pulsa '/' para ver los bloques…",

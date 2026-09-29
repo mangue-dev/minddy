@@ -102,8 +102,8 @@ async function requestAccessToken(forceRefresh = false): Promise<string | null> 
       identity,
     };
     return cachedToken.value;
-  } catch (error) {
-    console.error("[push/wns] OAuth request failed:", (error as Error).message);
+  } catch {
+    console.error("[push/wns] oauth_request_failed");
     return null;
   }
 }

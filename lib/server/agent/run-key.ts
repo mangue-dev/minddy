@@ -242,3 +242,19 @@ export async function revokeRunKey(hash: string): Promise<void> {
     console.error("[agent-run-key] revoke_request_failed");
   }
 }
+
+/** Erasure cannot certify success from a best-effort credential revocation. */
+export async function revokeRunKeyStrict(hash: string): Promise<void> {
+  const provisioning = process.env[PROVISIONING_ENV]?.trim();
+  if (!hash) return;
+  if (!provisioning) throw new Error("agent_key_revocation_unavailable");
+  let response: Response;
+  try {
+    response = await fetch(`${KEYS_URL}/${encodeURIComponent(hash)}`, {
+      method: "DELETE", headers: { authorization: `Bearer ${provisioning}` },
+    });
+  } catch {
+    throw new Error("agent_key_revocation_failed");
+  }
+  if (!response.ok && response.status !== 404) throw new Error("agent_key_revocation_failed");
+}

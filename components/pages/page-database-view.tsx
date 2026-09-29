@@ -1,4 +1,5 @@
 "use client";
+import { removeLocalSnapshot, restoreLocalSnapshot, saveLocalSnapshot } from "@/lib/local-snapshots";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -405,8 +406,15 @@ export function PageDatabaseView({
   const [preferencesReady, setPreferencesReady] = useState(false);
   const storageKey = `minddy:database-list:${projectId}:${database.id}`;
   useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem(storageKey) ?? "null");
+    let cancelled = false;
+    setPreferencesReady(false);
+    void (async () => {
+      const raw = JSON.parse(localStorage.getItem(storageKey) ?? "null");
+      const decoded = raw?.format === "minddy-local-v1"
+        ? await restoreLocalSnapshot(localStorage, storageKey, "page-list-settings") : null;
+      const stored = decoded && typeof decoded === "object" ? decoded as Record<string, unknown> : null;
+      if (raw && raw?.format !== "minddy-local-v1") removeLocalSnapshot(localStorage, storageKey);
+      if (cancelled) return;
       if (stored && typeof stored === "object") {
         if (typeof stored.sort === "string") setSort(stored.sort);
         if (typeof stored.descending === "boolean")
@@ -420,18 +428,14 @@ export function PageDatabaseView({
         )
           setHidden(stored.hidden);
       }
-    } catch {
-      /* Storage may be unavailable in private browsing. */
-    }
-    setPreferencesReady(true);
+    })().catch(() => {}).finally(() => { if (!cancelled) setPreferencesReady(true); });
+    return () => { cancelled = true; };
   }, [storageKey]);
   useEffect(() => {
     if (!preferencesReady) return;
     try {
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify({ sort, descending, filter, filterValue, hidden }),
-      );
+      void saveLocalSnapshot(localStorage, storageKey, "page-list-settings",
+        { sort, descending, filter, filterValue, hidden }).catch(() => {});
     } catch {
       /* List controls remain usable without persistence. */
     }

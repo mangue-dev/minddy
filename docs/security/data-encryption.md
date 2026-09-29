@@ -33,8 +33,16 @@ Supabase Auth stores the account email as an identity used for login. It remains
 in `auth.users` while Supabase Auth is the identity provider. A blind index in
 Minddy's own tables cannot replace that Auth identity. User-visible display
 names are intentionally public to members of their projects.
+Auth imports now accept only the explicit public-name and bounded product
+preference allowlist. Arbitrary imported metadata remains forbidden; existing
+Auth metadata and endpoint backups need a separate cleanup inventory. Current
+code/proof state is in the [29 September report](encryption/review-2026-09-29.md).
 
-## Implemented foundation on this branch
+## Historical foundation checkpoint
+
+The following initial implementation state is retained as history. Later
+repository conversions and proof checkpoints supersede its open-code claims;
+none establish that production rows have been migrated.
 
 `lib/server/encryption/` provides AES-256-GCM with row/column AAD, branded
 `Encrypted<T>` values, a separate HMAC blind index, a local root-key wrapper,
@@ -210,6 +218,10 @@ Supabase Vault can reduce plaintext secrets in backups, but its
 separate control from application-side encryption. Lock down that view before
 using it. Database statement logging is an operator-level setting; avoid SQL
 literals with secrets even if logging is disabled.
+The current implementation hardens Vault privileges but does not use Vault as
+the content root or require a blanket credential move there. Scoped application
+envelopes protect converted credentials. The current per-row transition is an
+atomic verified ciphertext replacement, never a retained clear dual write.
 
 ## Initial implementation review against the issue plan
 

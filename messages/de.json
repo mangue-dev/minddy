@@ -1992,7 +1992,12 @@
     "closeDescription": "Sie finden ihn in Ihren letzten Entwürfen.",
     "closeConfirm": "Speichern",
     "closeDiscard": "Verwerfen",
-    "keepEditing": "Zurück"
+    "keepEditing": "Zurück",
+    "saveFailed": "Der Entwurf konnte nicht gespeichert werden. Lassen Sie diesen Dialog offen und versuchen Sie es erneut.",
+    "restoreFailed": "Entwürfe konnten nicht wiederhergestellt werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "deleteFailed": "Der Entwurf konnte nicht gelöscht werden. Versuchen Sie es erneut.",
+    "recoverLegacy": "Ältere Entwürfe auf diesem Gerät wiederherstellen",
+    "legacyWarning": "Stellen Sie nur Entwürfe wieder her, die Sie auf diesem Gerät erstellt haben."
   },
   "Pages": {
     "placeholder": "Schreiben oder „/“ für Blöcke eingeben…",

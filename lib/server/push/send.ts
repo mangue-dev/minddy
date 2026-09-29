@@ -92,7 +92,7 @@ async function sendToSubscription(
       return "gone";
     }
     console.error(
-      `[push/apns] delivery failed (${response.status || "no status"}): ${response.reason ?? "unknown reason"}`
+      "[push/apns] delivery_failed", { status: response.status }
     );
     await incrementFailureCount(service, sub.id);
     return "failed";
@@ -112,7 +112,7 @@ async function sendToSubscription(
       return "gone";
     }
     console.error(
-      `[push/wns] delivery failed (${response.status || "no status"}): ${response.reason ?? "unknown reason"}`
+      "[push/wns] delivery_failed", { status: response.status }
     );
     await incrementFailureCount(service, sub.id);
     return "failed";
@@ -152,8 +152,7 @@ async function sendToSubscription(
     }
 
     console.error(
-      `[push] delivery failed (${status ?? "no status"}):`,
-      (e as Error).message
+      "[push] delivery_failed", { status }
     );
     // `failure_count + 1` without RPC: the value read may be out of date, but
     // this is a maintenance indicator, not a transactional counter.
@@ -201,7 +200,7 @@ export async function activeSubscriptionsOf(
     .eq("user_id", userId)
     .eq("enabled", true);
   if (error) {
-    console.error("[push] failed to read subscriptions:", error.message);
+    console.error("[push] subscriptions_read_failed");
     return [];
   }
   return Promise.all((data ?? []).map(async (row) => openPush(row))) as Promise<PushSubscriptionRow[]>;

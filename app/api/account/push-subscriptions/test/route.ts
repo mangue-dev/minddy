@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (error) {
-    console.error("[api/push-subscriptions/test] lookup failed:", error.message);
+    console.error("[api/push-subscriptions/test] lookup_failed");
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!device) {

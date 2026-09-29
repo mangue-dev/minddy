@@ -4,6 +4,12 @@ Run this protocol against a dedicated staging deployment and an isolated
 PostgreSQL copy. It measures code readiness; it does not assume that production
 rows have been migrated. Keep production flags and production data untouched.
 
+The current corrective code review uses only isolated PostgreSQL and synthetic
+fixtures. Representative search parity, latency, key-cache and load controls
+below belong to staging before activation; production measurements are not a
+code-PR acceptance requirement. The readiness endpoint reports only its
+explicit scope (ten critical families plus forge objects), never global closure.
+
 ## Fixture and oracle
 
 Prepare two isolated databases with the same anonymized, permission-preserving
@@ -291,13 +297,16 @@ printf 'header = "Authorization: Bearer %s"\n' "$CRON_SECRET" |
     > /tmp/min591-encryption-readiness.json
 ```
 
-Require HTTP 200, `ready: true`, and zero blocked rows in every family on both
+Require HTTP 200, scoped `ready: true`, and zero blocked rows in every family on both
 passes. HTTP 409 means a legacy, failed, tampered or wrong-key candidate still
 blocks activation; HTTP 503 means the verifier itself could not complete.
 The verifier walks every current row by keyset, checks the current key version,
 and decrypts protected values. It returns counts only. It is not an atomic
 snapshot across requests, so do not use it as a concurrent-writer completion
 proof. Retain failed candidates for repair and keep their `checked_at` null.
+Require the separate `forgeObjects` byte result too. SQL metadata completeness
+alone cannot authenticate Storage bytes. `globalReadiness: "not_assessed"`
+means every other target and retained copy still needs its own closure proof.
 
 Before this verifier, apply the additive OTP, authenticated-content and Agent
 erasure-fence migrations. Run the six bounded content workers until both

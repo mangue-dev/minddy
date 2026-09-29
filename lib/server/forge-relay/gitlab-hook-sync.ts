@@ -40,9 +40,9 @@ export async function pushGitlabHookSecret(
       secret,
     });
     if (!response.ok) {
-      console.error("[forge-relay] hook-secret push refused:", response.error);
+      console.error("[forge-relay] hook_secret_push_refused", { status: response.status });
     }
-  } catch (err) {
-    console.error("[forge-relay] hook-secret push failed:", (err as Error).message);
+  } catch {
+    console.error("[forge-relay] hook_secret_push_failed");
   }
 }

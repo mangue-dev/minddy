@@ -386,9 +386,9 @@ export async function bindRelayClaim(input: {
   let account: { login: string | null } | null = null;
   try {
     account = await getInstallationAccount(input.installationId);
-  } catch (err) {
+  } catch {
     // Transient GitHub failure: refuse cleanly so the operator can retry.
-    console.error("[forge-relay] installation account lookup failed:", (err as Error).message);
+    console.error("[forge-relay] installation_account_lookup_failed");
   }
   const login = account?.login ?? null;
   if (!login) {

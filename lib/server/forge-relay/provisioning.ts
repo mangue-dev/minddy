@@ -161,12 +161,9 @@ export async function ensureForgeRelayProvisioned(): Promise<boolean> {
         }
         await registerInstance();
         return true;
-      } catch (err) {
+      } catch {
         lastFailureAt = Date.now();
-        console.error(
-          "[forge-relay] automatic registration failed:",
-          (err as Error).message,
-        );
+        console.error("[forge-relay] automatic_registration_failed");
         return false;
       }
     } finally {
@@ -202,7 +199,7 @@ async function registerInstance(): Promise<void> {
     error?: string;
   } | null;
   if (!response.ok || !data?.instanceId) {
-    throw new Error(data?.error || `registration failed (${response.status})`);
+    throw new Error("relay_registration_refused");
   }
 
   const webhookSecret = crypto.randomBytes(32).toString("hex");
@@ -218,7 +215,7 @@ async function registerInstance(): Promise<void> {
       },
       { onConflict: "id" },
     );
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("relay_identity_write_failed");
 
   cached = {
     url,
@@ -255,8 +252,7 @@ export async function pushProvisionedWebhookRegistration(): Promise<void> {
   });
   if (!response.ok) {
     console.error(
-      "[forge-relay] webhook registration refused:",
-      await response.text().catch(() => `HTTP ${response.status}`),
+      "[forge-relay] webhook_registration_refused", { status: response.status },
     );
   }
 }

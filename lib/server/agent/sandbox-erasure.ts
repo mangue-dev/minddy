@@ -2,8 +2,9 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { agentSandboxName, legacyAgentSandboxName } from "./network-policy";
-import { revokeRunKey } from "./run-key";
+import { revokeRunKeyStrict } from "./run-key";
 import { deleteSandboxByName } from "./sandbox";
+import { eraseSandboxAllocations } from "./sandbox-allocation";
 
 export interface ErasableAgentRun {
   id: string;
@@ -37,6 +38,9 @@ export async function listScopedAgentRuns(
 
 /** Erase active and historical Agent compute before a project is purged. */
 export async function eraseAgentSandboxesForProject(projectId: string): Promise<void> {
+  const { data, error } = await getServiceClient().rpc("begin_agent_project_erasure", { p_project_id: projectId });
+  if (error || data !== true) throw new Error("agent_project_erasure_fence_failed");
+  await eraseSandboxAllocations("project", projectId);
   for (const run of await listScopedAgentRuns("project_id", projectId)) {
     const runId = run.id as string;
     for (const name of new Set([
@@ -46,6 +50,6 @@ export async function eraseAgentSandboxesForProject(projectId: string): Promise<
     ])) {
       if (name) await deleteSandboxByName(name);
     }
-    if (run.provider_key_id) await revokeRunKey(run.provider_key_id as string);
+    if (run.provider_key_id) await revokeRunKeyStrict(run.provider_key_id as string);
   }
 }

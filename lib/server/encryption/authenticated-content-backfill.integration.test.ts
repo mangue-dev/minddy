@@ -57,8 +57,10 @@ describe.skipIf(!enabled)("authenticated OAuth and API-key backfill proofs", () 
     try {
       expect(sql(template, "SELECT count(*) FROM public.oauth_clients;")).toBe("0");
       sql("postgres", `CREATE DATABASE ${database} TEMPLATE ${template};`);
-      const migration = readFileSync("supabase/migrations/20270108180000_authenticated_content_backfill_proofs.sql", "utf8");
-      sql(database, migration);
+      if (!process.env.MINDDY_ENCRYPTION_FINAL_TEMPLATE) {
+        const migration = readFileSync("supabase/migrations/20270108180000_authenticated_content_backfill_proofs.sql", "utf8");
+        sql(database, migration);
+      }
       const ciphertext = await Promise.all(values.map((value, index) =>
         store.encrypt(value, contexts[index])));
       sql(database, `INSERT INTO auth.users(id) VALUES(${quote(user)});

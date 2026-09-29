@@ -14,6 +14,26 @@
       ]
     }
   },
+  "agent_project_erasure_fences": {
+    "scope": { "kind": "project", "column": "project_id" },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": ["project_id"],
+      "timestamp": ["created_at"]
+    }
+  },
+  "agent_sandbox_allocations": {
+    "scope": { "kind": "project", "column": "project_id" },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": ["id", "run_id", "project_id", "user_ids", "sandbox_name",
+        "provider_key_id", "conversation_id", "created_by", "project_owner_id",
+        "private_owner_id", "repo_link_id", "connection_id", "repo_provider", "repo_external_id"],
+      "bounded_metadata": ["provider_pending", "key_request_pending"],
+      "operational_configuration": ["state"],
+      "timestamp": ["created_at", "cleaned_at", "cleanup_attempted_at"]
+    }
+  },
   "agent_artifacts": {
     "scope": {
       "ancestor": "agent_conversations:conversation_id"
@@ -4771,7 +4791,8 @@
       "encryption_metadata": [
         "content_key_version",
         "format_version",
-        "legacy_path_digest"
+        "legacy_path_digest",
+        "verified_object_digest"
       ],
       "routing_identity": [
         "id",
@@ -4782,7 +4803,8 @@
       "timestamp": [
         "created_at",
         "published_at",
-        "rotation_checked_at"
+        "rotation_checked_at",
+        "rotation_attempted_at"
       ]
     }
   },

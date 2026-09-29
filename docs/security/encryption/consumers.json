@@ -157,28 +157,28 @@
     "file": "app/api/account/push-subscriptions/route.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 173,
+    "line": 172,
     "storage": false
   },
   {
     "file": "app/api/account/push-subscriptions/route.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 194,
+    "line": 193,
     "storage": false
   },
   {
     "file": "app/api/account/push-subscriptions/route.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 226,
+    "line": 225,
     "storage": false
   },
   {
     "file": "app/api/account/push-subscriptions/route.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 241,
+    "line": 239,
     "storage": false
   },
   {
@@ -1662,63 +1662,63 @@
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": null,
-    "line": 52,
+    "line": 53,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 81,
+    "line": 82,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 91,
+    "line": 92,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 97,
+    "line": 98,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": null,
-    "line": 151,
+    "line": 152,
     "storage": true
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "rpc",
     "resource": "begin_agent_account_erasure",
-    "line": 169,
+    "line": 170,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 176,
+    "line": 178,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 204,
+    "line": 206,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "user_avatars",
-    "line": 251,
+    "line": 253,
     "storage": false
   },
   {
@@ -1928,84 +1928,84 @@
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": null,
-    "line": 111,
+    "line": 112,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 316,
+    "line": 317,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": null,
-    "line": 406,
+    "line": 407,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 427,
+    "line": 428,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 443,
+    "line": 444,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 468,
+    "line": 469,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "objectives",
-    "line": 577,
+    "line": 578,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "objectives",
-    "line": 585,
+    "line": 586,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "objectives",
-    "line": 587,
+    "line": 588,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "categories",
-    "line": 593,
+    "line": 594,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "categories",
-    "line": 600,
+    "line": 601,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "categories",
-    "line": 602,
+    "line": 603,
     "storage": false
   },
   {
@@ -2082,21 +2082,21 @@
     "file": "lib/server/agent/control-plane.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 435,
+    "line": 429,
     "storage": false
   },
   {
     "file": "lib/server/agent/control-plane.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 1442,
+    "line": 1436,
     "storage": false
   },
   {
     "file": "lib/server/agent/control-plane.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 1513,
+    "line": 1507,
     "storage": false
   },
   {
@@ -2124,56 +2124,56 @@
     "file": "lib/server/agent/drain.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 75,
+    "line": 76,
     "storage": false
   },
   {
     "file": "lib/server/agent/drain.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 96,
+    "line": 97,
     "storage": false
   },
   {
     "file": "lib/server/agent/drain.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 118,
+    "line": 119,
     "storage": false
   },
   {
     "file": "lib/server/agent/drain.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 127,
+    "line": 128,
     "storage": false
   },
   {
     "file": "lib/server/agent/drain.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 211,
+    "line": 212,
     "storage": false
   },
   {
     "file": "lib/server/agent/drain.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 425,
+    "line": 426,
     "storage": false
   },
   {
     "file": "lib/server/agent/drain.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 434,
+    "line": 435,
     "storage": false
   },
   {
     "file": "lib/server/agent/drain.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 449,
+    "line": 450,
     "storage": false
   },
   {
@@ -2194,21 +2194,21 @@
     "file": "lib/server/agent/execute.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 288,
+    "line": 290,
     "storage": false
   },
   {
     "file": "lib/server/agent/execute.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 294,
+    "line": 296,
     "storage": false
   },
   {
     "file": "lib/server/agent/execute.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 357,
+    "line": 359,
     "storage": false
   },
   {
@@ -3206,10 +3206,24 @@
     "storage": false
   },
   {
+    "file": "lib/server/agent/sandbox-allocation.ts",
+    "operation": "rpc",
+    "resource": null,
+    "line": 21,
+    "storage": false
+  },
+  {
     "file": "lib/server/agent/sandbox-erasure.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 23,
+    "line": 24,
+    "storage": false
+  },
+  {
+    "file": "lib/server/agent/sandbox-erasure.ts",
+    "operation": "rpc",
+    "resource": "begin_agent_project_erasure",
+    "line": 41,
     "storage": false
   },
   {
@@ -5799,29 +5813,22 @@
     "file": "lib/server/encryption/forge-attachment-backfill.ts",
     "operation": "from",
     "resource": null,
-    "line": 45,
+    "line": 44,
     "storage": true
   },
   {
     "file": "lib/server/encryption/forge-attachment-backfill.ts",
     "operation": "from",
-    "resource": "forge_attachment_legacy_owners",
-    "line": 48,
+    "resource": null,
+    "line": 49,
+    "storage": true
+  },
+  {
+    "file": "lib/server/encryption/forge-attachment-backfill.ts",
+    "operation": "rpc",
+    "resource": "verify_forge_attachment_legacy_cleanup",
+    "line": 56,
     "storage": false
-  },
-  {
-    "file": "lib/server/encryption/forge-attachment-backfill.ts",
-    "operation": "from",
-    "resource": null,
-    "line": 53,
-    "storage": true
-  },
-  {
-    "file": "lib/server/encryption/forge-attachment-backfill.ts",
-    "operation": "from",
-    "resource": null,
-    "line": 58,
-    "storage": true
   },
   {
     "file": "lib/server/encryption/forge-attachment-backfill.ts",
@@ -5833,9 +5840,16 @@
   {
     "file": "lib/server/encryption/forge-attachment-backfill.ts",
     "operation": "from",
-    "resource": "forge_attachment_objects",
-    "line": 70,
+    "resource": "forge_attachment_legacy_owners",
+    "line": 65,
     "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-attachment-backfill.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 74,
+    "storage": true
   },
   {
     "file": "lib/server/encryption/forge-attachment-backfill.ts",
@@ -5847,22 +5861,64 @@
   {
     "file": "lib/server/encryption/forge-attachment-backfill.ts",
     "operation": "from",
-    "resource": null,
-    "line": 82,
-    "storage": true
-  },
-  {
-    "file": "lib/server/encryption/forge-attachment-backfill.ts",
-    "operation": "from",
-    "resource": "forge_attachment_legacy_owners",
-    "line": 85,
+    "resource": "forge_attachment_objects",
+    "line": 86,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-attachment-backfill.ts",
     "operation": "from",
+    "resource": null,
+    "line": 95,
+    "storage": true
+  },
+  {
+    "file": "lib/server/encryption/forge-attachment-backfill.ts",
+    "operation": "from",
     "resource": "forge_attachment_migration_attempts",
-    "line": 91,
+    "line": 104,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-attachment-readiness.ts",
+    "operation": "rpc",
+    "resource": "forge_attachment_migration_complete",
+    "line": 17,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-attachment-readiness.ts",
+    "operation": "from",
+    "resource": "forge_attachment_objects",
+    "line": 23,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-attachment-readiness.ts",
+    "operation": "from",
+    "resource": "envelope_data_keys",
+    "line": 31,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-attachment-readiness.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 37,
+    "storage": true
+  },
+  {
+    "file": "lib/server/encryption/forge-attachment-readiness.ts",
+    "operation": "from",
+    "resource": "forge_attachment_objects",
+    "line": 47,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-attachment-readiness.ts",
+    "operation": "rpc",
+    "resource": "forge_attachment_migration_complete",
+    "line": 61,
     "storage": false
   },
   {
@@ -5876,98 +5932,91 @@
     "file": "lib/server/encryption/forge-attachment-rotation.ts",
     "operation": "rpc",
     "resource": "mark_forge_attachment_rotation_checked",
-    "line": 31,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/forge-attachment-rotation.ts",
-    "operation": "rpc",
-    "resource": "mark_forge_attachment_rotation_checked",
-    "line": 39,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/forge-attachment-rotation.ts",
-    "operation": "rpc",
-    "resource": "mark_forge_attachment_rotation_checked",
-    "line": 46,
+    "line": 24,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-attachment-rotation.ts",
     "operation": "from",
     "resource": null,
-    "line": 56,
+    "line": 35,
+    "storage": true
+  },
+  {
+    "file": "lib/server/encryption/forge-attachment-rotation.ts",
+    "operation": "rpc",
+    "resource": "verify_forge_attachment_object",
+    "line": 45,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-attachment-rotation.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 60,
     "storage": true
   },
   {
     "file": "lib/server/encryption/forge-attachment-rotation.ts",
     "operation": "from",
     "resource": null,
-    "line": 66,
-    "storage": true
-  },
-  {
-    "file": "lib/server/encryption/forge-attachment-rotation.ts",
-    "operation": "from",
-    "resource": null,
-    "line": 70,
+    "line": 64,
     "storage": true
   },
   {
     "file": "lib/server/encryption/forge-attachment-rotation.ts",
     "operation": "rpc",
     "resource": "rotate_forge_attachment_reference",
-    "line": 77,
+    "line": 71,
+    "storage": false
+  },
+  {
+    "file": "lib/server/encryption/forge-attachment-rotation.ts",
+    "operation": "rpc",
+    "resource": "verify_forge_attachment_object",
+    "line": 80,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-attachment-rotation.ts",
     "operation": "from",
     "resource": null,
-    "line": 86,
+    "line": 85,
     "storage": true
   },
   {
     "file": "lib/server/encryption/forge-attachment-rotation.ts",
     "operation": "rpc",
-    "resource": "mark_forge_attachment_rotation_checked",
-    "line": 93,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/forge-attachment-rotation.ts",
-    "operation": "rpc",
     "resource": "list_forge_attachment_orphans",
-    "line": 99,
+    "line": 93,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-attachment-rotation.ts",
     "operation": "from",
     "resource": null,
-    "line": 102,
+    "line": 96,
     "storage": true
   },
   {
     "file": "lib/server/encryption/forge-attachment-rotation.ts",
     "operation": "from",
     "resource": "forge_attachment_objects",
-    "line": 108,
+    "line": 102,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-attachment-rotation.ts",
     "operation": "rpc",
     "resource": "delete_abandoned_forge_attachment",
-    "line": 115,
+    "line": 109,
     "storage": false
   },
   {
     "file": "lib/server/encryption/forge-attachment-rotation.ts",
     "operation": "from",
     "resource": null,
-    "line": 120,
+    "line": 114,
     "storage": true
   },
   {
@@ -7206,6 +7255,13 @@
     "file": "lib/server/feedback/boards.ts",
     "operation": "rpc",
     "resource": "write_feedback_sso_secret_protected",
+    "line": 349,
+    "storage": false
+  },
+  {
+    "file": "lib/server/feedback/boards.ts",
+    "operation": "rpc",
+    "resource": "write_feedback_sso_secret",
     "line": 353,
     "storage": false
   },
@@ -7213,14 +7269,7 @@
     "file": "lib/server/feedback/boards.ts",
     "operation": "rpc",
     "resource": "write_feedback_sso_secret",
-    "line": 357,
-    "storage": false
-  },
-  {
-    "file": "lib/server/feedback/boards.ts",
-    "operation": "rpc",
-    "resource": "write_feedback_sso_secret",
-    "line": 384,
+    "line": 380,
     "storage": false
   },
   {
@@ -8011,7 +8060,7 @@
     "file": "lib/server/forge-relay/provisioning.ts",
     "operation": "from",
     "resource": "forge_relay_provisioning",
-    "line": 211,
+    "line": 208,
     "storage": false
   },
   {
@@ -8053,14 +8102,14 @@
     "file": "lib/server/forge-relay/refresh-broker.ts",
     "operation": "from",
     "resource": "forge_relay_refresh_lineage",
-    "line": 149,
+    "line": 148,
     "storage": false
   },
   {
     "file": "lib/server/forge-relay/refresh-broker.ts",
     "operation": "from",
     "resource": "forge_relay_refresh_lineage",
-    "line": 173,
+    "line": 172,
     "storage": false
   },
   {
@@ -9016,6 +9065,20 @@
     "storage": false
   },
   {
+    "file": "lib/server/local-snapshot-access.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 19,
+    "storage": false
+  },
+  {
+    "file": "lib/server/local-snapshot-access.ts",
+    "operation": "from",
+    "resource": "project_members",
+    "line": 39,
+    "storage": false
+  },
+  {
     "file": "lib/server/mcp-client.ts",
     "operation": "from",
     "resource": "user_mcp_connections",
@@ -9327,35 +9390,35 @@
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 459,
+    "line": 458,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 500,
+    "line": 499,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 510,
+    "line": 509,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 571,
+    "line": 570,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 572,
+    "line": 571,
     "storage": false
   },
   {
@@ -10986,21 +11049,21 @@
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 166,
+    "line": 165,
     "storage": false
   },
   {
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 172,
+    "line": 171,
     "storage": false
   },
   {
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 198,
+    "line": 197,
     "storage": false
   },
   {

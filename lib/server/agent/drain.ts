@@ -12,6 +12,7 @@ import { appendEvent, claimRun, notifyAgentRun, stampRun } from "./runs";
 import { SANDBOX_USAGE_SEQ_BASE } from "./pr-landing";
 import { executeAgentRun } from "./execute";
 import { isLoopCommandAlive, stopSandboxByName } from "./sandbox";
+import { retryRevokedSandboxAllocations } from "./sandbox-allocation";
 import { revokeRunKey } from "./run-key";
 import { currentDeploymentScope } from "./deployment";
 import { deploymentLookupPrefix } from "./run-deployment-content";
@@ -495,6 +496,9 @@ export async function drainAgentRuns(
   // Release microVMs from inactive idle sessions (keep snapshot).
   await reapIdleSandboxes(service).catch(() =>
     console.error("[agent-drain] reap_failed"),
+  );
+  await retryRevokedSandboxAllocations().catch(() =>
+    console.error("[agent-drain] allocation_cleanup_failed"),
   );
 
   while (deadline - Date.now() >= MIN_LAUNCH_BUDGET_MS) {

@@ -161,6 +161,7 @@ export function CreateIssueDialog({
   analyticsSource?: AnalyticsPropsFor<"issue_created">["source"];
 }) {
   const t = useTranslations("IssueUI");
+  const tDrafts = useTranslations("Drafts");
   const { user } = useAuth();
   const { track } = useAnalytics();
   const [title, setTitle] = useState("");
@@ -387,8 +388,8 @@ export function CreateIssueDialog({
 
   // Snapshot the form as a draft (MIN-41) — reuses the active id so re-closing a
   // recovered draft updates it in place instead of piling up copies.
-  const saveDraft = () => {
-    drafts.save({
+  const saveDraft = async () => {
+    await drafts.save({
       id: activeDraftId ?? createUuid(),
       projectId,
       updatedAt: Date.now(),
@@ -407,17 +408,17 @@ export function CreateIssueDialog({
   };
 
   // Stash the draft and close (the confirmation's "Save" action).
-  const saveDraftAndClose = () => {
-    saveDraft();
-    closeAndReset();
+  const saveDraftAndClose = async () => {
+    try { await saveDraft(); closeAndReset(); }
+    catch { toast.error(tDrafts("saveFailed")); }
   };
 
   // “Abandon”: we close WITHOUT keeping, and the original draft goes away
   // with — otherwise we would find in the repeat row the one we thought
   // having given up. Same gesture as successful creation, which also consumes the
   // draft it came from.
-  const discardDraftAndClose = () => {
-    if (activeDraftId) drafts.remove(activeDraftId);
+  const discardDraftAndClose = async () => {
+    if (activeDraftId && !await drafts.remove(activeDraftId)) return;
     closeAndReset();
   };
 
@@ -654,6 +655,10 @@ export function CreateIssueDialog({
             {...drop.handlers}
           >
             <DropOverlay show={drop.dragging} />
+            {drafts.legacyAvailable && <div className="mb-3 text-sm">
+              <p>{tDrafts("legacyWarning")}</p>
+              <Button type="button" variant="ghost" onClick={() => void drafts.recoverLegacy()}>{tDrafts("recoverLegacy")}</Button>
+            </div>}
             {/* Recent drafts — a row above the title to restore or delete an
               abandoned draft (MIN-41). Hidden once the form has content. */}
             {title.trim() === "" && description.trim() === "" && (

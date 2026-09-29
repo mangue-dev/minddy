@@ -276,7 +276,12 @@ const rules = [
     allowed: new Set(["lib/server/members.ts"]),
   },
   {
-    access: /\.\s*(?:from\s*\(\s*["'`]envelope_data_keys["'`]|rpc\s*\(\s*["'`](?:create_envelope_data_key_if_absent|rotate_envelope_data_key)["'`])/,
+    access: /\.\s*from\s*\(\s*["'`]envelope_data_keys["'`]\s*\)/,
+    allowed: new Set(["lib/server/encryption/registry.ts",
+      "lib/server/encryption/forge-attachment-readiness.ts"]),
+  },
+  {
+    access: /\.\s*rpc\s*\(\s*["'`](?:create_envelope_data_key_if_absent|rotate_envelope_data_key)["'`]/,
     allowed: new Set(["lib/server/encryption/registry.ts"]),
   },
 ];
@@ -319,6 +324,13 @@ for (const file of files) {
   if (requiredDecoders && (requiredDecoders.some((name) =>
       !new RegExp(`\\b${name}\\s*\\(`).test(source)) ||
       !/encrypted_content\s*,\s*encryption_version/.test(source))) {
+    violations.push(normalized);
+  }
+  if (normalized === "lib/server/encryption/forge-attachment-readiness.ts" &&
+      (!/from\s*\(\s*["']envelope_data_keys["']\s*\)\s*\.select\s*\(\s*["']version["']\s*\)/.test(source) ||
+        !/await\s+decodeAttachmentObject\s*\(/.test(source) ||
+        !/createHash\s*\(\s*["']sha256["']\s*\)/.test(source) ||
+        /(?:\.from\s*\([^;]*?\)\s*\.|\bquery\.)(?:insert|update|upsert|delete)\s*\(/.test(source))) {
     violations.push(normalized);
   }
   if (normalized === "app/api/project-drafts/[id]/route.ts" &&

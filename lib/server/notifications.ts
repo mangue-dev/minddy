@@ -235,8 +235,7 @@ async function currentlyPushableRows(
   ].flatMap((error) => (error ? [error.message] : []));
   if (failures.length > 0) {
     console.error(
-      "[notifications] push scope recheck failed:",
-      failures.join("; "),
+      "[notifications] push_scope_recheck_failed",
     );
   }
 
@@ -437,8 +436,8 @@ export async function insertNotifications(
             typeof metadata?.locale === "string" ? metadata.locale : null,
           ),
         );
-      } catch (e) {
-        console.error("[notifications] prefs read failed:", (e as Error).message);
+      } catch {
+        console.error("[notifications] preferences_read_failed");
       }
     })
   );
@@ -511,7 +510,7 @@ export async function insertNotifications(
     error = result.error;
   }
   if (error) {
-    console.error("[notifications] insert failed:", error.message);
+    console.error("[notifications] insert_failed");
     return;
   }
 

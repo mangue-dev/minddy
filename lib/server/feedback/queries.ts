@@ -109,7 +109,7 @@ export async function listPublicPosts(params: {
       ? query.order("vote_count", { ascending: false }).order("created_at", { ascending: false })
       : query.order("created_at", { ascending: false });
   const { data, error } = await query;
-  if (error) console.error("[feedback-queries] list failed:", error.message);
+  if (error) console.error("[feedback-queries] list_failed");
   const rows = (data ?? []) as unknown as PostWithAuthor[];
   const ids = rows.map((r) => r.id);
   const [voted, comments] = await Promise.all([

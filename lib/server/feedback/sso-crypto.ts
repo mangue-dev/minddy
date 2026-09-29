@@ -64,12 +64,8 @@ export function readBoardSsoSecret(
 
   try {
     return { plain: decrypt(envelope, getSsoEncryptionSecret()), legacy: false };
-  } catch (err) {
-    console.warn(
-      `[feedback-sso-crypto] failed to decrypt board secret: ${
-        err instanceof Error ? err.message : String(err)
-      }`
-    );
+  } catch {
+    console.warn("[feedback-sso-crypto] board_secret_decryption_failed");
     return { plain: null, legacy: false };
   }
 }

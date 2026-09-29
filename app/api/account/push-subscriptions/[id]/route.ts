@@ -52,7 +52,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     .maybeSingle();
 
   if (error) {
-    console.error("[api/push-subscriptions] update failed:", error.message);
+    console.error("[api/push-subscriptions] update_failed");
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!data) {
@@ -74,7 +74,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     .eq("user_id", auth.user.id);
 
   if (error) {
-    console.error("[api/push-subscriptions] delete failed:", error.message);
+    console.error("[api/push-subscriptions] delete_failed");
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!count) {

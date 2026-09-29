@@ -97,8 +97,11 @@ const { decodeJournal } = await import("@/lib/server/agent/encrypted-journal");
 describe.skipIf(!enabled)("agent journal duplicate rotation in isolated PostgreSQL", () => {
   beforeAll(() => {
     state.database = `minddy_min591_journal_rotation_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
-    sql("postgres", `CREATE DATABASE ${state.database} TEMPLATE minddy_min591_followup_final_v3_20260927;`);
-    sql(state.database, readFileSync("supabase/migrations/20270108140000_verified_encryption_backfill_attempts.sql", "utf8"));
+    const template = process.env.MINDDY_ENCRYPTION_FINAL_TEMPLATE ?? "minddy_min591_followup_final_v3_20260927";
+    sql("postgres", `CREATE DATABASE ${state.database} TEMPLATE ${template};`);
+    if (!process.env.MINDDY_ENCRYPTION_FINAL_TEMPLATE) {
+      sql(state.database, readFileSync("supabase/migrations/20270108140000_verified_encryption_backfill_attempts.sql", "utf8"));
+    }
     const actor = randomUUID(), project = randomUUID(), conversation = randomUUID();
     const run = randomUUID();
     sql(state.database, `INSERT INTO auth.users(id) VALUES(${quote(actor)});

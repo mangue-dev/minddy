@@ -78,7 +78,7 @@ export async function pushRelayLinkEvent(input: LinkEventInput): Promise<void> {
     // the snapshot agree; a bind appears in both. Sending both in one request
     // keeps one round trip and one self-healing payload.
     await relayRequest("/api/relay/links", { events: [event], snapshot });
-  } catch (err) {
-    console.warn("[forge-relay] link sync push failed:", (err as Error).message);
+  } catch {
+    console.warn("[forge-relay] link_sync_push_failed");
   }
 }

@@ -14,7 +14,8 @@ import {
 import { deleteSandboxByName } from "@/lib/server/agent/sandbox";
 import { agentSandboxName, legacyAgentSandboxName } from "@/lib/server/agent/network-policy";
 import { listScopedAgentRuns, type ErasableAgentRun } from "@/lib/server/agent/sandbox-erasure";
-import { revokeRunKey } from "@/lib/server/agent/run-key";
+import { eraseSandboxAllocations } from "@/lib/server/agent/sandbox-allocation";
+import { revokeRunKeyStrict } from "@/lib/server/agent/run-key";
 import { decodeProjectName } from "@/lib/server/project-content";
 
 /**
@@ -170,6 +171,7 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
     p_user_id: userId,
   });
   if (fenceError || fenced !== true) throw new Error("Unable to fence Agent runs for account erasure");
+  await eraseSandboxAllocations("account", userId);
 
   // ── 1. Abonnement Stripe ────────────────────────────────────────────────
   let subscriptionCanceled = false;
@@ -286,9 +288,7 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
       });
     }
     if (run.provider_key_id) {
-      await revokeRunKey(run.provider_key_id).catch((e) =>
-        warnings.push(`agent key: ${(e as Error).message}`),
-      );
+      await revokeRunKeyStrict(run.provider_key_id);
     }
   }
   for (let offset = 0; offset < personalConversationIds.length; offset += 100) {

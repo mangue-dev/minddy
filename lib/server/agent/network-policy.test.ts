@@ -295,6 +295,7 @@ describe("VM identity from the sandbox name", () => {
   it("recovers the run ID from the assigned sandbox name", () => {
     expect(agentSandboxName(RUN)).toBe(`agent-v2-${RUN}`);
     expect(runIdFromSandboxName(agentSandboxName(RUN))).toBe(RUN);
+    expect(runIdFromSandboxName(`${agentSandboxName(RUN)}-012345abcdef`)).toBe(RUN);
   });
 
   it("rejects probes, invented names and legacy sandboxes", () => {

@@ -278,14 +278,14 @@ export async function attachPendingInvitations(user: {
   if (isInvitationEncryptionConfigured()) {
     try {
       matches.push(attach("invited_email_blind_index", await invitationEmailIndex(email)));
-    } catch (error) {
-      console.error("[members] invitation index unavailable:", error);
+    } catch {
+      console.error("[members] invitation_index_unavailable");
     }
   }
   const results = await Promise.all(matches);
   for (const result of results) {
     if (result.error) {
-      console.error("[members] attach invitations failed:", result.error.message);
+      console.error("[members] invitation_attach_failed");
       continue;
     }
     for (const row of result.data ?? []) {
@@ -337,14 +337,14 @@ export async function claimPendingInvitationsLate(user: {
   if (isInvitationEncryptionConfigured()) {
     try {
       probes.push(probe("invited_email_blind_index", await invitationEmailIndex(email)));
-    } catch (error) {
-      console.error("[members] invitation index unavailable:", error);
+    } catch {
+      console.error("[members] invitation_index_unavailable");
     }
   }
   const matches = await Promise.all(probes);
   for (const result of matches) {
     if (result.error) {
-      console.error("[members] late claim probe failed:", result.error.message);
+      console.error("[members] invitation_late_claim_probe_failed");
     }
   }
   if (!matches.some((result) => result.data && result.data.length > 0)) return false;

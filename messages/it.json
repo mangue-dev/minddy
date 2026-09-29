@@ -1992,7 +1992,12 @@
     "closeDescription": "Lo troverai nei tuoi recenti progetti.",
     "closeConfirm": "Salva",
     "closeDiscard": "Scartare",
-    "keepEditing": "Indietro"
+    "keepEditing": "Indietro",
+    "saveFailed": "Impossibile salvare la bozza. Lascia aperta questa finestra e riprova.",
+    "restoreFailed": "Impossibile recuperare le bozze. Controlla la connessione e riprova.",
+    "deleteFailed": "Impossibile eliminare la bozza. Riprova.",
+    "recoverLegacy": "Recupera le vecchie bozze su questo dispositivo",
+    "legacyWarning": "Recupera solo le bozze che hai creato su questo dispositivo."
   },
   "Pages": {
     "placeholder": "Scrivi o digita '/' per i blocchi...",

@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EncryptedStore } from "./store";
 
 const h = vi.hoisted(() => ({ version: 1, service: null as unknown,
-  conflict: false }));
+  conflict: false, wrongKey: false }));
 const keys = {
   current: async () => ({ version: h.version,
     bytes: Buffer.alloc(32, h.version) }),
   byVersion: async (_scope: unknown, version: number) => ({ version,
-    bytes: Buffer.alloc(32, version) }),
+    bytes: Buffer.alloc(32, h.wrongKey ? 99 : version) }),
 };
 const store = new EncryptedStore(keys);
 vi.mock("./registry", () => ({ getEncryptedStore: () => store,
@@ -26,6 +26,8 @@ async function fixture() {
     await encodeAttachmentObject(firstPath, Buffer.from("private rotation sentinel"))]]);
   const row = { id, project_id: project, storage_path: firstPath,
     content_key_version: 1, format_version: 4 };
+  let proofs = 0;
+  let attempts = 0;
   const service = {
     from: () => {
       const request = {
@@ -41,6 +43,13 @@ async function fixture() {
       }
       if (name === "list_forge_attachment_orphans") return { data: [], error: null };
       if (name === "mark_forge_attachment_rotation_checked") {
+        attempts++;
+        return { data: true, error: null };
+      }
+      if (name === "verify_forge_attachment_object") {
+        if (h.conflict || args.p_expected_path !== row.storage_path ||
+            args.p_expected_version !== row.content_key_version) return { data: false, error: null };
+        proofs++;
         return { data: true, error: null };
       }
       if (name === "rotate_forge_attachment_reference") {
@@ -65,12 +74,48 @@ async function fixture() {
     }) },
   };
   h.service = service;
-  return { objects, row };
+  return { objects, row, proofs: () => proofs, attempts: () => attempts };
 }
 
-beforeEach(() => { h.version = 1; h.conflict = false; });
+beforeEach(() => { h.version = 1; h.conflict = false; h.wrongKey = false; });
 
 describe("forge attachment key rotation", () => {
+  it.each(["missing", "clear", "truncated", "corrupt", "wrong-key"])(
+    "does not certify a current object whose bytes are %s", async (damage) => {
+      const { objects, proofs, attempts } = await fixture();
+      if (damage === "missing") objects.delete(firstPath);
+      if (damage === "clear") objects.set(firstPath, Buffer.from("private sentinel"));
+      if (damage === "truncated") objects.set(firstPath, objects.get(firstPath)!.subarray(0, 40));
+      if (damage === "corrupt") {
+        const bytes = objects.get(firstPath)!;
+        const payload = JSON.parse(bytes.subarray(bytes.indexOf(10) + 1).toString());
+        const manifest = JSON.parse(payload.manifest);
+        manifest.tag = Buffer.alloc(16).toString("base64");
+        payload.manifest = JSON.stringify(manifest);
+        objects.set(firstPath, Buffer.from("minddy-attachment-object-v4\n" + JSON.stringify(payload)));
+      }
+      if (damage === "wrong-key") h.wrongKey = true;
+      expect(await rotateForgeAttachmentsBatch()).toMatchObject({ unchanged: 0, failed: 1 });
+      expect(proofs()).toBe(0);
+      expect(attempts()).toBe(1);
+    });
+  it("requires a successful reference CAS before certifying current authenticated bytes", async () => {
+    const state = await fixture();
+    h.conflict = true;
+    expect(await rotateForgeAttachmentsBatch()).toMatchObject({ unchanged: 0, conflicted: 1 });
+    expect(state.proofs()).toBe(0);
+    h.conflict = false;
+    expect(await rotateForgeAttachmentsBatch()).toMatchObject({ unchanged: 1, failed: 0 });
+    expect(state.proofs()).toBe(1);
+  });
+  it("blocks an authenticated object whose reference reports a different key version", async () => {
+    const state = await fixture();
+    h.version = 2;
+    state.row.content_key_version = 2;
+    expect(await rotateForgeAttachmentsBatch()).toMatchObject({ unchanged: 0, failed: 1 });
+    expect(state.proofs()).toBe(0);
+    expect(state.objects.has(firstPath)).toBe(true);
+  });
   it("verifies an immutable replacement before swapping the capability target", async () => {
     const { objects, row } = await fixture();
     h.version = 2;

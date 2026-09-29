@@ -1,5 +1,26 @@
 # MIN-591 source and copy closure matrix
 
+## Current review of `2ddcbbd4e`
+
+The [corrective report](review-2026-09-29.md) supersedes historical checkpoint
+counts and remaining-code claims below. No passing row certifies production
+ciphertext or retained-copy deletion.
+
+| Source/copy | Corrective boundary | Evidence and remaining gate |
+| --- | --- | --- |
+| Forge legacy and current Storage objects | Authenticate historical-key bytes and equivalence before original removal; exact-reference proof CAS, cleanup/rotation barriers, attempted versus checked markers; restored proof invalidation. | Failing-before/passing-after byte and SQL regressions, independent reference/metadata and simulated-byte arrival orders, cold-cache multiple keys and wrong-root refusal. Real Storage-service backup/restore remains a distinct gate. |
+| Agent external allocation and new provider keys | Durable account/project reservation, immutable live binding, unique generation, revocation before cleanup and key-mint intent. | Both commit orders on real PostgreSQL plus synthetic Vercel/self-hosted late-allocation/attachment/retry fixtures. In-flight/unknown outcomes cannot certify erasure; historical pre-ledger workers and provider retention require retirement. |
+| Application and provider logs | Controlled codes/statuses/opaque IDs at the reviewed entry points and adjacent push, relay, Numo, Feedback, desktop and API Auth paths. | Forced-production sentinel tests. Historical log sinks, external command telemetry and unrelated future writers are not certified. |
+| Browser/Electron renderer caches and drafts | Server-sealed account snapshots, access-revocation guard for cached responses, bounded expiry, explicit legacy draft recovery and logout fencing. | Real crypto/route and synthetic client lifecycle tests; see [copy inventory](local-client-copies.md). Personal drafts remain account-owned recovery copies; inactive profiles/backups require retention evidence. |
+| Supabase Auth metadata import | Only explicit public identity and bounded product preference keys. | Actual import sentinel regression. Existing arbitrary Auth metadata needs a separate inventory/scrub; login email is not a general exemption. |
+
+The read-only endpoint reports a scoped observation of ten critical row
+families and forge object bytes, with `globalReadiness: "not_assessed"`.
+Repeat it with quiescent writers and stable counts; independently close every
+target and copy before completing MIN-591. Vault hardening and atomic
+ciphertext replacement follow the current README, not older dual-write or
+Vault-migration proposals.
+
 This matrix tracks code conversion and earlier domain proofs. The review of
 `2645bc129` found durable clear copies and incomplete rotation despite the
 previous 69 restore scenarios. Treat a passing domain row as evidence for the

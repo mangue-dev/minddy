@@ -188,7 +188,7 @@ export async function enableBoardForProject(projectId: string): Promise<Feedback
     .select(BOARD_SELECT)
     .maybeSingle();
   if (error) {
-    console.error("[feedback-boards] create failed:", error.message);
+    console.error("[feedback-boards] create_failed");
     return null;
   }
   return hydrateBoard((data as FeedbackBoardRow | null) ?? null);
@@ -340,12 +340,8 @@ async function writeSsoSecret(
       boardId = board.data.id as string;
       sealed = await encodeBoardSso(projectId, boardId, secret);
     } else sealed = encryptBoardSsoSecret(secret);
-  } catch (err) {
-    console.error(
-      `[feedback-boards] sso rotate refused: ${
-        err instanceof Error ? err.message : String(err)
-      }`
-    );
+  } catch {
+    console.error("[feedback-boards] sso_rotate_refused");
     return null;
   }
 
@@ -359,7 +355,7 @@ async function writeSsoSecret(
         p_only_if_absent: onlyIfAbsent,
       });
   if (error) {
-    console.error("[feedback-boards] serialized SSO write failed:", error.message);
+    console.error("[feedback-boards] serialized_sso_write_failed");
     return null;
   }
   if (typeof data !== "string") return null;

@@ -2,23 +2,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EncryptedStore } from "./store";
 
 const h = vi.hoisted(() => ({ service: null as unknown,
-  rootReady: true, cryptoReady: true }));
-const key = Buffer.alloc(32, 71);
+  rootReady: true, cryptoReady: true, version: 1, conflict: false,
+  removeFails: false, wrongKey: false }));
 const store = new EncryptedStore({
   current: async () => {
     if (!h.cryptoReady) throw new Error("Unable to unwrap project key");
-    return { version: 1, bytes: Buffer.from(key) };
+    return { version: h.version, bytes: Buffer.alloc(32, h.version + 70) };
   },
   byVersion: async (_scope, version) => {
     if (!h.cryptoReady) throw new Error("Unable to unwrap project key");
-    return { version, bytes: Buffer.from(key) };
+    return { version, bytes: h.wrongKey ? Buffer.alloc(32, 99) : Buffer.alloc(32, version + 70) };
   },
 });
 vi.mock("./registry", () => ({ getEncryptedStore: () => store }));
 vi.mock("./local-key-wrapper", () => ({ hasDataRootKey: () => h.rootReady }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => h.service }));
 const { backfillForgeAttachmentsBatch } = await import("./forge-attachment-backfill");
-const { decodeAttachmentObject } = await import("./attachment-object-content");
+const { decodeAttachmentObject, encodeAttachmentObject } = await import("./attachment-object-content");
 
 const PR = "11111111-1111-4111-8111-111111111111";
 const ID = "22222222-2222-4222-8222-222222222222";
@@ -31,10 +31,14 @@ function fixture() {
   let uploads = 0;
   let activated = false;
   const service = {
-    rpc: async (name: string) => {
+    rpc: async (name: string, args: Record<string, unknown>) => {
       if (name === "activate_forge_attachment_encryption") {
         activated = true;
         return { data: true, error: null };
+      }
+      if (name === "verify_forge_attachment_legacy_cleanup") {
+        const match = [...rows.values()].find((row) => row.storage_path === args.p_expected_path);
+        return { data: !!match && !h.conflict, error: null };
       }
       return { data: objects.has(oldPath) ? [{
         name: oldPath, pr_id: PR, project_id: PROJECT,
@@ -53,12 +57,17 @@ function fixture() {
         objects.set(path, Buffer.from(bytes));
         return { error: null };
       },
-      remove: async (paths: string[]) => { paths.forEach((path) => objects.delete(path));
+      remove: async (paths: string[]) => {
+        if (h.removeFails && paths.includes(oldPath)) return { error: { message: "interrupted" } };
+        paths.forEach((path) => objects.delete(path));
         return { error: null }; },
     }) },
     from: (table: string) => ({
       insert: async (row: Record<string, unknown>) => {
         if (table !== "forge_attachment_objects") return { error: { message: "wrong table" } };
+        if ([...rows.values()].some((stored) => stored.legacy_path_digest === row.legacy_path_digest)) {
+          return { error: { message: "duplicate legacy binding" } };
+        }
         rows.set(String(row.id), row);
         return { error: null };
       },
@@ -71,9 +80,77 @@ function fixture() {
     activated: () => activated };
 }
 
-beforeEach(() => { h.service = null; h.rootReady = true; h.cryptoReady = true; });
+beforeEach(() => { h.service = null; h.rootReady = true; h.cryptoReady = true;
+  h.version = 1; h.conflict = false; h.removeFails = false; h.wrongKey = false; });
 
 describe("forge attachment migration", () => {
+  it.each(["missing", "clear", "truncated", "corrupt", "wrong-key", "missing-key", "different"])(
+    "preserves the recoverable source when a resumed replacement is %s", async (damage) => {
+      const state = fixture();
+      const path = `projects/${PROJECT}/forge/${ID}/${ID}`;
+      let sealed = await encodeAttachmentObject(path, Buffer.from(
+        damage === "different" ? "different content" : "private sentinel"));
+      if (damage === "clear") sealed = Buffer.from("private sentinel");
+      if (damage === "truncated") sealed = sealed.subarray(0, sealed.length - 20);
+      if (damage === "corrupt") {
+        const payload = JSON.parse(sealed.subarray(sealed.indexOf(10) + 1).toString());
+        const manifest = JSON.parse(payload.manifest);
+        manifest.tag = Buffer.alloc(16).toString("base64");
+        payload.manifest = JSON.stringify(manifest);
+        sealed = Buffer.from("minddy-attachment-object-v4\n" + JSON.stringify(payload));
+      }
+      if (damage !== "missing") state.objects.set(path, sealed);
+      state.rows.set(ID, { id: ID, storage_path: path });
+      if (damage === "wrong-key") h.wrongKey = true;
+      if (damage === "missing-key") h.cryptoReady = false;
+      expect(await backfillForgeAttachmentsBatch()).toMatchObject({ migrated: 0, failed: 1 });
+      expect(state.objects.get(oldPath)).toEqual(Buffer.from("private sentinel"));
+    });
+  it("keeps one recoverable encrypted winner when two workers rewrite the same source", async () => {
+    const state = fixture();
+    const results = await Promise.all([backfillForgeAttachmentsBatch(), backfillForgeAttachmentsBatch()]);
+    expect(results.reduce((sum, result) => sum + result.migrated, 0)).toBe(1);
+    expect(state.rows.size).toBe(1);
+    expect(state.objects.size).toBe(1);
+    const row = [...state.rows.values()][0];
+    expect(await decodeAttachmentObject(String(row.storage_path),
+      state.objects.get(String(row.storage_path))!)).toEqual(Buffer.from("private sentinel"));
+  });
+  it("retries an interrupted registered rewrite with its historical key", async () => {
+    const state = fixture();
+    h.removeFails = true;
+    expect(await backfillForgeAttachmentsBatch()).toMatchObject({ migrated: 0, failed: 1 });
+    expect(state.rows.size).toBe(1);
+    expect(state.objects.has(oldPath)).toBe(true);
+    h.removeFails = false;
+    h.version = 2;
+    expect(await backfillForgeAttachmentsBatch()).toMatchObject({ migrated: 1, failed: 0 });
+    expect(state.uploads()).toBe(1);
+    expect(state.objects.has(oldPath)).toBe(false);
+  });
+  it("preserves both objects when a cleanup reference CAS conflicts", async () => {
+    const state = fixture();
+    h.conflict = true;
+    expect(await backfillForgeAttachmentsBatch()).toMatchObject({ migrated: 0, failed: 1 });
+    expect(state.objects.has(oldPath)).toBe(true);
+    expect(state.objects.size).toBe(2);
+    h.conflict = false;
+    expect(await backfillForgeAttachmentsBatch()).toMatchObject({ migrated: 1, failed: 0 });
+  });
+  it("keeps a source through independently restored SQL and Storage batches", async () => {
+    const state = fixture();
+    const path = `projects/${PROJECT}/forge/${ID}/${ID}`;
+    const sealed = await encodeAttachmentObject(path, Buffer.from("private sentinel"));
+    state.rows.set(ID, { id: ID, storage_path: path });
+    expect(await backfillForgeAttachmentsBatch()).toMatchObject({ failed: 1 });
+    expect(state.objects.has(oldPath)).toBe(true);
+    state.objects.set(path, sealed);
+    expect(await backfillForgeAttachmentsBatch()).toMatchObject({ migrated: 1 });
+    state.objects.set(oldPath, Buffer.from("private sentinel"));
+    state.rows.clear();
+    expect(await backfillForgeAttachmentsBatch()).toMatchObject({ migrated: 1 });
+    expect(state.objects.has(oldPath)).toBe(false);
+  });
   it("encrypts, verifies and removes the historical clear object", async () => {
     const state = fixture();
     expect(await backfillForgeAttachmentsBatch(10)).toEqual({

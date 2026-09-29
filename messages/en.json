@@ -1992,7 +1992,12 @@
     "closeDescription": "You'll find it in your recent drafts.",
     "closeConfirm": "Save",
     "closeDiscard": "Discard",
-    "keepEditing": "Back"
+    "keepEditing": "Back",
+    "saveFailed": "Could not save the draft. Keep this dialog open and try again.",
+    "restoreFailed": "Could not restore drafts. Check your connection and try again.",
+    "deleteFailed": "Could not delete the draft. Try again.",
+    "recoverLegacy": "Recover older drafts on this device",
+    "legacyWarning": "Recover only drafts you created on this device."
   },
   "Pages": {
     "placeholder": "Write, or type '/' for blocks…",

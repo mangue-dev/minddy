@@ -2,6 +2,7 @@ import { importComment } from "./comment-store";
 import { encodeObjective } from "./objective-store";
 import { encodeCategory } from "./category-store";
 import "server-only";
+import { selectImportedAccountMetadata } from "./account-metadata-import";
 import { encodeIssue } from "@/lib/server/issue-store";
 import { encodeImportedAgentMessage, shouldEncryptAgentLaunch } from "@/lib/server/agent/run-launch-content";
 import { encodeAgentContextSnapshot, shouldEncryptAgentContext } from
@@ -1158,7 +1159,7 @@ export async function importAccountTransfer(
     const { data: current } = await service.auth.admin.getUserById(userId);
     const currentMetadata = current?.user?.user_metadata ?? {};
     await service.auth.admin.updateUserById(userId, {
-      user_metadata: { ...currentMetadata, ...document.account.user_metadata },
+      user_metadata: { ...currentMetadata, ...selectImportedAccountMetadata(document.account.user_metadata) },
     });
     result.personalData += 1;
   }

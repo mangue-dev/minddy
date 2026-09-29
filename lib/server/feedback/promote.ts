@@ -121,7 +121,7 @@ export async function promoteFeedbackPost(params: {
     .eq("id", params.postId)
     .is("issue_id", null);
   if (error) {
-    console.error("[feedback-promote] link failed:", error.message);
+    console.error("[feedback-promote] link_failed");
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
@@ -178,7 +178,7 @@ export async function linkFeedbackIssue(params: {
     .eq("id", params.postId)
     .is("issue_id", null);
   if (error) {
-    console.error("[feedback-promote] link existing failed:", error.message);
+    console.error("[feedback-promote] link_existing_failed");
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
   await emitFeedbackLinked(service, {

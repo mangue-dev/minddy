@@ -11,6 +11,7 @@ import {
   clearErrorHistory,
   formatStatusAge,
   readErrorHistory,
+  restoreErrorHistory,
   recordError,
   type StatusError,
 } from "@/lib/status-history";
@@ -99,6 +100,9 @@ function useStatusLine(hold: boolean) {
   // list, and reading localStorage during hydration would mismatch.
   useEffect(() => {
     setHistory(readErrorHistory());
+    let cancelled = false;
+    void restoreErrorHistory().then((errors) => { if (!cancelled) setHistory(errors); }).catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {

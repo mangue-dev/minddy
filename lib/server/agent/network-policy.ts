@@ -99,15 +99,13 @@ export function agentSandboxName(runId: string): string {
  * can claim nothing else**. A token carried in the VM, or a `runId` in the
  * body, would have requested verification; There is nothing to check here.
  *
- * `null` on anything that is not `agent-v2-<uuid>`. The new namespace
+ * `null` outside `agent-v2-<uuid>` and its unique allocation suffix. The namespace
  * prevents a run from waking a snapshot made by the old persistent launcher.
  */
 export function runIdFromSandboxName(name: string): string | null {
   if (!name.startsWith(AGENT_SANDBOX_PREFIX)) return null;
-  const candidate = name.slice(AGENT_SANDBOX_PREFIX.length);
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(candidate)
-    ? candidate
-    : null;
+  const match = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:-[0-9a-f]{12})?$/i.exec(name.slice(AGENT_SANDBOX_PREFIX.length));
+  return match?.[1] ?? null;
 }
 
 /** The Vercel tenant who has the right to speak to the control plan: OUR team

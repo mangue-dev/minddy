@@ -5,7 +5,8 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 const container = "supabase_db_minddy-encryption-test";
-const template = process.env.MINDDY_ENCRYPTION_FENCE_TEMPLATE ??
+const finalTemplate = process.env.MINDDY_ENCRYPTION_FINAL_TEMPLATE;
+const template = finalTemplate ?? process.env.MINDDY_ENCRYPTION_FENCE_TEMPLATE ??
   "minddy_min591_final_review";
 const migration = readFileSync(
   "supabase/migrations/20270108090000_encryption_snapshot_write_fences.sql", "utf8");
@@ -299,16 +300,18 @@ function pausedInvitationAndNull(database, actor, project, legacy) {
   /invitation_email_requires_encryption/);
 }
 
-test("isolated two-session encryption markers reproduce before and close after",
+test(finalTemplate ? "final-schema two-session encryption markers reject obsolete writers" :
+  "isolated two-session encryption markers reproduce before and close after",
   { skip: process.env.MINDDY_ENCRYPTION_DB_TEST !== "true" }, async () => {
-    for (const fixed of [false, true]) {
+    if (finalTemplate) assert.match(finalTemplate, /^minddy_min591_[a-z0-9_]+$/);
+    for (const fixed of finalTemplate ? [true] : [false, true]) {
       const database = `minddy_min591_fence_${fixed ? "after" : "before"}_${
         randomUUID().replaceAll("-", "").slice(0, 12)}`;
       const actor = randomUUID();
       const projects = Array.from({ length: 5 }, () => randomUUID());
       try {
         sql("postgres", `CREATE DATABASE ${database} TEMPLATE ${template};`);
-        if (fixed) sql(database, migration);
+        if (fixed && !finalTemplate) sql(database, migration);
         sql(database, `INSERT INTO auth.users(id) VALUES(${quote(actor)});
           INSERT INTO public.projects(id,owner_id,name,key) VALUES
           (${quote(projects[0])},${quote(actor)},'Issue fixture','IFS'),
@@ -329,6 +332,11 @@ test("isolated two-session encryption markers reproduce before and close after",
         await repeatableReadActivation(database, fixed, "oauth",
           `INSERT INTO public.oauth_clients(client_id,client_name,redirect_uris)
             VALUES('stale-${fixed}','clear OAuth client',ARRAY['https://example.test/cb']);`);
+        // Final proof guards correctly reject activation over the later shape-only
+        // OAuth-grant parent fixture. Exercise the empty-family activation first.
+        const clearApiKey = `INSERT INTO public.api_keys(user_id,name,key_hash,key_prefix)
+          VALUES(${quote(actor)},'clear API key',${quote("f".repeat(64))},'oauth');`;
+        if (finalTemplate) await repeatableReadActivation(database, fixed, "api", clearApiKey);
         const cipher = '{"format":3,"keyVersion":1,"data":"fixture"}';
         const keyId = randomUUID();
         const grantId = randomUUID();
@@ -347,9 +355,7 @@ test("isolated two-session encryption markers reproduce before and close after",
             VALUES(${quote("c".repeat(64))},'sealed-fixture',${quote(actor)},
               ${quote(grantId)},'https://example.test/cb',
               ${quote("d".repeat(43))},now()+interval '10 minutes');`);
-        await repeatableReadActivation(database, fixed, "api",
-          `INSERT INTO public.api_keys(user_id,name,key_hash,key_prefix)
-            VALUES(${quote(actor)},'clear API key',${quote("f".repeat(64))},'oauth');`);
+        if (!finalTemplate) await repeatableReadActivation(database, fixed, "api", clearApiKey);
         await repeatableReadActivation(database, fixed, "push",
           `INSERT INTO public.push_subscriptions(user_id,endpoint,transport,p256dh,auth)
             VALUES(${quote(actor)},'https://example.test/${fixed}',

@@ -8,7 +8,7 @@ work branch provides checkout recovery.
 
 ## New server runs
 
-- Vercel server sandboxes use the `agent-v2-<run ID>` namespace and
+- Vercel server sandboxes use the `agent-v2-<run ID>-<allocation generation>` namespace and
   `persistent: false`. A resumed empty session clones the work branch again and
   replays the encrypted journal. New sessions ignore all
   `AGENT_SANDBOX_SNAPSHOT_ID*` settings and boot from the runtime image.
@@ -24,6 +24,41 @@ work branch provides checkout recovery.
   and queued-to-running claims serialize with that fence.
   Project trash, explicit purge and retention purge erase sandboxes before
   reporting completion or cascading run rows.
+
+## Durable allocation and verifiable erasure
+
+The allocation ledger deliberately survives account/project/run cascades.
+Reservation serializes with account/project erasure fences, pins the current
+run owner/project/actor/repository binding and uses a unique physical name.
+Attach checks the binding again before private cloning and after allocation.
+A durable provider-key intent is recorded before minting; new keys must be
+attached to that ledger and strictly revoked on failure or erasure.
+
+Revocation happens before cleanup. A late allocation is deleted after its
+provider call settles. An uncertain provider result remains pending even after
+a successful delete or 404: a request may still create an object later. The
+bounded fair cron sweep repeatedly deletes the unique name and revokes known
+keys, without changing uncertainty into proof. An unknown key-mint result also
+blocks completion. Erasure rechecks all ledger rows in SQL after cleanup, so a
+truncated REST enumeration cannot report false success; parent hard-delete
+guards enforce the same condition.
+
+A successful application erasure means its durable fences prohibit new
+allocations and every recorded allocation has settled and been confirmed
+cleaned with known keys revoked. It does not certify provider backup/telemetry
+retirement. Process crashes or ambiguous provider/key requests require explicit
+operator reconciliation under quiescent writers: enumerate provider names and
+keys, obtain definitive request completion and deletion/revocation evidence,
+then use the guarded reconciliation RPCs. Never expire a lease, clear a fence,
+or use a 404 as the missing evidence. Retries may report incomplete until this
+evidence exists; this is a security blocker, not successful erasure.
+
+Before deploying this code for migration, stop/drain old runtimes that do not
+reserve a ledger entry and inventory their in-flight requests. The new ledger
+cannot retrospectively coordinate pre-ledger allocations. Restore allocation
+ledger and fences together with parents under quiescent writers; independent
+parent restoration must not silently reopen erasure. SQL and synthetic provider
+fixtures cover the current protocol, not a production provider rehearsal.
 
 ## Historical copies before migration or activation
 

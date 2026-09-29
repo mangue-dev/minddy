@@ -4,7 +4,54 @@ MIN-591 is one application-wide delivery. The existing invitation implementation
 is a small converted surface, not the production rollout boundary. Do not enable
 production migration on the strength of crypto unit tests or this inventory.
 
-## Security review of `4e9268554` on draft PR #289
+## Current corrective checkpoint: review of `2ddcbbd4e`
+
+The current code and evidence are recorded in the
+[29 September corrective report](review-2026-09-29.md) and
+[local client copy inventory](local-client-copies.md). They supersede remaining
+code and test-count claims in dated checkpoints below. Those sections are
+historical evidence, not cumulative production-closure assertions.
+
+Forge migration now authenticates and compares the replacement bytes before
+retiring a recoverable original, including resumed migrations. Rotation
+authenticates current objects too, and attempts cannot certify successful proof.
+Restored registrations lose their prior byte-proof marker. The application
+readiness endpoint includes a separate forge-byte scan and explicitly returns
+`globalReadiness: "not_assessed"`: ten critical families, even with forge objects,
+are not the whole application or its retained copies.
+
+Agent allocation uses a durable reservation, unique physical generation,
+revocation, current binding checks and provider-key intent before external calls.
+Account/project erasure cannot report success with unresolved reservations,
+including a late allocation after a provider 404. Unknown provider outcomes are
+durable blockers retried for cleanup, never inferred clean from age or absence.
+See [Agent retirement and coordination](agent-ephemeral-storage.md).
+
+Private provider bodies, exceptions and command stdout/stderr are replaced by
+controlled codes/statuses and opaque identifiers at the reviewed entry points
+and their analogues. Production sentinel fixtures test these paths; old logs,
+vendor telemetry and endpoint backups still need independent retirement.
+
+New device content snapshots are server-sealed with bounded retention. Legacy
+draft recovery is explicit and preserves the original until sealing succeeds.
+Auth imports use a bounded product-key allowlist. Login email, intentionally
+public member display names and bounded product preferences are distinct
+documented identity/metadata exceptions, never arbitrary-content exemptions.
+
+Per-row migration uses an authenticated atomic ciphertext replacement and
+clears sensitive source columns; it does not dual-write a retained clear copy.
+Vault currently provides a separate privilege-hardening control, not the root
+key service and not a prerequisite to moving every credential into Vault.
+Application credentials use the scoped envelope repositories. Root keys remain
+outside Postgres; deployment statement logging is an operator control.
+
+No production migration, provider-data exercise, deployment, merge or flag
+change was performed. Do not assume any production data is already encrypted.
+Keep MIN-591 in progress and PR #289 in draft. Representative search, latency,
+key-cache and load measurements are staging gates before activation, not
+production measurements required to validate this code PR.
+
+## Historical security review of `4e9268554` on draft PR #289
 
 The reviewed SHA preceded this corrective tranche. The local code now decrypts
 trashed page, issue and objective labels before visibility decisions; protected
@@ -153,7 +200,7 @@ registrations; orphan cleanup then removes the object.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 196 application tables and 1,756 columns, their primary
+- `schema.json` records 199 application tables and 1,785 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
   column exactly once. Its 173 encryption targets include the original content,
@@ -164,10 +211,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,712 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,735 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 530 functions, ten views and 483 application triggers. Function
+- `sql-consumers.json` records 558 functions, ten views and 491 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations

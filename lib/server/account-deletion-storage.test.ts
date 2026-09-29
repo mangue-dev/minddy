@@ -57,7 +57,7 @@ const service = vi.hoisted(() => {
   };
 
   const deleteUser = vi.fn(async () => ({ error: null }));
-  const rpc = vi.fn(async () => ({ data: true, error: null }));
+  const rpc = vi.fn(async (name: string) => ({ data: name === "revoke_agent_sandbox_allocations" ? [] : true, error: null }));
 
   const client = {
     from: (table: string) => query(tables[table] ?? []),

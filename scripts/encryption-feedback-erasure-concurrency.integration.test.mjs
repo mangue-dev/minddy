@@ -5,7 +5,8 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 const container = "supabase_db_minddy-encryption-test";
-const template = process.env.MINDDY_ERASURE_TEMPLATE ??
+const finalTemplate = process.env.MINDDY_ENCRYPTION_FINAL_TEMPLATE;
+const template = finalTemplate ?? process.env.MINDDY_ERASURE_TEMPLATE ??
   "minddy_min591_security_final_20260927";
 const quote = (value) => `'${value.replaceAll("'", "''")}'`;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -64,12 +65,13 @@ async function expectBlocked(promise) {
 }
 
 test("feedback erasure serializes with session and OTP creation in both orders", async () => {
+  if (finalTemplate) assert.match(finalTemplate, /^minddy_min591_[a-z0-9_]+$/);
   const database = `minddy_min591_erase_${randomUUID().slice(0, 12).replaceAll("-", "")}`;
   execFileSync("docker", ["exec", container, "createdb", "-U", "supabase_admin",
     "-T", template, database]);
   const sessions = [];
   try {
-    sql(database, readFileSync(
+    if (!finalTemplate) sql(database, readFileSync(
       "supabase/migrations/20270108171000_feedback_erasure_otp_lookup.sql", "utf8"));
     const actor = randomUUID();
     const project = randomUUID();

@@ -170,9 +170,9 @@ function runWnsHelper(args: string[]): Promise<string | null> {
       executable,
       args,
       { windowsHide: true, timeout: WNS_HELPER_TIMEOUT_MS, maxBuffer: 64 * 1024 },
-      (error, stdout, stderr) => {
+      (error, stdout) => {
         if (error) {
-          console.error("[push/wns] native helper failed:", stderr.trim() || error.message);
+          console.error("[push/wns] native_helper_failed");
           resolve(null);
           return;
         }
@@ -217,11 +217,10 @@ function checkWindowsStoreUpdate(): Promise<boolean | null> {
         timeout: STORE_UPDATE_HELPER_TIMEOUT_MS,
         maxBuffer: 16 * 1024,
       },
-      (error, stdout, stderr) => {
+      (error, stdout) => {
         if (error) {
           console.error(
-            "[updater/store] native helper failed:",
-            stderr.trim() || error.message,
+            "[updater/store] native_helper_failed",
           );
           resolve(null);
           return;
@@ -405,8 +404,8 @@ async function setChannel(next: DesktopChannel): Promise<void> {
  * `ipcMain.on` return immediately.
  */
 function onChannelChange(next: DesktopChannel): void {
-  void setChannel(next).catch((error) => {
-    console.error("[channel] switch failed", error);
+  void setChannel(next).catch(() => {
+    console.error("[channel] switch_failed");
   });
 }
 
@@ -436,8 +435,8 @@ async function carrySession(from: string, to: string): Promise<void> {
     }
     for (const cookie of carried) await jar.set(cookie);
     trace("carrySession", { from, to, carried: carried.length });
-  } catch (error) {
-    console.error("[channel] session carry-over failed", error);
+  } catch {
+    console.error("[channel] session_carry_over_failed");
   }
 }
 
@@ -1051,10 +1050,10 @@ function registerIpc(): void {
         endpoint: `apns:${token}`,
         installationId,
       };
-    } catch (error) {
+    } catch {
       apnsRegistration = null;
       wnsRegistration = null;
-      console.error("[push] native registration failed", error);
+      console.error("[push] native_registration_failed");
       return null;
     }
   });

@@ -167,6 +167,13 @@ BEGIN
   DELETE FROM public.forge_attachment_objects WHERE id=unmarked;
   DELETE FROM storage.objects WHERE bucket_id='forge-attachments'
     AND name=unmarked_path;
+  IF public.forge_attachment_migration_complete() THEN
+    RAISE EXCEPTION 'Metadata-only forge registration passed completion';
+  END IF;
+  -- This SQL fixture exercises trusted service proof plumbing, not object bytes.
+  IF NOT public.verify_forge_attachment_object(capability,second_path,2,repeat('f',64)) THEN
+    RAISE EXCEPTION 'Authenticated application proof CAS was rejected';
+  END IF;
   IF NOT public.forge_attachment_migration_complete() THEN
     RAISE EXCEPTION 'Forge migration did not complete after cleanup';
   END IF;

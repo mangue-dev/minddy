@@ -1992,7 +1992,12 @@
     "closeDescription": "Você o encontrará em seus rascunhos recentes.",
     "closeConfirm": "Salvar",
     "closeDiscard": "Descartar",
-    "keepEditing": "Voltar"
+    "keepEditing": "Voltar",
+    "saveFailed": "Não foi possível salvar o rascunho. Mantenha esta janela aberta e tente novamente.",
+    "restoreFailed": "Não foi possível recuperar rascunhos. Verifique sua conexão e tente novamente.",
+    "deleteFailed": "Não foi possível excluir o rascunho. Tente novamente.",
+    "recoverLegacy": "Recuperar rascunhos antigos neste dispositivo",
+    "legacyWarning": "Recupere apenas rascunhos que você criou neste dispositivo."
   },
   "Pages": {
     "placeholder": "Escreva ou digite '/' para blocos…",

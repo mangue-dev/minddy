@@ -40,6 +40,9 @@ describe("encrypted access CI guard", () => {
     ["captures/world/seed/005-carnet.mjs", 'client.from("user_scratchpad").select("user_id,content")'],
     ["lib/server/unreviewed-reader.ts", 'client.from(table).select("title")'],
     ["lib/server/trash.ts", 'service.from(table).select("title")'],
+    ["lib/server/encryption/forge-attachment-readiness.ts", 'service.from("envelope_data_keys").select("*")'],
+    ["lib/server/encryption/forge-attachment-readiness.ts", 'service.rpc("create_envelope_data_key_if_absent", params)'],
+    ["lib/server/encryption/forge-attachment-readiness.ts", 'service.from("envelope_data_keys").select("version"); await decodeAttachmentObject(path,bytes); createHash("sha256"); service.from("forge_attachment_objects").update(patch)'],
   ])("rejects unreviewed access in %s", (file, source) => {
     const result = check(file, source);
     expect(result.status, result.stdout + result.stderr).toBe(1);
@@ -49,6 +52,7 @@ describe("encrypted access CI guard", () => {
   it.each([
     ["lib/server/members.ts", 'service.rpc("create_project_invitation_guarded", params)'],
     ["lib/server/encryption/registry.ts", 'service.from("envelope_data_keys").select("*")'],
+    ["lib/server/encryption/forge-attachment-readiness.ts", 'service.from("envelope_data_keys").select("version"); await decodeAttachmentObject(path,bytes); createHash("sha256")'],
     ["app/safe.ts", 'service.from("projects").select("id")'],
     ["lib/server/scratchpad.ts", 'client.from("user_scratchpad").select("*")'],
     ["lib/server/stat-events.ts", 'service.from("stat_events").select("*")'],

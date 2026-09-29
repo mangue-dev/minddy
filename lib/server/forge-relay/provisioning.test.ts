@@ -73,6 +73,29 @@ afterEach(() => {
 });
 
 describe("ensureForgeRelayProvisioned", () => {
+  it.each(["registration response", "transport exception", "webhook response"])(
+    "does not log private data from a %s in production", async (failure) => {
+      const sentinel = "MIN591_PRIVATE_RELAY_SENTINEL";
+      const previousNodeEnv = process.env.NODE_ENV;
+      vi.stubEnv("NODE_ENV", "production");
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+        if (failure === "transport exception") throw new Error(sentinel);
+        if (failure === "registration response" || url.endsWith("/webhook-secret")) {
+          return new Response(JSON.stringify({ error: sentinel }), { status: 422 });
+        }
+        return new Response(JSON.stringify({ instanceId: INSTANCE_ID }), { status: 200 });
+      }));
+      try {
+        expect(await provisioning.ensureForgeRelayProvisioned()).toBe(failure === "webhook response");
+        expect(log.mock.calls.flat().map(String).join("\n")).not.toContain(sentinel);
+      } finally {
+        log.mockRestore();
+        vi.stubEnv("NODE_ENV", previousNodeEnv);
+      }
+    },
+  );
+
   it("registers once against the default control plane and stores the identity", async () => {
     stubRegistrationFetch();
     expect(await provisioning.ensureForgeRelayProvisioned()).toBe(true);

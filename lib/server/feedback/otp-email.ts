@@ -80,9 +80,7 @@ export async function sendOtpEmail(
     !apiKey ||
     !from
   ) {
-    console.error(
-      `[feedback-otp] email disabled — ${emailCapability.diagnostic}`,
-    );
+    console.error("[feedback-otp] email_disabled");
     return false;
   }
 
@@ -106,15 +104,14 @@ export async function sendOtpEmail(
       signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok) {
-      const detail = await response.text();
       console.error(
-        `[feedback-otp] Resend error (${response.status}): ${detail.slice(0, 200)}`,
+        "[feedback-otp] provider_request_refused", { provider: "resend", status: response.status },
       );
       return false;
     }
     return true;
-  } catch (err) {
-    console.error("[feedback-otp] send failed:", (err as Error).message);
+  } catch {
+    console.error("[feedback-otp] provider_request_failed");
     return false;
   }
 }

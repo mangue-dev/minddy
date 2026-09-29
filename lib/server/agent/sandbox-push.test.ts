@@ -10,7 +10,7 @@ import { cloudLayout } from "./harness-layout";
 /**
  * End of turn on the git side (MIN-123): WHEN does the harness touch the repository?
  *
- * `git push HEAD:refs/heads/<branche>` CREATES the remote branch, even when the tree
+ * `git push HEAD:refs/heads/<branch>` CREATES the remote branch, even when the tree
  * is clean — therefore a session that has not changed anything (question, plan, check)
  * left an empty branch on the user's repository. What is tested here is
  * this decision, and it alone: ​​the branch only reaches the remote from the
@@ -73,7 +73,7 @@ const OPTS = {
 };
 
 describe("commitAndPush", () => {
-  it("ne pousse RIEN quand le tour n'a rien changé (aucune branche créée)", async () => {
+  it("does not push or create a branch when the turn made no changes", async () => {
     const { sandbox, commands } = fakeSandbox({
       "git status --porcelain": { stdout: "" },
       "git rev-parse HEAD": { stdout: `${BASE_SHA}\n` },
@@ -93,7 +93,7 @@ describe("commitAndPush", () => {
     expect(commands.some((c) => c.startsWith("git ls-remote"))).toBe(false);
   });
 
-  it("commite puis pousse dès qu'un fichier a changé", async () => {
+  it("commits and pushes when a file changed", async () => {
     const { sandbox, commands } = fakeSandbox({
       "git status --porcelain": { stdout: " M lib/foo.ts\n" },
       "git add -A": {},
@@ -118,7 +118,7 @@ describe("commitAndPush", () => {
     expect(commands.some((c) => c.startsWith("git push"))).toBe(true);
   });
 
-  it("pousse une branche héritée même sur un tour purement conversationnel", async () => {
+  it("pushes an inherited branch even during a conversational turn", async () => {
     // Session which resumes a branch already pushed: HEAD is ahead of the base,
     // the remote is already up to date → push no-op, but the branch exists and remains so.
     const { sandbox, commands } = fakeSandbox({
@@ -138,7 +138,7 @@ describe("commitAndPush", () => {
     expect(commands.some((c) => c.startsWith("git push"))).toBe(true);
   });
 
-  it("pousse quand le sha de la base est illisible (défaut sûr)", async () => {
+  it("pushes when the base SHA cannot be read", async () => {
     const { sandbox, commands } = fakeSandbox({
       "git status --porcelain": { stdout: "" },
       "git rev-parse HEAD": { stdout: `${BASE_SHA}\n` },
@@ -153,7 +153,7 @@ describe("commitAndPush", () => {
     expect(commands.some((c) => c.startsWith("git push"))).toBe(true);
   });
 
-  it("remonte l'échec d'un push (le tour doit le signaler)", async () => {
+  it("reports a controlled code when the push fails", async () => {
     const { sandbox } = fakeSandbox({
       "git status --porcelain": { stdout: " M lib/foo.ts\n" },
       "git add -A": {},
@@ -165,6 +165,6 @@ describe("commitAndPush", () => {
       "git push": { exitCode: 1, stderr: "! [rejected] non-fast-forward" },
     });
 
-    await expect(commitAndPush(sandboxHost(sandbox, cloudLayout()), OPTS)).rejects.toThrow(/non-fast-forward/);
+    await expect(commitAndPush(sandboxHost(sandbox, cloudLayout()), OPTS)).rejects.toThrow("repository_push_failed");
   });
 });

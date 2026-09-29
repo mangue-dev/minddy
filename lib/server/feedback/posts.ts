@@ -165,7 +165,7 @@ export async function createFeedbackPost(input: {
     .select("*")
     .maybeSingle();
   if (error || !data) {
-    console.error("[feedback-posts] insert failed:", error?.code);
+    console.error("[feedback-posts] insert_failed");
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
   let post: FeedbackPostRow;
@@ -214,8 +214,8 @@ export async function createFeedbackPost(input: {
       after(async () => {
         try {
           await reviewFeedbackPost(post.id, post.project_id);
-        } catch (e) {
-          console.error("[feedback-posts] inline review failed:", (e as Error).message);
+        } catch {
+          console.error("[feedback-posts] inline_review_failed");
         }
       });
     } catch {
@@ -330,7 +330,7 @@ export async function updateFeedbackPostFields(params: {
       .is("deleted_at", null).eq("id", params.postId)
       .select("*").maybeSingle();
   if (error || !storedPost) {
-    console.error("[feedback-posts] update failed:", error?.code);
+    console.error("[feedback-posts] update_failed");
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
   let data: FeedbackPostRow;

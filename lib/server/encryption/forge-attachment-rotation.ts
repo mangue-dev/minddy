@@ -1,6 +1,6 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 import { FORGE_ATTACHMENTS_BUCKET } from "@/lib/forge-image-assets";
 import { getContentKeys } from "./registry";
@@ -21,42 +21,36 @@ export async function rotateForgeAttachmentsBatch(limit = 10) {
   for (const row of candidates.data ?? []) {
     result.scanned++;
     const path = row.storage_path as string;
-    let version: number;
-    try {
-      const current = await getContentKeys().current({ kind: "project", id: row.project_id });
-      version = current.version;
-      current.bytes.fill(0);
-    } catch {
-      result.failed++;
-      await service.rpc("mark_forge_attachment_rotation_checked", {
-        p_id: row.id, p_expected_path: path,
-        p_expected_version: row.content_key_version,
-      });
-      continue;
-    }
-    if (row.content_key_version > version) {
-      result.failed++;
-      await service.rpc("mark_forge_attachment_rotation_checked", {
-        p_id: row.id, p_expected_path: path,
-        p_expected_version: row.content_key_version,
-      });
-      continue;
-    }
-    if (row.content_key_version === version) {
-      const marked = await service.rpc("mark_forge_attachment_rotation_checked", {
-        p_id: row.id, p_expected_path: path,
-        p_expected_version: row.content_key_version,
-      });
-      if (marked.error) result.failed++;
-      else result.unchanged++;
-      continue;
-    }
+    const attempted = await service.rpc("mark_forge_attachment_rotation_checked", {
+      p_id: row.id, p_expected_path: path,
+      p_expected_version: row.content_key_version,
+    });
+    if (attempted.error) { result.failed++; continue; }
     const target = `projects/${row.project_id}/forge/${row.id}/${randomUUID()}`;
     try {
+      const current = await getContentKeys().current({ kind: "project", id: row.project_id });
+      const version = current.version;
+      current.bytes.fill(0);
+      if (row.content_key_version > version) throw new Error("Forge attachment key registry regressed");
       const source = await service.storage.from(FORGE_ATTACHMENTS_BUCKET).download(path);
       if (source.error || !source.data) throw new Error("Missing forge attachment");
-      const clear = await decodeAttachmentObject(path,
-        Buffer.from(await source.data.arrayBuffer()));
+      const bytes = Buffer.from(await source.data.arrayBuffer());
+      const clear = await decodeAttachmentObject(path, bytes);
+      const sourceMetadata = attachmentObjectMetadata(bytes);
+      if (sourceMetadata.content_key_version !== row.content_key_version ||
+          sourceMetadata.format_version !== row.format_version) {
+        throw new Error("Forge attachment object metadata differs from its reference");
+      }
+      if (row.content_key_version === version && row.format_version >= 4) {
+        const checked = await service.rpc("verify_forge_attachment_object", {
+          p_id: row.id, p_expected_path: path, p_expected_version: row.content_key_version,
+          p_object_digest: createHash("sha256").update(bytes).digest("hex"),
+        });
+        if (checked.error) result.failed++;
+        else if (checked.data !== true) result.conflicted++;
+        else result.unchanged++;
+        continue;
+      }
       const sealed = await encodeAttachmentObject(target, clear);
       const metadata = attachmentObjectMetadata(sealed);
       if (metadata.content_key_version <= row.content_key_version ||
@@ -69,9 +63,9 @@ export async function rotateForgeAttachmentsBatch(limit = 10) {
       if (uploaded.error) throw new Error("Unable to upload rotated forge attachment");
       const verified = await service.storage.from(FORGE_ATTACHMENTS_BUCKET)
         .download(target);
-      if (verified.error || !verified.data ||
-          !Buffer.from(await decodeAttachmentObject(target,
-            Buffer.from(await verified.data.arrayBuffer()))).equals(clear)) {
+      if (verified.error || !verified.data) throw new Error("Missing rotated forge attachment");
+      const verifiedBytes = Buffer.from(await verified.data.arrayBuffer());
+      if (!Buffer.from(await decodeAttachmentObject(target, verifiedBytes)).equals(clear)) {
         throw new Error("Rotated forge attachment verification failed");
       }
       const swapped = await service.rpc("rotate_forge_attachment_reference", {
@@ -83,6 +77,11 @@ export async function rotateForgeAttachmentsBatch(limit = 10) {
         result.conflicted++;
         continue;
       }
+      const proof = await service.rpc("verify_forge_attachment_object", {
+        p_id: row.id, p_expected_path: target, p_expected_version: metadata.content_key_version,
+        p_object_digest: createHash("sha256").update(verifiedBytes).digest("hex"),
+      });
+      if (proof.error || proof.data !== true) throw new Error("Rotated forge attachment proof conflicted");
       const removed = await service.storage.from(FORGE_ATTACHMENTS_BUCKET)
         .remove([path]);
       if (removed.error) throw new Error("Unable to retire old forge attachment");
@@ -90,11 +89,6 @@ export async function rotateForgeAttachmentsBatch(limit = 10) {
     } catch {
       result.failed++;
     }
-    const marked = await service.rpc("mark_forge_attachment_rotation_checked", {
-      p_id: row.id, p_expected_path: path,
-      p_expected_version: row.content_key_version,
-    });
-    if (marked.error) result.failed++;
   }
   const orphans = await service.rpc("list_forge_attachment_orphans", { p_limit: limit });
   if (orphans.error) throw new Error("Unable to scan forge attachment orphans");

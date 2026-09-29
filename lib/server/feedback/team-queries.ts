@@ -216,7 +216,7 @@ export async function listFeedbackForIssue(
     .is("merged_into_id", null)
     .order("vote_count", { ascending: false });
   if (error) {
-    console.error("[feedback-queries] by-issue failed:", error.message);
+    console.error("[feedback-queries] by_issue_failed");
     return [];
   }
   const rows = (data ?? []) as unknown as Omit<IssueLinkedFeedback, "comment_count">[];

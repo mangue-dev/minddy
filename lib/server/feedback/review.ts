@@ -272,7 +272,7 @@ async function publishWithoutReview(postId: string): Promise<void> {
     .select("id, project_id, source, review_state, status")
     .maybeSingle();
   if (error) {
-    console.error("[feedback-review] publish without review failed:", error.message);
+    console.error("[feedback-review] publish_without_review_failed");
     return;
   }
   if (updated) {
@@ -295,7 +295,7 @@ export async function runFeedbackReview(): Promise<ReviewReport> {
     p_limit: settings.batchSize,
   });
   if (error) {
-    console.error("[feedback-review] claim failed:", error.message);
+    console.error("[feedback-review] claim_failed");
     return report;
   }
 
@@ -358,7 +358,7 @@ export async function reviewFeedbackPost(
     p_post: postId,
   });
   if (error) {
-    console.error("[feedback-review] inline claim failed:", error.message);
+    console.error("[feedback-review] inline_claim_failed");
     return report;
   }
   const stored = ((data ?? []) as Record<string, unknown>[])[0];
@@ -381,8 +381,8 @@ async function runOne(
       report.failures += 1;
       await bumpFailure(post.id, post.analysis_failures);
     }
-  } catch (err) {
-    console.error("[feedback-review] post failed:", (err as Error).message);
+  } catch {
+    console.error("[feedback-review] post_failed");
     report.failures += 1;
     await bumpFailure(post.id, post.analysis_failures);
   }
@@ -712,7 +712,7 @@ async function reviewOne(
   const { data: updated, error: updError } = await saveFeedbackPostContent(
     service, post.id, post.project_id, updates);
   if (updError) {
-    console.error("[feedback-review] update failed:", updError.code);
+    console.error("[feedback-review] update_failed");
     return false;
   }
 

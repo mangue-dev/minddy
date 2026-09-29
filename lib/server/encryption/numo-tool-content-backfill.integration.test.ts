@@ -6,7 +6,7 @@ import { EncryptedStore, type EncryptionScope } from "./store";
 
 const enabled = process.env.MINDDY_ENCRYPTION_DB_TEST === "true";
 const container = "supabase_db_minddy-encryption-test";
-const template = "minddy_min591_final_review";
+const template = process.env.MINDDY_ENCRYPTION_FINAL_TEMPLATE ?? "minddy_min591_final_review";
 const state = vi.hoisted(() => ({
   database: "", userId: "", turnId: "", messageId: "", conflictId: "", badId: "",
   version: 1, conflictNext: false,
@@ -119,7 +119,9 @@ describe.skipIf(!enabled)("Numo tool worker against isolated PostgreSQL", () => 
       EXECUTE format('CREATE TABLE IF NOT EXISTS realtime.%I PARTITION OF realtime.messages FOR VALUES FROM (%L) TO (%L)',
         'messages_' || to_char(current_date,'YYYY_MM_DD'), current_date, current_date + 1);
     END $partition$;`);
-    sql(state.database, readFileSync("supabase/migrations/20270108100000_min591_numo_attempts_and_comment_realtime.sql", "utf8"));
+    if (!process.env.MINDDY_ENCRYPTION_FINAL_TEMPLATE) {
+      sql(state.database, readFileSync("supabase/migrations/20270108100000_min591_numo_attempts_and_comment_realtime.sql", "utf8"));
+    }
     sql(state.database, `INSERT INTO auth.users(id) VALUES(${quote(state.userId)});
       INSERT INTO public.projects(id,owner_id,name,key)
         VALUES(${quote(project)},${quote(state.userId)},'Fixture project','NWW');

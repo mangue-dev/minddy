@@ -277,8 +277,8 @@ async function runSharedSurfaceMention(input: {
       turnId: started.turnId,
       readClient: input.supabase,
     });
-  } catch (error) {
-    console.error(`[numo-surface] ${input.surface} failed:`, error);
+  } catch {
+    console.error("[numo-surface] execution_failed");
     await display?.fail();
     if (eventId) await failNumoSurfaceEvent(input.service, eventId);
   }

@@ -48,7 +48,7 @@ export async function setTabOrder(
   const { data: current, error: readErr } =
     await service.auth.admin.getUserById(userId);
   if (readErr || !current.user) {
-    return { ok: false, error: readErr?.message ?? "Account not found." };
+    return { ok: false, error: readErr ? "account_lookup_failed" : "Account not found." };
   }
   const meta = (current.user.user_metadata ?? {}) as Record<string, unknown>;
   const orders = readOrders(meta);
@@ -59,8 +59,8 @@ export async function setTabOrder(
     user_metadata: next,
   });
   if (writeErr) {
-    console.error("[tab-orders] update failed:", writeErr.message);
-    return { ok: false, error: writeErr.message };
+    console.error("[tab-orders] update_failed");
+    return { ok: false, error: "tab_order_update_failed" };
   }
   return { ok: true };
 }

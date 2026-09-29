@@ -3186,11 +3186,9 @@ export async function executeTool(
       default:
         return toolError(`Unknown tool: ${toolName}`);
     }
-  } catch (err) {
-    console.error(`[assistant] tool ${toolName} threw:`, err);
-    return toolError(
-      err instanceof Error ? err.message : "Tool execution failed",
-    );
+  } catch {
+    console.error("[assistant] tool_execution_failed");
+    return toolError("Tool execution failed");
   }
 }
 

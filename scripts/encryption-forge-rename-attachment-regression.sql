@@ -91,6 +91,11 @@ BEGIN
     AND name=legacy;
   DELETE FROM public.forge_attachment_legacy_owners WHERE
     old_path_digest=encode(extensions.digest(legacy,'sha256'),'hex');
+  IF public.forge_attachment_migration_complete() THEN
+    RAISE EXCEPTION 'Unverified renamed attachment passed completion';
+  END IF;
+  -- This SQL fixture exercises proof CAS; byte authentication is tested in TypeScript.
+  PERFORM public.verify_forge_attachment_object(capability,path,1,repeat('f',64));
   IF NOT public.forge_attachment_migration_complete() THEN
     RAISE EXCEPTION 'Migration remained incomplete after historical cleanup';
   END IF;

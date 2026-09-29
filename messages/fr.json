@@ -1992,7 +1992,12 @@
     "closeDescription": "Vous le retrouverez dans vos brouillons récents.",
     "closeConfirm": "Enregistrer",
     "closeDiscard": "Abandonner",
-    "keepEditing": "Revenir"
+    "keepEditing": "Revenir",
+    "saveFailed": "Enregistrement impossible. Gardez ce dialogue ouvert et réessayez.",
+    "restoreFailed": "Restauration impossible. Vérifiez votre connexion et réessayez.",
+    "deleteFailed": "Suppression impossible. Réessayez.",
+    "recoverLegacy": "Récupérer les anciens brouillons sur cet appareil",
+    "legacyWarning": "Récupérez uniquement les brouillons que vous avez créés sur cet appareil."
   },
   "Pages": {
     "placeholder": "Écrivez, ou tapez « / » pour insérer un bloc…",

@@ -6,7 +6,7 @@ import { EncryptedStore, type EncryptionScope } from "./store";
 
 const enabled = process.env.MINDDY_ENCRYPTION_DB_TEST === "true";
 const container = "supabase_db_minddy-encryption-test";
-const template = "minddy_min591_push_fresh";
+const template = process.env.MINDDY_ENCRYPTION_FINAL_TEMPLATE ?? "minddy_min591_push_fresh";
 const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 function sql(database: string, statement: string): string {
@@ -57,8 +57,10 @@ describe.skipIf(!enabled)("isolated invitation and push write fences", () => {
     try {
       expect(sql(template, "SELECT count(*) FROM public.push_subscriptions;")).toBe("0");
       sql("postgres", `CREATE DATABASE ${database} TEMPLATE ${template};`);
-      const migration = readFileSync("supabase/migrations/20270108030000_invitation_push_write_fences.sql", "utf8");
-      sql(database, migration);
+      if (!process.env.MINDDY_ENCRYPTION_FINAL_TEMPLATE) {
+        const migration = readFileSync("supabase/migrations/20270108030000_invitation_push_write_fences.sql", "utf8");
+        sql(database, migration);
+      }
       sql(database, `INSERT INTO auth.users(id) VALUES(${quote(first)}),(${quote(second)});
         INSERT INTO public.projects(id,owner_id,name,key)
           VALUES(${quote(project)},${quote(first)},'Fixture','F591');`);

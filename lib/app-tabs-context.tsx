@@ -10,6 +10,7 @@ import { AppTabRouteSync } from "@/components/app-tab-route-sync";
 import { appTabsStorageKey } from "./app-tabs-storage";
 import { prefetchAppTabDestination } from "./prefetch-tab-destination";
 import { NavigationContext, useOptionalAppTabNavigation } from "./app-tab-navigation-context";
+import { removeLocalSnapshot, restoreLocalSnapshot, saveLocalSnapshot } from "./local-snapshots";
 
 interface AppTabsValue extends AppTabsSnapshot {
   session: AppTabsSession;
@@ -79,15 +80,26 @@ function AccountTabs({ owner, children }: { owner: string; children: ReactNode }
       else router.push(href, { scroll: false });
     };
     session.remember = (id, href) => {
-      try { sessionStorage.setItem(storageKey, JSON.stringify({ id, href })); } catch { /* Storage is optional. */ }
+      void saveLocalSnapshot(sessionStorage, storageKey, "window-tabs", { id, href }).catch(() => {});
     };
   }, [router, session, storageKey, client]);
   useEffect(() => {
     if (!query.data) return;
     session.receive(query.data);
-    let restored: { id: string; href: string } | undefined;
-    try { restored = JSON.parse(sessionStorage.getItem(storageKey) ?? "null") ?? undefined; } catch { /* Ignore a malformed snapshot. */ }
-    void session.initialize(window.location.pathname + window.location.search + window.location.hash, restored);
+    let cancelled = false;
+    void (async () => {
+      let restored: { id: string; href: string } | undefined;
+      try {
+        const raw = JSON.parse(sessionStorage.getItem(storageKey) ?? "null");
+        if (raw?.format !== "minddy-local-v1") removeLocalSnapshot(sessionStorage, storageKey);
+        else {
+          const value = await restoreLocalSnapshot(sessionStorage, storageKey, "window-tabs");
+          if (value && typeof value === "object" && "id" in value && "href" in value && typeof value.id === "string" && typeof value.href === "string") restored = { id: value.id, href: value.href };
+        }
+      } catch { /* Server-backed tab destinations remain available. */ }
+      if (!cancelled) await session.initialize(window.location.pathname + window.location.search + window.location.hash, restored);
+    })();
+    return () => { cancelled = true; };
   }, [query.data, session, storageKey]);
   // A refresh hides the page first: push the pending location write out
   // immediately, or the next load restores a destination the session outgrew.

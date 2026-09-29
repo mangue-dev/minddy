@@ -9467,6 +9467,16 @@
         "nullable": true,
         "generated": false
       },
+      "rotation_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "verified_object_digest": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
       "pending_publication_claims": {
         "type": "integer",
         "nullable": false,
@@ -9747,6 +9757,114 @@
       "activated_at": {
         "type": "timestamp with time zone",
         "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": []
+  },
+  "agent_sandbox_allocations": {
+    "columns": {
+      "id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "state": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "run_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "user_ids": {
+        "type": "uuid[]",
+        "nullable": false,
+        "generated": false
+      },
+      "cleaned_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "created_by": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "repo_link_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "sandbox_name": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "connection_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "repo_provider": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "conversation_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "provider_key_id": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "private_owner_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "project_owner_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "provider_pending": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "repo_external_id": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "key_request_pending": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
+      "cleanup_attempted_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
         "generated": false
       }
     },
@@ -10835,6 +10953,24 @@
         "targetColumn": "id"
       }
     ]
+  },
+  "agent_project_erasure_fences": {
+    "columns": {
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "project_id"
+    ],
+    "foreignKeys": []
   },
   "ai_decision_evaluation_scope": {
     "columns": {

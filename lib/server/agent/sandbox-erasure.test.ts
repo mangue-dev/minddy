@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
 
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
+    rpc: async (name: string) => ({ data: name === "begin_agent_project_erasure" || name === "agent_allocation_erasure_complete" ? true : [], error: null }),
     from: (table: string) => {
       expect(table).toBe("agent_runs");
       let page = h.rows;
@@ -35,7 +36,7 @@ vi.mock("@/lib/supabase-service", () => ({
   }),
 }));
 vi.mock("./sandbox", () => ({ deleteSandboxByName: h.deleted }));
-vi.mock("./run-key", () => ({ revokeRunKey: h.revoked }));
+vi.mock("./run-key", () => ({ revokeRunKeyStrict: h.revoked }));
 
 const { eraseAgentSandboxesForProject } = await import("./sandbox-erasure");
 const RUN = "11111111-2222-4333-8444-555555555555";

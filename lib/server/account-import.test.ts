@@ -153,6 +153,16 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
 describe("account import tenant isolation", () => {
+  it("imports only bounded product metadata into Auth", async () => {
+    const write = vi.spyOn(service.auth.admin, "updateUserById");
+    await importAccountTransfer(transfer({ account: { id: SOURCE_USER, user_metadata: {
+      theme: "dark", locale: "en", automation_start_delay_min: 120, numo_default_status: "in_progress", private_notes: "PRIVATE_AUTH_SENTINEL",
+      avatar_url: "https://example.test/PRIVATE_AUTH_SENTINEL", smart_fill: { private: "PRIVATE_AUTH_SENTINEL" },
+    } } }), USER);
+    expect(write).toHaveBeenCalled();
+    expect(JSON.stringify(write.mock.calls)).not.toContain("PRIVATE_AUTH_SENTINEL");
+    expect(write.mock.calls[0]).toEqual([USER, { user_metadata: { theme: "dark", locale: "en", automation_start_delay_min: 120 } }]);
+  });
   it("rejects a membership that references another tenant's project", async () => {
     database.rows.projects = [{ id: OTHER_PROJECT, owner_id: OTHER_OWNER }];
 

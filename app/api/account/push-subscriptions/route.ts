@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("[api/push-subscriptions] list failed:", error.message);
+    console.error("[api/push-subscriptions] list_failed");
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   return NextResponse.json({
@@ -160,8 +160,7 @@ export async function POST(request: NextRequest) {
       p_refresh: refresh === true,
     });
     if (error || !data) {
-      console.error("[api/push-subscriptions] protected registration failed:",
-        error?.message);
+      console.error("[api/push-subscriptions] protected_registration_failed");
       return NextResponse.json({ error: t("databaseError") }, { status: 500 });
     }
     return NextResponse.json({ device: pushDevice(await openPush(data)) });
@@ -218,7 +217,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) {
-    console.error("[api/push-subscriptions] upsert failed:", error.message);
+    console.error("[api/push-subscriptions] upsert_failed");
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
@@ -231,8 +230,7 @@ export async function POST(request: NextRequest) {
     // Best effort: at worst one more dead line, which the first 410 will purge.
     if (cleanupError) {
       console.error(
-        "[api/push-subscriptions] cleanup of rotated endpoint failed:",
-        cleanupError.message
+        "[api/push-subscriptions] rotated_endpoint_cleanup_failed"
       );
     }
   }
@@ -246,8 +244,7 @@ export async function POST(request: NextRequest) {
       .neq("endpoint", endpointValue);
     if (cleanupError) {
       console.error(
-        "[api/push-subscriptions] cleanup of rotated native endpoint failed:",
-        cleanupError.message,
+        "[api/push-subscriptions] rotated_native_endpoint_cleanup_failed",
       );
     }
   }

@@ -91,6 +91,21 @@ beforeEach(() => {
 });
 
 describe("sendPushToUser", () => {
+  it.each(["web", "apns", "wns"])("does not log private %s delivery errors in production", async (transport) => {
+    const sentinel = "MIN591_PRIVATE_PUSH_SENTINEL";
+    vi.stubEnv("NODE_ENV", "production");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    H.send.mockRejectedValue(Object.assign(new Error(sentinel), { statusCode: 503, body: sentinel }));
+    H.sendApns.mockResolvedValue({ status: 503, reason: sentinel });
+    H.sendWns.mockResolvedValue({ status: 503, reason: sentinel });
+    const { service } = stubService([{ ...ONE_DEVICE[0], transport }]);
+    try {
+      expect(await sendPushToUser(service, "user", { ...PAYLOAD, body: sentinel }))
+        .toEqual({ sent: 0, gone: 0, failed: 1 });
+      expect(log).toHaveBeenCalled();
+      expect(log.mock.calls.flat().map(String).join("\n")).not.toContain(sentinel);
+    } finally { log.mockRestore(); }
+  });
   it("sends and resets the failure counter", async () => {
     H.send.mockResolvedValue(undefined);
     const { service, ops } = stubService(ONE_DEVICE);

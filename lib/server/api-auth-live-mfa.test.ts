@@ -54,6 +54,51 @@ beforeEach(() => {
 });
 
 describe("getAuthedUser live authorization enforcement", () => {
+  it.each(["origin", "referer"])("does not log private %s headers for rejected writes in production", async (header) => {
+    const sentinel = "MIN591_PRIVATE_ORIGIN_SENTINEL";
+    vi.stubEnv("NODE_ENV", "production");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const result = await getAuthedUser(new NextRequest("https://www.minddy.app/api/projects", {
+        method: "POST", headers: { [header]: `https://synthetic.invalid/${sentinel}` },
+      }));
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.response.status).toBe(403);
+      expect(log).toHaveBeenCalled();
+      expect(log.mock.calls.flat().map(String).join("\n")).not.toContain(sentinel);
+    } finally { log.mockRestore(); vi.unstubAllEnvs(); }
+  });
+
+  it.each(["response", "exception"])("does not log private live authorization %s failures in production", async (failure) => {
+    const sentinel = "MIN591_PRIVATE_AUTHORIZATION_SENTINEL";
+    vi.stubEnv("NODE_ENV", "production");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    if (failure === "response") authorizationAbortSignal.mockResolvedValue({ data: null, error: { message: sentinel } });
+    else authorizationAbortSignal.mockRejectedValue(new Error(sentinel));
+    try {
+      const result = await getAuthedUser(request());
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.response.status).toBe(503);
+      expect(log).toHaveBeenCalled();
+      expect(log.mock.calls.flat().map(String).join("\n")).not.toContain(sentinel);
+    } finally { log.mockRestore(); vi.unstubAllEnvs(); }
+  });
+
+  it("returns a controlled failure instead of propagating private authentication exceptions in production", async () => {
+    const sentinel = "MIN591_PRIVATE_CLAIMS_SENTINEL";
+    vi.stubEnv("NODE_ENV", "production");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    getClaims.mockRejectedValue(new Error(sentinel));
+    try {
+      const result = await getAuthedUser(request());
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.response.status).toBe(503);
+        expect(JSON.stringify(await result.response.json())).not.toContain(sentinel);
+      }
+      expect(log.mock.calls.flat().map(String).join("\n")).not.toContain(sentinel);
+    } finally { log.mockRestore(); vi.unstubAllEnvs(); }
+  });
   it("rejects an AAL1 token minted before the account enrolled MFA", async () => {
     authorizationAbortSignal.mockResolvedValue({
       data: { sessionActive: true, mfaAllowed: false },
