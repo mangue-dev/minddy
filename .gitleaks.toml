@@ -1,6 +1,30 @@
 title = "Minddy public-repository secret and data-marker policy"
 
 [[allowlists]]
+description = "Exact synthetic key sentinel in the production key-provisioning regression."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(?:^|/)lib/server/agent/sandbox-key-provisioning\.test\.ts$''']
+regexTarget = "secret"
+regexes = ['''^MIN591_PRIVATE_KEY_SECRET$''']
+
+[[allowlists]]
+description = "Exact synthetic webhook-secret sentinel in the production logging regression."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(?:^|/)lib/server/private-provider-logs\.test\.ts$''']
+regexTarget = "secret"
+regexes = ['''^synthetic-secret-of-at-least-32-characters$''']
+
+[[allowlists]]
+description = "Exact non-routable synthetic email in the Auth-arrival logging regression."
+targetRules = ["minddy-personal-email-marker"]
+condition = "AND"
+paths = ['''(?:^|/)lib/server/auth-arrival-private-logs\.test\.ts$''']
+regexTarget = "secret"
+regexes = ['''^synthetic@fixture\.invalid$''']
+
+[[allowlists]]
 description = "Exact SHA-256 migration fingerprints, independently verified by check:encryption-schema."
 targetRules = ["generic-api-key"]
 condition = "AND"
