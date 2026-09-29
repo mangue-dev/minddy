@@ -12,7 +12,7 @@ import {
   parseArgs,
   parseEnv,
 } from "./bootstrap-supabase.mjs";
-import { parseArgs as parseStorageArgs } from "./reconcile-storage-buckets.mjs";
+import { EXPECTED_BUCKETS, parseArgs as parseStorageArgs } from "./reconcile-storage-buckets.mjs";
 import { checkLocalConfig, verificationSql } from "./verify-supabase-bootstrap.mjs";
 import { BASELINE_VERSION } from "./repair-squashed-migration-history.mjs";
 
@@ -157,6 +157,19 @@ test("local verification derives Storage credentials from Supabase status", () =
   assert.equal(options.local, true);
   assert.equal(options.supabaseUrl, "http://127.0.0.1:54321");
   assert.equal(options.serviceRoleKey, "local-service-role");
+});
+
+test("local startup preserves private forge storage and migration-controlled icon activation", () => {
+  const config = readFileSync(new URL("../supabase/config.toml", import.meta.url), "utf8");
+  const forge = config.match(/\[storage\.buckets\.forge-attachments\]([^[]*)/);
+  assert.ok(forge, "the local forge bucket must be configured");
+  assert.match(forge[1], /public\s*=\s*false/);
+  assert.match(forge[1], /file_size_limit\s*=\s*"32MiB"/);
+  assert.equal(EXPECTED_BUCKETS["forge-attachments"].public, false);
+  assert.equal(EXPECTED_BUCKETS["forge-attachments"].file_size_limit, 32 * 1024 * 1024);
+  // Supabase reconciles declarative buckets after migrations and on restart.
+  // Icons change visibility during verified activation, so SQL owns this bucket.
+  assert.doesNotMatch(config, /\[storage\.buckets\.project-icons\]/);
 });
 
 

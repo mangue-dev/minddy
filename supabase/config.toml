@@ -57,14 +57,14 @@ file_size_limit = "25MiB"
 public = false
 file_size_limit = "20MiB"
 
-[storage.buckets.project-icons]
-public = true
-file_size_limit = "25MiB"
+# Project icons are managed by migrations and the Storage reconciler. Their
+# verified encryption activation makes the bucket private; a declarative public
+# bucket would undo that protection after migrations or on local restart.
 
 [storage.buckets.user-avatars]
 public = true
 file_size_limit = "10MiB"
 
 [storage.buckets.forge-attachments]
-public = true
-file_size_limit = "20MiB"
+public = false
+file_size_limit = "32MiB"

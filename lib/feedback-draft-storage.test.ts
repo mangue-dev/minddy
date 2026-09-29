@@ -9,7 +9,22 @@ const fixture = () => {
   return { values, storage };
 };
 const snapshot = (ciphertext = "authenticated-ciphertext"): FeedbackDraftSnapshot => ({ format: "minddy-feedback-draft-v1", nonce: "a4bc9d54-b13d-4277-98bf-2fbb6d8b7cd1", expiresAt: Date.now() + 10000, ciphertext });
-afterEach(() => { vi.useRealTimers(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+it("uses the browser fetch receiver when sealing and restoring a guest draft", async () => {
+  const { storage } = fixture();
+  const value = { title: "Guest draft", body: "Recoverable content" };
+  const request = vi.fn<typeof fetch>(async function (this: unknown, _url, init) {
+    if (this !== globalThis) throw new TypeError("Illegal invocation");
+    return JSON.parse(init!.body as string).operation === "seal"
+      ? Response.json({ snapshot: snapshot() }) : Response.json({ value });
+  });
+  vi.stubGlobal("fetch", request);
+  const store = new FeedbackDraftStorage("board", storage);
+  await store.save(value);
+  expect(await store.load()).toEqual(value);
+  expect(request).toHaveBeenCalledTimes(2);
+});
 
 it("does not persist private feedback text through the composer persistence entrypoint", async () => {
   const source = readFileSync("app/f/[token]/feedback-board-client.tsx", "utf8");

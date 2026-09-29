@@ -12,7 +12,7 @@ export class FeedbackDraftStorage {
     this.key = `mdy-feedback-draft:${token}`;
   }
   private async call(body: unknown): Promise<{ value?: FeedbackDraft; snapshot?: FeedbackDraftSnapshot }> {
-    const response = await this.request(`/f/${encodeURIComponent(this.token)}/draft`, {
+    const response = await this.request.call(globalThis, `/f/${encodeURIComponent(this.token)}/draft`, {
       method: "POST", credentials: "same-origin", cache: "no-store", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
     });
     if (!response.ok) throw new Error("Feedback draft unavailable");
