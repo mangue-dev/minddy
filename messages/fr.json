@@ -2577,6 +2577,7 @@
     "delegatedWorkState_starting": "Démarrage",
     "delegatedWorkState_queued": "En attente",
     "delegatedWorkState_running": "En cours",
+    "delegatedWorkState_stopping": "Arrêt…",
     "delegatedWorkState_waiting_input": "Attend votre réponse",
     "delegatedWorkState_completed": "Terminée",
     "delegatedWorkState_failed": "Échec",

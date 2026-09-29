@@ -12,6 +12,7 @@ export type DelegatedWorkState =
   | "starting"
   | "queued"
   | "running"
+  | "stopping"
   | "waiting_input"
   | "completed"
   | "failed"

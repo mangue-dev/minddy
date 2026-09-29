@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const authed = vi.hoisted(() => ({ user: { id: "user-1" } }));
 const interruptRequests: string[] = [];
 const chainStops: string[] = [];
+let drainKicks = 0;
 
 vi.mock("@/lib/server/api-auth", () => ({
   getAuthedUser: async () => ({
@@ -28,6 +29,16 @@ vi.mock("@/lib/server/agent/runs", () => ({
   requestInterrupt: async (runId: string) => {
     interruptRequests.push(runId);
   },
+}));
+
+vi.mock("@/lib/server/agent/launch", () => ({
+  kickAgentDrain: () => {
+    drainKicks += 1;
+  },
+}));
+
+vi.mock("@/lib/supabase-service", () => ({
+  getServiceClient: () => ({}),
 }));
 
 vi.mock("@/lib/server/automations/hooks", () => ({
@@ -52,6 +63,7 @@ beforeEach(() => {
   run = { id: "run-1", status: "running", chain_id: null, parent_numo_turn_id: null };
   interruptRequests.length = 0;
   chainStops.length = 0;
+  drainKicks = 0;
 });
 
 describe("POST /api/agent-runs/[runId]/stop", () => {
@@ -78,6 +90,17 @@ describe("POST /api/agent-runs/[runId]/stop", () => {
 
     expect(res.status).toBe(200);
     expect(interruptRequests).toEqual([]);
+    expect(drainKicks).toBe(0);
+  });
+
+  it("kicks the drain so an interrupted queued run rests right away", async () => {
+    run.status = "queued";
+
+    const res = await POST(request(), params);
+
+    expect(res.status).toBe(200);
+    expect(interruptRequests).toEqual(["run-1"]);
+    expect(drainKicks).toBe(1);
   });
 
   it("keeps stopping the automation chain of a working chain run", async () => {

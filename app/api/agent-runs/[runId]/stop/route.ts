@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { kickAgentDrain } from "@/lib/server/agent/launch";
 import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import { getRun, requestInterrupt } from "@/lib/server/agent/runs";
+import { getServiceClient } from "@/lib/supabase-service";
 import { stopChainOnInterrupt } from "@/lib/server/automations/hooks";
 
 /**
@@ -39,6 +41,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const working = WORKING.includes(run.status);
   if (working) {
     await requestInterrupt(runId);
+    // Make the stop IMMEDIATE where a poll would delay it (PR 304 reference):
+    // a run interrupted while QUEUED would otherwise rest only on the next
+    // drain tick — the kick claims it right away and the interrupt path stamps
+    // it at rest, which also delivers the delegation result to a waiting Numo
+    // turn in the same gesture. A RUNNING run keeps its own 5 s VM beat.
+    kickAgentDrain(getServiceClient());
   }
 
   // A human “stop” STOPS the chain (MIN-147), it does not move it forward:

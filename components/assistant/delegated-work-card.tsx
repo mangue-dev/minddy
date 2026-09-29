@@ -99,6 +99,7 @@ const STATE_ICONS = {
   starting: Loading02Icon,
   queued: Loading02Icon,
   running: Loading02Icon,
+  stopping: Loading02Icon,
   waiting_input: HelpCircleIcon,
   completed: CheckCircle2,
   failed: AlertCircleIcon,
@@ -154,35 +155,28 @@ function msOr(iso: string | null, fallback: number): number {
  * stop in the composer (one click to reconsider, then interrupt): the flag
  * drops, the worker rests, and Numo resumes on the delegation result. The
  * button disappears with the working state — at rest there is nothing to stop.
+ *
+ * The STOP STATE lives in the card, not here: both anchors (card and side
+ * panel) fold to the same optimistic "stopping" presentation the instant the
+ * stop is confirmed, without waiting for the server (PR 304 reference).
  */
 function DelegatedWorkStopButton({
-  runId,
   working,
+  stopping,
+  onStop,
 }: {
-  runId: string;
   working: boolean;
+  stopping: boolean;
+  onStop: () => void;
 }) {
   const t = useTranslations("Agent");
   const tCommon = useTranslations("Common");
-  const [stopping, setStopping] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const confirmationId = useId();
   const titleId = `${confirmationId}-title`;
   const descriptionId = `${confirmationId}-description`;
 
   if (!working) return null;
-
-  const stop = async () => {
-    setStopping(true);
-    try {
-      await interruptAgentRunApi(runId);
-    } catch (error) {
-      // The stop did not land (network, run already at rest): hand control
-      // back instead of leaving a dead button spinning.
-      setStopping(false);
-      toast.error((error as Error).message);
-    }
-  };
 
   return (
     <Popover open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -242,7 +236,7 @@ function DelegatedWorkStopButton({
             size="sm"
             onClick={() => {
               setConfirmOpen(false);
-              void stop();
+              onStop();
             }}
           >
             {t("delegatedWorkStop")}
@@ -300,7 +294,10 @@ function DelegatedWorkMeta({
           icon={StateIcon}
           className={cn(
             "size-3.5",
-            (state === "starting" || state === "queued" || state === "running") &&
+            (state === "starting" ||
+              state === "queued" ||
+              state === "running" ||
+              state === "stopping") &&
               "animate-spin",
           )}
           aria-hidden
@@ -389,7 +386,32 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
   const [diffFocus, setDiffFocus] = useState<string | null>(null);
-  const state = delegatedWorkState(call, run);
+  // Optimistic stop (PR 304 reference): the confirmed stop folds the whole
+  // presentation immediately — state line, live feed, chrono — and only the
+  // quiet reconciliation of the run query settles the card into its final
+  // state when the worker actually rests.
+  const [stopping, setStopping] = useState(false);
+  const rawState = delegatedWorkState(call, run);
+  const state: DelegatedWorkState =
+    stopping && working ? "stopping" : rawState;
+
+  useEffect(() => {
+    if (!working) setStopping(false);
+  }, [working]);
+
+  const stopWorker = async () => {
+    if (!runId) return;
+    setStopping(true);
+    try {
+      await interruptAgentRunApi(runId);
+    } catch (error) {
+      // The stop did not land (network, run already at rest): hand control
+      // back instead of leaving a dead presentation.
+      setStopping(false);
+      toast.error((error as Error).message);
+    }
+  };
+
   // The titler stamps a short `agent_runs.title` on the run at launch: prefer
   // it over the raw launch prompt, which can run for paragraphs. Until it lands
   // (or for old runs without one) the delegation arguments remain the fallback.
@@ -446,7 +468,11 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
             </div>
           </div>
           {runId ? (
-            <DelegatedWorkStopButton runId={runId} working={working} />
+            <DelegatedWorkStopButton
+              working={working}
+              stopping={stopping}
+              onStop={() => void stopWorker()}
+            />
           ) : null}
           <Button
             type="button"
@@ -547,7 +573,11 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
                     />
                   </SidePanelDescription>
                 </div>
-                <DelegatedWorkStopButton runId={runId} working={working} />
+                <DelegatedWorkStopButton
+                  working={working}
+                  stopping={stopping}
+                  onStop={() => void stopWorker()}
+                />
               </div>
             </SidePanelHeader>
             <SidePanelBody className="flex min-h-0 flex-1 flex-col p-0">
@@ -558,6 +588,7 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
                 status={run?.status ?? "queued"}
                 prompt={run?.prompt}
                 promptMentions={run?.prompt_mentions}
+                stopping={stopping}
                 onOpenFile={(path) => openDiff(path)}
                 onOpenDiff={() => openDiff()}
                 hiddenQuestionEventId={hiddenQuestionEventId}
