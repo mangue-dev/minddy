@@ -4,8 +4,8 @@ Run this protocol against a dedicated staging deployment and an isolated
 PostgreSQL copy. It measures code readiness; it does not assume that production
 rows have been migrated. Keep production flags and production data untouched.
 
-The current corrective code review uses only isolated PostgreSQL and synthetic
-fixtures. Representative search parity, latency, key-cache and load controls
+The corrective review uses isolated PostgreSQL, synthetic fixtures and a private
+restored production copy. Representative search parity, latency, key-cache and load controls
 below belong to staging before activation; production measurements are not a
 code-PR acceptance requirement. The readiness endpoint reports only its
 explicit scope (ten critical families plus forge objects), never global closure.
@@ -14,7 +14,7 @@ explicit scope (ten critical families plus forge objects), never global closure.
 
 Prepare two isolated databases with the same anonymized, permission-preserving
 fixture: one at the previous searchable schema for a latency baseline, and one
-with the proposed migrations and encryption flags enabled. Include at least ten
+with the proposed migrations and the global encryption switch enabled. Include at least ten
 projects, 10,000 pages, 100,000 issues, 100 active Numo runs and 1,000 objects.
 Use page bodies with a 2 KiB median and 64 KiB 95th percentile. In the proposed
 copy, retain 20% legitimate legacy pages, protect 40% with the previous content
@@ -164,8 +164,9 @@ measurements to validate the code PR.
 ## Object, Agent and concurrent maintenance gate
 
 Use only an isolated staging deployment and its isolated PostgreSQL database.
-Enable the relevant encryption flags there, including the Agent journal and
-delegation-result flags, before invoking the authenticated maintenance route.
+Set `MINDDY_CONTENT_ENCRYPTION_ENABLED=true` and configure `MINDDY_DATA_ROOT_KEY`
+there before invoking the authenticated maintenance route. The global switch
+also enables Agent journal and delegation-result encryption.
 Record the commit, flag values, schema version and batch response for each pass.
 Run enough bounded passes for the counters to stabilize, including a pass with
 no new forge upload. The final pass must report no failed object, Agent journal,
@@ -263,7 +264,7 @@ that Storage bytes survive service restoration.
 
 ## Follow-up activation controls for MIN-591
 
-Before lifting any encryption flag, apply the follow-up migrations in staging,
+Before enabling the global encryption switch, apply the follow-up migrations in staging,
 then run the two-session snapshot regression against an isolated clone. Keep
 the scope marker and content-key writes at `READ COMMITTED`; a transaction at
 `REPEATABLE READ` or `SERIALIZABLE` must fail before it can cross a marker.

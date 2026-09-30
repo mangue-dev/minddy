@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 
 import type { JSONContent } from "@tiptap/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -8,6 +9,9 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { pageBodyToMarkdownServer } from "@/lib/server/pages-projection";
 import type { PageSearchHit } from "@/lib/types";
 import { decodePageProjection, shouldProtectPages } from "./page-content";
+import { PageSearchProjectionCache } from "./pages-search-projection-cache";
+
+const projectionCache = new PageSearchProjectionCache();
 
 export type { PageSearchHit };
 
@@ -88,7 +92,7 @@ export function queueSearchText(service: Service, pageIds: string[]): void {
   afterOrNow(() => syncPagesSearchText(service, pageIds));
 }
 
-/* ─── Lecture ──────────────────────────────────────────────────────────────── */
+/* ─── Reads ──────────────────────────────────────────────────────────────── */
 
 /** What the SQL function renders, before cleaning the extract. */
 type RawHit = Omit<PageSearchHit, "excerpt"> & { excerpt: string | null };
@@ -180,14 +184,15 @@ export async function runPageSearch(
 type SearchTerm = { words: string[]; excluded: boolean; headline: boolean };
 type SearchClause = SearchTerm[];
 
+const PAGE_WORD_PATTERN = /[\p{L}\p{N}_]+(?:-[\p{L}\p{N}_]+)*@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+|[\p{L}\p{N}]+(?:\.[\p{L}\p{N}]+)+(?:\/[\p{L}\p{N}-]+)+|[\p{L}\p{N}]+(?:\/[\p{L}\p{N}-]+)+|\/[\p{L}\p{N}-]+(?:\/[\p{L}\p{N}-]+)*|[\p{L}\p{N}]+(?:\.[\p{L}\p{N}]+)+|[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)+|[\p{L}\p{N}]+/gu;
+
 function pageLexemes(text: string): string[] {
   // The simple PostgreSQL parser keeps email addresses and file paths as one
   // lexeme, expands a URL into URL/host/path lexemes, and expands a hyphenated
   // word into whole/parts. A hyphen after a dotted host separates the words.
-  const tokens = text.toLocaleLowerCase()
-    .replace(/\b[\p{L}][\p{L}\p{N}+.-]*:\/\//gu, "").match(
-    /[\p{L}\p{N}_]+(?:-[\p{L}\p{N}_]+)*@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+|[\p{L}\p{N}]+(?:\.[\p{L}\p{N}]+)+(?:\/[\p{L}\p{N}-]+)+|[\p{L}\p{N}]+(?:\/[\p{L}\p{N}-]+)+|\/[\p{L}\p{N}-]+(?:\/[\p{L}\p{N}-]+)*|[\p{L}\p{N}]+(?:\.[\p{L}\p{N}]+)+|[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)+|[\p{L}\p{N}]+/gu
-  ) ?? [];
+  const tokens = text.toLocaleLowerCase().replace(/<[^>]*>/g, " ")
+    .replace(/\b[\p{L}][\p{L}\p{N}+.-]*:\/\//gu, "")
+    .match(PAGE_WORD_PATTERN) ?? [];
   return tokens.flatMap((token) => {
     if (token.includes("@")) return [token];
     if (token.includes(".") && token.includes("/")) {
@@ -257,13 +262,23 @@ function positionedWords(title: string, body: string): PositionedWord[] {
   ];
 }
 
-function coversClause(words: PositionedWord[], clause: SearchClause): boolean {
-  return clause.every((term) => {
-    const found = words.some((word) => term.words.every((value, offset) =>
-      words.some((candidate) => candidate.position === word.position + offset &&
-        candidate.word === value)));
+/** Prefix counts test repeated cover windows without rescanning their word arrays. */
+function coverMatcher(words: Array<{ word: string; position: number }>, clauses: SearchClause[]) {
+  const indexed = clauses.map((clause) => clause.map((term) => {
+    const ends = new Int32Array(words.length + 1);
+    for (let end = 0; end < words.length; end++) {
+      const start = end - term.words.length + 1;
+      const found = start >= 0 && term.words.every((value, offset) =>
+        words[start + offset].word === value &&
+        words[start + offset].position === words[start].position + offset);
+      ends[end + 1] = ends[end] + Number(found);
+    }
+    return { ends, length: term.words.length, excluded: term.excluded };
+  }));
+  return (start: number, end: number) => indexed.some((clause) => clause.every((term) => {
+    const found = term.ends[end + 1] > term.ends[Math.min(end + 1, start + term.length - 1)];
     return term.excluded ? !found : found;
-  });
+  }));
 }
 
 /** Cover density mirrors the old SQL rank's weighted, overlapping minimal covers. */
@@ -276,8 +291,7 @@ export function rankPageSearch(title: string, body: string, clauses: SearchClaus
   const wanted = new Set(clauses.flatMap((clause) => clause.flatMap((term) => term.words)));
   const hits = positioned.filter((word) => wanted.has(word.word));
   if (!hits.length) return 0;
-  const qualifies = (start: number, end: number) => clauses.some((clause) =>
-    coversClause(hits.slice(start, end + 1), clause));
+  const qualifies = coverMatcher(hits, clauses);
   let rank = 0;
   let start = 0;
   while (start < hits.length) {
@@ -296,48 +310,97 @@ export function rankPageSearch(title: string, body: string, clauses: SearchClaus
   return Math.fround(rank);
 }
 
-export function protectedPageExcerpt(body: string, clauses: SearchClause[]): string {
-  const headlineClauses = clauses.map((clause) => clause.filter((term) => term.headline))
-    .filter((clause) => clause.length);
-  const terms = headlineClauses.flatMap((clause) => clause
-    .flatMap((term) => term.words));
-  const words = [...body.matchAll(/\S+/gu)];
-  // ts_headline does not highlight a doubly negated conjunct. It returns the
-  // initial MinWords fragment even though the positive match/rank is valid.
-  if (clauses.length === 1 && clauses[0].some((term) => !term.headline && !term.excluded)) {
-    const last = words[Math.min(words.length, 8) - 1];
-    return cleanExcerpt(last ? body.slice(0, (last.index ?? 0) + last[0].length) : "");
-  }
-  const matching = words.map((match) => pageLexemes(match[0])
-    .filter((word) => terms.includes(word)));
-  const candidates = matching.flatMap((hits, index) => hits.length ? [index] : []);
-  if (!candidates.length) {
-    const last = words[Math.min(words.length, 8) - 1];
-    return cleanExcerpt(last ? body.slice(0, (last.index ?? 0) + last[0].length) : "");
-  }
-  const renderMatched = (fragment: string) => cleanExcerpt(
-    (fragment.trim().match(/^[\p{L}][\p{L}\p{N}+.-]*:\/\/\S+$/u)
-      ? fragment.replace(/^[\p{L}][\p{L}\p{N}+.-]*:\/\//u, "")
-      : fragment).replace(/[^\p{L}\p{N}_]+$/u, "")
-  );
-  if (words.length <= 22) return renderMatched(body);
-  let start = 0;
-  let foundCompleteClause = false;
-  for (const candidate of candidates) {
-    const windowStart = Math.min(Math.max(0, candidate - 10), words.length - 22);
-    const windowText = words.slice(windowStart, windowStart + 22)
-      .map((word) => word[0]).join(" ");
-    const complete = headlineClauses.some((clause) =>
-      matchesPageSearch(windowText, [clause]));
-    if (complete && !foundCompleteClause) {
-      start = windowStart;
-      foundCompleteClause = true;
+type HeadlineWord = { value: string; start: number; end: number; counted: boolean };
+
+/** Match PostgreSQL's counted headline words, including hyphen parts and URL components. */
+function headlineWords(body: string): HeadlineWord[] {
+  const protocols = [...body.matchAll(/\b[\p{L}][\p{L}\p{N}+.-]*:\/\//gu)];
+  const tokenBody = body.replace(/\b[\p{L}][\p{L}\p{N}+.-]*:\/\//gu, (match) => " ".repeat(match.length));
+  const words = [...tokenBody.matchAll(PAGE_WORD_PATTERN)].flatMap((match) => {
+    const value = match[0].toLocaleLowerCase();
+    const start = match.index ?? 0;
+    const end = start + match[0].length;
+    if (value.includes("@")) return [{ value, start, end, counted: true }];
+    if (value.includes(".") && value.includes("/")) {
+      const slash = value.indexOf("/");
+      return [{ value, start, end, counted: false },
+        { value: value.slice(0, slash), start, end: start + slash, counted: true },
+        { value: value.slice(slash), start: start + slash, end, counted: true }];
     }
+    if (value.includes("-") && !value.includes("/")) {
+      let offset = start;
+      return [{ value, start, end, counted: false }, ...value.split("-").map((part) => {
+        const word = { value: part, start: offset, end: offset + part.length, counted: true };
+        offset = word.end + 1;
+        return word;
+      })];
+    }
+    return [{ value, start, end, counted: true }];
+  });
+  for (const protocol of protocols) words.push({ value: "", start: protocol.index ?? 0,
+    end: (protocol.index ?? 0) + protocol[0].length, counted: true });
+  return words.sort((left, right) => left.start - right.start);
+}
+
+export function protectedPageExcerpt(body: string, clauses: SearchClause[]): string {
+  // The SQL headline replaces XML tags before rendering a fragment. Keeping
+  // attributes in the token stream also distorts proximity and word budgets.
+  body = body.replace(/<[^>]*>/g, " ");
+  const words = headlineWords(body);
+  if (!words.length) return "";
+  const positive = clauses.map((clause) => clause.filter((term) => term.headline && !term.excluded))
+    .filter((clause) => clause.length);
+  const ignoreHighlights = clauses.length === 1 && clauses[0].some((term) => !term.headline && !term.excluded);
+  const wanted = new Set(ignoreHighlights ? [] : positive.flatMap((clause) => clause.flatMap((term) => term.words)));
+  const interesting = (index: number) => wanted.has(words[index].value);
+  const candidates = words.flatMap((_, index) => interesting(index) ? [index] : []);
+  const satisfies = coverMatcher(words.map((word, position) => ({ word: word.value, position })), positive);
+  let best: { from: number; to: number; count: number; matches: number } | null = null;
+  // PostgreSQL selects a minimal cover, prefers more query words, and then
+  // stretches it symmetrically. Whitespace tokens and compound parents do not
+  // consume its MaxWords budget. Short or numeric endpoints are trimmed.
+  for (let cursor = 0; cursor < candidates.length;) {
+    let end = cursor;
+    while (end < candidates.length && !satisfies(candidates[cursor], candidates[end])) end++;
+    if (end === candidates.length) break;
+    let begin = end;
+    while (begin > cursor && !satisfies(candidates[begin], candidates[end])) begin--;
+    let from = candidates[begin];
+    let to = candidates[end];
+    let count = 0;
+    let matches = 0;
+    let lastMatch = from;
+    for (let index = from; index <= to && count < 22; index++) {
+      if (words[index].counted) count++;
+      if (interesting(index)) { matches++; lastMatch = index; }
+    }
+    to = lastMatch;
+    count = words.slice(from, to + 1).filter((word) => word.counted).length;
+    if (!best || matches > best.matches || (matches === best.matches && count < best.count)) {
+      best = { from, to, count, matches };
+    }
+    cursor = begin + 1;
   }
-  const from = words[start].index ?? 0;
-  const last = words[start + 21];
-  const to = (last.index ?? 0) + last[0].length;
-  return renderMatched(body.slice(from, to));
+  if (!best) {
+    let count = 0;
+    let last = 0;
+    while (last < words.length && count < 8) { if (words[last].counted) count++; last++; }
+    return cleanExcerpt(last === words.length ? body : body.slice(0, words[last - 1].end));
+  }
+  let { from, to, count } = best;
+  const badEndpoint = (index: number) => !interesting(index) &&
+    (!words[index].counted || Buffer.byteLength(words[index].value, "utf8") <= 2 || /^[\d.]+$/.test(words[index].value) ||
+      body.slice(words[index].end, words[index].end + 3) === "://");
+  const leftBudget = Math.floor((22 - count) / 2);
+  let leftCount = 0;
+  while (from > 0 && leftCount < leftBudget) {
+    from--;
+    if (words[from].counted) { leftCount++; count++; }
+  }
+  while (from < best.from && badEndpoint(from)) { if (words[from].counted) count--; from++; }
+  while (to + 1 < words.length && count < 22) { to++; if (words[to].counted) count++; }
+  while (to > best.to && badEndpoint(to)) to--;
+  return cleanExcerpt(body.slice(words[from].start, words[to].end));
 }
 
 /** Read every RLS-visible batch before ranking, so page limits never bias search. */
@@ -348,7 +411,8 @@ async function searchProtectedPages(client: SupabaseClient, {
   const clauses = parsePageSearchQuery(query);
   if (!clauses.length) return { ok: true, hits: [] };
   const cap = Math.min(Math.max(1, Math.trunc(limit) || 1), MAX_SEARCH_LIMIT);
-  const ranked: Array<PageSearchHit & { body: string }> = [];
+  const ranked: Array<PageSearchHit & { body: string; cacheIdentity: string | null }> = [];
+  const queryIdentity = createHash("sha256").update(JSON.stringify(clauses)).digest("hex");
   const compare = (a: PageSearchHit, b: PageSearchHit) => b.rank - a.rank ||
     b.updated_at.localeCompare(a.updated_at) || a.id.localeCompare(b.id);
   const batch = 200;
@@ -366,19 +430,34 @@ async function searchProtectedPages(client: SupabaseClient, {
     for (const stored of data ?? []) {
       const row = await decodePageProjection(stored);
       const title = String(row.title ?? "");
-      const body = await pageSearchText(row.content);
-      const rank = rankPageSearch(title, body, clauses);
+      // RLS and authenticated decryption run on every request, including cache hits.
+      // Exact ciphertext plus row ownership prevents reuse after edits or scope changes.
+      const cacheIdentity = typeof stored.encrypted_content === "string" && stored.encryption_version > 0
+        ? createHash("sha256")
+          .update(JSON.stringify([stored.project_id, stored.id, stored.encryption_version]))
+          .update(stored.encrypted_content).digest("hex") : null;
+      const body = cacheIdentity
+        ? await projectionCache.get(cacheIdentity, () => pageSearchText(row.content))
+        : await pageSearchText(row.content);
+      const rank: number | null = cacheIdentity
+        ? JSON.parse(await projectionCache.get(`${cacheIdentity}:${queryIdentity}:rank`,
+          async () => JSON.stringify(rankPageSearch(title, body, clauses))))
+        : rankPageSearch(title, body, clauses);
       if (rank === null) continue;
       ranked.push({ id: row.id, project_id: row.project_id,
         parent_id: row.parent_id, title, icon: row.icon,
         updated_at: row.updated_at,
-        excerpt: "", rank, body });
+        excerpt: "", rank, body, cacheIdentity });
       ranked.sort(compare);
       if (ranked.length > cap) ranked.pop();
     }
     if (!data || data.length < batch) break;
   }
-  return { ok: true, hits: ranked.map(({ body, ...hit }) => ({
-    ...hit, excerpt: protectedPageExcerpt(body, clauses),
-  })) };
+  const hits = await Promise.all(ranked.map(async ({ body, cacheIdentity, ...hit }) => ({
+    ...hit, excerpt: cacheIdentity
+      ? await projectionCache.get(`${cacheIdentity}:${queryIdentity}:excerpt`,
+        async () => protectedPageExcerpt(body, clauses))
+      : protectedPageExcerpt(body, clauses),
+  })));
+  return { ok: true, hits };
 }

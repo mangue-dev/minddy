@@ -2413,7 +2413,7 @@
       "functionReferences": []
     },
     "sync_agent_runtime_from_run()": {
-      "sha256": "05ea58e7962090fbb73a4cab93c5431ac359501db4cac81eb9406bbe9a64526a",
+      "sha256": "c0e5a2a03094ac1d82fe780c1478967b1985e70875a515b781e1e114bb061992",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2645,7 +2645,7 @@
       "functionReferences": []
     },
     "guard_numo_worker_checkpoint()": {
-      "sha256": "de6da4c0e45c7e6c743faf9dd0f58f16a72840ebef453cef1625b2fbb6172cc1",
+      "sha256": "555606c6b2417a1662e62f8feeabaf806188bf5082a0dbb0a82e46059a66341a",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2664,7 +2664,9 @@
         "conversations",
         "numo_turn_events"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "numo_worker_conversation_project"
+      ]
     },
     "guard_project_icon_reference()": {
       "sha256": "227bbd68df30b47cdf9c8192cad515651b6f0645d9b7a02bc2894afeb37d71a8",
@@ -3070,7 +3072,7 @@
       "functionReferences": []
     },
     "search_pages(text,uuid,integer)": {
-      "sha256": "82819cfa2be2f1519f2a37d4c89cad67ed28381899862cde09ff04d4c941b0e7",
+      "sha256": "ee33eb43942adf6159d621a3684a601ee70dbfd41d5f1835ea60af6d174186ed",
       "securityDefiner": false,
       "configuration": null,
       "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
@@ -3318,7 +3320,7 @@
       "functionReferences": []
     },
     "guard_feedback_post_encryption()": {
-      "sha256": "79cd8669b706139a5fc9166dc87e324f013de28506f3fe046c6db34456dcd84d",
+      "sha256": "47ae47b19149916037a2b7789ea7fa085a453f655620fb61998b9e9884c86208",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3821,7 +3823,7 @@
       "functionReferences": []
     },
     "guard_numo_worker_event_payload()": {
-      "sha256": "e80fbf96a56bf39c168065ebf6622b54eeb93cdea2734674f597df1dd08355e5",
+      "sha256": "431cdeee370664421be5bb781b84d38865c589380e8eba41488aa773437cde5e",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3829,7 +3831,6 @@
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
-        "conversations",
         "numo_assistant_turns",
         "numo_worker_legacy_bindings",
         "agent_result_encryption_scopes",
@@ -3837,10 +3838,11 @@
       ],
       "protectedRelations": [
         "agent_runs",
-        "conversations",
         "numo_assistant_turns"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "numo_worker_conversation_project"
+      ]
     },
     "integration_content_version(text)": {
       "sha256": "c747d733bc46248878f678eaceef70da466d8b3f571673421fa51cbc0e395136",
@@ -4248,7 +4250,7 @@
       "functionReferences": []
     },
     "verify_project_icon(uuid,text,text)": {
-      "sha256": "9f1c887277d9520178c825d7dcb447a167041cc0f416a90416d182e15d112f7d",
+      "sha256": "39b04a33527487aba9b70bff3b67813691868cc518a7a34523571102e9cee592",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4829,7 +4831,7 @@
       "functionReferences": []
     },
     "list_forge_attachment_orphans(integer)": {
-      "sha256": "84f20a5d6586ce821829b6441e8df584c3fb54663df5581ac0545a46679fc313",
+      "sha256": "7d24c44e9a521a95c6eab5426e8f307a7ef6e58cd9c4cafbaa60aa2e4fb43af7",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4839,15 +4841,13 @@
         "projects",
         "attachments",
         "pull_requests",
-        "project_git_links",
         "forge_attachment_objects",
         "forge_attachment_legacy_pr_aliases"
       ],
       "protectedRelations": [
         "projects",
         "attachments",
-        "pull_requests",
-        "project_git_links"
+        "pull_requests"
       ],
       "functionReferences": []
     },
@@ -5688,6 +5688,23 @@
         "numo_worker_payload_verified"
       ]
     },
+    "numo_worker_conversation_project(uuid,uuid)": {
+      "sha256": "98ee2f5d839fd274bbf6648e1f2f8a75af0535f454a7824e9a81c950220a2fda",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres}",
+      "relations": [
+        "agent_runs",
+        "conversations"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "conversations"
+      ],
+      "functionReferences": []
+    },
     "release_issue_remote_status_push(uuid,uuid)": {
       "sha256": "2b857570cab7c07e54dfdae9dd59934f71025641c9cae5e2f137ccb615668c21",
       "securityDefiner": true,
@@ -6031,7 +6048,7 @@
       "functionReferences": []
     },
     "numo_worker_payload_verified(jsonb,text,uuid)": {
-      "sha256": "e12bb29c2ea8a5c6516be1cb00572cd577b15c811d0cd46c36508cf38417c74b",
+      "sha256": "5ab05129bbc1975fadcd12f2ded78ff09f5f68163afb3e417e3e2f3b81d88332",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6039,18 +6056,18 @@
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
-        "conversations",
         "numo_turn_events",
         "numo_assistant_turns",
         "numo_worker_legacy_bindings"
       ],
       "protectedRelations": [
         "agent_runs",
-        "conversations",
         "numo_turn_events",
         "numo_assistant_turns"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "numo_worker_conversation_project"
+      ]
     },
     "reserve_agent_pr_inline_comment(uuid,integer)": {
       "sha256": "649ed4393de351eee9cc506fa079ec1db612cf50c8a094310a5a7a8fec08c516",
@@ -6740,6 +6757,27 @@
       ],
       "functionReferences": []
     },
+    "migrate_verified_content_backfill(text,jsonb,jsonb)": {
+      "sha256": "7f9ea63de6323e523c5f9dc38368e09058c330e58a71ee1a5d6f9e888b83077f",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "pages",
+        "views",
+        "projects",
+        "saved_views"
+      ],
+      "protectedRelations": [
+        "pages",
+        "views",
+        "projects",
+        "saved_views"
+      ],
+      "functionReferences": []
+    },
     "apply_forge_relay_link_sync(uuid,bigint,jsonb,jsonb)": {
       "sha256": "5ecd144bbf170a7d0d43f11a17ac27631dc083d5ead96830e229557c59acd855",
       "securityDefiner": true,
@@ -7127,7 +7165,7 @@
       "functionReferences": []
     },
     "register_numo_worker_legacy_binding(text,uuid,uuid,text)": {
-      "sha256": "ef719ae8355796e43dbd497fa3dddae37bcf3f74b57f9242c83ba54f0e30491b",
+      "sha256": "4ed6d2031c71b43845b00615ef8a9869dcacdcdb333293dec5f825c8702ae5d5",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -7135,18 +7173,18 @@
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "agent_runs",
-        "conversations",
         "numo_turn_events",
         "numo_assistant_turns",
         "numo_worker_legacy_bindings"
       ],
       "protectedRelations": [
         "agent_runs",
-        "conversations",
         "numo_turn_events",
         "numo_assistant_turns"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "numo_worker_conversation_project"
+      ]
     },
     "upsert_view_share_guarded(uuid,text,text,text,text,uuid)": {
       "sha256": "0d0511cce2fee5b74daae9833105aced5e6a0e1eb4296d9b07809521a29e63dd",

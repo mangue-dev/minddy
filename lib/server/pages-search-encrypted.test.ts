@@ -1,13 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({ protected: false, rows: [] as Record<string, unknown>[],
-  root: "", rpcCalls: [] as string[] }));
+  root: "", rpcCalls: [] as string[], generation: 0,
+  decode: vi.fn(async (row: Record<string, unknown>) => row),
+  project: vi.fn(async (value: unknown) => String(value ?? "")) }));
 vi.mock("@/lib/server/page-content", () => ({
   shouldProtectPages: async () => h.protected,
-  decodePageProjection: async (row: Record<string, unknown>) => row,
+  decodePageProjection: h.decode,
 }));
 vi.mock("@/lib/server/pages-projection", () => ({
-  pageBodyToMarkdownServer: async (value: unknown) => String(value ?? ""),
+  pageBodyToMarkdownServer: h.project,
 }));
 const { runPageSearch, parsePageSearchQuery } = await import("./pages-search");
 
@@ -39,6 +41,9 @@ beforeEach(() => {
   h.root = process.env.MINDDY_DATA_ROOT_KEY ?? "";
   process.env.MINDDY_DATA_ROOT_KEY = "test-root";
   h.rpcCalls = [];
+  h.generation++;
+  h.decode.mockClear();
+  h.project.mockClear();
   h.rows = [
     { id: "a", project_id: "allowed", parent_id: null, title: "alpha",
       content: "first phrase here", icon: null, encrypted_content: "sealed",
@@ -50,11 +55,33 @@ beforeEach(() => {
       content: "first phrase here", icon: null, encrypted_content: "sealed",
       encryption_version: 1, deleted_at: null, updated_at: "2026-01-04T00:00:00Z" },
   ];
+  for (const row of h.rows) {
+    if (row.encrypted_content) row.encrypted_content = `sealed-${h.generation}`;
+  }
 });
 afterEach(() => { if (h.root) process.env.MINDDY_DATA_ROOT_KEY = h.root;
   else delete process.env.MINDDY_DATA_ROOT_KEY; });
 
 describe("mixed encrypted page search", () => {
+  it("rechecks access and decryption when Markdown is cached and invalidates edited ciphertext", async () => {
+    h.protected = true;
+    h.rows = [h.rows[0]];
+    const allowed = new Set(["allowed"]);
+    const source = client(allowed);
+    const query = () => runPageSearch(source as never, { query: "alpha OR edited" });
+    await query();
+    await query();
+    expect(h.decode).toHaveBeenCalledTimes(2);
+    expect(h.project).toHaveBeenCalledTimes(1);
+    allowed.clear();
+    expect(await query()).toEqual({ ok: true, hits: [] });
+    expect(h.decode).toHaveBeenCalledTimes(2);
+    allowed.add("allowed");
+    h.rows[0] = { ...h.rows[0], content: "edited body", encrypted_content: "edited-cipher" };
+    expect(await query()).toMatchObject({ ok: true, hits: [{ excerpt: "edited body" }] });
+    expect(h.project).toHaveBeenCalledTimes(2);
+  });
+
   it("uses the authorized application reader while writers are paused", async () => {
     const result = await runPageSearch(client(new Set(["allowed"])) as never,
       { query: "alpha OR beta", limit: 1 });

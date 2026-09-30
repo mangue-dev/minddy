@@ -11,7 +11,7 @@ DECLARE actor uuid := gen_random_uuid();
   connection uuid := gen_random_uuid();
   doomed_link uuid := gen_random_uuid(); survivor_link uuid := gen_random_uuid();
   old_pr uuid := gen_random_uuid(); twin uuid := gen_random_uuid();
-  old_path text;
+  old_path text; token text:='mdyr1:' || repeat('a',64);
 BEGIN
   INSERT INTO auth.users(id) VALUES(actor);
   INSERT INTO public.projects(id,owner_id,name,key)
@@ -39,6 +39,15 @@ BEGIN
           'aliases',jsonb_build_array('old/repo')))) THEN
     RAISE EXCEPTION 'Repository rename failed';
   END IF;
+  INSERT INTO public.forge_repository_names(provider,token,full_name_ciphertext,encryption_version)
+    VALUES('github',token,'{"format":3,"keyVersion":1,"data":"opaque"}',1);
+  IF NOT public.migrate_forge_repository_name('project_git_links',survivor_link,
+      'github','new/repo',token,ARRAY['old/repo'],ARRAY[token],'new','repo',NULL) THEN
+    RAISE EXCEPTION 'Mixed repository conversion fixture failed';
+  END IF;
+  IF EXISTS(SELECT 1 FROM public.list_forge_attachment_orphans(100) WHERE name=old_path) THEN
+    RAISE EXCEPTION 'Mixed repository identities selected a published object for deletion';
+  END IF;
   IF (SELECT current_pr_id FROM public.forge_attachment_legacy_pr_aliases
       WHERE old_pr_id=old_pr) IS DISTINCT FROM twin THEN
     RAISE EXCEPTION 'Historical PR alias was not retained';
@@ -49,9 +58,12 @@ BEGIN
     RAISE EXCEPTION 'Surviving project historical object was orphaned';
   END IF;
   DELETE FROM public.projects WHERE id=survivor;
-  IF NOT EXISTS(SELECT 1 FROM public.list_forge_attachment_orphans(100)
-      WHERE name=old_path) THEN
-    RAISE EXCEPTION 'Ownerless historical object was hidden after final cascade';
+  IF EXISTS(SELECT 1 FROM public.list_forge_attachment_orphans(100) WHERE name=old_path) THEN
+    RAISE EXCEPTION 'Unlinked but existing PR lost its published object';
+  END IF;
+  DELETE FROM public.pull_requests WHERE id=twin;
+  IF NOT EXISTS(SELECT 1 FROM public.list_forge_attachment_orphans(100) WHERE name=old_path) THEN
+    RAISE EXCEPTION 'Deleted PR historical object was hidden from cleanup';
   END IF;
   PERFORM set_config('storage.allow_delete_query','true',true);
   DELETE FROM storage.objects WHERE bucket_id='forge-attachments'

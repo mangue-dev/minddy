@@ -61,13 +61,12 @@ export async function backfillPageContentBatch(limit = 30,
         throw new Error("Page migration mismatch");
       }
       if (signal?.aborted) { result.interrupted = true; break; }
-      const write = await service.from("pages")
-        .update(fresh
-          ? { encryption_checked_at: new Date().toISOString() }
-          : { ...pageContentValues(encoded),
-            encryption_checked_at: new Date().toISOString() })
-        .eq("id", row.id).eq("project_id", row.project_id)
-        .eq("content_revision", revision).select("id").maybeSingle();
+      const write = await service.rpc("migrate_verified_content_backfill", {
+        p_table: "pages",
+        p_expected: { id: row.id, project_id: row.project_id, content_revision: revision,
+          encryption_version: row.encryption_version, encrypted_content: row.encrypted_content },
+        p_values: fresh ? {} : pageContentValues(encoded),
+      });
       if (write.error) throw new Error("Unable to migrate page content");
       if (!write.data) result.conflicted++;
       else if (fresh) result.unchanged++;

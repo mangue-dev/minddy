@@ -10,6 +10,10 @@ if (process.env.MIN591_REQUIRE_PG_ORACLE === "1" && !container) {
 }
 const fixtures = [
   { id: "old-many", title: "", body: "alpha alpha alpha" },
+  { id: "html-attributes", title: "", body: '<div data-label="alpha">ordinary text</div>' },
+  { id: "html-callout", title: "", body: '<div data-kind="note" data-icon="fixture">' +
+    Array.from({ length: 50 }, (_, index) => index === 10 ? "alpha" : `word${index + 1}`).join(" ") + '</div>' },
+
   { id: "new-one", title: "", body: "alpha" },
   { id: "title", title: "alpha", body: "ordinary text" },
   { id: "title-only-punctuation", title: "alpha", body: "Sentence." },
@@ -272,7 +276,7 @@ describe.skipIf(!container)("PostgreSQL page-search ranking oracle", () => {
         const source = fixtures.find((row) => row.id === actual[index].id)!;
         expect(protectedPageExcerpt(source.body, parsePageSearchQuery(query)),
           `${query}: ${source.id} excerpt`)
-          .toBe(expected[index].excerpt);
+          .toBe(expected[index].excerpt.trim());
       }
       expect(actual.slice(0, 1).map((row) => row.id))
         .toEqual(expected.slice(0, 1).map((row) => row.id));

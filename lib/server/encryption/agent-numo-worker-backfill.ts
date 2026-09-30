@@ -1,5 +1,7 @@
 import "server-only";
 
+import { isDeepStrictEqual } from "node:util";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeWorkerEventPayload } from "@/lib/server/numo/worker-event-content";
 import { isContentEncryptionEnabled } from "./content-config";
@@ -59,13 +61,15 @@ async function projectForRun(embeddedRunId: string | null, conversationId: strin
     throw new Error("Worker event run is ambiguous");
   }
   const { data, error } = await getServiceClient().from("agent_runs")
-    .select("project_id,parent_numo_turn_id,parent_numo_conversation_id")
+    .select("project_id,created_by,parent_numo_turn_id,parent_numo_conversation_id")
     .eq("id", runId).maybeSingle();
   if (error || !data?.project_id) throw new Error("Worker run scope is unavailable");
   const { data: conversation, error: conversationError } = await getServiceClient()
-    .from("conversations").select("project_id").eq("id", conversationId).maybeSingle();
-  if (conversationError || !conversation?.project_id ||
-      data.project_id !== conversation.project_id ||
+    .from("conversations").select("project_id,user_id").eq("id", conversationId).maybeSingle();
+  const conversationMatches = conversation && (conversation.project_id === data.project_id ||
+    (conversation.project_id === null && typeof conversation.user_id === "string" &&
+      conversation.user_id === data.created_by));
+  if (conversationError || !conversationMatches ||
       (binding && binding.project_id !== data.project_id) ||
       ((data.parent_numo_turn_id !== turnId ||
         data.parent_numo_conversation_id !== conversationId) &&
@@ -96,7 +100,7 @@ async function replacement(projectId: string, runId: string, eventId: string,
     encryption_version: store.versionOf(cipher), project_id: projectId,
     event_id: eventId, run_id: runId };
   const verified = await decodeWorkerEventPayload(wrapped, null, eventId, runId);
-  if (JSON.stringify(verified) !== JSON.stringify(content)) {
+  if (!isDeepStrictEqual(verified, content)) {
     throw new Error("Worker payload migration verification failed");
   }
   return wrapped;

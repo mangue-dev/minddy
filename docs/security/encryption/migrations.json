@@ -96,6 +96,7 @@
   "20270106990000_multi_provider_byok.sql": "4e60f35dd9200955664f274ce780367413791ad9f1dfc0404c021f4c1639da41",
   "20270107000000_issue_read_policy_batching.sql": "0c36c15b0ce44715bfff444c0fd158123c2bf807345d87f2d90d6864905dc4ae",
   "20270107010000_faq_ask_feature.sql": "614011c0667fa5eebf10857c94105d3942d78bc8928bf2a724bd6f1d2fb3459b",
+  "20270107015000_reconcile_numo_history_projection.sql": "01fec49ee5652f795a17f111f6134840e712032d0259d9fa95967e1eaf58e04d",
   "20270107020000_numo_stop_cascade.sql": "3e3640923c5d7cc6f5fe94e33553c425ccd935097859b17bf4b4c8489593cfee",
   "20270107020001_envelope_key_registry.sql": "4806eeded943436c26925b2ddc516390d76e6da199def289a2bddbcf39d45fbd",
   "20270107030000_invitation_email_encryption.sql": "1048dea1c6a74be38f8480a5dca00b56fe0816d8b5f4f3e4b7892e703ebc225f",
@@ -164,7 +165,7 @@
   "20270107700000_saved_view_bookmark_encryption.sql": "8d1d076992d0a2a709aee83dc1ee56bbcb764b84ac1da17594231f918ea36f57",
   "20270107710000_agent_routine_content_encryption.sql": "947a661fec631d4170467442336b2ca1f48cabedfc1e21cc0d9fbde93934a36d",
   "20270107720000_project_content_encryption.sql": "228f0f743a93c854bd92d25d9a014c32cf2c58569af26a5bb6210a9905e5a3b3",
-  "20270107730000_page_content_encryption.sql": "aa85a367d7e0516b677fc88a5f0e7d112e1a5ebdb97248d76e20925dbc1415af",
+  "20270107730000_page_content_encryption.sql": "d65a6310cfe7138152b2a9ec1b779e06f455414eb782fc55ee8553ba83aca385",
   "20270107730100_page_content_sql_guards.sql": "484d8fde20b278a0fc4ef88ccdf349b5a9e20022e78f2d87d240db7c2448a30e",
   "20270107730200_page_content_batch.sql": "c5ed15e066b9a3df597422e1e3904860f81841e4d46a0598381923ca6300379f",
   "20270107730300_page_content_import.sql": "8263bf100f70b5d395a3e21036ef96e0785e4603f109bc96c2ca0c1f2cd21adb",
@@ -216,5 +217,11 @@
   "20270109200005_agent_allocation_erasure_completeness.sql": "31c707b3d5fe484fa8c18154317fa6102c24f703004a380e767b9217600255ae",
   "20270109200006_numo_encrypted_stop_cascade.sql": "80f245855c425c03de4ff645aef3c1ea5c3d7aacfe9eed0d72e0eae2394de781",
   "20270109200007_attachment_object_retirement.sql": "972dc75b104936bce126458ff4afb5510bd675239bd78daa1aabbf4183dd2c10",
-  "20270109200008_content_backfill_attempt_revisions.sql": "d145c89dcbe82175be48216d8a75cc1fed31a10db75364bc6be0e5caa21b6a45"
+  "20270109200008_content_backfill_attempt_revisions.sql": "d145c89dcbe82175be48216d8a75cc1fed31a10db75364bc6be0e5caa21b6a45",
+  "20270109200009_historical_backfill_guards.sql": "27e7244f764d6df3f72f564597262e9e03ffebe343b71001a982fa2d25804459",
+  "20270109200010_personal_numo_worker_scope.sql": "fe4728fd8d5103b6da0ad7799c0eb2937b4c9cbfe1f13286fad69b053ed05dcd",
+  "20270109200011_content_backfill_verified_writes.sql": "d2c909c3b3dfc5ea076dcfc0c3bfea901abb6e60ba6c278b3973d0b0c3beef33",
+  "20270109200012_page_search_stable_order.sql": "7a3a288c483dcdb67823efe12cc58c8df492fcb00baf17372d775670d1231402",
+  "20270109200013_preserve_mixed_forge_attachment_owners.sql": "8733a7a12572264ccb4d25f2715c4fee9e4bcc205459fb02271784b7273df788",
+  "20270109200014_project_icon_verification_metadata.sql": "a8e75c43636ebf29f1270cf2db4efcbe59cf196416302a8160f257e801769f65"
 }

@@ -13,6 +13,9 @@ ALTER TABLE public.pages
   ADD COLUMN page_has_values boolean NOT NULL DEFAULT false,
   ADD COLUMN page_is_blank boolean NOT NULL DEFAULT false;
 
+-- Initialize derived flags without changing the historical edit timestamp.
+-- Restore the ordinary edit trigger within this transaction.
+ALTER TABLE public.pages DISABLE TRIGGER pages_set_updated_at;
 UPDATE public.pages SET page_is_database = database_schema IS NOT NULL,
   page_has_values = property_values <> '{}'::jsonb,
   page_is_blank = database_schema IS NULL AND property_values = '{}'::jsonb
@@ -24,6 +27,7 @@ UPDATE public.pages SET page_is_database = database_schema IS NOT NULL,
         content->'content'->0->>'type' = 'paragraph' AND
         (content->'content'->0->'content' IS NULL OR
           content->'content'->0->'content' = '[]'::jsonb)));
+ALTER TABLE public.pages ENABLE TRIGGER pages_set_updated_at;
 CREATE INDEX pages_content_migration_queue
   ON public.pages(encryption_checked_at NULLS FIRST,id);
 

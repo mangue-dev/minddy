@@ -57,13 +57,12 @@ export async function backfillProjectContentBatch(limit = 30,
         throw new Error("Project migration mismatch");
       }
       if (signal?.aborted) { result.interrupted = true; break; }
-      const write = await service.from("projects")
-        .update(fresh
-          ? { encryption_checked_at: new Date().toISOString() }
-          : { ...projectContentValues(encoded),
-            encryption_checked_at: new Date().toISOString() })
-        .eq("id", row.id).eq("owner_id", row.owner_id)
-        .eq("content_revision", revision).select("id").maybeSingle();
+      const write = await service.rpc("migrate_verified_content_backfill", {
+        p_table: "projects",
+        p_expected: { id: row.id, owner_id: row.owner_id, content_revision: revision,
+          encryption_version: row.encryption_version, encrypted_content: row.encrypted_content },
+        p_values: fresh ? {} : projectContentValues(encoded),
+      });
       if (write.error) throw new Error("Unable to migrate project content");
       if (!write.data) result.conflicted++;
       else if (fresh) result.unchanged++;

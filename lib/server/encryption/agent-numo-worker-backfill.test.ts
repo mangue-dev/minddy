@@ -5,6 +5,8 @@ type Event = { id: string; turn_id: string; type: string;
   payload: Record<string, unknown>; attempted: number | null };
 const state = vi.hoisted(() => ({
   tick: 0,
+  conversationProject: "project" as string | null,
+  runActor: "actor",
   events: [] as Event[],
   bindings: [] as Array<{ kind: string; target_id: string; run_id: string;
     turn_id: string; conversation_id: string; project_id: string }>,
@@ -48,12 +50,12 @@ const service = {
         : table === "numo_assistant_turns"
         ? { active_run_id: "run-b", conversation_id: "conversation" }
         : table === "agent_runs"
-          ? id === "run-a" ? { project_id: "project",
+          ? id === "run-a" ? { project_id: "project", created_by: state.runActor,
             parent_numo_turn_id: "turn", parent_numo_conversation_id: "conversation" }
             : id === "legacy-run" ? { project_id: "project",
               parent_numo_turn_id: null, parent_numo_conversation_id: null }
             : null
-          : { project_id: "project" }, error: null }),
+          : { project_id: state.conversationProject, user_id: "actor" }, error: null }),
     };
     return query;
   },
@@ -83,6 +85,8 @@ const { decodeWorkerEventPayload } = await import("@/lib/server/numo/worker-even
 
 beforeEach(() => {
   state.tick = 0;
+  state.conversationProject = "project";
+  state.runActor = "actor";
   state.bindings = [];
   state.events = [
     { id: "a", turn_id: "turn", type: "worker_completed",
@@ -95,6 +99,22 @@ beforeEach(() => {
 });
 
 describe("historical Numo worker events", () => {
+  it("converts a personal conversation's worker using its matching actor and parent bindings", async () => {
+    state.conversationProject = null;
+    state.events = [state.events[1]];
+    expect(await backfillNumoWorkerEventsBatch(1)).toMatchObject({ migrated: 1, failed: 0 });
+    await expect(decodeWorkerEventPayload(state.events[0].payload, null, "b", "run-a"))
+      .resolves.toEqual({ run_id: "run-a", result: "Private historical result" });
+  });
+
+  it("refuses a different actor's run in a personal conversation", async () => {
+    state.conversationProject = null;
+    state.runActor = "other-actor";
+    state.events = [state.events[1]];
+    expect(await backfillNumoWorkerEventsBatch(1)).toMatchObject({ migrated: 0, failed: 1 });
+    expect(state.events[0].payload).toEqual({ run_id: "run-a", result: "Private historical result" });
+  });
+
   it("moves an orphan behind a previous run after the turn starts another run", async () => {
     expect(await backfillNumoWorkerEventsBatch(1)).toMatchObject({
       scanned: 1, failed: 1,

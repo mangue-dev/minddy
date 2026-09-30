@@ -1,5 +1,7 @@
 import "server-only";
 
+import { isDeepStrictEqual } from "node:util";
+
 import { markAgentBackfillAttempt } from "./agent-backfill-attempt";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -66,8 +68,7 @@ export async function backfillAgentDelegationResultsBatch(limit = 20,
       const replacement = await encodeDelegationResult(row.project_id, row.id,
         decoded.delegation_result);
       const verified = await decodeDelegationResult({ ...row, ...replacement });
-      if (JSON.stringify(verified.delegation_result) !==
-          JSON.stringify(decoded.delegation_result)) {
+      if (!isDeepStrictEqual(verified.delegation_result, decoded.delegation_result)) {
         throw new Error("Agent result migration verification failed");
       }
       if (signal?.aborted) { result.interrupted = true; break; }

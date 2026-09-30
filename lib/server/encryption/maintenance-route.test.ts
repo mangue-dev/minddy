@@ -159,6 +159,32 @@ describe("application-wide encryption maintenance", () => {
       expect(callbacks.get("backfillPageContentBatch")).toHaveBeenCalled();
     } finally { log.mockRestore(); }
   });
+  it("serializes shared agent and Numo bundles and resumes later passes after a failure", async () => {
+    enable();
+    let active = 0;
+    let maximum = 0;
+    let completed = 0;
+    const bundles = [...callbacks].filter(([name]) => /^backfill(Agent|Numo|OrphanRuntime)/.test(name));
+    for (const [name, callback] of bundles) {
+      callback.mockImplementation(async () => {
+        active++;
+        maximum = Math.max(maximum, active);
+        await Promise.resolve();
+        active--;
+        completed++;
+        if (name === "backfillNumoWorkerEventsBatch") throw Error("Private source failure");
+        return emptyBatch;
+      });
+    }
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect((await GET(request())).status).toBe(503);
+      expect(maximum).toBe(1);
+      expect(completed).toBe(bundles.length);
+      expect(callbacks.get("backfillIssuesBatch")).toHaveBeenCalled();
+      expect(JSON.stringify(log.mock.calls)).not.toContain("Private source failure");
+    } finally { log.mockRestore(); }
+  });
   it("reports provider failures without blocking other domains or leaking content", async () => {
     enable();
     callbacks.get("backfillInvitationEmailsBatch")!.mockRejectedValue(new Error("Private provider content"));

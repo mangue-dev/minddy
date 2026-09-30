@@ -58,14 +58,12 @@ export async function backfillViewContentBatch(limit = 30,
         throw new Error("View content migration mismatch");
       }
       if (signal?.aborted) { result.interrupted = true; break; }
-      let query = service.from("views").update(fresh
-        ? { encryption_checked_at: new Date().toISOString() }
-        : { ...viewContentValues(encoded),
-          encryption_checked_at: new Date().toISOString() })
-        .eq("id", row.id).eq("content_revision", revision);
-      query = row.project_id ? query.eq("project_id", row.project_id)
-        : query.is("project_id", null).eq("user_id", row.user_id);
-      const write = await query.select("id").maybeSingle();
+      const write = await service.rpc("migrate_verified_content_backfill", {
+        p_table: "views",
+        p_expected: { id: row.id, project_id: row.project_id, user_id: row.user_id, content_revision: revision,
+          encryption_version: row.encryption_version, encrypted_content: row.encrypted_content },
+        p_values: fresh ? {} : viewContentValues(encoded),
+      });
       if (write.error) throw new Error("Unable to migrate view content");
       if (!write.data) result.conflicted++;
       else if (fresh) result.unchanged++;
