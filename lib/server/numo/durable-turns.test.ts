@@ -23,6 +23,7 @@ const h = vi.hoisted(() => ({
     billing: { plan: { id: "free", includedUsageUsd: 1 } },
   },
   processChat: vi.fn(),
+  fetchModelIndex: vi.fn(),
   recordAiUsage: vi.fn(),
   deliverAgentDelegationResult: vi.fn(),
 }));
@@ -140,10 +141,12 @@ const service = {
 } as unknown as SupabaseClient;
 
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => service }));
-vi.mock("@/lib/server/assistant/loop", () => ({
+vi.mock("@/lib/server/ai-provider-request", () => ({
+  fetchAiProviderBytes: (...args: unknown[]) => h.fetchModelIndex(...args),
+}));
+vi.mock("@/lib/server/assistant/loop", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/server/assistant/loop")>(),
   AmbiguousToolExecutionError: class extends Error {},
-  getModelInputModalities: async () => new Set(["text"]),
-  modelSupportsCaching: async () => false,
   processChat: (...args: unknown[]) => h.processChat(...args),
 }));
 vi.mock("@/lib/server/assistant/prompt", () => ({
@@ -268,6 +271,8 @@ beforeEach(() => {
     context: null,
   });
   h.processChat.mockReset();
+  h.fetchModelIndex.mockReset();
+  h.fetchModelIndex.mockRejectedValue(new Error("Catalog unavailable"));
   h.recordAiUsage.mockReset();
   h.deliverAgentDelegationResult.mockReset();
   vi.mocked(resolveAiRuntime).mockResolvedValue(runtime as never);
@@ -281,6 +286,35 @@ beforeEach(() => {
 });
 
 describe("durable Numo execution", () => {
+  it("streams a text answer before a cold OpenRouter catalog finishes loading", async () => {
+    let releaseCatalog!: () => void;
+    h.fetchModelIndex.mockReturnValue(new Promise((resolve) => {
+      releaseCatalog = () => resolve({ ok: true, bytes: Buffer.from('{"data":[]}') });
+    }));
+    const live = { emit: vi.fn(), close: vi.fn(), isClosed: false };
+    h.processChat.mockImplementationOnce(async (_messages, _tools, emitter) => {
+      emitter.emit("content_delta", { delta: "Immediate answer" });
+      return { fullContent: "Immediate answer", finalReasoning: null,
+        allToolCalls: [], generations: [], suspension: null };
+    });
+    const execution = executeNumoTurn({
+      turnId: h.turn!.id as string,
+      readClient: service,
+      aiRuntime: { ...runtime, provider: "openrouter" },
+      liveEmitter: live,
+    });
+    try {
+      await vi.waitFor(() => {
+        expect(live.emit).toHaveBeenCalledWith("content_delta", { delta: "Immediate answer" });
+      });
+      expect(h.fetchModelIndex).toHaveBeenCalledOnce();
+      expect((await execution).status).toBe("completed");
+    } finally {
+      releaseCatalog();
+      await execution;
+    }
+  });
+
   it("uses the model frozen on the admitted turn after a runtime change", async () => {
     h.turn = { ...h.turn!, model: "selected-model" };
     await executeNumoTurn({

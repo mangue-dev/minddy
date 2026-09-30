@@ -42,6 +42,10 @@ export interface OpenRouterModelInfo {
   contextLength: number | null;
   /** `architecture.input_modalities` contains `image` → we can SHOW him a model. */
   imageInput: boolean;
+  /** Published input types, used to preserve image and file attachments. */
+  inputModalities: string[];
+  /** Explicit prompt-cache support, independent of complete cache pricing. */
+  promptCaching: boolean;
   /** Output capabilities published by OpenRouter for catalog filtering. */
   outputModalities: string[];
   /**
@@ -174,6 +178,8 @@ async function fetchIndex(apiKey?: string): Promise<void> {
       name: m.name ?? m.id,
       contextLength: m.context_length && m.context_length > 0 ? m.context_length : null,
       imageInput: (m.architecture?.input_modalities ?? []).includes("image"),
+      inputModalities: m.architecture?.input_modalities ?? ["text"],
+      promptCaching: cacheRead != null && cacheRead > 0,
       outputModalities: outputs,
       textOutput: outputs.every((o) => o === "text"),
       router: m.architecture?.tokenizer === "Router" || !!m.alias_target,
@@ -235,6 +241,11 @@ export async function getOpenRouterModelInfo(
   apiKey?: string,
 ): Promise<OpenRouterModelInfo | null> {
   await loadOpenRouterIndex(apiKey);
+  return getCachedOpenRouterModelInfo(model);
+}
+
+/** Read available metadata immediately, including stale entries, without I/O. */
+export function getCachedOpenRouterModelInfo(model: string): OpenRouterModelInfo | null {
   const exact = index.get(model);
   if (exact) return exact;
   const colon = model.lastIndexOf(":");

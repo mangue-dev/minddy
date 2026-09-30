@@ -126,6 +126,29 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("cached model capabilities", () => {
+  it("reads available capabilities without fetching and preserves exact variants", async () => {
+    const { getCachedOpenRouterModelInfo, loadOpenRouterIndex, fetchMock } = await freshIndex({
+      data: [
+        { id: "vendor/model", architecture: { input_modalities: ["text", "image", "file"] },
+          pricing: { input_cache_read: "0.000001" } },
+        { id: "vendor/model:free" },
+      ],
+    });
+    expect(getCachedOpenRouterModelInfo("vendor/model")).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+    await loadOpenRouterIndex();
+    expect(getCachedOpenRouterModelInfo("vendor/model:nitro")).toMatchObject({
+      inputModalities: ["text", "image", "file"], promptCaching: true, cachePricing: null,
+    });
+    expect(getCachedOpenRouterModelInfo("vendor/model:free")).toMatchObject({
+      inputModalities: ["text"], promptCaching: false,
+    });
+    expect(getCachedOpenRouterModelInfo("missing/model")).toBeNull();
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+});
+
 describe("getOpenRouterModelInfo", () => {
   it("convertit les prix par token en USD au million de tokens", async () => {
     const { getOpenRouterModelInfo } = await freshIndex();

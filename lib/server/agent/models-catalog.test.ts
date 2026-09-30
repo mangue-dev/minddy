@@ -24,6 +24,8 @@ function entry(over: Partial<OpenRouterModelInfo> & { id: string }): OpenRouterM
     name: over.id,
     contextLength: 200000,
     imageInput: false,
+    inputModalities: ["text"],
+    promptCaching: false,
     outputModalities: ["text"],
     textOutput: true,
     router: false,
