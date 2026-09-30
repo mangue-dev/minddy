@@ -26,10 +26,8 @@ on:
     # commit on main. Running the same jobs again after the fast-forward would
     # double the bill without testing different bytes.
     branches: [main]
-    # The desktop release workflow generates this metadata only after all
-    # native packages have passed their protected publication jobs.
-    paths-ignore:
-      - desktop/released.json
+    # Release-record commits also need CI because production promotion requires
+    # a successful main push run for the exact commit being deployed.
   workflow_dispatch:
 
 permissions:
