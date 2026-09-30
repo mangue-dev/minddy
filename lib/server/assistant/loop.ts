@@ -13,9 +13,12 @@ import {
 } from "./execute-tool";
 import type { AssistantToolDef } from "./tools";
 import { redactDeep, SecretRedactor } from "@/lib/server/agent/redact";
-import { stripModelSuffix } from "@/lib/ai-model-config";
 import { fetchAiChat, type ResolvedAiRuntime } from "@/lib/server/ai-runtime";
-import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
+import {
+  getCachedOpenRouterModelInfo,
+  getOpenRouterModelInfo,
+  loadOpenRouterIndex,
+} from "@/lib/server/agent/openrouter-index";
 import {
   getToolResultCharLimit,
   serializeToolResult,
@@ -137,74 +140,28 @@ export class LlmStreamIdleError extends Error {
   }
 }
 
-/** Module-level cache — OpenRouter model list is fetched at most once per
-    process (on success), then feeds both capability lookups below. */
-const modelIndexCache = new Map<
-  string,
-  { caching: boolean; modalities: string[] }
->();
-let modelIndexLoaded = false;
-const MAX_MODEL_INDEX_BYTES = 5 * 1024 * 1024;
-
-async function loadModelIndex(apiKey: string): Promise<void> {
-  if (modelIndexLoaded) return;
-  try {
-    const res = await fetchAiProviderBytes(
-      "openrouter",
-      "https://openrouter.ai/api/v1/models",
-      {
-        headers: { Authorization: `Bearer ${apiKey}` },
-        maxBytes: MAX_MODEL_INDEX_BYTES,
-      },
-    );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const body = JSON.parse(res.bytes.toString("utf8")) as {
-      data?: Array<{
-        id: string;
-        pricing?: { input_cache_read?: string | number };
-        architecture?: { input_modalities?: string[] };
-      }>;
-    };
-    for (const m of body.data ?? []) {
-      modelIndexCache.set(m.id, {
-        caching: Number(m.pricing?.input_cache_read ?? 0) > 0,
-        modalities: m.architecture?.input_modalities ?? ["text"],
-      });
-    }
-    modelIndexLoaded = true;
-  } catch {
-    // Left unloaded — callers fall back to the conservative default and the
-    // next call retries the fetch.
-  }
-}
-
 /**
- * Returns true if the model supports explicit prompt caching via cache_control,
- * detected from OpenRouter's pricing metadata (input_cache_read > 0).
+ * Prompt-cache hints are optional: use available metadata and refresh it in
+ * the background so a cold or slow catalog cannot delay the first token.
  */
 export async function modelSupportsCaching(
   model: string,
-  apiKey: string
+  apiKey: string,
 ): Promise<boolean> {
-  await loadModelIndex(apiKey);
-  // The NU id: the OpenRouter catalog does not know the routing shortcuts
-  // (`…:nitro`, MIN-263), and a failed lookup would cut off the cache without saying anything.
-  return modelIndexCache.get(stripModelSuffix(model))?.caching ?? false;
+  void loadOpenRouterIndex(apiKey);
+  return getCachedOpenRouterModelInfo(model)?.promptCaching ?? false;
 }
 
 /**
- * The model's input modalities per OpenRouter ("text", "image", "file"…) —
- * gates whether attachments are sent as image/file parts or degraded to text
- * notes. Falls back to text-only when the index is unavailable.
+ * Attachment capabilities must be resolved before constructing provider input.
+ * This shares the catalog used by model validation and prompt-cache hints.
  */
 export async function getModelInputModalities(
   model: string,
-  apiKey: string
+  apiKey: string,
 ): Promise<Set<string>> {
-  await loadModelIndex(apiKey);
-  // Same: without the bare id, a suffixed model would pass as text alone and the
-  // attachments would be degraded to notes.
-  return new Set(modelIndexCache.get(stripModelSuffix(model))?.modalities ?? ["text"]);
+  const info = await getOpenRouterModelInfo(model, apiKey);
+  return new Set(info?.inputModalities ?? ["text"]);
 }
 
 export interface ProcessChatContext extends ToolContext {
