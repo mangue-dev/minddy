@@ -255,7 +255,7 @@ function write(harnessDir: string, children: readonly HarnessChild[]): void {
       serializeChildRegistry(children),
       "utf8",
     );
-  } catch (error) {
-    console.error("[child-registry] inscription impossible", error);
+  } catch {
+    console.error("[child-registry] registration_failed");
   }
 }

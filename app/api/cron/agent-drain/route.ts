@@ -10,6 +10,9 @@ import {
   type QueuedRunRow,
 } from "@/lib/server/agent/deployment";
 import { notifyAgentRun } from "@/lib/server/agent/runs";
+import { decodeAgentDeploymentUrl } from "@/lib/server/agent/run-deployment-content";
+import { encodeRunSummary, shouldEncryptAgentSummary } from
+  "@/lib/server/agent/run-summary-content";
 
 /**
  * LAUNCHER of agent runs (MIN-46, reduced to this profession in MIN-225). He doesn't
@@ -52,17 +55,25 @@ const CRON_DRAIN_BUDGET_MS = 270_000;
 async function dueScopedRuns(service: SupabaseClient): Promise<QueuedRunRow[]> {
   const { data, error } = await service
     .from("agent_runs")
-    .select("id, deployment_url, not_before")
+    .select("id, project_id, deployment_url, not_before")
     .eq("status", "queued")
     .not("deployment_url", "is", null)
     .lte("not_before", new Date().toISOString())
     .order("not_before", { ascending: true })
     .limit(50);
   if (error) {
-    console.error("[agent-drain] preview dispatch read failed:", error.message);
+    console.error("[agent-drain] preview dispatch read failed");
     return [];
   }
-  return (data ?? []) as QueuedRunRow[];
+  const decoded = await Promise.allSettled((data ?? []).map(async (row) => {
+    const clear = await decodeAgentDeploymentUrl(row);
+    return { id: clear.id, deployment_url: clear.deployment_url,
+      not_before: clear.not_before };
+  }));
+  if (decoded.some((result) => result.status === "rejected")) {
+    console.error("[agent-drain] preview dispatch decryption failed");
+  }
+  return decoded.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
 }
 
 /** Wakes A deployment preview. Best effort: production never executes these
@@ -75,14 +86,14 @@ async function kickDeployment(url: string, secret: string): Promise<void> {
       headers: { Authorization: `Bearer ${secret}` },
       signal: AbortSignal.timeout(10_000),
     });
-    console.log("[agent-drain] preview kick sent:", url);
+    console.log("[agent-drain] preview kick sent");
   } catch (error) {
     if (error instanceof Error && error.name === "TimeoutError") {
       // As in `chainAgentDrain`: the request is delivered, the child drains.
-      console.log("[agent-drain] preview kick sent (timeout):", url);
+      console.log("[agent-drain] preview kick timed out");
       return;
     }
-    console.error("[agent-drain] preview kick failed:", url, error);
+    console.error("[agent-drain] preview kick failed");
   }
 }
 
@@ -93,27 +104,32 @@ async function kickDeployment(url: string, secret: string): Promise<void> {
  */
 async function failStalledRuns(service: SupabaseClient, ids: string[]): Promise<void> {
   if (ids.length === 0) return;
-  const { data, error } = await service
+  const { data: candidates, error: lookupError } = await service
     .from("agent_runs")
-    .update({
-      status: "failed",
-      error_message: "Preview deployment unreachable",
-      checkpoint: null,
-    })
+    .select("id, project_id")
     .in("id", ids)
-    .eq("status", "queued")
-    .select("id, created_by, project_id, issue_id, conversation_id");
-  if (error) {
-    console.error("[agent-drain] stalled preview fail failed:", error.message);
+    .eq("status", "queued");
+  if (lookupError) {
+    console.error("[agent-drain] stalled preview lookup failed");
     return;
   }
-  const rows = (data ?? []) as Array<{
-    created_by: string | null;
-    project_id: string;
-    issue_id: string | null;
-    conversation_id: string;
-  }>;
-  for (const row of rows) await notifyAgentRun(row, "agent_failed");
+  for (const candidate of candidates ?? []) {
+    const message = await shouldEncryptAgentSummary(service, candidate.project_id)
+      ? await encodeRunSummary(candidate.project_id, candidate.id,
+          "error_message", "Preview deployment unreachable")
+      : "Preview deployment unreachable";
+    const { data, error } = await service.from("agent_runs").update({
+      status: "failed", error_message: message, checkpoint: null,
+      checkpoint_ciphertext: null, checkpoint_encryption_version: 0,
+    }).eq("id", candidate.id).eq("project_id", candidate.project_id)
+      .eq("status", "queued")
+      .select("id, created_by, project_id, issue_id, conversation_id").maybeSingle();
+    if (error) {
+      console.error("[agent-drain] stalled preview fail failed", candidate.id);
+      continue;
+    }
+    if (data) await notifyAgentRun(data, "agent_failed");
+  }
 }
 
 async function handle(request: NextRequest) {
@@ -122,24 +138,39 @@ async function handle(request: NextRequest) {
   }
 
   const service = getServiceClient();
-  const summary = await drainAgentRuns(service, { budgetMs: CRON_DRAIN_BUDGET_MS });
+  let summary: Awaited<ReturnType<typeof drainAgentRuns>>;
+  try {
+    summary = await drainAgentRuns(service, { budgetMs: CRON_DRAIN_BUDGET_MS });
+  } catch {
+    console.error("[agent-drain] drain failed");
+    return NextResponse.json({ error: "drain_failed" }, { status: 500 });
+  }
 
   // Distribution (MIN-165): only the PROD wakes up the other deployments. A
   // kicked preview arrives here with VERCEL_ENV=preview and only does its drain —
   // otherwise two deployments would pass the buck indefinitely.
   const secret = process.env.CRON_SECRET?.trim();
-  const dispatch =
-    process.env.VERCEL_ENV === "production" && secret
+  let dispatch: { urls: string[]; stalledRunIds: string[] };
+  try {
+    dispatch = process.env.VERCEL_ENV === "production" && secret
       ? previewKickTargets(await dueScopedRuns(service), {
           now: Date.now(),
           staleAfterMs: PREVIEW_STALE_AFTER_MS,
         })
       : { urls: [], stalledRunIds: [] };
+  } catch {
+    console.error("[agent-drain] preview dispatch failed");
+    return NextResponse.json({ error: "dispatch_failed" }, { status: 500 });
+  }
 
   if (dispatch.urls.length > 0 || dispatch.stalledRunIds.length > 0) {
     after(async () => {
-      if (secret) await Promise.all(dispatch.urls.map((url) => kickDeployment(url, secret)));
-      await failStalledRuns(service, dispatch.stalledRunIds);
+      try {
+        if (secret) await Promise.all(dispatch.urls.map((url) => kickDeployment(url, secret)));
+        await failStalledRuns(service, dispatch.stalledRunIds);
+      } catch {
+        console.error("[agent-drain] preview dispatch failed");
+      }
     });
   }
 

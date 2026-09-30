@@ -127,8 +127,8 @@ export async function POST(
       { runId, text, polished },
       { headers: { "Cache-Control": "no-store" } }
     );
-  } catch (err) {
-    console.error("[f/voice] transcription failed:", (err as Error).message);
+  } catch {
+    console.error("[f/voice] transcription_failed");
     return NextResponse.json({ error: "failed" }, { status: 502 });
   }
 }

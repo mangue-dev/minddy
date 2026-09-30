@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let storedSecret: string | null = null;
+const protection = vi.hoisted(() => ({ enabled: false }));
 const rpc = vi.fn(async (_name: string, args: Record<string, unknown>) => {
   if (!args.p_only_if_absent || storedSecret === null) {
     storedSecret = args.p_sso_secret as string | null;
@@ -9,7 +10,20 @@ const rpc = vi.fn(async (_name: string, args: Record<string, unknown>) => {
 });
 
 vi.mock("@/lib/supabase-service", () => ({
-  getServiceClient: () => ({ rpc }),
+  getServiceClient: () => ({ rpc, from: () => {
+    const query = { select: () => query, eq: () => query,
+      maybeSingle: async () => ({ data: { id: "board-one" }, error: null }) };
+    return query;
+  } }),
+}));
+vi.mock("@/lib/server/feedback/board-sso-content", () => ({
+  shouldProtectBoardSso: async () => protection.enabled,
+  encodeBoardSso: async (_project: string, _board: string, plain: string) =>
+    `mdyb3:1:${Buffer.from(plain).toString("base64url")}`,
+  decodeBoardSso: async (_project: string, _board: string,
+    stored: string | null) => stored?.startsWith("mdyb3:")
+      ? Buffer.from(stored.split(":")[2], "base64url").toString("utf8")
+      : stored?.replace(/^sealed:/, "") ?? null,
 }));
 vi.mock("@/lib/server/after-safe", () => ({ afterOrNow: vi.fn() }));
 vi.mock("@/lib/server/feedback/sso-crypto", () => ({
@@ -28,6 +42,7 @@ const { getOrCreateSsoSecret, rotateSsoSecret } = await import(
 beforeEach(() => {
   storedSecret = null;
   rpc.mockClear();
+  protection.enabled = false;
 });
 
 describe("feedback SSO secret writes", () => {
@@ -52,6 +67,18 @@ describe("feedback SSO secret writes", () => {
     expect(rpc.mock.calls.at(-1)?.[1]).toMatchObject({
       p_project_id: "project-1",
       p_only_if_absent: false,
+    });
+  });
+
+  it("persists a root-key envelope through the protected locked writer", async () => {
+    protection.enabled = true;
+    const clear = await rotateSsoSecret("project-1");
+    expect(clear).toMatch(/^fbsso_/);
+    expect(storedSecret).toMatch(/^mdyb3:1:/);
+    expect(storedSecret).not.toContain(clear);
+    expect(rpc.mock.calls.at(-1)?.[0]).toBe("write_feedback_sso_secret_protected");
+    expect(rpc.mock.calls.at(-1)?.[1]).toMatchObject({
+      p_project_id: "project-1", p_board_id: "board-one",
     });
   });
 });

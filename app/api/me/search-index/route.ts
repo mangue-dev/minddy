@@ -1,8 +1,12 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { categoryStore } from "@/lib/server/category-store";
+import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { buildMembersByProject } from "@/lib/server/project-members";
+import { decodePageProjection } from "@/lib/server/page-content";
 import type {
   Category,
   SearchIndexIssue,
@@ -40,7 +44,7 @@ const ISSUE_COLUMNS =
 const OBJECTIVE_COLUMNS = "id, project_id, name, status, color, projects!inner(deleted_at)";
 /** The title and its emoji: what the line displays. Never `content` (MIN-276). */
 const PAGE_COLUMNS =
-  "id, project_id, title, icon, updated_at, projects!inner(deleted_at)";
+  "id, project_id, title, icon, updated_at, encrypted_content, encryption_version, projects!inner(deleted_at)";
 
 /** The filter join does not go down to the client. */
 function stripJoin<T>(rows: ({ projects?: unknown } | null)[] | null): T[] {
@@ -72,14 +76,11 @@ export async function GET(request: NextRequest) {
   const service = getServiceClient();
 
   const [issuesRes, objectivesRes, pagesRes, categoriesRes, projectsRes] = await Promise.all([
-    auth.supabase
-      .from("issues")
-      .select(ISSUE_COLUMNS)
+    issueStore(auth.supabase).select(ISSUE_COLUMNS)
       .is("projects.deleted_at", null)
       .order("updated_at", { ascending: false })
       .limit(MAX_ISSUES),
-    auth.supabase
-      .from("objectives")
+    objectiveStore(auth.supabase)
       .select(OBJECTIVE_COLUMNS)
       .is("projects.deleted_at", null)
       .order("updated_at", { ascending: false })
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
       .is("projects.deleted_at", null)
       .order("updated_at", { ascending: false })
       .limit(MAX_PAGES),
-    auth.supabase.from("categories").select("id, project_id, name, color"),
+    categoryStore(auth.supabase, auth.user.id).select("id, project_id, name, color"),
     auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null),
   ]);
 
@@ -108,10 +109,11 @@ export async function GET(request: NextRequest) {
 
   const issues = stripJoin<SearchIndexIssue>(issuesRes.data);
   const objectives = stripJoin<SearchIndexObjective>(objectivesRes.data);
-  const pages = stripJoin<SearchIndexPage>(pagesRes.data);
+  const pages = await Promise.all(stripJoin<Record<string, unknown>>(
+    pagesRes.data).map((row) => decodePageProjection(row, auth.user.id))) as unknown as SearchIndexPage[];
 
   const categories: Record<string, Category[]> = {};
-  for (const c of (categoriesRes.data ?? []) as Category[]) {
+  for (const c of (categoriesRes.data ?? []) as unknown as Category[]) {
     (categories[c.project_id] ??= []).push(c);
   }
 

@@ -12,8 +12,11 @@ import { appendEvent, claimRun, notifyAgentRun, stampRun } from "./runs";
 import { SANDBOX_USAGE_SEQ_BASE } from "./pr-landing";
 import { executeAgentRun } from "./execute";
 import { isLoopCommandAlive, stopSandboxByName } from "./sandbox";
+import { retryRevokedSandboxAllocations } from "./sandbox-allocation";
 import { revokeRunKey } from "./run-key";
 import { currentDeploymentScope } from "./deployment";
+import { deploymentLookupPrefix } from "./run-deployment-content";
+import { hasDataRootKey } from "@/lib/server/encryption/local-key-wrapper";
 
 /**
  * Drain runs from the agent (MIN-46) — the worker. Self-budgeted within 300s of
@@ -394,11 +397,8 @@ export async function reapDeadVmRuns(
         routineId: row.routine_id,
         durationMs: Date.now() - startedMs,
         usdPerMinute: row.sandbox_billing?.usdPerMinute,
-      }).catch((err) =>
-        console.error(
-          "[agent-drain] vm compute metering failed:",
-          (err as Error).message,
-        ),
+      }).catch(() =>
+        console.error("[agent-drain] vm_compute_metering_failed"),
       );
     }
 
@@ -444,25 +444,25 @@ export async function reapDeadVmRuns(
   return { reaped };
 }
 
-/**
- * Restricts a queue request to the scope of the current deployment (MIN-165).
- * BOTH queue requests pass through here: if they diverged, a drain
- * would see work due to not having the right to claim and would exit empty.
- *
- * Generic NOT constrained, with the cast inside: constraining `Q` on the
- * form of `is`/`eq` explodes the inference on the Postgrest builder (TS2589),
- * and returning a minimal interface would lose `order`/`limit` to the caller.
- */
-function scopeToDeployment<Q>(query: Q, scope: string | null): Q {
-  const q = query as unknown as {
-    is(column: string, value: null): unknown;
-    eq(column: string, value: string): unknown;
-  };
-  return (
-    scope === null
-      ? q.is("deployment_url", null)
-      : q.eq("deployment_url", scope)
-  ) as Q;
+/** Read due work from legacy exact URLs and encrypted equality prefixes. */
+async function dueRunsForDeployment(service: SupabaseClient, scope: string | null,
+  encryptedPrefix: string | null): Promise<Array<{ id: string }>> {
+  const base = () => service.from("agent_runs").select("id,not_before,created_at")
+    .eq("status", "queued").not("local_exec", "is", true)
+    .lte("not_before", new Date().toISOString());
+  const candidates = await Promise.all([
+    (scope === null ? base().is("deployment_url", null)
+      : base().eq("deployment_url", scope))
+      .order("not_before", { ascending: true }).limit(10),
+    ...(encryptedPrefix ? [base().like("deployment_url", `${encryptedPrefix}%`)
+      .order("not_before", { ascending: true }).limit(10)] : []),
+  ]);
+  if (candidates.some((candidate) => candidate.error)) {
+    throw new Error("Unable to read scoped agent queue");
+  }
+  return candidates.flatMap((candidate) => candidate.data ?? [])
+    .sort((a, b) => a.not_before.localeCompare(b.not_before) ||
+      a.created_at.localeCompare(b.created_at)).slice(0, 10);
 }
 
 export async function drainAgentRuns(
@@ -480,6 +480,8 @@ export async function drainAgentRuns(
   // of agent, and the scoper would let the VM of a run preview run until
   // timeout de session.
   const scope = currentDeploymentScope();
+  const encryptedPrefix = scope && hasDataRootKey()
+    ? await deploymentLookupPrefix(scope) : null;
   let claimed = 0;
 
   // THE watchdog, and there is only one left (MIN-225): `requeueStuckRuns`
@@ -488,12 +490,15 @@ export async function drainAgentRuns(
   // write an event. This does not assume anything, it ASKS the platform if the
   // process lives. Best effort — a failed death certificate is made up for in passing
   // next, an exception here would kill the entire drain.
-  await reapDeadVmRuns(service).catch((err) =>
-    console.error("[agent-drain] vm watchdog failed:", (err as Error).message),
+  await reapDeadVmRuns(service).catch(() =>
+    console.error("[agent-drain] vm_watchdog_failed"),
   );
   // Release microVMs from inactive idle sessions (keep snapshot).
-  await reapIdleSandboxes(service).catch((err) =>
-    console.error("[agent-drain] reap failed:", (err as Error).message),
+  await reapIdleSandboxes(service).catch(() =>
+    console.error("[agent-drain] reap_failed"),
+  );
+  await retryRevokedSandboxAllocations().catch(() =>
+    console.error("[agent-drain] allocation_cleanup_failed"),
   );
 
   while (deadline - Date.now() >= MIN_LAUNCH_BUDGET_MS) {
@@ -513,18 +518,7 @@ export async function drainAgentRuns(
      * cloud, when it exists, will be decided BEFORE the first turn (D1 decision),
      * never by playing it in the wrong place silently.
      */
-    const { data } = await scopeToDeployment(
-      service
-        .from("agent_runs")
-        .select("id")
-        .eq("status", "queued")
-        .not("local_exec", "is", true)
-        .lte("not_before", new Date().toISOString()),
-      scope,
-    )
-      .order("not_before", { ascending: true })
-      .limit(10);
-    const rows = (data ?? []) as Array<{ id: string }>;
+    const rows = await dueRunsForDeployment(service, scope, encryptedPrefix);
     if (rows.length === 0) break;
 
     let didWork = false;

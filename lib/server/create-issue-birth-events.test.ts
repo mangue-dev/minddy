@@ -49,6 +49,7 @@ function table(name: string) {
   let inserted: Row[] = [];
   let categoryFilter = "";
   query.select = () => query;
+  query.order = () => query;
   query.eq = () => query;
   query.is = () => query;
   query.in = (column: string) => {
@@ -263,12 +264,13 @@ describe("createIssueForProject birth activity", () => {
     expect(result).toMatchObject({ ok: true, issue: { category_ids: [] } });
     expect(categoryLinkRows).toEqual([]);
     expect(eventRows).toHaveLength(1);
-    expect(log).toHaveBeenCalledWith(`[create-issue] category ${label} lookup failed:`, "category lookup failed");
+    expect(log).toHaveBeenCalledWith(`[create-issue] category ${label} lookup failed:`,
+      column === "name" ? "Unable to access category content" : "category lookup failed");
   });
 
   it("retains successfully resolved names when the independent ID lookup fails", async () => {
     categoryLookupErrors.id = { message: "invalid category ID" };
-    knownCategoryRows = [{ id: "category-by-name" }];
+    knownCategoryRows = [{ id: "category-by-name", project_id: "project-1", name: "Bug" }];
     vi.spyOn(console, "error").mockImplementation(() => {});
 
     const result = await create({ category_ids: ["undefined"], category_names: ["Bug"] });

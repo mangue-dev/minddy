@@ -22,6 +22,7 @@ const updateInvitation = vi.fn();
 
 let invitation: Record<string, unknown> | null = null;
 let project: Record<string, unknown> | null = null;
+let legacySchema = false;
 
 vi.mock("next-intl/server", () => ({
   getTranslations: async () => (key: string) => key,
@@ -30,7 +31,7 @@ vi.mock("@/lib/server/api-auth", () => ({
   getAuthedUser: (...args: unknown[]) => getAuthedUser(...args),
 }));
 // The route imports the invitation catch-up for its GET; he pulls everything
-// `members.ts` (mails, push, entitlements) dont ce test n'a que faire.
+// `members.ts` (email, push, entitlements), which this test does not need.
 vi.mock("@/lib/server/members", () => ({
   claimPendingInvitationsLate: async () => false,
 }));
@@ -39,11 +40,16 @@ vi.mock("@/lib/supabase-service", () => ({
     from(table: string) {
       if (table === "project_invitations") {
         return {
-          select: () => ({
-            eq: () => ({ maybeSingle: async () => ({ data: invitation }) }),
+          select: (columns: string) => ({
+            eq: () => ({ maybeSingle: async () => legacySchema && columns.includes("encryption_version")
+              ? { data: null, error: { code: "42703", message: "column does not exist" } }
+              : { data: invitation, error: null } }),
           }),
           update: (patch: unknown) => ({
             eq: async (_column: string, id: string) => {
+              if (legacySchema && Object.hasOwn(patch as object, "invited_email_ciphertext")) {
+                return { error: { code: "42703", message: "column does not exist" } };
+              }
               updateInvitation(patch, id);
               return { error: null };
             },
@@ -65,7 +71,7 @@ vi.mock("@/lib/supabase-service", () => ({
           },
         };
       }
-      throw new Error(`table inattendue : ${table}`);
+      throw new Error(`Unexpected table: ${table}`);
     },
   }),
 }));
@@ -86,6 +92,7 @@ function request(action: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  legacySchema = false;
   getAuthedUser.mockResolvedValue({
     ok: true,
     user: { id: USER, email: "invitee@minddy.app" },
@@ -96,6 +103,9 @@ beforeEach(() => {
     invited_by: OWNER,
     invited_user_id: USER,
     invited_email: "invitee@minddy.app",
+    invited_email_ciphertext: null,
+    invited_email_blind_index: null,
+    encryption_version: 0,
     status: "pending",
     expires_at: new Date(Date.now() + 86_400_000).toISOString(),
   };
@@ -103,7 +113,17 @@ beforeEach(() => {
 });
 
 describe("PATCH /api/projects/invitations", () => {
-  it("inscrit l'invité sur le projet de son invitation", async () => {
+  it("keeps legacy preview deployments usable before the additive migration", async () => {
+    legacySchema = true;
+    const response = await PATCH(request("accept"));
+    expect(response.status).toBe(200);
+    expect(updateInvitation).toHaveBeenCalledWith(
+      expect.not.objectContaining({ invited_email_ciphertext: null }),
+      INVITATION,
+    );
+  });
+
+  it("adds the invitee to the invitation's project", async () => {
     const response = await PATCH(request("accept"));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
@@ -114,19 +134,24 @@ describe("PATCH /api/projects/invitations", () => {
       expect.objectContaining({ project_id: PROJECT, user_id: USER })
     );
     expect(updateInvitation).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "accepted" }),
+      expect.objectContaining({
+        status: "accepted",
+        invited_email: null,
+        invited_email_ciphertext: null,
+        invited_email_blind_index: null,
+      }),
       INVITATION
     );
   });
 
-  it("refuse un rejet aussi bien qu'une acceptation quand la ligne n'est pas la sienne", async () => {
+  it("rejects an acceptance or rejection from another invitee", async () => {
     invitation!.invited_user_id = OWNER;
     const response = await PATCH(request("reject"));
     expect(response.status).toBe(403);
     expect(updateInvitation).not.toHaveBeenCalled();
   });
 
-  it("refuse une invitation dont l'adresse n'est pas celle du compte", async () => {
+  it("rejects an invitation with a mismatched account email", async () => {
     invitation!.invited_email = "quelquun.dautre@minddy.app";
     const response = await PATCH(request("accept"));
     expect(response.status).toBe(403);
@@ -134,7 +159,7 @@ describe("PATCH /api/projects/invitations", () => {
     expect(updateInvitation).not.toHaveBeenCalled();
   });
 
-  it("refuse une invitation redirigée vers le projet d'un autre", async () => {
+  it("rejects an invitation redirected to someone else's project", async () => {
     // The attack on MIN-325: the line is mine, the address too,
     // but its `project_id` was moved to a project that issued
     // the invitation does not have.
@@ -145,7 +170,7 @@ describe("PATCH /api/projects/invitations", () => {
     expect(updateInvitation).not.toHaveBeenCalled();
   });
 
-  it("rejette sans inscrire personne", async () => {
+  it("rejects without adding a member", async () => {
     const response = await PATCH(request("reject"));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true, acceptedProjectId: null });
@@ -156,7 +181,7 @@ describe("PATCH /api/projects/invitations", () => {
     );
   });
 
-  it("ne ressuscite pas une invitation périmée", async () => {
+  it("does not accept an expired invitation", async () => {
     invitation!.expires_at = new Date(Date.now() - 1000).toISOString();
     const response = await PATCH(request("accept"));
     expect(response.status).toBe(404);

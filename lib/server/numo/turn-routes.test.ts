@@ -6,6 +6,7 @@ const h = vi.hoisted(() => ({
   requestStop: vi.fn(),
   retryTurn: vi.fn(),
   executeTurn: vi.fn(),
+  decodeNumoEvent: vi.fn(async (...args: unknown[]) => args[0]),
   afterSeq: -1,
   activity: [
     { id: "event-1", seq: 0, type: "content_delta", payload: { delta: "First" } },
@@ -70,6 +71,9 @@ vi.mock("@/lib/server/numo/turns", () => ({
   requestNumoTurnStop: (...args: unknown[]) => h.requestStop(...args),
   retryNumoTurn: (...args: unknown[]) => h.retryTurn(...args),
 }));
+vi.mock("@/lib/server/numo/turn-event-content", () => ({
+  decodeNumoTurnEvent: (...args: unknown[]) => h.decodeNumoEvent(...args),
+}));
 const { GET } = await import("@/app/api/assistant/conversations/[id]/status/route");
 const { POST } = await import("@/app/api/assistant/conversations/[id]/turn/route");
 
@@ -98,6 +102,10 @@ describe("durable Numo turn routes", () => {
       pending_input: h.pendingInput,
       activity: [{ id: "event-2", seq: 1, type: "done" }],
     });
+    expect(h.decodeNumoEvent).toHaveBeenCalledWith(
+      { status: "completed" },
+      { userId: "user-1", turnId: TURN_ID, eventId: "event-2" },
+    );
   });
 
   it("stops the parent through the atomic orchestration action", async () => {

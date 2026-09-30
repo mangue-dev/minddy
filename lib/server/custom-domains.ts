@@ -18,6 +18,8 @@ import {
   type VercelVerificationRecord,
 } from "@/lib/server/vercel-domains";
 import { reserveProviderOperation } from "@/lib/server/provider-operation-guard";
+import { decodeDomainVerification, encodeDomainVerification,
+  shouldProtectDomainVerification } from "./custom-domain-content";
 
 /**
  * Custom domains (MIN-36). One `custom_domains` row maps a customer
@@ -37,6 +39,7 @@ export interface CustomDomainRow {
   share_id: string | null;
   status: "pending" | "verified";
   verification: VercelVerificationRecord[] | null;
+  content_revision: number;
   /** CNAME target recommended by Vercel for THIS domain (null → generic). */
   cname_target: string | null;
   created_at: string;
@@ -44,7 +47,13 @@ export interface CustomDomainRow {
 }
 
 const DOMAIN_SELECT =
-  "id, domain, board_id, share_id, status, verification, cname_target, created_at, updated_at";
+  "id, domain, board_id, share_id, status, verification, content_revision, cname_target, created_at, updated_at";
+
+async function openDomainRow(raw: CustomDomainRow | null): Promise<CustomDomainRow | null> {
+  if (!raw) return null;
+  return { ...raw, verification: await decodeDomainVerification(raw.id,
+    raw.verification) };
+}
 
 export type DomainTargetRef = { boardId: string } | { shareId: string };
 
@@ -92,7 +101,7 @@ export async function getDomainForBoard(boardId: string): Promise<CustomDomainRo
     .select(DOMAIN_SELECT)
     .eq("board_id", boardId)
     .maybeSingle();
-  return (data as CustomDomainRow | null) ?? null;
+  return openDomainRow(data as CustomDomainRow | null);
 }
 
 export async function getDomainForShare(shareId: string): Promise<CustomDomainRow | null> {
@@ -102,7 +111,7 @@ export async function getDomainForShare(shareId: string): Promise<CustomDomainRo
     .select(DOMAIN_SELECT)
     .eq("share_id", shareId)
     .maybeSingle();
-  return (data as CustomDomainRow | null) ?? null;
+  return openDomainRow(data as CustomDomainRow | null);
 }
 
 async function getDomainRowForTarget(target: DomainTargetRef): Promise<CustomDomainRow | null> {
@@ -238,7 +247,7 @@ export async function setDomain(
     .select(DOMAIN_SELECT)
     .eq("domain", domain)
     .maybeSingle();
-  const existing = existingRow as CustomDomainRow | null;
+  const existing = await openDomainRow(existingRow as CustomDomainRow | null);
   if (existing) {
     const sameTarget =
       "boardId" in target ? existing.board_id === target.boardId : existing.share_id === target.shareId;
@@ -264,14 +273,25 @@ export async function setDomain(
     return { ok: false, error: added.code === "invalid" ? "invalid" : added.code };
   }
 
+  const id = crypto.randomUUID();
+  const verification = added.verification.length > 0 ? added.verification : null;
+  let protectedVerification: string | VercelVerificationRecord[] | null;
+  try {
+    protectedVerification = await shouldProtectDomainVerification(service)
+      ? await encodeDomainVerification(id, verification) : verification;
+  } catch {
+    void removeDomainFromVercel(domain);
+    return { ok: false, error: "api_error" };
+  }
   const { data, error } = await service
     .from("custom_domains")
     .insert({
+      id,
       domain,
       board_id: "boardId" in target ? target.boardId : null,
       share_id: "shareId" in target ? target.shareId : null,
       status: added.verified ? "verified" : "pending",
-      verification: added.verification.length > 0 ? added.verification : null,
+      verification: protectedVerification,
       created_by: actorId,
     })
     .select(DOMAIN_SELECT)
@@ -291,7 +311,7 @@ export async function setDomain(
   }
 
   invalidateCustomDomainCache(domain);
-  return { ok: true, row: data as CustomDomainRow };
+  return { ok: true, row: (await openDomainRow(data as CustomDomainRow))! };
 }
 
 /**
@@ -440,10 +460,20 @@ export async function refreshDomainStatus(
     JSON.stringify(verification) !== JSON.stringify(row.verification)
   ) {
     const service = getServiceClient();
-    await service
+    const protectedVerification = await shouldProtectDomainVerification(service)
+      ? await encodeDomainVerification(row.id, verification) : verification;
+    const { data: updated, error } = await service
       .from("custom_domains")
-      .update({ status, verification, cname_target })
-      .eq("id", row.id);
+      .update({ status, verification: protectedVerification, cname_target })
+      .eq("id", row.id).eq("content_revision", row.content_revision)
+      .select(DOMAIN_SELECT).maybeSingle();
+    if (error) throw new Error("Unable to update custom domain status");
+    if (!updated) {
+      const latest = row.board_id ? await getDomainForBoard(row.board_id)
+        : await getDomainForShare(row.share_id!);
+      if (latest) return { ok: true, domain: serializeDomainStatus(latest),
+        refreshed: true };
+    }
   }
 
   return {

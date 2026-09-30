@@ -201,8 +201,8 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
     const touched = [...editedPaths];
     editedPaths.clear();
     const startedAt = Date.now();
-    const block = await typeErrorsForTurn(host, touched).catch((err) => {
-      console.error(`${logPrefix} turn-end typecheck failed:`, (err as Error).message);
+    const block = await typeErrorsForTurn(host, touched).catch(() => {
+      console.error(`${logPrefix} turn_end_typecheck_failed`);
       return null;
     });
     // Event `status` (neutral: invisible in the thread, countable in base) — it's him
@@ -267,8 +267,8 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
     const scope = await testScopeForTurn(budgetMs);
     if (!scope) return { block: null, status: null };
     const startedAt = Date.now();
-    const out = await testFailuresForTurn(host, scope).catch((err) => {
-      console.error(`${logPrefix} turn-end tests failed:`, (err as Error).message);
+    const out = await testFailuresForTurn(host, scope).catch(() => {
+      console.error(`${logPrefix} turn_end_tests_failed`);
       return null;
     });
     const block = out?.block ?? null;

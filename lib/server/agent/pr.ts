@@ -313,7 +313,12 @@ async function ghJson<T>(
     headers: { ...githubHeaders(token, init?.accept), ...init?.headers },
   });
   const text = await res.text();
-  const data = text ? (JSON.parse(text) as unknown) : null;
+  let data: unknown = null;
+  try {
+    data = text ? JSON.parse(text) as unknown : null;
+  } catch {
+    throw new GithubApiError("GitHub response was not valid JSON", res.status);
+  }
   if (!res.ok) throw new GithubApiError(githubErrorMessage(data, res.status), res.status);
   return data as T;
 }

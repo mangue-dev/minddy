@@ -1,11 +1,15 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
+import { loadIssueTitles } from "@/lib/server/issue-store";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { forgeFor, isForgeApiError, type MergeMethod } from "./forge";
 import { AI_REVIEW_MAX_INLINE_COMMENTS } from "./tools";
 import { resolvePrCommentAnchor, signReviewBody } from "./pr-tools";
+import { decodePullRequestUrlRow } from "./pull-request-url-content";
+import { decodePullRequestContentRow } from "./pull-request-content";
 import {
   needsRepoSync,
   readRepoSyncStates,
@@ -158,12 +162,13 @@ async function refreshIfStale(target: ProjectRepoTarget): Promise<void> {
       repoFullName: target.repoFullName,
       token: target.token,
     });
-  } catch (err) {
-    console.error("[project-pr-tools] sweep failed:", (err as Error).message);
+  } catch {
+    console.error("[project-pr-tools] sweep_failed");
   }
 }
 
 interface ListedRow {
+  id: string;
   number: number;
   title: string | null;
   state: PullRequestState;
@@ -175,8 +180,8 @@ interface ListedRow {
   merged_at: string | null;
   updated_at: string;
   issue: {
+    id: string;
     number: number;
-    title: string;
     project: { key: string } | null;
   } | null;
 }
@@ -219,11 +224,12 @@ async function listPullRequests(
   let query = getServiceClient()
     .from("pull_requests")
     .select(
-      "number, title, state, url, author_login, head_branch, base_branch, opened_at, merged_at, updated_at, " +
-        "issue:issues(number, title, project:projects(key))",
+      "id, number, title, state, url, author_login, head_branch, base_branch, opened_at, merged_at, updated_at, " +
+        "issue:issues(id, number, project:projects(key))",
     )
     .eq("provider", target.provider)
-    .eq("repo_full_name", target.repoFullName)
+    .eq("repo_full_name", await repositoryStorageName(target.provider,
+      target.repoFullName,false))
     .order("updated_at", { ascending: false })
     .limit(limit);
   if (states.length > 0) query = query.in("state", states);
@@ -233,7 +239,12 @@ async function listPullRequests(
   const { data, error } = await query;
   if (error) return { result: { error: error.message }, success: false };
 
-  const rows = (data ?? []) as unknown as ListedRow[];
+  const rows = await Promise.all(((data ?? []) as unknown as ListedRow[])
+    .map(async (row) => decodePullRequestContentRow(
+      await decodePullRequestUrlRow(row))));
+  const titles = await loadIssueTitles(getServiceClient(),
+    rows.map((row) => row.issue?.id).filter((id): id is string => !!id),
+    [ctx.projectId]);
   return {
     result: {
       repository: target.repoFullName,
@@ -252,12 +263,12 @@ async function listPullRequests(
         opened_at: row.opened_at,
         merged_at: row.merged_at,
         updated_at: row.updated_at,
-        issue: row.issue
+        issue: row.issue && titles.has(row.issue.id)
           ? {
               identifier: row.issue.project
                 ? `${row.issue.project.key}-${row.issue.number}`
                 : null,
-              title: row.issue.title,
+              title: titles.get(row.issue.id)!,
             }
           : null,
       })),

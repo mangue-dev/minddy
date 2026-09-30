@@ -196,7 +196,7 @@ async function runNumo(
     chain,
     ruleId,
     mode,
-    title: `${identifier}: ${issue.title}`,
+    title: identifier,
     requestId: randomUUID(),
     prompt,
     locale,

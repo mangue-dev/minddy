@@ -1,5 +1,6 @@
 import "server-only";
 
+import { storePageVersion, hasRecentPageVersion } from "./page-version-store";
 import { isDatabaseSchema } from "@/lib/page-databases";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -30,6 +31,7 @@ import {
   type PageSearchHit,
 } from "@/lib/server/pages-search";
 import type { PageDocJSON } from "@/lib/pages-merge";
+import { decodePage, decodePageProjection, encodePage, pageContentValues } from "./page-content";
 
 /**
  * PAGES of a project (MIN-266) — the server core, shared by routes
@@ -141,7 +143,7 @@ const UUID_RE =
  * page by page, when opened.
  */
 const LIST_COLUMNS =
-  "id, project_id, parent_id, title, icon, version, position, favorite, created_by, updated_by, updated_kind, updated_api_key_id, created_at, updated_at, deleted_at, deleted_by, deleted_root_id, parent_block_removed, database_schema, database_revision, database_title_name, property_values";
+  "id, project_id, parent_id, title, icon, version, position, favorite, created_by, updated_by, updated_kind, updated_api_key_id, created_at, updated_at, deleted_at, deleted_by, deleted_root_id, parent_block_removed, database_schema, database_revision, database_title_name, property_values, encrypted_content, encryption_version, content_revision, page_is_database, page_has_values, page_is_blank";
 
 const FULL_COLUMNS = `${LIST_COLUMNS}, content`;
 
@@ -218,12 +220,14 @@ export async function clearPageWatcher(
 async function loadPage(
   service: Service,
   pageId: string,
+  actorId: string,
   { includeTrashed = false }: { includeTrashed?: boolean } = {}
 ): Promise<Page | null> {
   const query = service.from("pages").select(FULL_COLUMNS).eq("id", pageId);
   if (!includeTrashed) query.is("deleted_at", null);
   const { data } = await query.maybeSingle();
-  return (data as Page | null) ?? null;
+  if (!data?.project_id || !(await access(actorId, data.project_id))) return null;
+  return decodePage(data, actorId);
 }
 
 /**
@@ -334,27 +338,25 @@ function stampPageWrite({
 
   afterOrNow(async () => {
     if (!always && authorId === actorId && authorKind === kind) {
-      const { data } = await service
-        .from("page_versions")
-        .select("id")
-        .eq("page_id", previous.id)
-        .gte("created_at", new Date(Date.now() - VERSION_COALESCE_MS).toISOString())
-        .limit(1);
-      if (data && data.length > 0) return;
+      if (await hasRecentPageVersion(service, previous.id,
+        new Date(Date.now() - VERSION_COALESCE_MS).toISOString())) return;
     }
 
-    const { error } = await service.from("page_versions").insert({
-      page_id: previous.id,
-      project_id: previous.project_id,
-      version: previous.version,
-      title: previous.title,
-      icon: previous.icon,
-      content: previous.content ?? { type: "doc", content: [] },
-      author_id: authorId,
-      author_kind: authorKind,
-      author_api_key_id: authorKeyId,
-    });
-    if (error) console.error("[pages] version snapshot failed:", error.message);
+    try {
+      await storePageVersion(service, {
+        page_id: previous.id,
+        project_id: previous.project_id,
+        version: previous.version,
+        title: previous.title,
+        icon: previous.icon,
+        content: previous.content ?? { type: "doc", content: [] },
+        author_id: authorId,
+        author_kind: authorKind,
+        author_api_key_id: authorKeyId,
+      });
+    } catch {
+      console.error("[pages] version snapshot failed");
+    }
   });
 }
 
@@ -468,7 +470,12 @@ export async function listPages(
     console.error("[pages] list failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  return { ok: true, pages: (data ?? []) as unknown as PageSummary[] };
+  const pages = await Promise.all((data ?? []).map(async (row) => {
+    const { content: _body, ...summary } = await decodePageProjection(
+      row as Record<string, unknown>, actorId);
+    return summary as unknown as PageSummary;
+  }));
+  return { ok: true, pages };
 }
 
 /** A page with his body. */
@@ -477,7 +484,7 @@ export async function getPage(
   actorId: string
 ): Promise<PageResult<Page>> {
   const service = getServiceClient();
-  const page = await loadPage(service, pageId);
+  const page = await loadPage(service, pageId, actorId);
   if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
   if (!(await access(actorId, page.project_id))) {
     return { ok: false, status: 404, errorKey: "pageNotFound" };
@@ -553,7 +560,7 @@ export async function createPage({
     return { ok: false, status: 400, errorKey: "pageDatabaseInvalid" };
   }
   if (input.database_schema !== undefined && parentId) {
-    const parent = await loadPage(service, parentId);
+    const parent = await loadPage(service, parentId, actorId);
     if (parent?.database_schema) return { ok: false, status: 400, errorKey: "pageDatabaseInvalid" };
   }
 
@@ -593,23 +600,27 @@ export async function createPage({
   }
 
   const row: Record<string, unknown> = {
+    id: typeof input.id === "string" && UUID_RE.test(input.id)
+      ? input.id : crypto.randomUUID(),
     project_id: projectId,
     parent_id: parentId,
     title: readTitle(input.title) ?? "",
     database_schema: input.database_schema ?? null,
+    database_title_name: null,
+    property_values: {},
     icon: readIcon(input.icon),
+    content: content ?? { type: "doc", content: [] },
     position: isPosition(input.position) ? input.position : positionAtEnd(
       all.filter((p) => !p.deleted_at && (p.parent_id ?? null) === parentId)
     ),
     created_by: actorId,
     ...writtenBy(actorId, kind, mcpKeyId),
   };
-  if (typeof input.id === "string" && UUID_RE.test(input.id)) row.id = input.id;
-  if (content !== undefined) row.content = content;
+  const stored = await encodePage(row, { service });
 
   const { data, error } = await service
     .from("pages")
-    .insert(row)
+    .insert(stored)
     .select(FULL_COLUMNS)
     .single();
 
@@ -617,7 +628,7 @@ export async function createPage({
     console.error("[pages] create failed:", error?.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  const page = data as unknown as Page;
+  const page = await decodePage(data, actorId);
   queueSearchText(service, [page.id]);
   queuePageBodyLinks(service, [page.id]);
   // A creation covers nothing: the call only establishes the rule (cf.
@@ -667,7 +678,7 @@ export async function duplicatePage(
   clientIds?: Record<string, string>
 ): Promise<PageResult<Page>> {
   const service = getServiceClient();
-  const page = await loadPage(service, pageId);
+  const page = await loadPage(service, pageId, actorId);
   if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
   if (!(await access(actorId, page.project_id))) {
     return { ok: false, status: 404, errorKey: "pageNotFound" };
@@ -688,7 +699,8 @@ export async function duplicatePage(
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
-  const byId = new Map((sources as unknown as Page[]).map((row) => [row.id, row]));
+  const decodedSources = await Promise.all(sources.map((row) => decodePage(row, actorId)));
+  const byId = new Map(decodedSources.map((row) => [row.id, row]));
   const requestedIds = clientIds ? Object.values(clientIds) : [];
   if (requestedIds.some((id) => typeof id !== "string" || !UUID_RE.test(id)) ||
       new Set(requestedIds).size !== requestedIds.length) {
@@ -699,7 +711,7 @@ export async function duplicatePage(
     live.filter((p) => (p.parent_id ?? null) === (page.parent_id ?? null))
   );
 
-  const sourceParent = page.parent_id ? await loadPage(service, page.parent_id) : null;
+  const sourceParent = page.parent_id ? await loadPage(service, page.parent_id, actorId) : null;
   const rows = family.flatMap((id) => {
     const source = byId.get(id);
     if (!source) return [];
@@ -734,9 +746,10 @@ export async function duplicatePage(
     ];
   });
 
+  const protectedRows = await Promise.all(rows.map((row) => encodePage(row, { service })));
   const { data, error } = await service
     .from("pages")
-    .insert(rows)
+    .insert(protectedRows)
     .select(FULL_COLUMNS);
   if (error || !data) {
     console.error("[pages] duplicate failed:", error?.message);
@@ -745,19 +758,20 @@ export async function duplicatePage(
 
   // The whole branch, not just the root: each copy carries its own
   // body (the internal links have even been rewritten), therefore its own text.
+  const copied = await Promise.all(data.map((row) => decodePage(row, actorId)));
   queueSearchText(
     service,
-    (data as unknown as Page[]).map((row) => row.id)
+    copied.map((row) => row.id)
   );
   queuePageBodyLinks(
     service,
-    (data as unknown as Page[]).map((row) => row.id)
+    copied.map((row) => row.id)
   );
   // NEW pages: like creation, they cover nothing.
   stampPageWrite({ service, previous: null, actorId, kind });
 
   const rootId = idMap.get(pageId);
-  const copy = (data as unknown as Page[]).find((row) => row.id === rootId);
+  const copy = copied.find((row) => row.id === rootId);
   if (!copy) return { ok: false, status: 500, errorKey: "databaseError" };
   // The ROOT alone is announced: a branch of twenty pages copied with a gesture
   // is one gesture, not twenty.
@@ -808,7 +822,7 @@ export async function updatePage({
   input: Record<string, unknown>;
 }): Promise<PageResult<Page>> {
   const service = getServiceClient();
-  const page = await loadPage(service, pageId);
+  const page = await loadPage(service, pageId, actorId);
   if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
   if (!(await access(actorId, page.project_id))) {
     return { ok: false, status: 404, errorKey: "pageNotFound" };
@@ -870,7 +884,7 @@ export async function updatePage({
     }
 
     if (nextParentId !== page.parent_id) {
-      const nextParent = nextParentId ? await loadPage(service, nextParentId) : null;
+      const nextParent = nextParentId ? await loadPage(service, nextParentId, actorId) : null;
       if (
         Object.keys(page.property_values ?? {}).length > 0 ||
         (nextParent?.database_schema && page.database_schema)
@@ -916,6 +930,10 @@ export async function updatePage({
     patch.content !== undefined || patch.title !== undefined || "icon" in patch;
   if (writesDocument) Object.assign(patch, writtenBy(actorId, kind, mcpKeyId));
 
+  const encoded = await encodePage({ ...page, ...patch }, { service });
+  const protectedWrite = Number(encoded.encryption_version ?? 0) > 0;
+  if (protectedWrite) Object.assign(patch, pageContentValues(encoded));
+
   // The lock is IN the write, not just in the control above:
   // two recordings started at the same millisecond both pass the
   // control (they read the same line) and the second would erase the first. There
@@ -923,6 +941,8 @@ export async function updatePage({
   // nothing, and melts again as if it had been refused from the start.
   const write = service.from("pages").update(patch).eq("id", pageId);
   if (expected !== null) write.eq("version", expected);
+  if (protectedWrite) write.eq("content_revision",
+    (page as Page & { content_revision: number }).content_revision);
 
   const { data, error } = await write
     .is("deleted_at", null)
@@ -940,8 +960,8 @@ export async function updatePage({
     // No line: either the page has just gone to the trash, or the
     // version moved between reading and writing. We reread to decide —
     // the two answers do not match in the same way.
-    if (expected !== null) {
-      const fresh = await loadPage(service, pageId);
+    if (expected !== null || protectedWrite) {
+      const fresh = await loadPage(service, pageId, actorId);
       if (fresh) {
         return { ok: false, status: 409, errorKey: "pageStale", conflict: fresh };
       }
@@ -967,7 +987,7 @@ export async function updatePage({
   if (writesDocument) {
     announcePageWrite({
       service,
-      page: data as unknown as Page,
+      page: await decodePage(data, actorId),
       previous: page,
       actorId,
       kind,
@@ -975,7 +995,7 @@ export async function updatePage({
       event: "page_updated",
     });
   }
-  return { ok: true, page: data as unknown as Page };
+  return { ok: true, page: await decodePage(data, actorId) };
 }
 
 /* ─── The mirror: the subpage block in the body of the parent ────────────────── */
@@ -1004,7 +1024,13 @@ async function syncParentBody(
   actorId: string,
   edit: (doc: PageDocJSON | null) => { doc: PageDocJSON; changed: boolean }
 ): Promise<void> {
-  const parent = await loadPage(service, parentId);
+  let parent: Page | null;
+  try {
+    parent = await loadPage(service, parentId, actorId);
+  } catch {
+    // A damaged parent body must not prevent a child from entering the trash.
+    return;
+  }
   if (!parent) return;
 
   const { doc, changed } = edit((parent.content as PageDocJSON | null) ?? null);
@@ -1015,10 +1041,13 @@ async function syncParentBody(
   // The condition on the read version does the rest — if someone wrote between
   // reading and here, we don't overwrite it; his own recording next
   // will go through the merge again, and the orphan block will surrender in the meantime.
+  const encryptedParent = await encodePage({ ...parent, content: doc,
+    version: parent.version + 1 }, { service });
+  const protectedParent = Number(encryptedParent.encryption_version ?? 0) > 0;
   const { error } = await service
     .from("pages")
     .update({
-      content: doc,
+      ...(protectedParent ? pageContentValues(encryptedParent) : { content: doc }),
       version: parent.version + 1,
       // The author of the mirror is that of the GESTE (basket, restoration), and the
       // gesture is human: the agent has no path to the trash.
@@ -1026,6 +1055,7 @@ async function syncParentBody(
     })
     .eq("id", parentId)
     .eq("version", parent.version)
+    .eq("content_revision", (parent as Page & { content_revision: number }).content_revision ?? 0)
     .is("deleted_at", null);
   if (error) console.error("[pages] subpage sync failed:", error.message);
   // The body of the PARENT has just changed (one subpage block less or less
@@ -1072,7 +1102,7 @@ export async function trashPage(
   kind: PageWriteKind = "human"
 ): Promise<{ ok: true; trashed: number } | { ok: false; status: number; errorKey: PageErrorKey }> {
   const service = getServiceClient();
-  const page = await loadPage(service, pageId);
+  const page = await loadPage(service, pageId, actorId);
   if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
   if (!(await access(actorId, page.project_id))) {
     return { ok: false, status: 404, errorKey: "pageNotFound" };
@@ -1169,7 +1199,7 @@ export async function discardPage(
   actorId: string
 ): Promise<{ ok: true } | { ok: false; status: number; errorKey: PageErrorKey }> {
   const service = getServiceClient();
-  const page = await loadPage(service, pageId);
+  const page = await loadPage(service, pageId, actorId);
   if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
   if (!(await access(actorId, page.project_id))) {
     return { ok: false, status: 404, errorKey: "pageNotFound" };
@@ -1222,7 +1252,7 @@ export async function restorePage(
   kind: PageWriteKind = "human"
 ): Promise<{ ok: true; restored: number } | { ok: false; status: number; errorKey: PageErrorKey }> {
   const service = getServiceClient();
-  const page = await loadPage(service, pageId, { includeTrashed: true });
+  const page = await loadPage(service, pageId, actorId, { includeTrashed: true });
   if (!page || !page.deleted_at) {
     return { ok: false, status: 404, errorKey: "pageNotFound" };
   }

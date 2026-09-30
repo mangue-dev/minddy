@@ -1,13 +1,22 @@
+import { issueStore, loadIssueTitles } from "@/lib/server/issue-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeProjectName } from "@/lib/server/project-content";
 import { isRepoProviderId, type RepoProviderId } from "@/lib/repo-providers";
 import { forgeFor } from "./forge";
 import { issueRefFromPr, parseIssueRef } from "./pr-ingest-core";
 import { broadcastPrChangedByNumber } from "./pr-live";
 import type { PullRequestRef } from "./pr";
+import { decodePullRequestUrlRow, encodePullRequestUrl,
+  shouldEncryptPullRequestUrl } from "./pull-request-url-content";
+import { decodePullRequestContentRow, encodePullRequestContent,
+  PR_CONTENT_FIELDS, shouldEncryptPullRequestContent } from "./pull-request-content";
+import { decodeRepositoryName, repositoryStorageName } from
+  "@/lib/server/git/repository-name-content";
 
 /**
  * Data access from table `pull_requests` (MIN-143) — the passage point
@@ -102,7 +111,9 @@ export interface PullRequestUpsertOutcome {
  *
  * Only `provider` / `repo_full_name` / `number` (identity) and `state` * are mandatory — you don't update a PR without knowing what state it is in.
  */
-function toRow(input: PullRequestUpsert): Record<string, unknown> {
+function toRow(input: PullRequestUpsert, id?: string,
+  encryptedUrl?: string | null,
+  encryptedContent?: Record<string, string>): Record<string, unknown> {
   const row: Record<string, unknown> = {
     provider: input.provider,
     repo_full_name: input.repoFullName,
@@ -113,8 +124,9 @@ function toRow(input: PullRequestUpsert): Record<string, unknown> {
     updated_at: input.updatedAt ?? new Date().toISOString(),
     synced_at: new Date().toISOString(),
   };
+  if (id) row.id = id;
   const optional: Array<[string, unknown]> = [
-    ["url", input.url],
+    ["url", encryptedUrl === undefined ? input.url : encryptedUrl],
     ["title", input.title],
     ["author_login", input.authorLogin],
     ["author_avatar_url", input.authorAvatarUrl],
@@ -128,7 +140,15 @@ function toRow(input: PullRequestUpsert): Record<string, unknown> {
   for (const [column, value] of optional) {
     if (value !== undefined) row[column] = value;
   }
+  Object.assign(row, encryptedContent);
   return row;
+}
+
+async function decodeStoredPr<T extends PullRequestRow>(row: T): Promise<T> {
+  const content = await decodePullRequestContentRow(
+    await decodePullRequestUrlRow(row));
+  return { ...content, repo_full_name: (await decodeRepositoryName(
+    row.provider,row.repo_full_name))! };
 }
 
 /**
@@ -140,17 +160,54 @@ export async function upsertPullRequestWithOutcome(
   input: PullRequestUpsert,
 ): Promise<PullRequestUpsertOutcome | null> {
   const service = getServiceClient();
-  const { data, error } = await service.rpc("upsert_pull_request_monotonic", {
-    p_values: toRow(input),
-  });
-  if (error) {
-    console.error("[pull-requests] upsert failed:", error.message);
-    return null;
+  const storedName = await repositoryStorageName(input.provider,
+    input.repoFullName,true,service);
+  const storedInput = { ...input,repoFullName:storedName };
+  const content = { title: input.title, head_branch: input.headBranch,
+    base_branch: input.baseBranch };
+  const [encryptUrl, encryptContent] = await Promise.all([
+    input.url != null && shouldEncryptPullRequestUrl(),
+    Object.values(content).some((value) => value != null) &&
+      shouldEncryptPullRequestContent(),
+  ]);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let id: string | undefined;
+    let url: string | null | undefined;
+    const protectedFields: Record<string, string> = {};
+    if (encryptUrl || encryptContent) {
+      const existing = await service.from("pull_requests").select("id")
+        .eq("provider", input.provider).eq("repo_full_name", storedName)
+        .eq("number", input.number).maybeSingle();
+      if (existing.error) throw new Error("Unable to resolve pull request URL identity");
+      id = existing.data?.id ?? randomUUID();
+      if (encryptUrl) url = await encodePullRequestUrl(id!, input.url!);
+      if (encryptContent) {
+        for (const column of PR_CONTENT_FIELDS) {
+          const value = content[column];
+          if (value != null) {
+            protectedFields[column] = await encodePullRequestContent(id!,
+              column, value);
+          }
+        }
+      }
+    }
+    const { data, error } = await service.rpc("upsert_pull_request_monotonic", {
+      p_values: toRow(storedInput, id, url, protectedFields),
+    });
+    if (error?.message.includes("pull_request_id_changed") && attempt === 0) {
+      continue;
+    }
+    if (error) {
+      console.error("[pull-requests] upsert_failed", error.code);
+      return null;
+    }
+    const result = data as { row?: PullRequestRow; applied?: boolean } | null;
+    return result?.row
+      ? { row: await decodeStoredPr(result.row),
+        applied: result.applied === true }
+      : null;
   }
-  const result = data as { row?: PullRequestRow; applied?: boolean } | null;
-  return result?.row
-    ? { row: result.row, applied: result.applied === true }
-    : null;
+  return null;
 }
 
 export async function upsertPullRequest(
@@ -169,7 +226,7 @@ export async function findPullRequest(
     .select(PR_COLUMNS)
     .eq("id", prId)
     .maybeSingle();
-  return (data as PullRequestRow | null) ?? null;
+  return data ? decodeStoredPr(data as unknown as PullRequestRow) : null;
 }
 
 /** Pull request by its natural key — the resolution run → PR of the facades. */
@@ -179,14 +236,16 @@ export async function findPullRequestByNumber(opts: {
   number: number;
 }): Promise<PullRequestRow | null> {
   const service = getServiceClient();
+  const storedName = await repositoryStorageName(opts.provider,
+    opts.repoFullName,false,service);
   const { data } = await service
     .from("pull_requests")
     .select(PR_COLUMNS)
     .eq("provider", opts.provider)
-    .eq("repo_full_name", opts.repoFullName)
+    .eq("repo_full_name", storedName)
     .eq("number", opts.number)
     .maybeSingle();
-  return (data as PullRequestRow | null) ?? null;
+  return data ? decodeStoredPr(data as unknown as PullRequestRow) : null;
 }
 
 /**
@@ -204,13 +263,16 @@ export async function findPullRequestsByHeadSha(opts: {
   headSha: string;
 }): Promise<PullRequestRow[]> {
   const service = getServiceClient();
+  const storedName = await repositoryStorageName(opts.provider,
+    opts.repoFullName,false,service);
   const { data } = await service
     .from("pull_requests")
     .select(PR_COLUMNS)
     .eq("provider", opts.provider)
-    .eq("repo_full_name", opts.repoFullName)
+    .eq("repo_full_name", storedName)
     .eq("head_sha", opts.headSha);
-  return (data ?? []) as unknown as PullRequestRow[];
+  return Promise.all(((data ?? []) as unknown as PullRequestRow[])
+    .map((row) => decodeStoredPr(row)));
 }
 
 export interface RepoRef {
@@ -220,13 +282,14 @@ export interface RepoRef {
 
 /** Connection line → repository, or null if it is incomplete (unknown provider,
  repository never chosen: the connection exists before the repository is designated). */
-function repoFromLink(data: unknown): RepoRef | null {
+async function repoFromLink(data: unknown): Promise<RepoRef | null> {
   const row = data as {
     provider: string;
     repo_full_name: string | null;
   } | null;
   if (!row?.repo_full_name || !isRepoProviderId(row.provider)) return null;
-  return { provider: row.provider, repoFullName: row.repo_full_name };
+  return { provider: row.provider,repoFullName:
+    (await decodeRepositoryName(row.provider,row.repo_full_name))! };
 }
 
 /**
@@ -271,6 +334,7 @@ export async function repoForRun(run: {
  * deep-link `?run=` would fall on a 404 for a PR which exists.
  */
 export async function resolvePrForRun(run: {
+  id: string;
   repo_link_id: string | null;
   project_id: string;
   issue_id: string | null;
@@ -288,14 +352,19 @@ export async function resolvePrForRun(run: {
     number: run.pr_number,
   });
   if (existing) return existing;
+  const { decodeAgentWorkBranch } = await import("./run-work-branch-content");
+  const { decodeAgentBaseBranch } = await import("./run-base-branch-content");
+  const { decodeAgentPrUrl } = await import("./run-pr-url-content");
+  const clearRun = await decodeAgentPrUrl(await decodeAgentWorkBranch(
+    await decodeAgentBaseBranch(run)));
   return upsertPullRequest({
     provider: repo.provider,
     repoFullName: repo.repoFullName,
     number: run.pr_number,
     state: run.pr_state ?? "open",
-    url: run.pr_url,
-    headBranch: run.branch_name,
-    baseBranch: run.base_branch,
+    url: clearRun.pr_url,
+    headBranch: clearRun.branch_name,
+    baseBranch: clearRun.base_branch,
     issueId: run.issue_id,
   });
 }
@@ -330,7 +399,7 @@ export async function setPullRequestIssue(
     },
   );
   if (error) {
-    console.error("[pull-requests] issue link failed:", error.message);
+    console.error("[pull-requests] issue_link_failed", error.code);
     return "pr_not_found";
   }
   return data as
@@ -384,11 +453,12 @@ export async function findPullRequestForIssue(
     .eq("issue_id", issueId)
     .order("updated_at", { ascending: false });
   const rows = (data ?? []) as unknown as PullRequestRow[];
-  return (
+  const chosen = (
     rows.find((r) => r.state === "draft" || r.state === "open") ??
     rows[0] ??
     null
   );
+  return chosen ? decodeStoredPr(chosen) : null;
 }
 
 // ── Rattachement au ticket ───────────────────────────────────────────────────
@@ -404,11 +474,12 @@ export async function projectsForRepo(
   repoFullName: string,
 ): Promise<RepoProject[]> {
   const service = getServiceClient();
+  const storedName = await repositoryStorageName(provider, repoFullName, false, service);
   const { data } = await service
     .from("project_git_links")
     .select("project:projects(id, key)")
     .eq("provider", provider)
-    .eq("repo_full_name", repoFullName);
+    .eq("repo_full_name", storedName);
   // Embedded to-one relationship: object at runtime, cast via unknown (see Supabase).
   return ((data ?? []) as unknown as Array<{ project: RepoProject | null }>)
     .map((r) => r.project)
@@ -447,9 +518,7 @@ export async function resolveIssueForPr(opts: {
   if (!project) return null;
 
   const service = getServiceClient();
-  const { data } = await service
-    .from("issues")
-    .select("id")
+  const { data } = await issueStore(service).select("id")
     .eq("project_id", project.id)
     .eq("number", parsed.number)
     .is("deleted_at", null)
@@ -518,11 +587,8 @@ async function reconcileDriftedPr(
         });
       }
     }
-  } catch (err) {
-    console.error(
-      "[pull-requests] state reconcile failed:",
-      (err as Error).message,
-    );
+  } catch {
+    console.error("[pull-requests] state_reconcile_failed");
   }
 }
 
@@ -553,13 +619,17 @@ export async function readRepoSyncStates(
 ): Promise<Map<string, RepoSyncState>> {
   if (repos.length === 0) return new Map();
   const service = getServiceClient();
+  const stored = await Promise.all(repos.map(async (repo) => ({ ...repo,
+    name: await repositoryStorageName(repo.provider, repo.repoFullName, false, service),
+  })));
   const { data } = await service
     .from("pull_request_syncs")
     .select("provider, repo_full_name, synced_at, truncated")
-    .in("repo_full_name", [...new Set(repos.map((r) => r.repoFullName))]);
+    .in("repo_full_name", [...new Set(stored.map((r) => r.name))]);
   const map = new Map<string, RepoSyncState>();
   for (const row of (data ?? []) as RepoSyncState[]) {
-    map.set(`${row.provider}:${row.repo_full_name}`, row);
+    const clearName = await decodeRepositoryName(row.provider,row.repo_full_name);
+    map.set(`${row.provider}:${clearName}`, { ...row, repo_full_name: clearName! });
   }
   return map;
 }
@@ -587,17 +657,18 @@ export async function stampRepoSync(
   repoFullName: string,
 ): Promise<void> {
   const service = getServiceClient();
+  const storedName = await repositoryStorageName(provider, repoFullName, true, service);
   const { error } = await service
     .from("pull_request_syncs")
     .upsert(
       {
         provider,
-        repo_full_name: repoFullName,
+        repo_full_name: storedName,
         synced_at: new Date().toISOString(),
       },
       { onConflict: "provider,repo_full_name" },
     );
-  if (error) console.error("[pull-requests] sync stamp failed:", error.message);
+  if (error) console.error("[pull-requests] sync_stamp_failed", error.code);
 }
 
 /**
@@ -631,11 +702,13 @@ export async function syncRepoPullRequests(opts: {
   });
 
   const service = getServiceClient();
+  const storedName = await repositoryStorageName(opts.provider, opts.repoFullName,
+    true, service);
   const { data: existing } = await service
     .from("pull_requests")
     .select("number, issue_id, state")
     .eq("provider", opts.provider)
-    .eq("repo_full_name", opts.repoFullName);
+    .eq("repo_full_name", storedName);
   const knownByNumber = new Map(
     (
       (existing ?? []) as Array<{
@@ -758,14 +831,14 @@ export async function syncRepoPullRequests(opts: {
   const { error: stampError } = await service.from("pull_request_syncs").upsert(
     {
       provider: opts.provider,
-      repo_full_name: opts.repoFullName,
+      repo_full_name: storedName,
       synced_at: new Date().toISOString(),
       truncated,
     },
     { onConflict: "provider,repo_full_name" },
   );
   if (stampError)
-    console.error("[pull-requests] sweep stamp failed:", stampError.message);
+    console.error("[pull-requests] sweep_stamp_failed", stampError.code);
 
   // AFTER writing the lines: reconciliation rereads the PR by its key
   // natural, and must find the up-to-date state there, not the one we just
@@ -815,9 +888,9 @@ export async function listVisibleRepos(
   const { data } = await supabase
     .from("project_git_links")
     .select(
-      "provider, repo_full_name, project:projects(id, key, name, icon_url, orb_seed, deleted_at)",
+      "provider, repo_full_name, project:projects(id, key, name, encrypted_content, encryption_version, icon_url, orb_seed, deleted_at)",
     );
-  return (
+  const rows = (
     (data ?? []) as unknown as Array<{
       provider: string;
       repo_full_name: string | null;
@@ -836,11 +909,11 @@ export async function listVisibleRepos(
         !r.project.deleted_at &&
         isRepoProviderId(r.provider),
     )
-    .map((r) => ({
+  return Promise.all(rows.map(async (r) => ({
       provider: r.provider as RepoProviderId,
-      repoFullName: r.repo_full_name as string,
-      project: r.project as VisibleRepo["project"],
-    }));
+      repoFullName: (await decodeRepositoryName(r.provider,r.repo_full_name))!,
+      project: { ...r.project!, name: await decodeProjectName(r.project!) } as VisibleRepo["project"],
+    })));
 }
 
 /** A PR of the list, with its ticket and the project of this ticket (RLS joins). */
@@ -867,14 +940,18 @@ export async function listPullRequestsForUser(
   opts?: { limit?: number; states?: PullRequestState[] },
 ): Promise<PullRequestWithIssue[]> {
   if (repos.length === 0) return [];
-  const names = [...new Set(repos.map((r) => r.repoFullName))];
+  const service = getServiceClient();
+  const stored = await Promise.all(repos.map(async (r) => ({ ...r,
+    name: await repositoryStorageName(r.provider,r.repoFullName,false,service),
+  })));
+  const names = [...new Set(stored.map((r) => r.name))];
   const pairs = new Set(
-    repos.map((r) => repoSyncKey(r.provider, r.repoFullName)),
+    stored.map((r) => repoSyncKey(r.provider, r.name)),
   );
 
   let query = supabase
     .from("pull_requests")
-    .select(`${PR_COLUMNS}, issue:issues(id, number, title, project_id)`)
+    .select(`${PR_COLUMNS}, issue:issues(id, number, project_id)`)
     .in("repo_full_name", names)
     .order("updated_at", { ascending: false });
   if (opts?.states) query = query.in("state", opts.states);
@@ -882,9 +959,19 @@ export async function listPullRequestsForUser(
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return ((data ?? []) as unknown as PullRequestWithIssue[]).filter((row) =>
+  const rows = ((data ?? []) as unknown as PullRequestWithIssue[]).filter((row) =>
     pairs.has(`${row.provider}:${row.repo_full_name}`),
   );
+  const titles = await loadIssueTitles(supabase,
+    rows.map((row) => row.issue?.id).filter((id): id is string => !!id),
+    repos.map((repo) => repo.project.id));
+  return Promise.all(rows.map(async (raw) => {
+    const row = await decodeStoredPr(raw);
+    return { ...row,
+    issue: row.issue && titles.has(row.issue.id)
+      ? { ...row.issue, title: titles.get(row.issue.id)! } : null,
+    };
+  }));
 }
 
 /**
@@ -899,9 +986,10 @@ export async function countPullRequestsForUser(
   states: PullRequestState[],
 ): Promise<number> {
   const namesByProvider = new Map<string, Set<string>>();
+  const service = getServiceClient();
   for (const repo of repos) {
     const names = namesByProvider.get(repo.provider) ?? new Set<string>();
-    names.add(repo.repoFullName);
+    names.add(await repositoryStorageName(repo.provider,repo.repoFullName,false,service));
     namesByProvider.set(repo.provider, names);
   }
 

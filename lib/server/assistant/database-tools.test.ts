@@ -24,6 +24,18 @@ vi.mock("@/lib/server/page-tools", () => ({
   updateDatabaseForAgent: h.update,
   createPageForAgent: h.create,
 }));
+vi.mock("@/lib/server/automations/operation-content", () => ({
+  shouldProtectAutomationOperation: async () => true,
+  encodeOperationText: async (_project: string, _chain: string,
+    _step: number, _field: string, value: string) => `sealed:${value}`,
+  encodeOperationJson: async (_project: string, _chain: string,
+    _step: number, _field: string, value: unknown) => ({ sealed: value }),
+  decodeOperationText: async (_project: string, _chain: string,
+    _step: number, _field: string, value: string) => value?.replace(/^sealed:/, ""),
+  decodeOperationJson: async (_project: string, _chain: string,
+    _step: number, _field: string, value: { sealed?: unknown }) =>
+    value?.sealed ?? value,
+}));
 import { executeTool } from "./execute-tool";
 import { AUTOMATION_ASSISTANT_TOOLS, PROJECT_ASSISTANT_TOOLS } from "./tools";
 const ctx = {
@@ -249,7 +261,8 @@ describe("conversation action targets", () => {
     query.eq = chain;
     query.is = chain;
     query.select = chain;
-    query.maybeSingle = async () => ({ data: { id: "operation-1" }, error: null });
+    query.maybeSingle = async () => ({ data: { id: "operation-1", step: 1 }, error: null });
+    query.single = async () => ({ data: { project_id: "project" }, error: null });
     const automation = {
       ...conversation,
       conversationId: "parent-conversation",
@@ -268,8 +281,8 @@ describe("conversation action targets", () => {
     });
     expect(writes).toEqual([{
       outcome: "failed",
-      outcome_summary: "The requested change remains blocked.",
-      outcome_blockers: ["A product decision is still required."],
+      outcome_summary: "sealed:The requested change remains blocked.",
+      outcome_blockers: { sealed: ["A product decision is still required."] },
     }]);
 
     expect(await executeTool("report_automation_outcome", {
@@ -279,26 +292,29 @@ describe("conversation action targets", () => {
     }, conversation)).toMatchObject({ success: false });
   });
   it("reuses an identical automation result but rejects a conflicting one", async () => {
-    let selectCount = 0;
+    let operationReadCount = 0;
     const query: Record<string, unknown> = {};
     const chain = () => query;
     query.update = chain;
-    query.select = () => {
-      selectCount++;
-      return query;
-    };
+    query.select = chain;
     query.eq = chain;
     query.is = chain;
-    query.maybeSingle = async () => selectCount % 2 === 1
-      ? { data: null, error: null }
-      : {
+    query.single = async () => ({ data: { project_id: "project" }, error: null });
+    query.maybeSingle = async () => {
+      operationReadCount++;
+      if (operationReadCount % 3 === 1) {
+        return { data: { id: "operation-1", step: 1 }, error: null };
+      }
+      if (operationReadCount % 3 === 2) return { data: null, error: null };
+      return {
           data: {
             outcome: "failed",
-            outcome_summary: "Still blocked.",
-            outcome_blockers: ["Decision required."],
+            outcome_summary: "sealed:Still blocked.",
+            outcome_blockers: { sealed: ["Decision required."] },
           },
           error: null,
         };
+    };
     const automation = {
       ...conversation,
       conversationId: "parent-conversation",

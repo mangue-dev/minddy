@@ -3,7 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { isBlankTrashPage, listTrash } from "./trash";
 
-const h = vi.hoisted(() => ({ rows: [] as Record<string, unknown>[] }));
+const h = vi.hoisted(() => ({ rows: [] as Record<string, unknown>[],
+  errorTable: null as string | null }));
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
     from: (table: string) => {
@@ -16,6 +17,7 @@ vi.mock("@/lib/supabase-service", () => ({
           data: table === "pages" && columns.includes("id")
             ? h.rows.map((row) => Object.fromEntries(columns.map((column) => [column, row[column]])))
             : [],
+          error: table === h.errorTable ? { message: "query failed" } : null,
         }),
       };
       return query;
@@ -81,6 +83,7 @@ describe("isBlankTrashPage", () => {
   });
 
   it("includes stored entry values in the actual trash list projection", async () => {
+    h.errorTable = null;
     h.rows = [
       { id: "entry", project_id: "project", deleted_at: "2026-09-06T00:00:00Z", deleted_by: null, title: "", content: null, database_schema: null, property_values: { amount: 0 } },
       { id: "draft", project_id: "project", deleted_at: "2026-09-06T00:00:00Z", deleted_by: null, title: "", content: null, database_schema: null, property_values: {} },
@@ -88,5 +91,15 @@ describe("isBlankTrashPage", () => {
     const session = { from: () => ({ select: () => ({ is: async () => ({ data: [{ id: "project", name: "Project", owner_id: "actor" }] }) }) }) };
     const items = await listTrash("actor", session as unknown as SupabaseClient);
     expect(items.map((item) => item.id)).toEqual(["entry"]);
+  });
+
+  it("does not treat a failed protected page query as an empty trash", async () => {
+    h.errorTable = "pages";
+    const session = { from: () => ({ select: () => ({ is: async () => ({
+      data: [{ id: "project", name: "Project", owner_id: "actor" }], error: null,
+    }) }) }) };
+    await expect(listTrash("actor", session as unknown as SupabaseClient))
+      .rejects.toThrow("Unable to list trashed items");
+    h.errorTable = null;
   });
 });

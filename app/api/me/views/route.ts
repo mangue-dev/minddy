@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { createView, ensureBaselineViews } from "@/lib/server/views";
+import { decodeView } from "@/lib/server/view-content";
 
 /** GET /api/me/views — the caller's global (cross-project) views, all personal.
  Seeds the baseline (system "My tickets" + default "All") first. */
@@ -29,7 +30,8 @@ export async function GET(request: NextRequest) {
     console.error("[api/me/views] list failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  return NextResponse.json(data);
+  return NextResponse.json(await Promise.all((data ?? []).map((row) =>
+    decodeView(row, auth.user.id))));
 }
 
 /** POST /api/me/views — create a personal global view. */

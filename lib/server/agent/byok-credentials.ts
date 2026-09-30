@@ -44,12 +44,8 @@ export function decryptUserAiKey(encrypted: string | null | undefined): string |
   if (!isEncryptedEnvelope(envelope)) return null;
   try {
     return decrypt(envelope, getAiKeySecret());
-  } catch (err) {
-    console.warn(
-      `[byok-credentials] failed to decrypt key: ${
-        err instanceof Error ? err.message : String(err)
-      }`,
-    );
+  } catch {
+    console.warn("[byok-credentials] key_decryption_failed");
     return null;
   }
 }

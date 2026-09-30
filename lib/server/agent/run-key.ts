@@ -177,7 +177,7 @@ export async function mintRunKey(opts: {
     // log from start; this one, the only one that is permanent on
     // a deployment, returned `null` silently — and the caller fell back to the
     // platform key without anything, anywhere, saying it even once.
-    console.error(`[agent-run-key] ${PROVISIONING_ENV} manquante — run non plafonné chez le fournisseur`);
+    console.error("[agent-run-key] provisioning_key_missing; provider cap unavailable");
     return null;
   }
   try {
@@ -196,12 +196,18 @@ export async function mintRunKey(opts: {
       }),
     });
     if (!res.ok) {
-      console.error(`[agent-run-key] mint failed (${res.status}): ${(await res.text()).slice(0, 300)}`);
+      console.error("[agent-run-key] mint_http_failed", res.status, opts.runId);
       return null;
     }
-    const body = (await res.json()) as { key?: string; data?: { hash?: string } };
-    const key = body.key?.trim();
-    const hash = body.data?.hash?.trim();
+    let body: { key?: string; data?: { hash?: string } };
+    try {
+      body = (await res.json()) as { key?: string; data?: { hash?: string } };
+    } catch {
+      console.error("[agent-run-key] mint_response_invalid", opts.runId);
+      return null;
+    }
+    const key = typeof body?.key === "string" ? body.key.trim() : null;
+    const hash = typeof body?.data?.hash === "string" ? body.data.hash.trim() : null;
     // The secret is only returned to creation: without both, the key is
     // unusable AND irrevocable. Better not to use it at all.
     if (!key || !hash) {
@@ -209,8 +215,8 @@ export async function mintRunKey(opts: {
       return null;
     }
     return { key, hash, capUsd: opts.capUsd };
-  } catch (err) {
-    console.error("[agent-run-key] mint failed:", (err as Error).message);
+  } catch {
+    console.error("[agent-run-key] mint_request_failed", opts.runId);
     return null;
   }
 }
@@ -230,9 +236,25 @@ export async function revokeRunKey(hash: string): Promise<void> {
       headers: { authorization: `Bearer ${provisioning}` },
     });
     if (!res.ok && res.status !== 404) {
-      console.error(`[agent-run-key] revoke failed (${res.status}) for ${hash}`);
+      console.error("[agent-run-key] revoke_http_failed", res.status);
     }
-  } catch (err) {
-    console.error("[agent-run-key] revoke failed:", (err as Error).message);
+  } catch {
+    console.error("[agent-run-key] revoke_request_failed");
   }
+}
+
+/** Erasure cannot certify success from a best-effort credential revocation. */
+export async function revokeRunKeyStrict(hash: string): Promise<void> {
+  const provisioning = process.env[PROVISIONING_ENV]?.trim();
+  if (!hash) return;
+  if (!provisioning) throw new Error("agent_key_revocation_unavailable");
+  let response: Response;
+  try {
+    response = await fetch(`${KEYS_URL}/${encodeURIComponent(hash)}`, {
+      method: "DELETE", headers: { authorization: `Bearer ${provisioning}` },
+    });
+  } catch {
+    throw new Error("agent_key_revocation_failed");
+  }
+  if (!response.ok && response.status !== 404) throw new Error("agent_key_revocation_failed");
 }

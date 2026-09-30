@@ -279,16 +279,10 @@ export function opencodeSupervisorDeps(opts: {
           label: `opencode serve --port ${port}`,
         });
       }
-      /**
-       * BOTH PIPES ARE READ, and not out of curiosity: a child whose output no one reads ends up blocking on a full pipe — a server that logs for hours gets there. We prefix them and let them
-       * go into our own output, which is the one that the microVM keeps.
-       */
-      const log = (prefix: string) => (chunk: Buffer) => {
-        const text = chunk.toString().trimEnd();
-        if (text) console.log(`[opencode:${prefix}] ${text.slice(0, 2000)}`);
-      };
-      child.stdout?.on("data", log("out"));
-      child.stderr?.on("data", log("err"));
+      // Drain both pipes so the child cannot block. Their output can include
+      // prompts and tool results, so it must not enter platform logs.
+      child.stdout?.on("data", () => {});
+      child.stderr?.on("data", () => {});
 
       /**
        * ⚠ **A SPAWN THAT FAILS IS A FACT, NOT A SLOWNESS** (MIN-293).
@@ -311,8 +305,8 @@ export function opencodeSupervisorDeps(opts: {
           ),
         );
       });
-      child.on("error", (err) =>
-        console.error("[opencode] runtime error:", err.message),
+      child.on("error", () =>
+        console.error("[opencode] runtime_error"),
       );
       let stopping: Promise<void> | null = null;
       return {

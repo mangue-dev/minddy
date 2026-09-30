@@ -1,8 +1,10 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { after } from "next/server";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeProject } from "@/lib/server/project-content";
 import { canUseAutomations } from "@/lib/server/entitlements";
 import {
   activeRunForChain,
@@ -272,7 +274,7 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
   // ── The world, re-checked at runtime ────────────────────────────────────
   const { data: project } = await service
     .from("projects")
-    .select("id, key, owner_id, automations_enabled, automations")
+    .select("*")
     .eq("id", params.projectId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -289,6 +291,7 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     if (existing) await shutDownChain(existing, "gone");
     return;
   }
+  const readableProject = await decodeProject(project);
 
   if (!project.automations_enabled) {
     // The switch was cut while a chain was running: we cannot leave it
@@ -301,12 +304,11 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     return;
   }
 
-  const { data: issueRow } = await service
-    .from("issues")
-    .select(
+  const { data: issueRow } = await issueStore(service).select(
       "id, number, title, plan, status, priority, effort, assignee_id, automation_override",
     )
     .eq("id", params.issueId)
+    .eq("project_id", params.projectId)
     .is("deleted_at", null)
     .maybeSingle();
   // Ticket in the trash: same reason, same remedy. And without that, a
@@ -323,7 +325,7 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
   // Cascade ticket > project > account: forcing the ticket wins, otherwise the
   // rules written on the project (API/MCP), otherwise the OWNER preset
   // of the project — it is he who pays and he alone who was able to arm this project.
-  const rules = rulesForIssue(rulesForProject(project.automations, ownerMeta), override);
+  const rules = rulesForIssue(rulesForProject(readableProject.automations, ownerMeta), override);
 
   // Efforts covered: a ticket of a size out of account does not trigger
   // Nothing. Tested AFTER the rules (one says what to play, the other on what), and

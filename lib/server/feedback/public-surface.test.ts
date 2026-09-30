@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
+import { authenticationProof } from "@/lib/server/encryption/auth-proof";
 
 /**
  * MIN-342 — what an ANONYMOUS (or a visitor from another board) achieves.
@@ -203,6 +204,7 @@ const { requestFeedbackOtp, verifyFeedbackOtp } = await import(
 
 beforeEach(() => {
   vi.unstubAllEnvs();
+  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-secret-with-at-least-forty-characters");
   vi.stubEnv("EMAIL_PROVIDER", "resend");
   vi.stubEnv("RESEND_API_KEY", "resend-key");
   vi.stubEnv("FEEDBACK_EMAIL_FROM", "feedback@example.test");
@@ -211,6 +213,8 @@ beforeEach(() => {
   voteUpserts = [];
   sentEmails.length = 0;
 });
+
+afterEach(() => vi.unstubAllEnvs());
 
 describe("votePost", () => {
   it("accepts a post from the visitor's project", async () => {
@@ -321,8 +325,22 @@ describe("requestFeedbackOtp", () => {
 
 describe("verifyFeedbackOtp", () => {
   function otpHash(id: string, code: string): string {
-    return createHash("sha256").update(`${id}:${code}`).digest("hex");
+    return authenticationProof("feedback_otp", [id, code]);
   }
+
+  it("round-trips a delivered code without leaving an offline six-digit verifier in the database", async () => {
+    const recipient = { boardId: "board-proof", email: "proof@example.com", ip: "198.51.100.45", locale: "en" as const };
+    expect(await requestFeedbackOtp(recipient)).toEqual({ ok: true });
+    const code = sentEmails[0].code;
+    const row = otpRows[0];
+    const protectedHash = row.code_hash;
+    const legacyHash = createHash("sha256").update(`${row.id}:${code}`).digest("hex");
+    expect(protectedHash).not.toBe(legacyHash);
+    row.code_hash = legacyHash;
+    expect(await verifyFeedbackOtp({ ...recipient, code })).toEqual({ ok: false, error: "invalidCode" });
+    row.code_hash = protectedHash;
+    expect(await verifyFeedbackOtp({ ...recipient, code })).toEqual({ ok: true, email: recipient.email });
+  });
 
   it("atomically caps parallel verification attempts", async () => {
     const id = "00000000-0000-4000-8000-000000000461";

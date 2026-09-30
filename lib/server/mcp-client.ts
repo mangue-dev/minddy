@@ -13,14 +13,14 @@ import {
 } from "@/lib/mcp-client";
 import { mcpFetch, MCP_TIMEOUT_MS } from "./mcp-http";
 export { mcpFetch, MCP_TIMEOUT_MS, MCP_MAX_BYTES } from "./mcp-http";
-import { decryptMcpToken } from "./mcp-credentials";
+import { decodeMcpConnection, mcpSecret } from "./mcp-content";
 export { encryptMcpToken, decryptMcpToken } from "./mcp-credentials";
 import { openMcpOAuth } from "./mcp-oauth";
 import { checkSessionRateLimit } from "./session-rate-limit";
 import { MCP_MAX_RESULT_BYTES } from "@/lib/mcp-client-tools";
 
 const COLUMNS =
-  "id,name,url,enabled,created_at,transport,auth_mode,oauth_connected";
+  "id,user_id,name,url,enabled,created_at,transport,auth_mode,oauth_connected,token_encrypted,headers_encrypted,oauth_encrypted,encryption_version,encrypted_content,content_revision";
 export type McpConnectionRow = Omit<
   McpConnection,
   "has_token" | "has_headers"
@@ -29,6 +29,9 @@ export type McpConnectionRow = Omit<
   token_encrypted: string | null;
   headers_encrypted: string | null;
   oauth_encrypted: string | null;
+  encryption_version?: number;
+  encrypted_content?: string | null;
+  content_revision?: number;
 };
 
 export async function listMcpConnections(
@@ -36,14 +39,17 @@ export async function listMcpConnections(
 ): Promise<McpConnection[]> {
   const { data, error } = await getServiceClient()
     .from("user_mcp_connections")
-    .select(`${COLUMNS},token_encrypted,headers_encrypted`)
+    .select(COLUMNS)
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
   if (error) throw new Error("Could not load MCP connections");
-  return (data ?? []).map(({ token_encrypted, headers_encrypted, ...row }) => ({
-    ...row,
-    has_token: !!token_encrypted,
-    has_headers: !!headers_encrypted,
+  return Promise.all((data ?? []).map(async (raw) => {
+    const row = await decodeMcpConnection(raw as McpConnectionRow);
+    return { id: row.id, name: row.name, url: row.url,
+      enabled: row.enabled, created_at: row.created_at,
+      transport: row.transport, auth_mode: row.auth_mode,
+      oauth_connected: row.oauth_connected,
+      has_token: !!row.token_encrypted, has_headers: !!row.headers_encrypted };
   }));
 }
 
@@ -54,14 +60,12 @@ export async function getMcpConnection(
   if (!mcpConnectionId.safeParse(id).success) return null;
   const { data, error } = await getServiceClient()
     .from("user_mcp_connections")
-    .select(
-      `${COLUMNS},user_id,token_encrypted,headers_encrypted,oauth_encrypted`,
-    )
+    .select(COLUMNS)
     .eq("user_id", userId)
     .eq("id", id)
     .maybeSingle();
   if (error) throw new Error("Could not load MCP connection");
-  return data;
+  return data ? decodeMcpConnection(data as McpConnectionRow) : null;
 }
 
 /** A fresh session per operation avoids sharing authentication between accounts. */
@@ -78,11 +82,11 @@ export async function withMcpClient<T>(
   let transport: StreamableHTTPClientTransport | SSEClientTransport | undefined;
   let oauth: Awaited<ReturnType<typeof openMcpOAuth>> | undefined;
   try {
-    const token = decryptMcpToken(connection.token_encrypted);
+    const token = mcpSecret(connection, "token_encrypted");
     if (connection.auth_mode === "oauth")
       oauth = await openMcpOAuth(connection);
     const headers = connection.headers_encrypted
-      ? (JSON.parse(decryptMcpToken(connection.headers_encrypted)!) as Record<
+      ? (JSON.parse(mcpSecret(connection, "headers_encrypted")!) as Record<
           string,
           string
         >)

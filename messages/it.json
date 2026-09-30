@@ -230,9 +230,9 @@
     "passwordTooShort": "Usa almeno 8 caratteri.",
     "invalidShareLevel": "Livello di condivisione non valido.",
     "resourceNotFound": "Risorsa non trovata.",
-    "resourceInvalid": "Risorsa rifiutata: massimo 10 risorse, 20 MB per file.",
+    "resourceInvalid": "Risorsa rifiutata: massimo 10 risorse, 4,5 MB per file.",
     "linkInvalidUrl": "Collegamento non valido o irraggiungibile.",
-    "attachmentInvalid": "Allegato respinto: 10 file max, 20 MB per file.",
+    "attachmentInvalid": "Allegato respinto: 10 file max, 4,5 MB per file.",
     "invalidCycle": "Ciclo sconosciuto o non valido.",
     "triageCannotJoinCycle": "Un ticket in triage non può entrare in un ciclo. Rimuovilo prima dal triage.",
     "closedIssueCannotJoinCycle": "I ticket chiusi non possono essere spostati in un altro ciclo.",
@@ -1992,7 +1992,12 @@
     "closeDescription": "Lo troverai nei tuoi recenti progetti.",
     "closeConfirm": "Salva",
     "closeDiscard": "Scartare",
-    "keepEditing": "Indietro"
+    "keepEditing": "Indietro",
+    "saveFailed": "Impossibile salvare la bozza. Lascia aperta questa finestra e riprova.",
+    "restoreFailed": "Impossibile recuperare le bozze. Controlla la connessione e riprova.",
+    "deleteFailed": "Impossibile eliminare la bozza. Riprova.",
+    "recoverLegacy": "Recupera le vecchie bozze su questo dispositivo",
+    "legacyWarning": "Recupera solo le bozze che hai creato su questo dispositivo."
   },
   "Pages": {
     "placeholder": "Scrivi o digita '/' per i blocchi...",
@@ -6030,7 +6035,9 @@
     "entry_notebook-agent_title": "Avviare un agente dal task notebook",
     "entry_notebook-agent_body": "Affida all’agente di codice un’attività del tuo taccuino personale. Puoi avviarlo direttamente dall’attività, senza creare prima un ticket di progetto.",
     "entry_notifications_title": "Notifiche che puoi effettivamente tenere al passo",
-    "entry_notifications_body": "Le notifiche sono raggruppate per ticket per seguire una conversazione senza leggere ogni evento separatamente. Scegli quali attività ricevere nelle impostazioni delle notifiche."
+    "entry_notifications_body": "Le notifiche sono raggruppate per ticket per seguire una conversazione senza leggere ogni evento separatamente. Scegli quali attività ricevere nelle impostazioni delle notifiche.",
+    "entry_encrypted-workspace-content_title": "Workspace content is encrypted at rest",
+    "entry_encrypted-workspace-content_body": "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage. Search and collaboration keep working with content decrypted only for authorized users."
   },
   "Automations": {
     "title": "Automazioni",

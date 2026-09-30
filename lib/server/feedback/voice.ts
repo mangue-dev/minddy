@@ -304,11 +304,8 @@ export async function transcribeFeedbackAudio({
       projectId,
     },
     surface: "feedback",
-  }).catch((err) => {
-    console.error(
-      "[feedback-voice] cleanup failed, returning raw transcript:",
-      err instanceof Error ? err.message : err,
-    );
+  }).catch(() => {
+    console.error("[feedback-voice] transcript_cleanup_failed");
     return null;
   });
 

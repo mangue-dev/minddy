@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import { NextResponse, after, type NextRequest } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
 import { addCommentToFeedbackPost } from "@/lib/server/add-comment";
@@ -54,8 +55,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   }
 
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("comments")
+  const { data, error } = await commentStore(service, "comments", guard.userId)
     .select("*, attachments(*), feedback_users!feedback_user_id (id, name, email, pseudonym)")
     .eq("feedback_post_id", postId)
     .order("created_at", { ascending: true });

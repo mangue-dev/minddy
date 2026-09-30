@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { afterOrNow } from "@/lib/server/after-safe";
 import {
   syncPrState,
@@ -227,7 +228,8 @@ async function isServiceAccount(
   const { data } = await service
     .from("project_git_links")
     .select("git_connections(provider_account_id, account_login)")
-    .eq("repo_full_name", repoFullName)
+    .eq("repo_full_name", await repositoryStorageName("gitlab",
+      repoFullName,false,service))
     .eq("provider", "gitlab");
   // Embedded to-one relationship: object at runtime, cast via unknown (see Supabase).
   const connections = (

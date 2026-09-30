@@ -1208,11 +1208,8 @@ export async function runOpencodeTurn(
     const warmToolsPromise = client
       .warmTools(job.model)
       .then(() => timing("opencode-tools-ready"))
-      .catch((err) => {
-        console.warn(
-          "[supervisor] opencode tool warm-up failed:",
-          (err as Error).message,
-        );
+      .catch(() => {
+        console.warn("[supervisor] opencode_tool_warmup_failed");
       });
 
     // ── The session: resumed by the journal, or new ────────────────────────
@@ -1227,8 +1224,8 @@ export async function runOpencodeTurn(
         // before checkpointing its cursor. Rebase on what was successfully
         // replayed so the next export cannot wrap that prefix in a new batch.
         journalSeq = lastSeqByAggregate(journalSeq, previous.events);
-      } catch (err) {
-        console.error("[supervisor] replay failed:", (err as Error).message);
+      } catch {
+        console.error("[supervisor] replay_failed");
         sessionId = "";
         journalSeq = {};
       }
@@ -1620,14 +1617,11 @@ export async function runOpencodeTurn(
         ) {
           runClosed = true;
         }
-      } catch (err) {
+      } catch {
         // A failed save does not break the round: it costs the restart, and
         // the next pass will try again. What she should not do is
         // pushing back the deadline in silence — hence the trace.
-        console.error(
-          "[supervisor] periodic checkpoint failed:",
-          (err as Error).message,
-        );
+        console.error("[supervisor] periodic_checkpoint_failed");
       }
     };
 
@@ -1733,14 +1727,11 @@ export async function runOpencodeTurn(
       const answers = matched.some((entry) => entry.answer)
         ? matched.map((entry) => (entry.answer ? [entry.answer] : []))
         : asked.questions.map((_, i) => (i === 0 ? [text] : []));
-      await client.replyQuestion(asked.id, answers).catch((err) => {
+      await client.replyQuestion(asked.id, answers).catch(() => {
         // A response that does not arrive leaves the tool hanging until the
         // deadline. To say - but not to bring down the trick, as for the
         // permissions: the model will see its tool never render.
-        console.error(
-          "[supervisor] question reply failed:",
-          (err as Error).message,
-        );
+        console.error("[supervisor] question_reply_failed");
       });
       // A human may answer after hours. Give the resumed model a fresh silence
       // window instead of measuring from when the question was first asked.
@@ -2090,8 +2081,8 @@ export async function runOpencodeTurn(
         const pending = await cp.hasPendingMessages();
         if (pending || pendingPrompt.length > 0 || monitorClosed) return;
         await stopTurn();
-      } catch (err) {
-        console.error("[supervisor] stop monitor failed:", (err as Error).message);
+      } catch {
+        console.error("[supervisor] stop_monitor_failed");
       } finally {
         controlBusy = false;
       }
@@ -2324,14 +2315,11 @@ export async function runOpencodeTurn(
           }
           await client
             .replyPermission(out.permission.id, verdict.reply, verdict.message)
-            .catch((err) => {
+            .catch(() => {
               // A verdict that does not arrive leaves the tool hanging until the
               // deadline of the round. To say, therefore – but not to bring down the trick:
               // the model will see its tool never render, and that is already a signal.
-              console.error(
-                "[supervisor] permission reply failed:",
-                (err as Error).message,
-              );
+              console.error("[supervisor] permission_reply_failed");
             });
         }
 
@@ -2874,14 +2862,11 @@ export async function runOpencodeTurn(
       opencodeState = forcedStop
         ? { sessionId, seq: journalSeq }
         : await syncJournal();
-    } catch (err) {
+    } catch {
       // A newspaper that we have not been able to export does not lose the trick: it loses the
       // RESUME, and the next round will start with a new session. To say, therefore,
       // and not to swallow in silence.
-      console.error(
-        "[supervisor] history export failed:",
-        (err as Error).message,
-      );
+      console.error("[supervisor] history_export_failed");
     }
 
     // ── The push, the diff, the report ──────────────────── ─────────────────────
@@ -2982,7 +2967,7 @@ export async function runOpencodeTurn(
         pushed = await pushWork(commitMessageFromReply(reply, job.commitRef));
       } catch (err) {
         pushError = outward((err as Error).message);
-        console.error("[supervisor] turn-end push failed:", pushError);
+        console.error("[supervisor] turn_end_push_failed");
       }
     }
 
@@ -3240,9 +3225,7 @@ class TurnLedger {
       if (!usage || gen.costUsd == null) {
         // Nothing billable to write, but it SAYS: it's the only sign
         // that an expense could have gone off the counters.
-        console.error(
-          `[supervisor] round coupé sans usage du fournisseur (gen ${gen.id ?? "?"}) — non facturé`,
-        );
+        console.error("[supervisor] provider_usage_missing");
         continue;
       }
       const prompt = usage.promptTokens ?? 0;

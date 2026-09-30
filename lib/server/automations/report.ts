@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -365,7 +366,7 @@ export async function postChainComment(
     lines.push("", `_${facts.join(" · ")}_`);
 
     const service = getServiceClient();
-    await service.from("comments").insert({
+    await commentStore(service, "comments").insert({
       issue_id: chain.issue_id,
       author_id: chain.owner_id,
       body: lines.join("\n"),

@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { randomUUID } from "node:crypto";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import {
   getNumoConversation,
@@ -14,6 +15,8 @@ import {
   resolveNumoTurnConfiguration,
 } from "@/lib/server/assistant/conversation-config";
 import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
+import { encodeConversationTitle, shouldProtectConversationTitle } from
+  "@/lib/server/numo/conversation-title-content";
 
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -69,8 +72,12 @@ export async function POST(request: NextRequest) {
     if (error) return Response.json({ error: "Unable to read project" }, { status: 500 });
     if (!data) return Response.json({ error: "Project not found" }, { status: 404 });
   }
+  const id = randomUUID();
+  const title = body.title?.trim() || null;
+  const storedTitle = await shouldProtectConversationTitle()
+    ? await encodeConversationTitle(auth.user.id, id, title) : title;
   const { data, error } = await auth.supabase.from("conversations").insert({
-    user_id: auth.user.id, title: body.title?.trim() || null, project_id: body.projectId ?? null,
+    id, user_id: auth.user.id, title: storedTitle, project_id: body.projectId ?? null,
     ...(configuration?.persistedModel !== null && configuration?.persistedModel !== undefined
       ? { model: configuration.persistedModel }
       : {}),

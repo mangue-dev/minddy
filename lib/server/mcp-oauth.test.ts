@@ -10,6 +10,11 @@ import {
 import { decryptMcpToken, encryptMcpToken } from "./mcp-credentials";
 import { mcpSettingsUpdate } from "./mcp-settings";
 import type { McpConnectionRow } from "./mcp-client";
+import { getMcpConnection } from "./mcp-client";
+import { decodeMcpAttempt, decodeMcpConnection,
+  protectMcpConnection } from "./mcp-content";
+import { EncryptedStore } from "./encryption/store";
+import { randomBytes } from "node:crypto";
 
 const state = vi.hoisted(() => ({
   tables: {} as Record<string, Record<string, unknown>[]>,
@@ -26,7 +31,9 @@ const state = vi.hoisted(() => ({
   streaming: false,
   canceled: 0,
   session: false,
+  store: null as EncryptedStore | null,
 }));
+vi.mock("./encryption/registry", () => ({ getEncryptedStore: () => state.store }));
 vi.mock("./app-origin", () => ({
   canonicalAppOrigin: () => "https://minddy.test",
   oauthAppOrigin: () => "https://minddy.test",
@@ -197,12 +204,41 @@ beforeEach(() => {
   state.streaming = false;
   state.canceled = 0;
   state.session = false;
+  const key = randomBytes(32);
+  state.store = new EncryptedStore({
+    current: async () => ({ version: 1, bytes: Buffer.from(key) }),
+    byVersion: async () => ({ version: 1, bytes: Buffer.from(key) }),
+  });
 });
 afterEach(() => {
   vi.unstubAllEnvs();
 });
 
 describe("generic MCP OAuth", () => {
+  it("keeps the callback attempt and refreshed connection sealed", async () => {
+    state.tables.mcp_content_scope = [{ id: true }];
+    const protectedColumns = await protectMcpConnection({ ...connection,
+      oauth_encrypted: encryptMcpToken("{}"),
+      encryption_version: 0, encrypted_content: null });
+    state.tables.user_mcp_connections = [{ ...connection,
+      ...protectedColumns, content_revision: 0 }];
+    const current = await getMcpConnection("alice", connection.id);
+    expect(current?.url).toBe(connection.url);
+    const authorization = new URL(await startMcpOAuth(current!));
+    const attempt = state.tables.user_mcp_oauth_attempts[0];
+    expect(attempt.endpoint).toBeNull();
+    expect(attempt.payload_encrypted).toBeNull();
+    expect(JSON.stringify(attempt)).not.toContain("verifier");
+    const opened = await decodeMcpAttempt(attempt as never);
+    expect(opened.endpoint).toBe(connection.url);
+    await completeMcpOAuth("alice", authorization.searchParams.get("state")!, "code");
+    const stored = state.tables.user_mcp_connections[0];
+    for (const column of ["name", "url", "oauth_encrypted"])
+      expect(stored[column]).toBeNull();
+    expect(JSON.stringify(stored)).not.toContain("private-refresh-token");
+    const decoded = await decodeMcpConnection(stored as McpConnectionRow);
+    expect(decoded.oauth_encrypted).toContain("private-refresh-token");
+  });
   it.each(["http", "sse"] as const)("follows %s challenges and preserves the challenged scope", async (transport) => {
     state.challengeOnly = true;
     state.challenge = 'Bearer resource_metadata="https://mcp.example.com/auth/resource", scope="tools:read"';

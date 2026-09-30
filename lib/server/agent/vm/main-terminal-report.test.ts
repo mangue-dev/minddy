@@ -29,11 +29,13 @@ describe("VM terminal reporting", () => {
 
   it("reads the job inside the reporting boundary and keeps launch-time routing hints", () => {
     const boundary = source.indexOf("try {", source.indexOf("async function main"));
-    const read = source.indexOf("await readFile(jobPathFromArgv()", boundary);
+    const read = source.indexOf("await readFile(jobPath", boundary);
+    const erase = source.indexOf("await unlink(jobPath)", read);
     const originArg = source.indexOf("process.argv[3]", source.indexOf("async function main"));
     const client = source.indexOf("cp = createControlPlaneClient", originArg);
 
     expect(read).toBeGreaterThan(boundary);
+    expect(erase).toBeGreaterThan(read);
     expect(originArg).toBeGreaterThan(0);
     expect(client).toBeGreaterThan(originArg);
   });

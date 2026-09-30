@@ -1,5 +1,7 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
+
 import { getServiceClient } from "@/lib/supabase-service";
 import { generateIntegrationKey } from "@/lib/server/integration-key";
 import {
@@ -15,6 +17,9 @@ import {
   type WebhookScope,
 } from "@/lib/server/webhooks";
 import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
+import { decodeIntegration, decodeIntegrationField,
+  encodeIntegrationField, shouldProtectIntegrations,
+  type StoredIntegration } from "./integration-content";
 
 /**
  * Management of project integrations (Feedback API). Writes via the
@@ -23,7 +28,7 @@ import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
  */
 
 export const INTEGRATION_SUMMARY_SELECT =
-  "id, name, kind, key_prefix, created_at, last_used_at, revoked_at, " +
+  "id, project_id, name, kind, key_prefix, created_at, last_used_at, revoked_at, " +
   "webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at";
 
 // The kind and its guard live in purity with the API contract they describe
@@ -47,8 +52,8 @@ export interface IntegrationSummary {
 
 /** A row of the table, returned to the caller: the state of the last
  delivery replaces the remote HTTP code (MIN-341). */
-function toSummary(row: unknown): IntegrationSummary {
-  const raw = row as IntegrationSummary;
+async function toSummary(row: unknown): Promise<IntegrationSummary> {
+  const raw = await decodeIntegration(row as IntegrationSummary & StoredIntegration);
   return { ...raw, webhook_last_status: normalizeWebhookStatus(raw.webhook_last_status) };
 }
 
@@ -69,7 +74,7 @@ export async function listIntegrations(
     console.error("[integrations] list failed:", error.message);
     return null;
   }
-  return (data ?? []).map(toSummary);
+  return Promise.all((data ?? []).map(toSummary));
 }
 
 export async function createIntegration({
@@ -97,11 +102,17 @@ export async function createIntegration({
 
   const { key, hash, prefix } = generateIntegrationKey();
   const service = getServiceClient();
+  const id=randomUUID();
+  const protectedWrite=await shouldProtectIntegrations();
+  const storedName=protectedWrite
+    ? await encodeIntegrationField({id,project_id:projectId},"name",trimmed)
+    : trimmed;
   const { data, error } = await service
     .from("integrations")
     .insert({
+      id,
       project_id: projectId,
-      name: trimmed,
+      name: storedName,
       kind: isIntegrationKind(kind) ? kind : "issues",
       key_hash: hash,
       key_prefix: prefix,
@@ -114,7 +125,7 @@ export async function createIntegration({
     console.error("[integrations] create failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  return { ok: true, integration: toSummary(data), key };
+  return { ok: true, integration: await toSummary(data), key };
 }
 
 /**
@@ -186,14 +197,12 @@ export async function updateIntegrationWebhook({
   const service = getServiceClient();
 
   // A webhook only carries ISSUE events: on a feedback key, it
-  // would have nothing to deliver. We refuse to light it rather than put away a
-  // configuration that will never go away — turning it off, however, remains
-  // always possible (a feedback key set before this rule must be able to
-  // se nettoyer).
-  if (url) {
+  // would have nothing to deliver. Enabling it is refused, while disabling
+  // a previously configured feedback webhook remains possible.
+  {
     const { data: existing, error: readError } = await service
       .from("integrations")
-      .select("kind, webhook_url")
+      .select("id, project_id, kind, webhook_url, webhook_url_protected")
       .eq("id", integrationId)
       .eq("project_id", projectId)
       .maybeSingle();
@@ -206,34 +215,40 @@ export async function updateIntegrationWebhook({
     }
     if (!existing)
       return { ok: false, status: 404, errorKey: "integrationNotFound" };
-    if (existing.kind !== "issues") {
+    if (url && existing.kind !== "issues") {
       return { ok: false, status: 400, errorKey: "webhookIssuesOnly" };
     }
     // Set a destination, or move it: human gesture only.
-    if (actor === "agent" && existing.webhook_url !== url) {
+    const previousUrl=await decodeIntegrationField(existing,
+      "webhook_url",existing.webhook_url);
+    if (url && actor === "agent" && previousUrl !== url) {
       return { ok: false, status: 403, errorKey: "webhookHumanOnly" };
     }
-  }
-
-  const { data, error } = await service
-    .from("integrations")
-    .update({
-      webhook_url: url,
+    const storedUrl=url && (existing.webhook_url_protected ||
+      await shouldProtectIntegrations())
+      ? await encodeIntegrationField(existing,"webhook_url",url)
+      : url;
+    let update=service.from("integrations").update({
+      webhook_url: storedUrl,
       webhook_events: input.webhook_events,
       webhook_scope: input.webhook_scope,
     })
     .eq("id", integrationId)
     .eq("project_id", projectId)
-    .is("revoked_at", null)
-    .select(INTEGRATION_SUMMARY_SELECT);
+    .is("revoked_at", null);
+    update=existing.webhook_url===null
+      ? update.is("webhook_url",null)
+      : update.eq("webhook_url",existing.webhook_url);
+    const {data,error}=await update.select(INTEGRATION_SUMMARY_SELECT);
 
-  if (error) {
-    console.error("[integrations] webhook update failed:", error.message);
-    return { ok: false, status: 500, errorKey: "databaseError" };
+    if (error) {
+      console.error("[integrations] webhook update failed:", error.message);
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+    const row = (data ?? [])[0];
+    if (!row) return { ok: false, status: 404, errorKey: "integrationNotFound" };
+    return { ok: true, integration: await toSummary(row) };
   }
-  const row = (data ?? [])[0];
-  if (!row) return { ok: false, status: 404, errorKey: "integrationNotFound" };
-  return { ok: true, integration: toSummary(row) };
 }
 
 export async function revokeIntegration({

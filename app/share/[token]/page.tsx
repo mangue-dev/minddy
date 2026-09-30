@@ -1,3 +1,6 @@
+import { issueStore } from "@/lib/server/issue-store";
+import { categoryStore } from "@/lib/server/category-store";
+import { objectiveStore } from "@/lib/server/objective-store";
 import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -111,9 +114,7 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
 
   const [issuesRes, relationsRes, categoriesRes, objectivesRes, membersRes] =
     await Promise.all([
-      service
-        .from("issues")
-        .select(ISSUE_SELECT)
+      issueStore(service).select(ISSUE_SELECT)
         .is("deleted_at", null)
         .eq("project_id", project.id)
         .order("position", { ascending: true })
@@ -122,10 +123,13 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
         .from("issue_relations")
         .select("id, source_id, target_id, type")
         .eq("project_id", project.id),
-      service.from("categories").select("*").eq("project_id", project.id),
-      service.from("objectives").select("*").eq("project_id", project.id).is("deleted_at", null),
+      categoryStore(service).select("*").eq("project_id", project.id),
+      objectiveStore(service).select("*").eq("project_id", project.id).is("deleted_at", null),
       service.from("project_members").select("user_id").eq("project_id", project.id),
     ]);
+  if (categoriesRes.error || objectivesRes.error) {
+    throw new Error("Unable to read public board labels");
+  }
 
   const allIssues = (issuesRes.data ?? []).map(mapIssueRow) as unknown as Issue[];
   const relations = (relationsRes.data ?? []) as IssueRelation[];
@@ -194,7 +198,7 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
     // The project tables do not output in full: only the lines that one
     // visible card quotes can be painted, so only those go.
     categories: publicCategoriesFor(
-      (categoriesRes.data ?? []) as Category[],
+      (categoriesRes.data ?? []) as unknown as Category[],
       visibleIssues
     ),
     objectives: publicObjectivesFor(

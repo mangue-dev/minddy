@@ -16,7 +16,10 @@ const fixtures = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
-    from: () => ({
+    from: (table: string) => table === "attachment_object_encrypted"
+      ? { select: () => ({ eq: () => ({ maybeSingle: async () =>
+        ({ data: null, error: null }) }) }) }
+      : ({
       select: () => ({
         eq: () => ({
           in: () => ({

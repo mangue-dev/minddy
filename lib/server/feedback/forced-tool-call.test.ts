@@ -1,18 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { recordAiUsage } from "@/lib/server/ai-usage";
 
 vi.mock("@/lib/server/ai-provider-request", () => ({
   fetchAiProvider: (_provider: string, url: string, init: RequestInit) => fetch(url, init),
 }));
 
 /**
- * `forcedToolCall` is the primitive shared by five AI passes (smart-fill,
- * conversation title, import match, brief cut, review of
- * feedback). The routing shortcut fallback (MIN-263) lives INSIDE: it's this
- * that gives it to all five without anyone having to know.
+ * `forcedToolCall` is shared by smart fill, conversation titles, import
+ * matching, brief splitting, and feedback review. It handles routing suffix
+ * fallback for all consumers.
  *
- * What matters: we only replay on a REFUSAL, and only when there is a
- * suffix to remove. Replaying a timeout would double the wait for someone who
- * is already waiting in front of their screen.
+ * A refused suffixed model may retry without the suffix. Timeouts do not retry.
  */
 
 vi.mock("@/lib/server/ai-usage", () => ({
@@ -59,10 +57,10 @@ function call(model: string) {
   });
 }
 
-/** The model actually sent, trial by trial. */
+/** Model sent on each attempt. */
 const modelsSent: string[] = [];
 
-/** Replaces `fetch` with `handler`, noting the pattern of each request. */
+/** Replace `fetch` and record the model used by each request. */
 function stubFetch(handler: (model: string) => Response) {
   vi.spyOn(globalThis, "fetch").mockImplementation((async (
     _url: string,
@@ -87,8 +85,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("forcedToolCall — repli du raccourci de routage", () => {
-  it("n'utilise pas la clé plateforme sans opt-in du service managé", async () => {
+describe("forcedToolCall routing suffix fallback", () => {
+  it("does not use the platform key without managed AI opt-in", async () => {
     process.env.MINDDY_MANAGED_AI = "";
     const fetch = vi.spyOn(globalThis, "fetch");
 
@@ -96,27 +94,27 @@ describe("forcedToolCall — repli du raccourci de routage", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("n'appelle qu'une fois quand le modèle suffixé passe", async () => {
+  it("calls once when the suffixed model succeeds", async () => {
     stubFetch(() => okResponse("openai/gpt-5"));
     const out = await call("openai/gpt-5:nitro");
     expect(out).toEqual({ model: "openai/gpt-5" });
     expect(modelsSent).toEqual(["openai/gpt-5:nitro"]);
   });
 
-  it("rejoue sur le modèle nu quand OpenRouter refuse", async () => {
+  it("retries the bare model when OpenRouter refuses", async () => {
     stubFetch((model) => (model.includes(":") ? refusal() : okResponse(model)));
     const out = await call("openai/gpt-5:exacto");
     expect(out).toEqual({ model: "openai/gpt-5" });
     expect(modelsSent).toEqual(["openai/gpt-5:exacto", "openai/gpt-5"]);
   });
 
-  it("ne rejoue pas le refus d'un modèle nu", async () => {
+  it("does not retry a bare model refusal", async () => {
     stubFetch(() => refusal());
     expect(await call("openai/gpt-5")).toBeNull();
     expect(modelsSent).toEqual(["openai/gpt-5"]);
   });
 
-  it("ne rejoue pas un timeout — l'attente compte plus que le raccourci", async () => {
+  it("does not retry a timeout", async () => {
     stubFetch(() => {
       throw Object.assign(new Error("The operation was aborted"), { name: "TimeoutError" });
     });
@@ -124,15 +122,15 @@ describe("forcedToolCall — repli du raccourci de routage", () => {
     expect(modelsSent).toEqual(["openai/gpt-5:floor"]);
   });
 
-  it("abandonne proprement quand le modèle nu échoue aussi", async () => {
+  it("returns null when the bare model also fails", async () => {
     stubFetch(() => refusal());
     expect(await call("openai/gpt-5:nitro")).toBeNull();
     expect(modelsSent).toEqual(["openai/gpt-5:nitro", "openai/gpt-5"]);
   });
 });
 
-describe("forcedToolCall — demande de raisonnement", () => {
-  it("ne pose aucun champ de raisonnement quand l'effort n'est pas demandé", async () => {
+describe("forcedToolCall reasoning request", () => {
+  it("omits reasoning when no effort is requested", async () => {
     const fetch = vi.spyOn(globalThis, "fetch").mockImplementation((async (
       _url: string,
       init: { body: string },
@@ -144,7 +142,7 @@ describe("forcedToolCall — demande de raisonnement", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it("demande l'effort demandé, tel quel, au fournisseur", async () => {
+  it("sends the requested effort to the provider", async () => {
     const fetch = vi.spyOn(globalThis, "fetch").mockImplementation((async (
       _url: string,
       init: { body: string },
@@ -159,7 +157,7 @@ describe("forcedToolCall — demande de raisonnement", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it("repose le même effort sur le modèle nu après un repli de suffixe", async () => {
+  it("uses the same effort after suffix fallback", async () => {
     stubFetch((model) => (model.includes(":") ? refusal() : okResponse(model)));
     const bodyModels: unknown[] = [];
     vi.spyOn(globalThis, "fetch").mockImplementation((async (
@@ -179,5 +177,50 @@ describe("forcedToolCall — demande de raisonnement", () => {
       { effort: "low", exclude: false },
       { effort: "low", exclude: false },
     ]);
+  });
+});
+
+describe("forcedToolCall log redaction", () => {
+  const sentinel = "MIN591_PRIVATE_TOOL_ARGUMENT";
+
+  async function expectRedacted(response: () => Response | Promise<Response>) {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => response());
+    expect(await call("openai/gpt-5")).toBeNull();
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain(sentinel);
+  }
+
+  it("does not log provider error bodies", async () => {
+    await expectRedacted(() => ({
+      ok: false, status: 400, text: async () => sentinel,
+    }) as Response);
+  });
+
+  it("does not log response JSON syntax errors", async () => {
+    await expectRedacted(() => ({
+      ok: true, json: async () => { throw new SyntaxError(`Unexpected token ${sentinel}`); },
+    }) as unknown as Response);
+  });
+
+  it("does not log tool argument syntax errors", async () => {
+    await expectRedacted(() => ({
+      ok: true,
+      json: async () => ({ choices: [{ message: { tool_calls: [
+        { function: { name: "pick", arguments: `{${sentinel}` } },
+      ] } }] }),
+    }) as unknown as Response);
+  });
+
+  it("does not log transport exception messages", async () => {
+    await expectRedacted(() => { throw new Error(sentinel); });
+  });
+
+  it("does not log usage ledger exception messages", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(okResponse("openai/gpt-5"));
+    vi.mocked(recordAiUsage).mockRejectedValueOnce(new Error(sentinel));
+    expect(await forcedToolCall("openai/gpt-5", "system", "user", "pick",
+      { type: "object" }, { logPrefix: "[test]", record: {
+        feature: "feedback_classify", billTo: { userId: "user-id" },
+      } })).toBeNull();
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain(sentinel);
   });
 });

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import crypto from "node:crypto";
+import { EncryptedStore, type DataKeyProvider } from
+  "@/lib/server/encryption/store";
 
 import {
   FakeQuery,
@@ -26,6 +28,10 @@ vi.stubEnv("GIT_TOKEN_ENCRYPTION_SECRET", "token-crypto-secret-0123456789abcdef"
 
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({ from: (name: string) => new FakeQuery(name) }),
+}));
+const protection = vi.hoisted(() => ({ store: null as EncryptedStore | null }));
+vi.mock("@/lib/server/encryption/registry", () => ({
+  getEncryptedStore: () => protection.store,
 }));
 
 function generateInstanceKeys(): { publicKeyPem: string; privateKeyPem: string } {
@@ -74,6 +80,14 @@ const {
 
 beforeEach(() => {
   seedInstance();
+  setFakeTable("forge_relay_user_delivery_scope", []);
+  const material = crypto.randomBytes(32);
+  const keys: DataKeyProvider = {
+    current: async () => ({ version: 2, bytes: Buffer.from(material) }),
+    byVersion: async (_scope, version) =>
+      ({ version, bytes: Buffer.from(material) }),
+  };
+  protection.store = new EncryptedStore(keys);
 });
 
 describe("instance-signed authorization state", () => {
@@ -149,6 +163,27 @@ describe("cloud-signed state", () => {
 });
 
 describe("user deliveries", () => {
+  it("seals both token copies while keeping authorized consumption idempotent", async () => {
+    setFakeTable("forge_relay_user_delivery_scope", [{ id: true }]);
+    const deliveryId = await createUserDelivery({
+      instanceId: INSTANCE_ID, delivery: DELIVERY,
+    });
+    const row = fakeTables["forge_relay_user_deliveries"]?.[0] as FakeRow;
+    expect(row.access_token_encrypted).toBeNull();
+    expect(row.refresh_token_encrypted).toBeNull();
+    expect(row.encryption_version).toBe(2);
+    expect(JSON.stringify(row)).not.toContain(DELIVERY.tokens.accessToken);
+    expect(JSON.stringify(row)).not.toContain(DELIVERY.tokens.refreshToken);
+    expect(await consumeUserDelivery({
+      instanceId: "11111111-1111-4111-8111-111111111111",deliveryId,
+    })).toEqual({ status: "pending" });
+    const first = await consumeUserDelivery({ instanceId: INSTANCE_ID,
+      deliveryId });
+    expect(first).toEqual({ status: "delivered", delivery: DELIVERY });
+    expect(await consumeUserDelivery({ instanceId: INSTANCE_ID, deliveryId }))
+      .toEqual(first);
+  });
+
   it("parks the token set encrypted and hands it to its instance once", async () => {
     const deliveryId = await createUserDelivery({
       instanceId: INSTANCE_ID,

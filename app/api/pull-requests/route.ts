@@ -1,4 +1,6 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { after, NextResponse, type NextRequest } from "next/server";
+import { decodeRepositoryName } from "@/lib/server/git/repository-name-content";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -136,8 +138,9 @@ async function pinnedRow(
 
   let pr = prId ? await findPullRequest(prId) : null;
   if (!pr && runId) {
-    const run = await getRun(runId);
-    pr = run ? await resolvePrForRun(run) : null;
+    const run = await getRun(runId, { decode: false });
+    pr = run && repos.some((repo) => repo.project.id === run.project_id)
+      ? await resolvePrForRun(run) : null;
   }
   if (!pr) return null;
   const found = pr;
@@ -150,9 +153,7 @@ async function pinnedRow(
   // if it is in the trash, exactly as on the lines of the page.
   let issue: PullRequestWithIssue["issue"] = null;
   if (found.issue_id) {
-    const { data } = await supabase
-      .from("issues")
-      .select("id, number, title, project_id")
+    const { data } = await issueStore(supabase).select("id, number, title, project_id")
       .eq("id", found.issue_id)
       .maybeSingle();
     issue = (data as PullRequestWithIssue["issue"]) ?? null;
@@ -259,7 +260,8 @@ export async function GET(request: NextRequest) {
     for (const run of (data ?? []) as unknown as RunRow[]) {
       const link = run.repo_link;
       if (!link?.repo_full_name || run.pr_number == null) continue;
-      const key = `${link.provider}:${link.repo_full_name}:${run.pr_number}`;
+      const clearName = await decodeRepositoryName(link.provider,link.repo_full_name);
+      const key = `${link.provider}:${clearName}:${run.pr_number}`;
       const list = runsByPr.get(key);
       if (list) list.push(run);
       else runsByPr.set(key, [run]);

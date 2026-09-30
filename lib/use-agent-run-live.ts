@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase";
-import type { AgentRunEvent } from "./agent-api";
+import type { AgentEventType } from "./agent-api";
 import { liveAfterEvent, liveFromStream, type AgentRunLive, type StreamPayload } from "./agent-live";
 import { parseAgentLocalDiff, type AgentLocalDiff } from "./agent-local-diff";
 import { onRealtimeRekey, resolveRealtimeTopic } from "./realtime-topic";
@@ -17,16 +17,12 @@ export type { AgentRunLive } from "./agent-live";
  *
  * Numo streams because its thread holds the SSE connection of the route which does
  * loop. The code agent cannot: its loop runs as a
- * task in the background, without a browser at the end. The server therefore broadcasts two things on the topic
- * of the run (lib/server/agent/live.ts), and this is where we receive them:
+ * task in the background, without a browser at the end. The server stores a
+ * protected current snapshot for the live tail and diff. This hook polls the
+ * authorized route twice per second while the run is active.
  *
- * `stream` — the text of the current round, ~4 times per second. Rendered as
- * live tail of the thread, then replaced with the real message. Carries
- * also the REFLECTION state (MIN-122) — a flag and a timer,
- * never the text of the reasoning: this is not streamed.
- * `event` — a freshly inserted `agent_run_events` line, pushed
- * directly in the thread cache: the tool-calls and the response
- * appear instantly instead of waiting for the poll.
+ * `event` — a source-row invalidation. The authorized event route loads the
+ * content; Realtime never carries the event payload.
  *
  * The polling of `useAgentRunEventsQuery` remains in place: it's the net (message
  * lost, sleeping tab, subscription not yet attached).
@@ -34,7 +30,7 @@ export type { AgentRunLive } from "./agent-live";
 
 interface Listener {
   onStream?: (payload: StreamPayload) => void;
-  onEvent?: (row: AgentRunEvent) => void;
+  onEvent?: (signal: { id: string; type: AgentEventType }) => void;
   onDiff?: (diff: AgentLocalDiff) => void;
 }
 
@@ -45,6 +41,7 @@ interface Entry {
   closed: boolean;
   connectVersion: number;
   stopRekey: () => void;
+  stopPoll: () => void;
 }
 
 /**
@@ -63,6 +60,7 @@ function subscribeRun(runId: string, listener: Listener): () => void {
       closed: false,
       connectVersion: 0,
       stopRekey: () => {},
+      stopPoll: () => {},
     };
     entry = fresh;
     channels.set(runId, fresh);
@@ -84,18 +82,12 @@ function subscribeRun(runId: string, listener: Listener): () => void {
           const channel = supabase.channel(topic, {
             config: { private: true },
           });
-          channel.on("broadcast", { event: "stream" }, ({ payload }) => {
-            for (const l of fresh.listeners)
-              l.onStream?.((payload ?? {}) as StreamPayload);
-          });
           channel.on("broadcast", { event: "event" }, ({ payload }) => {
-            const row = (payload as { row?: AgentRunEvent } | null)?.row;
-            if (!row?.id) return;
-            for (const l of fresh.listeners) l.onEvent?.(row);
-          });
-          channel.on("broadcast", { event: "diff" }, ({ payload }) => {
-            const diff = parseAgentLocalDiff(payload);
-            for (const l of fresh.listeners) l.onDiff?.(diff);
+            const signal = payload as { id?: string; type?: string } | null;
+            if (!signal?.id || !signal.type) return;
+            for (const l of fresh.listeners) l.onEvent?.({
+              id: signal.id, type: signal.type as AgentEventType,
+            });
           });
           channel.subscribe();
           fresh.channel = channel;
@@ -107,6 +99,41 @@ function subscribeRun(runId: string, listener: Listener): () => void {
     };
     fresh.stopRekey = onRealtimeRekey(connect);
     connect();
+    let pending = false;
+    let streamAt = 0;
+    let diffAt = 0;
+    const poll = async () => {
+      if (pending || fresh.closed) return;
+      pending = true;
+      try {
+        const response = await fetch(`/api/agent-runs/${runId}/live`, {
+          cache: "no-store",
+        });
+        if (!response.ok || fresh.closed) return;
+        const value = await response.json() as {
+          stream?: StreamPayload | null;
+          diff?: Record<string, unknown> | null;
+        };
+        const nextStreamAt = typeof value.stream?.at === "number" ? value.stream.at : 0;
+        if (nextStreamAt > streamAt) {
+          streamAt = nextStreamAt;
+          for (const l of fresh.listeners) l.onStream?.(value.stream ?? {});
+        }
+        const nextDiffAt = typeof value.diff?.at === "number" ? value.diff.at : 0;
+        if (nextDiffAt > diffAt) {
+          diffAt = nextDiffAt;
+          const diff = parseAgentLocalDiff(value.diff);
+          for (const l of fresh.listeners) l.onDiff?.(diff);
+        }
+      } catch {
+        // The next poll retries after a transient network failure.
+      } finally {
+        pending = false;
+      }
+    };
+    void poll();
+    const interval = setInterval(() => void poll(), 500);
+    fresh.stopPoll = () => clearInterval(interval);
   }
   entry.listeners.add(listener);
 
@@ -117,14 +144,14 @@ function subscribeRun(runId: string, listener: Listener): () => void {
     opened.closed = true;
     opened.connectVersion += 1;
     opened.stopRekey();
+    opened.stopPoll();
     channels.delete(runId);
     if (opened.channel) void getSupabase().removeChannel(opened.channel);
   };
 }
 
-/** Patch produced on the machine during the round. It shares the same
- * Realtime subscription as the feed, but remains separate from the text stream so as not to be
- * retransmitted four times per second. When idle, the persistent event takes over. */
+/** Patch produced on the machine during the round. It shares one authorized
+ * snapshot poll with the stream. When idle, the persistent event takes over. */
 export function useAgentRunLocalDiff(
   runId: string | null,
   active: boolean,
@@ -174,21 +201,12 @@ export function useAgentRunLive(
         // ([agent-live.ts](agent-live.ts)).
         setLive((prev) => liveFromStream(prev, p));
       },
-      onEvent: (row) => {
+      onEvent: (signal) => {
         // A set event closes the writing phase of the round — except the files, which
         // have no other relay than the `files_changed` at the end of the turn (cf.
         // `liveAfterEvent`).
-        setLive((prev) => liveAfterEvent(prev, row.type));
-        // The cache is ONLY patched if it already exists: creating it here would cause
-        // the query for fresh and would skip its initial loading.
-        queryClient.setQueryData<{ events: AgentRunEvent[] }>(
-          ["agent-run-events", runId],
-          (old) => {
-            if (!old) return old;
-            if (old.events.some((e) => e.id === row.id)) return old;
-            return { events: [...old.events, row].sort((a, b) => a.seq - b.seq) };
-          },
-        );
+        setLive((prev) => liveAfterEvent(prev, signal.type));
+        void queryClient.invalidateQueries({ queryKey: ["agent-run-events", runId] });
       },
     });
   }, [runId, active, queryClient]);

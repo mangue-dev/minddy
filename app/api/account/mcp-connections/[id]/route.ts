@@ -5,6 +5,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { mcpConnectionId, mcpConnectionPatch } from "@/lib/mcp-client";
 import { getMcpConnection } from "@/lib/server/mcp-client";
 import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
+import { mcpConnectionWrite, mcpContentEnabled } from "@/lib/server/mcp-content";
 
 type Context = { params: Promise<{ id: string }> };
 export async function PATCH(request: NextRequest, context: Context) {
@@ -30,7 +31,10 @@ export async function PATCH(request: NextRequest, context: Context) {
     }
     let values;
     try {
-      values = mcpSettingsUpdate(fields, current);
+      const protectedWrite = !!current.encryption_version || await mcpContentEnabled();
+      values = await mcpConnectionWrite(auth.user.id,
+        mcpSettingsUpdate(fields, current, protectedWrite),
+        current, protectedWrite);
     } catch {
       return NextResponse.json({ error: "encryption" }, { status: 503 });
     }
@@ -42,14 +46,15 @@ export async function PATCH(request: NextRequest, context: Context) {
       .eq("user_id", auth.user.id);
     if (pendingError)
       return NextResponse.json({ error: "save" }, { status: 503 });
-    const { data, error } = await service
+    let update = service
       .from("user_mcp_connections")
       .update(values)
       .eq("user_id", auth.user.id)
-      .eq("id", id)
-      .eq("url", current.url)
-      .select("id")
-      .maybeSingle();
+      .eq("id", id);
+    update = current.content_revision === undefined
+      ? update.eq("url", current.url)
+      : update.eq("content_revision", current.content_revision);
+    const { data, error } = await update.select("id").maybeSingle();
     if (error) return NextResponse.json({ error: "save" }, { status: 500 });
     if (!data) return NextResponse.json({ error: "missing" }, { status: 404 });
     return NextResponse.json({ ok: true });

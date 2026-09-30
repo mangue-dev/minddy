@@ -19,6 +19,11 @@ const INSTANCE_ID = "7f6e5d4c-3b2a-4948-8272-6d6f64656c79";
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({ from: (name: string) => new FakeQuery(name) }),
 }));
+vi.mock("@/lib/server/encryption/registry", () => ({
+  getContentKeys: () => ({
+    current: async () => { throw new Error("Unavailable system key"); },
+  }),
+}));
 
 let fetchCalls: { url: string; init: RequestInit }[] = [];
 
@@ -54,6 +59,7 @@ function seedExistingIdentity(): void {
 beforeEach(() => {
   fetchCalls = [];
   setFakeTable("forge_relay_provisioning", []);
+  setFakeTable("forge_relay_provisioning_scope", []);
   delete process.env.MINDDY_FORGE_RELAY;
   delete process.env.MINDDY_FORGE_RELAY_URL;
   delete process.env.MINDDY_FORGE_RELAY_INSTANCE_ID;
@@ -67,6 +73,29 @@ afterEach(() => {
 });
 
 describe("ensureForgeRelayProvisioned", () => {
+  it.each(["registration response", "transport exception", "webhook response"])(
+    "does not log private data from a %s in production", async (failure) => {
+      const sentinel = "MIN591_PRIVATE_RELAY_SENTINEL";
+      const previousNodeEnv = process.env.NODE_ENV;
+      vi.stubEnv("NODE_ENV", "production");
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+        if (failure === "transport exception") throw new Error(sentinel);
+        if (failure === "registration response" || url.endsWith("/webhook-secret")) {
+          return new Response(JSON.stringify({ error: sentinel }), { status: 422 });
+        }
+        return new Response(JSON.stringify({ instanceId: INSTANCE_ID }), { status: 200 });
+      }));
+      try {
+        expect(await provisioning.ensureForgeRelayProvisioned()).toBe(failure === "webhook response");
+        expect(log.mock.calls.flat().map(String).join("\n")).not.toContain(sentinel);
+      } finally {
+        log.mockRestore();
+        vi.stubEnv("NODE_ENV", previousNodeEnv);
+      }
+    },
+  );
+
   it("registers once against the default control plane and stores the identity", async () => {
     stubRegistrationFetch();
     expect(await provisioning.ensureForgeRelayProvisioned()).toBe(true);
@@ -170,5 +199,13 @@ describe("ensureForgeRelayProvisioned", () => {
     // Recovering the secrets is enough — no Cloud-side cleanup to undo.
     expect(await provisioning.ensureForgeRelayProvisioned()).toBe(true);
     expect(fetchCalls).toHaveLength(2);
+  });
+
+  it("does not contact the control plane when the active data key is unavailable", async () => {
+    setFakeTable("forge_relay_provisioning_scope", [{ id: true }]);
+    stubRegistrationFetch();
+    expect(await provisioning.ensureForgeRelayProvisioned()).toBe(false);
+    expect(fetchCalls).toHaveLength(0);
+    expect(fakeTables["forge_relay_provisioning"] ?? []).toHaveLength(0);
   });
 });

@@ -7,7 +7,8 @@ import { useTranslations } from "next-intl";
 import { toast } from "mangue-ui";
 import { forgeAttachmentMarkdown } from "@/lib/forge-image-assets";
 import { compressImage } from "@/lib/image-compress";
-import { MAX_ATTACHMENT_BYTES } from "@/lib/use-attachment-uploads";
+import { MAX_ATTACHMENT_UPLOAD_BYTES, MAX_ATTACHMENT_UPLOAD_MB } from
+  "@/lib/attachment-upload-limits";
 
 /**
  * Attach a file to a pull request comment (MIN-162).
@@ -45,8 +46,8 @@ export function useForgeUploads(
   const addFiles = useCallback(
     (files: Iterable<File>) => {
       for (const file of files) {
-        if (file.size > MAX_ATTACHMENT_BYTES) {
-          toast.error(t("tooLarge", { name: file.name, max: 20 }));
+        if (file.size > MAX_ATTACHMENT_UPLOAD_BYTES) {
+          toast.error(t("tooLarge", { name: file.name, max: MAX_ATTACHMENT_UPLOAD_MB }));
           continue;
         }
         const name = file.name || "fichier";
@@ -73,7 +74,7 @@ export function useForgeUploads(
                 : file;
 
             const form = new FormData();
-            form.append("file", blob, name);
+            form.append("file", blob, name.slice(-200));
             const res = await fetch(`${endpoint}/attachments`, {
               method: "POST",
               body: form,

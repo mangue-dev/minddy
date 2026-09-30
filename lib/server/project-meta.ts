@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { decodeProjectName } from "@/lib/server/project-content";
 
 /**
  * Name of a project, for page titles (MIN-95).
@@ -17,10 +18,10 @@ export const projectName = cache(async (id: string): Promise<string | null> => {
     const supabase = await createServerSupabase();
     const { data } = await supabase
       .from("projects")
-      .select("name")
+      .select("id, name, encrypted_content, encryption_version")
       .eq("id", id)
       .maybeSingle();
-    return data?.name ?? null;
+    return data ? await decodeProjectName(data) : null;
   } catch {
     return null;
   }

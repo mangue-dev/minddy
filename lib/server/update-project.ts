@@ -9,6 +9,8 @@ import { isValidKey, normalizeKey } from "@/lib/project-key";
 import { normalizeLanguage, type FeedbackLanguage } from "@/lib/feedback/languages";
 import { parseSmartTriageMode } from "@/lib/smart-triage";
 import type { Project } from "@/lib/types";
+import { decodeProject, encodeProject, projectContentValues } from
+  "@/lib/server/project-content";
 
 /**
  * Shared project-settings update core, used by PATCH /api/projects/[id] and the
@@ -187,6 +189,41 @@ export async function updateProjectSettings({
   if (Object.keys(updates).length === 0) {
     return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
   }
+  const contentChange = ["name", "automations", "smart_assign_rules"]
+    .some((key) => Object.hasOwn(updates, key));
+  if (contentChange) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const read = await service.from("projects").select("*")
+        .eq("id", projectId).is("deleted_at", null).maybeSingle();
+      if (read.error) return { ok: false, status: 500, errorKey: "databaseError" };
+      if (!read.data) return { ok: false, status: 404, errorKey: "projectNotFound" };
+      if (read.data.owner_id !== actorId) {
+        return { ok: false, status: 403, errorKey: "ownerOnly" };
+      }
+      const plain = await decodeProject(read.data, actorId);
+      const encoded = await encodeProject({ ...plain,
+        name: updates.name ?? plain.name,
+        automations: updates.automations ?? plain.automations,
+        smart_assign_rules: updates.smart_assign_rules ?? plain.smart_assign_rules,
+        encryption_version: read.data.encryption_version });
+      const write = await service.from("projects")
+        .update({ ...updates, ...projectContentValues(encoded) })
+        .eq("id", projectId).eq("owner_id", actorId)
+        .eq("content_revision", read.data.content_revision)
+        .is("deleted_at", null).select("*").maybeSingle();
+      if (write.error) {
+        if (write.error.code === "23505") {
+          return { ok: false, status: 409, errorKey: "projectKeyAlreadyUsed" };
+        }
+        console.error("[update-project] failed:", write.error.message);
+        return { ok: false, status: 500, errorKey: "databaseError" };
+      }
+      if (write.data) {
+        return { ok: true, project: await decodeProject(write.data, actorId) as unknown as Project };
+      }
+    }
+    return { ok: false, status: 409, errorKey: "databaseError" };
+  }
   const { data, error } = await service
     .from("projects")
     .update(updates)
@@ -203,5 +240,5 @@ export async function updateProjectSettings({
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
   if (!data) return { ok: false, status: 404, errorKey: "projectNotFound" };
-  return { ok: true, project: data as Project };
+  return { ok: true, project: await decodeProject(data, actorId) as unknown as Project };
 }

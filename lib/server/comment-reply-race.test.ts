@@ -110,7 +110,7 @@ describe("comment reply and root deletion races", () => {
   it("removes the uploaded object once when deletion wins before attachment registration", async () => {
     mocks.getServiceClient.mockReturnValue(
       service({
-        data: { id: "reply-1", issue_id: "issue-1", parent_id: "root-1" },
+        data: { id: "reply-1", body: "Reply", issue_id: "issue-1", parent_id: "root-1" },
         error: null,
       }),
     );

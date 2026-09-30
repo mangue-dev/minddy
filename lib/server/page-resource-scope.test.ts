@@ -31,6 +31,10 @@ function fakeService(livePageIds: string[]) {
     // of the batch. No known uploaders here — this file is about pages.
     rpc: async () => ({ data: [], error: null }),
     from(table: string) {
+      if (table === "attachment_metadata_encryption_scope") {
+        return { select: () => ({ eq: () => ({ maybeSingle: async () =>
+          ({ data: null, error: null }) }) }) };
+      }
       if (table === "pages") {
         const builder: Record<string, unknown> = {
           select: () => builder,

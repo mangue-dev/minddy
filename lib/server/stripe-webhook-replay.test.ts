@@ -167,6 +167,7 @@ describe("POST /api/stripe/webhook", () => {
     expect(res.status).toBe(200);
     expect(applyStripeBillingEvent).toHaveBeenCalledTimes(2);
     expect(rows[0].processed_at).toBeTruthy();
+    expect(rows[0]).not.toHaveProperty("payload");
   });
 
   it("does not process an already completed event twice", async () => {

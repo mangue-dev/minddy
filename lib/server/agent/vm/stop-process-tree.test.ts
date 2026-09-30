@@ -24,15 +24,13 @@ describe("OpenCode process cleanup", () => {
     const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       await once(server.stdout!, "data");
-      const failure = Object.assign(new Error("process enumeration failed"), error);
+      const failure = Object.assign(new Error("private process output sentinel"), error);
       vi.mocked(execFileSync).mockImplementationOnce(() => { throw failure; });
 
       await expect(stopProcessTree(server)).resolves.toBeUndefined();
       expect(server.signalCode).toBe(ignoreTerm ? "SIGKILL" : "SIGTERM");
-      expect(warning).toHaveBeenCalledWith(
-        "[opencode] Could not enumerate descendants; stopping the server only:",
-        failure,
-      );
+      expect(warning).toHaveBeenCalledWith("[opencode] descendant_enumeration_failed");
+      expect(warning.mock.calls.flat().join(" ")).not.toContain("private process output sentinel");
       await expect(stopProcessTree(server)).resolves.toBeUndefined();
     } finally {
       warning.mockRestore();

@@ -77,6 +77,10 @@ export class SelfHostedSandbox implements AgentSandbox {
     return result.exists && result.running ? new SelfHostedSandbox(name) : null;
   }
 
+  static async delete(name: string): Promise<void> {
+    await runnerRequest(sandboxPath(name), { method: "DELETE" });
+  }
+
   async configureLlmRelay(input: {
     apiKey: string | null;
     baseUrl: string;

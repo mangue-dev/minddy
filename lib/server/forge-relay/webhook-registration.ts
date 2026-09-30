@@ -36,11 +36,8 @@ export async function ensureRelayWebhookRegistration(): Promise<void> {
     if (!(await loadProvisionedRelayConfig())) return;
     try {
       await pushProvisionedWebhookRegistration();
-    } catch (err) {
-      console.error(
-        "[forge-relay] webhook registration failed:",
-        (err as Error).message,
-      );
+    } catch {
+      console.error("[forge-relay] webhook_registration_failed");
     }
     return;
   }
@@ -51,9 +48,9 @@ export async function ensureRelayWebhookRegistration(): Promise<void> {
       secret: process.env.MINDDY_FORGE_RELAY_WEBHOOK_SECRET?.trim(),
     });
     if (!response.ok) {
-      console.error("[forge-relay] webhook registration refused:", response.error);
+      console.error("[forge-relay] webhook_registration_refused", { status: response.status });
     }
-  } catch (err) {
-    console.error("[forge-relay] webhook registration failed:", (err as Error).message);
+  } catch {
+    console.error("[forge-relay] webhook_registration_failed");
   }
 }

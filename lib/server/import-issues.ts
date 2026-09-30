@@ -1,6 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import { encodeIssue } from "@/lib/server/issue-store";
 import { getServiceClient } from "@/lib/supabase-service";
 import { categoryKey, resolveCategoryIdsByName } from "@/lib/server/categories";
 import { insertAttachmentsFor } from "@/lib/server/attachments";
@@ -157,7 +158,12 @@ export async function importIssuesIntoProject({
   const order = rows
     .map((_, i) => i)
     .sort((a, b) => Number(rows[a].parent_id != null) - Number(rows[b].parent_id != null));
-  const ordered = order.map((i) => rows[i]);
+  let ordered: Record<string, unknown>[];
+  try {
+    ordered = await Promise.all(order.map((i) => encodeIssue(rows[i])));
+  } catch {
+    return dbError("issue encryption", "unavailable");
+  }
 
   for (let i = 0; i < ordered.length; i += INSERT_CHUNK) {
     const { error } = await service.from("issues").insert(ordered.slice(i, i + INSERT_CHUNK));

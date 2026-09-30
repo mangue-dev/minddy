@@ -27,6 +27,7 @@ const { removeStorageObjects } = await import("./attachments");
  passes integer, and it is the null which remains the subject of the file. */
 const noReference = () => ({
   select: () => ({ in: async () => ({ data: [], error: null }) }),
+  delete: () => ({ in: async () => ({ error: null }) }),
 });
 
 function storageSpy() {
@@ -39,7 +40,7 @@ function storageSpy() {
 }
 
 describe("removeStorageObjects", () => {
-  it("efface les chemins qu'on lui donne", async () => {
+  it("removes the supplied unreferenced paths", async () => {
     const { service, remove } = storageSpy();
     await removeStorageObjects(service, ["projects/p/a/f.png", "projects/p/b/g.pdf"]);
     expect(remove).toHaveBeenCalledWith([
@@ -48,19 +49,19 @@ describe("removeStorageObjects", () => {
     ]);
   });
 
-  it("écarte le chemin nul d'un lien sans emporter les fichiers avec lui", async () => {
+  it("ignores null link paths without discarding file paths", async () => {
     const { service, remove } = storageSpy();
     await removeStorageObjects(service, [null, "projects/p/a/f.png", undefined]);
     expect(remove).toHaveBeenCalledWith(["projects/p/a/f.png"]);
   });
 
-  it("n'appelle pas le storage quand il ne reste aucun objet", async () => {
+  it("does not call Storage when no objects remain", async () => {
     const { service, remove } = storageSpy();
     await removeStorageObjects(service, [null, "", undefined]);
     expect(remove).not.toHaveBeenCalled();
   });
 
-  it("ne lève jamais : un ménage raté ne fait pas échouer l'écriture", async () => {
+  it("keeps cleanup failures from failing the business write", async () => {
     const service = {
       from: noReference,
       storage: {

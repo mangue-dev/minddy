@@ -17,7 +17,7 @@
 import { openDemoWorld, createPlan, callRpc } from "../../lib/guards.mjs";
 import { resolvePeople, requireProject } from "./_people.mjs";
 import { categoryLabel } from "./_categories.mjs";
-import { describeMetadata, syncIssueMetadata } from "./_issues.mjs";
+import { assertIssueSeedWritable, describeMetadata, syncIssueMetadata } from "./_issues.mjs";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
@@ -108,6 +108,7 @@ async function main() {
   const world = await openDemoWorld();
   const people = resolvePeople(world);
   const project = requireProject(world, "AUR");
+  await assertIssueSeedWritable(world, project.id);
 
   const { data: existing, error } = await world.admin
     .from("issues")

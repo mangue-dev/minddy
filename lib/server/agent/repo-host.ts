@@ -191,7 +191,7 @@ export async function cloneRepo(
   await host.mkdir(root).catch(() => {});
   const wipe = await host.exec(`rm -rf ${sq(repoDir)}`, { cwd: root });
   if (wipe.exitCode !== 0)
-    throw new Error(`cleanup failed: ${wipe.stderr || wipe.stdout}`);
+    throw new Error("repository_cleanup_failed");
 
   const since = historySince();
   const clone = await host.exec(
@@ -200,7 +200,7 @@ export async function cloneRepo(
     { cwd: root, timeoutMs: 180_000 },
   );
   if (clone.exitCode !== 0)
-    throw new Error(`git clone failed: ${clone.stderr || clone.stdout}`);
+    throw new Error("repository_clone_failed");
 
   const setup = [
     `set -e`,
@@ -213,7 +213,7 @@ export async function cloneRepo(
   ].join("\n");
   const branch = await host.exec(setup, { timeoutMs: 120_000 });
   if (branch.exitCode !== 0)
-    throw new Error(`branch setup failed: ${branch.stderr || branch.stdout}`);
+    throw new Error("repository_branch_setup_failed");
 }
 
 /**
@@ -271,14 +271,14 @@ export async function clonePullRequest(
   await host.mkdir(root).catch(() => {});
   const wipe = await host.exec(`rm -rf ${sq(repoDir)}`, { cwd: root });
   if (wipe.exitCode !== 0)
-    throw new Error(`cleanup failed: ${wipe.stderr || wipe.stdout}`);
+    throw new Error("repository_cleanup_failed");
 
   const clone = await host.exec(
     `git clone --depth 1 --branch ${sq(opts.baseBranch)} ${sq(opts.authUrl)} ${sq(repoDir)}`,
     { cwd: root, timeoutMs: 180_000 },
   );
   if (clone.exitCode !== 0)
-    throw new Error(`git clone failed: ${clone.stderr || clone.stdout}`);
+    throw new Error("repository_clone_failed");
 
   const fallback = opts.headBranch?.trim()
     ? [
@@ -302,9 +302,7 @@ export async function clonePullRequest(
   ].join("\n");
   const head = await host.exec(setup, { timeoutMs: 120_000 });
   if (head.exitCode !== 0) {
-    throw new Error(
-      `pull request checkout failed: ${head.stderr || head.stdout}`,
-    );
+    throw new Error("pull_request_checkout_failed");
   }
 
   await anchorPullRequestBase(host, {
@@ -343,7 +341,7 @@ export async function anchorPullRequestBase(
     // Not a session failure: the prompt can describe the fallback. But say so,
     // otherwise a degraded review is indistinguishable from an exact one.
     console.error(
-      `[agent] pr base anchor unavailable (${baseSha}): ${anchor.stderr || anchor.stdout}`,
+      "[agent] pr_base_anchor_unavailable", { exitCode: anchor.exitCode },
     );
   }
 }
@@ -420,14 +418,14 @@ export async function commitAndPush(
   if (dirty) {
     const staged = await host.exec(`git add -A`);
     if (staged.exitCode !== 0)
-      throw new Error(`git add failed: ${staged.stderr || staged.stdout}`);
+      throw new Error("repository_stage_failed");
     const commit = await host.exec(
       `git ${gitIdentityFlags(opts.committer)} commit -m ${sq(
         commitMessageWithSignoff(opts.message, opts.committer),
       )}`,
     );
     if (commit.exitCode !== 0)
-      throw new Error(`git commit failed: ${commit.stderr || commit.stdout}`);
+      throw new Error("repository_commit_failed");
   }
 
   const head = await host.exec(`git rev-parse HEAD`);
@@ -457,7 +455,7 @@ export async function commitAndPush(
     { timeoutMs: 120_000 },
   );
   if (push.exitCode !== 0)
-    throw new Error(`git push failed: ${push.stderr || push.stdout}`);
+    throw new Error("repository_push_failed");
 
   return {
     committed: dirty,

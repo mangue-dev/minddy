@@ -8,6 +8,7 @@ import {
   removeProjectSideBuckets,
 } from "@/lib/server/project-storage";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
+import { eraseAgentSandboxesForProject } from "@/lib/server/agent/sandbox-erasure";
 import {
   ORPHAN_ATTACHMENT_DAYS,
   removeStorageObjects,
@@ -47,7 +48,7 @@ export const RETENTION_DAYS = {
  * Invitations still pending. After this period, the address of a person
  * who has never joined the project is kept without purpose.
  */
-  pendingInvitations: 90,
+  pendingInvitations: 30,
   /**
  * Agent execution traces (events + control messages) after
  * the terminal state of the run. The recovery `checkpoint` is already set to
@@ -160,7 +161,7 @@ async function step(
 
 type Service = ReturnType<typeof getServiceClient>;
 
-/** Counts lines actually deleted (`count: "exact"` on a delete). */
+/** Counts rows affected by a mutation with `count: "exact"`. */
 function counted(result: { count: number | null; error: unknown }): number {
   if (result.error) throw result.error as Error;
   return result.count ?? 0;
@@ -177,14 +178,14 @@ async function purgeReadNotifications(service: Service, now: Date) {
   );
 }
 
-/** Invitations never accepted, issued more than `pendingInvitations` ago. */
+/** Remove invitations as soon as their 30-day validity has expired. */
 async function purgePendingInvitations(service: Service, now: Date) {
   return counted(
     await service
       .from("project_invitations")
       .delete({ count: "exact" })
       .eq("status", "pending")
-      .lt("created_at", cutoff(RETENTION_DAYS.pendingInvitations, now))
+      .lt("expires_at", now.toISOString())
   );
 }
 
@@ -235,7 +236,7 @@ async function purgeExpiredOauthCodes(service: Service, now: Date) {
   );
 }
 
-/** Expired sessions and one-time codes from public feedback boards. */
+/** Expired sessions, one-time codes, and short-lived erasure digests. */
 async function purgeExpiredFeedbackAuth(service: Service, now: Date) {
   const iso = now.toISOString();
   const sessions = counted(
@@ -244,7 +245,16 @@ async function purgeExpiredFeedbackAuth(service: Service, now: Date) {
   const codes = counted(
     await service.from("feedback_otp_codes").delete({ count: "exact" }).lt("expires_at", iso)
   );
-  return sessions + codes;
+  const { data: expired, error } = await service.from("feedback_users")
+    .select("id").lt("otp_erasure_until", iso).limit(500);
+  if (error) throw error;
+  const ids = (expired ?? []).map((row) => row.id as string);
+  const digests = ids.length === 0 ? 0 : counted(
+    await service.from("feedback_users")
+      .update({ otp_erasure_lookup: null, otp_erasure_until: null },
+        { count: "exact" }).in("id", ids)
+  );
+  return sessions + codes + digests;
 }
 
 /**
@@ -374,6 +384,10 @@ async function purgeTrash(service: Service, now: Date) {
 
     const ids = (data ?? []).map((r) => r.id as string);
     if (ids.length === 0) continue;
+
+    if (type === "project") {
+      for (const id of ids) await eraseAgentSandboxesForProject(id);
+    }
 
     const paths = await attachmentPaths(service, type, ids);
     // A project also carries its icon and comment attachments

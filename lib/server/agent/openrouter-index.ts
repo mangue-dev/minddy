@@ -210,8 +210,8 @@ export async function loadOpenRouterIndex(apiKey?: string): Promise<void> {
   if (index.size > 0 && Date.now() - loadedAt < TTL_MS) return;
   if (!inFlight) {
     inFlight = fetchIndex(apiKey)
-      .catch((err) => {
-        console.error("[openrouter-index] load failed:", (err as Error).message);
+      .catch(() => {
+        console.error("[openrouter-index] load_failed");
       })
       .finally(() => {
         inFlight = null;

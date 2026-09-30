@@ -1,3 +1,4 @@
+import { categoryStore } from "@/lib/server/category-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -24,12 +25,13 @@ export async function loadImportContext(
 ): Promise<ImportContext> {
   const service = getServiceClient();
 
-  const [{ data: project }, { data: memberRows }, { data: categoryRows }] =
+  const [{ data: project }, { data: memberRows }, { data: categoryRows, error: categoryError }] =
     await Promise.all([
       service.from("projects").select("owner_id").eq("id", projectId).maybeSingle(),
       service.from("project_members").select("user_id").eq("project_id", projectId),
-      service.from("categories").select("name").eq("project_id", projectId),
+      categoryStore(service).select("name").eq("project_id", projectId),
     ]);
+  if (categoryError) throw new Error("Unable to read import categories");
 
   const ids = [
     ...(project?.owner_id ? [project.owner_id as string] : []),

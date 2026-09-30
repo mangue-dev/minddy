@@ -1,3 +1,4 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -18,9 +19,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await auth.supabase
-    .from("issues")
-    .select(ISSUE_SELECT)
+  const { data, error } = await issueStore(auth.supabase).select(ISSUE_SELECT)
     .order("position", { ascending: true })
     .order("number", { ascending: true });
 

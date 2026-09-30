@@ -1,10 +1,13 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
+import { decodeIntegration } from "./integration-content";
 
 import { after } from "next/server";
 import { createHmac, randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EventRow } from "@/lib/server/issue-events";
 import { safeFetch } from "@/lib/server/safe-fetch";
+import { decodeProjectName } from "@/lib/server/project-content";
 
 /**
  * Outbound webhooks from integrations (API Feedback). Plugged into insertEvents
@@ -171,9 +174,7 @@ export function dispatchWebhooksForEvents(
             .filter((id): id is string => typeof id === "string")
         ),
       ];
-      const { data: issues } = await service
-        .from("issues")
-        .select("id, project_id, number, title, status, priority, effort, integration_id")
+      const { data: issues } = await issueStore(service).select("id, project_id, number, title, status, priority, effort, integration_id")
         .is("deleted_at", null)
         .in("id", issueIds);
       if (!issues?.length) return;
@@ -192,18 +193,21 @@ export function dispatchWebhooksForEvents(
         .not("webhook_url", "is", null)
         .is("revoked_at", null);
       if (!hooks?.length) return;
+      const decodedHooks=await Promise.all(hooks.map((hook)=>
+        decodeIntegration(hook)));
 
       const { data: projects } = await service
         .from("projects")
-        .select("id, name, key")
+        .select("id, name, key, encrypted_content, encryption_version")
         .in("id", projectIds);
-      const projectById = new Map((projects ?? []).map((p) => [p.id as string, p]));
+      const projectById = new Map(await Promise.all((projects ?? []).map(async (p) =>
+        [p.id as string, { ...p, name: await decodeProjectName(p) }] as const)));
 
       // Grouping by (webhook, issue, event): a single delivery
       // issue.updated carrying all the modifications of the same save.
       const now = new Date().toISOString();
       const deliveries: Promise<void>[] = [];
-      for (const hook of hooks) {
+      for (const hook of decodedHooks) {
         const events = (hook.webhook_events ?? []) as string[];
         for (const issueId of issueIds) {
           const issue = issueById.get(issueId);

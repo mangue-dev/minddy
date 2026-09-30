@@ -1,6 +1,8 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeView, encodeView, viewContentValues } from "./view-content";
 import { getProjectAccess } from "@/lib/server/project-access";
 import {
   ISSUE_STATUSES,
@@ -276,20 +278,14 @@ export async function createView({
   }
 
   const service = getServiceClient();
+  const row = await encodeView({
+    id: randomUUID(), project_id: projectId,
+    user_id: projectId === null || input.personal === true ? actorId : null,
+    kind: "custom", name, filters, sort, display,
+  }, { service });
   const { data, error } = await service
     .from("views")
-    .insert({
-      project_id: projectId,
-      // Project views are shared (NULL) unless explicitly personal; global
-      // views are always the caller's own.
-      user_id: projectId === null || input.personal === true ? actorId : null,
-      kind: "custom", // the system view is only ever seeded, never created
-      name,
-      filters,
-      sort,
-      display,
-      // position keeps its column default (0), like the route always did.
-    })
+    .insert(row)
     .select("*")
     .single();
 
@@ -297,7 +293,7 @@ export async function createView({
     console.error("[views] create failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  return { ok: true, view: data, invalid };
+  return { ok: true, view: await decodeView(data, actorId), invalid };
 }
 
 export async function updateView({
@@ -339,61 +335,45 @@ export async function updateView({
 
   const service = getServiceClient();
 
-  const { data: view } = await service
-    .from("views")
-    .select("id, project_id, user_id, kind")
-    .eq("id", viewId)
-    .maybeSingle();
-  if (!view) {
-    return { ok: false, status: 404, errorKey: "viewNotFound" };
-  }
-  // A personal view is only its owner's (RLS parity: invisible to others).
-  if (view.user_id && view.user_id !== actorId) {
-    return { ok: false, status: 404, errorKey: "viewNotFound" };
-  }
-  // Global views (project_id null) are personal: the ownership check above
-  // is the whole access rule.
-  if (view.project_id !== null) {
-    const access = await getProjectAccess(actorId, view.project_id as string);
-    if (!access) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: view } = await service.from("views").select("*")
+      .eq("id", viewId).maybeSingle();
+    if (!view || view.user_id && view.user_id !== actorId) {
       return { ok: false, status: 404, errorKey: "viewNotFound" };
     }
-  }
-
-  if (view.kind === "my") {
-    // System view: the name never changes…
-    if ("name" in updates) {
-      return { ok: false, status: 400, errorKey: "systemViewLocked" };
+    if (view.project_id !== null &&
+        !await getProjectAccess(actorId, view.project_id as string)) {
+      return { ok: false, status: 404, errorKey: "viewNotFound" };
     }
-    // …and the assignee filter is pinned to the dynamic "@me". Forgiving:
-    // the rest of the filters payload is kept, the caller is just told.
-    if ("filters" in updates) {
-      const filters = updates.filters as ViewFilters;
-      const wanted = JSON.stringify(filters.assignee ?? null);
-      if (wanted !== JSON.stringify([ME_ASSIGNEE])) {
-        invalid.push(
-          `filters.assignee: locked to ["${ME_ASSIGNEE}"] on the system view, overridden`
-        );
+    if (view.kind === "my") {
+      if ("name" in updates) {
+        return { ok: false, status: 400, errorKey: "systemViewLocked" };
       }
-      filters.assignee = [ME_ASSIGNEE];
+      if ("filters" in updates) {
+        const filters = updates.filters as ViewFilters;
+        if (JSON.stringify(filters.assignee ?? null) !==
+            JSON.stringify([ME_ASSIGNEE])) {
+          invalid.push(`filters.assignee: locked to ["${ME_ASSIGNEE}"] on the system view, overridden`);
+        }
+        filters.assignee = [ME_ASSIGNEE];
+      }
     }
+    const plain = await decodeView(view, actorId);
+    const encoded = await encodeView({ ...plain, ...updates,
+      encryption_version: view.encryption_version }, { service });
+    const { data, error } = await service.from("views")
+      .update({ ...viewContentValues(encoded),
+        ...(updates.sort ? { sort: updates.sort } : {}) })
+      .eq("id", viewId)
+      .eq("content_revision", view.content_revision ?? 0)
+      .select("*").maybeSingle();
+    if (error) {
+      console.error("[views] update failed:", error.message);
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+    if (data) return { ok: true, view: await decodeView(data, actorId), invalid };
   }
-
-  const { data, error } = await service
-    .from("views")
-    .update(updates)
-    .eq("id", viewId)
-    .select("*")
-    .maybeSingle();
-
-  if (error) {
-    console.error("[views] update failed:", error.message);
-    return { ok: false, status: 500, errorKey: "databaseError" };
-  }
-  if (!data) {
-    return { ok: false, status: 404, errorKey: "viewNotFound" };
-  }
-  return { ok: true, view: data, invalid };
+  return { ok: false, status: 409, errorKey: "databaseError" };
 }
 
 /**
@@ -444,7 +424,7 @@ export async function ensureBaselineViews({
     console.error("[views] system view lookup failed:", systemReadError.message);
     clean = false;
   } else if (!systemRow) {
-    const { error } = await service.from("views").insert({
+    const row = await encodeView({ id: randomUUID(),
       project_id: projectId,
       user_id: userId,
       kind: "my",
@@ -453,7 +433,8 @@ export async function ensureBaselineViews({
       sort: "smart",
       display: {},
       position: -1, // API consumers list it first; the UI orders pills itself
-    });
+    }, { service });
+    const { error } = await service.from("views").insert(row);
     // 23505 = a concurrent GET won the seed race (partial unique index) — fine.
     if (error && error.code !== "23505") {
       console.error("[views] system view seed failed:", error.message);
@@ -474,7 +455,7 @@ export async function ensureBaselineViews({
     return; // not memorized: we will check again at the next GET
   }
   if (!count) {
-    const { error } = await service.from("views").insert({
+    const row = await encodeView({ id: randomUUID(),
       project_id: projectId,
       user_id: projectId === null ? userId : null, // project default = shared
       kind: "custom",
@@ -482,7 +463,8 @@ export async function ensureBaselineViews({
       filters: {},
       sort: "smart",
       display: {},
-    });
+    }, { service });
+    const { error } = await service.from("views").insert(row);
     if (error) {
       console.error("[views] default view seed failed:", error.message);
       clean = false;

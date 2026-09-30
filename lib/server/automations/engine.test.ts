@@ -164,6 +164,8 @@ beforeEach(() => {
     id: "p1",
     key: "MIN",
     owner_id: "owner",
+    name: "Project",
+    smart_assign_rules: {},
     automations_enabled: true,
     automations: [],
   };

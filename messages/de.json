@@ -230,9 +230,9 @@
     "passwordTooShort": "Verwenden Sie mindestens 8 Zeichen.",
     "invalidShareLevel": "Ungültige Freigabeebene.",
     "resourceNotFound": "Ressource nicht gefunden.",
-    "resourceInvalid": "Ressource abgelehnt: 10 maximal, 20 MB pro Datei.",
+    "resourceInvalid": "Ressource abgelehnt: 10 maximal, 4,5 MB pro Datei.",
     "linkInvalidUrl": "Ungültiger oder nicht erreichbarer Link.",
-    "attachmentInvalid": "Anhang abgelehnt: maximal 10 Dateien, 20 MB pro Datei.",
+    "attachmentInvalid": "Anhang abgelehnt: maximal 10 Dateien, 4,5 MB pro Datei.",
     "invalidCycle": "Unbekannter oder ungültiger Zyklus.",
     "triageCannotJoinCycle": "Ein Problem in der Triage kann keinem Zyklus beitreten. Verschieben Sie es zuerst aus der Triage.",
     "closedIssueCannotJoinCycle": "Geschlossene Probleme können nicht in einen anderen Zyklus verschoben werden.",
@@ -1992,7 +1992,12 @@
     "closeDescription": "Sie finden ihn in Ihren letzten Entwürfen.",
     "closeConfirm": "Speichern",
     "closeDiscard": "Verwerfen",
-    "keepEditing": "Zurück"
+    "keepEditing": "Zurück",
+    "saveFailed": "Der Entwurf konnte nicht gespeichert werden. Lassen Sie diesen Dialog offen und versuchen Sie es erneut.",
+    "restoreFailed": "Entwürfe konnten nicht wiederhergestellt werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "deleteFailed": "Der Entwurf konnte nicht gelöscht werden. Versuchen Sie es erneut.",
+    "recoverLegacy": "Ältere Entwürfe auf diesem Gerät wiederherstellen",
+    "legacyWarning": "Stellen Sie nur Entwürfe wieder her, die Sie auf diesem Gerät erstellt haben."
   },
   "Pages": {
     "placeholder": "Schreiben oder „/“ für Blöcke eingeben…",
@@ -6030,7 +6035,9 @@
     "entry_notebook-agent_title": "Starte einen Agenten über das Aufgabennotizbuch",
     "entry_notebook-agent_body": "Lass den Programmierassistenten eine Aufgabe aus deinem persönlichen Notizbuch bearbeiten. Starte ihn direkt von der Aufgabe aus, ohne vorher ein Projektticket anzulegen.",
     "entry_notifications_title": "Behalte deine Benachrichtigungen im Überblick",
-    "entry_notifications_body": "Benachrichtigungen werden jetzt nach Ticket gruppiert, damit du Gespräche verfolgen kannst, ohne jedes Ereignis einzeln zu lesen. Wähle in den Benachrichtigungseinstellungen, welche Aktivitäten im Posteingang erscheinen."
+    "entry_notifications_body": "Benachrichtigungen werden jetzt nach Ticket gruppiert, damit du Gespräche verfolgen kannst, ohne jedes Ereignis einzeln zu lesen. Wähle in den Benachrichtigungseinstellungen, welche Aktivitäten im Posteingang erscheinen.",
+    "entry_encrypted-workspace-content_title": "Workspace content is encrypted at rest",
+    "entry_encrypted-workspace-content_body": "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage. Search and collaboration keep working with content decrypted only for authorized users."
   },
   "Automations": {
     "title": "Automatisierungen",

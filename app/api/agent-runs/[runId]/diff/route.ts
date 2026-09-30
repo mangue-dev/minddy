@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import { getRun } from "@/lib/server/agent/runs";
+import { decodeAgentBaseBranch } from "@/lib/server/agent/run-base-branch-content";
+import { decodeAgentWorkBranch } from "@/lib/server/agent/run-work-branch-content";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { forgeFor, isForgeApiError } from "@/lib/server/agent/forge";
 import { getAgentSandboxByName, sandboxHost } from "@/lib/server/agent/sandbox";
@@ -45,12 +47,14 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  const run = await getRun(runId);
+  const run = await getRun(runId, { decode: false });
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
   if (!(await canReadAgentRun(auth.user.id, run))) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
+  const baseBranch = (await decodeAgentBaseBranch(run, auth.user.id)).base_branch;
+  const workBranch = (await decodeAgentWorkBranch(run, auth.user.id)).branch_name;
 
   const patches = request.nextUrl.searchParams.get("stat") !== "1";
 
@@ -59,14 +63,14 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   // the pull request she reads.
   const working = run.status === "queued" || run.status === "running";
   if (working && run.sandbox_id && run.pull_request_id == null) {
-    const live = await readLiveDiff(run.sandbox_id, run.base_branch, patches);
+    const live = await readLiveDiff(run.sandbox_id, baseBranch, patches);
     if (live && live.files.length > 0) {
       return NextResponse.json({ ...live, url: run.pr_url ?? null, live: true });
     }
   }
 
   // Neither PR nor stamped branch (run barely launched): empty diff, not an error.
-  const head = run.branch_name;
+  const head = workBranch;
   if (run.pr_number == null && !head) {
     return NextResponse.json({ files: [], url: null });
   }
@@ -96,7 +100,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     const { files, url } = await forge.compareBranches({
       token: target.token,
       repoFullName: target.repoFullName,
-      base: run.base_branch ?? target.defaultBranch,
+      base: baseBranch ?? target.defaultBranch,
       head,
     });
     return NextResponse.json({ files, provider: target.provider, url });

@@ -1,3 +1,4 @@
+import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -115,8 +116,7 @@ async function currentlyPushableRows(
       ? service.from("projects").select("id, owner_id").in("id", projectIds)
       : Promise.resolve({ data: [] as ScopeRow[], error: null }),
     commentIds.length
-      ? service
-          .from("comments")
+      ? commentStore(service, "comments")
           .select("id, issue_id, objective_id, feedback_post_id")
           .in("id", commentIds)
       : Promise.resolve({ data: [] as ScopeRow[], error: null }),
@@ -235,8 +235,7 @@ async function currentlyPushableRows(
   ].flatMap((error) => (error ? [error.message] : []));
   if (failures.length > 0) {
     console.error(
-      "[notifications] push scope recheck failed:",
-      failures.join("; "),
+      "[notifications] push_scope_recheck_failed",
     );
   }
 
@@ -437,8 +436,8 @@ export async function insertNotifications(
             typeof metadata?.locale === "string" ? metadata.locale : null,
           ),
         );
-      } catch (e) {
-        console.error("[notifications] prefs read failed:", (e as Error).message);
+      } catch {
+        console.error("[notifications] preferences_read_failed");
       }
     })
   );
@@ -511,7 +510,7 @@ export async function insertNotifications(
     error = result.error;
   }
   if (error) {
-    console.error("[notifications] insert failed:", error.message);
+    console.error("[notifications] insert_failed");
     return;
   }
 

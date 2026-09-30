@@ -3,7 +3,15 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
+import { decodeProjectName } from "@/lib/server/project-content";
 import type { InvitationPreview } from "@/lib/types";
+import {
+  decryptInvitationEmail,
+  legacyInvitationEmailColumns,
+  missingInvitationEncryptionSchema,
+  type InvitationEmailColumns,
+} from "@/lib/server/encryption/invitation-email";
+import { digestInvitationToken } from "@/lib/server/encryption/invitation-token-digest";
 
 /**
  * What the `?invite=<token>` of an invitation email link allows to say
@@ -29,12 +37,35 @@ export async function resolveInvitationToken(
   if (!normalized || normalized.length > 128) return null;
 
   const service = getServiceClient();
-  const { data, error } = await service
-    .from("project_invitations")
-    .select("invited_email, invited_by, expires_at, projects(name)")
-    .eq("token", normalized)
-    .eq("status", "pending")
-    .maybeSingle();
+  const lookup = (storedToken: string, encrypted: boolean) => {
+    const query = service
+      .from("project_invitations")
+      .select("id, project_id, invited_email, invited_email_ciphertext, invited_email_blind_index, encryption_version, invited_by, expires_at, projects(id, name, encrypted_content, encryption_version)")
+      .eq("token", storedToken)
+      .eq("status", "pending");
+    return encrypted
+      ? query.gt("encryption_version", 0).maybeSingle()
+      : query.eq("encryption_version", 0).maybeSingle();
+  };
+  const encryptedResult = await lookup(digestInvitationToken(normalized), true);
+  const legacyLookup = async () => {
+    const legacy = await service
+      .from("project_invitations")
+      .select("id, project_id, invited_email, invited_by, expires_at, projects(id, name, encrypted_content, encryption_version)")
+      .eq("token", normalized)
+      .eq("status", "pending")
+      .maybeSingle();
+    return { ...legacy, data: legacy.data && legacyInvitationEmailColumns(legacy.data) };
+  };
+  const versionedLegacy = !encryptedResult.data && !encryptedResult.error
+    ? await lookup(normalized, false)
+    : null;
+  const { data, error } = missingInvitationEncryptionSchema(encryptedResult.error) ||
+    missingInvitationEncryptionSchema(versionedLegacy?.error ?? null)
+    ? await legacyLookup()
+    : encryptedResult.data || encryptedResult.error
+      ? encryptedResult
+      : versionedLegacy!;
 
   if (error) {
     console.error("[invitation-token] lookup failed:", error.message);
@@ -50,16 +81,30 @@ export async function resolveInvitationToken(
   // PostgREST makes the embed to-one as an object, but the generic typing of the
   // client sometimes gives it in a table — we accept both.
   const projectEmbed = data.projects as
-    | { name?: string }
-    | Array<{ name?: string }>
+    | { id?: string; name?: string | null; encrypted_content?: string | null;
+        encryption_version?: number }
+    | Array<{ id?: string; name?: string | null;
+        encrypted_content?: string | null; encryption_version?: number }>
     | null;
   const project = Array.isArray(projectEmbed) ? projectEmbed[0] : projectEmbed;
   // Without the project name, the banner would not say anything: we do not display one.
-  if (!project?.name) return null;
+  if (!project) return null;
+  const projectName = await decodeProjectName(project);
+
+  let invitedEmail: string;
+  try {
+    invitedEmail = await decryptInvitationEmail(data as InvitationEmailColumns & {
+      id: string;
+      project_id: string;
+    }, { actorId: null, reason: "invitation_preview" });
+  } catch (error) {
+    console.error("[invitation-token] email decrypt failed:", error);
+    return null;
+  }
 
   return {
-    projectName: project.name,
+    projectName,
     inviterName: displayName(toNamed(inviters.get(inviterId)), ""),
-    invitedEmail: data.invited_email as string,
+    invitedEmail,
   };
 }

@@ -41,7 +41,9 @@ vi.mock("@/lib/supabase-service", () => ({
       return {
         select: () => ({
           eq: () => ({
-            eq: () => ({ maybeSingle: async () => ({ data: keyRow }) }),
+            eq: () => ({ maybeSingle: async () => ({ data: keyRow
+              ? { id: "key-1", user_id: USER, feature_models: {}, ...keyRow }
+              : null }) }),
           }),
         }),
         update: (patch: unknown) => ({
@@ -74,9 +76,12 @@ beforeEach(() => {
   process.env.MINDDY_MANAGED_AI = "1";
   process.env.OPENROUTER_API_KEY = "platform-key";
   keyRow = {
+    id: "key-1",
+    user_id: USER,
     provider: "openrouter",
     key_encrypted: "chiffré",
     base_url: null,
+    feature_models: {},
     validated_at: null,
   };
   updated.length = 0;

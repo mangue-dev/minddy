@@ -8,16 +8,8 @@ import {
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 
 /**
- * POST /api/pull-requests/[prId]/attachments — hosts a file intended for a
- * PR comment and makes its URL public (MIN-162).
- *
- * In multipart and not in base64 JSON: the file only traverses, and
- * encoding it into text would cost it a third of its weight for nothing.
- *
- * The upload goes through the server (and not direct-to-storage like the parts
- * ticket attachments) because the destination is a PUBLIC bucket: this is the
- * access check to the PR, here, which prevents it from being a host of
- * open files. The details are in `prAttachmentResponse`.
+ * Host a PR comment attachment as encrypted bytes in private storage and return
+ * a capability URL. Authorization precedes reading the multipart body.
  */
 
 type RouteContext = { params: Promise<{ prId: string }> };
@@ -33,9 +25,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   // which will end in 401. The order is the same on the facade by run.
   const auth = await authorizePrRequest(request, prId);
   if (!auth.ok) return auth.response;
-  // Same guard as ticket attachments: destination is a bucket
-  // PUBLIC of 20 MB per file, and nothing else limits the loop which
-  // upload a thousand.
+  // Limit repeated uploads independently of the shared per-file size limit.
   const rl = checkSessionRateLimit(auth.userId, "pr-attachment-create");
   if (!rl.allowed) {
     return NextResponse.json(

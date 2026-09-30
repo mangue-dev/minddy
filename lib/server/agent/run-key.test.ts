@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { requestedRunReservationUsd, runKeyCapUsd } from "./run-key";
+import { mintRunKey, requestedRunReservationUsd, revokeRunKey,
+  runKeyCapUsd } from "./run-key";
 
 /**
  * The ceiling of the run key holds TWO budgets which do not have the same status.
@@ -86,5 +87,43 @@ describe("requestedRunReservationUsd", () => {
   it("keeps run headroom without requesting more than the account cap", () => {
     expect(requestedRunReservationUsd({ runBudgetUsd: 2, accountCapUsd: 10 })).toBe(3);
     expect(requestedRunReservationUsd({ runBudgetUsd: 20, accountCapUsd: 5 })).toBe(5);
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+  delete process.env.OPENROUTER_PROVISIONING_KEY;
+});
+
+describe("run key provider log safety", () => {
+  it("does not log rejected provider bodies or a revoked key hash", async () => {
+    process.env.OPENROUTER_PROVISIONING_KEY = "provisioning-secret";
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: false, status: 403,
+      text: async () => "MIN591_PRIVATE_PROVIDER_BODY",
+    })));
+    expect(await mintRunKey({ runId: "run-1", capUsd: 1 })).toBeNull();
+    await revokeRunKey("MIN591_PRIVATE_HASH");
+    expect(JSON.stringify(logged.mock.calls)).not.toMatch(/MIN591_PRIVATE/);
+    expect(logged).toHaveBeenCalledWith("[agent-run-key] mint_http_failed", 403, "run-1");
+  });
+
+  it("uses a controlled code for invalid JSON and exceptions echoing submitted content", async () => {
+    process.env.OPENROUTER_PROVISIONING_KEY = "provisioning-secret";
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true, status: 200,
+      json: async () => { throw new Error("MIN591_PRIVATE_JSON_FRAGMENT"); },
+    })));
+    expect(await mintRunKey({ runId: "run-2", capUsd: 1 })).toBeNull();
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw new Error("MIN591_PRIVATE_SUBMITTED_CONTENT");
+    }));
+    expect(await mintRunKey({ runId: "run-2", capUsd: 1 })).toBeNull();
+    expect(JSON.stringify(logged.mock.calls)).not.toContain("MIN591_PRIVATE");
+    expect(logged).toHaveBeenCalledWith("[agent-run-key] mint_response_invalid", "run-2");
+    expect(logged).toHaveBeenCalledWith("[agent-run-key] mint_request_failed", "run-2");
   });
 });

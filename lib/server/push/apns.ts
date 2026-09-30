@@ -60,8 +60,8 @@ export function apnsProviderToken(now = Date.now()): string | null {
     const value = `${unsigned}.${base64url(signature)}`;
     cachedToken = { value, createdAt: now, identity };
     return value;
-  } catch (error) {
-    console.error("[push/apns] clé privée refusée:", (error as Error).message);
+  } catch {
+    console.error("[push/apns] private_key_refused");
     return null;
   }
 }
@@ -94,9 +94,9 @@ export async function sendApnsNotification(
         client.destroy();
         resolve(response);
       };
-      client.once("error", (error) => {
-        console.error("[push/apns] connexion échouée:", error.message);
-        finish({ status: 0, reason: error.message });
+      client.once("error", () => {
+        console.error("[push/apns] connection_failed");
+        finish({ status: 0, reason: "ConnectionFailed" });
       });
 
       const request = client.request({
@@ -128,21 +128,21 @@ export async function sendApnsNotification(
         }
         finish({ status, reason });
       });
-      request.on("error", (error) => {
-        console.error("[push/apns] requête échouée:", error.message);
-        finish({ status: 0, reason: error.message });
+      request.on("error", () => {
+        console.error("[push/apns] request_failed");
+        finish({ status: 0, reason: "RequestFailed" });
       });
       request.setTimeout(10_000, () => {
-        console.error("[push/apns] délai de 10 s dépassé");
+        console.error("[push/apns] request_timeout");
         finish({ status: 0, reason: "Timeout" });
       });
       request.end(body);
     });
-  } catch (error) {
+  } catch {
     // `connect` or `request` can also raise synchronously (header or
     // invalid local configuration). The push never goes back to the action which
     // created the inbox notification.
-    console.error("[push/apns] préparation échouée:", (error as Error).message);
-    return { status: 0, reason: (error as Error).message };
+    console.error("[push/apns] request_setup_failed");
+    return { status: 0, reason: "RequestSetupFailed" };
   }
 }

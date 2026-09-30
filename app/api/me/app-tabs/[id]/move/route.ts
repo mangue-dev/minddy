@@ -7,6 +7,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if (!auth.ok) return auth.response;
   const { id } = await context.params;
   const body = await request.json().catch(() => null);
-  const result = await moveAppTab(auth.supabase, { id, revision: body?.revision, beforeId: body?.beforeId });
+  const result = await moveAppTab(auth.supabase, { id, revision: body?.revision, beforeId: body?.beforeId }, auth.user.id);
   return NextResponse.json(result, { status: appTabResultStatus(result) });
 }

@@ -615,8 +615,8 @@ export async function listMergeRequestCommitExtras(opts: {
             // the caller will read the message trailers, the only source remaining.
             authors: [],
           });
-        } catch (err) {
-          console.error("[mr] commit stats unreadable:", (err as Error).message);
+        } catch {
+          console.error("[mr] commit_stats_unreadable");
         }
       }),
     );

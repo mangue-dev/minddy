@@ -94,6 +94,9 @@ function trashAwareEcho(entity: Entity, change: RemoteChange): RemoteEcho {
   if (change.operation === "DELETE" || stringField(change.record, "deleted_at")) {
     return { entity, kind: "remove", id };
   }
+  // Protected broadcasts carry metadata only. Refetch authorized content rather
+  // than replacing decoded rows or registering incomplete pending overlays.
+  if (!stringField(change.record, entity === "issue" ? "title" : "name")) return null;
   return change.record ? { entity, kind: "upsert", id, row: change.record } : null;
 }
 

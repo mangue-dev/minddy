@@ -35,11 +35,8 @@ export async function sweepRepo(userId: string, repo: VisibleRepo): Promise<bool
       token: target.token,
     });
     return truncated;
-  } catch (err) {
-    console.error(
-      `[pull-requests] sweep ${repo.repoFullName} failed:`,
-      (err as Error).message,
-    );
+  } catch {
+    console.error("[pull-requests] repository sweep failed");
     // We stamp all the same: a broken forge must not make the user retry the
     // scan on EACH view. The list stays as before, and the next window retries.
     await stampRepoSync(repo.provider, repo.repoFullName);

@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   await getServiceClient().from("forge_relay_audit").insert({
     instance_id: verification.instance.id,
     action: "links_sync",
-    detail: { applied: result.applied },
+    detail: {},
   });
   return NextResponse.json({ ok: true, applied: result.applied });
 }

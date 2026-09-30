@@ -3,6 +3,7 @@ import "server-only";
 import crypto from "node:crypto";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { requireSecret } from "@/lib/server/env-secrets";
 import { getInstallationAccount } from "@/lib/server/git/github-app";
 
@@ -385,9 +386,9 @@ export async function bindRelayClaim(input: {
   let account: { login: string | null } | null = null;
   try {
     account = await getInstallationAccount(input.installationId);
-  } catch (err) {
+  } catch {
     // Transient GitHub failure: refuse cleanly so the operator can retry.
-    console.error("[forge-relay] installation account lookup failed:", (err as Error).message);
+    console.error("[forge-relay] installation_account_lookup_failed");
   }
   const login = account?.login ?? null;
   if (!login) {
@@ -422,7 +423,8 @@ export async function bindRelayClaim(input: {
       p_installation_id: input.installationId,
       p_account_login: login,
       p_repository_id: input.repositoryId,
-      p_repository_full_name: input.repositoryFullName,
+      p_repository_full_name: await repositoryStorageName("github",
+        input.repositoryFullName,true,supabase),
     },
   );
   if (claimError) return { ok: false, status: 500, error: claimError.message };

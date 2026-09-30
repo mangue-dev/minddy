@@ -184,6 +184,24 @@ describe("merge_pull_request", () => {
     );
   });
 
+  it("does not log a private PR state synchronization exception in production", async () => {
+    const sentinel = "MIN591_PRIVATE_PR_SYNC_SENTINEL";
+    vi.stubEnv("NODE_ENV", "production");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    forgeFor.mockReturnValue(forgeWith({
+      getPullRequest: vi.fn().mockResolvedValue(pr()),
+      mergePullRequest: vi.fn().mockResolvedValue(undefined),
+    }));
+    syncPrState.mockRejectedValue(new Error(sentinel));
+    try {
+      expect((await run()).success).toBe(true);
+      expect(log.mock.calls.flat().map(String).join("\n")).not.toContain(sentinel);
+    } finally {
+      log.mockRestore();
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("refuses a draft, a closed pull request and a conflicting one before calling the forge", async () => {
     for (const [state, fragment] of [
       [pr({ draft: true }), "draft"],

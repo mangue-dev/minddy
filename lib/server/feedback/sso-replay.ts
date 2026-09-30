@@ -35,7 +35,7 @@ export async function consumeSsoToken(params: {
     // Base unreachable: we refuse. Letting it go would make the breakdown the means
     // to play again, and there is no harm in refusing an SSO redirection — the
     // visitor lands on the board, where the email verification awaits him.
-    console.error("[feedback-sso] replay guard failed:", error.message);
+    console.error("[feedback-sso] replay_guard_failed");
     return false;
   }
 
@@ -54,6 +54,6 @@ function purgeExpired(): void {
       .from("feedback_sso_replays")
       .delete()
       .lt("expires_at", new Date().toISOString());
-    if (error) console.error("[feedback-sso] replay purge failed:", error.message);
+    if (error) console.error("[feedback-sso] replay_purge_failed");
   });
 }

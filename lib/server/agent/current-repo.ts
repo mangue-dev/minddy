@@ -537,7 +537,7 @@ export async function commitTurnAndPush(
     `git push ${sq(opts.authUrl)} ${sq(`${headSha}:refs/heads/${opts.workBranch}`)}`,
     { timeoutMs: 120_000 },
   );
-  if (push.exitCode !== 0) throw new Error(`git push failed: ${push.stderr || push.stdout}`);
+  if (push.exitCode !== 0) throw new Error("repository_push_failed");
 
   return { ...delivered, committed, remoteUpdated: remoteSha !== headSha, headSha, pushed: true };
 }

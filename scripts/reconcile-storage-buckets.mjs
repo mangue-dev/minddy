@@ -9,7 +9,7 @@ const ROOT_DIR = resolve(SCRIPT_DIR, "..");
 const EXPECTED_BUCKETS = {
   attachments: { public: false, file_size_limit: 20 * 1024 * 1024 },
   "project-icons": { public: true, file_size_limit: 25 * 1024 * 1024 },
-  "forge-attachments": { public: true, file_size_limit: 20 * 1024 * 1024 },
+  "forge-attachments": { public: false, file_size_limit: 32 * 1024 * 1024 },
 };
 
 function fail(message) {
@@ -100,7 +100,21 @@ export async function reconcileBuckets(options) {
   }
   const current = new Map((await listBuckets(options)).map((bucket) => [bucket.id, bucket]));
 
-  for (const [id, expected] of Object.entries(EXPECTED_BUCKETS)) {
+  // The bucket stays public until the CAS object conversion has removed every
+  // old readable object. Activation flips it in the same database transaction.
+  const scope = await fetch(`${options.supabaseUrl.replace(/\/$/, "")}/rest/v1/project_icon_encryption_scope?select=id&limit=1`, {
+    headers: { apikey: options.serviceRoleKey,
+      authorization: `Bearer ${options.serviceRoleKey}` },
+  });
+  if (!scope.ok && scope.status !== 404) {
+    fail(`project icon activation lookup returned ${scope.status}.`);
+  }
+  const iconsActivated = scope.ok && (await scope.json()).length > 0;
+  const expectedBuckets = { ...EXPECTED_BUCKETS,
+    "project-icons": { ...EXPECTED_BUCKETS["project-icons"],
+      public: !iconsActivated } };
+
+  for (const [id, expected] of Object.entries(expectedBuckets)) {
     const bucket = current.get(id);
     if (!bucket) {
       await storageFetch(options, "/bucket", {
@@ -120,7 +134,7 @@ export async function reconcileBuckets(options) {
   }
 
   const byId = new Map((await listBuckets(options)).map((bucket) => [bucket.id, bucket]));
-  for (const [id, expected] of Object.entries(EXPECTED_BUCKETS)) {
+  for (const [id, expected] of Object.entries(expectedBuckets)) {
     const bucket = byId.get(id);
     if (!bucket || !matches(bucket, expected)) {
       fail(`bucket ${id} is missing or misconfigured after reconciliation.`);

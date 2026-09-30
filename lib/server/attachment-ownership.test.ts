@@ -53,7 +53,10 @@ function fake({
         .map((p) => ({ name: p, owner_id: owners[p] })),
       error: null,
     }),
-    from: (table: string) => ({
+    from: (table: string) => table === "attachment_metadata_encryption_scope"
+      ? ({ select: () => ({ eq: () => ({ maybeSingle: async () =>
+        ({ data: null, error: null }) }) }) }) : ({
+      delete: () => ({ in: async () => ({ error: null }) }),
       insert: (batch: Record<string, unknown>[]) => {
         inserted.push(...batch);
         return {
@@ -154,14 +157,14 @@ describe("registering a resource on someone else's file", () => {
   });
 });
 
-describe("supprimer les octets d'un objet encore référencé", () => {
-  it("garde l'objet qu'une autre ligne nomme encore", async () => {
+describe("removing bytes of a referenced object", () => {
+  it("keeps an object referenced by another attachment", async () => {
     const { client, removed } = fake({ referencedIn: { attachments: [PATH] } });
     await removeStorageObjects(client, [PATH]);
     expect(removed).toHaveLength(0);
   });
 
-  it("garde l'objet qu'un fichier de page nomme encore", async () => {
+  it("keeps an object referenced by a page file", async () => {
     // Two tables reference the same bucket: only look at yours
     // would make the guard true on half the paths.
     const { client, removed } = fake({ referencedIn: { page_files: [PATH] } });
@@ -169,7 +172,7 @@ describe("supprimer les octets d'un objet encore référencé", () => {
     expect(removed).toHaveLength(0);
   });
 
-  it("retire l'orphelin, et lui seul", async () => {
+  it("removes only the unreferenced object", async () => {
     const orphan = `projects/${PROJECT}/def/vieux.pdf`;
     const { client, removed } = fake({ referencedIn: { attachments: [PATH] } });
     await removeStorageObjects(client, [PATH, orphan, null, ""]);
@@ -178,7 +181,7 @@ describe("supprimer les octets d'un objet encore référencé", () => {
 
   it("deletes nothing when it no longer knows what references what", async () => {
     // An orphan costs bytes; one deletion too much costs the file
-    // de quelqu'un.
+    // of another user.
     const { client, removed } = fake({ referenceFails: true });
     await removeStorageObjects(client, [PATH]);
     expect(removed).toHaveLength(0);

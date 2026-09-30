@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { decodeProjectName } from "@/lib/server/project-content";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -46,7 +47,7 @@ export async function resolveAssistantProjectTarget(
       await Promise.all([
         ctx.service
           .from("projects")
-          .select("id, name, key")
+          .select("id")
           .eq("owner_id", ctx.userId)
           .is("deleted_at", null),
         ctx.service.from("project_members").select("project_id").eq("user_id", ctx.userId),
@@ -59,13 +60,18 @@ export async function resolveAssistantProjectTarget(
     if (ids.size === 0) return { projectId };
     const { data: visible, error } = await ctx.service
       .from("projects")
-      .select("id, name, key")
+      .select("id, name, key, encrypted_content, encryption_version")
       .in("id", [...ids])
       .is("deleted_at", null);
     if (error) return { projectId };
 
     const needle = explicit.toLowerCase();
-    const matched = ((visible ?? []) as Array<{ id: string; name: string; key: string }>).find(
+    const named = await Promise.all(((visible ?? []) as Array<{
+      id: string; name: string | null; key: string; encrypted_content?: string | null;
+      encryption_version?: number }>).map(async (project) => ({
+        ...project, name: await decodeProjectName(project, ctx.userId),
+      })));
+    const matched = named.find(
       (project) =>
         project.key.toLowerCase() === needle || project.name.toLowerCase() === needle,
     );

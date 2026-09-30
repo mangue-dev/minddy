@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { createView, ensureBaselineViews } from "@/lib/server/views";
+import { decodeView } from "@/lib/server/view-content";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -39,7 +40,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     console.error("[api/views] list failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  return NextResponse.json(data);
+  return NextResponse.json(await Promise.all((data ?? []).map((row) =>
+    decodeView(row, auth.user.id))));
 }
 
 /** POST /api/projects/[id]/views — create a saved view (shared unless `personal`). */

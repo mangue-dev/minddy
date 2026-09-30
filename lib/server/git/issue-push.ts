@@ -1,4 +1,6 @@
+import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
+import { decodeRepositoryName } from "@/lib/server/git/repository-name-content";
 
 import { randomUUID } from "node:crypto";
 
@@ -128,7 +130,7 @@ async function pushLatestRemoteState(params: QueuedRemotePush): Promise<void> {
       p_claim_id: claimId,
     });
     if (error) {
-      console.error("[issue-push] remote-status claim failed:", error.message);
+      console.error("[issue-push] remote_status_claim_failed", params.issueId);
       return;
     }
     if (data === true) {
@@ -149,7 +151,7 @@ async function pushLatestRemoteState(params: QueuedRemotePush): Promise<void> {
       p_issue_id: params.issueId,
       p_claim_id: claimId,
     });
-    if (error) console.error("[issue-push] remote-status claim release failed:", error.message);
+    if (error) console.error("[issue-push] remote_status_release_failed", params.issueId);
   }
 }
 
@@ -157,14 +159,12 @@ async function pushLatestRemoteStateWithClaim(
   service: ReturnType<typeof getServiceClient>,
   params: QueuedRemotePush,
 ): Promise<void> {
-  const { data: issue, error: issueError } = await service
-    .from("issues")
-    .select("project_id, status, remote_provider, remote_repo_id, remote_number")
+  const { data: issue, error: issueError } = await issueStore(service).select("project_id, status, remote_provider, remote_repo_id, remote_number")
     .eq("id", params.issueId)
     .is("deleted_at", null)
     .maybeSingle();
   if (issueError) {
-    console.error("[issue-push] current issue lookup failed:", issueError.message);
+    console.error("[issue-push] issue_lookup_failed", params.issueId);
     return;
   }
   if (
@@ -190,7 +190,7 @@ async function pushLatestRemoteStateWithClaim(
     .eq("issue_sync_enabled", true)
     .maybeSingle();
   if (linkError) {
-    console.error("[issue-push] linked repository lookup failed:", linkError.message);
+    console.error("[issue-push] repository_lookup_failed", params.issueId);
     return;
   }
   if (!data) return;
@@ -212,7 +212,7 @@ async function pushLatestRemoteStateWithClaim(
     connectionSource: Array.isArray(row.git_connections)
       ? row.git_connections[0]?.source ?? null
       : row.git_connections?.source ?? null,
-    repoFullName: row.repo_full_name,
+    repoFullName: await decodeRepositoryName(row.provider,row.repo_full_name),
     externalRepoId: row.external_repo_id,
   };
 
@@ -230,11 +230,12 @@ async function pushLatestRemoteStateWithClaim(
     } else {
       await pushGitlabState(token, target, issue.remote_number, state);
     }
-  } catch (err) {
+  } catch {
     console.error(
-      `[issue-push] ${target.provider} #${issue.remote_number} → ` +
-        `${state.open ? "open" : "closed"} failed:`,
-      (err as Error).message,
+      "[issue-push] remote_status_write_failed",
+      params.issueId,
+      target.provider,
+      state.open ? "open" : "closed",
     );
   }
 }
@@ -277,8 +278,8 @@ async function resolveWriteToken(
       return token;
     }
     return await getGitlabAccessToken(target.connectionId);
-  } catch (err) {
-    console.warn(`[issue-push] fallback token failed: ${(err as Error).message}`);
+  } catch {
+    console.warn("[issue-push] fallback_token_failed", target.provider);
     return null;
   }
 }
@@ -312,8 +313,7 @@ async function pushGithubState(
     },
   );
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as { message?: string };
-    throw new Error(data.message || `HTTP ${response.status}`);
+    throw new Error(`github_status_push_http_${response.status}`);
   }
 }
 
@@ -338,7 +338,6 @@ async function pushGitlabState(
     },
   );
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as { message?: string };
-    throw new Error(data.message || `HTTP ${response.status}`);
+    throw new Error(`gitlab_status_push_http_${response.status}`);
   }
 }

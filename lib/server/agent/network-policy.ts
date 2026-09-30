@@ -3,66 +3,19 @@ import type { NetworkPolicy, NetworkPolicyRule } from "@vercel/sandbox";
 import { chatCompletionsUrl } from "@/lib/agent-providers";
 
 /**
- * Agent microVM network policy (MIN-223). PURE and testable without
- * sandbox — like `repo-path.ts`, this is infrastructure logic that preserves
- * a boundary the model process cannot grant itself.
+ * Agent microVM network policy (MIN-223). The Vercel firewall injects the LLM
+ * credential only for the exact completion route and forwards control-plane
+ * calls with a signed `sandbox_name` claim. The versioned name binds a VM to
+ * one run and prevents an old persistent sandbox from claiming a new session.
+ * Git uses a credential-free remote; the firewall injects forge authentication
+ * only for the linked repository's smart-HTTP path.
  *
- * THE PRINCIPLE, AND IT IS UNUSUAL: **the microVM does not hold any secrets OF
- * MINDDY.** No LLM key, no Supabase key, no identity token. It's not a
- * code discipline, it is the platform:
- *
- * - the Vercel Sandbox firewall terminates the TLS of the VM and **installs itself**
- * the `authorization` header on the completion request (`transform`), after
- * the exit of the VM. The key never enters its memory space; the loop
- * sends a placeholder and receives a real completion (measured in MIN-223);
- * - the control plan (events, ledger, checkpoint, tools) goes through
- * `forwardURL`: the firewall forwards the request to our route in y
- * adding an OIDC signed by the platform, whose claim `sandbox_name` is worth
- * `agent-<run.id>`. **A VM cannot therefore claim anything other than its own
- * run** — which a token carried in the VM would not have been able to guarantee.
- *
- * FORGE CREDENTIALS DO NOT ENTER THE VM (MIN-421). Git uses a credential-free
- * remote. The firewall injects HTTP Basic authentication only for the linked
- * repository's smart-HTTP path. A long-running writer can ask the control
- * plane to rotate this firewall rule, but the response still contains only the
- * credential-free remote URL.
- *
- * AND ALL OF THE ABOVE IS ONLY WORTH ONE MICROVM (MIN-355, MIN-357). This file
- * describes a policy imposed by the Vercel Sandbox firewall: a trick that plays
- * on the user's machine has none, and therefore has nothing of what the
- * platform guaranteed here. **The two halves of the invariant fall there, and it
- * it's better to write them down than let them become stale :**
- *
- * - the harness CARRY an identity token ([local-exec-token.ts](local-exec-token.ts)),
- * because no firewall signs for him. What replaces it is not
- * hiding but a reduction of power, written in `handleControlPlaneRequest`;
- * - and it CARRYS the key of the model, because no firewall will install it after its
- *   sortie. Elle descend d'un cran seulement — jusqu'au proxy LLM
- * ([vm/llm-proxy.ts](vm/llm-proxy.ts)), in memory, never in the job nor in
- * the opencode server environment — and it is always a MINTED key
- * HARD CEILING ([run-key.ts](run-key.ts)): it is the ceiling which limits the damage,
- * not the secret.
- *
- * TWO CHOICES THAT LOOK LIKE DETAILS AND ARE NOT.
- *
- * 1. `path: { exact }` on the completion route, **never** a `startsWith`.
- * It is this word that puts `/api/v1/key` — the PROVISIONING route of OpenRouter,
- * neighboring a segment — out of range: measured at 401 with the placeholder,
- * there that a prefix would have credited it and would have let the VM emit its
- * own keys. **The LLM proxy now has the same word** (`resolveProxyTarget`,
- * strict equality on `pathname`): on a machine, it is he who sets the
- * key, so it is he who holds what this line here holds.
- * 2. Public egress is available because development tools routinely follow CDN
- * redirects and repository-defined download URLs. Private, loopback, link-local,
- * carrier-grade NAT, benchmark, and multicast IPv4 ranges remain denied after
- * DNS resolution. Connectivity is broad; secret injection remains exact.
- *
- * WHAT REMAINS POSSIBLE, AND WHICH IS BOUNDED ELSEWHERE: a hostile model can
- * call the credited route outside the loop (a `curl` is enough). It's not
- * exfiltration is an expense, and it escapes the ledger. THE
- * guardrail is not another control in the VM — it is compromised by
- * hypothesis — this is the key per run to hard cap of `run-key.ts`, held by the
- * fournisseur.
+ * Local execution has no Vercel firewall. Its short-lived identity token is
+ * limited by `handleControlPlaneRequest`, and the model key stays in the local
+ * LLM proxy memory under a per-run spending cap. Public egress is available for
+ * development tools, while private and loopback ranges remain blocked after DNS
+ * resolution. A hostile model may still call the credited completion route;
+ * the per-run provider key bounds that expense.
  */
 
 /**
@@ -83,7 +36,12 @@ export const AGENT_LLM_PLACEHOLDER_KEY = "minddy-placeholder";
 
 /** Prefix of the microVM name of a run. The name IS the identity: it is he who
  * platform sign in the OIDC claim `sandbox_name`. */
-const AGENT_SANDBOX_PREFIX = "agent-";
+const AGENT_SANDBOX_PREFIX = "agent-v2-";
+
+/** Old names are used only to retire historical snapshot-backed sandboxes. */
+export function legacyAgentSandboxName(runId: string): string {
+  return `agent-${runId}`;
+}
 
 /** Package hosts retained when rotating a policy created by an older release. */
 export const AGENT_PACKAGE_EGRESS_HOSTS = [
@@ -141,16 +99,13 @@ export function agentSandboxName(runId: string): string {
  * can claim nothing else**. A token carried in the VM, or a `runId` in the
  * body, would have requested verification; There is nothing to check here.
  *
- * `null` on anything that is not `agent-<uuid>`: a probe sandbox, a
- * internal tool, an invented name. The uuid format is required — without it, a
- * `agent-../..` would make a Postgrest request on an arbitrary string.
+ * `null` outside `agent-v2-<uuid>` and its unique allocation suffix. The namespace
+ * prevents a run from waking a snapshot made by the old persistent launcher.
  */
 export function runIdFromSandboxName(name: string): string | null {
   if (!name.startsWith(AGENT_SANDBOX_PREFIX)) return null;
-  const candidate = name.slice(AGENT_SANDBOX_PREFIX.length);
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(candidate)
-    ? candidate
-    : null;
+  const match = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:-[0-9a-f]{12})?$/i.exec(name.slice(AGENT_SANDBOX_PREFIX.length));
+  return match?.[1] ?? null;
 }
 
 /** The Vercel tenant who has the right to speak to the control plan: OUR team

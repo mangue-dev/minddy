@@ -1,4 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
+import { randomBytes } from "node:crypto";
+import { EncryptedRowCodec } from "@/lib/server/encryption/row-codec";
+import { EncryptedStore } from "@/lib/server/encryption/store";
+
+const encryption = vi.hoisted(() => ({ store: null as EncryptedStore | null }));
+vi.mock("@/lib/server/encryption/registry", () => ({
+  getEncryptedStore: () => encryption.store,
+}));
 
 import { resolveAssistantProjectId, resolveAssistantProjectTarget } from "./project-scope";
 
@@ -53,7 +61,8 @@ describe("Numo project scope", () => {
 });
 
 describe("resolveAssistantProjectTarget — a named project resolves to its id", () => {
-  function clientWith(projects: Array<{ id: string; name: string; key: string }>) {
+  function clientWith(projects: Array<{ id: string; name: string | null;
+    key: string; encrypted_content?: string | null; encryption_version?: number }>) {
     return {
       userId: USER_ID,
       service: {
@@ -103,6 +112,27 @@ describe("resolveAssistantProjectTarget — a named project resolves to its id",
       "Minddy",
     );
     expect(out).toEqual({ projectId: PROJECT_ID });
+  });
+
+  it("resolves a sealed project name after the membership lookup", async () => {
+    const key = randomBytes(32);
+    encryption.store = new EncryptedStore({
+      current: async () => ({ version: 1, bytes: Buffer.from(key) }),
+      byVersion: async (_scope, version) =>
+        ({ version, bytes: Buffer.from(key) }),
+    });
+    const sealed = await new EncryptedRowCodec(encryption.store).encode({
+      id: PROJECT_ID, name: "Private project", automations: [],
+      smart_assign_rules: {}, encrypted_content: null, encryption_version: 0,
+    }, { table: "projects", scope: { kind: "project", id: PROJECT_ID } });
+    const out = await resolveAssistantProjectTarget(clientWith([{
+      id: PROJECT_ID, key: "MIN", name: null,
+      encrypted_content: sealed.encrypted_content as string,
+      encryption_version: sealed.encryption_version as number,
+    }]), null, "Private project");
+    expect(out).toEqual({ projectId: PROJECT_ID });
+    encryption.store = null;
+    key.fill(0);
   });
 
   it("keeps the implicit context project when the call names no project", async () => {

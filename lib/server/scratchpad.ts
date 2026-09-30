@@ -11,6 +11,7 @@ import {
 import { MAX_SCRATCHPAD_LENGTH, tasksCheckedOff } from "@/lib/scratchpad";
 import { insertStatEvents } from "@/lib/server/stat-events";
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeScratchpadRow, encodeScratchpadContent } from "./encryption/scratchpad-content";
 
 /**
  * Core of the personal scratchpad (Notes) — the user's UNIQUE markdown note.
@@ -63,13 +64,24 @@ export async function getScratchpad(
   client: SupabaseClient,
   userId: string
 ): Promise<ScratchpadState> {
+  const row = await getScratchpadRow(client, userId);
+  return row ? toState(row) : EMPTY;
+}
+
+/** The same authorized read is used by account exports; ciphertext never reaches the export. */
+export async function getScratchpadRow(client: SupabaseClient, userId: string): Promise<Record<string, unknown> | null> {
+  const row = await loadScratchpadRow(client, userId);
+  return row ? decodeScratchpadRow(row, userId) : null;
+}
+
+async function loadScratchpadRow(client: SupabaseClient, userId: string): Promise<Record<string, unknown> | null> {
   const { data, error } = await client
     .from("user_scratchpad")
-    .select("content, updated_at, rev")
+    .select("*")
     .eq("user_id", userId)
     .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data ? toState(data) : EMPTY;
+  if (error) throw new Error("Unable to load scratchpad");
+  return data;
 }
 
 /** Max length of the label snapshotted in the stats ledger. */
@@ -87,7 +99,8 @@ const MAX_TASK_TEXT = 500;
 async function recordTaskCompletions(
   userId: string,
   before: string,
-  after: string
+  after: string,
+  requireEncryption: boolean,
 ): Promise<void> {
   const checked = tasksCheckedOff(before, after);
   if (checked.length === 0) return;
@@ -108,10 +121,11 @@ async function recordTaskCompletions(
         issue_number: null,
         issue_title: null,
         task_text: text.slice(0, MAX_TASK_TEXT),
-      }))
+      })),
+      { requireEncryption },
     );
-  } catch (err) {
-    console.error("[scratchpad] stat events failed:", (err as Error).message);
+  } catch {
+    console.error("[scratchpad] stat events failed");
   }
 }
 
@@ -132,43 +146,51 @@ export async function setScratchpad(
   client: SupabaseClient,
   userId: string,
   content: string,
-  expectedRev: number
+  expectedRev: number,
+  { recordCompletions = true }: { recordCompletions?: boolean } = {},
 ): Promise<ScratchpadWrite> {
   const clipped =
     content.length > MAX_SCRATCHPAD_LENGTH
       ? content.slice(0, MAX_SCRATCHPAD_LENGTH)
       : content;
 
-  const before = await getScratchpad(client, userId);
+  if (!Number.isSafeInteger(expectedRev) || expectedRev < 0 || expectedRev >= Number.MAX_SAFE_INTEGER) {
+    throw new Error("Invalid scratchpad revision");
+  }
+  const stored = await loadScratchpadRow(client, userId);
+  const before = stored ? toState(await decodeScratchpadRow(stored, userId)) : EMPTY;
+  if (before.rev !== expectedRev) return { ...before, conflicted: true };
+  const protectedContent = await encodeScratchpadContent(clipped, userId, stored?.encryption_version);
 
   const { data, error } = await client
     .from("user_scratchpad")
-    .update({ content: clipped, rev: expectedRev + 1 })
+    .update({ ...protectedContent, rev: expectedRev + 1 })
     .eq("user_id", userId)
     .eq("rev", expectedRev)
-    .select("content, updated_at, rev")
+    .select("*")
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Unable to save scratchpad");
   if (data) {
-    if (before.rev === expectedRev) {
-      await recordTaskCompletions(userId, before.content, clipped);
+    if (recordCompletions && before.rev === expectedRev) {
+      await recordTaskCompletions(userId, before.content, clipped, "encrypted_content" in protectedContent);
     }
-    return { ...toState(data), conflicted: false };
+    return { ...toState(await decodeScratchpadRow(data, userId)), conflicted: false };
   }
 
   // No row matched the CAS: either there is no row yet, or its rev advanced.
   const current = await getScratchpad(client, userId);
-  if (current.updated_at === null) {
+  if (current.updated_at === null && expectedRev === 0) {
     // First write ever → insert (rev starts at 1). A lost insert race surfaces
     // as a conflict so the caller reconciles against whoever won.
     const { data: inserted, error: insertError } = await client
       .from("user_scratchpad")
-      .insert({ user_id: userId, content: clipped, rev: 1 })
-      .select("content, updated_at, rev")
+      .insert({ user_id: userId, ...protectedContent, rev: 1 })
+      .select("*")
       .maybeSingle();
     if (!insertError && inserted) {
-      return { ...toState(inserted), conflicted: false };
+      return { ...toState(await decodeScratchpadRow(inserted, userId)), conflicted: false };
     }
+    if (insertError && insertError.code !== "23505") throw new Error("Unable to create scratchpad");
     return { ...(await getScratchpad(client, userId)), conflicted: true };
   }
   return { ...current, conflicted: true };

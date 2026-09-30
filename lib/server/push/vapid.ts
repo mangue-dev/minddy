@@ -25,9 +25,7 @@ function vapidSubject(): string | null {
   const raw = process.env.VAPID_SUBJECT?.trim();
   if (!raw) return null;
   if (raw.startsWith("mailto:") || raw.startsWith("https://")) return raw;
-  console.error(
-    `[push] VAPID_SUBJECT invalide (${raw}) — attendu mailto: ou https: ; Web Push désactivé`
-  );
+  console.error("[push] vapid_subject_invalid");
   return null;
 }
 
@@ -63,10 +61,10 @@ export function configureWebPush(): boolean {
     );
     configured = true;
     return true;
-  } catch (e) {
+  } catch {
     // A poorly copied key (wrong length, base64url truncated) returns HERE, at
     // first arming, and not at each sending. We say it once and turn it off.
-    console.error("[push] clés VAPID refusées:", (e as Error).message);
+    console.error("[push] vapid_keys_refused");
     return false;
   }
 }

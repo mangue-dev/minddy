@@ -32,6 +32,10 @@ vi.mock("@/lib/server/decisions/llm", () => ({
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({ from: fromMock }),
 }));
+vi.mock("./evaluation-content", () => ({
+  shouldProtectDecisionEvaluations: async () => false,
+  prepareDecisionEvaluation: async (row: unknown) => row,
+}));
 
 const { compareDecisionAnswers, runShadowComparison } = await import("./shadow");
 import type { DecisionSpec } from "./types";

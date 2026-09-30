@@ -54,6 +54,7 @@ export interface ChangelogEntry {
 
 /** Newest to oldest — this is the display order AND the order of the feed. */
 export const CHANGELOG_ENTRIES: ReadonlyArray<ChangelogEntry> = [
+  { id: "encrypted-workspace-content", date: "2026-09-30" },
   { id: "mcp-catalog", date: "2026-09-21" },
   { id: "performance", date: "2026-09-20" },
   { id: "family-boards", date: "2026-09-19" },

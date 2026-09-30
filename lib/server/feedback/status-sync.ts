@@ -61,8 +61,8 @@ export function scheduleFeedbackStatusSync(
   const mapped = feedbackStatusForIssue(issueStatus);
   if (!mapped) return;
   afterOrNow(() =>
-    syncFeedbackStatusForIssue(issueId, mapped, actorId).catch((e) =>
-      console.error("[feedback-status-sync] failed:", (e as Error).message)
+    syncFeedbackStatusForIssue(issueId, mapped, actorId).catch(() =>
+      console.error("[feedback-status-sync] sync_failed")
     )
   );
 }
@@ -87,7 +87,7 @@ export async function syncFeedbackStatusForIssue(
     .is("deleted_at", null)
     .eq("issue_id", issueId);
   if (error) {
-    console.error("[feedback-status-sync] update failed:", error.message);
+    console.error("[feedback-status-sync] update_failed");
     return;
   }
   for (const post of affected ?? []) {

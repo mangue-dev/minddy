@@ -1,4 +1,16 @@
 import "server-only";
+import { encodeConversationTitle, shouldProtectConversationTitle } from
+  "@/lib/server/numo/conversation-title-content";
+import { shouldProtectNumoUserMessages } from
+  "@/lib/server/numo/user-message-content";
+import { shouldProtectNumoTurnIntent } from
+  "@/lib/server/numo/turn-intent-content";
+import { shouldProtectNumoTurnEvents } from
+  "@/lib/server/numo/turn-event-content";
+import { shouldProtectNumoToolContent } from
+  "@/lib/server/numo/tool-content";
+import { shouldProtectNumoFinalContent } from
+  "@/lib/server/numo/final-content";
 
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -6,11 +18,31 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { defaultLocale } from "@/i18n/config";
 import { getServiceClient } from "@/lib/supabase-service";
 import { startNumoIntent } from "@/lib/server/numo/start-intent";
-import type { NumoTurn } from "@/lib/server/numo/turns";
+import { hydrateNumoTurn, type NumoTurn } from "@/lib/server/numo/turns";
+import { decodeNumoError, encodeNumoError,
+  shouldProtectNumoErrors } from "@/lib/server/numo/error-content";
 import {
   routineRunBudgetUsd,
   type Routine,
 } from "@/lib/server/routines";
+import { decodeRoutine, shouldProtectRoutines } from
+  "@/lib/server/routine-content";
+
+async function requireProtectedRoutineCopies(service: SupabaseClient) {
+  if (!await shouldProtectRoutines(service)) return;
+  const ready = await Promise.all([
+    shouldProtectConversationTitle(service),
+    shouldProtectNumoUserMessages(service),
+    shouldProtectNumoTurnIntent(service),
+    shouldProtectNumoTurnEvents(service),
+    shouldProtectNumoToolContent(service),
+    shouldProtectNumoFinalContent(service),
+    shouldProtectNumoErrors(service),
+  ]);
+  if (ready.some((protectedCopy) => !protectedCopy)) {
+    throw new Error("Routine occurrence copies require protected Numo paths");
+  }
+}
 
 export type RoutineOccurrenceOrigin = "scheduled" | "manual";
 
@@ -33,17 +65,20 @@ function composite<T>(value: unknown): T | null {
   return (value as T | null) ?? null;
 }
 
+async function readableOccurrence(row: NumoRoutineOccurrence, userId: string) {
+  return { ...row, error_message: await decodeNumoError(userId,
+    "numo_routine_occurrences", row.id, row.error_message) };
+}
+
 function occurrenceError(error: unknown): { code: string; message: string } {
   const candidate = error as { code?: unknown; message?: unknown };
   const message = typeof candidate.message === "string"
     ? candidate.message
     : "Numo could not start this routine occurrence.";
   return {
-    code: typeof candidate.code === "string"
-      ? candidate.code
-      : /^[a-z][a-z0-9_]+$/.test(message)
-        ? message
-        : "numo_unavailable",
+    code: candidate.code === "usage_budget_exceeded"
+      || message === "usage_budget_exceeded"
+      ? "usage_budget_exceeded" : "numo_unavailable",
     message,
   };
 }
@@ -71,6 +106,7 @@ export async function startRoutineOccurrence(input: {
   readClient?: SupabaseClient;
 }): Promise<{ occurrence: NumoRoutineOccurrence; turn: NumoTurn }> {
   const service = getServiceClient();
+  await requireProtectedRoutineCopies(service);
   const requestId = input.requestId ?? randomUUID();
   const scheduledFor = input.origin === "scheduled"
     ? input.scheduledFor ?? input.routine.next_run_at
@@ -85,7 +121,9 @@ export async function startRoutineOccurrence(input: {
     p_origin: input.origin,
     p_scheduled_for: scheduledFor,
     p_request_id: requestId,
-    p_title: input.routine.title,
+    p_title: await shouldProtectConversationTitle(service)
+      ? await encodeConversationTitle(input.routine.owner_id,
+        requestId, input.routine.title.trim().slice(0, 200)) : input.routine.title,
   });
   if (error) throw new Error(error.message);
   let occurrence = composite<NumoRoutineOccurrence>(data);
@@ -98,7 +136,8 @@ export async function startRoutineOccurrence(input: {
       .eq("id", occurrence.turn_id)
       .single();
     if (turnError || !existing) throw new Error(turnError?.message ?? "Routine turn not found");
-    return { occurrence, turn: existing as NumoTurn };
+    return { occurrence: await readableOccurrence(occurrence,
+      input.routine.owner_id), turn: await hydrateNumoTurn(existing as NumoTurn) };
   }
 
   let turnCreated = false;
@@ -163,21 +202,25 @@ export async function startRoutineOccurrence(input: {
       .eq("id", occurrence.turn_id ?? started.turnId)
       .single();
     if (turnError || !turn) throw new Error(turnError?.message ?? "Routine turn not found");
-    return { occurrence, turn: turn as NumoTurn };
+    return { occurrence: await readableOccurrence(occurrence,
+      input.routine.owner_id), turn: await hydrateNumoTurn(turn as NumoTurn) };
   } catch (error) {
     if (!turnCreated) {
       const failure = occurrenceError(error);
-      await Promise.all([
-        service
-          .from("numo_routine_occurrences")
-          .update({ error_code: failure.code, error_message: failure.message })
-          .eq("id", occurrence.id)
-          .is("turn_id", null),
-        service
-          .from("conversations")
-          .update({ status: "error", error_message: failure.message })
-          .eq("id", occurrence.conversation_id),
-      ]);
+      const protect = await shouldProtectNumoErrors(service);
+      const [occurrenceErrorMessage, conversationErrorMessage] = protect
+        ? await Promise.all([
+            encodeNumoError(input.routine.owner_id, "numo_routine_occurrences",
+              occurrence.id, failure.message),
+            encodeNumoError(input.routine.owner_id, "conversations",
+              occurrence.conversation_id, failure.message),
+          ]) : [failure.message, failure.message];
+      const failed = await service.rpc("fail_numo_routine_occurrence", {
+        p_id: occurrence.id, p_old_turn_id: null, p_code: failure.code,
+        p_occurrence_error: occurrenceErrorMessage,
+        p_conversation_error: conversationErrorMessage,
+      });
+      if (failed.error) throw new Error(failed.error.message, { cause: error });
     }
     throw error;
   }
@@ -194,7 +237,13 @@ export async function occurrencesForRoutine(
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
-  return (data ?? []) as NumoRoutineOccurrence[];
+  const rows = (data ?? []) as NumoRoutineOccurrence[];
+  if (!rows.length) return rows;
+  const { data: routine, error: ownerError } = await getServiceClient()
+    .from("agent_routines").select("owner_id").eq("id", routineId).single();
+  if (ownerError || !routine?.owner_id) throw new Error("Routine owner unavailable");
+  return Promise.all(rows.map((row) => readableOccurrence(row,
+    routine.owner_id)));
 }
 
 /** Resolve the routine lineage of a user reply in an occurrence conversation. */
@@ -223,12 +272,15 @@ export async function routineContinuationForConversation(
     .maybeSingle();
   if (routineError) throw new Error(routineError.message);
   if (!routine) return null;
+  const decodedOccurrence = await readableOccurrence(occurrence as NumoRoutineOccurrence,
+    routine.owner_id);
 
-  const cap = await routineRunBudgetUsd(routine as Routine);
+  const plainRoutine = await decodeRoutine(routine, userId) as unknown as Routine;
+  const cap = await routineRunBudgetUsd(plainRoutine);
   if (cap == null) {
     return {
-      occurrence: occurrence as NumoRoutineOccurrence,
-      routine: routine as Routine,
+      occurrence: decodedOccurrence,
+      routine: plainRoutine,
       remainingBudgetUsd: null,
     };
   }
@@ -248,8 +300,8 @@ export async function routineContinuationForConversation(
     spent = (usage ?? []).reduce((total, row) => total + Number(row.cost ?? 0), 0);
   }
   return {
-    occurrence: occurrence as NumoRoutineOccurrence,
-    routine: routine as Routine,
+    occurrence: decodedOccurrence,
+    routine: plainRoutine,
     remainingBudgetUsd: Math.max(0, cap - spent),
   };
 }
@@ -277,7 +329,7 @@ export async function recoverPendingRoutineOccurrences(limit = 10): Promise<numb
     if (!routine) continue;
     try {
       await startRoutineOccurrence({
-        routine: routine as Routine,
+        routine: await decodeRoutine(routine, routine.owner_id) as unknown as Routine,
         origin: occurrence.origin,
         scheduledFor: occurrence.scheduled_for,
         requestId: occurrence.request_id,

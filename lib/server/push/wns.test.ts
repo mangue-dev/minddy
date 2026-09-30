@@ -26,6 +26,18 @@ beforeEach(() => {
 });
 
 describe("WNS transport", () => {
+  it("does not log private OAuth exceptions in production", async () => {
+    const sentinel = "MIN591_PRIVATE_WNS_SENTINEL";
+    vi.stubEnv("NODE_ENV", "production");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error(sentinel)));
+    try {
+      expect(await sendWnsNotification("https://synthetic.notify.windows.com/?token=synthetic", PAYLOAD))
+        .toMatchObject({ status: 0 });
+      expect(log).toHaveBeenCalled();
+      expect(log.mock.calls.flat().map(String).join("\n")).not.toContain(sentinel);
+    } finally { log.mockRestore(); }
+  });
   it("stays disabled until every Entra credential is present", () => {
     expect(isWnsConfigured()).toBe(true);
     vi.stubEnv("WNS_CLIENT_SECRET", "");

@@ -65,7 +65,6 @@ async function claimStripeEvent(event: StripeEvent): Promise<ClaimOutcome> {
     stripe_event_id: event.id,
     type: event.type,
     livemode: event.livemode,
-    payload: event,
     processed_at: null,
   });
   if (!error) return "fresh";
@@ -262,7 +261,7 @@ export async function POST(request: NextRequest) {
     console.error("[stripe-webhook] failed:", (error as Error).message);
     // The reservation remains WITHOUT stamp: the Stripe replay will take it back
     // (immediately if it is expired, on the next try otherwise). Nothing is
-    // deleted — the line keeps the payload, which is the trace of the incident.
+    // deleted — the reservation and event ID remain available for replay.
     return Response.json({ error: (error as Error).message }, { status: 500 });
   }
 }

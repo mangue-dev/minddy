@@ -9,6 +9,10 @@ import { forgeProviderForConnection } from "./forge-provider";
 import { getGitlabAccessToken, listGitlabProjects } from "./gitlab-app";
 import { isForgeRelayClientConfigured } from "@/lib/server/forge-relay/client";
 import { pushRelayLinkEvent } from "@/lib/server/forge-relay/link-push";
+import { decodeRepositoryName, registerRepositoryName,
+  shouldProtectRepositoryNames } from "./repository-name-content";
+import { decodeDefaultBranch,encodeDefaultBranch,
+  shouldEncryptDefaultBranch } from "./default-branch-content";
 
 /**
  * Access to project link ↔ repository (project_git_links) — MIN-47. Customer service;
@@ -48,16 +52,24 @@ export async function getProjectLink(
   const row = data as unknown as LinkRow & {
     git_connections: { account_login: string | null } | null;
   };
+  const repoFullName = await decodeRepositoryName(row.provider,
+    row.repo_full_name);
+  const previousNames = await Promise.all((row.repo_previous_names ?? [])
+    .map((name) => decodeRepositoryName(row.provider,name)));
+  const lastSlash = repoFullName?.lastIndexOf("/") ?? -1;
   return {
     id: row.id,
     provider: row.provider as RepoProviderId,
     connection_id: row.connection_id,
     external_repo_id: row.external_repo_id,
-    repo_owner: row.repo_owner,
-    repo_name: row.repo_name,
-    repo_full_name: row.repo_full_name,
-    repo_previous_names: row.repo_previous_names ?? [],
-    default_branch: row.default_branch,
+    repo_owner: row.repo_owner ?? (lastSlash>0
+      ? repoFullName!.slice(0,lastSlash) : null),
+    repo_name: row.repo_name ?? (lastSlash>0
+      ? repoFullName!.slice(lastSlash+1) : null),
+    repo_full_name: repoFullName,
+    repo_previous_names: previousNames.filter((name): name is string =>
+      typeof name==="string"),
+    default_branch: await decodeDefaultBranch(projectId,row.default_branch),
     account_login: row.git_connections?.account_login ?? null,
     issue_sync_enabled: row.issue_sync_enabled === true,
     issue_sync_backfilled_at: row.issue_sync_backfilled_at,
@@ -164,21 +176,31 @@ export async function bindRepo(params: {
   const supabase = getServiceClient();
   const previousLink = await getProjectLink(params.projectId);
   const nowIso = new Date().toISOString();
+  const protectNames = await shouldProtectRepositoryNames(supabase);
+  const storedName = protectNames
+    ? await registerRepositoryName(connection.provider,repo.full_name)
+    : repo.full_name;
+  const previousNames = previousLink?.provider === connection.provider &&
+    previousLink.external_repo_id === repo.external_repo_id
+    ? previousLink.repo_previous_names ?? [] : [];
+  const storedPreviousNames = protectNames
+    ? await Promise.all(previousNames.map((name) =>
+        registerRepositoryName(connection.provider,name)))
+    : previousNames;
+  const defaultBranch = await shouldEncryptDefaultBranch(supabase)
+    ? await encodeDefaultBranch(params.projectId,repo.default_branch)
+    : repo.default_branch;
   const values = {
     project_id: params.projectId,
     connection_id: connection.id,
     provider: connection.provider,
     installation_id: connection.installation_id,
     external_repo_id: repo.external_repo_id,
-    repo_owner: repo.owner,
-    repo_name: repo.name,
-    repo_full_name: repo.full_name,
-    repo_previous_names:
-      previousLink?.provider === connection.provider &&
-      previousLink.external_repo_id === repo.external_repo_id
-        ? previousLink.repo_previous_names
-        : [],
-    default_branch: repo.default_branch,
+    repo_owner: protectNames ? null : repo.owner,
+    repo_name: protectNames ? null : repo.name,
+    repo_full_name: storedName,
+    repo_previous_names: storedPreviousNames,
+    default_branch: defaultBranch,
     created_by: params.userId,
     updated_at: nowIso,
   };
@@ -247,7 +269,8 @@ export async function unlinkProject(projectId: string): Promise<boolean> {
       event: "unlinked",
       provider: removed.provider,
       repoId: removed.external_repo_id,
-      repo: removed.repo_full_name,
+      repo: (await decodeRepositoryName(removed.provider,
+        removed.repo_full_name))!,
       connectionId: removed.connection_id,
     });
   }

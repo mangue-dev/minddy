@@ -213,6 +213,7 @@ export function ObjectiveDialog({
 }) {
   const t = useTranslations("Objectives");
   const tCommon = useTranslations("Common");
+  const tDrafts = useTranslations("Drafts");
   const { track } = useAnalytics();
   // Mounts with the objectives page: warm the editor chunk once painted.
   useIdleMarkdownEditorPreload();
@@ -294,9 +295,9 @@ export function ObjectiveDialog({
     uploads.inputs.length > 0;
 
   // Snapshot the form as a local draft (MIN-41), reusing the active id.
-  const saveDraft = () => {
+  const saveDraft = async () => {
     if (!projectId) return;
-    drafts.save({
+    await drafts.save({
       id: activeDraftId ?? createUuid(),
       projectId,
       updatedAt: Date.now(),
@@ -311,17 +312,17 @@ export function ObjectiveDialog({
   };
 
   // Stash the draft and close (the confirmation's "Save" action).
-  const saveDraftAndClose = () => {
-    saveDraft();
-    closeAndReset();
+  const saveDraftAndClose = async () => {
+    try { await saveDraft(); closeAndReset(); }
+    catch { toast.error(tDrafts("saveFailed")); }
   };
 
   // “Abandon”: we close WITHOUT keeping, and the original draft goes away
   // with — otherwise we would find in the repeat row the one we thought
   // have given up. Same gesture as successful creation, which also consumes the
   // draft it came from.
-  const discardDraftAndClose = () => {
-    if (activeDraftId) drafts.remove(activeDraftId);
+  const discardDraftAndClose = async () => {
+    if (activeDraftId && !await drafts.remove(activeDraftId)) return;
     closeAndReset();
   };
 
@@ -487,6 +488,10 @@ export function ObjectiveDialog({
               : {})}
           >
             {composerEnabled && <DropOverlay show={drop.dragging} />}
+            {composerEnabled && drafts.legacyAvailable && <div className="mb-3 text-sm">
+              <p>{tDrafts("legacyWarning")}</p>
+              <Button type="button" variant="ghost" onClick={() => void drafts.recoverLegacy()}>{tDrafts("recoverLegacy")}</Button>
+            </div>}
             {/* Recent drafts — a row above the name to restore or delete an
               abandoned draft (MIN-41). Hidden once the form has content. */}
             {composerEnabled &&

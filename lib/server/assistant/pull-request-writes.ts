@@ -623,8 +623,8 @@ async function settleState(
       return "done";
     }
     return null;
-  } catch (err) {
-    console.error("[assistant] PR state sync skipped:", (err as Error).message);
+  } catch {
+    console.error("[assistant] pr_state_sync_failed");
     return null;
   }
 }

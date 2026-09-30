@@ -4,7 +4,15 @@
 -- views are the only place it ever existed.
 BEGIN;
 
-CREATE OR REPLACE VIEW public.numo_work WITH (security_invoker = true) AS
+-- PostgreSQL cannot remove view columns with CREATE OR REPLACE. Rebuild the
+-- known views and policies in order; avoid CASCADE so unexpected dependencies fail.
+DROP POLICY assistant_active_conversation_insert ON public.assistant_active_conversation;
+DROP POLICY assistant_active_conversation_update ON public.assistant_active_conversation;
+DROP VIEW public.numo_user_conversation_history;
+DROP VIEW public.numo_conversation_history;
+DROP VIEW public.numo_work;
+
+CREATE VIEW public.numo_work WITH (security_invoker = true) AS
 SELECT r.id, COALESCE(o.conversation_id, i.id) AS conversation_id,
   i.id AS work_conversation_id, r.conversation_id AS legacy_conversation_id,
   r.project_id, r.issue_id, r.pull_request_id, r.status, r.title,
@@ -19,7 +27,7 @@ LEFT JOIN public.agent_conversation_reads rd ON rd.conversation_id = c.id AND rd
 JOIN public.numo_conversation_ids i ON i.agent_id = r.conversation_id
 LEFT JOIN public.numo_work_origins o ON o.agent_id = r.conversation_id;
 
-CREATE OR REPLACE VIEW public.numo_conversation_history WITH (security_invoker = true) AS
+CREATE VIEW public.numo_conversation_history WITH (security_invoker = true) AS
 SELECT i.id, 'assistant'::text AS source, c.id AS legacy_id,
   c.user_id, c.project_id, NULL::uuid AS access_project_id,
   'private'::text AS visibility, c.title, c.status, c.error_message,
@@ -58,5 +66,26 @@ WHERE NOT EXISTS (SELECT 1 FROM public.numo_work_origins o WHERE o.agent_id = c.
   AND (r.id IS NULL OR r.routine_id IS NULL)
   AND (r.issue_id IS NULL OR issue.id IS NOT NULL)
   AND (r.pull_request_id IS NULL OR pr.id IS NOT NULL);
+
+CREATE VIEW public.numo_user_conversation_history WITH (security_invoker = true) AS
+SELECT history.*
+FROM public.numo_conversation_history AS history
+WHERE history.source <> 'assistant'
+   OR NOT public.is_numo_routine_conversation(history.legacy_id);
+
+REVOKE ALL ON public.numo_work, public.numo_conversation_history,
+  public.numo_user_conversation_history FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON public.numo_work, public.numo_conversation_history,
+  public.numo_user_conversation_history TO authenticated, service_role;
+
+CREATE POLICY assistant_active_conversation_insert ON public.assistant_active_conversation
+  FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() AND EXISTS (
+    SELECT 1 FROM public.numo_conversation_history c WHERE c.id = conversation_id
+  ));
+CREATE POLICY assistant_active_conversation_update ON public.assistant_active_conversation
+  FOR UPDATE TO authenticated USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid() AND EXISTS (
+    SELECT 1 FROM public.numo_conversation_history c WHERE c.id = conversation_id
+  ));
 
 COMMIT;

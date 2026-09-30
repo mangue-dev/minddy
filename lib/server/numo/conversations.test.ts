@@ -24,6 +24,7 @@ function database(tables: Record<string, Row[]> = {}, failedTable?: string) {
     const query = {
       select: (...args: unknown[]) => { calls.push({ table, method: "select", args }); return query; },
       eq: (key: string, value: unknown) => { rows = rows.filter((r) => r[key] === value); return query; },
+      in: (key: string, values: unknown[]) => { rows = rows.filter((r) => values.includes(r[key])); return query; },
       is: (key: string, value: unknown) => { rows = rows.filter((r) => r[key] === value); return query; },
       order: (...args: unknown[]) => { calls.push({ table, method: "order", args }); return query; },
       range: (a: number, b: number) => { calls.push({ table, method: "range", args: [a, b] }); rows = rows.slice(a, b + 1); return query; },
@@ -59,6 +60,33 @@ describe("Numo conversation adapter", () => {
     expect(db.calls.filter((c) => c.method === "order").slice(0, 2).map((c) => c.args)).toEqual([
       ["updated_at", { ascending: false }], ["id", { ascending: true }],
     ]);
+  });
+
+  it("hydrates an issue-derived agent title through the authorized issue repository", async () => {
+    const agent = { id, source: "agent", project_id: "project", title: null,
+      latest_work_id: "work-1" };
+    const db = database({
+      numo_user_conversation_history: [agent],
+      agent_runs: [{ id: "work-1", project_id: "project", issue_id: "issue-1" }],
+      issues: [{ id: "issue-1", project_id: "project", title: "Private issue" }],
+    });
+    expect((await listNumoConversations(db.client)).conversations[0].title).toBe("Private issue");
+    expect(db.from).toHaveBeenCalledWith("agent_runs");
+    expect(db.from).toHaveBeenCalledWith("issues");
+  });
+
+  it("hydrates a PR title only after matching the authorized run project", async () => {
+    const agent = { id, source: "agent", project_id: "project", title: null,
+      latest_work_id: "work-1" };
+    const db = database({
+      numo_user_conversation_history: [agent],
+      agent_runs: [{ id: "work-1", project_id: "project", issue_id: null,
+        pull_request_id: "pr-1" }],
+      pull_requests: [{ id: "pr-1", title: "Private pull request" }],
+    });
+    expect((await listNumoConversations(db.client)).conversations[0].title)
+      .toBe("Private pull request");
+    expect(db.from).toHaveBeenCalledWith("pull_requests");
   });
 
   it("does not read content for a missing or inaccessible common identity", async () => {
@@ -124,8 +152,11 @@ describe("Numo conversation routes", () => {
   it("creates a projectless conversation owned by the authenticated user", async () => {
     const db = database({ numo_conversation_history: [conversation] });
     auth.get.mockResolvedValue({ ok: true, user: { id: userId }, supabase: db.client });
+    auth.service.mockReturnValue(db.client);
     expect((await create(request("/api/numo/conversations", "POST", {}))).status).toBe(201);
-    expect(db.calls).toContainEqual({ table: "conversations", method: "insert", args: [{ user_id: userId, title: null, project_id: null }] });
+    expect(db.calls).toContainEqual({ table: "conversations", method: "insert",
+      args: [expect.objectContaining({ id: expect.any(String), user_id: userId,
+        title: null, project_id: null })] });
   });
 
   it("rejects project context that the caller cannot read", async () => {

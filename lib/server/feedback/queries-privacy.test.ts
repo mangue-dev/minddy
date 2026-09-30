@@ -10,6 +10,10 @@ const canonical: Row = {
   body: "Body",
   submitted_title: "Canonical",
   submitted_body: "Body",
+  translated_title: null,
+  translated_body: null,
+  moderation_reason: null,
+  embedding: null,
   status: "open",
   vote_count: 0,
   merged_into_id: null,
@@ -25,10 +29,10 @@ const canonical: Row = {
 };
 
 const merged: Row[] = [
-  { id: "public", title: "Public duplicate", merged_into_id: "canonical", is_public: true, review_state: "published", status: "open", deleted_at: null, created_at: "1" },
-  { id: "private", title: "Private duplicate", merged_into_id: "canonical", is_public: false, review_state: "published", status: "open", deleted_at: null, created_at: "2" },
-  { id: "pending", title: "Pending duplicate", merged_into_id: "canonical", is_public: true, review_state: "pending", status: "open", deleted_at: null, created_at: "3" },
-  { id: "spam", title: "Spam duplicate", merged_into_id: "canonical", is_public: true, review_state: "published", status: "spam", deleted_at: null, created_at: "4" },
+  { ...canonical, id: "public", title: "Public duplicate", merged_into_id: "canonical", is_public: true, review_state: "published", status: "open", created_at: "1" },
+  { ...canonical, id: "private", title: "Private duplicate", merged_into_id: "canonical", is_public: false, review_state: "published", status: "open", created_at: "2" },
+  { ...canonical, id: "pending", title: "Pending duplicate", merged_into_id: "canonical", is_public: true, review_state: "pending", status: "open", created_at: "3" },
+  { ...canonical, id: "spam", title: "Spam duplicate", merged_into_id: "canonical", is_public: true, review_state: "published", status: "spam", created_at: "4" },
 ];
 
 function query(table: string) {

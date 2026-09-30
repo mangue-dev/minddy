@@ -1,3 +1,5 @@
+import { categoryStore } from "@/lib/server/category-store";
+import { decodeFeedbackPost, saveFeedbackPostContent } from "@/lib/server/feedback-post-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -270,7 +272,7 @@ async function publishWithoutReview(postId: string): Promise<void> {
     .select("id, project_id, source, review_state, status")
     .maybeSingle();
   if (error) {
-    console.error("[feedback-review] publish without review failed:", error.message);
+    console.error("[feedback-review] publish_without_review_failed");
     return;
   }
   if (updated) {
@@ -293,7 +295,7 @@ export async function runFeedbackReview(): Promise<ReviewReport> {
     p_limit: settings.batchSize,
   });
   if (error) {
-    console.error("[feedback-review] claim failed:", error.message);
+    console.error("[feedback-review] claim_failed");
     return report;
   }
 
@@ -301,7 +303,9 @@ export async function runFeedbackReview(): Promise<ReviewReport> {
   // owner): it's two readings, no need to redo them for each post.
   const modeByProject = new Map<string, FeedbackReviewMode>();
 
-  for (const post of (claimed ?? []) as ClaimedPost[]) {
+  for (const stored of (claimed ?? []) as Record<string, unknown>[]) {
+    const post = (typeof stored.encryption_version === "number" && stored.encryption_version > 0
+      ? await decodeFeedbackPost(stored) : stored) as unknown as ClaimedPost;
     let mode = modeByProject.get(post.project_id);
     if (mode === undefined) {
       mode = await reviewModeForProject(post.project_id);
@@ -354,10 +358,12 @@ export async function reviewFeedbackPost(
     p_post: postId,
   });
   if (error) {
-    console.error("[feedback-review] inline claim failed:", error.message);
+    console.error("[feedback-review] inline_claim_failed");
     return report;
   }
-  const post = ((data ?? []) as ClaimedPost[])[0];
+  const stored = ((data ?? []) as Record<string, unknown>[])[0];
+  const post = stored ? (typeof stored.encryption_version === "number" && stored.encryption_version > 0
+    ? await decodeFeedbackPost(stored) : stored) as unknown as ClaimedPost : null;
   if (!post) return report;
 
   await runOne(post, settings, report);
@@ -375,8 +381,8 @@ async function runOne(
       report.failures += 1;
       await bumpFailure(post.id, post.analysis_failures);
     }
-  } catch (err) {
-    console.error("[feedback-review] post failed:", (err as Error).message);
+  } catch {
+    console.error("[feedback-review] post_failed");
     report.failures += 1;
     await bumpFailure(post.id, post.analysis_failures);
   }
@@ -486,11 +492,9 @@ async function prepareFeedbackReview(
       { record: { billTo: { projectOwner: post.project_id }, projectId: post.project_id } }
     );
     if (!embedding) return null;
-    await service
-      .from("feedback_posts")
-      .update({ embedding: toVectorLiteral(embedding) })
-      .is("deleted_at", null)
-      .eq("id", post.id);
+    const saved = await saveFeedbackPostContent(service, post.id, post.project_id,
+      { embedding: toVectorLiteral(embedding) });
+    if (saved.error || !saved.data) return null;
   }
 
   // A post already deduplicated (marker before MIN-87) does not go through the
@@ -499,9 +503,10 @@ async function prepareFeedbackReview(
 
   const [rejectedPairs, catRows, translation] = await Promise.all([
     lookForDuplicates ? fetchRejectedPairIds(post.id) : Promise.resolve(new Set<string>()),
-    service.from("categories").select("id, name").eq("project_id", post.project_id),
+    categoryStore(service).select("id, name").eq("project_id", post.project_id),
     projectTranslationSettings(post.project_id),
   ]);
+  if (catRows.error) throw new Error("Unable to read feedback review categories");
 
   let candidates: MatchedPost[] = [];
   if (lookForDuplicates) {
@@ -704,16 +709,10 @@ async function reviewOne(
   }
   if (decision.forcePrivate) updates.is_public = false;
 
-  const { data: updated, error: updError } = await service
-    .from("feedback_posts")
-    .update(updates)
-    .is("deleted_at", null)
-    .eq("id", post.id)
-    .is("merged_into_id", null)
-    .select("id, project_id, source, review_state, status")
-    .maybeSingle();
+  const { data: updated, error: updError } = await saveFeedbackPostContent(
+    service, post.id, post.project_id, updates);
   if (updError) {
-    console.error("[feedback-review] update failed:", updError.message);
+    console.error("[feedback-review] update_failed");
     return false;
   }
 
@@ -727,7 +726,7 @@ async function reviewOne(
         review_state: currentReviewState,
         status: currentStatus,
       },
-      updated as FeedbackNotificationPost
+      updated as unknown as FeedbackNotificationPost
     );
   }
 

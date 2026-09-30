@@ -18,9 +18,22 @@ import type {
   NumoSurfaceEvent,
   NumoSurfaceThread,
 } from "./surface-conversations";
+import { decodeNumoSurfaceEvent } from "./surface-conversations";
+import type { StoredSurfaceDestination } from "./surface-destination-content";
 
 interface SurfaceProjectionRow extends NumoSurfaceEvent {
   thread: NumoSurfaceThread;
+}
+
+type StoredSurfaceProjectionRow = Omit<SurfaceProjectionRow, "destination"> & {
+  destination: StoredSurfaceDestination;
+};
+
+function commentTableForSurface(surface: NumoSurfaceThread["surface"]):
+  "comments" | "page_comments" | null {
+  if (surface === "page_comment") return "page_comments";
+  if (surface === "pull_request_comment") return null;
+  return "comments";
 }
 
 export function numoSurfaceProjectionDisposition(
@@ -58,15 +71,18 @@ async function projectableOutcome(
   if (turn.status !== "waiting_input") return answer;
   const { data, error } = await service
     .from("assistant_messages")
-    .select("content")
+    .select("id,role,content,tool_calls,context,metadata,tool_call_id,tool_name,tool_payload_version")
     .eq("turn_id", turn.id)
     .eq("role", "tool")
     .eq("tool_name", "ask_user")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) throw new Error(error.message);
-  const questions = surfaceAskUserQuestions(data?.content as string | null);
+  if (error) throw new Error("numo_surface_outcome_lookup_failed");
+  const { decodeNumoToolMessage } = await import("./tool-content");
+  const visible = data ? await decodeNumoToolMessage(turn.user_id, data,
+    turn.user_id) : null;
+  const questions = surfaceAskUserQuestions(visible?.content as string | null);
   const questionText = questions.join("\n\n");
   return [answer, questionText].filter(Boolean).join("\n\n");
 }
@@ -74,7 +90,7 @@ async function projectableOutcome(
 async function projectionForTurn(
   service: SupabaseClient,
   turnId: string,
-): Promise<SurfaceProjectionRow | null> {
+): Promise<StoredSurfaceProjectionRow | null> {
   const { data, error } = await service
     .from("numo_surface_events")
     .select("*, thread:numo_surface_threads(*)")
@@ -83,8 +99,8 @@ async function projectionForTurn(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data as SurfaceProjectionRow | null;
+  if (error) throw new Error("numo_surface_projection_lookup_failed");
+  return data as StoredSurfaceProjectionRow | null;
 }
 
 /** Mirror the common engine's live activity onto an internal comment placeholder. */
@@ -92,7 +108,10 @@ export async function createNumoSurfaceEmitter(
   service: SupabaseClient,
   turnId: string,
 ): Promise<SafeEmitter | undefined> {
-  const projection = await projectionForTurn(service, turnId);
+  const stored = await projectionForTurn(service, turnId);
+  if (!stored || !await getProjectAccess(stored.actor_id,
+      stored.thread.project_id)) return undefined;
+  const projection = await decodeNumoSurfaceEvent(stored) as SurfaceProjectionRow;
   const destination = projection?.destination;
   if (
     !projection?.response_id || destination?.kind !== "comment"
@@ -170,7 +189,7 @@ async function claimProjection(
     .eq("projection_status", "pending")
     .select("id")
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("numo_surface_access_lookup_failed");
   return !!data;
 }
 
@@ -190,7 +209,7 @@ async function stampProjection(
       updated_at: now,
     })
     .eq("id", eventId);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("numo_surface_projection_write_failed");
 }
 
 async function notifyCommentProjection(
@@ -267,7 +286,7 @@ async function projectPullRequest(
     .select("*")
     .eq("id", destination.pullRequestId)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("numo_surface_pull_request_lookup_failed");
   if (!pr) return;
   const { resolvePrScope } = await import("@/lib/server/agent/pr-actions");
   const scope = await resolvePrScope(projection.actor_id, pr as PullRequestRow);
@@ -281,33 +300,35 @@ export async function projectNumoSurfaceTurn(
   turn: NumoTurn,
 ): Promise<void> {
   if (numoSurfaceProjectionDisposition(turn.status) === "wait") return;
-  const projection = await projectionForTurn(service, turn.id);
-  if (!projection || projection.projection_status !== "pending") return;
-  if (!(await claimProjection(service, projection.id))) return;
+  const stored = await projectionForTurn(service, turn.id);
+  if (!stored || stored.projection_status !== "pending") return;
+  if (!(await claimProjection(service, stored.id))) return;
 
   try {
     // Re-check access at delivery time. A private answer is not projected after
     // the invoking member loses access while background work is running.
-    if (!await getProjectAccess(projection.actor_id, projection.thread.project_id)) {
-      if (projection.destination.kind === "comment" && projection.response_id) {
+    if (!await getProjectAccess(stored.actor_id, stored.thread.project_id)) {
+      const table = commentTableForSurface(stored.thread.surface);
+      if (table && stored.response_id) {
         await commentDisplay(
           service,
-          projection.response_id,
-          projection.destination.table,
+          stored.response_id,
+          table,
         ).fail();
       }
-      await stampProjection(service, projection.id, turn.status, "failed");
+      await stampProjection(service, stored.id, turn.status, "failed");
       return;
     }
+    const projection = await decodeNumoSurfaceEvent(stored) as SurfaceProjectionRow;
     if (projection.destination.kind === "comment") {
       await projectComment(service, projection, turn);
     } else {
       await projectPullRequest(service, projection, turn);
     }
     await stampProjection(service, projection.id, turn.status, "projected");
-  } catch (error) {
-    console.error("[numo-surface] projection failed:", error);
-    await stampProjection(service, projection.id, turn.status, "failed");
+  } catch {
+    console.error("[numo-surface] projection_failed", stored.id);
+    await stampProjection(service, stored.id, turn.status, "failed");
   }
 }
 
@@ -315,7 +336,16 @@ export async function failNumoSurfaceProjection(
   service: SupabaseClient,
   turnId: string,
 ): Promise<void> {
-  const projection = await projectionForTurn(service, turnId).catch(() => null);
+  const stored = await projectionForTurn(service, turnId).catch(() => null);
+  if (!stored) return;
+  if (!await getProjectAccess(stored.actor_id, stored.thread.project_id)) {
+    const table = commentTableForSurface(stored.thread.surface);
+    if (table && stored.response_id) {
+      await commentDisplay(service, stored.response_id, table).fail();
+    }
+    return;
+  }
+  const projection = await decodeNumoSurfaceEvent(stored) as SurfaceProjectionRow;
   if (
     !projection || projection.destination.kind !== "comment"
     || !projection.response_id

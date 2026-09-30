@@ -47,10 +47,8 @@
  */
 
 /**
- * The PUBLIC bucket where files attached to a PR comment land
- * (MIN-162). Public because the comment goes to the forge: its URL is
- * read by GitHub, by its notification emails, and by people who don't have
- * minddy account. Server writing only — cf. migration.
+ * Private object storage for files linked from forge comments. The proxy URL
+ * is a bearer capability for external forge readers; Storage never serves bytes.
  */
 export const FORGE_ATTACHMENTS_BUCKET = "forge-attachments";
 
@@ -64,8 +62,11 @@ export function forgeAttachmentProxyUrl(origin: string, storagePath: string): st
   return new URL(`/api/pr-attachments/${segments.join("/")}`, origin).toString();
 }
 
-/** Converts the public route segments back to the only accepted storage key shape. */
+/** Converts route segments to a capability id or a historical storage key. */
 export function forgeAttachmentStoragePath(segments: string[]): string | null {
+  if (segments.length === 1) {
+    return STORAGE_UUID_RE.test(segments[0]) ? segments[0] : null;
+  }
   if (segments.length !== 3) return null;
   const [prId, attachmentId, fileName] = segments;
   if (

@@ -2,14 +2,16 @@ import "server-only";
 import type { z } from "zod";
 import { mcpConnectionInput } from "@/lib/mcp-client";
 import { encryptMcpToken } from "./mcp-credentials";
-import { initialMcpOAuth } from "./mcp-oauth";
+import { initialMcpOAuth, initialMcpOAuthData } from "./mcp-oauth";
 import type { McpConnectionRow } from "./mcp-client";
 
 /** Keep all credential updates out of the browser-facing metadata. */
 export function mcpSettingsUpdate(
   input: Partial<z.infer<typeof mcpConnectionInput>>,
   current?: McpConnectionRow,
+  rawSecrets = false,
 ) {
+  const seal = rawSecrets ? (value: string) => value : encryptMcpToken;
   const { token, headers, oauth_client_id, oauth_client_secret, ...fields } =
     input;
   const destinationChanged =
@@ -31,14 +33,14 @@ export function mcpSettingsUpdate(
     mode !== "bearer"
       ? {
           token_encrypted:
-            mode === "bearer" ? encryptMcpToken(token ?? "") : null,
+            mode === "bearer" ? seal(token ?? "") : null,
         }
       : {}),
     ...(!current || headers !== undefined || destinationChanged
       ? {
           headers_encrypted:
             headers && Object.keys(headers).length
-              ? encryptMcpToken(JSON.stringify(headers))
+              ? seal(JSON.stringify(headers))
               : null,
         }
       : {}),
@@ -46,7 +48,9 @@ export function mcpSettingsUpdate(
       ? {
           oauth_encrypted:
             mode === "oauth"
-              ? initialMcpOAuth(oauth_client_id, oauth_client_secret)
+              ? rawSecrets
+                ? initialMcpOAuthData(oauth_client_id, oauth_client_secret)
+                : initialMcpOAuth(oauth_client_id, oauth_client_secret)
               : null,
           oauth_connected: false,
         }

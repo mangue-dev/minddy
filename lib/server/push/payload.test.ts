@@ -167,7 +167,7 @@ describe("buildPushPayload", () => {
   it("suit la cible : objectif, retour de board, pull request, ticket", () => {
     const ctx = ctxWithIssue();
     ctx.objectives.set("obj", "Refonte de l'inbox");
-    ctx.feedbackPosts.set("fp", "Mode sombre s'il vous plaît");
+    ctx.feedbackPosts.set("fp", { projectId: PROJECT, title: "Mode sombre s'il vous plaît" });
     ctx.pullRequests.set("pr", { number: 12, title: "Ajouter le mode sombre" });
 
     const objective = buildPushPayload(
@@ -189,6 +189,10 @@ describe("buildPushPayload", () => {
       title: "Mode sombre s'il vous plaît",
       url: `/projects/${PROJECT}/feedback?post=fp`,
     });
+    ctx.feedbackPosts.set("fp", { projectId: "foreign-project", title: "Foreign feedback" });
+    expect(buildPushPayload(ctx,
+      issueRow("feedback_new", { issue_id: null, feedback_post_id: "fp" }), "fr"))
+      .toBeNull();
 
     // An open PR leads to the Pull requests page, which is not in a project.
     const pr = buildPushPayload(

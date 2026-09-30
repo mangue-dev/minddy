@@ -209,7 +209,13 @@ describe("readInboxNotifications target isolation", () => {
       project_id: project,
       title,
       name: title,
+      description: null,
       deleted_at: null,
+    });
+    const feedbackScoped = (id: string, project: string, title: string) => ({
+      ...scoped(id, project, title), body: "", submitted_title: title,
+      submitted_body: "", translated_title: null, translated_body: null,
+      moderation_reason: null, embedding: null,
     });
     const fixtures: Fixtures = {
       notifications,
@@ -219,8 +225,8 @@ describe("readInboxNotifications target isolation", () => {
         scoped("objective-b", "project-b", "Foreign objective"),
       ],
       feedback_posts: [
-        scoped("feedback-a", "project-a", "Allowed feedback"),
-        scoped("feedback-b", "project-b", "Foreign feedback"),
+        feedbackScoped("feedback-a", "project-a", "Allowed feedback"),
+        feedbackScoped("feedback-b", "project-b", "Foreign feedback"),
       ],
       agent_routines: [
         scoped("routine-a", "project-a", "Allowed routine"),

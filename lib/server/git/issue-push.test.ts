@@ -249,6 +249,27 @@ describe("scheduleRemoteStatusPush — GitHub", () => {
     expect(calls).toHaveLength(1);
   });
 
+  it("logs only controlled fields for private and malformed provider failures", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: false, status: 422,
+      json: async () => { throw new Error("MIN591_PRIVATE_JSON_FRAGMENT"); },
+      text: async () => "MIN591_PRIVATE_PROVIDER_BODY",
+    })));
+    await push(IMPORTED, "done");
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls))
+      .not.toContain("MIN591_PRIVATE");
+    expect(console.error).toHaveBeenCalledWith(
+      "[issue-push] remote_status_write_failed", IMPORTED.id, "github", "closed",
+    );
+
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw new Error("MIN591_PRIVATE_SUBMITTED_CONTENT");
+    }));
+    await push(IMPORTED, "done");
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls))
+      .not.toContain("MIN591_PRIVATE");
+  });
+
   it("serializes a newer status behind an in-flight push", async () => {
     let release!: () => void;
     httpGate = new Promise<void>((resolve) => {

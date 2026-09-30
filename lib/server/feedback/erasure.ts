@@ -1,35 +1,28 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import { getBoardForProject } from "@/lib/server/feedback/boards";
+import { decodeFeedbackIdentityRow, feedbackOtpEmailLookup } from "./identity-content";
 
 /**
- * Deletion of a board participant (GDPR art. 17).
+ * Erase a board participant's private identity (GDPR Article 17).
  *
- * The board editor is responsible for processing the people who participate in it; minddy is his subcontractor. When a deletion request to him
- * arrives, it is therefore up to him to execute it — and until now he had nothing to do: no identity deletion existed in the product.
+ * The board owner handles erasure requests from participants. The identity row
+ * remains under an opaque UUID and pseudonym so that existing contributions,
+ * replies, and votes retain their meaning. Email, name, external ID, pending
+ * verification codes, and sessions are removed atomically by the database.
  *
- * What leaves: email, name, external_id, verification codes in wait,
- * and all open sessions. What remains: the line, opaque, bearing a
- * uuid and the pseudonym that derives from it. The WHY of this choice is at length in
- * the migration `20261110090000_feedback_erasure.sql` — in one sentence: delete
- * the line would change the public comments of the person to those of
- * the team, would take away the responses of others, and would change
- * retroactively the weight of the feedback that she had supported.
- *
- * Idempotent: erasing the same identity twice does nothing the second time
- * and gives the same report.
+ * Every call revokes sessions, including retries after an earlier erasure.
  */
 
 export interface FeedbackErasureReport {
   userId: string;
-  /** Already deleted before this call — nothing has been retouched. */
+  /** Identity data was already erased before this call. */
   alreadyErased: boolean;
-  /** Contributions remaining online, now without identifiable author. */
+  /** Contributions that remain available under the pseudonym. */
   posts: number;
   comments: number;
   votes: number;
-  /** Sessions revoked (visitor is logged out everywhere). */
+  /** Sessions revoked by this call. */
   sessions: number;
 }
 
@@ -43,69 +36,52 @@ export async function eraseFeedbackUser(params: {
 }): Promise<FeedbackErasureResult> {
   const service = getServiceClient();
 
-  // `project_id` is part of the filter, not just the read: route
-  // carries a project id and an identity id, and nothing
-  // would otherwise prohibit erasing the identity of a neighboring board.
-  const { data: user } = await service
+  // Scope both the read and the transactional erasure to this project.
+  const { data: user, error: readError } = await service
     .from("feedback_users")
     .select("id, project_id, email, erased_at")
     .eq("id", params.userId)
     .eq("project_id", params.projectId)
     .maybeSingle();
+  if (readError) return { ok: false, error: "failed" };
   if (!user) return { ok: false, error: "notFound" };
 
-  const [posts, comments, votes] = await Promise.all([
-    countRows(service, "feedback_posts", "author_id", params.userId),
-    countRows(service, "comments", "feedback_user_id", params.userId),
-    countRows(service, "feedback_votes", "user_id", params.userId),
-  ]);
-
-  if (user.erased_at) {
-    return {
-      ok: true,
-      report: {
-        userId: params.userId,
-        alreadyErased: true,
-        posts,
-        comments,
-        votes,
-        sessions: 0,
-      },
-    };
+  let posts: number;
+  let comments: number;
+  let votes: number;
+  try {
+    [posts, comments, votes] = await Promise.all([
+      countRows(service, "feedback_posts", "author_id", params.userId),
+      countRows(service, "comments", "feedback_user_id", params.userId),
+      countRows(service, "feedback_votes", "user_id", params.userId),
+    ]);
+  } catch {
+    return { ok: false, error: "failed" };
   }
 
-  // Sessions first: as long as the cookie is valid, its bearer would continue to
-  // see yourself “connected” under an identity that you are emptying.
-  const { count: sessions } = await service
-    .from("feedback_sessions")
-    .delete({ count: "exact" })
-    .eq("user_id", params.userId);
-
-  // A pending code carries the address in plain text. It expires in ten minutes and the
-  // night sweep picks it up — but “in ten minutes” is not a
-  // response to a deletion request.
-  if (user.email) {
-    const board = await getBoardForProject(params.projectId);
-    if (board) {
-      await service
-        .from("feedback_otp_codes")
-        .delete()
-        .eq("board_id", board.id)
-        .eq("email", user.email);
+  let email: string | null = null;
+  let otpEmailLookup: string | null = null;
+  if (!user.erased_at) {
+    try {
+      // Legacy OTP rows can lack a blind lookup during rollout, so the clear
+      // email is required to remove them. If decryption fails, keep the
+      // identity intact and report failure instead of a partial erasure.
+      email = (await decodeFeedbackIdentityRow(user, params.projectId)).email;
+      if (email) otpEmailLookup = await feedbackOtpEmailLookup(email);
+    } catch {
+      return { ok: false, error: "failed" };
     }
   }
-
-  const { error } = await service
-    .from("feedback_users")
-    .update({
-      email: null,
-      name: null,
-      external_id: null,
-      erased_at: new Date().toISOString(),
-    })
-    .eq("id", params.userId);
-  if (error) {
-    console.error("[feedback-erasure] scrub failed:", error.message);
+  const { data, error } = await service.rpc("erase_feedback_identity", {
+    p_project_id: params.projectId,
+    p_user_id: params.userId,
+    p_email_plain: email,
+    p_otp_email_lookup: otpEmailLookup,
+  });
+  const result = (data as { already_erased: boolean;
+    sessions_revoked: number }[] | null)?.[0];
+  if (error || !result) {
+    console.error("[feedback-erasure] atomic erase failed");
     return { ok: false, error: "failed" };
   }
 
@@ -113,27 +89,26 @@ export async function eraseFeedbackUser(params: {
     ok: true,
     report: {
       userId: params.userId,
-      alreadyErased: false,
+      alreadyErased: result.already_erased,
       posts,
       comments,
       votes,
-      sessions: sessions ?? 0,
+      sessions: result.sessions_revoked,
     },
   };
 }
 
-/** `select("*")` and not `select("id")`: `feedback_votes` does not have a column
- `id` (its primary key is the post/identity pair), and an absent column
- causes the count to fail instead of returning zero. */
+/** Votes use the post/identity pair as their primary key, so count all rows. */
 async function countRows(
   service: ReturnType<typeof getServiceClient>,
   table: string,
   column: string,
   userId: string
 ): Promise<number> {
-  const { count } = await service
+  const { count, error } = await service
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq(column, userId);
-  return count ?? 0;
+  if (error || count === null) throw new Error("Feedback contribution count failed");
+  return count;
 }

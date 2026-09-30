@@ -1,7 +1,9 @@
+import { issueStore } from "@/lib/server/issue-store";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeProject } from "@/lib/server/project-content";
 import { activeRunForChain, requestInterrupt } from "@/lib/server/agent/runs";
 import { requestNumoTurnStop } from "@/lib/server/numo/turns";
 import {
@@ -81,9 +83,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
 
   // RLS: The caller must be able to see the ticket.
-  const { data: issueRow } = await auth.supabase
-    .from("issues")
-    .select(
+  const { data: issueRow } = await issueStore(auth.supabase).select(
       "id, project_id, status, priority, effort, plan, assignee_id, automation_override",
     )
     .eq("id", id)
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const [{ data: project }, chain, { data: categoryRows }] = await Promise.all([
     service
       .from("projects")
-      .select("id, owner_id, automations_enabled, automations")
+      .select("*")
       .eq("id", issue.project_id)
       .maybeSingle(),
     latestChainForIssue(id),
@@ -107,8 +107,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     ? ((await service.auth.admin.getUserById(project.owner_id as string)).data?.user
         ?.user_metadata ?? null)
     : null;
+  const readableProject = project ? await decodeProject(project) : null;
   const rules = rulesForIssue(
-    rulesForProject(project?.automations, ownerMeta as Record<string, unknown> | null),
+    rulesForProject(readableProject?.automations, ownerMeta as Record<string, unknown> | null),
     parseAutomationOverride(issue.automation_override),
   );
   const facts = {
@@ -154,9 +155,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  const { data: issue } = await auth.supabase
-    .from("issues")
-    .select("id, project_id")
+  const { data: issue } = await issueStore(auth.supabase).select("id, project_id")
     .eq("id", id)
     .maybeSingle();
   if (!issue) return NextResponse.json({ error: "Issue not found" }, { status: 404 });

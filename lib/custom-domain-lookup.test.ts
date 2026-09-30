@@ -25,6 +25,12 @@ const ENV = {
 };
 
 const fetchMock = vi.fn();
+vi.mock("@/lib/server/encryption/share-token-content", () => ({
+  decodeShareToken: async (_id: string, stored: string) => stored.startsWith("mdys3:")
+    ? Buffer.from(stored.slice(6), "base64url").toString("utf8") : stored,
+  shareTokenLookup: async (token: string) =>
+    Buffer.from(token).toString("hex").padStart(64, "0"),
+}));
 
 function respond(rows: unknown[]) {
   fetchMock.mockResolvedValueOnce({ ok: true, json: async () => rows });
@@ -93,6 +99,16 @@ describe("lookupCustomDomain", () => {
     });
   });
 
+  it("decrypts a custom-domain share token before routing", async () => {
+    respond([{ feedback_boards: null, view_shares: {
+      id: "share-one", token: `mdys3:${Buffer.from("secret-token")
+        .toString("base64url")}`, views: { project_id: "project-v" }, pages: null,
+    } }]);
+    expect(await lookupCustomDomain("private.example.com")).toEqual({
+      kind: "share", token: "secret-token", projectId: "project-v",
+    });
+  });
+
   it("caches per host, and never lets one host's answer stand in for another's", async () => {
     respond([
       { feedback_boards: { token: "tok-acme", project_id: "project-a" }, view_shares: null },
@@ -134,6 +150,14 @@ describe("lookupTokenProject", () => {
 
     respond([{ views: null, pages: { project_id: "project-p" } }]);
     expect(await lookupTokenProject("page", "tok-page")).toBe("project-p");
+  });
+
+  it("uses an indexed lookup after a legacy share token miss", async () => {
+    respond([]);
+    respond([{ views: { project_id: "project-v" }, pages: null }]);
+    expect(await lookupTokenProject("share", "secret-token")).toBe("project-v");
+    expect(urls()[1]).toContain("view_shares?token_lookup=eq.");
+    expect(urls()[1]).not.toContain("secret-token");
   });
 
   it("returns null on an unknown token", async () => {

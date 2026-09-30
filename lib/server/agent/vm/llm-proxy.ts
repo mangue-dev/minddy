@@ -490,7 +490,7 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
       // A refusal here is never trivial: it is either an opencode that has changed
       // route, or someone trying to use the proxy. It can be read in a
       // log, bounded because the request-target comes from opposite.
-      console.error(`[llm-proxy] refused ${req.method} ${(req.url ?? "").slice(0, 200)}`);
+      console.error("[llm-proxy] route_refused", route.status);
       res.writeHead(route.status, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: { message: route.message } }));
       return;

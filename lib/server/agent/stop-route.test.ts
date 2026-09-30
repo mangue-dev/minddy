@@ -12,6 +12,8 @@ const interruptRequests: string[] = [];
 const chainStops: string[] = [];
 const messageConsumptions: Array<Record<string, unknown>> = [];
 let drainKicks = 0;
+let consumptionError: Error | null = null;
+let canReadRun = true;
 
 vi.mock("@/lib/server/api-auth", () => ({
   getAuthedUser: async () => ({
@@ -22,13 +24,17 @@ vi.mock("@/lib/server/api-auth", () => ({
 }));
 
 vi.mock("@/lib/server/agent/run-access", () => ({
-  canReadAgentRun: async () => true,
+  canReadAgentRun: async () => canReadRun,
 }));
 
 vi.mock("@/lib/server/agent/runs", () => ({
   getRun: async () => run,
   requestInterrupt: async (runId: string) => {
     interruptRequests.push(runId);
+  },
+  discardPendingWorkerMessages: async (runId: string) => {
+    if (consumptionError) throw consumptionError;
+    messageConsumptions.push({ consumed_at: new Date().toISOString(), run_id: runId });
   },
 }));
 
@@ -38,22 +44,8 @@ vi.mock("@/lib/server/agent/launch", () => ({
   },
 }));
 
-// Chainable enough for the `agent_run_messages` consume of a worker stop.
 vi.mock("@/lib/supabase-service", () => ({
-  getServiceClient: () => ({
-    from: (table: string) => ({
-      update: (row: Record<string, unknown>) => ({
-        eq: (_column: string, value: unknown) => ({
-          is: () => {
-            if (table === "agent_run_messages") {
-              messageConsumptions.push({ ...row, run_id: value });
-            }
-            return Promise.resolve({ error: null });
-          },
-        }),
-      }),
-    }),
-  }),
+  getServiceClient: () => ({}),
 }));
 
 vi.mock("@/lib/server/automations/hooks", () => ({
@@ -80,6 +72,8 @@ beforeEach(() => {
   chainStops.length = 0;
   messageConsumptions.length = 0;
   drainKicks = 0;
+  consumptionError = null;
+  canReadRun = true;
 });
 
 describe("POST /api/agent-runs/[runId]/stop", () => {
@@ -111,6 +105,30 @@ describe("POST /api/agent-runs/[runId]/stop", () => {
     await POST(request(), params);
 
     expect(messageConsumptions).toEqual([]);
+  });
+
+  it("does not acknowledge a worker stop when queued steering cannot be discarded", async () => {
+    run.parent_numo_turn_id = "turn-1";
+    run.chain_id = "chain-1";
+    consumptionError = new Error("Unable to discard stopped worker messages");
+
+    await expect(POST(request(), params)).rejects.toThrow(consumptionError.message);
+
+    expect(interruptRequests).toEqual(["run-1"]);
+    expect(drainKicks).toBe(0);
+    expect(chainStops).toEqual([]);
+  });
+
+  it("does not interrupt or discard steering for a worker the caller cannot read", async () => {
+    run.parent_numo_turn_id = "turn-1";
+    canReadRun = false;
+
+    const res = await POST(request(), params);
+
+    expect(res.status).toBe(404);
+    expect(interruptRequests).toEqual([]);
+    expect(messageConsumptions).toEqual([]);
+    expect(drainKicks).toBe(0);
   });
 
   it("still interrupts a standalone working run", async () => {

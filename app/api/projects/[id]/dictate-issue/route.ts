@@ -2,6 +2,7 @@ import { NextResponse, after, type NextRequest } from "next/server";
 import { getLocale } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeProjectName } from "@/lib/server/project-content";
 import {
   recordAiUsage,
   newRunId,
@@ -426,13 +427,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // RLS scopes the project read; an inaccessible project reads as not found.
   const { data: project } = await auth.supabase
     .from("projects")
-    .select("id, name, key, owner_id")
+    .select("id, name, key, owner_id, encrypted_content, encryption_version")
     .eq("id", projectId)
     .is("deleted_at", null)
     .single();
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
+  project.name = await decodeProjectName(project, auth.user.id);
 
   const service = getServiceClient();
   const [ctx, aiRuntime, locale] = await Promise.all([

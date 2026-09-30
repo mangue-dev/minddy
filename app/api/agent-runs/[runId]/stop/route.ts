@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { kickAgentDrain } from "@/lib/server/agent/launch";
 import { canReadAgentRun } from "@/lib/server/agent/run-access";
-import { getRun, requestInterrupt } from "@/lib/server/agent/runs";
+import { discardPendingWorkerMessages, getRun, requestInterrupt } from "@/lib/server/agent/runs";
 import { getServiceClient } from "@/lib/supabase-service";
 import { stopChainOnInterrupt } from "@/lib/server/automations/hooks";
 
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  const run = await getRun(runId);
+  const run = await getRun(runId, { decode: false });
   if (!run) return NextResponse.json({ error: "Run not found" }, { status: 404 });
 
   if (!(await canReadAgentRun(auth.user.id, run))) {
@@ -49,11 +49,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     // SWALLOWS it, like the conversation-wide stop RPC does: without this, the
     // stop would answer ok while the worker carried on with a stale steer.
     if (run.parent_numo_turn_id) {
-      await getServiceClient()
-        .from("agent_run_messages")
-        .update({ consumed_at: new Date().toISOString() })
-        .eq("run_id", runId)
-        .is("consumed_at", null);
+      await discardPendingWorkerMessages(runId);
     }
     // Make the stop IMMEDIATE where a poll would delay it (PR 304 reference):
     // a run interrupted while QUEUED would otherwise rest only on the next

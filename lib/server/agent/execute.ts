@@ -1,9 +1,12 @@
 import "server-only";
+import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 
 import { resolveAgentExecutionBackend } from "@/lib/capabilities";
 import { workerModelSurfaceForAgentRun } from "@/lib/ai-surfaces";
 import { getUserSandboxPreferences } from "./sandbox-preferences";
 import { getServiceClient } from "@/lib/supabase-service";
+import { decodeProjectName } from "@/lib/server/project-content";
+import { issueStore } from "@/lib/server/issue-store";
 import { joinedPage } from "@/lib/server/resource-select";
 import { recordSandboxUsage } from "@/lib/server/usage";
 import {
@@ -17,7 +20,6 @@ import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { promptWithAttachments } from "./prompt-attachments";
 import { getGithubBotCommitIdentity } from "@/lib/server/git/github-app";
 import {
-  getOrCreateAgentSandbox,
   sandboxHost,
   sandboxName,
   type Sandbox,
@@ -83,7 +85,6 @@ import {
   supportsImageInput,
 } from "./model";
 import {
-  agentSandboxName,
   buildAgentNetworkPolicy,
   AGENT_LLM_PLACEHOLDER_KEY,
 } from "./network-policy";
@@ -93,7 +94,7 @@ import {
   VM_PROTOCOL_VERSION,
   type VmJob,
 } from "./vm/protocol";
-import { mintRunKey, revokeRunKey, runKeyCapUsd } from "./run-key";
+import { revokeRunKey, runKeyCapUsd } from "./run-key";
 import { agentControlOrigin } from "./origin";
 import { CONTACT_EMAIL, SITE_NAME } from "@/lib/site";
 import { priorConversationLostNote } from "@/lib/server/runtime-locale-copy";
@@ -122,6 +123,10 @@ import {
 } from "./server-exec-token";
 import { resolveAgentExecutionTarget } from "@/lib/agent-execution-target";
 import { planBootstrapRetry } from "./retry";
+import {
+  allocateReservedSandbox, cleanupSandboxAllocation, mintAllocationRunKey,
+  reserveSandboxAllocation, type SandboxAllocation,
+} from "./sandbox-allocation";
 
 function repoTargetMatchesRun(run: AgentRun, target: RepoCloneTarget): boolean {
   return (
@@ -273,8 +278,7 @@ async function loadIssueContext(
   const includePromptContext = opts.includePromptContext !== false;
   const [{ data: issue }, { data: project }, { data: attachmentRows }] =
     await Promise.all([
-      service
-        .from("issues")
+      issueStore(service)
         // A resumed opencode session already has its start in its local database.
         // Rereading neither the long markdown nor the plan can influence your next one
         // prompt; it was transport and decoding before each first token.
@@ -285,17 +289,18 @@ async function loadIssueContext(
         )
         .is("deleted_at", null)
         .eq("id", issueId)
+        .eq("project_id", run.project_id)
         .maybeSingle(),
       service
         .from("projects")
-        .select("key, name")
+        .select("id, key, name, encrypted_content, encryption_version")
         .eq("id", run.project_id)
         .maybeSingle(),
       includePromptContext
         ? service
             .from("attachments")
             .select(
-              "id, kind, page_id, file_name, mime_type, size_bytes, page:pages(title)",
+              "id, kind, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, encrypted_content, encryption_version)",
             )
             .eq("issue_id", issueId)
             .order("created_at", { ascending: true })
@@ -303,16 +308,18 @@ async function loadIssueContext(
     ]);
   const key = (project as { key?: string } | null)?.key ?? "ISSUE";
   const number = (issue as { number?: number } | null)?.number ?? 0;
+  const decodedAttachmentRows = await Promise.all((attachmentRows ?? []).map((row) =>
+    decodeAttachmentRow("attachments", row, null, run.project_id)));
   return {
     identifier: `${key}-${number}`,
     title: (issue as { title?: string } | null)?.title ?? "Untitled",
     description:
       (issue as { description?: string | null } | null)?.description ?? null,
     plan: (issue as { plan?: string | null } | null)?.plan ?? null,
-    projectName: (project as { name?: string } | null)?.name ?? null,
+    projectName: project ? await decodeProjectName(project) : null,
     projectKey: key,
     resources: (
-      (attachmentRows ?? []) as Array<{
+      decodedAttachmentRows as Array<{
         id: string;
         kind: string | null;
         page_id: string | null;
@@ -355,12 +362,12 @@ async function loadProjectContext(
   const service = getServiceClient();
   const { data } = await service
     .from("projects")
-    .select("key, name")
+    .select("id, key, name, encrypted_content, encryption_version")
     .eq("id", projectId)
     .maybeSingle();
   return {
     key: (data as { key?: string } | null)?.key ?? "PROJECT",
-    name: (data as { name?: string } | null)?.name ?? null,
+    name: data ? await decodeProjectName(data) : null,
   };
 }
 
@@ -566,10 +573,10 @@ export async function executeAgentRun(
     ? "routine_compute"
     : "sandbox_compute";
   let sandbox: Sandbox | null = null;
+  let allocation: SandboxAllocation | null = null;
   /**
-   * A platform run key minted before Sandbox creation is not persisted until the
-   * network policy has been installed. If bootstrap fails first, this local hash
-   * is the only handle capable of revoking the otherwise orphaned key.
+   * Keep the newly minted key locally as well as in the allocation ledger, so
+   * a failed SQL handle registration can still revoke the known provider key.
    */
   let uninstalledVmKeyHash: string | null = null;
   /**
@@ -807,11 +814,8 @@ export async function executeAgentRun(
             base: baseBranch,
             head: prRun.headSha ?? prRun.headBranch ?? "",
           })
-          .catch((err: unknown) => {
-            console.error(
-              `[agent] merge base unreadable for PR #${prRun.number}:`,
-              err,
-            );
+          .catch(() => {
+            console.error("[agent] merge_base_unreadable", prRun.number);
             return null;
           })
       : Promise.resolve(null);
@@ -867,15 +871,16 @@ export async function executeAgentRun(
      * non-exfiltrable as ours, but cannot be capped — that is stated on the BYOK
      * screen and is not fixed here.
      *
-     * Minting fails silently (variable unset, API down) → fall back to `apiKey`. A
-     * missing spending safeguard must not prevent a run from executing; it must be
-     * visible in the logs.
+     * An unconfigured provider never starts a key request and retains the existing
+     * fallback. Once a request starts, an unknown result blocks execution and
+     * erasure until the durable provisioning intent is reconciled.
      */
     let vmKeyHash: string | null = null;
+    allocation = await reserveSandboxAllocation(run.id);
     let vmKey = selfHostedSandbox ? AGENT_LLM_PLACEHOLDER_KEY : apiKey;
     if (keyMode === "platform") {
       if (!selfHostedSandbox) {
-        const minted = await mintRunKey({
+        const minted = await mintAllocationRunKey(allocation, {
           runId: run.id,
           capUsd: runKeyCapUsd({
             runBudgetUsd: run.budget_usd,
@@ -902,9 +907,8 @@ export async function executeAgentRun(
       }
     }
 
-    // Wake the server sandbox (filesystem restored from the persistent snapshot
-    // for a fast continuation); otherwise `onCreate` clones the working branch.
-    // Deterministic name → the same microVM/snapshot from one turn to the next.
+    // Each allocation has a unique name. Rebuild its ephemeral filesystem from
+    // the encrypted journal and pushed branch after retiring the previous session.
     let sandboxRepoUrl = vmTarget?.remoteUrl;
     const configureSandboxRepo = async (fresh: Sandbox): Promise<string> => {
       if (!vmTarget) throw new Error("No repository linked to this project");
@@ -917,8 +921,8 @@ export async function executeAgentRun(
       }
       return vmTarget.remoteUrl;
     };
-    const sandboxResult = await getOrCreateAgentSandbox({
-          name: agentSandboxName(run.id),
+    const sandboxResult = await allocateReservedSandbox(allocation, {
+          name: allocation.sandbox_name,
           preferences: resolveAgentExecutionBackend(process.env) === "vercel"
             ? await getUserSandboxPreferences(run.created_by)
             : undefined,
@@ -1011,10 +1015,9 @@ export async function executeAgentRun(
     // `branch_name` waits for the FIRST REAL PUSH (MIN-123, `noteBranchPushed`
     // below): until something is pushed, the branch exists only in the microVM,
     // and surfaces that read a branch (diff view, lineage inheritance, branch
-    // cleanup) must not refer to one that is absent from the repository. The name
-    // is deterministic, so a later chunk can recover it without rereading it from
-    // the database.
-    await stampRun(run.id, {
+    // cleanup) must not refer to one that is absent from the repository. The
+    // allocation ledger retains this session's identity for erasure and recovery.
+    const attached = await stampRun(run.id, {
       // Record an allocated sandbox only; a failed allocation has no identity.
       ...(sandbox
         ? { sandbox_id: sandboxName(sandbox), sandbox_stopped_at: null }
@@ -1026,6 +1029,10 @@ export async function executeAgentRun(
       // reaper would revoke nothing while believing it had closed the tap.
       provider_key_id: vmKeyHash,
     });
+    if (!attached) {
+      await cleanupSandboxAllocation(allocation);
+      throw new Error("agent_allocation_attachment_failed");
+    }
     uninstalledVmKeyHash = null;
 
     // No one can use the PREVIOUS chunk's key anymore: the policy just installed
@@ -1178,6 +1185,7 @@ export async function executeAgentRun(
               number: prRun.number,
             },
             pr: prRun,
+            projectId: run.project_id,
           })
         : null;
       // The SHA ACTUALLY reviewed, as just returned by the forge: the one stored at
@@ -1786,6 +1794,11 @@ export async function executeAgentRun(
     if (!retryForPending) await notifyAgentRun(run, "agent_failed");
     return "completed";
   } finally {
+    // Cleanup failures retain a durable blocker for an erasure retry.
+    if (allocation && allocation.state !== "cleaned" && !vmLoopLaunched) {
+      await cleanupSandboxAllocation(allocation);
+      uninstalledVmKeyHash = null;
+    }
     // Background-job safety net (MIN-114): push paths have already killed them, but
     // the mid-turn ERROR path has not — and a surviving server would keep the
     // microVM awake until the reaper. Best-effort, never blocking.

@@ -230,9 +230,9 @@
     "passwordTooShort": "Use pelo menos 8 caracteres.",
     "invalidShareLevel": "Nível de compartilhamento inválido.",
     "resourceNotFound": "Recurso não encontrado.",
-    "resourceInvalid": "Recurso rejeitado: máximo de 10, 20 MB por arquivo.",
+    "resourceInvalid": "Recurso rejeitado: máximo de 10, 4,5 MB por arquivo.",
     "linkInvalidUrl": "Link inválido ou inacessível.",
-    "attachmentInvalid": "Anexo rejeitado: máximo de 10 arquivos, 20 MB por arquivo.",
+    "attachmentInvalid": "Anexo rejeitado: máximo de 10 arquivos, 4,5 MB por arquivo.",
     "invalidCycle": "Ciclo desconhecido ou inválido.",
     "triageCannotJoinCycle": "Um problema na triagem não pode ingressar em um ciclo. Primeiro, retire-o da triagem.",
     "closedIssueCannotJoinCycle": "Problemas fechados não podem ser movidos para outro ciclo.",
@@ -1992,7 +1992,12 @@
     "closeDescription": "Você o encontrará em seus rascunhos recentes.",
     "closeConfirm": "Salvar",
     "closeDiscard": "Descartar",
-    "keepEditing": "Voltar"
+    "keepEditing": "Voltar",
+    "saveFailed": "Não foi possível salvar o rascunho. Mantenha esta janela aberta e tente novamente.",
+    "restoreFailed": "Não foi possível recuperar rascunhos. Verifique sua conexão e tente novamente.",
+    "deleteFailed": "Não foi possível excluir o rascunho. Tente novamente.",
+    "recoverLegacy": "Recuperar rascunhos antigos neste dispositivo",
+    "legacyWarning": "Recupere apenas rascunhos que você criou neste dispositivo."
   },
   "Pages": {
     "placeholder": "Escreva ou digite '/' para blocos…",
@@ -6030,7 +6035,9 @@
     "entry_notebook-agent_title": "Iniciar um agente a partir do bloco de notas de tarefas",
     "entry_notebook-agent_body": "Peça ao agente de código para trabalhar em uma tarefa do seu bloco de notas pessoal. Inicie-o diretamente pela tarefa, sem criar antes um ticket de projeto.",
     "entry_notifications_title": "Notificações que você pode realmente acompanhar",
-    "entry_notifications_body": "As notificações agora são agrupadas por ticket para acompanhar uma conversa sem ler cada evento separadamente. Escolha quais atividades aparecem na caixa de entrada nas configurações de notificações."
+    "entry_notifications_body": "As notificações agora são agrupadas por ticket para acompanhar uma conversa sem ler cada evento separadamente. Escolha quais atividades aparecem na caixa de entrada nas configurações de notificações.",
+    "entry_encrypted-workspace-content_title": "Workspace content is encrypted at rest",
+    "entry_encrypted-workspace-content_body": "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage. Search and collaboration keep working with content decrypted only for authorized users."
   },
   "Automations": {
     "title": "Automações",

@@ -2,28 +2,20 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
+import { listProjectDrafts, saveProjectDraft } from "@/lib/server/project-draft-store";
 
 /**
- * Project creation drafts (`project_drafts` table, RLS
- * self-manage → cookie client, no service access required).
- *
- * This route is a WAREHOUSE, not a template: `data` is the state of the form
- * of the wizard, which moves with each step that is added to it, and it is the client who
- * knows how to proofread it (lib/project-draft.ts does it defensively). We therefore do not validate
- * here only what the database needs — an id, a name, a short step, an object —
- * plus a size ceiling, with the icon traveling there as a data URL.
+ * Project creation drafts are private to their owner. The repository encrypts
+ * the name and arbitrary wizard state before storing them.
  */
 
 const MAX_NAME_LENGTH = 200;
 const MAX_STEP_LENGTH = 40;
-/** The complete draft, serialized. A compressed icon weighs a few dozen
- * of Ko: this ceiling leaves room, without letting a paperweight pass through. */
+/** The complete draft can include a compressed icon data URL. */
 const MAX_DATA_BYTES = 512 * 1024;
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-const SELECT = "id, name, step, data, updated_at";
 
 /** GET /api/project-drafts — my drafts, from newest to oldest. */
 export async function GET(request: NextRequest) {
@@ -31,25 +23,15 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await auth.supabase
-    .from("project_drafts")
-    .select(SELECT)
-    .order("updated_at", { ascending: false });
-
-  if (error) {
-    console.error("[api/project-drafts] list failed:", error.message);
+  try {
+    return NextResponse.json(await listProjectDrafts(auth.supabase, auth.user.id));
+  } catch {
+    console.error("[api/project-drafts] list failed");
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  return NextResponse.json(data);
 }
 
-/**
- * PUT /api/project-drafts — pose ou remplace UN brouillon.
- *
- * An upsert by id, not a POST then PATCH: the id is that of the future
- * project, drawn by the wizard when it is opened, and the client does not know — does not have
- * namely — if this draft has already been written once.
- */
+/** PUT /api/project-drafts — create or replace one draft by its future project ID. */
 export async function PUT(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
@@ -85,8 +67,7 @@ export async function PUT(request: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  // A draft with no name has nothing to show in the sidebar: the wizard
-  // doesn't record any, and the road doesn't accept it either.
+  // A nameless draft cannot be identified in the sidebar.
   if (!name) {
     return NextResponse.json({ error: t("nameRequired") }, { status: 400 });
   }
@@ -97,21 +78,11 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: t("draftTooLarge") }, { status: 413 });
   }
 
-  // `user_id` explicit: the insertion policy requires it (with check), and it is
-  // also what prevents overwriting someone else’s draft — the update policy
-  // would otherwise see no lines to modify, and the upsert would create one.
-  const { data: row, error } = await auth.supabase
-    .from("project_drafts")
-    .upsert(
-      { id, user_id: auth.user.id, name, step, data },
-      { onConflict: "id" }
-    )
-    .select(SELECT)
-    .single();
-
-  if (error) {
-    console.error("[api/project-drafts] upsert failed:", error.message);
+  try {
+    const row = await saveProjectDraft(auth.supabase, auth.user.id, { id, name, step, data });
+    return NextResponse.json(row);
+  } catch {
+    console.error("[api/project-drafts] save failed");
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  return NextResponse.json(row);
 }

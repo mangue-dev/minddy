@@ -52,7 +52,11 @@ vi.mock("./safe-fetch", () => ({
 }));
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
-    from: () => {
+    from: (table: string) => {
+      if (table === "mcp_content_scope") return {
+        select: () => ({ eq: () => ({ maybeSingle: async () =>
+          ({ data: null, error: { code: "42P01" } }) }) }),
+      };
       let operation = "read";
       let values: Record<string, unknown> | undefined;
       const filters: Record<string, unknown> = {};

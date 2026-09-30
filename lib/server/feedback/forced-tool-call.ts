@@ -161,10 +161,10 @@ export async function forcedToolCall(
     );
     const response = call.response;
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`LLM error (${response.status}): ${errorText.slice(0, 200)}`);
+      console.error(`${logPrefix} LLM call failed: provider_http_${response.status}`);
+      return null;
     }
-    const data = (await response.json()) as {
+    let data: {
       choices?: {
         message?: {
           tool_calls?: { function?: { name?: string; arguments?: string } }[];
@@ -174,6 +174,12 @@ export async function forcedToolCall(
       model?: string;
       usage?: OpenRouterUsage;
     };
+    try {
+      data = await response.json();
+    } catch {
+      console.error(`${logPrefix} LLM call failed: response_json_invalid`);
+      return null;
+    }
     if (options?.record) {
       const u = parseOpenRouterUsage(data.usage);
       await recordAiUsage({
@@ -197,9 +203,14 @@ export async function forcedToolCall(
     }
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0]?.function;
     if (toolCall?.name !== toolName) return null;
-    return JSON.parse(toolCall.arguments || "{}") as Record<string, unknown>;
-  } catch (err) {
-    console.error(`${logPrefix} LLM call failed:`, (err as Error).message);
+    try {
+      return JSON.parse(toolCall.arguments || "{}") as Record<string, unknown>;
+    } catch {
+      console.error(`${logPrefix} LLM call failed: tool_arguments_invalid`);
+      return null;
+    }
+  } catch {
+    console.error(`${logPrefix} LLM call failed: request_failed`);
     return null;
   }
 }
