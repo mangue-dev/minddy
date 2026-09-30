@@ -128,6 +128,9 @@ export function useFeedbackBoardSettings(projectId: string) {
         body: JSON.stringify(body),
       });
       queryClient.setQueryData(key, fresh);
+      if (body.enabled === false) {
+        queryClient.removeQueries({ queryKey: feedbackDomainKey(projectId) });
+      }
       return true;
     } catch (e) {
       queryClient.setQueryData(key, previous);

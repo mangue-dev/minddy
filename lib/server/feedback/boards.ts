@@ -9,6 +9,7 @@ import {
 } from "@/lib/server/feedback/sso-crypto";
 import { decodeBoardSso, encodeBoardSso,
   shouldProtectBoardSso } from "@/lib/server/feedback/board-sso-content";
+import { cleanRemovedDomain } from "@/lib/server/custom-domain-cleanup";
 
 /**
  * Feedback boards (MIN-37). One board per project, opt-in. The public URL
@@ -292,10 +293,17 @@ export async function setBoardAccent(
 
 export async function disableBoardForProject(projectId: string): Promise<boolean> {
   const service = getServiceClient();
+  const { data: domains, error: lookupError } = await service.from("custom_domains")
+    .select("domain, feedback_boards!inner(project_id)")
+    .eq("feedback_boards.project_id", projectId);
+  if (lookupError) return false;
   const { error } = await service
     .from("feedback_boards")
     .update({ enabled: false })
     .eq("project_id", projectId);
+  if (!error) {
+    for (const row of domains ?? []) await cleanRemovedDomain(row.domain as string);
+  }
   return !error;
 }
 

@@ -27,6 +27,7 @@ const PlugSceneIcon = sceneIcon(Plug01Icon);
 const KeySceneIcon = sceneIcon(Key02Icon);
 const MailSceneIcon = sceneIcon(Mail01Icon);
 import { CustomDomainSection } from "@/components/custom-domain-section";
+import { CustomDomainRemovalDialog } from "@/components/custom-domain-removal-dialog";
 import {
   BoardAccentRow,
   BoardVisibilityRows,
@@ -123,6 +124,7 @@ export function FeedbackSetupWizard({
   const [envCopied, setEnvCopied] = useState(false);
   /** Did this journey light up the board itself? Only this case falls apart. */
   const [provisionedBoard, setProvisionedBoard] = useState(false);
+  const [confirmDisable, setConfirmDisable] = useState(false);
 
   const {
     board,
@@ -179,6 +181,7 @@ export function FeedbackSetupWizard({
     setCopied(false);
     setEnvCopied(false);
     setProvisionedBoard(false);
+    setConfirmDisable(false);
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -204,7 +207,11 @@ export function FeedbackSetupWizard({
    * next steps have something to fix — and go back to the API on
    * returned to the condition in which it was found.
    */
-  const applyType = async () => {
+  const applyType = async (confirmed = false) => {
+    if (mode !== "board" && provisionedBoard && !confirmed) {
+      setConfirmDisable(true);
+      return;
+    }
     const alreadyOn = board?.enabled === true;
     setWorking(true);
     try {
@@ -608,31 +615,39 @@ export function FeedbackSetupWizard({
   const atStake = stepIndex > 0 && currentStep !== "done";
 
   return (
-    <WizardDialog
-      open={open}
-      onOpenChange={handleOpenChange}
-      label={t("feedbackWizardTitle")}
-      steps={steps.map((id) => stepDefs[id])}
-      stepIndex={stepIndex}
-      onStepIndexChange={setStepIndex}
-      submitting={working || generating}
-      dismissConfirm={
-        atStake
-          ? {
-              title: t("feedbackWizardQuitTitle"),
-              description: t("feedbackWizardQuitDesc"),
-              confirmLabel: t("feedbackWizardQuitConfirm"),
-              cancelLabel: t("feedbackWizardQuitCancel"),
-            }
-          : undefined
-      }
-      onSubmit={(id) => {
-        if (id === "type") void applyType();
-        else if (id === "sso") void applySso();
-        else if (id === "placement") void generate();
-        else if (id === "done") handleOpenChange(false);
-        else setStepIndex((i) => i + 1);
-      }}
-    />
+    <>
+      <CustomDomainRemovalDialog
+        kind="board"
+        open={open && confirmDisable}
+        onOpenChange={setConfirmDisable}
+        onConfirm={async () => { await applyType(true); }}
+      />
+      <WizardDialog
+        open={open}
+        onOpenChange={handleOpenChange}
+        label={t("feedbackWizardTitle")}
+        steps={steps.map((id) => stepDefs[id])}
+        stepIndex={stepIndex}
+        onStepIndexChange={setStepIndex}
+        submitting={working || generating}
+        dismissConfirm={
+          atStake
+            ? {
+                title: t("feedbackWizardQuitTitle"),
+                description: t("feedbackWizardQuitDesc"),
+                confirmLabel: t("feedbackWizardQuitConfirm"),
+                cancelLabel: t("feedbackWizardQuitCancel"),
+              }
+            : undefined
+        }
+        onSubmit={(id) => {
+          if (id === "type") void applyType();
+          else if (id === "sso") void applySso();
+          else if (id === "placement") void generate();
+          else if (id === "done") handleOpenChange(false);
+          else setStepIndex((i) => i + 1);
+        }}
+      />
+    </>
   );
 }

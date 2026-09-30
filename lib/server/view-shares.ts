@@ -7,6 +7,7 @@ import {
   reserveCustomDomainMutation,
 } from "@/lib/server/custom-domains";
 import { getProjectAccess } from "@/lib/server/project-access";
+import { cleanRemovedDomain } from "@/lib/server/custom-domain-cleanup";
 import { publicProjectIconRoute } from "@/lib/server/project-icon-content";
 import { decodeProjectName } from "@/lib/server/project-content";
 import { decodeView } from "@/lib/server/view-content";
@@ -621,6 +622,11 @@ export async function deletePageShare(
   const resolved = await resolveSharePage(pageId, actorId);
   if (!resolved.ok) return resolved;
 
+  const { data: domains, error: lookupError } = await getServiceClient()
+    .from("custom_domains").select("domain, view_shares!inner(page_id)")
+    .eq("view_shares.page_id", pageId);
+  if (lookupError) return { ok: false, status: 500, errorKey: "databaseError" };
+
   const { error } = await getServiceClient()
     .from("view_shares")
     .delete()
@@ -629,5 +635,6 @@ export async function deletePageShare(
     console.error("[view-shares] page delete failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
+  for (const row of domains ?? []) await cleanRemovedDomain(row.domain as string);
   return { ok: true, share: null };
 }

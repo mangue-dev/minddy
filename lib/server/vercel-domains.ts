@@ -72,6 +72,7 @@ async function vercelFetch(
       ...init?.headers,
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(5_000),
   });
 }
 
