@@ -17,8 +17,7 @@ type ContextRow = StoredAgentContext & {
 
 /** Convert context snapshots in bounded, verified compare-and-swap batches. */
 export async function backfillAgentContextsBatch(limit = 20, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_AGENT_CONTEXT_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Agent context encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

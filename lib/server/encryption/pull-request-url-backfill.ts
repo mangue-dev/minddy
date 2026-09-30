@@ -13,8 +13,7 @@ const SCOPE = { kind: "system" as const,
 /** Resume a bounded system-scope pass with a row-value CAS. */
 export async function backfillPullRequestUrlsBatch(limit = 20,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_PULL_REQUEST_URL_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Pull request URL encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

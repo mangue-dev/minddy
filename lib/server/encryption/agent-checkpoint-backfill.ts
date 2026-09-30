@@ -12,8 +12,7 @@ type StoredCheckpoint = { id: string; project_id: string; conversation_id: strin
 
 /** Convert a bounded set of run checkpoints and their current runtime copies. */
 export async function backfillAgentCheckpointBatch(limit = 5, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_AGENT_CHECKPOINT_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Agent checkpoint encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 20) {

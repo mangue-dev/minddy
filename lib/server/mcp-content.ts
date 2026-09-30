@@ -26,8 +26,7 @@ const context = (table: "user_mcp_connections" | "user_mcp_oauth_attempts", user
   ({ table, scope: { kind: "user" as const, id: userId } });
 
 export async function mcpContentEnabled(): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_MCP_CONTENT_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   const { data, error } = await getServiceClient().from("mcp_content_scope")
     .select("id").eq("id", true).maybeSingle();
   if (error && !["42P01", "PGRST205"].includes(error.code))

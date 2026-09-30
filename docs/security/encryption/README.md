@@ -4,6 +4,23 @@ MIN-591 is one application-wide delivery. The existing invitation implementation
 is a small converted surface, not the production rollout boundary. Do not enable
 production migration on the strength of crypto unit tests or this inventory.
 
+## One application-wide activation switch
+
+`MINDDY_CONTENT_ENCRYPTION_ENABLED=true` enables all converted content domains,
+including invitations, private files, Agent/Numo copies, credentials, and their
+bounded migration, rotation and cleanup workers. Provision a recoverable
+`MINDDY_DATA_ROOT_KEY` before enabling it. Domain-specific encryption flags and
+the three related cleanup/scrub flags are retired and ignored, including when
+an old configuration explicitly sets them to `false`. Dated checkpoints below
+record their former names; they are not current configuration instructions.
+
+With the global switch disabled, maintenance does not run and legacy sources
+are not newly opted in. Existing ciphertext remains readable with its keys;
+protected rows and activated SQL scopes still require encrypted writes. Pausing
+the switch does not reverse activation or authorize a plaintext downgrade.
+Missing keys fail closed. The single switch does not waive the coordinated
+DB/Storage restore, retained-copy inventory or staging activation checks.
+
 ## Current corrective checkpoint: review of `2ddcbbd4e`
 
 The current code and evidence are recorded in the

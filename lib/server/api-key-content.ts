@@ -20,8 +20,7 @@ function context(row: Pick<StoredApiKey,"id" | "user_id">) {
 }
 
 export async function shouldProtectApiKeys():Promise<boolean> {
-  if(isContentEncryptionEnabled() &&
-      process.env.MINDDY_API_KEY_CONTENT_ENCRYPTION_ENABLED === "true")
+  if (isContentEncryptionEnabled())
     return true;
   const {data,error}=await getServiceClient().from("api_key_content_scope")
     .select("id").eq("id",true).maybeSingle();

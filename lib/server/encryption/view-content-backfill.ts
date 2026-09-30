@@ -11,8 +11,7 @@ import { isContentEncryptionEnabled } from "./content-config";
 /** Rotate private and shared board views in bounded revision-guarded batches. */
 export async function backfillViewContentBatch(limit = 30,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_VIEW_CONTENT_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("View content encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

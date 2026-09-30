@@ -10,8 +10,7 @@ import { getContentKeys } from "./registry";
 /** Rotate admission snapshots through a bounded, row-locked CAS queue. */
 export async function backfillNumoTurnIntentsBatch(limit = 30,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_NUMO_TURN_INTENT_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Numo turn intent encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

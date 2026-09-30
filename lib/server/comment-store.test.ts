@@ -192,7 +192,7 @@ describe("encrypted comment repository", () => {
     await syncGithubComment(state.service!, { p_issue_id: "issue", p_remote_comment_id: "remote", p_author_id: "actor",
       p_body: "Private mirrored body", p_author_login: "actor", p_author_association: "OWNER", p_html_url: null,
       p_created_at_remote: null, p_updated_at_remote: null, p_deleted_at_remote: null });
-    const writes = requests.filter((request) => request.table === "sync_github_issue_comment_atomic");
+    const writes = requests.filter((request) => request.table === "sync_github_issue_comment_encrypted_url");
     expect(writes).toHaveLength(2);
     expect(writes[0].body.p_comment_id).not.toBe(writes[1].body.p_comment_id);
     expect(writes[1].body.p_body).toBeNull();
@@ -200,7 +200,7 @@ describe("encrypted comment repository", () => {
   });
 
   it("keeps the forge URL encrypted inside the atomic comment RPC", async () => {
-    vi.stubEnv("MINDDY_ISSUE_SIDECAR_ENCRYPTION_ENABLED", "true");
+    vi.stubEnv("MINDDY_ISSUE_SIDECAR_ENCRYPTION_ENABLED", "false");
     await syncGithubComment(state.service!, { p_issue_id: "issue",
       p_remote_comment_id: "remote", p_author_id: "actor",
       p_body: "Private mirrored body", p_author_login: "actor",

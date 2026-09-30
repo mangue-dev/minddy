@@ -27,8 +27,7 @@ function valid(row: UserAiKeyRow): boolean {
 
 export async function shouldProtectUserAiKeys(service?: SupabaseClient):
   Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_USER_AI_KEY_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await (service ?? getServiceClient())
     .from("user_ai_key_content_scope").select("id").eq("id", true)

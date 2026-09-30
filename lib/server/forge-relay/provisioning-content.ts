@@ -28,8 +28,7 @@ export type ProvisioningRow = {
 
 export async function shouldProtectProvisioning(service?: SupabaseClient):
   Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_RELAY_PROVISIONING_ENCRYPTION_ENABLED === "true") {
+  if (isContentEncryptionEnabled()) {
     return true;
   }
   const { data, error } = await (service ?? getServiceClient())

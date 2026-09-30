@@ -17,8 +17,7 @@ function context(row:Pick<StoredIntegration,"id" | "project_id">,
 }
 
 export async function shouldProtectIntegrations():Promise<boolean>{
-  if(isContentEncryptionEnabled() &&
-      process.env.MINDDY_INTEGRATION_CONTENT_ENCRYPTION_ENABLED==="true")
+  if (isContentEncryptionEnabled())
     return true;
   const {data,error}=await getServiceClient()
     .from("integration_content_scope").select("id").eq("id",true)

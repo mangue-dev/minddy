@@ -9,7 +9,6 @@ const store = new EncryptedStore({
   byVersion: async (_scope, version) => ({ version, bytes: Buffer.from(secret) }),
 });
 vi.mock("./registry", () => ({ getEncryptedStore: () => store }));
-vi.mock("./content-config", () => ({ isContentEncryptionEnabled: () => true }));
 
 import { decodeAppConfig, encodeAppConfig } from "./app-config-content";
 
@@ -17,7 +16,7 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("app configuration content", () => {
   it("seals values and binds them to their actual key", async () => {
-    vi.stubEnv("MINDDY_APP_CONFIG_ENCRYPTION_ENABLED", "true");
+    vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");
     const saved = await encodeAppConfig("private_setting", "private-value");
     expect(saved.value).toBeNull();
     expect(JSON.stringify(saved)).not.toContain("private-value");
@@ -29,7 +28,7 @@ describe("app configuration content", () => {
   });
 
   it("keeps already protected values sealed while the write flag is off", async () => {
-    vi.stubEnv("MINDDY_APP_CONFIG_ENCRYPTION_ENABLED", "false");
+    vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "false");
     expect(await encodeAppConfig("legacy", "clear", 0)).toEqual({
       key: "legacy", value: "clear",
     });

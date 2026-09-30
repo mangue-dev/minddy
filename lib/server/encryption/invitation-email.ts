@@ -1,5 +1,7 @@
 import "server-only";
 
+import { isContentEncryptionEnabled } from "@/lib/server/encryption/content-config";
+
 import {
   blindIndex,
   normalizeEmailForIndex,
@@ -46,7 +48,7 @@ export function legacyInvitationEmailColumns<T extends { invited_email: string |
 }
 
 export function isInvitationEncryptionEnabled(): boolean {
-  return process.env.MINDDY_INVITATION_ENCRYPTION_ENABLED === "true";
+  return isContentEncryptionEnabled();
 }
 
 /** Once protected writes begin, a paused flag cannot authorize clear invitations. */

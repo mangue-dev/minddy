@@ -12,8 +12,7 @@ import { getContentKeys } from "./registry";
 /** Rotate assistant conversation titles through a bounded CAS queue. */
 export async function backfillNumoConversationTitlesBatch(limit = 30,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_NUMO_CONVERSATION_TITLE_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Numo conversation title encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

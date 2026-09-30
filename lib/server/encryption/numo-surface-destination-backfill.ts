@@ -12,8 +12,7 @@ import { decodeSurfaceDestination, encodeSurfaceDestination,
 /** Convert or rotate a bounded batch without overwriting concurrent projections. */
 export async function backfillNumoSurfaceDestinationsBatch(limit = 30,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_NUMO_SURFACE_DESTINATION_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Numo surface destination encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

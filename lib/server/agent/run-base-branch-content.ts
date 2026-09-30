@@ -31,8 +31,7 @@ export function isEncryptedAgentBaseBranch(value: string | null): boolean {
 }
 
 export async function shouldEncryptAgentBaseBranch(service: SupabaseClient, projectId: string) {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_AGENT_BASE_BRANCH_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await service.from("agent_base_branch_encryption_scopes")
     .select("project_id").eq("project_id", projectId).maybeSingle();

@@ -42,8 +42,7 @@ function blank(row: Row): boolean {
 }
 
 export async function shouldProtectPages(service?: SupabaseClient): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_PAGE_CONTENT_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await (service ?? getServiceClient())
     .from("page_content_encryption_scope")

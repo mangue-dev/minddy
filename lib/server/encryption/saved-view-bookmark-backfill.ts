@@ -11,8 +11,7 @@ import { isContentEncryptionEnabled } from "./content-config";
 /** Verify and rotate personal bookmarks in bounded revision-guarded batches. */
 export async function backfillSavedViewBookmarksBatch(limit = 30,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_SAVED_VIEW_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Saved-view encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

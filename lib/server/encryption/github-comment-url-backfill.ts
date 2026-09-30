@@ -16,8 +16,7 @@ type UrlRow = StoredGithubCommentUrl & {
 /** Convert forge comment URLs with bounded, verified compare-and-swap writes. */
 export async function backfillGithubCommentUrlsBatch(limit = 20,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_ISSUE_SIDECAR_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("GitHub comment URL encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

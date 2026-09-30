@@ -8,8 +8,7 @@ type Row = StoredOAuthCode & { content_revision: number;
   encryption_checked_at: string | null };
 /** Rotate active or retained one-time codes with an exact content revision. */
 export async function backfillOAuthCodesBatch(limit = 25, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_OAUTH_CODE_ENCRYPTION_ENABLED !== "true")
+  if (!isContentEncryptionEnabled())
     throw new Error("OAuth code encryption is not enabled");
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
     throw new Error("Invalid OAuth code batch size");

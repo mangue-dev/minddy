@@ -17,8 +17,7 @@ function binding(userId: string, source: NumoErrorSource, rowId: string) {
 }
 
 export async function shouldProtectNumoErrors(service: SupabaseClient) {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_NUMO_ERROR_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   const { data, error } = await service.from("numo_error_encryption_scope")
     .select("id").eq("id", true).maybeSingle();
   if (error && !["42P01", "PGRST205"].includes(error.code)) {

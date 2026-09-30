@@ -31,8 +31,7 @@ export function feedbackIdentityState(value: string) {
 
 export async function shouldProtectFeedbackIdentity(
   service: SupabaseClient = getServiceClient()): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_FEEDBACK_IDENTITY_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   const { data, error } = await service.from("feedback_identity_encryption_scope")
     .select("id").eq("id", true).maybeSingle();
   if (error && error.code !== "42P01" && error.code !== "PGRST205") {

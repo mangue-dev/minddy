@@ -20,14 +20,13 @@ function binding(projectId: string, issueId: string) {
 }
 
 export function legacyGithubIssueMetadataSchema(error: { code?: string } | null): boolean {
-  return process.env.MINDDY_ISSUE_SIDECAR_ENCRYPTION_ENABLED !== "true" &&
+  return !isContentEncryptionEnabled() &&
     (error?.code === "42703" || error?.code === "PGRST204");
 }
 
 export async function shouldEncryptGithubIssueMetadata(service: SupabaseClient,
   projectId: string) {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_ISSUE_SIDECAR_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await service.from("github_issue_metadata_encryption_scopes")
     .select("project_id").eq("project_id", projectId).maybeSingle();

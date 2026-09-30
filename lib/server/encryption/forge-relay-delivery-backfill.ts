@@ -14,8 +14,7 @@ const SCOPE = { kind: "system" as const,
 /** Convert payload and retry diagnostics together under one delivery-row CAS. */
 export async function backfillForgeRelayDeliveriesBatch(limit = 20,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_FORGE_RELAY_DELIVERY_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Forge relay delivery encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

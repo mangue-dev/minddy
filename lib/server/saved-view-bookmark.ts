@@ -21,8 +21,7 @@ function valid(row: Row) {
 
 export async function shouldProtectSavedViews(service?: SupabaseClient):
   Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_SAVED_VIEW_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await (service ?? getServiceClient())
     .from("saved_view_bookmark_encryption_scope")

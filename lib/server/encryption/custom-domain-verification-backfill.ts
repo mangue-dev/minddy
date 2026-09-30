@@ -14,8 +14,7 @@ type Row = { id: string; content_revision: number; verification: unknown };
 export async function backfillCustomDomainVerificationBatch(
   limit = 25, signal?: AbortSignal,
 ) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_CUSTOM_DOMAIN_VERIFICATION_ENCRYPTION_ENABLED !== "true")
+  if (!isContentEncryptionEnabled())
     throw new Error("Custom domain verification encryption is not enabled");
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
     throw new Error("Invalid custom domain verification batch size");

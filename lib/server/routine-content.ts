@@ -33,8 +33,7 @@ function owner(row: Row) {
 
 export async function shouldProtectRoutines(service?: SupabaseClient):
   Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_AGENT_ROUTINE_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await (service ?? getServiceClient())
     .from("agent_routine_content_encryption_scope")

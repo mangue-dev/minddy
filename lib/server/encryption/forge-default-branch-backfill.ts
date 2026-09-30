@@ -11,8 +11,7 @@ import { getContentKeys } from "./registry";
 /** Rotate private default branches in bounded compare-and-swap batches. */
 export async function backfillForgeDefaultBranchesBatch(limit=30,
   signal?:AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_FORGE_DEFAULT_BRANCH_ENCRYPTION_ENABLED!=="true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Forge default branch encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit<1 || limit>100) {

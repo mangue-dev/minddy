@@ -13,8 +13,7 @@ const SCOPE = { kind: "system" as const,
 /** Rotate all three PR content fields under one row-value CAS. */
 export async function backfillPullRequestContentBatch(limit = 20,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_PULL_REQUEST_CONTENT_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Pull request content encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

@@ -11,8 +11,7 @@ import { getContentKeys } from "./registry";
 /** Rotate user messages through a bounded, row-locked compare-and-swap queue. */
 export async function backfillNumoUserMessagesBatch(limit = 30,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_NUMO_USER_MESSAGE_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Numo user message encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

@@ -23,8 +23,7 @@ function binding(userId: string, messageId: string) {
 export async function shouldProtectNumoUserMessages(
   service: SupabaseClient,
 ): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_NUMO_USER_MESSAGE_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   const { data, error } = await service.from("numo_user_message_scope")
     .select("id").eq("id", true).maybeSingle();
   if (error && error.code !== "42P01" && error.code !== "PGRST205") {

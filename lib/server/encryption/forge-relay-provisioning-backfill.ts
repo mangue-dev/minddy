@@ -9,8 +9,7 @@ import { isContentEncryptionEnabled } from "./content-config";
 
 /** Migrate the one provisioned identity with a content-revision CAS. */
 export async function backfillRelayProvisioningBatch(signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_RELAY_PROVISIONING_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Relay provisioning encryption is not enabled");
   }
   const result = { scanned: 0, migrated: 0, unchanged: 0, conflicted: 0,

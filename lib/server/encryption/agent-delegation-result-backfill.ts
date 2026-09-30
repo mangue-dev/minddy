@@ -16,9 +16,7 @@ type ResultRow = StoredDelegationResult & {
 /** Convert and rotate a bounded worker-result batch under compare-and-swap. */
 export async function backfillAgentDelegationResultsBatch(limit = 20,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      (process.env.MINDDY_AGENT_RESULT_ENCRYPTION_ENABLED !== "true" &&
-       process.env.MINDDY_AGENT_WORK_BRANCH_ENCRYPTION_ENABLED !== "true")) {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Agent result encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

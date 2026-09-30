@@ -34,8 +34,7 @@ function newPath(oldPath: string): string {
 /** Move old named objects to opaque paths and encrypt their bytes in bounded batches. */
 export async function backfillAttachmentObjectsBatch(limit = 10,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_ATTACHMENT_OBJECT_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Attachment object encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

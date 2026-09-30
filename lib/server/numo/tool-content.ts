@@ -32,8 +32,7 @@ function checkpointBinding(userId: string, turnId: string) {
 }
 
 export async function shouldProtectNumoToolContent(service: SupabaseClient) {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_NUMO_TOOL_CONTENT_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   const { data, error } = await service.from("numo_tool_content_scope")
     .select("id").eq("id", true).maybeSingle();
   if (error && !["42P01", "PGRST205"].includes(error.code)) {

@@ -41,6 +41,5 @@ export async function encodeAppConfig(key: string, value: string,
 }
 
 export function appConfigEncryptionEnabled(): boolean {
-  return isContentEncryptionEnabled() &&
-    process.env.MINDDY_APP_CONFIG_ENCRYPTION_ENABLED === "true";
+  return isContentEncryptionEnabled();
 }

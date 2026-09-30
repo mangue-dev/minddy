@@ -15,8 +15,7 @@ type TurnRow = SummaryRow & { run_id: string | null;
   conversation: { project_id: string } | Array<{ project_id: string }> };
 
 function validate(limit: number) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_AGENT_SUMMARY_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Agent summary encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

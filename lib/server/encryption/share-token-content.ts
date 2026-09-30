@@ -20,8 +20,7 @@ export function isEncryptedShareToken(value: string): boolean {
 
 export async function shouldProtectShareTokens(
   service: SupabaseClient = getServiceClient()): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_SHARE_TOKEN_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   const { data, error } = await service.from("view_share_token_encryption_scope")
     .select("id").eq("id", true).maybeSingle();
   if (error && error.code !== "42P01" && error.code !== "PGRST205") {

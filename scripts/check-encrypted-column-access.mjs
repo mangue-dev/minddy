@@ -13,6 +13,14 @@ const allowedInvitationAccess = new Set([
 
 const rules = [
   {
+    access: /process\s*\.\s*env\s*(?:\.\s*MINDDY_(?!CONTENT_ENCRYPTION_ENABLED\b)[A-Z_]*(?:ENCRYPTION|CLEANUP|SCRUB)_ENABLED|\[\s*["']MINDDY_(?!CONTENT_ENCRYPTION_ENABLED["'])[A-Z_]*(?:ENCRYPTION|CLEANUP|SCRUB)_ENABLED["']\s*\])/,
+    allowed: new Set(),
+  },
+  {
+    access: /process\s*\.\s*env\s*(?:\.\s*MINDDY_[A-Z_]*(?:ENCRYPTION|CLEANUP|SCRUB)_ENABLED|\[\s*["']MINDDY_[A-Z_]*(?:ENCRYPTION|CLEANUP|SCRUB)_ENABLED["']\s*\])/,
+    allowed: new Set(["lib/server/encryption/content-config.ts"]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]push_subscriptions["'`]\s*\)/,
     allowed: new Set([
       "app/api/account/push-subscriptions/route.ts",

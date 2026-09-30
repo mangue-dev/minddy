@@ -30,8 +30,7 @@ function outcomeBinding(userId: string, turnId: string) {
 
 export async function shouldProtectNumoFinalContent(service: SupabaseClient):
   Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_NUMO_FINAL_CONTENT_ENCRYPTION_ENABLED === "true") {
+  if (isContentEncryptionEnabled()) {
     return true;
   }
   const { data, error } = await service.from("numo_final_content_scope")

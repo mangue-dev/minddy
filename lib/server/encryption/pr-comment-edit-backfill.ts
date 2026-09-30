@@ -14,8 +14,7 @@ const SCOPE = { kind: "system" as const,
 /** Bounded, resumable PR comment edit conversion and key rotation. */
 export async function backfillPrCommentEditsBatch(limit = 20,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_PR_COMMENT_EDIT_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("PR comment edit encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

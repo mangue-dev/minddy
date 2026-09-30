@@ -28,8 +28,7 @@ export function publicProjectIconRoute(
 export async function shouldProtectProjectIcons(
   service: SupabaseClient = getServiceClient(),
 ): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_PROJECT_ICON_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await service.from("project_icon_encryption_scope")
     .select("id").eq("id", true).maybeSingle();

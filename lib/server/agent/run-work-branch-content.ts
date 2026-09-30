@@ -55,8 +55,7 @@ export function workBranchArtifactRef(value: string): string {
 
 export async function shouldEncryptAgentWorkBranch(service: SupabaseClient,
   projectId: string): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_AGENT_WORK_BRANCH_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await service.from("agent_work_branch_encryption_scopes")
     .select("project_id").eq("project_id", projectId).maybeSingle();

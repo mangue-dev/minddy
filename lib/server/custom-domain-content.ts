@@ -18,8 +18,7 @@ function binding(id: string) {
 export async function shouldProtectDomainVerification(
   service: SupabaseClient = getServiceClient(),
 ): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_CUSTOM_DOMAIN_VERIFICATION_ENCRYPTION_ENABLED === "true")
+  if (isContentEncryptionEnabled())
     return true;
   const { data, error } = await service.from("custom_domain_verification_scope")
     .select("id").eq("id", true).maybeSingle();

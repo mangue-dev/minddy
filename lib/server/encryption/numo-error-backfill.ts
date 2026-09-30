@@ -58,8 +58,7 @@ async function convert(conversation: Conversation, turn: Copy | null,
 
 /** Rotate each error and its conversation copy in bounded CAS transactions. */
 export async function backfillNumoErrorsBatch(limit = 30, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_NUMO_ERROR_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Numo error encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

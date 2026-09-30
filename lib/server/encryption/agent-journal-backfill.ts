@@ -16,8 +16,7 @@ type Row = Parameters<typeof decodeJournal>[1] & {
 
 /** Convert immutable batches under a version check, including historical keys. */
 export async function backfillAgentJournalBatch(limit = 5, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_AGENT_JOURNAL_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Agent journal encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500) {

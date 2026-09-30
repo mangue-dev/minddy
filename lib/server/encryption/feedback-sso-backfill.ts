@@ -18,8 +18,7 @@ async function markAttempt(id: string, old: string | null) {
 /** Replace legacy board secrets and rotate project keys in a bounded CAS pass. */
 export async function backfillFeedbackSsoBatch(limit = 30,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_FEEDBACK_SSO_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Feedback SSO root encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

@@ -13,8 +13,7 @@ import { getContentKeys } from "./registry";
 /** Rotate operation snapshots through a bounded, service-only CAS queue. */
 export async function backfillNumoAutomationContentBatch(limit = 30,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_NUMO_AUTOMATION_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Numo automation encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

@@ -21,8 +21,7 @@ export function isEncryptedDefaultBranch(value:string|null):boolean {
 
 export async function shouldEncryptDefaultBranch(
   service:SupabaseClient=getServiceClient()) {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_FORGE_DEFAULT_BRANCH_ENCRYPTION_ENABLED==="true") {
+  if (isContentEncryptionEnabled()) {
     return true;
   }
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;

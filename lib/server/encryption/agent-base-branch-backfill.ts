@@ -11,8 +11,7 @@ import { isContentEncryptionEnabled } from "./content-config";
 import { getContentKeys } from "./registry";
 
 function validate(limit: number) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_AGENT_BASE_BRANCH_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Agent base branch encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

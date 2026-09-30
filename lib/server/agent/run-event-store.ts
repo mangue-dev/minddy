@@ -24,7 +24,7 @@ const EVENT_COLUMNS = "id,run_id,seq,type,payload,encrypted_content,encryption_v
 const LEGACY_COLUMNS = "id,run_id,seq,type,payload,created_at,run:agent_runs!inner(project_id)";
 
 function legacySchema(error: { code?: string } | null) {
-  return process.env.MINDDY_AGENT_EVENT_ENCRYPTION_ENABLED !== "true" &&
+  return !isContentEncryptionEnabled() &&
     (error?.code === "42703" || error?.code === "PGRST204");
 }
 
@@ -37,8 +37,7 @@ function eventContext(projectId: string, runId: string, eventId: string) {
 }
 
 export async function shouldEncryptRunEvent(service: SupabaseClient, projectId: string) {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_AGENT_EVENT_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await service.from("agent_event_encryption_scopes")
     .select("project_id").eq("project_id", projectId).maybeSingle();

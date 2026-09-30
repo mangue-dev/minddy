@@ -15,8 +15,7 @@ async function markAttempt(id: string, old: Record<string, unknown>) {
 /** Move historical merge undo UUIDs out of arbitrary JSON in bounded CAS batches. */
 export async function backfillFeedbackMergeBatch(limit = 50,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_FEEDBACK_MERGE_PAYLOAD_CLEANUP_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Feedback merge conversion is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

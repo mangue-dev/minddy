@@ -28,8 +28,7 @@ export function isEncryptedSurfaceDestination(value: unknown): value is {
 
 export async function shouldEncryptSurfaceDestination(
   service?: SupabaseClient): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_NUMO_SURFACE_DESTINATION_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   const { data, error } = await (service ?? getServiceClient())
     .from("numo_surface_destination_encryption_scope")
     .select("id").eq("id", true).maybeSingle();

@@ -25,8 +25,7 @@ export type DeliveryTokenRow = { id: string; instance_id: string;
 
 export async function shouldProtectUserDelivery(service?: SupabaseClient):
   Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_RELAY_USER_DELIVERY_ENCRYPTION_ENABLED === "true") {
+  if (isContentEncryptionEnabled()) {
     return true;
   }
   const { data, error } = await (service ?? getServiceClient())

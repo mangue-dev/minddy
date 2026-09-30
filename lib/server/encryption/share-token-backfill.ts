@@ -13,8 +13,7 @@ const SCOPE = { kind: "system" as const,
 /** Rotate a bounded, fair batch. The SQL write compares the original token. */
 export async function backfillShareTokensBatch(limit = 30,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_SHARE_TOKEN_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Share token encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

@@ -35,8 +35,7 @@ function context(table: ForgeOAuthTable,row: ForgeOAuthTokenRow) {
 
 export async function shouldProtectForgeOAuthTokens(service?: SupabaseClient):
   Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_FORGE_OAUTH_TOKEN_ENCRYPTION_ENABLED === "true") {
+  if (isContentEncryptionEnabled()) {
     return true;
   }
   const { data, error } = await (service ?? getServiceClient())

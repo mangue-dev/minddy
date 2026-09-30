@@ -36,8 +36,7 @@ function safeIcon(row: Row) {
 
 export async function shouldProtectProjects(service?: SupabaseClient):
   Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_PROJECT_CONTENT_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await (service ?? getServiceClient())
     .from("project_content_encryption_scope")

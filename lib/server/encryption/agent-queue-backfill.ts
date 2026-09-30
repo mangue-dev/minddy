@@ -23,8 +23,7 @@ type ParentRow = { id: string; content: string | null;
 
 /** Convert the queue row and its SQL transcript copy under one compare-and-swap RPC. */
 export async function backfillAgentQueueBatch(limit = 20, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_AGENT_LAUNCH_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Agent launch encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

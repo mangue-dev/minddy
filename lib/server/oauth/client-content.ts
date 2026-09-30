@@ -31,8 +31,7 @@ function context(clientId: string) {
 }
 
 export async function shouldProtectOAuthClients(): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_OAUTH_CLIENT_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   const { data, error } = await getServiceClient()
     .from("oauth_client_content_scope").select("id").eq("id", true).maybeSingle();
   if (error && !["42P01", "PGRST205"].includes(error.code))

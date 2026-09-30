@@ -12,8 +12,7 @@ import { getContentKeys } from "./registry";
 /** Convert and rotate a bounded deployment-affinity batch under CAS. */
 export async function backfillAgentDeploymentUrlsBatch(limit = 20,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_AGENT_DEPLOYMENT_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Agent deployment encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

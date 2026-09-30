@@ -28,8 +28,7 @@ function valid(row: Row) {
 }
 
 export async function shouldProtectViews(service?: SupabaseClient): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_VIEW_CONTENT_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await (service ?? getServiceClient())
     .from("view_content_encryption_scope")

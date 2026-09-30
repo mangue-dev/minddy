@@ -16,8 +16,7 @@ const context = { table: "ai_decision_evaluations" as const,
 export async function backfillAiDecisionEvaluationsBatch(
   limit = 25, signal?: AbortSignal,
 ) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_AI_DECISION_EVALUATION_ENCRYPTION_ENABLED !== "true")
+  if (!isContentEncryptionEnabled())
     throw new Error("Decision evaluation encryption is not enabled");
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
     throw new Error("Invalid decision evaluation batch size");

@@ -29,8 +29,7 @@ async function markAttempt(table: Table, row: Row) {
 /** Convert or rotate a fair, bounded batch of private feedback identities. */
 export async function backfillFeedbackIdentityBatch(table: Table,
   limit = 30, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_FEEDBACK_IDENTITY_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Feedback identity encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

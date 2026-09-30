@@ -20,8 +20,7 @@ export function isEncryptedPrCommentEdit(value: string): boolean {
 }
 
 export async function shouldEncryptPrCommentEdit(): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_PR_COMMENT_EDIT_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await getServiceClient()
     .from("pr_comment_edit_encryption_scope")

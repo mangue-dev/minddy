@@ -25,8 +25,7 @@ type MetadataRow = {
 /** Rotate or convert one bounded batch of attachment or page-file metadata. */
 export async function backfillAttachmentMetadataBatch(
   table: AttachmentTable, limit = 30, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_ATTACHMENT_METADATA_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Attachment metadata encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

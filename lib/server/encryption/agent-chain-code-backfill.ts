@@ -7,8 +7,7 @@ import { isContentEncryptionEnabled } from "./content-config";
 /** Remove non-code legacy automation fields in bounded, row-locked batches. */
 export async function backfillAgentChainCodesBatch(limit = 50,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_AGENT_CHAIN_CODE_CLEANUP_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Agent chain code cleanup is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

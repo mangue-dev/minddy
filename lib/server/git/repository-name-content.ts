@@ -75,8 +75,7 @@ export async function repositoryNameToken(provider: string, fullName: string) {
 
 export async function shouldProtectRepositoryNames(
   service: SupabaseClient=getServiceClient()) {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_FORGE_REPOSITORY_NAME_ENCRYPTION_ENABLED==="true") {
+  if (isContentEncryptionEnabled()) {
     return true;
   }
   const { data,error } = await service.from("forge_repository_name_scope")

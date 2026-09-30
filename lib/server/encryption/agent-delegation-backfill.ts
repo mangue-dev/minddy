@@ -15,8 +15,7 @@ type DelegationRow = { id: string; project_id: string; parent_numo_turn_id: stri
 
 /** Convert a bounded set of delegated inputs with compare-and-swap writes. */
 export async function backfillAgentDelegationBatch(limit = 20, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_AGENT_DELEGATION_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Agent delegation encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

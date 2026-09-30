@@ -1,3 +1,4 @@
+import { isContentEncryptionEnabled } from "@/lib/server/encryption/content-config";
 import { NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { NUMO_UUID } from "@/lib/server/numo/conversations";
@@ -58,7 +59,7 @@ export async function GET(
     "run_id,parent_numo_turn_id,question_id,call_id,questions,created_at,source_event_id,encrypted_questions,questions_encryption_version"
   ) : null;
   if (pendingResult?.error &&
-      process.env.MINDDY_AGENT_EVENT_ENCRYPTION_ENABLED !== "true" &&
+      !isContentEncryptionEnabled() &&
       ["42703", "PGRST204"].includes(pendingResult.error.code)) {
     pendingResult = await readPending(
       "run_id,parent_numo_turn_id,question_id,call_id,questions,created_at");

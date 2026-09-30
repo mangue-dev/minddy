@@ -31,8 +31,7 @@ export function protectedWebhookSecretVersion(value: string | null): number {
 
 export async function shouldProtectRepoWebhookSecret(
   service?: SupabaseClient): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_REPO_WEBHOOK_SECRET_ENCRYPTION_ENABLED === "true") {
+  if (isContentEncryptionEnabled()) {
     return true;
   }
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;

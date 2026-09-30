@@ -8,8 +8,7 @@ type Row = StoredOAuthClient & { content_revision: number;
   encryption_checked_at: string | null };
 /** Verify and rotate a bounded OAuth client batch under exact revision CAS. */
 export async function backfillOAuthClientsBatch(limit = 25, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_OAUTH_CLIENT_ENCRYPTION_ENABLED !== "true")
+  if (!isContentEncryptionEnabled())
     throw new Error("OAuth client encryption is not enabled");
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
     throw new Error("Invalid OAuth client batch size");

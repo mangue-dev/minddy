@@ -7,8 +7,7 @@ import { isContentEncryptionEnabled } from "./content-config";
 export async function scrubStripeWebhookPayloadsBatch(
   limit = 100, signal?: AbortSignal,
 ) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_STRIPE_WEBHOOK_PAYLOAD_SCRUB_ENABLED !== "true")
+  if (!isContentEncryptionEnabled())
     throw new Error("Stripe webhook payload scrub is not enabled");
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500)
     throw new Error("Invalid Stripe webhook scrub batch size");

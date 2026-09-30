@@ -33,8 +33,7 @@ export function isEncryptedTurnIntent(value: StoredTurnIntent):
 
 export async function shouldProtectNumoTurnIntent(
   service: SupabaseClient = getServiceClient()): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_NUMO_TURN_INTENT_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   const { data, error } = await service.from("numo_turn_intent_scope")
     .select("id").eq("id", true).maybeSingle();
   if (error && error.code !== "42P01" && error.code !== "PGRST205") {

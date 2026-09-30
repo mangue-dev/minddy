@@ -15,8 +15,7 @@ type VerdictRow = StoredAgentVerdict & {
 
 /** Convert and rotate a bounded verdict batch under compare-and-swap. */
 export async function backfillAgentVerdictsBatch(limit = 20, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_AGENT_VERDICT_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Agent verdict encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

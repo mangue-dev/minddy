@@ -15,9 +15,7 @@ type Counters = { scanned: number; migrated: number; unchanged: number;
   conflicted: number; failed: number; interrupted: boolean };
 
 function enabled() {
-  return isContentEncryptionEnabled() &&
-    (process.env.MINDDY_AGENT_RESULT_ENCRYPTION_ENABLED === "true" ||
-     process.env.MINDDY_AGENT_WORK_BRANCH_ENCRYPTION_ENABLED === "true");
+  return isContentEncryptionEnabled();
 }
 
 function counters(): Counters {

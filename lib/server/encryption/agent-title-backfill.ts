@@ -25,8 +25,7 @@ async function currentVersion(projectId: string) {
 
 /** Convert run titles and their conversation copies under one SQL compare-and-swap. */
 export async function backfillAgentTitleBatch(limit = 20, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_AGENT_TITLE_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Agent title encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

@@ -10,8 +10,7 @@ import { getContentKeys } from "./registry";
 export async function backfillAgentBranchPrefixesBatch(
   limit = 25, signal?: AbortSignal,
 ) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_AGENT_BRANCH_PREFIX_ENCRYPTION_ENABLED !== "true")
+  if (!isContentEncryptionEnabled())
     throw new Error("Agent branch prefix encryption is not enabled");
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
     throw new Error("Invalid agent branch prefix batch size");

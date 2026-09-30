@@ -8,8 +8,7 @@ type Row = StoredApiKey & { content_revision:number;
   encryption_checked_at:string|null };
 /** Verify and rotate actor attribution in bounded user-key batches. */
 export async function backfillApiKeysBatch(limit=25,signal?:AbortSignal){
-  if(!isContentEncryptionEnabled() ||
-      process.env.MINDDY_API_KEY_CONTENT_ENCRYPTION_ENABLED!=="true")
+  if (!isContentEncryptionEnabled())
     throw new Error("API key content encryption is not enabled");
   if(!Number.isSafeInteger(limit) || limit<1 || limit>100)
     throw new Error("Invalid API key batch size");

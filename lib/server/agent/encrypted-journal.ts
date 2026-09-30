@@ -48,8 +48,7 @@ export async function journalLookup(projectId: string, digest: string): Promise<
 }
 
 export async function shouldEncryptJournal(projectId: string): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_AGENT_JOURNAL_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await getServiceClient().from("agent_journal_encryption_scopes")
     .select("project_id").eq("project_id", projectId).maybeSingle();

@@ -19,8 +19,7 @@ type QueueRow = (McpConnectionRow | McpAttemptRow) & {
 const secretColumns = ["token_encrypted", "headers_encrypted", "oauth_encrypted"] as const;
 
 async function backfill(table: Table, limit: number, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_MCP_CONTENT_ENCRYPTION_ENABLED !== "true")
+  if (!isContentEncryptionEnabled())
     throw new Error("MCP content encryption is not enabled");
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
     throw new Error("Invalid MCP batch size");

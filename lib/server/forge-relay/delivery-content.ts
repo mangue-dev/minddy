@@ -25,8 +25,7 @@ export function isEncryptedRelayDelivery(value: string | null): boolean {
 }
 
 export async function shouldEncryptRelayDelivery(): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_FORGE_RELAY_DELIVERY_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await getServiceClient()
     .from("forge_relay_delivery_encryption_scope")

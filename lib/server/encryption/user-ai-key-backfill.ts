@@ -10,8 +10,7 @@ import { isContentEncryptionEnabled } from "./content-config";
 /** Migrate and rotate complete BYOK rows under bounded compare-and-swap edits. */
 export async function backfillUserAiKeysBatch(limit = 30,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_USER_AI_KEY_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("BYOK encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

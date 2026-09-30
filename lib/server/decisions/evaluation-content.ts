@@ -14,8 +14,7 @@ const context = { table: "ai_decision_evaluations" as const,
 export async function shouldProtectDecisionEvaluations(
   service: SupabaseClient = getServiceClient(),
 ): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_AI_DECISION_EVALUATION_ENCRYPTION_ENABLED === "true")
+  if (isContentEncryptionEnabled())
     return true;
   const { data, error } = await service.from("ai_decision_evaluation_scope")
     .select("id").eq("id", true).maybeSingle();

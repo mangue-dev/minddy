@@ -9,7 +9,7 @@ import { rowMigrationProgress } from "./row-migration-progress";
 
 /** Fair, revision-guarded conversion of issue source rows and historical keys. */
 export async function backfillIssuesBatch(limit = 50, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() || process.env.MINDDY_ISSUE_SOURCE_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Issue source encryption is not enabled");
   }
   const service = getServiceClient();

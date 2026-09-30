@@ -26,8 +26,7 @@ const COLUMNS: Record<Table,string> = {
 /** Convert each linked name and copy with a bounded, restartable CAS pass. */
 export async function backfillForgeRepositoryNamesBatch(limit=30,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_FORGE_REPOSITORY_NAME_ENCRYPTION_ENABLED!=="true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Forge repository name encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit<1 || limit>100) {

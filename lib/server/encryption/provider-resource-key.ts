@@ -13,8 +13,7 @@ const CONTEXT = { scope: SCOPE, table: "provider_operation_reservations",
 
 export async function shouldIndexProviderResource(
   service: SupabaseClient = getServiceClient()): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_PROVIDER_RESOURCE_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   const { data, error } = await service
     .from("provider_operation_resource_encryption_scope")
     .select("id").eq("id", true).maybeSingle();

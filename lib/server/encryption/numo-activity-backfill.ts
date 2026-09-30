@@ -12,8 +12,7 @@ import { decodeNumoTurnEvent, encodeNumoTurnEvent,
 /** Convert and rotate the durable Numo activity journal in a bounded CAS pass. */
 export async function backfillNumoActivityBatch(limit = 30,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_NUMO_EVENT_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Numo activity encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

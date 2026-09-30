@@ -17,8 +17,7 @@ type MetadataRow = StoredGithubIssueMetadata & {
 /** Convert issue-sidecar content with a bounded compare-and-swap pass. */
 export async function backfillGithubIssueMetadataBatch(limit = 20,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_ISSUE_SIDECAR_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("GitHub issue metadata encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

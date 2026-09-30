@@ -17,8 +17,7 @@ function binding(userId: string, field: Field) {
 export async function shouldProtectBillingIdentity(
   service: SupabaseClient = getServiceClient(),
 ): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_BILLING_IDENTITY_ENCRYPTION_ENABLED === "true")
+  if (isContentEncryptionEnabled())
     return true;
   const { data, error } = await service.from("billing_identity_scope")
     .select("id").eq("id", true).maybeSingle();

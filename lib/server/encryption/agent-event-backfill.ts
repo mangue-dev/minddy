@@ -13,8 +13,7 @@ type EventRow = Parameters<typeof decodeRunEvent>[1] & {
 
 /** Convert event payload and SQL-created copies under one database transaction. */
 export async function backfillAgentEventsBatch(limit = 20, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_AGENT_EVENT_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Agent event encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

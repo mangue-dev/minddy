@@ -13,8 +13,7 @@ type Message = { id: string; conversation_id: string; content: string;
 
 /** Convert source-free transcript messages with a bounded compare-and-swap pass. */
 export async function backfillAgentStandaloneMessages(limit = 20, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_AGENT_LAUNCH_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Agent launch encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

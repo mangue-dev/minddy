@@ -11,8 +11,7 @@ import { isContentEncryptionEnabled } from "./content-config";
 /** Convert and rotate per-repository hook secrets with exact-value CAS. */
 export async function backfillProjectWebhookSecretsBatch(limit = 30,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_REPO_WEBHOOK_SECRET_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Repository webhook encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

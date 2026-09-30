@@ -13,7 +13,7 @@ type LaunchContent = {
 };
 
 export function legacyAgentLaunchSchema(error: { code?: string } | null): boolean {
-  return process.env.MINDDY_AGENT_LAUNCH_ENCRYPTION_ENABLED !== "true" &&
+  return !isContentEncryptionEnabled() &&
     (error?.code === "42703" || error?.code === "PGRST204");
 }
 
@@ -37,8 +37,7 @@ function context(projectId: string, runId: string) {
 }
 
 export async function shouldEncryptAgentLaunch(service: SupabaseClient, projectId: string) {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_AGENT_LAUNCH_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await service.from("agent_launch_encryption_scopes")
     .select("project_id").eq("project_id", projectId).maybeSingle();

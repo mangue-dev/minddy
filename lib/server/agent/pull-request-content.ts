@@ -22,8 +22,7 @@ export function isEncryptedPullRequestContent(value: string | null): boolean {
 }
 
 export async function shouldEncryptPullRequestContent(): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_PULL_REQUEST_CONTENT_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await getServiceClient()
     .from("pull_request_content_encryption_scope")

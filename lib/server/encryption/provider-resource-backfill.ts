@@ -7,8 +7,7 @@ import { providerResourceIndex } from "./provider-resource-key";
 /** Convert historical lease identities without resetting quota or deduplication. */
 export async function backfillProviderResourcesBatch(limit = 50,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_PROVIDER_RESOURCE_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Provider resource protection is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

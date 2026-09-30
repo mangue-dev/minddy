@@ -117,8 +117,7 @@ function uuid(value: unknown): string | null {
 /** Rotate tool sources and copies in bounded compare-and-swap transactions. */
 export async function backfillNumoToolContentBatch(limit = 30,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_NUMO_TOOL_CONTENT_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Numo tool content encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit<1 || limit>100) {

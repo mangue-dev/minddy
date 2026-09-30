@@ -19,8 +19,7 @@ function binding(userId: string) {
 export async function shouldProtectAgentBranchPrefix(
   service: SupabaseClient = getServiceClient(),
 ): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_AGENT_BRANCH_PREFIX_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   const { data, error } = await service.from("agent_branch_prefix_scope")
     .select("id").eq("id", true).maybeSingle();
   if (error && !["42P01", "PGRST205"].includes(error.code))

@@ -7,8 +7,7 @@ import { forgeMentionKeyIndex } from "./forge-mention-key";
 /** Convert old counter identities with CAS; a live claim folds its own row first. */
 export async function backfillForgeMentionKeysBatch(limit = 50,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_FORGE_THROTTLE_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Forge mention key protection is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

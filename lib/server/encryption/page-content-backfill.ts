@@ -11,8 +11,7 @@ import { isContentEncryptionEnabled } from "./content-config";
 /** Convert complete page rows under a bounded revision-guarded scan. */
 export async function backfillPageContentBatch(limit = 30,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_PAGE_CONTENT_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Page content encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

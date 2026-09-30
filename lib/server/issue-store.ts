@@ -61,7 +61,7 @@ export async function encodeIssue(row: Row, previousVersion = 0): Promise<Row> {
   const logical = complete(row);
   validate(logical);
   if (typeof logical.project_id !== "string") throw new Error("Missing issue project");
-  const optIn = isContentEncryptionEnabled() && process.env.MINDDY_ISSUE_SOURCE_ENCRYPTION_ENABLED === "true";
+  const optIn = isContentEncryptionEnabled();
   if (!optIn && previousVersion === 0 && !process.env.MINDDY_DATA_ROOT_KEY) return logical;
   const scope = { kind: "project" as const, id: logical.project_id };
   if (!optIn && previousVersion === 0) {

@@ -8,8 +8,7 @@ type Row = StoredPush & { content_revision: number;
   encryption_checked_at: string | null };
 /** Rotate one bounded batch without changing endpoint or installation identity. */
 export async function backfillPushBatch(limit = 25, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_PUSH_CONTENT_ENCRYPTION_ENABLED !== "true")
+  if (!isContentEncryptionEnabled())
     throw new Error("Push encryption is not enabled");
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
     throw new Error("Invalid push batch size");

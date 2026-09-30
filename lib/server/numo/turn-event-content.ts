@@ -29,8 +29,7 @@ export function isEncryptedNumoTurnEvent(value: StoredPayload):
 
 export async function shouldProtectNumoTurnEvents(
   service: SupabaseClient = getServiceClient()): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_NUMO_EVENT_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   const { data, error } = await service.from("numo_event_content_scope")
     .select("id").eq("id", true).maybeSingle();
   if (error && error.code !== "42P01" && error.code !== "PGRST205") {

@@ -27,8 +27,7 @@ export function isEncryptedAttachmentValue(value: string | null): boolean {
 
 export async function shouldEncryptAttachmentMetadata(
   service: SupabaseClient = getServiceClient()): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_ATTACHMENT_METADATA_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   const { data, error } = await service
     .from("attachment_metadata_encryption_scope")
     .select("id").eq("id", true).maybeSingle();

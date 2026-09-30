@@ -1,3 +1,4 @@
+import { isContentEncryptionEnabled } from "@/lib/server/encryption/content-config";
 import { issueStore } from "@/lib/server/issue-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -101,7 +102,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
           .or("checkpoint.not.is.null,checkpoint_ciphertext.not.is.null")
       : { data: [], error: null };
   const { data: checkpointRows } = checkpointLookup.error?.code === "42703" &&
-      process.env.MINDDY_AGENT_CHECKPOINT_ENCRYPTION_ENABLED !== "true"
+      !isContentEncryptionEnabled()
     ? await service.from("agent_runs").select("id").in("id", failedIds)
         .not("checkpoint", "is", null)
     : checkpointLookup;

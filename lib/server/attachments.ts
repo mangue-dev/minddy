@@ -175,8 +175,7 @@ export function opaqueAttachmentPath(prefix: string): string {
 }
 
 async function protectAttachmentObjectWrites(service: SupabaseClient): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_ATTACHMENT_OBJECT_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   const { data, error } = await service.from("attachment_object_encryption_scope")
     .select("id").eq("id", true).maybeSingle();
   if (error && error.code !== "42P01" && error.code !== "PGRST205") {

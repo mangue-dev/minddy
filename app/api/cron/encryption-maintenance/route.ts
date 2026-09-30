@@ -148,7 +148,6 @@ import { backfillScratchpadsBatch } from "@/lib/server/encryption/scratchpad-bac
 import { backfillStatEventsBatch } from "@/lib/server/encryption/stat-events-backfill";
 import {
   isInvitationEncryptionConfigured,
-  isInvitationEncryptionEnabled,
 } from "@/lib/server/encryption/invitation-email";
 
 export const maxDuration = 60;
@@ -158,126 +157,8 @@ export async function GET(request: NextRequest) {
   if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  const invitationsEnabled = isInvitationEncryptionEnabled();
   const contentEnabled = isContentEncryptionEnabled();
-  const issuesEnabled = contentEnabled && process.env.MINDDY_ISSUE_SOURCE_ENCRYPTION_ENABLED === "true";
-  const agentJournalEnabled = contentEnabled && process.env.MINDDY_AGENT_JOURNAL_ENCRYPTION_ENABLED === "true";
-  const agentEventsEnabled = contentEnabled && process.env.MINDDY_AGENT_EVENT_ENCRYPTION_ENABLED === "true";
-  const agentLaunchEnabled = contentEnabled && process.env.MINDDY_AGENT_LAUNCH_ENCRYPTION_ENABLED === "true";
-  const agentTitleEnabled = contentEnabled && process.env.MINDDY_AGENT_TITLE_ENCRYPTION_ENABLED === "true";
-  const agentCheckpointEnabled = contentEnabled && process.env.MINDDY_AGENT_CHECKPOINT_ENCRYPTION_ENABLED === "true";
-  const agentDelegationEnabled = contentEnabled && process.env.MINDDY_AGENT_DELEGATION_ENCRYPTION_ENABLED === "true";
-  const agentContextEnabled = contentEnabled && process.env.MINDDY_AGENT_CONTEXT_ENCRYPTION_ENABLED === "true";
-  const issueSidecarEnabled = contentEnabled && process.env.MINDDY_ISSUE_SIDECAR_ENCRYPTION_ENABLED === "true";
-  const agentVerdictEnabled = contentEnabled && process.env.MINDDY_AGENT_VERDICT_ENCRYPTION_ENABLED === "true";
-  const agentDeploymentEnabled = contentEnabled && process.env.MINDDY_AGENT_DEPLOYMENT_ENCRYPTION_ENABLED === "true";
-  const agentBaseBranchEnabled = contentEnabled && process.env.MINDDY_AGENT_BASE_BRANCH_ENCRYPTION_ENABLED === "true";
-  const agentWorkBranchEnabled = contentEnabled && process.env.MINDDY_AGENT_WORK_BRANCH_ENCRYPTION_ENABLED === "true";
-  const agentResultEnabled = contentEnabled &&
-    (process.env.MINDDY_AGENT_RESULT_ENCRYPTION_ENABLED === "true" || agentWorkBranchEnabled);
-  const agentSummaryEnabled = contentEnabled &&
-    process.env.MINDDY_AGENT_SUMMARY_ENCRYPTION_ENABLED === "true";
-  const agentPrUrlEnabled = contentEnabled &&
-    process.env.MINDDY_AGENT_PR_URL_ENCRYPTION_ENABLED === "true";
-  const pullRequestUrlEnabled = contentEnabled &&
-    process.env.MINDDY_PULL_REQUEST_URL_ENCRYPTION_ENABLED === "true";
-  const pullRequestContentEnabled = contentEnabled &&
-    process.env.MINDDY_PULL_REQUEST_CONTENT_ENCRYPTION_ENABLED === "true";
-  const prCommentEditEnabled = contentEnabled &&
-    process.env.MINDDY_PR_COMMENT_EDIT_ENCRYPTION_ENABLED === "true";
-  const forgeRelayDeliveryEnabled = contentEnabled &&
-    process.env.MINDDY_FORGE_RELAY_DELIVERY_ENCRYPTION_ENABLED === "true";
-  const attachmentObjectEnabled = contentEnabled &&
-    process.env.MINDDY_ATTACHMENT_OBJECT_ENCRYPTION_ENABLED === "true";
-  const attachmentMetadataEnabled = contentEnabled &&
-    process.env.MINDDY_ATTACHMENT_METADATA_ENCRYPTION_ENABLED === "true";
-  const feedbackIdentityEnabled = contentEnabled &&
-    process.env.MINDDY_FEEDBACK_IDENTITY_ENCRYPTION_ENABLED === "true";
-  const shareTokenEnabled = contentEnabled &&
-    process.env.MINDDY_SHARE_TOKEN_ENCRYPTION_ENABLED === "true";
-  const numoSurfaceEnabled = contentEnabled &&
-    process.env.MINDDY_NUMO_SURFACE_DESTINATION_ENCRYPTION_ENABLED === "true";
-  const feedbackSsoEnabled = contentEnabled &&
-    process.env.MINDDY_FEEDBACK_SSO_ENCRYPTION_ENABLED === "true";
-  const forgeMentionEnabled = contentEnabled &&
-    process.env.MINDDY_FORGE_THROTTLE_ENCRYPTION_ENABLED === "true";
-  const numoActivityEnabled = contentEnabled &&
-    process.env.MINDDY_NUMO_EVENT_ENCRYPTION_ENABLED === "true";
-  const providerResourceEnabled = contentEnabled &&
-    process.env.MINDDY_PROVIDER_RESOURCE_ENCRYPTION_ENABLED === "true";
-  const appConfigEnabled = contentEnabled &&
-    process.env.MINDDY_APP_CONFIG_ENCRYPTION_ENABLED === "true";
-  const feedbackMergeEnabled = contentEnabled &&
-    process.env.MINDDY_FEEDBACK_MERGE_PAYLOAD_CLEANUP_ENABLED === "true";
-  const agentChainCodesEnabled = contentEnabled &&
-    process.env.MINDDY_AGENT_CHAIN_CODE_CLEANUP_ENABLED === "true";
-  const numoTurnIntentsEnabled = contentEnabled &&
-    process.env.MINDDY_NUMO_TURN_INTENT_ENCRYPTION_ENABLED === "true";
-  const numoAutomationEnabled = contentEnabled &&
-    process.env.MINDDY_NUMO_AUTOMATION_ENCRYPTION_ENABLED === "true";
-  const numoConversationTitleEnabled = contentEnabled &&
-    process.env.MINDDY_NUMO_CONVERSATION_TITLE_ENCRYPTION_ENABLED === "true";
-  const numoUserMessageEnabled = contentEnabled &&
-    process.env.MINDDY_NUMO_USER_MESSAGE_ENCRYPTION_ENABLED === "true";
-  const numoFinalContentEnabled = contentEnabled &&
-    process.env.MINDDY_NUMO_FINAL_CONTENT_ENCRYPTION_ENABLED === "true";
-  const numoErrorsEnabled = contentEnabled &&
-    process.env.MINDDY_NUMO_ERROR_ENCRYPTION_ENABLED === "true";
-  const numoToolContentEnabled = contentEnabled &&
-    process.env.MINDDY_NUMO_TOOL_CONTENT_ENCRYPTION_ENABLED === "true";
-  const forgeRepositoryNamesEnabled = contentEnabled &&
-    process.env.MINDDY_FORGE_REPOSITORY_NAME_ENCRYPTION_ENABLED === "true";
-  const forgeDefaultBranchesEnabled = contentEnabled &&
-    process.env.MINDDY_FORGE_DEFAULT_BRANCH_ENCRYPTION_ENABLED === "true";
-  const projectIconsEnabled = contentEnabled &&
-    process.env.MINDDY_PROJECT_ICON_ENCRYPTION_ENABLED === "true";
-  const viewContentEnabled = contentEnabled &&
-    process.env.MINDDY_VIEW_CONTENT_ENCRYPTION_ENABLED === "true";
-  const savedViewBookmarksEnabled = contentEnabled &&
-    process.env.MINDDY_SAVED_VIEW_ENCRYPTION_ENABLED === "true";
-  const agentRoutinesEnabled = contentEnabled &&
-    process.env.MINDDY_AGENT_ROUTINE_ENCRYPTION_ENABLED === "true";
-  const projectContentEnabled = contentEnabled &&
-    process.env.MINDDY_PROJECT_CONTENT_ENCRYPTION_ENABLED === "true";
-  const pageContentEnabled = contentEnabled &&
-    process.env.MINDDY_PAGE_CONTENT_ENCRYPTION_ENABLED === "true";
-  const userAiKeysEnabled = contentEnabled &&
-    process.env.MINDDY_USER_AI_KEY_ENCRYPTION_ENABLED === "true";
-  const relayInstancesEnabled = contentEnabled &&
-    process.env.MINDDY_RELAY_INSTANCE_ENCRYPTION_ENABLED === "true";
-  const projectWebhookSecretsEnabled = contentEnabled &&
-    process.env.MINDDY_REPO_WEBHOOK_SECRET_ENCRYPTION_ENABLED === "true";
-  const relayProvisioningEnabled = contentEnabled &&
-    process.env.MINDDY_RELAY_PROVISIONING_ENCRYPTION_ENABLED === "true";
-  const relayUserDeliveriesEnabled = contentEnabled &&
-    process.env.MINDDY_RELAY_USER_DELIVERY_ENCRYPTION_ENABLED === "true";
-  const forgeOAuthTokensEnabled = contentEnabled &&
-    process.env.MINDDY_FORGE_OAUTH_TOKEN_ENCRYPTION_ENABLED === "true";
-  const mcpContentEnabled = contentEnabled &&
-    process.env.MINDDY_MCP_CONTENT_ENCRYPTION_ENABLED === "true";
-  const agentBranchPrefixesEnabled = contentEnabled &&
-    process.env.MINDDY_AGENT_BRANCH_PREFIX_ENCRYPTION_ENABLED === "true";
-  const appTabsEnabled = contentEnabled &&
-    process.env.MINDDY_APP_TABS_ENCRYPTION_ENABLED === "true";
-  const aiDecisionEvaluationsEnabled = contentEnabled &&
-    process.env.MINDDY_AI_DECISION_EVALUATION_ENCRYPTION_ENABLED === "true";
-  const stripeWebhookScrubEnabled = contentEnabled &&
-    process.env.MINDDY_STRIPE_WEBHOOK_PAYLOAD_SCRUB_ENABLED === "true";
-  const customDomainVerificationEnabled = contentEnabled &&
-    process.env.MINDDY_CUSTOM_DOMAIN_VERIFICATION_ENCRYPTION_ENABLED === "true";
-  const billingIdentityEnabled = contentEnabled &&
-    process.env.MINDDY_BILLING_IDENTITY_ENCRYPTION_ENABLED === "true";
-  const oauthClientsEnabled = contentEnabled &&
-    process.env.MINDDY_OAUTH_CLIENT_ENCRYPTION_ENABLED === "true";
-  const oauthCodesEnabled = contentEnabled &&
-    process.env.MINDDY_OAUTH_CODE_ENCRYPTION_ENABLED === "true";
-  const apiKeysEnabled = contentEnabled &&
-    process.env.MINDDY_API_KEY_CONTENT_ENCRYPTION_ENABLED === "true";
-  const integrationsEnabled = contentEnabled &&
-    process.env.MINDDY_INTEGRATION_CONTENT_ENCRYPTION_ENABLED === "true";
-  const pushEnabled = contentEnabled &&
-    process.env.MINDDY_PUSH_CONTENT_ENCRYPTION_ENABLED === "true";
-  if (!invitationsEnabled && !contentEnabled) {
+  if (!contentEnabled) {
     return NextResponse.json({ skipped: true });
   }
   if (!isInvitationEncryptionConfigured()) {
@@ -286,7 +167,7 @@ export async function GET(request: NextRequest) {
   try {
     const rotation = await rotateDueContentKeys();
     const outcomes = await Promise.allSettled([
-      invitationsEnabled ? backfillInvitationEmailsBatch(100) : Promise.resolve(null),
+      contentEnabled ? backfillInvitationEmailsBatch(100) : Promise.resolve(null),
       contentEnabled ? backfillScratchpadsBatch(50, request.signal) : Promise.resolve(null),
       contentEnabled ? backfillStatEventsBatch(50, request.signal) : Promise.resolve(null),
       contentEnabled ? backfillHistoryBatch("issue_events", 50, request.signal) : Promise.resolve(null),
@@ -297,86 +178,86 @@ export async function GET(request: NextRequest) {
       contentEnabled ? backfillCategoriesBatch(50, request.signal) : Promise.resolve(null),
       contentEnabled ? backfillProjectDraftsBatch(50, request.signal) : Promise.resolve(null),
       contentEnabled ? backfillFeedbackPostsBatch(50, request.signal) : Promise.resolve(null),
-      issuesEnabled ? backfillIssuesBatch(50, request.signal) : Promise.resolve(null),
-      agentJournalEnabled ? backfillAgentJournalBatch(5, request.signal) : Promise.resolve(null),
-      agentEventsEnabled ? backfillAgentEventsBatch(20, request.signal) : Promise.resolve(null),
-      agentLaunchEnabled ? backfillAgentLaunchBatch(20, request.signal) : Promise.resolve(null),
-      agentTitleEnabled ? backfillAgentTitleBatch(20, request.signal) : Promise.resolve(null),
-      agentCheckpointEnabled ? backfillAgentCheckpointBatch(5, request.signal) : Promise.resolve(null),
-      agentDelegationEnabled ? backfillAgentDelegationBatch(20, request.signal) : Promise.resolve(null),
-      agentLaunchEnabled ? backfillAgentStandaloneMessages(20, request.signal) : Promise.resolve(null),
-      agentLaunchEnabled ? backfillAgentQueueBatch(20, request.signal) : Promise.resolve(null),
-      agentContextEnabled ? backfillAgentContextsBatch(20, request.signal) : Promise.resolve(null),
-      issueSidecarEnabled ? backfillGithubIssueMetadataBatch(20, request.signal) : Promise.resolve(null),
-      issueSidecarEnabled ? backfillGithubCommentUrlsBatch(20, request.signal) : Promise.resolve(null),
-      agentVerdictEnabled ? backfillAgentVerdictsBatch(20, request.signal) : Promise.resolve(null),
-      agentDeploymentEnabled ? backfillAgentDeploymentUrlsBatch(20, request.signal) : Promise.resolve(null),
-      agentBaseBranchEnabled ? backfillAgentRunBaseBranchesBatch(20, request.signal) : Promise.resolve(null),
-      agentBaseBranchEnabled ? backfillOrphanRuntimeBaseBranchesBatch(20, request.signal) : Promise.resolve(null),
-      agentWorkBranchEnabled ? backfillAgentArtifactBranchesBatch(20, request.signal) : Promise.resolve(null),
-      agentWorkBranchEnabled ? backfillAgentRunWorkBranchesBatch(20, request.signal) : Promise.resolve(null),
-      agentWorkBranchEnabled ? backfillOrphanRuntimeWorkBranchesBatch(20, request.signal) : Promise.resolve(null),
-      agentResultEnabled ? backfillAgentDelegationResultsBatch(20, request.signal) : Promise.resolve(null),
-      agentResultEnabled ? backfillNumoWorkerEventsBatch(20, request.signal) : Promise.resolve(null),
-      agentResultEnabled ? backfillNumoWorkerCheckpointsBatch(20, request.signal) : Promise.resolve(null),
-      agentSummaryEnabled ? backfillAgentRunSummariesBatch(20, request.signal) : Promise.resolve(null),
-      agentSummaryEnabled ? backfillAgentTurnSummariesBatch(20, request.signal) : Promise.resolve(null),
-      agentPrUrlEnabled ? backfillAgentArtifactUrlsBatch(20, request.signal) : Promise.resolve(null),
-      agentPrUrlEnabled ? backfillAgentRunPrUrlsBatch(20, request.signal) : Promise.resolve(null),
-      pullRequestUrlEnabled ? backfillPullRequestUrlsBatch(20, request.signal) : Promise.resolve(null),
-      pullRequestContentEnabled ? backfillPullRequestContentBatch(20, request.signal) : Promise.resolve(null),
-      prCommentEditEnabled ? backfillPrCommentEditsBatch(20, request.signal) : Promise.resolve(null),
-      forgeRelayDeliveryEnabled ? backfillForgeRelayDeliveriesBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillIssuesBatch(50, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentJournalBatch(5, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentEventsBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentLaunchBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentTitleBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentCheckpointBatch(5, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentDelegationBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentStandaloneMessages(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentQueueBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentContextsBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillGithubIssueMetadataBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillGithubCommentUrlsBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentVerdictsBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentDeploymentUrlsBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentRunBaseBranchesBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillOrphanRuntimeBaseBranchesBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentArtifactBranchesBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentRunWorkBranchesBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillOrphanRuntimeWorkBranchesBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentDelegationResultsBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillNumoWorkerEventsBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillNumoWorkerCheckpointsBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentRunSummariesBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentTurnSummariesBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentArtifactUrlsBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentRunPrUrlsBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillPullRequestUrlsBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillPullRequestContentBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillPrCommentEditsBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillForgeRelayDeliveriesBatch(20, request.signal) : Promise.resolve(null),
       contentEnabled ? scrubForgeRelayAuditBatch(100, request.signal) : Promise.resolve(null),
-      attachmentObjectEnabled ? backfillAttachmentObjectsBatch(10, request.signal) : Promise.resolve(null),
-      attachmentMetadataEnabled ? backfillAttachmentMetadataBatch("attachments", 30, request.signal) : Promise.resolve(null),
-      attachmentMetadataEnabled ? backfillAttachmentMetadataBatch("page_files", 30, request.signal) : Promise.resolve(null),
-      feedbackIdentityEnabled ? backfillFeedbackIdentityBatch("feedback_users", 30, request.signal) : Promise.resolve(null),
-      feedbackIdentityEnabled ? backfillFeedbackIdentityBatch("feedback_otp_codes", 30, request.signal) : Promise.resolve(null),
-      shareTokenEnabled ? backfillShareTokensBatch(30, request.signal) : Promise.resolve(null),
-      numoSurfaceEnabled ? backfillNumoSurfaceDestinationsBatch(30, request.signal) : Promise.resolve(null),
-      feedbackSsoEnabled ? backfillFeedbackSsoBatch(30, request.signal) : Promise.resolve(null),
-      forgeMentionEnabled ? backfillForgeMentionKeysBatch(50, request.signal) : Promise.resolve(null),
-      numoActivityEnabled ? backfillNumoActivityBatch(30, request.signal) : Promise.resolve(null),
-      providerResourceEnabled ? backfillProviderResourcesBatch(50, request.signal) : Promise.resolve(null),
-      appConfigEnabled ? backfillAppConfigBatch(30, request.signal) : Promise.resolve(null),
-      feedbackMergeEnabled ? backfillFeedbackMergeBatch(50, request.signal) : Promise.resolve(null),
-      agentChainCodesEnabled ? backfillAgentChainCodesBatch(50, request.signal) : Promise.resolve(null),
-      numoTurnIntentsEnabled ? backfillNumoTurnIntentsBatch(30, request.signal) : Promise.resolve(null),
-      numoAutomationEnabled ? backfillNumoAutomationContentBatch(30, request.signal) : Promise.resolve(null),
-      numoConversationTitleEnabled ? backfillNumoConversationTitlesBatch(30, request.signal) : Promise.resolve(null),
-      numoUserMessageEnabled ? backfillNumoUserMessagesBatch(30, request.signal) : Promise.resolve(null),
-      numoFinalContentEnabled ? backfillNumoFinalContentBatch(30, request.signal) : Promise.resolve(null),
-      numoErrorsEnabled ? backfillNumoErrorsBatch(30, request.signal) : Promise.resolve(null),
-      numoToolContentEnabled ? backfillNumoToolContentBatch(30, request.signal) : Promise.resolve(null),
-      forgeRepositoryNamesEnabled ? backfillForgeRepositoryNamesBatch(30, request.signal) : Promise.resolve(null),
-      forgeDefaultBranchesEnabled ? backfillForgeDefaultBranchesBatch(30, request.signal) : Promise.resolve(null),
-      projectIconsEnabled ? backfillProjectIconsBatch(10, request.signal) : Promise.resolve(null),
-      viewContentEnabled ? backfillViewContentBatch(30, request.signal) : Promise.resolve(null),
-      savedViewBookmarksEnabled ? backfillSavedViewBookmarksBatch(30, request.signal) : Promise.resolve(null),
-      agentRoutinesEnabled ? backfillAgentRoutineContentBatch(30, request.signal) : Promise.resolve(null),
-      projectContentEnabled ? backfillProjectContentBatch(30, request.signal) : Promise.resolve(null),
-      pageContentEnabled ? backfillPageContentBatch(30, request.signal) : Promise.resolve(null),
-      userAiKeysEnabled ? backfillUserAiKeysBatch(30, request.signal) : Promise.resolve(null),
-      relayInstancesEnabled ? backfillRelayInstancesBatch(20, request.signal) : Promise.resolve(null),
-      projectWebhookSecretsEnabled ? backfillProjectWebhookSecretsBatch(30, request.signal) : Promise.resolve(null),
-      relayProvisioningEnabled ? backfillRelayProvisioningBatch(request.signal) : Promise.resolve(null),
-      relayUserDeliveriesEnabled ? backfillRelayUserDeliveriesBatch(30, request.signal) : Promise.resolve(null),
-      forgeOAuthTokensEnabled ? backfillForgeOAuthConnectionsBatch(25, request.signal) : Promise.resolve(null),
-      forgeOAuthTokensEnabled ? backfillForgeOAuthIdentitiesBatch(25, request.signal) : Promise.resolve(null),
-      mcpContentEnabled ? backfillMcpConnectionsBatch(25, request.signal) : Promise.resolve(null),
-      mcpContentEnabled ? backfillMcpAttemptsBatch(25, request.signal) : Promise.resolve(null),
-      agentBranchPrefixesEnabled ? backfillAgentBranchPrefixesBatch(25, request.signal) : Promise.resolve(null),
-      appTabsEnabled ? backfillAppTabsBatch(25, request.signal) : Promise.resolve(null),
-      aiDecisionEvaluationsEnabled ? backfillAiDecisionEvaluationsBatch(25, request.signal) : Promise.resolve(null),
-      stripeWebhookScrubEnabled ? scrubStripeWebhookPayloadsBatch(100, request.signal) : Promise.resolve(null),
-      customDomainVerificationEnabled ? backfillCustomDomainVerificationBatch(25, request.signal) : Promise.resolve(null),
-      billingIdentityEnabled ? backfillBillingIdentityBatch(25, request.signal) : Promise.resolve(null),
-      oauthClientsEnabled ? backfillOAuthClientsBatch(25, request.signal) : Promise.resolve(null),
-      oauthCodesEnabled ? backfillOAuthCodesBatch(25, request.signal) : Promise.resolve(null),
-      apiKeysEnabled ? backfillApiKeysBatch(25, request.signal) : Promise.resolve(null),
-      integrationsEnabled ? backfillIntegrationsBatch(25, request.signal) : Promise.resolve(null),
-      pushEnabled ? backfillPushBatch(25, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAttachmentObjectsBatch(10, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAttachmentMetadataBatch("attachments", 30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAttachmentMetadataBatch("page_files", 30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillFeedbackIdentityBatch("feedback_users", 30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillFeedbackIdentityBatch("feedback_otp_codes", 30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillShareTokensBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillNumoSurfaceDestinationsBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillFeedbackSsoBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillForgeMentionKeysBatch(50, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillNumoActivityBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillProviderResourcesBatch(50, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAppConfigBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillFeedbackMergeBatch(50, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentChainCodesBatch(50, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillNumoTurnIntentsBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillNumoAutomationContentBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillNumoConversationTitlesBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillNumoUserMessagesBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillNumoFinalContentBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillNumoErrorsBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillNumoToolContentBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillForgeRepositoryNamesBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillForgeDefaultBranchesBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillProjectIconsBatch(10, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillViewContentBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillSavedViewBookmarksBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentRoutineContentBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillProjectContentBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillPageContentBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillUserAiKeysBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillRelayInstancesBatch(20, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillProjectWebhookSecretsBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillRelayProvisioningBatch(request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillRelayUserDeliveriesBatch(30, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillForgeOAuthConnectionsBatch(25, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillForgeOAuthIdentitiesBatch(25, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillMcpConnectionsBatch(25, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillMcpAttemptsBatch(25, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAgentBranchPrefixesBatch(25, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAppTabsBatch(25, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillAiDecisionEvaluationsBatch(25, request.signal) : Promise.resolve(null),
+      contentEnabled ? scrubStripeWebhookPayloadsBatch(100, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillCustomDomainVerificationBatch(25, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillBillingIdentityBatch(25, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillOAuthClientsBatch(25, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillOAuthCodesBatch(25, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillApiKeysBatch(25, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillIntegrationsBatch(25, request.signal) : Promise.resolve(null),
+      contentEnabled ? backfillPushBatch(25, request.signal) : Promise.resolve(null),
     ]);
     const invitation = outcomes[0];
     const scratchpad = outcomes[1];
@@ -499,205 +380,205 @@ export async function GET(request: NextRequest) {
         categories: categories.status === "fulfilled" ? categories.value : { failed: true },
         project_drafts: projectDrafts.status === "fulfilled" ? projectDrafts.value : { failed: true },
         feedback_posts: feedbackPosts.status === "fulfilled" ? feedbackPosts.value : { failed: true },
-        ...(issuesEnabled ? { issues: issues.status === "fulfilled" ? issues.value : { failed: true } } : {}),
-        ...(agentJournalEnabled ? { agent_journal: agentJournal.status === "fulfilled" ? agentJournal.value : { failed: true } } : {}),
-        ...(agentEventsEnabled ? { agent_events: agentEvents.status === "fulfilled" ? agentEvents.value : { failed: true } } : {}),
-        ...(agentLaunchEnabled ? { agent_launch: agentLaunch.status === "fulfilled" ? agentLaunch.value : { failed: true } } : {}),
-        ...(agentTitleEnabled ? { agent_titles: agentTitle.status === "fulfilled" ? agentTitle.value : { failed: true } } : {}),
-        ...(agentCheckpointEnabled ? { agent_checkpoints: agentCheckpoint.status === "fulfilled" ? agentCheckpoint.value : { failed: true } } : {}),
-        ...(agentDelegationEnabled ? { agent_delegation: agentDelegation.status === "fulfilled" ? agentDelegation.value : { failed: true } } : {}),
-        ...(agentLaunchEnabled ? { agent_standalone_messages: agentStandaloneMessages.status === "fulfilled" ? agentStandaloneMessages.value : { failed: true } } : {}),
-        ...(agentLaunchEnabled ? { agent_queue_messages: agentQueueMessages.status === "fulfilled" ? agentQueueMessages.value : { failed: true } } : {}),
-        ...(agentContextEnabled ? { agent_contexts: agentContexts.status === "fulfilled" ? agentContexts.value : { failed: true } } : {}),
-        ...(issueSidecarEnabled ? { github_issue_metadata: issueSidecar.status === "fulfilled" ? issueSidecar.value : { failed: true } } : {}),
-        ...(issueSidecarEnabled ? { github_comment_urls: githubCommentUrls.status === "fulfilled" ? githubCommentUrls.value : { failed: true } } : {}),
-        ...(agentVerdictEnabled ? { agent_verdicts: agentVerdicts.status === "fulfilled" ? agentVerdicts.value : { failed: true } } : {}),
-        ...(agentDeploymentEnabled ? { agent_deployments: agentDeployments.status === "fulfilled" ? agentDeployments.value : { failed: true } } : {}),
-        ...(agentBaseBranchEnabled ? { agent_base_branches: agentBaseBranches.status === "fulfilled" ? agentBaseBranches.value : { failed: true },
+        ...(contentEnabled ? { issues: issues.status === "fulfilled" ? issues.value : { failed: true } } : {}),
+        ...(contentEnabled ? { agent_journal: agentJournal.status === "fulfilled" ? agentJournal.value : { failed: true } } : {}),
+        ...(contentEnabled ? { agent_events: agentEvents.status === "fulfilled" ? agentEvents.value : { failed: true } } : {}),
+        ...(contentEnabled ? { agent_launch: agentLaunch.status === "fulfilled" ? agentLaunch.value : { failed: true } } : {}),
+        ...(contentEnabled ? { agent_titles: agentTitle.status === "fulfilled" ? agentTitle.value : { failed: true } } : {}),
+        ...(contentEnabled ? { agent_checkpoints: agentCheckpoint.status === "fulfilled" ? agentCheckpoint.value : { failed: true } } : {}),
+        ...(contentEnabled ? { agent_delegation: agentDelegation.status === "fulfilled" ? agentDelegation.value : { failed: true } } : {}),
+        ...(contentEnabled ? { agent_standalone_messages: agentStandaloneMessages.status === "fulfilled" ? agentStandaloneMessages.value : { failed: true } } : {}),
+        ...(contentEnabled ? { agent_queue_messages: agentQueueMessages.status === "fulfilled" ? agentQueueMessages.value : { failed: true } } : {}),
+        ...(contentEnabled ? { agent_contexts: agentContexts.status === "fulfilled" ? agentContexts.value : { failed: true } } : {}),
+        ...(contentEnabled ? { github_issue_metadata: issueSidecar.status === "fulfilled" ? issueSidecar.value : { failed: true } } : {}),
+        ...(contentEnabled ? { github_comment_urls: githubCommentUrls.status === "fulfilled" ? githubCommentUrls.value : { failed: true } } : {}),
+        ...(contentEnabled ? { agent_verdicts: agentVerdicts.status === "fulfilled" ? agentVerdicts.value : { failed: true } } : {}),
+        ...(contentEnabled ? { agent_deployments: agentDeployments.status === "fulfilled" ? agentDeployments.value : { failed: true } } : {}),
+        ...(contentEnabled ? { agent_base_branches: agentBaseBranches.status === "fulfilled" ? agentBaseBranches.value : { failed: true },
           orphan_runtime_base_branches: orphanRuntimeBaseBranches.status === "fulfilled" ? orphanRuntimeBaseBranches.value : { failed: true } } : {}),
-        ...(agentWorkBranchEnabled ? { agent_branch_artifacts: agentBranchArtifacts.status === "fulfilled" ? agentBranchArtifacts.value : { failed: true },
+        ...(contentEnabled ? { agent_branch_artifacts: agentBranchArtifacts.status === "fulfilled" ? agentBranchArtifacts.value : { failed: true },
           agent_work_branches: agentWorkBranches.status === "fulfilled" ? agentWorkBranches.value : { failed: true },
           orphan_runtime_work_branches: orphanRuntimeWorkBranches.status === "fulfilled" ? orphanRuntimeWorkBranches.value : { failed: true } } : {}),
-        ...(agentResultEnabled ? { agent_delegation_results: agentDelegationResults.status === "fulfilled" ? agentDelegationResults.value : { failed: true } } : {}),
-        ...(agentResultEnabled ? { numo_worker_events: numoWorkerEvents.status === "fulfilled" ? numoWorkerEvents.value : { failed: true },
+        ...(contentEnabled ? { agent_delegation_results: agentDelegationResults.status === "fulfilled" ? agentDelegationResults.value : { failed: true } } : {}),
+        ...(contentEnabled ? { numo_worker_events: numoWorkerEvents.status === "fulfilled" ? numoWorkerEvents.value : { failed: true },
           numo_worker_checkpoints: numoWorkerCheckpoints.status === "fulfilled" ? numoWorkerCheckpoints.value : { failed: true } } : {}),
-        ...(agentSummaryEnabled ? { agent_run_summaries: agentRunSummaries.status === "fulfilled" ? agentRunSummaries.value : { failed: true },
+        ...(contentEnabled ? { agent_run_summaries: agentRunSummaries.status === "fulfilled" ? agentRunSummaries.value : { failed: true },
           agent_turn_summaries: agentTurnSummaries.status === "fulfilled" ? agentTurnSummaries.value : { failed: true } } : {}),
-        ...(agentPrUrlEnabled ? { agent_artifact_urls: agentArtifactUrls.status === "fulfilled" ? agentArtifactUrls.value : { failed: true },
+        ...(contentEnabled ? { agent_artifact_urls: agentArtifactUrls.status === "fulfilled" ? agentArtifactUrls.value : { failed: true },
           agent_run_pr_urls: agentRunPrUrls.status === "fulfilled" ? agentRunPrUrls.value : { failed: true } } : {}),
-        ...(pullRequestUrlEnabled ? { pull_request_urls: pullRequestUrls.status === "fulfilled" ? pullRequestUrls.value : { failed: true } } : {}),
-        ...(pullRequestContentEnabled ? { pull_request_content: pullRequestContent.status === "fulfilled" ? pullRequestContent.value : { failed: true } } : {}),
-        ...(prCommentEditEnabled ? { pr_comment_edits: prCommentEdits.status === "fulfilled" ? prCommentEdits.value : { failed: true } } : {}),
-        ...(forgeRelayDeliveryEnabled ? { forge_relay_deliveries: forgeRelayDeliveries.status === "fulfilled" ? forgeRelayDeliveries.value : { failed: true } } : {}),
+        ...(contentEnabled ? { pull_request_urls: pullRequestUrls.status === "fulfilled" ? pullRequestUrls.value : { failed: true } } : {}),
+        ...(contentEnabled ? { pull_request_content: pullRequestContent.status === "fulfilled" ? pullRequestContent.value : { failed: true } } : {}),
+        ...(contentEnabled ? { pr_comment_edits: prCommentEdits.status === "fulfilled" ? prCommentEdits.value : { failed: true } } : {}),
+        ...(contentEnabled ? { forge_relay_deliveries: forgeRelayDeliveries.status === "fulfilled" ? forgeRelayDeliveries.value : { failed: true } } : {}),
         ...(contentEnabled ? { forge_relay_audit: forgeRelayAudit.status === "fulfilled" ? forgeRelayAudit.value : { failed: true } } : {}),
-        ...(attachmentObjectEnabled ? { attachment_objects: attachmentObjects.status === "fulfilled" ? attachmentObjects.value : { failed: true } } : {}),
-        ...(attachmentMetadataEnabled ? {
+        ...(contentEnabled ? { attachment_objects: attachmentObjects.status === "fulfilled" ? attachmentObjects.value : { failed: true } } : {}),
+        ...(contentEnabled ? {
           attachment_metadata: attachmentMetadata.status === "fulfilled" ? attachmentMetadata.value : { failed: true },
           page_file_metadata: pageFileMetadata.status === "fulfilled" ? pageFileMetadata.value : { failed: true },
         } : {}),
-        ...(feedbackIdentityEnabled ? {
+        ...(contentEnabled ? {
           feedback_users: feedbackUsers.status === "fulfilled" ? feedbackUsers.value : { failed: true },
           feedback_otp: feedbackOtp.status === "fulfilled" ? feedbackOtp.value : { failed: true },
         } : {}),
-        ...(shareTokenEnabled ? {
+        ...(contentEnabled ? {
           share_tokens: shareTokens.status === "fulfilled" ? shareTokens.value : { failed: true },
         } : {}),
-        ...(numoSurfaceEnabled ? {
+        ...(contentEnabled ? {
           numo_surface_destinations: numoSurfaces.status === "fulfilled" ? numoSurfaces.value : { failed: true },
         } : {}),
-        ...(feedbackSsoEnabled ? {
+        ...(contentEnabled ? {
           feedback_sso: feedbackSso.status === "fulfilled" ? feedbackSso.value : { failed: true },
         } : {}),
-        ...(forgeMentionEnabled ? {
+        ...(contentEnabled ? {
           forge_mention_keys: forgeMention.status === "fulfilled" ? forgeMention.value : { failed: true },
         } : {}),
-        ...(numoActivityEnabled ? {
+        ...(contentEnabled ? {
           numo_activity: numoActivity.status === "fulfilled" ? numoActivity.value : { failed: true },
         } : {}),
-        ...(providerResourceEnabled ? {
+        ...(contentEnabled ? {
           provider_resources: providerResources.status === "fulfilled" ? providerResources.value : { failed: true },
         } : {}),
-        ...(appConfigEnabled ? {
+        ...(contentEnabled ? {
           app_config: appConfig.status === "fulfilled" ? appConfig.value : { failed: true },
         } : {}),
-        ...(feedbackMergeEnabled ? {
+        ...(contentEnabled ? {
           feedback_merge: feedbackMerge.status === "fulfilled" ? feedbackMerge.value : { failed: true },
         } : {}),
-        ...(agentChainCodesEnabled ? {
+        ...(contentEnabled ? {
           agent_chain_codes: agentChainCodes.status === "fulfilled" ? agentChainCodes.value : { failed: true },
         } : {}),
-        ...(numoTurnIntentsEnabled ? {
+        ...(contentEnabled ? {
           numo_turn_intents: numoTurnIntents.status === "fulfilled" ? numoTurnIntents.value : { failed: true },
         } : {}),
-        ...(numoAutomationEnabled ? {
+        ...(contentEnabled ? {
           numo_automation_content: numoAutomation.status === "fulfilled"
             ? numoAutomation.value : { failed: true },
         } : {}),
-        ...(numoConversationTitleEnabled ? {
+        ...(contentEnabled ? {
           numo_conversation_titles: numoConversationTitles.status === "fulfilled"
             ? numoConversationTitles.value : { failed: true },
         } : {}),
-        ...(numoUserMessageEnabled ? {
+        ...(contentEnabled ? {
           numo_user_messages: numoUserMessages.status === "fulfilled"
             ? numoUserMessages.value : { failed: true },
         } : {}),
-        ...(numoFinalContentEnabled ? {
+        ...(contentEnabled ? {
           numo_final_content: numoFinalContent.status === "fulfilled"
             ? numoFinalContent.value : { failed: true },
         } : {}),
-        ...(numoErrorsEnabled ? {
+        ...(contentEnabled ? {
           numo_errors: numoErrors.status === "fulfilled"
             ? numoErrors.value : { failed: true },
         } : {}),
-        ...(numoToolContentEnabled ? {
+        ...(contentEnabled ? {
           numo_tool_content: numoToolContent.status === "fulfilled"
             ? numoToolContent.value : { failed: true },
         } : {}),
-        ...(forgeRepositoryNamesEnabled ? {
+        ...(contentEnabled ? {
           forge_repository_names: forgeRepositoryNames.status === "fulfilled"
             ? forgeRepositoryNames.value : { failed: true },
         } : {}),
-        ...(forgeDefaultBranchesEnabled ? {
+        ...(contentEnabled ? {
           forge_default_branches: forgeDefaultBranches.status === "fulfilled"
             ? forgeDefaultBranches.value : { failed: true },
         } : {}),
-        ...(projectIconsEnabled ? {
+        ...(contentEnabled ? {
           project_icons: projectIcons.status === "fulfilled"
             ? projectIcons.value : { failed: true },
         } : {}),
-        ...(viewContentEnabled ? {
+        ...(contentEnabled ? {
           view_content: viewContent.status === "fulfilled"
             ? viewContent.value : { failed: true },
         } : {}),
-        ...(savedViewBookmarksEnabled ? {
+        ...(contentEnabled ? {
           saved_view_bookmarks: savedViewBookmarks.status === "fulfilled"
             ? savedViewBookmarks.value : { failed: true },
         } : {}),
-        ...(agentRoutinesEnabled ? {
+        ...(contentEnabled ? {
           agent_routines: agentRoutines.status === "fulfilled"
             ? agentRoutines.value : { failed: true },
         } : {}),
-        ...(projectContentEnabled ? {
+        ...(contentEnabled ? {
           project_content: projectContent.status === "fulfilled"
             ? projectContent.value : { failed: true },
         } : {}),
-        ...(pageContentEnabled ? {
+        ...(contentEnabled ? {
           page_content: pageContent.status === "fulfilled"
             ? pageContent.value : { failed: true },
         } : {}),
-        ...(userAiKeysEnabled ? {
+        ...(contentEnabled ? {
           user_ai_keys: userAiKeys.status === "fulfilled"
             ? userAiKeys.value : { failed: true },
         } : {}),
-        ...(relayInstancesEnabled ? {
+        ...(contentEnabled ? {
           relay_instances: relayInstances.status === "fulfilled"
             ? relayInstances.value : { failed: true },
         } : {}),
-        ...(projectWebhookSecretsEnabled ? {
+        ...(contentEnabled ? {
           project_webhook_secrets: projectWebhookSecrets.status === "fulfilled"
             ? projectWebhookSecrets.value : { failed: true },
         } : {}),
-        ...(relayProvisioningEnabled ? {
+        ...(contentEnabled ? {
           relay_provisioning: relayProvisioning.status === "fulfilled"
             ? relayProvisioning.value : { failed: true },
         } : {}),
-        ...(relayUserDeliveriesEnabled ? {
+        ...(contentEnabled ? {
           relay_user_deliveries: relayUserDeliveries.status === "fulfilled"
             ? relayUserDeliveries.value : { failed: true },
         } : {}),
-        ...(forgeOAuthTokensEnabled ? {
+        ...(contentEnabled ? {
           forge_oauth_connections: forgeOAuthConnections.status === "fulfilled"
             ? forgeOAuthConnections.value : { failed: true },
           forge_oauth_identities: forgeOAuthIdentities.status === "fulfilled"
             ? forgeOAuthIdentities.value : { failed: true },
         } : {}),
-        ...(mcpContentEnabled ? {
+        ...(contentEnabled ? {
           mcp_connections: mcpConnections.status === "fulfilled"
             ? mcpConnections.value : { failed: true },
           mcp_attempts: mcpAttempts.status === "fulfilled"
             ? mcpAttempts.value : { failed: true },
         } : {}),
-        ...(agentBranchPrefixesEnabled ? {
+        ...(contentEnabled ? {
           agent_branch_prefixes: agentBranchPrefixes.status === "fulfilled"
             ? agentBranchPrefixes.value : { failed: true },
         } : {}),
-        ...(appTabsEnabled ? {
+        ...(contentEnabled ? {
           app_tabs: appTabs.status === "fulfilled" ? appTabs.value : { failed: true },
         } : {}),
-        ...(aiDecisionEvaluationsEnabled ? {
+        ...(contentEnabled ? {
           ai_decision_evaluations: aiDecisionEvaluations.status === "fulfilled"
             ? aiDecisionEvaluations.value : { failed: true },
         } : {}),
-        ...(stripeWebhookScrubEnabled ? {
+        ...(contentEnabled ? {
           stripe_webhook_payloads: stripeWebhookPayloads.status === "fulfilled"
             ? stripeWebhookPayloads.value : { failed: true },
         } : {}),
-        ...(customDomainVerificationEnabled ? {
+        ...(contentEnabled ? {
           custom_domain_verification:
             customDomainVerification.status === "fulfilled"
               ? customDomainVerification.value : { failed: true },
         } : {}),
-        ...(billingIdentityEnabled ? {
+        ...(contentEnabled ? {
           billing_identity: billingIdentity.status === "fulfilled"
             ? billingIdentity.value : { failed: true },
         } : {}),
-        ...(oauthClientsEnabled ? {
+        ...(contentEnabled ? {
           oauth_clients: oauthClients.status === "fulfilled"
             ? oauthClients.value : { failed: true },
         } : {}),
-        ...(oauthCodesEnabled ? {
+        ...(contentEnabled ? {
           oauth_codes: oauthCodes.status === "fulfilled"
             ? oauthCodes.value : { failed: true },
         } : {}),
-        ...(apiKeysEnabled ? {
+        ...(contentEnabled ? {
           api_keys: apiKeys.status === "fulfilled"
             ? apiKeys.value : { failed: true },
         } : {}),
-        ...(integrationsEnabled ? {
+        ...(contentEnabled ? {
           integrations: integrations.status === "fulfilled"
             ? integrations.value : { failed: true },
         } : {}),
-        ...(pushEnabled ? {
+        ...(contentEnabled ? {
           push_subscriptions: push.status === "fulfilled"
             ? push.value : { failed: true },
         } : {}),

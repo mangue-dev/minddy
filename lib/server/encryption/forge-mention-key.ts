@@ -12,8 +12,7 @@ const CONTEXT = { scope: SCOPE, table: "forge_mention_throttle", column: "key" }
 
 export async function shouldIndexForgeMentionKey(
   service: SupabaseClient = getServiceClient()): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_FORGE_THROTTLE_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   const { data, error } = await service.from("forge_mention_key_encryption_scope")
     .select("id").eq("id", true).maybeSingle();
   if (error && error.code !== "42P01" && error.code !== "PGRST205") {

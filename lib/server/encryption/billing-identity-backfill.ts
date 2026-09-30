@@ -10,8 +10,7 @@ type Row = { user_id: string; content_revision: number;
 export async function backfillBillingIdentityBatch(
   limit = 25, signal?: AbortSignal,
 ) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_BILLING_IDENTITY_ENCRYPTION_ENABLED !== "true")
+  if (!isContentEncryptionEnabled())
     throw new Error("Billing identity encryption is not enabled");
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
     throw new Error("Invalid billing identity batch size");

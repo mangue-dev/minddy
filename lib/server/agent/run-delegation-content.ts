@@ -22,8 +22,7 @@ function binding(projectId: string, runId: string) {
 }
 
 export async function shouldEncryptAgentDelegation(service: SupabaseClient, projectId: string) {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_AGENT_DELEGATION_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   if (!process.env.MINDDY_DATA_ROOT_KEY) return false;
   const { data, error } = await service.from("agent_delegation_encryption_scopes")
     .select("project_id").eq("project_id", projectId).maybeSingle();

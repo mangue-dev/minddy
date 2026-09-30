@@ -21,8 +21,7 @@ export function isEncryptedConversationTitle(value: string | null): boolean {
 
 export async function shouldProtectConversationTitle(
   service: SupabaseClient = getServiceClient()): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_NUMO_CONVERSATION_TITLE_ENCRYPTION_ENABLED === "true") {
+  if (isContentEncryptionEnabled()) {
     return true;
   }
   const { data, error } = await service.from("numo_conversation_title_scope")

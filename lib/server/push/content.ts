@@ -28,8 +28,7 @@ export type StoredPush = {
 };
 
 export async function shouldProtectPush(): Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_PUSH_CONTENT_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   for (const table of ["push_content_scope", "push_content_write_scope"] as const) {
     const { data, error } = await getServiceClient().from(table)
       .select("id").eq("id", true).maybeSingle();

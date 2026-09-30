@@ -11,8 +11,7 @@ import { isContentEncryptionEnabled } from "./content-config";
 /** Rotate relay labels, destinations and secrets in bounded CAS batches. */
 export async function backfillRelayInstancesBatch(limit = 20,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_RELAY_INSTANCE_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Relay instance encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

@@ -14,8 +14,7 @@ type QueueRow = ForgeOAuthTokenRow & { id: string;
 
 async function backfill(table: ForgeOAuthTable,limit: number,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_FORGE_OAUTH_TOKEN_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Forge OAuth token encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

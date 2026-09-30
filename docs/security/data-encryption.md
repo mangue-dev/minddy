@@ -49,8 +49,9 @@ none establish that production rows have been migrated.
 bounded in-memory key caching, and an atomic SQL key registry. The first
 converted column is `project_invitations.invited_email`. Its database migration
 is additive: legacy rows remain marked `encryption_version = 0`, and new rows
-are encrypted only when `MINDDY_INVITATION_ENCRYPTION_ENABLED=true`. Without that
-flag, existing writes stay legacy. The hourly maintenance route converts up to
+are opted in when `MINDDY_CONTENT_ENCRYPTION_ENABLED=true`, the single switch
+for all content domains. Without it, unprotected writes stay legacy; activated
+scopes and already protected rows still require encrypted writes. The hourly maintenance route converts up to
 100 legacy invitations per run,
 deletes expired legacy invitations, and clears email from answered legacy rows.
 It runs on both Vercel and the self-hosted scheduler. Already encrypted expired

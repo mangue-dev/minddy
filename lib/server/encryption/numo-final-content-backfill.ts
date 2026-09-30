@@ -80,8 +80,7 @@ async function convert(input: { turn: { id: string; user_id: string;
 /** Migrate linked final messages with their outcome in one SQL transaction. */
 export async function backfillNumoFinalContentBatch(limit = 30,
   signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_NUMO_FINAL_CONTENT_ENCRYPTION_ENABLED !== "true") {
+  if (!isContentEncryptionEnabled()) {
     throw new Error("Numo final content encryption is not enabled");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {

@@ -11,8 +11,7 @@ type Row = { id: string; user_id: string; href: string;
 
 /** Rotate both tab fields together; an exact-value and revision CAS avoids stale writes. */
 export async function backfillAppTabsBatch(limit = 25, signal?: AbortSignal) {
-  if (!isContentEncryptionEnabled() ||
-      process.env.MINDDY_APP_TABS_ENCRYPTION_ENABLED !== "true")
+  if (!isContentEncryptionEnabled())
     throw new Error("Application tab encryption is not enabled");
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
     throw new Error("Invalid application tab batch size");

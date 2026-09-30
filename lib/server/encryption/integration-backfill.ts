@@ -10,8 +10,7 @@ type Row=StoredIntegration & {content_revision:number;
   webhook_encryption_checked_at:string|null};
 /** Rotate the source and webhook copy under one exact revision CAS. */
 export async function backfillIntegrationsBatch(limit=25,signal?:AbortSignal){
-  if(!isContentEncryptionEnabled() ||
-      process.env.MINDDY_INTEGRATION_CONTENT_ENCRYPTION_ENABLED!=="true")
+  if (!isContentEncryptionEnabled())
     throw new Error("Integration encryption is not enabled");
   if(!Number.isSafeInteger(limit) || limit<1 || limit>100)
     throw new Error("Invalid integration batch size");

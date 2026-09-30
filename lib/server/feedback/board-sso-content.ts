@@ -20,8 +20,7 @@ export function isEncryptedBoardSso(value: string | null | undefined): boolean {
 
 export async function shouldProtectBoardSso(service?: SupabaseClient):
   Promise<boolean> {
-  if (isContentEncryptionEnabled() &&
-      process.env.MINDDY_FEEDBACK_SSO_ENCRYPTION_ENABLED === "true") return true;
+  if (isContentEncryptionEnabled()) return true;
   const { data, error } = await (service ?? getServiceClient())
     .from("feedback_sso_encryption_scope").select("id").eq("id", true)
     .maybeSingle();
