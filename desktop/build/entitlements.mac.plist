@@ -21,6 +21,10 @@
          not attempt to register (desktop/src/main.ts). -->
     <key>com.apple.developer.aps-environment</key>
     <string>production</string>
+    <key>com.apple.application-identifier</key>
+    <string>Y5D87P5VYK.app.minddy.desktop</string>
+    <key>com.apple.developer.team-identifier</key>
+    <string>Y5D87P5VYK</string>
     <!-- V8 compiles just in time: without this, the first page does not render. -->
     <key>com.apple.security.cs.allow-jit</key>
     <true/>
