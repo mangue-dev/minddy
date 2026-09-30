@@ -12197,5 +12197,61 @@
       "id"
     ],
     "foreignKeys": []
+  },
+  "custom_domain_cleanup": {
+    "columns": {
+      "id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "domain": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "attempts": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "next_attempt_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "domain"
+    ],
+    "foreignKeys": []
+  },
+  "custom_domain_mutation_leases": {
+    "columns": {
+      "token": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "domain": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "expires_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "domain"
+    ],
+    "foreignKeys": []
   }
 }

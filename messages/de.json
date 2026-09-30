@@ -317,6 +317,13 @@
     "back": "Zurück zu den Einstellungen"
   },
   "CustomDomain": {
+    "unpublishPageTitle": "Veröffentlichung dieser Seite aufheben?",
+    "unpublishPage": "Veröffentlichung aufheben",
+    "disableBoardTitle": "Öffentliches Board deaktivieren?",
+    "stopSharingTitle": "Diese Ansicht nicht mehr teilen?",
+    "stopHostingDescription": "Dieser öffentliche Link funktioniert dann nicht mehr. Jede verbundene eigene Domain wird aus dem Minddy-Hosting entfernt. Entferne ihre DNS-Einträge bei deinem Domainanbieter. Um erneut zu teilen, musst du die Domain wieder verbinden.",
+    "disableBoard": "Board deaktivieren",
+    "stopSharing": "Freigabe beenden",
     "title": "Benutzerdefinierte Domain",
     "description": "Stellen Sie diese Seite über einen CNAME-Eintrag auf Ihrer eigenen Subdomain bereit.",
     "placeholder": "feedback.yourdomain.com",

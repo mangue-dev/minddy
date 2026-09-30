@@ -5,6 +5,7 @@ import { Copy01Icon, GlobeIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { MIN_SHARE_PASSWORD_LENGTH } from "@/lib/share-password";
+import { CustomDomainRemovalDialog } from "@/components/custom-domain-removal-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -72,14 +73,16 @@ export function PagePublishDialog({
 
   const [level, setLevel] = useState<ViewShareLevel>("private");
   const [password, setPassword] = useState("");
+  const [confirmRevoke, setConfirmRevoke] = useState(false);
 
   // Re-synchronized on opening, and when the response arrives.
   useEffect(() => {
     if (open) {
       setLevel(serverLevel);
       setPassword("");
+      setConfirmRevoke(false);
     }
-  }, [open, serverLevel]);
+  }, [open, serverLevel, pageId]);
 
   const update = useMutation({
     mutationFn: (input: {
@@ -103,11 +106,14 @@ export function PagePublishDialog({
   });
 
   const changeLevel = (next: ViewShareLevel) => {
+    if (update.isPending || revoke.isPending) return;
+    if (next === "private" && share) {
+      setConfirmRevoke(true);
+      return;
+    }
     setLevel(next);
     if (next === serverLevel) return;
-    if (next === "private") {
-      if (share) revoke.mutate();
-    } else if (next === "public") {
+    if (next === "public") {
       update.mutate({ level: "public" });
     }
     // “password” expects the password below: the server requires one
@@ -138,6 +144,12 @@ export function PagePublishDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      <CustomDomainRemovalDialog
+        kind="page"
+        open={open && confirmRevoke}
+        onOpenChange={setConfirmRevoke}
+        onConfirm={async () => { await revoke.mutateAsync(); setLevel("private"); }}
+      />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

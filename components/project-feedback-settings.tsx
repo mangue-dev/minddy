@@ -20,6 +20,7 @@ import {
   cn,
 } from "mangue-ui";
 import { getAppEnv } from "@/lib/env";
+import { CustomDomainRemovalDialog } from "@/components/custom-domain-removal-dialog";
 import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import {
@@ -76,6 +77,7 @@ export function ProjectFeedbackSettings({
 }) {
   const t = useTranslations("Settings");
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [confirmDisable, setConfirmDisable] = useState(false);
   const {
     board,
     sharedViews,
@@ -194,7 +196,13 @@ export function ProjectFeedbackSettings({
         </div>
       )}
 
-      {/* ── Canal 1 : board public ─────────────────────────────────────── */}
+      <CustomDomainRemovalDialog
+        kind="board"
+        open={confirmDisable}
+        onOpenChange={setConfirmDisable}
+        onConfirm={async () => { await patchBoard({ enabled: false }); }}
+      />
+      {/* Public feedback board */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.projectFeedbackBoard}
         title={t("feedbackChannelBoardTitle")}
@@ -207,8 +215,11 @@ export function ProjectFeedbackSettings({
             />
             <Switch
               checked={boardOn}
-              disabled={!isOwner}
-              onCheckedChange={(v) => void patchBoard({ enabled: v })}
+              disabled={!isOwner || busy}
+              onCheckedChange={(v) => {
+                if (!v) setConfirmDisable(true);
+                else void patchBoard({ enabled: true });
+              }}
               aria-label={t("feedbackChannelBoardTitle")}
             />
           </>

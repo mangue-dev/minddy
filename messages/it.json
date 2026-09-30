@@ -317,6 +317,13 @@
     "back": "Torna alle impostazioni"
   },
   "CustomDomain": {
+    "unpublishPageTitle": "Annullare la pubblicazione di questa pagina?",
+    "unpublishPage": "Annulla pubblicazione",
+    "disableBoardTitle": "Disattivare la bacheca pubblica?",
+    "stopSharingTitle": "Interrompere la condivisione di questa vista?",
+    "stopHostingDescription": "Questo link pubblico non funzionerà più. Ogni dominio personalizzato collegato verrà rimosso dall’hosting di Minddy. Rimuovi i suoi record DNS presso il tuo fornitore di domini. Per condividere di nuovo, dovrai ricollegare il dominio.",
+    "disableBoard": "Disattiva bacheca",
+    "stopSharing": "Interrompi condivisione",
     "title": "Domini personalizzati",
     "description": "Servi questa pagina sul tuo sottodominio tramite un record CNAME.",
     "placeholder": "feedback.yourdomain.com",

@@ -4459,6 +4459,76 @@
     "storage": false
   },
   {
+    "file": "lib/server/custom-domain-cleanup.ts",
+    "operation": "rpc",
+    "resource": "acquire_custom_domain_lease",
+    "line": 11,
+    "storage": false
+  },
+  {
+    "file": "lib/server/custom-domain-cleanup.ts",
+    "operation": "rpc",
+    "resource": "release_custom_domain_lease",
+    "line": 19,
+    "storage": false
+  },
+  {
+    "file": "lib/server/custom-domain-cleanup.ts",
+    "operation": "from",
+    "resource": "custom_domains",
+    "line": 34,
+    "storage": false
+  },
+  {
+    "file": "lib/server/custom-domain-cleanup.ts",
+    "operation": "from",
+    "resource": "custom_domain_cleanup",
+    "line": 42,
+    "storage": false
+  },
+  {
+    "file": "lib/server/custom-domain-cleanup.ts",
+    "operation": "from",
+    "resource": "custom_domain_cleanup",
+    "line": 48,
+    "storage": false
+  },
+  {
+    "file": "lib/server/custom-domain-cleanup.ts",
+    "operation": "from",
+    "resource": "custom_domain_cleanup",
+    "line": 64,
+    "storage": false
+  },
+  {
+    "file": "lib/server/custom-domain-cleanup.ts",
+    "operation": "rpc",
+    "resource": "reconcile_inactive_custom_domains",
+    "line": 78,
+    "storage": false
+  },
+  {
+    "file": "lib/server/custom-domain-cleanup.ts",
+    "operation": "from",
+    "resource": "custom_domains",
+    "line": 95,
+    "storage": false
+  },
+  {
+    "file": "lib/server/custom-domain-cleanup.ts",
+    "operation": "from",
+    "resource": "custom_domain_cleanup",
+    "line": 101,
+    "storage": false
+  },
+  {
+    "file": "lib/server/custom-domain-cleanup.ts",
+    "operation": "from",
+    "resource": "custom_domain_cleanup",
+    "line": 111,
+    "storage": false
+  },
+  {
     "file": "lib/server/custom-domain-content.ts",
     "operation": "from",
     "resource": "custom_domain_verification_scope",
@@ -4469,56 +4539,56 @@
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 99,
+    "line": 100,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 109,
+    "line": 110,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 245,
+    "line": 268,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 286,
+    "line": 309,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 304,
+    "line": 327,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 339,
+    "line": 379,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "rpc",
     "resource": "delete_custom_domain_if_current",
-    "line": 380,
+    "line": 393,
     "storage": false
   },
   {
     "file": "lib/server/custom-domains.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 465,
+    "line": 478,
     "storage": false
   },
   {
@@ -7150,147 +7220,154 @@
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 86,
+    "line": 87,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 93,
+    "line": 94,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 122,
+    "line": 123,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 129,
+    "line": 130,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 149,
+    "line": 150,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 159,
+    "line": 160,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 177,
+    "line": 178,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 185,
+    "line": 186,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 203,
+    "line": 204,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 216,
+    "line": 217,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 229,
+    "line": 230,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 242,
+    "line": 243,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 255,
+    "line": 256,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 268,
+    "line": 269,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 286,
+    "line": 287,
+    "storage": false
+  },
+  {
+    "file": "lib/server/feedback/boards.ts",
+    "operation": "from",
+    "resource": "custom_domains",
+    "line": 296,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 295,
+    "line": 300,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 305,
+    "line": 313,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "from",
     "resource": "feedback_boards",
-    "line": 337,
+    "line": 345,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "rpc",
     "resource": "write_feedback_sso_secret_protected",
-    "line": 349,
+    "line": 357,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "rpc",
     "resource": "write_feedback_sso_secret",
-    "line": 353,
+    "line": 361,
     "storage": false
   },
   {
     "file": "lib/server/feedback/boards.ts",
     "operation": "rpc",
     "resource": "write_feedback_sso_secret",
-    "line": 380,
+    "line": 388,
     "storage": false
   },
   {
@@ -11945,126 +12022,133 @@
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "views",
-    "line": 143,
+    "line": 144,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "views",
-    "line": 177,
+    "line": 178,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 192,
+    "line": 193,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 216,
+    "line": 217,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "rpc",
     "resource": "upsert_view_share_guarded_protected",
-    "line": 264,
+    "line": 265,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "rpc",
     "resource": "upsert_view_share_guarded",
-    "line": 271,
+    "line": 272,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "rpc",
     "resource": "revoke_view_share_guarded",
-    "line": 312,
+    "line": 313,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 384,
+    "line": 385,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 388,
+    "line": 389,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 404,
+    "line": 405,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "views",
-    "line": 419,
+    "line": 420,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 453,
+    "line": 454,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 500,
+    "line": 501,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 519,
+    "line": 520,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 558,
+    "line": 559,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 595,
+    "line": 596,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 599,
+    "line": 600,
+    "storage": false
+  },
+  {
+    "file": "lib/server/view-shares.ts",
+    "operation": "from",
+    "resource": "custom_domains",
+    "line": 625,
     "storage": false
   },
   {
     "file": "lib/server/view-shares.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 624,
+    "line": 630,
     "storage": false
   },
   {

@@ -317,6 +317,13 @@
     "back": "Volver a la configuración"
   },
   "CustomDomain": {
+    "unpublishPageTitle": "¿Dejar de publicar esta página?",
+    "unpublishPage": "Dejar de publicar",
+    "disableBoardTitle": "¿Desactivar el tablero público?",
+    "stopSharingTitle": "¿Dejar de compartir esta vista?",
+    "stopHostingDescription": "Este enlace público dejará de funcionar. Cualquier dominio personalizado conectado se eliminará del alojamiento de Minddy. Elimina sus registros DNS en tu proveedor de dominios. Para volver a compartir, tendrás que reconectar el dominio.",
+    "disableBoard": "Desactivar tablero",
+    "stopSharing": "Dejar de compartir",
     "title": "Dominio personalizado",
     "description": "Publica esta página en tu propio subdominio mediante un registro CNAME.",
     "placeholder": "feedback.yourdomain.com",

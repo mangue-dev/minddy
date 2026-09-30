@@ -317,6 +317,13 @@
     "back": "Back to settings"
   },
   "CustomDomain": {
+    "unpublishPageTitle": "Unpublish this page?",
+    "unpublishPage": "Unpublish page",
+    "disableBoardTitle": "Disable the public board?",
+    "stopSharingTitle": "Stop sharing this view?",
+    "stopHostingDescription": "This public link will stop working. Any connected custom domain will be removed from Minddy hosting. Remove its DNS records at your domain provider. To share again, you will need to reconnect the domain.",
+    "disableBoard": "Disable board",
+    "stopSharing": "Stop sharing",
     "title": "Custom domain",
     "description": "Serve this page on your own subdomain via a CNAME record.",
     "placeholder": "feedback.yourdomain.com",
