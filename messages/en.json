@@ -5910,6 +5910,8 @@
     "subscribe": "Follow updates via RSS",
     "feedBannerTitle": "Follow minddy updates in your feed reader",
     "feedBannerBody": "RSS lets you follow updates without an account. Copy this page’s address into an RSS reader to receive new release announcements.",
+    "entry_encrypted-workspace-content_title": "Workspace content is encrypted at rest",
+    "entry_encrypted-workspace-content_body": "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage. Search and collaboration keep working with content decrypted only for authorized users.",
     "entry_mcp-catalog_title": "Connect more tools to Numo",
     "entry_mcp-catalog_body": "A searchable registry of preconfigured MCP connections covers far more services, and Numo can now set a connection up for you, authentication guide included. No more hand-typing server URLs.",
     "entry_performance_title": "minddy stays fast on big projects",

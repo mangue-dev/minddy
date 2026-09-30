@@ -19,6 +19,10 @@ export class PageSearchProjectionCache {
     this.entries.delete(key);
   }
 
+  peek(key: string): string | undefined {
+    return this.entries.get(key)?.body;
+  }
+
   async get(key: string, project: () => Promise<string>): Promise<string> {
     const cached = this.entries.get(key);
     if (cached) return cached.body;

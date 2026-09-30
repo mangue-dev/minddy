@@ -3,7 +3,7 @@
   "name": "io.github.mangue-dev/minddy",
   "title": "minddy",
   "description": "Minimal issue tracker: projects, objectives and trackable plans, written by agents over MCP.",
-  "version": "0.10.30",
+  "version": "0.11.0",
   "websiteUrl": "https://www.minddy.app",
   "repository": {
     "url": "https://github.com/mangue-dev/minddy",
@@ -13,12 +13,16 @@
   "icons": [
     {
       "src": "https://www.minddy.app/web-app-manifest-192x192.png",
-      "sizes": ["192x192"],
+      "sizes": [
+        "192x192"
+      ],
       "mimeType": "image/png"
     },
     {
       "src": "https://www.minddy.app/web-app-manifest-512x512.png",
-      "sizes": ["512x512"],
+      "sizes": [
+        "512x512"
+      ],
       "mimeType": "image/png"
     }
   ],

@@ -10524,35 +10524,42 @@
     "file": "lib/server/pages-search.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 67,
+    "line": 68,
     "storage": false
   },
   {
     "file": "lib/server/pages-search.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 79,
+    "line": 80,
     "storage": false
   },
   {
     "file": "lib/server/pages-search.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 151,
+    "line": 152,
     "storage": false
   },
   {
     "file": "lib/server/pages-search.ts",
     "operation": "rpc",
     "resource": "search_pages",
-    "line": 168,
+    "line": 169,
+    "storage": false
+  },
+  {
+    "file": "lib/server/pages-search.ts",
+    "operation": "rpc",
+    "resource": "page_search_cipher_fingerprints",
+    "line": 421,
     "storage": false
   },
   {
     "file": "lib/server/pages-search.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 420,
+    "line": 450,
     "storage": false
   },
   {

@@ -6035,7 +6035,9 @@
     "entry_notebook-agent_title": "Inicia un agente desde el cuaderno de tareas",
     "entry_notebook-agent_body": "Pide al agente de código que trabaje en una tarea de tu bloc de notas personal. Puedes iniciarlo desde la tarea, sin crear antes un ticket del proyecto.",
     "entry_notifications_title": "Notificaciones que realmente puedes seguir",
-    "entry_notifications_body": "Las notificaciones se agrupan por ticket para seguir una conversación sin leer cada evento por separado. Elige qué actividades aparecen en tu bandeja de entrada desde los ajustes de notificaciones."
+    "entry_notifications_body": "Las notificaciones se agrupan por ticket para seguir una conversación sin leer cada evento por separado. Elige qué actividades aparecen en tu bandeja de entrada desde los ajustes de notificaciones.",
+    "entry_encrypted-workspace-content_title": "Workspace content is encrypted at rest",
+    "entry_encrypted-workspace-content_body": "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage. Search and collaboration keep working with content decrypted only for authorized users."
   },
   "Automations": {
     "title": "Automatizaciones",

@@ -12,7 +12,10 @@ DECLARE actor uuid := gen_random_uuid(); project uuid := gen_random_uuid();
   old_url text := 'https://example.invalid/private/repo/pull/11';
   artifact_cipher text := 'mdyp3:1:eyJmb3JtYXQiOjMsImtleVZlcnNpb24iOjF9';
   run_cipher text := 'mdyp3:2:eyJmb3JtYXQiOjMsImtleVZlcnNpb24iOjJ9';
-  rejected boolean;
+  rejected boolean; branch_artifact uuid;
+  branch_prefix text := 'mdyw3:' || repeat('b',64);
+  branch_v1 text := 'mdyw3:' || repeat('b',64) || ':1:YWJj';
+  branch_v2 text := 'mdyw3:' || repeat('b',64) || ':2:YWJj';
 BEGIN
   INSERT INTO auth.users(id) VALUES(actor);
   INSERT INTO public.projects(id,owner_id,name,key)
@@ -20,7 +23,12 @@ BEGIN
   INSERT INTO public.agent_conversations(id,project_id,owner_id)
     VALUES(conversation,project,actor);
   INSERT INTO public.agent_runs(id,project_id,conversation_id,created_by,
-    pr_number,pr_url) VALUES(legacy_run,project,conversation,actor,11,old_url);
+    pr_number,pr_url,branch_name) VALUES(legacy_run,project,conversation,actor,11,old_url,branch_v1);
+  SELECT id INTO branch_artifact FROM public.agent_artifacts WHERE run_id=legacy_run AND kind='branch';
+  IF NOT public.migrate_agent_artifact_branch(branch_artifact,project,branch_prefix,
+      branch_v1,legacy_run,branch_prefix,branch_v2) THEN
+    RAISE EXCEPTION 'Independent branch artifact rotation failed';
+  END IF;
   SELECT id INTO artifact_id FROM public.agent_artifacts
     WHERE run_id=legacy_run AND kind='pull_request';
   IF artifact_id IS NULL THEN RAISE EXCEPTION 'PR artifact missing'; END IF;
@@ -44,6 +52,17 @@ BEGIN
       AND url=run_cipher AND url_bound_run_id=legacy_run) THEN
     RAISE EXCEPTION 'PR artifact did not retain run binding';
   END IF;
+  IF NOT EXISTS(SELECT 1 FROM public.agent_artifacts WHERE id=branch_artifact AND ref_ciphertext=branch_v2) THEN
+    RAISE EXCEPTION 'PR URL backfill replaced the rotated branch';
+  END IF;
+  UPDATE public.agent_runs SET pr_state='merged',cost_usd=1 WHERE id=legacy_run;
+  IF NOT EXISTS(SELECT 1 FROM public.agent_artifacts WHERE id=branch_artifact AND ref_ciphertext=branch_v2) THEN
+    RAISE EXCEPTION 'Ordinary metadata update replaced the rotated branch';
+  END IF;
+  BEGIN
+    UPDATE public.agent_artifacts SET ref_ciphertext=branch_v1 WHERE id=branch_artifact;
+    RAISE EXCEPTION 'Artifact key rollback was accepted';
+  EXCEPTION WHEN check_violation THEN NULL; END;
   rejected := false;
   BEGIN
     UPDATE public.agent_runs SET pr_url=old_url WHERE id=legacy_run;

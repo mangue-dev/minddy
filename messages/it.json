@@ -6035,7 +6035,9 @@
     "entry_notebook-agent_title": "Avviare un agente dal task notebook",
     "entry_notebook-agent_body": "Affida all’agente di codice un’attività del tuo taccuino personale. Puoi avviarlo direttamente dall’attività, senza creare prima un ticket di progetto.",
     "entry_notifications_title": "Notifiche che puoi effettivamente tenere al passo",
-    "entry_notifications_body": "Le notifiche sono raggruppate per ticket per seguire una conversazione senza leggere ogni evento separatamente. Scegli quali attività ricevere nelle impostazioni delle notifiche."
+    "entry_notifications_body": "Le notifiche sono raggruppate per ticket per seguire una conversazione senza leggere ogni evento separatamente. Scegli quali attività ricevere nelle impostazioni delle notifiche.",
+    "entry_encrypted-workspace-content_title": "Workspace content is encrypted at rest",
+    "entry_encrypted-workspace-content_body": "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage. Search and collaboration keep working with content decrypted only for authorized users."
   },
   "Automations": {
     "title": "Automazioni",

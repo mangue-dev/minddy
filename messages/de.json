@@ -6035,7 +6035,9 @@
     "entry_notebook-agent_title": "Starte einen Agenten über das Aufgabennotizbuch",
     "entry_notebook-agent_body": "Lass den Programmierassistenten eine Aufgabe aus deinem persönlichen Notizbuch bearbeiten. Starte ihn direkt von der Aufgabe aus, ohne vorher ein Projektticket anzulegen.",
     "entry_notifications_title": "Behalte deine Benachrichtigungen im Überblick",
-    "entry_notifications_body": "Benachrichtigungen werden jetzt nach Ticket gruppiert, damit du Gespräche verfolgen kannst, ohne jedes Ereignis einzeln zu lesen. Wähle in den Benachrichtigungseinstellungen, welche Aktivitäten im Posteingang erscheinen."
+    "entry_notifications_body": "Benachrichtigungen werden jetzt nach Ticket gruppiert, damit du Gespräche verfolgen kannst, ohne jedes Ereignis einzeln zu lesen. Wähle in den Benachrichtigungseinstellungen, welche Aktivitäten im Posteingang erscheinen.",
+    "entry_encrypted-workspace-content_title": "Workspace content is encrypted at rest",
+    "entry_encrypted-workspace-content_body": "Projects, issues, pages, comments and AI history are now encrypted in the database and file storage. Search and collaboration keep working with content decrypted only for authorized users."
   },
   "Automations": {
     "title": "Automatisierungen",

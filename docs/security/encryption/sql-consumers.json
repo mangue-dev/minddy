@@ -2413,7 +2413,7 @@
       "functionReferences": []
     },
     "sync_agent_runtime_from_run()": {
-      "sha256": "c0e5a2a03094ac1d82fe780c1478967b1985e70875a515b781e1e114bb061992",
+      "sha256": "58c6467acd9b6433b615f504f1421aebe0e801c68da89f29a7b0cd97f78f6f4d",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6018,7 +6018,7 @@
       "functionReferences": []
     },
     "migrate_agent_run_pr_url(uuid,uuid,text,text)": {
-      "sha256": "dc7be28fd712b262e7584d54225136dba78b855e22eeb03a331b0e7bfa413639",
+      "sha256": "209083540b572a2af31aa1fa8d28e24355a6979d8ad691798b7b09711fb346fc",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6923,6 +6923,21 @@
       ],
       "protectedRelations": [
         "agent_runs"
+      ],
+      "functionReferences": []
+    },
+    "page_search_cipher_fingerprints(uuid,integer,integer)": {
+      "sha256": "f97661dd6d9c3bb5fa0f9c5792333767f63996a4391f872081ab3b2d8bd51c46",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{supabase_admin=X/supabase_admin,postgres=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}",
+      "relations": [
+        "pages"
+      ],
+      "protectedRelations": [
+        "pages"
       ],
       "functionReferences": []
     },

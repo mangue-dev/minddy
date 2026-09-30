@@ -12,6 +12,7 @@ import { decodePageProjection, shouldProtectPages } from "./page-content";
 import { PageSearchProjectionCache } from "./pages-search-projection-cache";
 
 const projectionCache = new PageSearchProjectionCache();
+const ciphertextCache = new PageSearchProjectionCache();
 
 export type { PageSearchHit };
 
@@ -417,17 +418,58 @@ async function searchProtectedPages(client: SupabaseClient, {
     b.updated_at.localeCompare(a.updated_at) || a.id.localeCompare(b.id);
   const batch = 200;
   for (let offset = 0; ; offset += batch) {
-    let request = client.from("pages")
-      .select("id,project_id,parent_id,title,icon,content,updated_at,encrypted_content,encryption_version")
-      .is("deleted_at", null).order("id", { ascending: true })
-      .range(offset, offset + batch - 1);
-    if (projectId) request = request.eq("project_id", projectId);
-    const { data, error } = await request;
+    const { data, error } = await client.rpc("page_search_cipher_fingerprints", {
+      p_project_id: projectId, p_offset: offset, p_limit: batch,
+    });
     if (error) {
       console.error("[pages] protected search read failed:", error.message);
       return { ok: false };
     }
-    for (const stored of data ?? []) {
+    const identities = (data ?? []) as Array<{ id: string; project_id: string;
+      parent_id: string | null; updated_at: string; encryption_version: number;
+      cipher_digest: string | null; protected_fields_clear: boolean }>;
+    if (identities.some(row => row.encryption_version > 0 && !row.protected_fields_clear)) {
+      console.error("[pages] protected search row retains plaintext");
+      return { ok: false };
+    }
+    const cacheKey = (row: typeof identities[number]) =>
+      JSON.stringify([row.project_id, row.id, row.encryption_version, row.cipher_digest]);
+    // Capture cache hits before the awaited batch read: another request may evict them.
+    const available = new Map(identities.flatMap(row => {
+      const cipher = row.encryption_version > 0 && row.cipher_digest
+        ? ciphertextCache.peek(cacheKey(row)) : undefined;
+      return cipher === undefined ? [] : [[row.id, cipher] as const];
+    }));
+    const missing = identities.filter(row => row.encryption_version < 1 ||
+      !available.has(row.id));
+    type SearchRow = Record<string, unknown> & { id: string; project_id: string;
+      parent_id: string | null; updated_at: string; encryption_version: number;
+      encrypted_content: string | null; icon?: string | null };
+    let fetched = new Map<string, SearchRow>();
+    if (missing.length) {
+      const loaded = await client.from("pages")
+        .select("id,project_id,parent_id,title,icon,content,updated_at,encrypted_content,encryption_version")
+        .is("deleted_at", null).in("id", missing.map(row => row.id));
+      if (loaded.error) {
+        console.error("[pages] protected search document read failed:", loaded.error.message);
+        return { ok: false };
+      }
+      fetched = new Map((loaded.data ?? []).map((row): [string, SearchRow] => [row.id, row]));
+    }
+    for (const identity of identities) {
+      const cached = available.get(identity.id);
+      const stored: SearchRow | undefined = cached !== undefined
+        ? { ...identity, encrypted_content: cached }
+        : fetched.get(identity.id);
+      // A row can disappear or lose RLS visibility between the two reads.
+      if (!stored) continue;
+      if (cached === undefined && typeof stored.encrypted_content === "string" &&
+          Number(stored.encryption_version) > 0) {
+        const digest = createHash("sha256").update(stored.encrypted_content).digest("hex");
+        const key = JSON.stringify([stored.project_id, stored.id, stored.encryption_version, digest]);
+        const cipher = stored.encrypted_content;
+        await ciphertextCache.get(key, async () => cipher);
+      }
       const row = await decodePageProjection(stored);
       const title = String(row.title ?? "");
       // RLS and authenticated decryption run on every request, including cache hits.
@@ -445,7 +487,7 @@ async function searchProtectedPages(client: SupabaseClient, {
         : rankPageSearch(title, body, clauses);
       if (rank === null) continue;
       ranked.push({ id: row.id, project_id: row.project_id,
-        parent_id: row.parent_id, title, icon: row.icon,
+        parent_id: row.parent_id, title, icon: row.icon ?? null,
         updated_at: row.updated_at,
         excerpt: "", rank, body, cacheIdentity });
       ranked.sort(compare);

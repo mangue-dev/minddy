@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
 
 const h = vi.hoisted(() => ({ protected: false, rows: [] as Record<string, unknown>[],
   root: "", rpcCalls: [] as string[], generation: 0,
+  consistent: true, documents: vi.fn(),
   decode: vi.fn(async (row: Record<string, unknown>) => row),
   project: vi.fn(async (value: unknown) => String(value ?? "")) }));
 vi.mock("@/lib/server/page-content", () => ({
@@ -23,6 +25,8 @@ function client(allowed: Set<string>) {
       gt: (key: string, value: number) => { filters.push((r) => Number(r[key]) > value); return request; },
       is: (key: string, value: null) => { filters.push((r) => r[key] === value); return request; },
       eq: (key: string, value: string) => { filters.push((r) => r[key] === value); return request; },
+      in: (key: string, values: string[]) => { h.documents(values);
+        filters.push(r => values.includes(String(r[key]))); return request; },
       order: () => request,
       limit: (value: number) => { end = value; return request; },
       range: (from: number, to: number) => { start = from; end = to + 1; return request; },
@@ -32,8 +36,19 @@ function client(allowed: Set<string>) {
     };
     return request;
   };
-  return { from, rpc: async (name: string) => { h.rpcCalls.push(name);
-    return { data: [], error: null }; } };
+  return { from, rpc: async (name: string, input: { p_project_id?: string | null;
+    p_offset?: number; p_limit?: number }) => {
+    h.rpcCalls.push(name);
+    return { data: name === "page_search_cipher_fingerprints" ? h.rows.filter(row =>
+      allowed.has(String(row.project_id)) && row.deleted_at === null &&
+      (!input.p_project_id || row.project_id === input.p_project_id))
+      .slice(input.p_offset ?? 0, (input.p_offset ?? 0) + (input.p_limit ?? 200))
+      .map(row => ({ id: row.id, project_id: row.project_id, parent_id: row.parent_id,
+        updated_at: row.updated_at, encryption_version: row.encryption_version,
+        protected_fields_clear: h.consistent,
+        cipher_digest: typeof row.encrypted_content === "string"
+          ? createHash("sha256").update(row.encrypted_content).digest("hex") : null })) : [], error: null };
+  } };
 }
 
 beforeEach(() => {
@@ -41,8 +56,11 @@ beforeEach(() => {
   h.root = process.env.MINDDY_DATA_ROOT_KEY ?? "";
   process.env.MINDDY_DATA_ROOT_KEY = "test-root";
   h.rpcCalls = [];
+  h.consistent = true;
+  h.documents.mockClear();
   h.generation++;
-  h.decode.mockClear();
+  h.decode.mockReset();
+  h.decode.mockImplementation(async row => ({ ...h.rows.find(value => value.id === row.id), ...row }));
   h.project.mockClear();
   h.rows = [
     { id: "a", project_id: "allowed", parent_id: null, title: "alpha",
@@ -73,6 +91,7 @@ describe("mixed encrypted page search", () => {
     await query();
     expect(h.decode).toHaveBeenCalledTimes(2);
     expect(h.project).toHaveBeenCalledTimes(1);
+    expect(h.documents).toHaveBeenCalledTimes(1);
     allowed.clear();
     expect(await query()).toEqual({ ok: true, hits: [] });
     expect(h.decode).toHaveBeenCalledTimes(2);
@@ -82,11 +101,38 @@ describe("mixed encrypted page search", () => {
     expect(h.project).toHaveBeenCalledTimes(2);
   });
 
+  it("rechecks plaintext consistency and authenticated decryption after ciphertext cache hits", async () => {
+    h.protected = true;
+    h.rows = [h.rows[0]];
+    const source = client(new Set(["allowed"]));
+    const query = () => runPageSearch(source as never, { query: "alpha" });
+    await query();
+    h.consistent = false;
+    expect(await query()).toEqual({ ok: false });
+    h.consistent = true;
+    h.decode.mockRejectedValueOnce(new Error("Cipher authentication failed"));
+    await expect(query()).rejects.toThrow("Cipher authentication failed");
+    expect(h.documents).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes parent and edit metadata without refetching unchanged ciphertext", async () => {
+    h.protected = true;
+    h.rows = [h.rows[0]];
+    const source = client(new Set(["allowed"]));
+    await runPageSearch(source as never, { query: "alpha" });
+    h.rows[0].parent_id = "new-parent";
+    h.rows[0].updated_at = "2026-02-01T00:00:00Z";
+    expect(await runPageSearch(source as never, { query: "alpha" })).toMatchObject({
+      ok: true, hits: [{ parent_id: "new-parent", updated_at: "2026-02-01T00:00:00Z" }],
+    });
+    expect(h.documents).toHaveBeenCalledTimes(1);
+  });
+
   it("uses the authorized application reader while writers are paused", async () => {
     const result = await runPageSearch(client(new Set(["allowed"])) as never,
       { query: "alpha OR beta", limit: 1 });
     expect(result).toMatchObject({ ok: true, hits: [{ id: "a" }] });
-    expect(h.rpcCalls).toEqual([]);
+    expect(h.rpcCalls).toEqual(["page_search_cipher_fingerprints"]);
   });
 
   it("preserves OR, exclusions, phrases, limits and project permissions", async () => {
