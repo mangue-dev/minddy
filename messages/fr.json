@@ -1795,6 +1795,7 @@
   "CommandPaletteActions": {
     "copied": "Copié",
     "linkCopied": "Lien copié",
+    "openInCurrentTab": "Ouvrir dans cet onglet",
     "openInNewTab": "Ouvrir dans un nouvel onglet",
     "copyLink": "Copier le lien",
     "copyIdentifier": "Copier « {identifier} »",

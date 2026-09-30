@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiAutoRotateIcon, ArrowRight01Icon, Calendar01Icon, DateTimeIcon, Delete02Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, Link02Icon, RepeatIcon, Target01Icon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon, ArrowRight01Icon, Calendar01Icon, DateTimeIcon, Delete02Icon, ExternalLinkIcon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, Link02Icon, RepeatIcon, Target01Icon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
 import {
   memo,
   useCallback,
@@ -97,6 +97,7 @@ import { useAskNumoTarget } from "@/lib/ask-numo-context";
 import { useStableCallback } from "@/lib/use-stable-callback";
 import { useCategoryCreateOption } from "@/lib/use-picker-create";
 import { useAuth } from "@/lib/auth-context";
+import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { DropOverlay, useFileDrop } from "@/components/resources";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
@@ -960,6 +961,7 @@ const IssueCardContent = memo(function IssueCardContent({
   const tAgent = useTranslations("Agent");
   const tPlan = useTranslations("Plan");
   const tCommon = useTranslations("Common");
+  const tAction = useTranslations("CommandPaletteActions");
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { openIntent, open: openAssistant } = useAssistantPanelActions();
@@ -971,6 +973,7 @@ const IssueCardContent = memo(function IssueCardContent({
     pr,
   } = useIssueActivity(issue.id);
   const router = useRouter();
+  const appTabs = useOptionalAppTabSession();
 
   // Card bindings are made HERE rather than by the column (MIN-316).
   // The received props take the ticket as an argument and are therefore stable
@@ -1373,7 +1376,24 @@ const IssueCardContent = memo(function IssueCardContent({
                 "merge",
               ],
               icon: <HugeiconsIcon icon={GitPullRequestIcon} className="size-4" />,
-              onSelect: openPr,
+              children: [
+                {
+                  id: "open-pr-current-tab",
+                  label: tAction("openInCurrentTab"),
+                  icon: <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />,
+                  onSelect: openPr,
+                },
+                {
+                  id: "open-pr-new-tab",
+                  label: tAction("openInNewTab"),
+                  icon: <HugeiconsIcon icon={ExternalLinkIcon} className="size-4" />,
+                  onSelect: () => {
+                    const href = `/pull-requests?pr=${pr.prId}`;
+                    if (appTabs) void appTabs.create(href);
+                    else window.open(href, "_blank", "noopener,noreferrer");
+                  },
+                },
+              ],
             },
           ]
         : []),
@@ -1460,6 +1480,7 @@ const IssueCardContent = memo(function IssueCardContent({
     agentActions,
     pr,
     openPr,
+    appTabs,
     onAddRelation,
     issue,
     objectiveMap,
@@ -1469,6 +1490,7 @@ const IssueCardContent = memo(function IssueCardContent({
     tAgent,
     tRel,
     tCommon,
+    tAction,
   ]);
   lastMenuActions.current = menuActions;
 

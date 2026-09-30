@@ -1795,6 +1795,7 @@
   "CommandPaletteActions": {
     "copied": "Copiado",
     "linkCopied": "Link copiado",
+    "openInCurrentTab": "Abrir nesta aba",
     "openInNewTab": "Abrir em uma nova aba",
     "copyLink": "Copiar link",
     "copyIdentifier": "Copiar “{identifier}”",
