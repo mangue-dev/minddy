@@ -825,6 +825,9 @@ function ProjectBoard() {
               objective={activeObjective}
               objectives={objectives}
               projectId={project.id}
+              projectKey={project.key}
+              issues={issues}
+              onOpenIssue={openIssueById}
               progress={objectiveProgress(activeObjective.id, issues)}
               lead={
                 activeObjective.lead_user_id

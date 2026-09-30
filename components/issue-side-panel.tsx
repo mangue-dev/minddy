@@ -82,7 +82,7 @@ import {
   shouldAutoStartOnPromptCopy,
 } from "@/lib/prompt-copy-auto-start";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
-import { resolveRelations } from "@/lib/relation-constants";
+import { resolveDisplayRelationsByIssue } from "@/lib/relation-constants";
 import {
   IssueShortcutMenu,
   useIssueFieldShortcuts,
@@ -125,11 +125,6 @@ import type {
   Objective,
   RelationEndpointType,
 } from "@/lib/types";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 export function IssueSidePanel({
   issue,
@@ -361,21 +356,8 @@ export function IssueSidePanel({
     if (!issue) return [];
     const byId = new Map(allIssues.map((i) => [i.id, i]));
     const objectiveById = new Map(objectives.map((o) => [o.id, o]));
-    const statusById = new Map(allIssues.map((i) => [i.id, i.status]));
-    const objectiveStatusById = new Map(objectives.map((o) => [o.id, o.status]));
-    return resolveRelations(issue.id, relations, statusById, objectiveStatusById)
-      .map((r): ChipRelation | null => {
-        if (r.otherType === "objective") {
-          const objective = objectiveById.get(r.otherId);
-          return objective
-            ? { ...r, otherType: "objective" as const, otherName: objective.name }
-            : null;
-        }
-        const other = byId.get(r.otherId);
-        return other ? { ...r, otherNumber: other.number } : null;
-      })
-      .filter((r): r is ChipRelation => r !== null);
-  }, [issue?.id, relations, allIssues, objectives]); // eslint-disable-line react-hooks/exhaustive-deps
+    return resolveDisplayRelationsByIssue(relations, byId, objectiveById).get(issue.id) ?? [];
+  }, [issue, relations, allIssues, objectives]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // New work enters the common Numo conversation. Historical worker sessions
   // remain available only as navigation to existing execution details.
@@ -884,51 +866,12 @@ export function IssueSidePanel({
           <div className="flex shrink-0 items-center justify-between gap-4 px-6 pt-5 pb-3">
             <div className="flex min-w-0 items-center gap-1">
               <SidePanelTitle asChild>
-                <span className="flex items-center gap-1.5 text-lg font-semibold tracking-tight">
+                <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-lg font-semibold tracking-tight">
                   <IntegrationIndicator issue={issue} iconClassName="size-4" />
                   <RemoteIssueIndicator issue={issue} iconClassName="size-4" />
-                  {parent && (
-                    <button
-                      type="button"
-                      onClick={() => onOpenIssue(parent.id)}
-                      aria-label={t("openParentAria", {
-                        id: issueIdentifier(projectKey, parent.number),
-                      })}
-                      className="rounded font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:outline-none"
-                    >
-                      {issueIdentifier(projectKey, parent.number)}
-                    </button>
-                  )}
-                  {/* As on the map: hovering over “› MIN-42” names the relationship
-                      that the chevron alone suggests. */}
-                  {parent ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="flex items-center gap-1.5">
-                          <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                          {issueIdentifier(projectKey, issue.number)}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {t("subIssueOf", {
-                          id: issueIdentifier(projectKey, parent.number),
-                        })}
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    issueIdentifier(projectKey, issue.number)
-                  )}
+                  {issueIdentifier(projectKey, issue.number)}
                 </span>
               </SidePanelTitle>
-              {resolvedRelations.length > 0 && (
-                <RelationChips
-                  relations={resolvedRelations}
-                  projectKey={projectKey}
-                  onOpen={onOpenIssue}
-                  max={1}
-                  className="font-mono text-xs text-muted-foreground"
-                />
-              )}
               {/* Code Agent: the only state that deserves the header (at work,
                   or a PR to reread) — the rest is in the “⋯” menu. */}
               <IssueAgentChip
@@ -989,6 +932,19 @@ export function IssueSidePanel({
               </SidePanelClose>
             </div>
           </div>
+
+          {(parent || resolvedRelations.some((r) => !r.resolved)) && (
+            <div className="flex flex-wrap items-center gap-2 px-6 pb-3 text-xs text-muted-foreground">
+              {parent && (
+                <button type="button" onClick={() => onOpenIssue(parent.id)} className="inline-flex items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 hover:bg-muted">
+                  <HugeiconsIcon icon={ArrowRight01Icon} className="size-3" aria-hidden />
+                  {t("subIssueOf", { id: issueIdentifier(projectKey, parent.number) })}
+                </button>
+              )}
+              <RelationChips relations={resolvedRelations} projectKey={projectKey} onOpen={onOpenIssue}
+                onOpenObjective={(id) => router.push(`/projects/${issue.project_id}/objectives?open=${id}`)} />
+            </div>
+          )}
 
           <SidePanelBody className="flex flex-col gap-4 pt-0" {...containerProps}>
             <AutoTextarea

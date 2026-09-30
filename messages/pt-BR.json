@@ -2249,13 +2249,15 @@
     "action_blocks": "Marcar como bloqueando…",
     "action_blocked_by": "Marcar como bloqueado por…",
     "action_related": "Marcar como relacionado…",
-    "pick_blocks": "Bloqueando qual problema?",
-    "pick_blocked_by": "Bloqueado por qual problema?",
-    "pick_related": "Relacionado a qual problema?",
-    "addRelationAria": "Link para um problema",
+    "pick_blocks": "Qual ticket ou objetivo bloqueia?",
+    "pick_blocked_by": "Bloqueado por qual ticket ou objetivo?",
+    "pick_related": "Relacionado a qual ticket ou objetivo?",
+    "addRelationAria": "Vincular um ticket ou objetivo",
     "searchIssue": "Pesquisar um problema…",
     "searchTarget": "Pesquisar um problema…",
-    "objectives": "Objetivos"
+    "objectives": "Objetivos",
+    "viaObjective": "Pelo objetivo: {name}",
+    "empty": "Nenhuma relação"
   },
   "Profile": {
     "avatarLabel": "Avatar",

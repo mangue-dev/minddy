@@ -9,7 +9,7 @@ import {
   buildIssuePrompt,
   buildIssueVerifyPrompt,
 } from "./issue-prompt";
-import { resolveRelationsByIssue } from "./relation-constants";
+import { resolveDisplayRelationsByIssue } from "./relation-constants";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { Issue, IssueRelation, Objective } from "./types";
 
@@ -55,7 +55,8 @@ const relations: IssueRelation[] = [
 function boardRelations(file: string) {
   return evaluateInitializer<Map<string, ChipRelation[]>>(file, "relationsByIssue", {
     useMemo: (callback: () => unknown) => callback(),
-    issues: [issue], relations, allIssueMap, resolveRelationsByIssue,
+    issues: [issue], relations, allIssueMap, resolveDisplayRelationsByIssue,
+    objectiveMap, objectiveMapByProject: new Map([["project", objectiveMap]]),
   }).get(issue.id)!;
 }
 
@@ -92,11 +93,12 @@ describe.each(["kanban-board.tsx", "global-kanban-board.tsx"])("%s copied prompt
     expect(prompt).not.toContain("MIN-0");
   });
 
-  it("keeps objective relations out of compact chips", () => {
+  it("includes objective relations in compact dependency groups", () => {
     const active = evaluateInitializer<ChipRelation[]>("relation-chips.tsx", "active", {
       relations: boardRelations(file),
     });
-    expect(active.map((row) => row.otherId)).toEqual(["other"]);
+    expect(active).toHaveLength(4);
+    expect(active.filter((row) => row.otherType === "objective")).toHaveLength(3);
   });
 });
 

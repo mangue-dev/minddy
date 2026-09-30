@@ -12,9 +12,20 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Link02Icon } from "@hugeicons/core-free-icons";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { RelationObjectiveLabel } from "@/components/relation-objective-label";
 import { useTranslations } from "next-intl";
-import { Button, CommandGroup, CommandItem, cn, toast } from "mangue-ui";
+import {
+  Button,
+  CommandGroup,
+  CommandItem,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  cn,
+  toast,
+} from "mangue-ui";
 import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import {
   RELATION_PRIORITY,
@@ -23,31 +34,28 @@ import {
 } from "@/lib/relation-constants";
 import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
-import {
-  ObjectiveStatusIndicator,
-  RelationIcon,
-  StatusIndicator,
-} from "@/components/issue-indicators";
+import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
 import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { SearchMenu } from "@/components/search-menu";
-import type {
-  Issue,
-  IssueRelationType,
-  Objective,
-} from "@/lib/types";
+import type { Issue, IssueRelationType, Objective } from "@/lib/types";
 
 export function ObjectiveRelationsSection({
   objective,
   projectId,
   projectKey,
   issues,
+  onOpenIssue,
+  variant = "panel",
 }: {
   objective: Objective;
   projectId: string;
   projectKey: string;
   /** All project issues — the candidate ends and the status hydration. */
   issues: Issue[];
+  onOpenIssue?: (issueId: string) => void;
+  variant?: "panel" | "board";
 }) {
+  const router = useRouter();
   const t = useTranslations("Relations");
   const tCommon = useTranslations("Common");
   const { relations, addRelation, removeRelation } =
@@ -55,6 +63,7 @@ export function ObjectiveRelationsSection({
   const { objectives } = useObjectivesQuery(projectId);
 
   const [open, setOpen] = useState(false);
+  const [boardOpen, setBoardOpen] = useState(false);
   const [step, setStep] = useState<IssueRelationType | null>(null);
   const [query, setQuery] = useState("");
 
@@ -64,25 +73,28 @@ export function ObjectiveRelationsSection({
   const resolved = useMemo(() => {
     const statusById = new Map(issues.map((i) => [i.id, i.status]));
     const objectiveStatusById = new Map(
-      objectives.map((o) => [o.id, o.status])
+      objectives.map((o) => [o.id, o.status]),
     );
     return resolveRelations(
       objective.id,
       relations,
       statusById,
-      objectiveStatusById
+      objectiveStatusById,
     );
   }, [objective.id, relations, issues, objectives]);
 
   // Candidates: open issues, then the other open objectives (a closed blocker
   // doesn't block — the resolver would mark it spent immediately).
   const linked = useMemo(
-    () => new Set(resolved.map((r) => r.otherId)),
-    [resolved]
+    () =>
+      new Set(
+        resolved.filter((r) => r.relation === step).map((r) => r.otherId),
+      ),
+    [resolved, step],
   );
   const issueCandidates = useMemo(
     () => issues.filter((i) => !linked.has(i.id) && !isClosedStatus(i.status)),
-    [issues, linked]
+    [issues, linked],
   );
   const objectiveCandidates = useMemo(
     () =>
@@ -91,9 +103,9 @@ export function ObjectiveRelationsSection({
           o.id !== objective.id &&
           !linked.has(o.id) &&
           o.status !== "done" &&
-          o.status !== "canceled"
+          o.status !== "canceled",
       ),
-    [objectives, objective.id, linked]
+    [objectives, objective.id, linked],
   );
 
   const grouped = useMemo(
@@ -102,7 +114,7 @@ export function ObjectiveRelationsSection({
         type,
         items: resolved.filter((r) => r.relation === type),
       })).filter((g) => g.items.length > 0),
-    [resolved]
+    [resolved],
   );
 
   const close = () => {
@@ -111,7 +123,7 @@ export function ObjectiveRelationsSection({
     setQuery("");
   };
 
-  return (
+  const content = (
     <>
       <PropertyRow label={t("relations")}>
         <SearchMenu
@@ -173,8 +185,11 @@ export function ObjectiveRelationsSection({
                         close();
                       }}
                     >
-                      <StatusIndicator status={candidate.status} className="size-4" />
-                      <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                      <StatusIndicator
+                        status={candidate.status}
+                        className="size-4"
+                      />
+                      <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
                         {id}
                       </span>
                       <span className="truncate">{candidate.title}</span>
@@ -190,20 +205,14 @@ export function ObjectiveRelationsSection({
                       value={candidate.id}
                       keywords={[candidate.name]}
                       onSelect={() => {
-                        void addRelation(
-                          objective.id,
-                          step,
-                          candidate.id,
-                          { sourceType: "objective", targetType: "objective" }
-                        ).catch((err) => toast.error((err as Error).message));
+                        void addRelation(objective.id, step, candidate.id, {
+                          sourceType: "objective",
+                          targetType: "objective",
+                        }).catch((err) => toast.error((err as Error).message));
                         close();
                       }}
                     >
-                      <ObjectiveStatusIndicator
-                        status={candidate.status}
-                        className="size-4"
-                      />
-                      <span className="truncate">{candidate.name}</span>
+                      <RelationObjectiveLabel objective={candidate} />
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -219,7 +228,8 @@ export function ObjectiveRelationsSection({
             <div key={group.type}>
               <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                 <RelationIcon relation={group.type} className="size-3.5" />
-                {t(group.type)}
+                {t(group.type)}{" "}
+                <span className="tabular-nums">{group.items.length}</span>
               </div>
               <div className="flex flex-col">
                 {group.items.map((r) => {
@@ -235,47 +245,54 @@ export function ObjectiveRelationsSection({
                       key={r.id}
                       className="group/relrow flex items-center gap-2 rounded-md px-1.5 py-1.5 hover:bg-muted/60"
                     >
-                      <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
-                        {isObjective ? (
-                          otherObjective && (
-                            <ObjectiveStatusIndicator
-                              status={otherObjective.status}
-                              className="size-4 shrink-0"
-                            />
-                          )
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBoardOpen(false);
+                          if (isObjective)
+                            router.push(
+                              `/projects/${projectId}/objectives?open=${r.otherId}`,
+                            );
+                          else if (onOpenIssue) onOpenIssue(r.otherId);
+                          else
+                            router.push(
+                              `/projects/${projectId}?issue=${r.otherId}`,
+                            );
+                        }}
+                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                      >
+                        {isObjective && otherObjective ? (
+                          <RelationObjectiveLabel objective={otherObjective} />
                         ) : (
-                          otherIssue && (
-                            <StatusIndicator
-                              status={otherIssue.status}
-                              className="size-4 shrink-0"
-                            />
-                          )
+                          <>
+                            {otherIssue && (
+                              <StatusIndicator
+                                status={otherIssue.status}
+                                className="size-4 shrink-0"
+                              />
+                            )}
+                            {otherIssue && (
+                              <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
+                                {issueIdentifier(projectKey, otherIssue.number)}
+                              </span>
+                            )}
+                            <span
+                              className={cn(
+                                "min-w-0 flex-1 truncate text-sm",
+                                otherIssue?.status === "done" &&
+                                  "text-muted-foreground line-through",
+                              )}
+                            >
+                              {otherIssue?.title}
+                            </span>
+                          </>
                         )}
-                        <span className="w-14 shrink-0 font-mono text-xs text-muted-foreground">
-                          {isObjective
-                            ? ""
-                            : (otherIssue &&
-                                issueIdentifier(projectKey, otherIssue.number)) ||
-                              ""}
-                        </span>
-                        <span
-                          className={cn(
-                            "min-w-0 flex-1 truncate text-sm",
-                            !isObjective &&
-                              otherIssue?.status === "done" &&
-                              "text-muted-foreground line-through"
-                          )}
-                        >
-                          {isObjective
-                            ? (otherObjective?.name ?? "")
-                            : (otherIssue?.title ?? "")}
-                        </span>
                         {r.resolved && (
                           <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                             {t("resolved")}
                           </span>
                         )}
-                      </div>
+                      </button>
                       <Button
                         variant="ghost"
                         size="icon-sm"
@@ -283,7 +300,7 @@ export function ObjectiveRelationsSection({
                         className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/relrow:opacity-100 focus-visible:opacity-100"
                         onClick={() =>
                           void Promise.resolve(removeRelation(r.id)).catch(
-                            (err) => toast.error((err as Error).message)
+                            (err) => toast.error((err as Error).message),
                           )
                         }
                       >
@@ -298,5 +315,69 @@ export function ObjectiveRelationsSection({
         </div>
       )}
     </>
+  );
+  if (variant === "panel") return content;
+  const activeGroups = grouped
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((r) => !r.resolved),
+    }))
+    .filter((group) => group.items.length);
+  const blocked = resolved.some(
+    (r) => r.relation === "blocked_by" && !r.resolved,
+  );
+  return (
+    <Popover open={boardOpen} onOpenChange={setBoardOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={t("relations")}
+        >
+          <span
+            className={cn(
+              "flex size-7 shrink-0 items-center justify-center rounded-full",
+              blocked ? "bg-red-500/10" : "bg-muted",
+            )}
+          >
+            {blocked ? (
+              <RelationIcon relation="blocked_by" className="size-3.5" />
+            ) : (
+              <HugeiconsIcon
+                icon={Link02Icon}
+                className="size-3.5 text-muted-foreground"
+              />
+            )}
+          </span>
+          <span className="flex flex-col leading-tight">
+            <span className="text-[11px] text-muted-foreground">
+              {t("relations")}
+            </span>
+            <span
+              className={cn(
+                "text-xs font-medium",
+                blocked && "text-red-600 dark:text-red-400",
+              )}
+            >
+              {activeGroups.length
+                ? activeGroups
+                    .map((group) => `${t(group.type)} ${group.items.length}`)
+                    .join(" · ")
+                : resolved.length
+                  ? t("resolved")
+                  : t("empty")}
+            </span>
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-96 max-w-[calc(100vw-2rem)] p-3">
+        <div className="max-h-96 overflow-y-auto">
+          {content}
+          {!resolved.length && (
+            <p className="py-2 text-sm text-muted-foreground">{t("empty")}</p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

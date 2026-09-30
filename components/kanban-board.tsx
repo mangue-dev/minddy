@@ -33,7 +33,7 @@ import type {
   SortDirection,
   ViewSort,
 } from "@/lib/types";
-import { resolveRelationsByIssue } from "@/lib/relation-constants";
+import { resolveDisplayRelationsByIssue } from "@/lib/relation-constants";
 import { cycleBlockingRelations } from "@/lib/cycle";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { promptRelations } from "@/lib/issue-prompt";
@@ -67,7 +67,6 @@ import {
   useMarqueeSelection,
 } from "@/components/marquee-selection";
 import { splitCycleSelection } from "@/components/cycle/use-cycle-menu-actions";
-import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import {
   restoreBoardScroll,
@@ -176,26 +175,9 @@ export const KanbanBoard = memo(function KanbanBoard({
   const candidateIssuesRef = useRef(allIssues);
   candidateIssuesRef.current = allIssues;
   const getCandidateIssues = useCallback(() => candidateIssuesRef.current, []);
-  const relationsByIssue = useMemo(() => {
-    const map = new Map<string, ChipRelation[]>();
-    if (relations.length === 0) return map;
-    // Blocker statuses drive relation resolution (a done blocker no longer blocks).
-    const statusById = new Map(
-      Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
-    );
-    const resolvedByIssue = resolveRelationsByIssue(relations, statusById);
-    for (const issue of issues) {
-      const resolved = (resolvedByIssue.get(issue.id) ?? [])
-        .map((r): ChipRelation | null => {
-          if (r.otherType === "objective") return r;
-          const other = allIssueMap.get(r.otherId);
-          return other ? { ...r, otherNumber: other.number } : null;
-        })
-        .filter((r): r is ChipRelation => r !== null);
-      if (resolved.length > 0) map.set(issue.id, resolved);
-    }
-    return map;
-  }, [issues, relations, allIssueMap]);
+  const relationsByIssue = useMemo(() => resolveDisplayRelationsByIssue(
+    relations ?? [], allIssueMap, objectiveMap,
+  ), [relations, allIssueMap, objectiveMap]);
 
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
   // The smart sort's relations resolve against ALL issues (a filter may

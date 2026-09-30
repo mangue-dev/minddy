@@ -84,7 +84,7 @@ export function SubIssuesSection({
                 className="flex items-center gap-2 rounded-md px-1.5 py-1.5 text-left hover:bg-muted/60"
               >
                 <StatusIndicator status={child.status} className="size-4 shrink-0" />
-                <span className="w-14 shrink-0 font-mono text-xs text-muted-foreground">
+                <span className="min-w-14 shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
                   {issueIdentifier(projectKey, child.number)}
                 </span>
                 <span
