@@ -1,7 +1,6 @@
 "use client";
 
-// Numo's context pill: what the assistant has in front of him, a
-// chose par pilule.
+// Numo's context pills show one item of context per pill.
 //
 // The DRAWING (concentric rays, superimposed order) lives in
 // [components/entity-pill.tsx](../entity-pill.tsx), shared with resources
@@ -16,7 +15,7 @@
 // hand, he withdraws for good — a cross.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiAutoRotateIcon as CycleIcon, Book02Icon, Calendar01Icon, Cancel01Icon, FileAttachmentIcon, GitPullRequestIcon, InboxIcon, Layers01Icon, LayoutGridIcon, MessageMultiple01Icon, Settings02Icon, Target01Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, File02Icon, BubbleChatDelayIcon, Cancel01Icon, FileAttachmentIcon, GitPullRequestIcon, InboxIcon, Layers01Icon, Layout3ColumnIcon, MessageMultiple01Icon, Settings01Icon, Target01Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { AppIcon } from "@/components/icon";
@@ -68,10 +67,9 @@ const STYLES: Record<
     icon: MessageMultiple01Icon,
     tint: "bg-rose-500/12 text-rose-600 dark:text-rose-400",
   },
-  // The same clock as the Routines tab and its empty state: a routine is
-  // recognized by his face, here and there.
+  // Match the Routines tab and sidebar.
   routine: {
-    icon: Calendar01Icon,
+    icon: BubbleChatDelayIcon,
     tint: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
   },
   inbox: {
@@ -80,11 +78,11 @@ const STYLES: Record<
   },
   // The wiki: the same figure as the page tree in the sidebar.
   page: {
-    icon: Book02Icon,
+    icon: File02Icon,
     tint: "bg-indigo-500/12 text-indigo-600 dark:text-indigo-400",
   },
   view: {
-    icon: LayoutGridIcon,
+    icon: Layout3ColumnIcon,
     tint: "bg-cyan-500/12 text-cyan-600 dark:text-cyan-400",
   },
   cycle: {
@@ -92,7 +90,7 @@ const STYLES: Record<
     tint: "bg-teal-500/12 text-teal-600 dark:text-teal-400",
   },
   settings: {
-    icon: Settings02Icon,
+    icon: Settings01Icon,
     tint: "bg-slate-500/12 text-slate-600 dark:text-slate-400",
   },
   // Member and project never pass through this table: they carry their

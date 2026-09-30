@@ -5,6 +5,7 @@
     "clear": "Löschen"
   },
   "Scratchpad": {
+    "actions": "Notizbuchaktionen",
     "title": "Aufgabennotizbuch",
     "srDescription": "Ihr persönliches Aufgabennotizbuch.",
     "open": "Aufgabennotizbuch",

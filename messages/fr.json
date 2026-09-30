@@ -5,6 +5,7 @@
     "clear": "Effacer"
   },
   "Scratchpad": {
+    "actions": "Actions du carnet",
     "title": "Carnet de tâches",
     "srDescription": "Votre carnet de tâches personnel.",
     "open": "Carnet de tâches",

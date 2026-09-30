@@ -5,6 +5,7 @@
     "clear": "Borrar"
   },
   "Scratchpad": {
+    "actions": "Acciones del cuaderno",
     "title": "Cuaderno de tareas",
     "srDescription": "Tu cuaderno de tareas personal.",
     "open": "Cuaderno de tareas",

@@ -5,6 +5,7 @@
     "clear": "Clear"
   },
   "Scratchpad": {
+    "actions": "Notebook actions",
     "title": "Task notebook",
     "srDescription": "Your personal task notebook.",
     "open": "Task notebook",

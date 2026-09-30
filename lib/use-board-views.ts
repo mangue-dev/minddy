@@ -115,6 +115,8 @@ export function useBoardViews(
   const customCount = orderedViews.length - (orderedViews.some((v) => v.kind === "my") ? 1 : 0);
 
   const activeView = orderedViews.find((v) => v.id === activeViewId) ?? null;
+  const selectedViewRef = useRef({ restoreKey, id: activeViewId });
+  selectedViewRef.current = { restoreKey, id: activeViewId };
   const locked = activeView?.kind === "my";
   const config = locked ? lockToMe(rawConfig) : rawConfig;
   const setConfig = (next: ViewConfig) => setRawConfig(locked ? lockToMe(next) : next);
@@ -147,6 +149,11 @@ export function useBoardViews(
       });
       toast.success(t("viewUpdated"));
     } catch (err) {
+      // A failed local save restores the stored baseline, not the working filters.
+      // Only touch this selection: the user may have moved to another board/view.
+      if (selectedViewRef.current.restoreKey === restoreKey && selectedViewRef.current.id === activeView.id) {
+        appliedSigRef.current = normalizeConfig(configOf(activeView));
+      }
       toast.error((err as Error).message);
     }
   };

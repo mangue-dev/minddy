@@ -1,12 +1,12 @@
 "use client";
 
+import { PrCommitsSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 import { useMemo, useState } from "react";
 import { AppIcon } from "@/components/icon";
 import { ShieldCheckIcon as ShieldCheck } from "@hugeicons/core-free-icons";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import {
   Badge,
-  Skeleton,
 } from "mangue-ui";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { normalizeForgeInstant } from "@/lib/forge-time";
@@ -267,14 +267,7 @@ export function PrCommits({
     setDiffOpen(true);
   };
 
-  if (loading) {
-    return (
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-5 w-40" />
-        <Skeleton className="h-32 rounded-lg" />
-      </div>
-    );
-  }
+  if (loading) return <PrCommitsSkeleton />;
   if (commits.length === 0) {
     return <p className="text-sm text-muted-foreground">{t("noCommits")}</p>;
   }
