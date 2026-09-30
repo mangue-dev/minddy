@@ -8,17 +8,17 @@ publication and project and rejects an unpublished target.
 
 The application attempts provider cleanup immediately after board/share
 revocation. An hourly authenticated cron retries durable entries and reconciles
-legacy inactive mappings and Vercel production subdomains without a mapping.
+legacy inactive Minddy mappings.
 Hostname leases serialize attachment, replacement, removal and reconciliation;
 cleanup checks the retained mapping after acquiring the lease and acknowledges
 only the captured queue identity. Network calls time out after five seconds,
 and abandoned leases expire after two minutes.
 
-Historical inventory cleanup preserves primary application hosts, Vercel
-deployment hosts, wildcard/apex domains, redirects, branch/environment domains,
-unknown creation timestamps and attachments younger than ten minutes. Domain
-inventory is fully paginated or discarded; inventory failures still allow
-previously queued cascades to retry. Each run processes up to ten due entries
+Only domain deletions recorded by Minddy are eligible for provider cleanup.
+A hostname missing from `custom_domains` is not proof of a Minddy attachment:
+secondary application aliases and historical provider-only hostnames without
+that durable evidence are preserved. Primary application and Vercel deployment
+hosts remain protected even if queued. Each run processes up to ten due entries
 within a forty-second work budget. Failed entries become eligible after five
 minutes and are retried by the next hourly run. The self-hosted scheduler gives
 this route a sixty-second request timeout.
@@ -31,8 +31,8 @@ Validation:
 
 - Focused Vitest coverage exercises provider outages/retries, retained mappings,
   reassignment before lease acquisition, lookup failures, lease contention,
-  queue generations, protected hosts, inventory pagination, cron authentication,
-  self-hosted scheduling and actual React confirmation/cancellation flows.
+  queue generations, protected hosts, secondary operator aliases, cron
+  authentication, self-hosted scheduling and actual React confirmation/cancellation flows.
 - `scripts/custom-domain-cleanup-regression.sql` passes on isolated PostgreSQL
   18.3 (PGlite), using the baseline target tables and their cascade foreign keys.
   It verifies board deactivation/reactivation, inactive-target rejection, view

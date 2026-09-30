@@ -3,8 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { invalidateCustomDomainCache } from "@/lib/custom-domain-lookup";
 import { isPrimaryHost, normalizeHost } from "@/lib/public-hosts";
-import { isVercelDomainsConfigured, listVercelProjectDomains,
-  removeDomainFromVercel } from "@/lib/server/vercel-domains";
+import { isVercelDomainsConfigured, removeDomainFromVercel } from "@/lib/server/vercel-domains";
 
 /** Shared by attachment, replacement, explicit removal and background cleanup. */
 export async function acquireDomainLease(domain: string): Promise<string | null> {
@@ -70,7 +69,7 @@ export async function cleanRemovedDomain(domain: string): Promise<void> {
   }
 }
 
-/** Hourly reconciliation also discovers provider orphans predating the queue. */
+/** Reconcile inactive Minddy mappings and retry their durable deletion entries. */
 export async function reconcileCustomDomains() {
   if (!isVercelDomainsConfigured()) return { ok: true, skipped: true };
   const deadline = Date.now() + 40_000;
@@ -78,36 +77,9 @@ export async function reconcileCustomDomains() {
   const { error } = await service.rpc("reconcile_inactive_custom_domains");
   if (error) throw new Error("Unable to reconcile inactive custom domains");
 
-  // The client paginates the inventory completely or fails closed. Exclude
-  // operator redirects, preview environments and recently attached hostnames.
-  let inventoryFailed = false;
-  try {
-    const inventory = await listVercelProjectDomains();
-    const candidates = inventory.filter((entry) => {
-      const domain = normalizeHost(entry.name);
-      return !isPrimaryHost(domain) && !domain.includes("*") && domain.split(".").length >= 3 &&
-        !entry.redirect && !entry.gitBranch && !entry.customEnvironmentId &&
-        Number.isFinite(entry.createdAt) && entry.createdAt <= Date.now() - 10 * 60_000;
-    }).map((entry) => normalizeHost(entry.name));
-    for (let offset = 0; offset < candidates.length; offset += 100) {
-      if (Date.now() >= deadline - 10_000) break;
-      const batch = candidates.slice(offset, offset + 100);
-      const { data: mappings, error: lookupError } = await service.from("custom_domains")
-        .select("domain").in("domain", batch);
-      if (lookupError) throw new Error("Unable to check domain inventory mapping");
-      const retained = new Set((mappings ?? []).map((row) => row.domain));
-      const orphans = batch.filter((domain) => !retained.has(domain)).map((domain) => ({ domain }));
-      if (!orphans.length) continue;
-      const { error: queueError } = await service.from("custom_domain_cleanup")
-        .upsert(orphans, { onConflict: "domain", ignoreDuplicates: true });
-      if (queueError) throw new Error("Unable to queue orphan custom domain");
-    }
-  } catch {
-    // Inventory errors must not stop retries already recorded by cascades.
-    inventoryFailed = true;
-    console.error("[custom-domains] provider inventory unavailable");
-  }
-
+  // A missing mapping alone does not establish Minddy ownership. Only deletion
+  // triggers enqueue domains, including cascades and reconciled inactive targets.
+  // Provider-only aliases without that evidence belong to the operator.
   const { data: rows, error: queueError } = await service.from("custom_domain_cleanup")
     .select("id, domain, attempts").lte("next_attempt_at", new Date().toISOString())
     .order("next_attempt_at").limit(10);
@@ -117,5 +89,5 @@ export async function reconcileCustomDomains() {
     if (Date.now() >= deadline) break;
     counts[await cleanDomain(row)]++;
   }
-  return { ok: counts.failed === 0 && !inventoryFailed, inventoryFailed, ...counts };
+  return { ok: counts.failed === 0, ...counts };
 }

@@ -125,44 +125,6 @@ export async function removeDomainFromVercel(domain: string): Promise<{ ok: bool
   return { ok: false };
 }
 
-export type VercelProjectDomain = {
-  name: string;
-  createdAt: number;
-  redirect?: string | null;
-  gitBranch?: string | null;
-  customEnvironmentId?: string | null;
-};
-
-/** Read every page before using the inventory for destructive reconciliation. */
-export async function listVercelProjectDomains(): Promise<VercelProjectDomain[]> {
-  if (isFake()) return [];
-  if (!isVercelDomainsConfigured()) throw new Error("Vercel domains are not configured");
-  const domains: VercelProjectDomain[] = [];
-  const deadline = Date.now() + 15_000;
-  let until: number | null = null;
-  for (let page = 0; page < 20; page++) {
-    if (Date.now() >= deadline) throw new Error("Vercel domain inventory timed out");
-    const res = await vercelFetch(`/v9/projects/${process.env.VERCEL_PROJECT_ID}/domains`,
-      undefined, { limit: "100", order: "desc", production: "true",
-        ...(until === null ? {} : { until: String(until) }) });
-    if (!res.ok) throw new Error("Unable to list Vercel project domains");
-    const body = await res.json() as {
-      domains: VercelProjectDomain[]; pagination?: { next: number | null };
-    };
-    if (!Array.isArray(body.domains) || body.domains.some((d) => typeof d?.name !== "string"))
-      throw new Error("Invalid Vercel domain inventory");
-    domains.push(...body.domains);
-    if (!body.pagination || !("next" in body.pagination))
-      throw new Error("Invalid Vercel domain pagination");
-    const next = body.pagination.next;
-    if (next === null) return domains;
-    if (!Number.isFinite(next) || (until !== null && next >= until))
-      throw new Error("Invalid Vercel domain pagination");
-    until = next;
-  }
-  throw new Error("Vercel domain inventory exceeds reconciliation limit");
-}
-
 export async function getVercelDomainState(domain: string): Promise<VercelDomainState> {
   if (isFake()) {
     return {

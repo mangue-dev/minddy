@@ -4462,70 +4462,56 @@
     "file": "lib/server/custom-domain-cleanup.ts",
     "operation": "rpc",
     "resource": "acquire_custom_domain_lease",
-    "line": 11,
+    "line": 10,
     "storage": false
   },
   {
     "file": "lib/server/custom-domain-cleanup.ts",
     "operation": "rpc",
     "resource": "release_custom_domain_lease",
-    "line": 19,
+    "line": 18,
     "storage": false
   },
   {
     "file": "lib/server/custom-domain-cleanup.ts",
     "operation": "from",
     "resource": "custom_domains",
-    "line": 34,
+    "line": 33,
     "storage": false
   },
   {
     "file": "lib/server/custom-domain-cleanup.ts",
     "operation": "from",
     "resource": "custom_domain_cleanup",
-    "line": 42,
+    "line": 41,
     "storage": false
   },
   {
     "file": "lib/server/custom-domain-cleanup.ts",
     "operation": "from",
     "resource": "custom_domain_cleanup",
-    "line": 48,
+    "line": 47,
     "storage": false
   },
   {
     "file": "lib/server/custom-domain-cleanup.ts",
     "operation": "from",
     "resource": "custom_domain_cleanup",
-    "line": 64,
+    "line": 63,
     "storage": false
   },
   {
     "file": "lib/server/custom-domain-cleanup.ts",
     "operation": "rpc",
     "resource": "reconcile_inactive_custom_domains",
-    "line": 78,
-    "storage": false
-  },
-  {
-    "file": "lib/server/custom-domain-cleanup.ts",
-    "operation": "from",
-    "resource": "custom_domains",
-    "line": 95,
+    "line": 77,
     "storage": false
   },
   {
     "file": "lib/server/custom-domain-cleanup.ts",
     "operation": "from",
     "resource": "custom_domain_cleanup",
-    "line": 101,
-    "storage": false
-  },
-  {
-    "file": "lib/server/custom-domain-cleanup.ts",
-    "operation": "from",
-    "resource": "custom_domain_cleanup",
-    "line": 111,
+    "line": 83,
     "storage": false
   },
   {

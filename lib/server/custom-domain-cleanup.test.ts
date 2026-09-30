@@ -109,32 +109,32 @@ describe("durable custom domain cleanup", () => {
     expect(h.remove).not.toHaveBeenCalled();
   });
 
-  it("retries cascades even when provider inventory is unavailable", async () => {
-    h.inventory.mockRejectedValue(new Error("inventory unavailable"));
-    expect(await reconcileCustomDomains()).toMatchObject({ ok: false, removed: 1, inventoryFailed: true });
-    expect(h.remove).toHaveBeenCalledWith(domain);
+  it("reconciles inactive targets before retrying cascaded domains", async () => {
+    setFakeTable("custom_domain_cleanup", []);
+    h.rpc.mockImplementation(async (name) => {
+      if (name === "reconcile_inactive_custom_domains") {
+        setFakeTable("custom_domain_cleanup", [{ ...row }]);
+      }
+      return { data: name === "acquire_custom_domain_lease" ? "lease-1" : 1, error: null };
+    });
+    expect(await reconcileCustomDomains()).toMatchObject({ ok: true, removed: 1 });
+    expect(h.rpc).toHaveBeenNthCalledWith(1, "reconcile_inactive_custom_domains");
+    expect(h.remove).toHaveBeenCalledExactlyOnceWith(domain);
+    expect(fakeTables.custom_domain_cleanup).toEqual([]);
   });
 
-  it("discovers only old customer hostnames and preserves operator configuration", async () => {
-    setFakeTable("custom_domain_cleanup", []);
+  it("preserves an old secondary application alias without a Minddy deletion entry", async () => {
+    const alias = "secondary.example.org";
     vi.stubEnv("MINDDY_PUBLIC_APP_URL", "https://app.example.org");
     h.inventory.mockResolvedValue([
       { name: domain, createdAt: 1 },
-      { name: "app.example.org", createdAt: 1 },
-      { name: "www.minddy.app", createdAt: 1 },
-      { name: "deploy.vercel.app", createdAt: 1 },
-      { name: "example.com", createdAt: 1 },
-      { name: "*.example.com", createdAt: 1 },
-      { name: "redirect.example.com", createdAt: 1, redirect: "www.minddy.app" },
-      { name: "branch.example.com", createdAt: 1, gitBranch: "preview" },
-      { name: "staging.example.com", createdAt: 1, customEnvironmentId: "env-1" },
-      { name: "recent.example.com", createdAt: Date.now() },
-      { name: "unknown.example.com" },
-      { name: "active.example.com", createdAt: 1 },
+      { name: alias, createdAt: 1 },
     ]);
-    setFakeTable("custom_domains", [{ domain: "active.example.com", id: "active" }]);
     await reconcileCustomDomains();
-    expect(fakeTables.custom_domain_cleanup.map((r) => r.domain)).toEqual([domain]);
+    await cleanRemovedDomain(alias);
+    expect(h.remove).toHaveBeenCalledExactlyOnceWith(domain);
+    expect(h.inventory).not.toHaveBeenCalled();
+    expect(fakeTables.custom_domain_cleanup).toEqual([]);
   });
 
   it("is inert when the provider is not configured", async () => {
