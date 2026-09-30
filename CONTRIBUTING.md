@@ -80,6 +80,8 @@ from the VS Code Source Control view:
 npm run work:start -- "short work name"
 # Edit files, generate the commit message, and commit in VS Code.
 npm run work:pr -- "Short title" -m "Complete description"
+# Commit any review fixes, then push them to the same pull request.
+npm run work:pr
 # Merge the pull request on GitHub after its checks pass.
 npm run work:done
 ```
@@ -89,12 +91,14 @@ The pull-request command pushes that branch, adds any missing DCO sign-offs,
 and creates its pull request with the given title and description; repeat
 `-m` for several description paragraphs. On a pull request that already
 exists, the command only pushes the new commits and keeps the title and
-description as they were written at creation — a deliberate rewrite needs the
-explicit `--replace` flag. The description must be a real, complete text —
-what was done, why, and anything a reviewer needs to know — never a bare
-`Signed-off-by` trailer: the sign-off belongs to the commits. Run without
-arguments, the command falls back to filling the pull request from the commit
-messages. The done command refuses to run until
+description, including manual edits. Supplying another title or description
+succeeds without changing either field. A deliberate rewrite needs the
+explicit `--replace` flag; only supplied fields are replaced. The description
+must be a real, complete text — what was done, why, and anything a reviewer
+needs to know — never a bare `Signed-off-by` trailer: the sign-off belongs to
+the commits. Run without
+arguments when creating a pull request, the command falls back to filling it
+from the commit messages. The done command refuses to run until
 the pull request is merged, then synchronizes local `main` and removes the work
 branch. Repository VS Code settings add the required DCO sign-off to commits
 created from the Source Control view.
