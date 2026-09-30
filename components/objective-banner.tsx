@@ -16,7 +16,8 @@ import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
 import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import { pushObjectiveBoardHistory } from "@/lib/objective-board-navigation";
-import type { Member, Objective } from "@/lib/types";
+import { ObjectiveRelationsSection } from "@/components/objective-relations-section";
+import type { Issue, Member, Objective } from "@/lib/types";
 import {
   Tooltip,
   TooltipContent,
@@ -76,6 +77,9 @@ export function ObjectiveBoardHeader({
   objective,
   objectives,
   projectId,
+  projectKey,
+  issues,
+  onOpenIssue,
   progress,
   lead,
 }: {
@@ -83,6 +87,9 @@ export function ObjectiveBoardHeader({
   /** All project objectives shown in the title selector. */
   objectives: Objective[];
   projectId: string;
+  projectKey: string;
+  issues: Issue[];
+  onOpenIssue: (issueId: string) => void;
   progress: { done: number; total: number; percent: number };
   lead: Member | null;
 }) {
@@ -211,6 +218,7 @@ export function ObjectiveBoardHeader({
             </div>
           </div>
         )}
+        <ObjectiveRelationsSection objective={objective} projectId={projectId} projectKey={projectKey} issues={issues} onOpenIssue={onOpenIssue} variant="board" />
       </div>
     </AppContentHeader>
   );

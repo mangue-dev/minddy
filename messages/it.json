@@ -2249,13 +2249,15 @@
     "action_blocks": "Contrassegna come bloccante…",
     "action_blocked_by": "Contrassegna come bloccato da…",
     "action_related": "Contrassegna come correlato…",
-    "pick_blocks": "Bloccare quale ticket?",
-    "pick_blocked_by": "Bloccato da quale ticket?",
-    "pick_related": "In relazione a quale ticket?",
-    "addRelationAria": "Collega a un ticket",
+    "pick_blocks": "Quale ticket o obiettivo blocca?",
+    "pick_blocked_by": "Da quale ticket o obiettivo è bloccato?",
+    "pick_related": "A quale ticket o obiettivo è collegato?",
+    "addRelationAria": "Collega un ticket o un obiettivo",
     "searchIssue": "Cerca un ticket...",
     "searchTarget": "Cerca un ticket...",
-    "objectives": "Obiettivi"
+    "objectives": "Obiettivi",
+    "viaObjective": "Tramite obiettivo: {name}",
+    "empty": "Nessuna relazione"
   },
   "Profile": {
     "avatarLabel": "Avatar",

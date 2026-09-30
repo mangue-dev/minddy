@@ -2249,13 +2249,15 @@
     "action_blocks": "Als blockierend markieren…",
     "action_blocked_by": "Als blockiert markieren von…",
     "action_related": "Als verwandt markieren…",
-    "pick_blocks": "Welches Problem wird blockiert?",
-    "pick_blocked_by": "Von welchem Problem blockiert?",
-    "pick_related": "Mit welchem Problem verknüpfen?",
-    "addRelationAria": "Link zu einem Problem",
+    "pick_blocks": "Welches Ticket oder Ziel wird blockiert?",
+    "pick_blocked_by": "Durch welches Ticket oder Ziel blockiert?",
+    "pick_related": "Mit welchem Ticket oder Ziel verknüpft?",
+    "addRelationAria": "Ticket oder Ziel verknüpfen",
     "searchIssue": "Problem suchen…",
     "searchTarget": "Problem suchen…",
-    "objectives": "Objectives"
+    "objectives": "Objectives",
+    "viaObjective": "Über das Ziel: {name}",
+    "empty": "Noch keine Beziehungen"
   },
   "Profile": {
     "avatarLabel": "Avatar",

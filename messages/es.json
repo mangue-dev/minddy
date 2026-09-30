@@ -2249,13 +2249,15 @@
     "action_blocks": "Marcar como bloqueadora…",
     "action_blocked_by": "Marcar como bloqueada por…",
     "action_related": "Marcar como relacionada…",
-    "pick_blocks": "¿Qué incidencia bloquea?",
-    "pick_blocked_by": "¿Qué incidencia la bloquea?",
-    "pick_related": "¿Con qué incidencia está relacionada?",
-    "addRelationAria": "Vincular a una incidencia",
+    "pick_blocks": "¿Qué ticket u objetivo bloquea?",
+    "pick_blocked_by": "¿Qué ticket u objetivo lo bloquea?",
+    "pick_related": "¿Con qué ticket u objetivo se relaciona?",
+    "addRelationAria": "Vincular un ticket u objetivo",
     "searchIssue": "Buscar una incidencia…",
     "searchTarget": "Buscar una incidencia…",
-    "objectives": "Objetivos"
+    "objectives": "Objetivos",
+    "viaObjective": "A través del objetivo: {name}",
+    "empty": "Sin relaciones"
   },
   "Profile": {
     "avatarLabel": "Avatar",

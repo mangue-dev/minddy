@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import ts from "typescript-api";
 import { describe, expect, it, vi } from "vitest";
-import { resolveRelations } from "./relation-constants";
+import { resolveDisplayRelationsByIssue } from "./relation-constants";
 import type { ChipRelation } from "@/components/relation-chips";
 
 function source(file: string) {
@@ -77,7 +77,7 @@ describe("issue panel relation plumbing", () => {
     const relations = [{ id: "relation", source_id: "objective", source_type: "objective", target_id: "issue", target_type: "issue", type: "blocks" }];
     for (const [status, resolved] of [["planned", false], ["in_progress", false], ["done", true], ["canceled", true], ["planned", false]] as const) {
       const rows = evaluate<ChipRelation[]>(expression, {
-        useMemo: memo, issue, allIssues: [issue], relations, resolveRelations,
+        useMemo: memo, issue, allIssues: [issue], relations, resolveDisplayRelationsByIssue,
         objectives: [{ id: "objective", name: "Release", status }],
       });
       expect(rows).toEqual([{

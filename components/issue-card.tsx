@@ -705,6 +705,7 @@ export const IssueCardBody = memo(function IssueCardBody({
   selected?: boolean;
   dragging?: boolean;
 }) {
+  const router = useRouter();
   const t = useTranslations("IssueUI");
   const tCycles = useTranslations("Cycles");
   const plan = planProgress(issue.plan);
@@ -794,60 +795,33 @@ export const IssueCardBody = memo(function IssueCardBody({
           )}
           <IntegrationIndicator issue={issue} iconClassName="size-3" />
           <RemoteIssueIndicator issue={issue} iconClassName="size-3" />
-          {parentNumber != null &&
-            (onOpenParent ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  stop(e);
-                  onOpenParent();
-                }}
-                onPointerDown={stop}
-                aria-label={t("openParentAria", {
-                  id: issueIdentifier(projectKey, parentNumber),
-                })}
-                className="rounded-sm transition-colors hover:text-foreground hover:underline"
-              >
-                {issueIdentifier(projectKey, parentNumber)}
-              </button>
-            ) : (
-              <span>{issueIdentifier(projectKey, parentNumber)}</span>
-            ))}
-          {/* The chevron alone does not explain the prefix: on a sub-issue,
-              hovering “› MIN-42” names the relation — “Sub-issue of MIN-12”. */}
-          {parentNumber == null ? (
-            <span className="truncate">
-              {issueIdentifier(projectKey, issue.number)}
-            </span>
-          ) : (
+          {parentNumber != null && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="flex min-w-0 items-center gap-1">
-                  <HugeiconsIcon icon={ArrowRight01Icon} className="size-3 shrink-0" aria-hidden />
-                  <span className="truncate">
-                    {issueIdentifier(projectKey, issue.number)}
-                  </span>
-                </span>
+                <button type="button" disabled={!onOpenParent}
+                  onClick={(e) => { stop(e); onOpenParent?.(); }} onPointerDown={stop}
+                  aria-label={t("openParentAria", { id: issueIdentifier(projectKey, parentNumber) })}
+                  className="shrink-0 rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <HugeiconsIcon icon={ArrowRight01Icon} className="size-3" aria-hidden />
+                </button>
               </TooltipTrigger>
-              <TooltipContent>
-                {t("subIssueOf", {
-                  id: issueIdentifier(projectKey, parentNumber),
-                })}
-              </TooltipContent>
+              <TooltipContent>{t("subIssueOf", { id: issueIdentifier(projectKey, parentNumber) })}</TooltipContent>
             </Tooltip>
           )}
+          <span className="shrink-0 whitespace-nowrap">{issueIdentifier(projectKey, issue.number)}</span>
           {relations && relations.length > 0 && (
             <RelationChips
               relations={relations}
               projectKey={projectKey}
               onOpen={onOpenRelated}
-              max={1}
+              onOpenObjective={onOpenRelated ? (id) => router.push(`/projects/${issue.project_id}/objectives?open=${id}`) : undefined}
               className="shrink-0"
             />
           )}
         </span>
         <span className="flex shrink-0 items-center gap-1.5">
-          {/* PR disponible → remplace l'indicateur de plan ; sinon le plan. */}
+          {/* An actionable PR takes the place of plan progress. */}
           {pr && isPrWorthShowing(pr) ? (
             <PrPick state={pr.state} onOpen={onOpenPr} />
           ) : plan.total > 0 ? (
@@ -1138,7 +1112,7 @@ const IssueCardContent = memo(function IssueCardContent({
     if (!candidateIssues) return [];
     const linked = new Set(
       (relations ?? [])
-        .filter((r) => r.relation === relationType && r.otherType !== "objective")
+        .filter((r) => !r.inheritedObjectiveId && r.relation === relationType && r.otherType !== "objective")
         .map((r) => r.otherId),
     );
     return candidateIssues.filter(
@@ -1151,7 +1125,7 @@ const IssueCardContent = memo(function IssueCardContent({
     if (!relationType || !objectiveMap) return [];
     const linked = new Set(
       (relations ?? [])
-        .filter((r) => r.relation === relationType && r.otherType === "objective")
+        .filter((r) => !r.inheritedObjectiveId && r.relation === relationType && r.otherType === "objective")
         .map((r) => r.otherId),
     );
     return [...objectiveMap.values()].filter(
