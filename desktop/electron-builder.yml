@@ -255,6 +255,9 @@ mac:
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.inherit.plist
+  # APNs is a restricted entitlement. Every fresh Mac needs the authorizing
+  # Developer ID profile inside the signed bundle, not on the build machine.
+  provisioningProfile: build/minddy-developer-id.provisionprofile
   # Fail the build if the signed bundle or one of its nested helpers cannot be
   # verified. Publication performs the same check again after packaging.
   strictVerify: true
