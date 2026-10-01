@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { AlertCircleIcon, ArrowRight01Icon, CheckIcon, Loading02Icon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, ArrowRight01Icon, CheckIcon, LoaderCircleIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -144,7 +144,7 @@ export function RelayGithubConnect() {
 
   return (
     <ClaimCard title={t("title")}>
-      <HugeiconsIcon icon={Loading02Icon} className="h-8 w-8 animate-spin text-primary" aria-hidden />
+      <HugeiconsIcon icon={LoaderCircleIcon} className="h-8 w-8 animate-spin text-primary" aria-hidden />
       <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
         {t("waiting")}
       </p>

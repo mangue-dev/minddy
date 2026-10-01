@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { AiAutoRotateIcon as CycleIcon, Calendar01Icon, CheckIcon, Loading02Icon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, Calendar01Icon, CheckIcon, LoaderCircleIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -67,7 +67,7 @@ export function CycleActivationWelcome() {
         <li>{t("welcomeBullet3")}</li>
       </ul>
       <Button size="sm" className="mt-1" onClick={() => void activate()} disabled={activating || !user}>
-        {activating ? <HugeiconsIcon icon={Loading02Icon} className="animate-spin" /> : <AppIcon icon={CycleIcon} />}
+        {activating ? <HugeiconsIcon icon={LoaderCircleIcon} className="animate-spin" /> : <AppIcon icon={CycleIcon} />}
         {t("activate")}
       </Button>
     </EmptyShell>
@@ -143,7 +143,7 @@ export function CycleCompletedBanner() {
         <p className="text-sm font-semibold">{t("completedTitle")}</p>
       </div>
       <Button size="sm" variant="outline" onClick={() => void refill()} disabled={refilling}>
-        {refilling ? <HugeiconsIcon icon={Loading02Icon} className="animate-spin" /> : <AppIcon icon={CycleIcon} />}
+        {refilling ? <HugeiconsIcon icon={LoaderCircleIcon} className="animate-spin" /> : <AppIcon icon={CycleIcon} />}
         {t("refill")}
       </Button>
     </div>

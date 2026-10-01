@@ -1,6 +1,6 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Download04Icon as ArrowDownToLine, Loading02Icon, Refresh01Icon, ShoppingBag01Icon } from "@hugeicons/core-free-icons";
+import { Download04Icon as ArrowDownToLine, LoaderCircleIcon, Refresh01Icon, ShoppingBag01Icon } from "@hugeicons/core-free-icons";
 import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Popover, PopoverAnchor, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, cn } from "mangue-ui";
@@ -210,7 +210,7 @@ export function AppUpdateAction({
           className="bg-[#0085FF] text-white hover:bg-[#0085FF]/90"
           onClick={applyUpdate}
         >
-          {pending && <HugeiconsIcon icon={Loading02Icon} className="animate-spin" />}
+          {pending && <HugeiconsIcon icon={LoaderCircleIcon} className="animate-spin" />}
           {actionLabel}
         </Button>
       </div>
@@ -226,7 +226,7 @@ export function AppUpdateAction({
             ? ShoppingBag01Icon
             : ready
               ? ArrowDownToLine
-              : Loading02Icon
+              : LoaderCircleIcon
       }
       iconClassName={!ready || pending ? "animate-spin" : undefined}
       iconCollapsedOnly={ready && !pending}

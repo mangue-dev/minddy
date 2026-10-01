@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, Layers01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Layers01Icon, LoaderCircleIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -97,7 +97,7 @@ export function SkillPreviewDialog({
 
             {loading ? (
               <div className="mt-10 flex items-center gap-2 text-sm text-muted-foreground">
-                <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" aria-hidden />
+                <HugeiconsIcon icon={LoaderCircleIcon} className="size-4 animate-spin" aria-hidden />
                 <span>{t("skillPreviewLoading")}</span>
               </div>
             ) : failed || !loaded ? (

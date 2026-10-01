@@ -19,7 +19,7 @@ packageExtensionsChecksum: sha256-gb8IWRYa0HLC0njrFwOplLteblxDkJjrN7zLnxlfTj0=
 
 patchedDependencies:
   mangue-ui@0.8.0:
-    hash: 2a45a88432578b569f160fddd2aa7037bd3561acbfbaed76ff477864926f35ff
+    hash: 817cb7c5c85642ca2a69ce0ce53e900a0093605ddbc59fe7a5368ff8b79528e6
     path: patches/mangue-ui@0.8.0.patch
   web-push@3.6.7:
     hash: 643894c41fa680567920fd08b7f6d427d21396eab07abace37fd151d4cb063d5
@@ -190,7 +190,7 @@ importers:
         version: 3.3.0
       mangue-ui:
         specifier: ^0.8.0
-        version: 0.8.0(patch_hash=2a45a88432578b569f160fddd2aa7037bd3561acbfbaed76ff477864926f35ff)(@emotion/is-prop-valid@1.4.0)(@lobehub/ui@5.20.3)(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(antd@6.5.1(date-fns@4.4.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(next@16.3.6(@types/node@25.9.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        version: 0.8.0(patch_hash=817cb7c5c85642ca2a69ce0ce53e900a0093605ddbc59fe7a5368ff8b79528e6)(@emotion/is-prop-valid@1.4.0)(@lobehub/ui@5.20.3)(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(antd@6.5.1(date-fns@4.4.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(next@16.3.6(@types/node@25.9.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       mcp-handler:
         specifier: ^2.2.0
         version: 2.2.0(@modelcontextprotocol/server@2.1.0)(next@16.3.6(@types/node@25.9.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))
@@ -10706,7 +10706,7 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  mangue-ui@0.8.0(patch_hash=2a45a88432578b569f160fddd2aa7037bd3561acbfbaed76ff477864926f35ff)(@emotion/is-prop-valid@1.4.0)(@lobehub/ui@5.20.3)(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(antd@6.5.1(date-fns@4.4.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(next@16.3.6(@types/node@25.9.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
+  mangue-ui@0.8.0(patch_hash=817cb7c5c85642ca2a69ce0ce53e900a0093605ddbc59fe7a5368ff8b79528e6)(@emotion/is-prop-valid@1.4.0)(@lobehub/ui@5.20.3)(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(antd@6.5.1(date-fns@4.4.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(next@16.3.6(@types/node@25.9.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
     dependencies:
       '@lobehub/icons': 5.21.0(@lobehub/ui@5.20.3)(@types/react@19.2.18)(antd@6.5.1(date-fns@4.4.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@radix-ui/react-switch': 1.3.3(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, Loading02Icon, WorkHistoryIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, LoaderCircleIcon, WorkHistoryIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -130,7 +130,7 @@ export function UsageHistorySection() {
 
           {!loadedOnce || (loading && entries.length === 0) ? (
             <div className="flex items-center justify-center gap-2 border-t border-border px-4 py-8 text-sm text-muted-foreground">
-              <HugeiconsIcon icon={Loading02Icon} className="size-4 animate-spin" />
+              <HugeiconsIcon icon={LoaderCircleIcon} className="size-4 animate-spin" />
             </div>
           ) : total === 0 ? (
             <div className="border-t border-border p-4">

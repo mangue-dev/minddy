@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon, BotIcon, CancelCircleIcon as Ban, CheckIcon, GitBranchIcon, GitCommitIcon, GitPullRequestIcon, HelpCircleIcon, LinkSquare01Icon, Loading02Icon, PackageIcon, SquareIcon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, BotIcon, CancelCircleIcon as Ban, CheckIcon, GitBranchIcon, GitCommitIcon, GitPullRequestIcon, HelpCircleIcon, LinkSquare01Icon, LoaderCircleIcon, PackageIcon, SquareIcon } from "@hugeicons/core-free-icons";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useId, useMemo, useState } from "react";
@@ -96,10 +96,10 @@ function titleOf(call: DelegatedWorkCall, fallback: string): string {
 }
 
 const STATE_ICONS = {
-  starting: Loading02Icon,
-  queued: Loading02Icon,
-  running: Loading02Icon,
-  stopping: Loading02Icon,
+  starting: LoaderCircleIcon,
+  queued: LoaderCircleIcon,
+  running: LoaderCircleIcon,
+  stopping: LoaderCircleIcon,
   waiting_input: HelpCircleIcon,
   completed: CheckIcon,
   failed: AlertCircleIcon,

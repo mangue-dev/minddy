@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrangeByLettersAZIcon, AiAutoRotateIcon as CycleIcon, ArrowUpRight01Icon, Delete02Icon, FilterIcon, FloppyDiskIcon, LinkSquare01Icon, Loading02Icon, LockIcon, MoreHorizontalIcon, Edit04Icon, Plug01Icon, Share01Icon, CheckIcon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrangeByLettersAZIcon, AiAutoRotateIcon as CycleIcon, ArrowUpRight01Icon, Delete02Icon, FilterIcon, FloppyDiskIcon, LinkSquare01Icon, LoaderCircleIcon, LockIcon, MoreHorizontalIcon, Edit04Icon, Plug01Icon, Share01Icon, CheckIcon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -985,7 +985,7 @@ export function BoardToolbar({
                   )}
                 >
                   {generatingViewIds.has(activeDragView.id) && (
-                    <HugeiconsIcon icon={Loading02Icon} className="size-3 shrink-0 animate-spin" />
+                    <HugeiconsIcon icon={LoaderCircleIcon} className="size-3 shrink-0 animate-spin" />
                   )}
                   {activeDragView.kind === "my" &&
                     (myAvatarSource ? (
@@ -1258,7 +1258,7 @@ function ViewChip({
       className={cn(PILL_CLASS, pillTone(active), isDragging && "opacity-50")}
     >
       {generating && (
-        <HugeiconsIcon icon={Loading02Icon} className="size-3 shrink-0 animate-spin" aria-label={t("viewGenerating")} />
+        <HugeiconsIcon icon={LoaderCircleIcon} className="size-3 shrink-0 animate-spin" aria-label={t("viewGenerating")} />
       )}
       {isSystem &&
         (avatarSeed ? (
