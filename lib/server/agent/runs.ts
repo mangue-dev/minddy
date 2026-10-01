@@ -5,6 +5,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { DatabaseOperationError } from "@/lib/server/failure-diagnostics";
 import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { insertNotifications } from "@/lib/server/notifications";
 import type { RepoProviderId } from "@/lib/repo-providers";
@@ -711,7 +712,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     if (error?.code === PG_UNIQUE_VIOLATION) throw new ActiveRunExistsError();
     if (!error && input.managedBudget)
       throw new ManagedBudgetUnavailableError();
-    throw new Error(error?.message ?? "Failed to create agent run");
+    throw new DatabaseOperationError("create_agent_run", error, result.status);
   }
   // Analytics (MIN-78): the launch is also tracked on the client side, but it
   // only does not see runs triggered by mention or restarted by drain.
